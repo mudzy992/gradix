@@ -1,0 +1,67 @@
+---
+description: Gradix project baseline — stack, scope, colors, bans
+alwaysApply: true
+---
+
+# Gradix
+
+Construction-ops platform: web panel, Expo, public company one-page, multi-company, ERP-lite, payroll export, IoT fleet. Source of truth: `.cursor/docs/DECISIONS.md` + `.cursor/docs/DOMAIN.md` + matrices + `.cursor/plans/gradix-core/PLAN_FREEZE.md` (ako nije u freeze-u, nije v1).
+
+## Layout
+
+- `backend/` NestJS + TypeScript strict + Prisma 7 + MySQL 8
+- `frontend/` React (Vite) + TypeScript + Tailwind + shadcn
+- `mobile/` Expo + TypeScript + i18n + light/dark/system
+- Plan: `.cursor/plans/gradix-core/` (phases 1–11). **Svih 11 faza plan locked.**
+- Matrices: `.cursor/docs/matrices/<feature>/MATRIX.md` + `CHANGELOG.md`
+
+## Banned
+
+- Turborepo `apps/*`, Next.js, Express/Fastify, PostgreSQL
+- `NEXT_PUBLIC_*` (use `VITE_*`)
+- Custom WS port; Socket.IO shares the Nest HTTP server
+- WatermelonDB / BullMQ / Redis until a phase segment requires them
+- Ad-hoc SQL outside Prisma migrations
+- Email / FCM delivery until the matching Settings flag is on (stubs only). **SMS is out of the product.**
+- Trusting JWT for roles (JWT is `sub` only; roles from DB)
+- Unscoped list queries (always company + data-scope)
+
+## Product rules
+
+- Tenant: `Company` + `companyId`. `X-Company-Id` only for PLATFORM_ADMIN (else 400).
+- Timer: one open session per user (`TIMER_ALREADY_OPEN`). machineId null until phase 4. Pause does not accrue; close-while-paused adds to pauseAccum. Auto-close after `timer.maxOpenHours` (12). Complete = `tasks.write` only. Hours accrue on machine from phase 4.
+- Onboarding: API-created users get a one-time temp password + `mustChangePassword`. ADMIN may reset-password (new temp once). Seed users do not force-change. Inactive company → login 401.
+- Quantities: manual BOQ; do not mix into progress %. Trips do not auto-add executed qty.
+- Geofence info-only; not payroll evidence. No SMS.
+- Trips/fuel immutable after sync; Amendment for corrections.
+- Public DTO whitelist. File paths must start with `{companyId}/`. Socket rooms server-side.
+- Roles N:M, permission union. SUPER_ADMIN is per-company.
+- PM/SS see assigned projects only. ADMIN/ACCOUNTANT see the whole company.
+- GPS: `UserLocation` vs machine `GpsRecord`. Phone first; IoT in phase 11.
+- Spend/progress: `.cursor/docs/matrices/spend-progress/MATRIX.md` — never invent KPIs.
+- Public site: `/p/:slug` (phase 8). Panel: `/login`.
+- i18n BS default + EN. Apple-linear. Mobile web = Sheet.
+- Money: Decimal. Dates UTC. Display = company `app.timezone` (default Europe/Sarajevo).
+- API envelope `{ success, data, meta }` / `{ success: false, error: { code, message } }`.
+- Lists: `page`, `limit`, `sort`, `order`.
+- Uploads: MinIO, path in DB, `{companyId}/` prefix.
+- Offline (phase 6): expo-sqlite. Trip, TimerSession, FuelEntry, DiaryEntry, photo.
+- File length 100–150; split at 200 (schema/config up to 400).
+- Logic change ⇒ MATRIX + CHANGELOG; delete dead code.
+- No application code until the user starts a named phase. Planning freeze must be written first ([PLAN_FREEZE.md](../plans/gradix-core/PLAN_FREEZE.md)).
+
+## Color map
+
+- primary: `#1B365D`
+- background: `#F4F1EA`
+- text: `#1A1A1A`
+- accent: `#C45C26`
+- success: `#2F6F4E`
+- danger: `#B42318`
+
+## Local DB
+
+- Name: `gradix` (vanjski MySQL; `DATABASE_URL` u `backend/.env`)
+- Docker: samo MinIO. MySQL nije u compose-u.
+- `backend/prisma.config.ts` (Prisma 7)
+- Never commit `.env`

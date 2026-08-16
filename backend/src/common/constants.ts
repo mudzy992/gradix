@@ -1,0 +1,13 @@
+export const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
+export const EMPLOYEE_CODE_PATTERN = /^[A-Z0-9-]{1,20}$/;
+export const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
+export const MIN_PASSWORD_LENGTH = 10;
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_LIMIT = 20;
+export const MAX_LIMIT = 100;
+export const ACCESS_TTL = '15m';
+export const REFRESH_DAYS = 30;
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const ARGON2_MEMORY_KIB = 19456;
+export const ARGON2_TIME_COST = 2;
+export const ARGON2_PARALLELISM = 1;

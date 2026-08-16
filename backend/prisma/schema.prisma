@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  SUPER_ADMIN
+  ADMIN
+  PROJECT_MANAGER
+  SITE_SUPERVISOR
+  MACHINE_OPERATOR
+  DRIVER
+  WORKER
+  MECHANIC
+  ACCOUNTANT
+}
+
+enum SettingScope {
+  PUBLIC
+  PRIVATE
+  SECRET
+}
+
+enum NotificationType {
+  TASK_DISPATCHED
+  TASK_COMPLETED
+  TIMER_FORCE_CLOSED
+  TIMER_AUTO_CLOSED
+  GEOFENCE_ENTER
+  GEOFENCE_EXIT
+  DOCUMENT_EXPIRING
+  SERVICE_DUE
+  FUEL_ANOMALY
+  HSE_CREATED
+  AMENDMENT_CREATED
+  DIARY_CONFLICT
+  PAYROLL_REJECTED
+}
+
+enum AuditAction {
+  USER_CREATED
+  USER_UPDATED
+  USER_DEACTIVATED
+  USER_ROLES_CHANGED
+  PASSWORD_CHANGED
+  PASSWORD_RESET
+  SETTINGS_UPDATED
+  COMPANY_CREATED
+  COMPANY_UPDATED
+  COMPANY_DEACTIVATED
+  PROJECT_CREATED
+  PROJECT_STATUS
+  TASK_COMPLETED
+  TASK_CANCELLED
+  TIMER_AUTO_CLOSED
+  TIMER_FORCE_CLOSED
+  TIMER_AMENDED
+  TRIP_AMENDED
+  FUEL_AMENDED
+  MACHINE_HOURS_CORRECTED
+  PAYROLL_APPROVED
+  PAYROLL_REJECTED
+  COST_ENTRY_CREATED
+  STOCK_MOVEMENT
+}
+
+enum Locale {
+  bs
+  en
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  legalName String?
+  address   String?
+  city      String?
+  country   String   @default("BA")
+  taxId     String?
+  phone     String?
+  email     String?
+  logoPath  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  settings      Setting[]
+  notifications Notification[]
+  auditEvents   AuditEvent[]
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  firstName          String
+  lastName           String
+  employeeCode       String?
+  email              String    @unique
+  phone              String?   @unique
+  passwordHash       String
+  companyId          String?
+  hourlyRate         Decimal?  @db.Decimal(12, 2)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  locale             Locale    @default(bs)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  company       Company?             @relation(fields: [companyId], references: [id])
+  roles         UserRoleAssignment[]
+  refreshTokens RefreshToken[]
+  devices       Device[]
+  notifications Notification[]
+  auditEvents   AuditEvent[]
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId])
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Device {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceId   String
+  fcmToken   String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+}
+
+model Setting {
+  id        String       @id @default(cuid())
+  companyId String
+  key       String
+  value     Json
+  scope     SettingScope
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, key])
+  @@index([companyId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  companyId String
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  data      Json
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([userId, isRead])
+}
+
+model AuditEvent {
+  id         String      @id @default(cuid())
+  companyId  String?
+  actorId    String
+  action     AuditAction
+  entityType String
+  entityId   String
+  payload    Json
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  company    Company?    @relation(fields: [companyId], references: [id])
+  actor      User        @relation(fields: [actorId], references: [id])
+
+  @@index([companyId])
+  @@index([actorId])
+}

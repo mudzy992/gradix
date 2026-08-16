@@ -1,0 +1,187 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../../generated/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { AuthTokensService } from '../auth/auth-tokens.service';
+import { AuthUser } from '../../common/types/auth-user';
+import { CreateUserDto, PatchUserDto } from './users.dto';
+import { AppError } from '../../common/errors/app-error';
+import { ERROR_CODES } from '../../common/errors/error-codes';
+import { createTemporaryPassword, hashPassword } from '../../common/utils/password';
+import { normalizePhone } from '../../common/utils/phone';
+import { listResult, parsePagination } from '../../common/utils/pagination';
+import { serializeUser } from './serialize-user';
+import { assertRoleChange } from './role-escalation';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import {
+  assertEmployeeCode,
+  assertName,
+  assertPayrollWrite,
+  findScopedUser,
+  requireCompany,
+  throwUnique,
+} from './users-helpers';
+
+@Injectable()
+export class UsersService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly tokens: AuthTokensService,
+  ) {}
+
+  async list(actor: AuthUser, query: PaginationQueryDto) {
+    const companyId = requireCompany(actor);
+    const { page, limit, skip } = parsePagination(query.page, query.limit);
+    const where: Prisma.UserWhereInput = {
+      companyId,
+      ...(query.q
+        ? {
+            OR: [
+              { firstName: { contains: query.q } },
+              { lastName: { contains: query.q } },
+              { email: { contains: query.q } },
+              { employeeCode: { contains: query.q } },
+            ],
+          }
+        : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        include: { roles: true },
+        skip,
+        take: limit,
+        orderBy: { createdAt: query.order ?? 'desc' },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return listResult(rows.map((row) => serializeUser(row, actor)), total, page, limit);
+  }
+
+  async getById(actor: AuthUser, id: string) {
+    return serializeUser(await findScopedUser(this.prisma, actor, id), actor);
+  }
+
+  async create(actor: AuthUser, dto: CreateUserDto) {
+    const companyId = requireCompany(actor);
+    assertName(dto.firstName);
+    assertName(dto.lastName);
+    await assertRoleChange({ actor, targetUserId: '', nextRoles: dto.roles, prisma: this.prisma });
+    assertEmployeeCode(dto.employeeCode);
+    if (dto.hourlyRate !== undefined) {
+      assertPayrollWrite(actor);
+    }
+    const temporaryPassword = createTemporaryPassword();
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: dto.email.toLowerCase(),
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phone: normalizePhone(dto.phone),
+          employeeCode: dto.employeeCode || null,
+          companyId,
+          hourlyRate: dto.hourlyRate ?? null,
+          locale: dto.locale === 'en' ? 'en' : 'bs',
+          mustChangePassword: true,
+          passwordHash: await hashPassword(temporaryPassword),
+          roles: { create: dto.roles.map((role) => ({ role })) },
+        },
+        include: { roles: true },
+      });
+      await this.audit.write({
+        companyId,
+        actorId: actor.id,
+        action: 'USER_CREATED',
+        entityType: 'User',
+        entityId: user.id,
+        payload: { email: user.email, roles: dto.roles },
+      });
+      return { ...serializeUser(user, actor), temporaryPassword };
+    } catch (error) {
+      throwUnique(error);
+    }
+  }
+
+  async patch(actor: AuthUser, id: string, dto: PatchUserDto) {
+    const existing = await findScopedUser(this.prisma, actor, id);
+    if (dto.roles) {
+      await assertRoleChange({ actor, targetUserId: id, nextRoles: dto.roles, prisma: this.prisma });
+    }
+    if (dto.hourlyRate !== undefined) {
+      assertPayrollWrite(actor);
+    }
+    assertName(dto.firstName);
+    assertName(dto.lastName);
+    assertEmployeeCode(dto.employeeCode);
+    try {
+      const user = await this.prisma.$transaction(async (tx) => {
+        if (dto.roles) {
+          await tx.userRoleAssignment.deleteMany({ where: { userId: id } });
+          await tx.userRoleAssignment.createMany({
+            data: dto.roles.map((role) => ({ userId: id, role })),
+          });
+        }
+        return tx.user.update({
+          where: { id },
+          data: {
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            phone: dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
+            employeeCode: dto.employeeCode === undefined ? undefined : dto.employeeCode || null,
+            isActive: dto.isActive,
+            hourlyRate: dto.hourlyRate,
+            locale: dto.locale,
+          },
+          include: { roles: true },
+        });
+      });
+      if (dto.isActive === false && existing.isActive) {
+        await this.tokens.revokeAll(id);
+        await this.audit.write({
+          companyId: actor.tenantCompanyId,
+          actorId: actor.id,
+          action: 'USER_DEACTIVATED',
+          entityType: 'User',
+          entityId: id,
+          payload: {},
+        });
+      } else {
+        await this.audit.write({
+          companyId: actor.tenantCompanyId,
+          actorId: actor.id,
+          action: dto.roles ? 'USER_ROLES_CHANGED' : 'USER_UPDATED',
+          entityType: 'User',
+          entityId: id,
+          payload: { fields: Object.keys(dto) },
+        });
+      }
+      return serializeUser(user, actor);
+    } catch (error) {
+      throwUnique(error);
+    }
+  }
+
+  async resetPassword(actor: AuthUser, id: string) {
+    if (actor.id === id) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, 'Use change-password for self', 403);
+    }
+    await findScopedUser(this.prisma, actor, id);
+    const temporaryPassword = createTemporaryPassword();
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash: await hashPassword(temporaryPassword), mustChangePassword: true },
+    });
+    await this.tokens.revokeAll(id);
+    await this.audit.write({
+      companyId: actor.tenantCompanyId,
+      actorId: actor.id,
+      action: 'PASSWORD_RESET',
+      entityType: 'User',
+      entityId: id,
+      payload: {},
+    });
+    return { temporaryPassword };
+  }
+}
