@@ -36,7 +36,7 @@ Nova sesija: [PLAN_FREEZE.md](./PLAN_FREEZE.md), ovaj fajl, [DECISIONS.md](../..
 
 ## Otvoreno / rizici
 
-- e2e **nije pokrenut** (file testovi trebaju MinIO). Auth/users e2e mogu protiv vanjskog MySQL-a kad je seed tu.
+- Git: lokalni `main` commit `5bf484a` (`feat(backend): add phase 1 foundation`). Remote nije pushan — `gh` nije ulogovan (`gh auth login`).
 - PLATFORM_ADMIN seed lozinka (`SEED_PASSWORD`); 2FA opciono Faza 7.
 - Deploy domen nije biran.
 - Gap vs plan Faze 1: compose bez MySQL — [03_gap_analysis.md](../../docs/03_gap_analysis.md).
