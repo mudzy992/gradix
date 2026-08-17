@@ -35,4 +35,4 @@ Incident/HSE **nije** offline. Trip/Fuel nakon sync nisu u mutate queue (Amendme
 
 ## Izvori u kodu
 
-- (Faza 6) `mobile/` sync engine + `backend/src/modules/sync/`
+- `mobile/sync/` + `backend/src/modules/ops/sync*.ts`

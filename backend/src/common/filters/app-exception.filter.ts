@@ -10,7 +10,11 @@ export class AppExceptionFilter implements ExceptionFilter {
     if (exception instanceof AppError) {
       response.status(exception.status).json({
         success: false,
-        error: { code: exception.code, message: exception.message },
+        error: {
+          code: exception.code,
+          message: exception.message,
+          ...(exception.details ? { details: exception.details } : {}),
+        },
       });
       return;
     }

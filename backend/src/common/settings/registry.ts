@@ -89,6 +89,15 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     scope: 'PRIVATE',
     type: 'number',
     defaultValue: 200,
+    min: 10,
+    max: 5000,
     description: 'Default geofence radius in meters',
+  },
+  {
+    key: 'erp.allowNegativeStock',
+    scope: 'PRIVATE',
+    type: 'boolean',
+    defaultValue: false,
+    description: 'Allow stock movements that take a warehouse below zero',
   },
 ];

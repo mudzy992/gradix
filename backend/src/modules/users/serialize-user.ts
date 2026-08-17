@@ -31,7 +31,7 @@ export function serializeUser(
     email: user.email,
     phone: user.phone,
     companyId: user.companyId,
-    hourlyRate: canReadRate ? (user.hourlyRate?.toString() ?? null) : undefined,
+    hourlyRate: canReadRate ? (user.hourlyRate?.toFixed(2) ?? null) : undefined,
     isActive: user.isActive,
     mustChangePassword: user.mustChangePassword,
     locale: user.locale,

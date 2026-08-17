@@ -1,5 +1,10 @@
 # Changelog — spend-progress
 
+## 2026-08-17 (Faza 10 kod)
+
+- **Šta:** `currentSpend` = fuel/service osim kad postoji CostEntry tog sourceId; tad samo CostEntry. MANUAL/PAYROLL +=.
+- **Zašto:** Faza 10 izvršena.
+
 ## 2026-08-15 (Faza 2 lock)
 
 - **Šta:** Recalc i na cancel; nema dashboard u Fazi 2.

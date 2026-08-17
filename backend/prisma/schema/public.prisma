@@ -1,0 +1,19 @@
+enum PublicAssetKind {
+  LOGO
+  COVER
+}
+
+model PublicAsset {
+  id        String          @id @default(cuid())
+  companyId String
+  path      String
+  mime      String
+  kind      PublicAssetKind
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  company   Company         @relation(fields: [companyId], references: [id])
+  logoFor   Company?        @relation("CompanyLogo")
+  coverFor  Project[]
+
+  @@index([companyId, kind])
+}

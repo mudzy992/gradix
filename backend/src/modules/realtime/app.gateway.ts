@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from './realtime.service';
+import { joinScopedProjectRooms } from './join-project-rooms';
 
 @WebSocketGateway({ cors: { origin: true } })
 @Injectable()
@@ -48,6 +49,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection {
       if (user.companyId) {
         await client.join(`company:${user.companyId}`);
       }
+      await joinScopedProjectRooms(client, this.prisma, user);
       client.on('join', () => undefined);
     } catch {
       this.logger.debug('socket auth failed');

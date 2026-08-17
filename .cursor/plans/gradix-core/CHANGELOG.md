@@ -1,5 +1,90 @@
 # Changelog — Gradix core plan
 
+## 2026-08-17 (Faza 11 kod)
+
+- **Šta:** GpsDevice 1/mašina; `POST /api/iot/gps` + `X-Device-Key`; rotate; 501 stub obrisan; mapa badge PHONE|IOT; e2e iot 3/3. Nema CAN/tachograph/više trackera.
+- **Zašto:** Owner: izvrši Fazu 11.
+
+## 2026-08-17 (Faza 10 kod)
+
+- **Šta:** ERP-lite: Partner, CostEntry (unique company+source+sourceId), Warehouse SITE|YARD|CISTERN, StockMovement. `currentSpend` = fuel/service dok nema CostEntry tog sourceId, tad samo CostEntry; MANUAL uvijek +=. `from-payroll` idempotent po mjesecu TZ. Fuel ne skida lager; `POST /fuel/:id/apply-stock` idempotent na CISTERN. `erp.allowNegativeStock` default false. Web `/erp`. E2e 3/3. Nema IoT/GL/PDV.
+- **Zašto:** Owner: izvrši Fazu 10.
+
+## 2026-08-16 (Faza 9 kod)
+
+- **Šta:** Payroll API + web `/payroll`. Novi timer insert `PENDING` (DB default ostaje APPROVED). SS/PM scoped, ne sebe (`PAYROLL_SELF_APPROVE`); ADMIN sebe OK. Mjesec u `app.timezone`; duration bez pause; PENDING/REJECTED nisu u zbroju; export xlsx. Satnica ostaje `PATCH /users/:id`. E2e payroll 3/3. Nema ERP/IoT/doprinosa.
+- **Zašto:** Owner: izvrši Fazu 9.
+
+## 2026-08-16 (Handoff → Faza 9)
+
+- **Šta:** `HANDOFF.md` za novu sesiju: Faza 1–8 zatvorene; kickoff Faze 9 (payroll). Šta već postoji (`hourlyRate`, `approvalStatus` default APPROVED, jedini `timerSession.create` u `timer-create.ts`, TZ helperi, xlsx u reportima, email stub) vs što treba uraditi. Ne dirati Prisma default; PENDING u insertu. Prompt za copy-paste.
+- **Zašto:** Owner: uradi handoff i pripremi Fazu 9.
+
+## 2026-08-16 (Faza 8 kod)
+
+- **Šta:** Javni `/p/:slug` one-page + `GET /api/public/:slug|/projects|/assets/:id`. DTO firme bez taxId; DTO projekta bez budget/spend/GPS; samo `isPublic=true`. `PublicAsset` stream po id. `PATCH /projects/:id/public` + `POST /api/public/assets` (`public.write`, WORKER 403). Throttle 60/min/IP. Isti 404 za tuđi/nepostojeći/inactive slug. Panel `/` ostaje `/login`. E2e public 3/3. Nema payroll/ERP/IoT.
+- **Zašto:** Owner: izvrši Fazu 8.
+
+## 2026-08-16 (Handoff → Faza 8)
+
+- **Šta:** `HANDOFF.md` za novu sesiju: Faza 1–7 zatvorene; kickoff Faze 8 (public `/p/:slug`, DTO whitelist, PublicAsset stream, `/` = `/login`). Šta već postoji (`isPublic`, `public.*` settings, `@Public()`, `public.write`) vs što treba uraditi. Prompt za copy-paste.
+- **Zašto:** Owner: napravi handoff za Fazu 8.
+
+## 2026-08-16 (Faza 7 kod)
+
+- **Šta:** Tender convert WON (ista firma, prilozi ostaju); IN_SERVICE + force-close timer + 409 MACHINE_IN_SERVICE; docs warn 30/15/5 bez bloka; fiksni reporti + diary PDF; CI lint+test+build + Playwright login, nema deploy. Seed MECHANIC + ACCOUNTANT. `features.email=false` ⇒ 0 SMTP. 7.5 TOTP nije. E2e polish 5/5.
+- **Zašto:** Owner: izvrši Fazu 7.
+
+## 2026-08-16 (Handoff → Faza 7)
+
+- **Šta:** `HANDOFF.md` za novu sesiju: Faza 1–6 zatvorene; kickoff Faze 7 (tender convert WON, IN_SERVICE+force-close, docs warn, fiksni reporti, CI bez deploy). Šta već postoji (IN_SERVICE enum, notify types, pdfUrl kolona) vs što treba uraditi. Prompt za copy-paste.
+- **Zašto:** Owner: napravi handoff za Fazu 7.
+
+## 2026-08-16 (Faza 6 kod)
+
+- **Šta:** Expo `mobile/` + `POST /api/sync/push|pull` + `GET /api/sync/catalog`. Online startedAt=server; offline push klijent startedAt s boundovima. HSE online-only. Katalog TTL 24h. E2e sync 3/3. 6.5 bio/FCM/voice nije. Nema IN_SERVICE / tender / payroll.
+- **Zašto:** Owner: izvrši Fazu 6.
+
+## 2026-08-16 (Handoff → Faza 6)
+
+- **Šta:** `HANDOFF.md` za novu sesiju: Faza 1–5 zatvorene; kickoff Faze 6 (Expo + sync push/pull/catalog). Diary/incidents API već postoje — ne ponavljati 6.0/6.0b na backendu. Prompt za copy-paste.
+- **Zašto:** Owner: napravi handoff za sljedeću sesiju.
+
+## 2026-08-16 (Faza 5 kod)
+
+- **Šta:** Web ops UI + diary/dashboard/HSE API. `GET /dashboard` po roli; `DiaryEntry` unique dan/TZ; `DIARY_CONFLICT` + resolve A/B/MERGE; incidents lista + SS Sheet. Nav projects/tasks/fleet/map/logistics/diary/hse. Leaflet OSM. Bell deep link. Gantt planned-only. WORKER nema `/projects`. E2e 38/38. Nema mobile/ / IN_SERVICE / 5.2b drag-drop.
+- **Zašto:** Owner: izvrši Fazu 5.
+
+## 2026-08-16 (Handoff → Faza 5)
+
+- **Šta:** `HANDOFF.md` kickoff Faze 5: dashboard/diary/HSE API, ukidanje `/projects` redirecta, Leaflet, bell deep link, Sheet `< md`. Prompt za novu sesiju.
+- **Zašto:** Owner: handoff + prompt prije Faze 5 u novoj sesiji.
+
+## 2026-08-16 (Faza 4 kod)
+
+- **Šta:** Fleet/logistics API: Machine/Trip/Fuel/UserLocation/GpsRecord, picker, presence, geofence info-only, IoT 501, machineId FK + mutex, TRIP/FUEL amendments. E2e 34/34. Nema fleet UI / Leaflet / IN_SERVICE.
+- **Zašto:** Owner: izvrši Fazu 4.
+
+## 2026-08-16 (Handoff → Faza 4)
+
+- **Šta:** `HANDOFF.md` + canvas status: Faza 1–3 zatvorene; kickoff Faze 4 (fleet API, bez UI). Prompt za novu sesiju.
+- **Zašto:** Owner: update canvas + handoff prije Faze 4 u novoj sesiji.
+
+## 2026-08-16 (Faza 3 kod)
+
+- **Šta:** Vite SPA `frontend/`: login, layout Sheet, settings, users, companies, bell, Socket.IO. Access u memoriji. Light-only. Backend: `GET /company`, users `?role=`, `/me.company` uz platform header, geofence min/max u registry.
+- **Zašto:** Owner: izvrši Fazu 3.
+
+## 2026-08-16 (Handoff → Faza 3)
+
+- **Šta:** `HANDOFF.md` ažuriran za novu sesiju: Faza 1+2 zatvorene, kickoff Faze 3 (Vite shell, bez ops UI).
+- **Zašto:** Owner: handoff urađenog + priprema sljedeće sesije.
+
+## 2026-08-16 (Faza 2 kod + Faza 1 e2e)
+
+- **Šta:** Faza 2 API (projects/tasks/timer/quantities/TIMER amendments) + migracija + seed PM/SS/WORKER. Faza 1 e2e zatvoren (Swagger prefix, email unique meta, MinIO test stub, Prisma CJS). E2e 29/29.
+- **Zašto:** Owner: checklist + kompletiraj Fazu 1 pa pređi na Fazu 2.
+
 ## 2026-08-16 (Faza 1 kod + vanjski MySQL)
 
 - **Šta:** Faza 1 implementirana (`backend/`). Compose samo MinIO. MySQL vanjski `DATABASE_URL`. Migracija + seed applied na `gradix`.

@@ -64,8 +64,8 @@ export class AuthController {
   @Public()
   @HttpCode(200)
   @Post('forgot')
-  forgot(@Body() _dto: ForgotDto) {
-    return this.auth.forgot();
+  forgot(@Body() dto: ForgotDto) {
+    return this.auth.forgot(dto.email);
   }
 
   @Public()

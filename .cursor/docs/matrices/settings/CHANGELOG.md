@@ -1,5 +1,15 @@
 # Changelog — settings
 
+## 2026-08-17 (Faza 10 kod)
+
+- **Šta:** Registry `erp.allowNegativeStock` boolean PRIVATE default false.
+- **Zašto:** Faza 10 izvršena.
+
+## 2026-08-16 (Faza 3 kod)
+
+- **Šta:** Registry `geofence.defaultRadiusM` min 10 / max 5000 (već u freeze + constants).
+- **Zašto:** Settings UI šalje number; coerce treba iste granice.
+
 ## 2026-08-15 (Faza 3 lock)
 
 - **Šta:** UI locked; firma preko PATCH /company; secret prazan PUT ne briše.

@@ -4,6 +4,8 @@ import { PrismaClient } from '../generated/client';
 import { hashPassword } from '../src/common/utils/password';
 import { defaultSettingRows } from '../src/modules/companies/default-settings';
 import { MIN_PASSWORD_LENGTH } from '../src/common/constants';
+import { seedDemoOps } from './seed-demo-ops';
+import { seedDemoFleet } from './seed-demo-fleet';
 
 function createPrisma(): PrismaClient {
   const url = process.env.DATABASE_URL;
@@ -78,6 +80,31 @@ async function seed(): Promise<void> {
   await prisma.userRoleAssignment.create({
     data: { userId: admin.id, role: 'SUPER_ADMIN' },
   });
+  await seedDemoOps(prisma, { companyId: company.id, passwordHash });
+  await prisma.setting.update({
+    where: { companyId_key: { companyId: company.id, key: 'public.companyName' } },
+    data: { value: 'Demo Gradnja' },
+  });
+  await prisma.setting.update({
+    where: { companyId_key: { companyId: company.id, key: 'public.tagline' } },
+    data: { value: 'Gradimo pouzdano.' },
+  });
+  await prisma.setting.update({
+    where: { companyId_key: { companyId: company.id, key: 'public.contact' } },
+    data: { value: 'info@demo.local' },
+  });
+  const demo = await prisma.project.findFirst({ where: { companyId: company.id, code: 'DEMO-1' } });
+  if (demo) {
+    await prisma.project.update({ where: { id: demo.id }, data: { isPublic: true } });
+  }
+  const driver = await prisma.user.findUnique({ where: { email: 'driver@gradix.local' } });
+  if (demo && driver) {
+    await seedDemoFleet(prisma, {
+      companyId: company.id,
+      projectId: demo.id,
+      driverId: driver.id,
+    });
+  }
   await prisma.$disconnect();
 }
 

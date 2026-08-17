@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated"
+  provider     = "prisma-client"
+  output       = "../../generated"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -84,16 +85,54 @@ model Company {
   city      String?
   country   String   @default("BA")
   taxId     String?
-  phone     String?
-  email     String?
-  logoPath  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  phone       String?
+  email       String?
+  logoPath    String?
+  logoAssetId String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  users         User[]
-  settings      Setting[]
-  notifications Notification[]
-  auditEvents   AuditEvent[]
+  users              User[]
+  settings           Setting[]
+  notifications      Notification[]
+  auditEvents        AuditEvent[]
+  projects           Project[]
+  projectPhases      ProjectPhase[]
+  projectAssignments ProjectAssignment[]
+  projectDocuments   ProjectDocument[]
+  tasks              Task[]
+  taskAssignments    TaskAssignment[]
+  taskAttachments    TaskAttachment[]
+  taskDependencies   TaskDependency[]
+  timerSessions      TimerSession[]
+  quantityItems      QuantityItem[]
+  amendments         Amendment[]
+  machines           Machine[]
+  machineAssignments MachineAssignment[]
+  materials          Material[]
+  depots             Depot[]
+  trips              Trip[]
+  fuelEntries        FuelEntry[]
+  userLocations      UserLocation[]
+  gpsRecords         GpsRecord[]
+  diaryEntries       DiaryEntry[]
+  diaryPhotos        DiaryPhoto[]
+  incidents          Incident[]
+  incidentPhotos     IncidentPhoto[]
+  tenders            Tender[]
+  tenderAttachments  TenderAttachment[]
+  serviceTemplates   ServiceTemplate[]
+  serviceRecords     ServiceRecord[]
+  companyDocuments   CompanyDocument[]
+  workerDocuments    WorkerDocument[]
+  machineDocuments   MachineDocument[]
+  publicAssets       PublicAsset[]
+  partners           Partner[]
+  costEntries        CostEntry[]
+  warehouses         Warehouse[]
+  stockMovements     StockMovement[]
+  gpsDevices         GpsDevice[]
+  logoAsset          PublicAsset?        @relation("CompanyLogo", fields: [logoAssetId], references: [id], onDelete: SetNull)
 }
 
 model User {
@@ -112,12 +151,22 @@ model User {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  company       Company?             @relation(fields: [companyId], references: [id])
-  roles         UserRoleAssignment[]
-  refreshTokens RefreshToken[]
-  devices       Device[]
-  notifications Notification[]
-  auditEvents   AuditEvent[]
+  company            Company?             @relation(fields: [companyId], references: [id])
+  roles              UserRoleAssignment[]
+  refreshTokens      RefreshToken[]
+  devices            Device[]
+  notifications      Notification[]
+  auditEvents        AuditEvent[]
+  projectAssignments ProjectAssignment[]
+  taskAssignments    TaskAssignment[]
+  timerSessions      TimerSession[]
+  amendments         Amendment[]
+  machineAssignments MachineAssignment[]
+  trips              Trip[]
+  fuelEntries        FuelEntry[]
+  userLocations      UserLocation[]
+  incidents          Incident[]
+  workerDocuments    WorkerDocument[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])

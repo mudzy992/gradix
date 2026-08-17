@@ -1,0 +1,134 @@
+enum TenderStatus {
+  DRAFT
+  SUBMITTED
+  WON
+  LOST
+  WITHDRAWN
+}
+
+enum ServiceRecordStatus {
+  PLANNED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Tender {
+  id                  String       @id @default(cuid())
+  companyId           String
+  title               String
+  client              String
+  submittedValue      Decimal?     @db.Decimal(12, 2)
+  submittedAt         DateTime?
+  status              TenderStatus @default(DRAFT)
+  notes               String?      @db.Text
+  convertedProjectId  String?      @unique
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  company             Company      @relation(fields: [companyId], references: [id])
+  convertedProject    Project?     @relation(fields: [convertedProjectId], references: [id])
+  attachments         TenderAttachment[]
+
+  @@index([companyId, status])
+}
+
+model TenderAttachment {
+  id        String   @id @default(cuid())
+  companyId String
+  tenderId  String
+  path      String
+  fileName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id])
+  tender    Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  @@index([tenderId])
+}
+
+model ServiceTemplate {
+  id            String      @id @default(cuid())
+  companyId     String
+  machineType   MachineType
+  intervalHours Int
+  title         String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  company       Company     @relation(fields: [companyId], references: [id])
+  records       ServiceRecord[]
+
+  @@index([companyId, machineType])
+}
+
+model ServiceRecord {
+  id                     String              @id @default(cuid())
+  companyId              String
+  machineId              String
+  projectId              String?
+  templateId             String?
+  status                 ServiceRecordStatus @default(PLANNED)
+  scheduledAt            DateTime?
+  startedAt              DateTime?
+  completedAt            DateTime?
+  totalCost              Decimal?            @db.Decimal(12, 2)
+  note                   String?             @db.Text
+  previousMachineStatus  MachineStatus?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  company                Company             @relation(fields: [companyId], references: [id])
+  machine                Machine             @relation(fields: [machineId], references: [id])
+  project                Project?            @relation(fields: [projectId], references: [id])
+  template               ServiceTemplate?    @relation(fields: [templateId], references: [id])
+
+  @@index([companyId, status])
+  @@index([machineId])
+}
+
+model CompanyDocument {
+  id        String    @id @default(cuid())
+  companyId String
+  type      String
+  filePath  String
+  expiresAt DateTime?
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, expiresAt])
+}
+
+model WorkerDocument {
+  id        String    @id @default(cuid())
+  companyId String
+  userId    String
+  type      String
+  filePath  String
+  expiresAt DateTime?
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([companyId, expiresAt])
+  @@index([userId])
+}
+
+model MachineDocument {
+  id        String    @id @default(cuid())
+  companyId String
+  machineId String
+  type      String
+  filePath  String
+  expiresAt DateTime?
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+  machine   Machine   @relation(fields: [machineId], references: [id])
+
+  @@index([companyId, expiresAt])
+  @@index([machineId])
+}

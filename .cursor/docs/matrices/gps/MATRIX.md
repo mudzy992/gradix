@@ -23,8 +23,10 @@ Info-only (ime, lastSeenAt, ne tačne koordinate u listi — opciono na mapi 5.4
 ## IoT (Faza 11)
 
 - `GpsDevice`: machineId unique ( **1 device / mašina** → 409 `IOT_DEVICE_EXISTS` )
-- apiKey hash, isActive; plaintext key jednom na create
-- Ingest: `POST /api/iot/gps` header `X-Device-Key` (Faza 11). Phone ostaje fallback. `source: PHONE | IOT`.
+- apiKey Argon2id + lookup hash; isActive; plaintext key jednom na create/rotate
+- Ingest: `POST /api/iot/gps` header `X-Device-Key`. Loš/missing → 401 `AUTH_INVALID_CREDENTIALS`. Phone ostaje fallback. `source: PHONE | IOT`.
+- Machine `lastGpsSource` PHONE|IOT za mapu. GET devices/machines **nema** key/hash.
+- DECOMMISSIONED ili `isActive=false` → 403 `FORBIDDEN`. Decommission postavlja `isActive=false`.
 
 ## Retention
 
@@ -34,6 +36,7 @@ Info-only (ime, lastSeenAt, ne tačne koordinate u listi — opciono na mapi 5.4
 ## Throttle
 
 - Socket `machine:location` max 1 / 5s / mašina
+- HTTP ingest IoT: 1 / 5s / mašina (`lastGpsAt`)
 - UserLocation max 1 / 15s / user
 
 ## Izvori

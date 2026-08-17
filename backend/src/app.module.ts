@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OptionalThrottlerGuard } from './common/guards/optional-throttler.guard';
 import { PasswordChangeGuard } from './common/guards/password-change.guard';
@@ -17,6 +18,12 @@ import { CompaniesModule } from './modules/companies/companies.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FilesModule } from './modules/files/files.module';
+import { OpsModule } from './modules/ops/ops.module';
+import { MailModule } from './modules/mail/mail.module';
+import { PolishModule } from './modules/polish/polish.module';
+import { PublicModule } from './modules/public/public.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
+import { ErpModule } from './modules/erp/erp.module';
 
 @Module({
   imports: [
@@ -24,6 +31,7 @@ import { FilesModule } from './modules/files/files.module';
     ThrottlerModule.forRoot({
       throttlers: [{ name: 'default', ttl: 60000, limit: 120 }],
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuditModule,
     RealtimeModule,
@@ -34,6 +42,12 @@ import { FilesModule } from './modules/files/files.module';
     SettingsModule,
     NotificationsModule,
     FilesModule,
+    OpsModule,
+    MailModule,
+    PolishModule,
+    PublicModule,
+    PayrollModule,
+    ErpModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: OptionalThrottlerGuard },

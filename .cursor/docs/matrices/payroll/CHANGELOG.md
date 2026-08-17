@@ -1,5 +1,10 @@
 # Changelog — payroll
 
+## 2026-08-16 (Faza 9 kod)
+
+- **Šta:** Novi TimerSession insert `PENDING` (DB default ostaje APPROVED). TIMER amend APPROVED → PENDING.
+- **Zašto:** Faza 9 izvršena.
+
 ## 2026-08-15 (presence/reset)
 
 - **Šta:** Dan/mjesec po startedAt TZ; amend duration ulazi u zbroj.

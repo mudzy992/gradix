@@ -3,6 +3,7 @@ import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
+import { TimerForceCloseService } from '../ops/timer-force-close.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { CreateUserDto, PatchUserDto } from './users.dto';
 import { AppError } from '../../common/errors/app-error';
@@ -12,7 +13,7 @@ import { normalizePhone } from '../../common/utils/phone';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { serializeUser } from './serialize-user';
 import { assertRoleChange } from './role-escalation';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { UsersQueryDto } from './users.dto';
 import {
   assertEmployeeCode,
   assertName,
@@ -28,13 +29,15 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly tokens: AuthTokensService,
+    private readonly timers: TimerForceCloseService,
   ) {}
 
-  async list(actor: AuthUser, query: PaginationQueryDto) {
+  async list(actor: AuthUser, query: UsersQueryDto) {
     const companyId = requireCompany(actor);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
     const where: Prisma.UserWhereInput = {
       companyId,
+      ...(query.role ? { roles: { some: { role: query.role } } } : {}),
       ...(query.q
         ? {
             OR: [
@@ -138,6 +141,7 @@ export class UsersService {
         });
       });
       if (dto.isActive === false && existing.isActive) {
+        await this.timers.closeOpenForUser(id, actor.id);
         await this.tokens.revokeAll(id);
         await this.audit.write({
           companyId: actor.tenantCompanyId,

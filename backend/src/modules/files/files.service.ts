@@ -40,8 +40,25 @@ export class FilesService {
     return { path: objectPath, mime };
   }
 
+  async putGenerated(
+    companyId: string,
+    buffer: Buffer,
+    ext: string,
+    mime: string,
+  ): Promise<string> {
+    const objectPath = buildObjectPath(companyId, ext);
+    await this.minio.client.putObject(this.minio.bucket, objectPath, buffer, buffer.length, {
+      'Content-Type': mime,
+    });
+    return objectPath;
+  }
+
   async getObject(actor: AuthUser, rawPath: string) {
     const companyId = this.requireCompany(actor);
+    return this.streamPublic(companyId, rawPath);
+  }
+
+  async streamPublic(companyId: string, rawPath: string) {
     const objectPath = assertStoragePath(rawPath, companyId);
     try {
       const stream = await this.minio.client.getObject(this.minio.bucket, objectPath);

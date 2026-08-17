@@ -19,6 +19,9 @@ export class MinioService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    if (process.env.MINIO_SKIP === 'true') {
+      return;
+    }
     const exists = await this.client.bucketExists(this.bucket);
     if (!exists) {
       await this.client.makeBucket(this.bucket);

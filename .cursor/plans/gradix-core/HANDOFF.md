@@ -1,67 +1,46 @@
 # HANDOFF — Gradix
 
-Datum: 2026-08-16. Repo: `C:\Users\m.ceric\Documents\GitHub\gradix`.
+Datum: 2026-08-17. Repo: `C:\Users\m.ceric\Documents\GitHub\gradix`.
 
-Nova sesija: [PLAN_FREEZE.md](./PLAN_FREEZE.md), ovaj fajl, [DECISIONS.md](../../docs/DECISIONS.md), [01_phase-01-foundation.md](./01_phase-01-foundation.md), [02_phase-02-core-ops-api.md](./02_phase-02-core-ops-api.md).
+**Nova sesija čita redom:** [PLAN_FREEZE.md](./PLAN_FREEZE.md) → ovaj fajl → [CHECKLIST.md](./CHECKLIST.md).
+
+v1 plan 1–11 je **implementiran**. Nema Faze 12 u freeze-u.
 
 ## Šta je urađeno
 
-**Plan 1–11 LOCKED.** Kod: **samo Faza 1**. Nema `frontend/` ni `mobile/`. Faze 2–11 nisu implementirane.
+**Plan 1–11 LOCKED.** Kod: **Faza 1–11**. Implementacija **100%** (11/11), **100%** po segmentima (41/41).
+
+Canvas: `C:\Users\m.ceric\.cursor\projects\c-Users-m-ceric-Documents-GitHub-gradix\canvases\gradix-implementation-status.canvas.tsx`
 
 ### Infra
-- `docker-compose.yml` — **samo MinIO** (jedan bucket). MySQL nije u Dockeru.
-- `backend/.env` (nije u gitu) — vanjski MySQL `DATABASE_URL`, JWT, MinIO, `SEED_PASSWORD`.
-- `.env.example` / `backend/.env.example` — placeholder `mysql://USER:PASSWORD@HOST:3306/gradix`.
+- Compose: **samo MinIO**. MySQL vanjski (`DATABASE_URL`, baza `gradix`).
+- Prisma 7: `backend/prisma/schema/`. Zadnja migracija: `20260817140000_phase_11_iot`.
 
-### Backend (Nest 11 + Prisma 7)
-- `backend/prisma/schema.prisma` + `prisma.config.ts` + migracija `20260815120000_phase_01_foundation`
-- `backend/prisma/seed.ts` — Company `demo`; `platform@gradix.local` PLATFORM_ADMIN; `admin@gradix.local` SUPER_ADMIN; `mustChangePassword=false`; 11 settings
-- Moduli: `health`, `auth` (+ `/me`, FCM device), `users`, `companies` (+ `PATCH /company`), `settings`, `notifications`, `files`, `audit`, `realtime` (Socket.IO rooms `user:{id}` / `company:{id}`)
-- Common: envelope, `AppError` + `error.code`, RBAC katalog v1, tenant/JWT/password-change/permissions guards, pagination 20/100
-- E2E: `backend/test/*.e2e-spec.ts` (health, auth, users, tenant, files)
+### Faza 11 (IoT)
+- `GpsDevice` 1/mašina (`IOT_DEVICE_EXISTS`). Key Argon2id + sha256 lookup. Plaintext jednom na create/rotate.
+- `POST /api/iot/gps` + `X-Device-Key`. Loš key 401. DECOMMISSIONED / `isActive=false` → 403. Throttle 1/5s.
+- Phone GPS ostaje (`source=PHONE`). Mapa badge PHONE|IOT (`lastGpsSource`). Key nije u GET.
 
-### Seed u bazi (applied)
-- firma `demo` (Demo Gradnja, Sarajevo)
-- `platform@gradix.local` / `admin@gradix.local`
-- 11 settings keys
+### Seed (`SEED_PASSWORD`, `mustChangePassword=false`)
+`platform@` PLATFORM · `admin@` SUPER_ADMIN · `pm@` · `ss@` · `worker@` · `driver@` · `op@` · `mechanic@` · `accountant@`. Firma `demo` + `DEMO-1`. Dev: backend `:3000`, `cd frontend && npm run dev`.
 
-## Odluke + razlozi
-
-- MySQL je **vanjski** (`DATABASE_URL` u `backend/.env`). Docker samo MinIO. Owner override vs Faza 1 plan “MySQL u compose”.
-- Zarez u DB lozinci u URL-u ide kao `%2C`.
-- Magic-byte upload: lokalni `detect-mime.ts` (Nest CJS; bez ESM `file-type`).
-- Prisma 7: `prisma-client` generator → `backend/generated` (gitignore), adapter `@prisma/adapter-mariadb`.
-- Timer force-close na deaktivaciji = **no-op** dok nema `TimerSession` (Faza 2).
-- JWT access samo `{ sub }`; role iz DB.
+## Van freeze-a (ne raditi osim ako owner kaže)
+CAN bus, tachograph, više IoT uređaja po mašini, Redis geo, auto-deploy, TOTP, SMS, ERP GL/PDV, doprinosi.
 
 ## Otvoreno / rizici
 
-- Git: lokalni `main` commit `5bf484a` (`feat(backend): add phase 1 foundation`). Remote nije pushan — `gh` nije ulogovan (`gh auth login`).
-- PLATFORM_ADMIN seed lozinka (`SEED_PASSWORD`); 2FA opciono Faza 7.
-- Deploy domen nije biran.
-- Gap vs plan Faze 1: compose bez MySQL — [03_gap_analysis.md](../../docs/03_gap_analysis.md).
-
-## Next steps
-
-1. Nova sesija: prompt ispod. **Ne implementirati Fazu 2** dok owner ne kaže **izvrši Fazu 2**.
-2. Opciono prije Faze 2: `docker compose up -d` (MinIO) + `cd backend && npm run test:e2e`.
-3. Faza 2: [02_phase-02-core-ops-api.md](./02_phase-02-core-ops-api.md) — projects/phases/tasks/timer/quantities/TIMER amendment. Nema frontend, nema Machine/Trip.
+- Git: lokalni `main`; remote nije pushan.
+- Ne committati `backend/.env`.
 
 ## Test status
 
 | Šta | Rezultat |
 |---|---|
 | `npx nest build` | OK |
-| `npx prisma generate` | OK |
-| vanjski MySQL `gradix` | konekcija OK |
-| `prisma migrate deploy` | applied (`phase_01_foundation`) |
-| `prisma db seed` | OK (demo + 2 usera + 11 settings) |
-| `npm run test:e2e` | nije pokrenuto |
+| frontend `tsc -b` | OK |
+| e2e iot (Faza 11) | **3/3** |
+| e2e fleet (401 umjesto 501) | **5/5** |
 
-## Prompt za sljedeću sesiju
+## Next steps
 
-```
-Čitaj `.cursor/plans/gradix-core/PLAN_FREEZE.md` i `HANDOFF.md`. Svih 11 faza plan locked. Faza 1 kod + seed su na vanjskom MySQL (nije Docker). Bez faza 2–11 dok ne kažem „izvrši Fazu 2“.
-
-Ako kažem izvrši Fazu 2: radi po `02_phase-02-core-ops-api.md` + matrice project-status, task-status, timer, spend-progress, data-scope, quantities, amendments. machineId null do 4.1. Nema frontend/mobile.
-```
+Nema sljedeće v1 faze. Owner bira: commit/push, deploy, ili van-scope polish.

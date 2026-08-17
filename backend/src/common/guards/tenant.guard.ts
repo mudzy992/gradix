@@ -36,6 +36,12 @@ export class TenantGuard implements CanActivate {
       context.getClass(),
     ]);
     if (!isTenant) {
+      if (isPlatform && header) {
+        const company = await this.assertCompany(header);
+        user.tenantCompanyId = header;
+        user.company = { id: company.id, name: company.name, slug: company.slug };
+        return true;
+      }
       user.tenantCompanyId = user.companyId;
       return true;
     }
@@ -47,8 +53,9 @@ export class TenantGuard implements CanActivate {
           403,
         );
       }
-      await this.assertCompany(header);
+      const company = await this.assertCompany(header);
       user.tenantCompanyId = header;
+      user.company = { id: company.id, name: company.name, slug: company.slug };
       return true;
     }
     if (!user.companyId) {
@@ -65,10 +72,14 @@ export class TenantGuard implements CanActivate {
     return value ?? null;
   }
 
-  private async assertCompany(id: string): Promise<void> {
-    const company = await this.prisma.company.findUnique({ where: { id } });
+  private async assertCompany(id: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id },
+      select: { id: true, name: true, slug: true },
+    });
     if (!company) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Company not found', 404);
     }
+    return company;
   }
 }

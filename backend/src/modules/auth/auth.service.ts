@@ -8,6 +8,7 @@ import { mapAuthUser, toMeDto } from './map-auth-user';
 import { AuthUser } from '../../common/types/auth-user';
 import { ChangePasswordDto, FcmTokenDto, LoginDto, PatchMeDto } from './auth.dto';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../mail/email.service';
 
 const USER_INCLUDE = { roles: true, company: true } as const;
 
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly tokens: AuthTokensService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -99,7 +101,16 @@ export class AuthService {
     return { ok: true };
   }
 
-  forgot(): { ok: true } {
+  async forgot(email: string): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (user?.companyId) {
+      await this.email.trySend({
+        companyId: user.companyId,
+        to: user.email,
+        subject: 'Password reset',
+        text: 'A password reset was requested.',
+      });
+    }
     return { ok: true };
   }
 

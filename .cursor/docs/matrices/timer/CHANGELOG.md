@@ -1,5 +1,10 @@
 # Changelog — timer
 
+## 2026-08-16 (Faza 9 kod)
+
+- **Šta:** Novi session insert `approvalStatus=PENDING`. Close/force-close i dalje ne dira status.
+- **Zašto:** Faza 9 izvršena.
+
 ## 2026-08-15 (Faze 4–6 lock)
 
 - **Šta:** Offline push startedAt; machine mutex Faza 4; PENDING Faza 9.

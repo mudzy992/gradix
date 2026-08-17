@@ -1,0 +1,226 @@
+enum MachineType {
+  TRUCK
+  EXCAVATOR
+  LOADER
+  GRADER
+  ROLLER
+  PAVER
+  DUMPER
+  COMPRESSOR
+  OTHER
+}
+
+enum MachineStatus {
+  IDLE
+  ACTIVE
+  IN_SERVICE
+  DECOMMISSIONED
+}
+
+enum GpsSource {
+  PHONE
+  IOT
+}
+
+enum MaterialUnit {
+  M3
+  T
+  M
+  M2
+  PCS
+  H
+  L
+}
+
+model Machine {
+  id                  String        @id @default(cuid())
+  companyId           String
+  name                String
+  code                String?
+  type                MachineType
+  status              MachineStatus @default(IDLE)
+  currentWorkingHours Decimal       @default(0) @db.Decimal(12, 3)
+  lastLat             Decimal?      @db.Decimal(10, 7)
+  lastLng             Decimal?      @db.Decimal(10, 7)
+  lastGpsAt           DateTime?
+  lastGpsSource       GpsSource?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  company             Company       @relation(fields: [companyId], references: [id])
+  assignments         MachineAssignment[]
+  timers              TimerSession[]
+  trips               Trip[]
+  fuelEntries         FuelEntry[]
+  gpsRecords          GpsRecord[]
+  serviceRecords      ServiceRecord[]
+  documents           MachineDocument[]
+  gpsDevice           GpsDevice?
+
+  @@unique([companyId, code])
+  @@index([companyId, status])
+}
+
+model MachineAssignment {
+  id        String    @id @default(cuid())
+  companyId String
+  machineId String
+  projectId String
+  userId    String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+  machine   Machine   @relation(fields: [machineId], references: [id])
+  project   Project   @relation(fields: [projectId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([machineId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Material {
+  id        String       @id @default(cuid())
+  companyId String
+  name      String
+  unit      MaterialUnit
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  company   Company      @relation(fields: [companyId], references: [id])
+  trips     Trip[]
+  stockMovements StockMovement[]
+
+  @@index([companyId, isActive])
+}
+
+model Depot {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  qrToken   String   @unique
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company   Company  @relation(fields: [companyId], references: [id])
+  trips     Trip[]
+
+  @@index([companyId, isActive])
+}
+
+model Trip {
+  id              String    @id @default(cuid())
+  companyId       String
+  driverId        String
+  projectId       String
+  machineId       String
+  materialId      String
+  quantity        Decimal   @db.Decimal(12, 3)
+  originText      String
+  originLat       Decimal?  @db.Decimal(10, 7)
+  originLng       Decimal?  @db.Decimal(10, 7)
+  destDepotId     String?
+  destLat         Decimal?  @db.Decimal(10, 7)
+  destLng         Decimal?  @db.Decimal(10, 7)
+  weighTicketPath String?
+  weighQty        Decimal?  @db.Decimal(12, 3)
+  notes           String?   @db.Text
+  loadedAt        DateTime  @default(now())
+  unloadedAt      DateTime?
+  isSynced        Boolean   @default(true)
+  localId         String?
+  deviceId        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  company         Company   @relation(fields: [companyId], references: [id])
+  driver          User      @relation(fields: [driverId], references: [id])
+  project         Project   @relation(fields: [projectId], references: [id])
+  machine         Machine   @relation(fields: [machineId], references: [id])
+  material        Material  @relation(fields: [materialId], references: [id])
+  destDepot       Depot?    @relation(fields: [destDepotId], references: [id])
+
+  @@index([companyId, projectId])
+  @@index([driverId])
+  @@index([machineId])
+  @@unique([companyId, driverId, deviceId, localId])
+}
+
+model FuelEntry {
+  id         String   @id @default(cuid())
+  companyId  String
+  machineId  String
+  userId     String
+  projectId  String?
+  liters     Decimal  @db.Decimal(12, 3)
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  totalCost  Decimal  @db.Decimal(12, 2)
+  notes      String?  @db.Text
+  receiptPath String?
+  isSynced   Boolean  @default(true)
+  localId    String?
+  deviceId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  company    Company  @relation(fields: [companyId], references: [id])
+  machine    Machine  @relation(fields: [machineId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  project    Project? @relation(fields: [projectId], references: [id])
+  stockMovement StockMovement?
+
+  @@index([companyId, projectId])
+  @@index([machineId])
+  @@unique([companyId, userId, deviceId, localId])
+}
+
+model UserLocation {
+  id         String   @id @default(cuid())
+  companyId  String
+  userId     String
+  lat        Decimal  @db.Decimal(10, 7)
+  lng        Decimal  @db.Decimal(10, 7)
+  recordedAt DateTime @default(now())
+  accuracyM  Decimal? @db.Decimal(8, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  company    Company  @relation(fields: [companyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([companyId, userId, recordedAt])
+}
+
+model GpsRecord {
+  id         String    @id @default(cuid())
+  companyId  String
+  machineId  String
+  lat        Decimal   @db.Decimal(10, 7)
+  lng        Decimal   @db.Decimal(10, 7)
+  recordedAt DateTime  @default(now())
+  source     GpsSource @default(PHONE)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  company    Company   @relation(fields: [companyId], references: [id])
+  machine    Machine   @relation(fields: [machineId], references: [id])
+
+  @@index([machineId, recordedAt])
+  @@index([companyId])
+}
+
+model GpsDevice {
+  id         String    @id @default(cuid())
+  companyId  String
+  machineId  String    @unique
+  name       String
+  apiKeyHash String    @db.VarChar(255)
+  keyLookup  String    @unique
+  isActive   Boolean   @default(true)
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  company    Company   @relation(fields: [companyId], references: [id])
+  machine    Machine   @relation(fields: [machineId], references: [id])
+
+  @@index([companyId])
+}

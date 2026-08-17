@@ -1,90 +1,114 @@
-# Gradix — master checklist
+# Gradix — master checklist (implementacija)
+
+Ažurirano: 2026-08-17. Plan 1–11 **LOCKED**.
+
+**Ukupno implementacija: 100%** (11/11 faza). **Ponderisano (41 segment): 100%.** **Plan: 100%.**
+
+| Faza | Plan | Kod | Segmenti | % |
+|---|---|---|---|---|
+| 1 Foundation | LOCKED | done | 8/8 | 100% |
+| 2 Core ops API | LOCKED | done | 6/6 | 100% |
+| 3 Frontend shell | LOCKED | done | 7/7 | 100% |
+| 4 Fleet / logistics | LOCKED | done | 3/3 | 100% |
+| 5 Web ops | LOCKED | done | 4/4 | 100% |
+| 6 Mobile Expo | LOCKED | done | 4/4 | 100% |
+| 7 Tender/servis/docs/CI | LOCKED | done | 5/5 | 100% |
+| 8 Public site | LOCKED | done | 1/1 | 100% |
+| 9 Payroll | LOCKED | done | 1/1 | 100% |
+| 10 ERP-lite | LOCKED | done | 1/1 | 100% |
+| 11 IoT | LOCKED | done | 1/1 | 100% |
+
+Vizuelni prikaz: canvas pored chata.
 
 Dokumenti:
 
 - [x] Baseline + plan 1–11 + DECISIONS/DOMAIN
 - [x] Matrice uključujući amendments, hse; SMS izbačen
 - [x] **Planning freeze** — [PLAN_FREEZE.md](./PLAN_FREEZE.md)
-- [x] **Peglanje 2** — timer amend, ponoć/TZ, company inactive, reset lozinke, fuel receipt, presence, notify primaoci, offline TTL, tender prilozi
+- [x] **Peglanje 2**
+- [x] **Faze 1–11 plan LOCKED**
+- [x] **Faza 1 kod + e2e**
+- [x] **Faza 2 kod + e2e**
+- [x] **Faza 3 frontend shell**
+- [x] **Faza 4 fleet/logistics API + e2e**
+- [x] **Faza 5 web ops UI + diary/dashboard/HSE API**
+- [x] **Faza 6 mobile Expo + sync push/pull/catalog**
+- [x] **Faza 7 tender/servis/docs/reporti/CI**
+- [x] **Faza 8 public `/p/:slug`**
+- [x] **Faza 9 payroll**
+- [x] **Faza 10 ERP-lite**
+- [x] **Faza 11 IoT**
 
-- [x] **Faza 1 plan LOCKED** — [01_phase-01-foundation.md](./01_phase-01-foundation.md)
-- [x] **Faza 1 kod** — Nest API; vanjski MySQL migrate+seed OK; e2e nije pokrenut
-- [x] **Faza 2 plan LOCKED** — [02_phase-02-core-ops-api.md](./02_phase-02-core-ops-api.md)
-- [x] **Faza 3 plan LOCKED** — [03_phase-03-frontend-shell.md](./03_phase-03-frontend-shell.md)
-- [x] **Faze 4–11 plan LOCKED** — `04` … `11_phase-*.md`
+## Faza 1 — Foundation — 100%
 
-Kod se **ne** radi dok owner ne kaže „izvrši Fazu N“.
-
-## Faza 1 — Foundation
-
-- [x] 1.1 Docker, Nest, health, throttle login/refresh
-- [x] 1.2 Company (pravna polja + email), User (firstName/lastName, employeeCode, mustChangePassword, locale), roles, Device, Setting, Notification enum v1, AuditEvent, seed
-- [x] 1.3 Settings per company (nema features.sms; timer.maxOpenHours; geofence.defaultRadiusM)
-- [x] 1.4 Auth JWT sub-only, Argon2id min 10, temp lozinka jednom, force change, reset-password, refresh reuse revoke, logout/logout-all, E.164, email inactive zauzet, company inactive 401, X-Company-Id 400/403
-- [x] 1.5 Users + PermissionsGuard (cijeli katalog) + company scope; slug immutable; deaktivacija revoke (timer close Faza 2)
-- [x] 1.6 In-app + zatvoren type enum + Socket.IO server-side rooms
+- [x] 1.1 Nest, health, throttle (MySQL vanjski — owner override; Docker samo MinIO)
+- [x] 1.2 Company, User, roles, Device, Setting, Notification enum v1, AuditEvent, seed
+- [x] 1.3 Settings per company
+- [x] 1.4 Auth JWT sub-only, Argon2id, temp lozinka, force change, reset, refresh reuse
+- [x] 1.5 Users + PermissionsGuard + company scope
+- [x] 1.6 In-app + Socket.IO rooms
 - [x] 1.7 Upload path guard
-- [x] 1.8 Envelope `error.code`, paginacija 20/100, Swagger, tests cross-tenant + path traversal
+- [x] 1.8 Envelope, paginacija, Swagger `/api/docs`, e2e zelen
 
-## Faza 2 — Core ops API
+## Faza 2 — Core ops API — 100%
 
-- [ ] 2.1 Projects + phases + assignments + documents (scoped lista; WORKER 403; PM auto-assign; planned dates; locality)
-- [ ] 2.2 Tasks, dispatch (`assigneeIds`), attachments, FS dependencies; nema DELETE
-- [ ] 2.3 Timer: server startedAt, pause-close formula, mutex u migraciji, machineId null, auto-close 12h, deactivate hook, `GET /timer?projectId=`
-- [ ] 2.4 Socket `project:{id}` server-side join
-- [ ] 2.5 QuantityItem + TIMER amendment + progress recalc; nema `/dashboard`
-- [ ] Seed PM/SS/WORKER + acceptance iz faznog dokumenta
+- [x] 2.1 Projects + phases + assignments + documents
+- [x] 2.2 Tasks, dispatch, attachments, FS dependencies
+- [x] 2.3 Timer: server startedAt, pause-close, mutex SQL, machineId FK od Faze 4, auto-close cron, deactivate
+- [x] 2.4 Socket `project:{id}` server-side join
+- [x] 2.5 QuantityItem + TIMER amendment + progress recalc
+- [x] Seed PM/SS/WORKER + acceptance e2e
 
-## Faza 3 — Frontend shell
+## Faza 3 — Frontend shell — 100%
 
-- [ ] 3.1 Vite + tokens + i18n + proxy + light-only
-- [ ] 3.2 Login/forgot/reset + access memory + remember-me + silent refresh + logout-all tabs
-- [ ] 3.3 Layout Sheet `< md`; nav dashboard/settings/users/companies; mustChangePassword fullscreen
-- [ ] 3.4 Settings registry + `PATCH /company` + logo upload
-- [ ] 3.5 Users Sheet + temp lozinka jednom + hourlyRate samo payroll.write
-- [ ] 3.6 Bell + socket handshake JWT; klik bez deep linka
-- [ ] PLATFORM_ADMIN company switcher; `/projects` URL → dashboard
+- [x] 3.1 Vite + tokens + i18n + proxy + light-only
+- [x] 3.2 Login/forgot/reset + access memory + remember-me
+- [x] 3.3 Layout Sheet `< md`; nav; mustChangePassword fullscreen
+- [x] 3.4 Settings registry + `PATCH /company` + logo
+- [x] 3.5 Users Sheet + temp lozinka + hourlyRate
+- [x] 3.6 Bell + socket JWT; klik bez deep linka
+- [x] PLATFORM_ADMIN company switcher; `/projects` → dashboard
 
-## Faza 4 — Fleet / logistics / GPS
+## Faza 4 — Fleet / logistics / GPS — 100%
 
-- [ ] Machines IDLE/ACTIVE/DECOMMISSIONED; jedna aktivna dodjela; hours += timer
-- [ ] Trips + picker + amendment whitelist; QR/vagar opcion; fuel projectId; fuel ne skida lager
-- [ ] UserLocation + geofence info-only; IoT 501
+- [x] Machines IDLE/ACTIVE/DECOMMISSIONED; jedna aktivna dodjela; hours += timer
+- [x] Trips + picker + amendment whitelist; QR/vagar opcion; fuel projectId
+- [x] UserLocation + geofence info-only; IoT 501
 
-## Faza 5 — Web ops
+## Faza 5 — Web ops — 100%
 
-- [ ] Dashboard po roli (worker bez budget) + presence widget
-- [ ] Projects + količine tab + dnevnik + dokumenti; diary conflict resolve
-- [ ] Gantt samo planned dates
-- [ ] HSE lista `/hse` za SS
+- [x] Dashboard po roli + presence widget
+- [x] Projects + količine tab + dnevnik + dokumenti
+- [x] Gantt samo planned dates
+- [x] HSE lista `/hse` za SS
 
-## Faza 6 — Mobile
+## Faza 6 — Mobile — 100%
 
-- [ ] Tabs unija, timer/ture/fuel/diary
-- [ ] Offline sync; katalog TTL 24h; synced trip/fuel immutable
-- [ ] 6.0b HSE online-only (ne blokira close)
-- [ ] 6.5 bio/FCM/voice ne blokira
+- [x] Tabs unija, timer/ture/fuel/diary
+- [x] Offline sync; katalog TTL 24h
+- [x] 6.0b HSE online-only
+- [x] 6.5 bio/FCM/voice ne blokira
 
-## Faza 7 — Tender / servis / docs / reporti / CI
+## Faza 7 — Tender / servis / docs / reporti / CI — 100%
 
-- [ ] Tender convert WON + prilozi; usporedba nije score
-- [ ] Servis IN_SERVICE + force-close timer
-- [ ] Docs warn 30/15/5, ne blok
-- [ ] Fiksni report slugovi (+ phase-quantities); CI test+build bez auto-deploy
-- [ ] 2FA opciono
+- [x] Tender convert WON + prilozi ostaju na tenderu
+- [x] Servis IN_SERVICE + force-close timer; novi start 409 MACHINE_IN_SERVICE
+- [x] Docs warn 30/15/5, ne blok login/timer
+- [x] Fiksni report slugovi; GET /reports/custom → REPORT_UNKNOWN; CI lint+test+build + Playwright login, nema deploy
+- [x] 2FA/TOTP opciono (ne zatvara)
 
-## Faza 8 — Public
+## Faza 8 — Public — 100%
 
-- [ ] DTO whitelist (bez taxId/budget/GPS) + PublicAsset; `/p/:slug`; panel `/login`
+- [x] DTO whitelist + PublicAsset stream po id; `/p/:slug` one-page; panel `/` = `/login`; WORKER 403 PATCH public; isti 404 za tuđi/nepostojeći slug
 
-## Faza 9 — Payroll
+## Faza 9 — Payroll — 100%
 
-- [ ] Mjesec u TZ; dan = startedAt; SS ne odobrava sebe; pause nije u satima; GPS nije dokaz; xlsx
+- [x] Mjesec u TZ; dan = startedAt; SS ne sebe; pause nije u satima; xlsx
 
-## Faza 10 — ERP-lite
+## Faza 10 — ERP-lite — 100%
 
-- [ ] Partneri; CostEntry bez duplog spend; warehouse SITE|YARD|CISTERN; apply-stock opciono
+- [x] Partneri; CostEntry unique source+sourceId; warehouse SITE\|YARD\|CISTERN; apply-stock opciono
 
-## Faza 11 — IoT
+## Faza 11 — IoT — 100%
 
-- [ ] 1 device/mašina; ingest; no key in GET
+- [x] 1 device/mašina; ingest; no key in GET

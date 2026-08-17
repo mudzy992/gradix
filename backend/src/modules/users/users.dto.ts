@@ -9,7 +9,14 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { AppRole, ROLES } from '../../common/rbac/roles';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ROLES, type AppRole } from '../../common/rbac/roles';
+
+export class UsersQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(ROLES)
+  role?: AppRole;
+}
 
 export class CreateUserDto {
   @IsEmail()

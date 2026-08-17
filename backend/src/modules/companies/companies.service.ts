@@ -3,6 +3,7 @@ import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthTokensService } from '../auth/auth-tokens.service';
+import { TimerForceCloseService } from '../ops/timer-force-close.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { CreateCompanyDto, PatchCompanyDto } from './companies.dto';
 import { defaultSettingRows } from './default-settings';
@@ -27,6 +28,7 @@ const PUBLIC_FIELDS = {
   phone: true,
   email: true,
   logoPath: true,
+  logoAssetId: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -37,6 +39,7 @@ export class CompaniesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly tokens: AuthTokensService,
+    private readonly timers: TimerForceCloseService,
   ) {}
 
   async list(query: PaginationQueryDto) {
@@ -104,11 +107,27 @@ export class CompaniesService {
     return this.patchCompany(actor, id, dto, true);
   }
 
+  async getTenant(actor: AuthUser) {
+    const companyId = this.requireTenant(actor);
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: PUBLIC_FIELDS,
+    });
+    if (!company) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'Company not found', 404);
+    }
+    return company;
+  }
+
   async patchTenant(actor: AuthUser, dto: PatchCompanyDto) {
+    return this.patchCompany(actor, this.requireTenant(actor), dto, false);
+  }
+
+  private requireTenant(actor: AuthUser): string {
     if (!actor.tenantCompanyId) {
       throw new AppError(ERROR_CODES.TENANT_HEADER_REQUIRED, 'X-Company-Id is required', 403);
     }
-    return this.patchCompany(actor, actor.tenantCompanyId, dto, false);
+    return actor.tenantCompanyId;
   }
 
   private async patchCompany(
@@ -143,6 +162,7 @@ export class CompaniesService {
       },
     });
     if (allowActive && dto.isActive === false && existing.isActive) {
+      await this.timers.closeOpenForCompany(id, actor.id);
       const users = await this.prisma.user.findMany({ where: { companyId: id } });
       await Promise.all(users.map((user) => this.tokens.revokeAll(user.id)));
       await this.audit.write({

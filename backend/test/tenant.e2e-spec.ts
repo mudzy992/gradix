@@ -72,6 +72,9 @@ describe('Tenant (e2e)', () => {
       .send({ slug: 'hacked' });
     expect(slug.status).toBe(409);
     expect(slug.body.error.code).toBe('TENANT_SLUG_IMMUTABLE');
+    const get = await request(app.getHttpServer()).get('/api/company').set(auth(token));
+    expect(get.status).toBe(200);
+    expect(get.body.data.city).toBe('Mostar');
   });
 
   it('company inactive login is 401', async () => {

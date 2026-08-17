@@ -46,11 +46,11 @@ export function assertEmployeeCode(value?: string): void {
 
 export function throwUnique(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-    const target = String(error.meta?.target ?? '');
-    if (target.includes('email')) {
+    const haystack = JSON.stringify(error.meta ?? '');
+    if (haystack.includes('email')) {
       throw new AppError(ERROR_CODES.AUTH_EMAIL_TAKEN, 'Email already taken', 409);
     }
-    if (target.includes('phone')) {
+    if (haystack.includes('phone')) {
       throw new AppError(ERROR_CODES.USER_PHONE_TAKEN, 'Phone already taken', 409);
     }
     throw new AppError(ERROR_CODES.CONFLICT, 'Conflict', 409);

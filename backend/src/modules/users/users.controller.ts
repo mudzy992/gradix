@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto, PatchUserDto } from './users.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CreateUserDto, PatchUserDto, UsersQueryDto } from './users.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
@@ -15,7 +14,7 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.USERS_READ)
-  list(@CurrentUser() actor: AuthUser, @Query() query: PaginationQueryDto) {
+  list(@CurrentUser() actor: AuthUser, @Query() query: UsersQueryDto) {
     return this.users.list(actor, query);
   }
 

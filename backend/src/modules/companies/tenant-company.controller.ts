@@ -1,4 +1,4 @@
-import { Body, Controller, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { PatchCompanyDto } from './companies.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -11,6 +11,12 @@ import type { AuthUser } from '../../common/types/auth-user';
 @Controller('company')
 export class TenantCompanyController {
   constructor(private readonly companies: CompaniesService) {}
+
+  @Get()
+  @RequirePermissions(PERMISSIONS.SETTINGS_WRITE)
+  get(@CurrentUser() actor: AuthUser) {
+    return this.companies.getTenant(actor);
+  }
 
   @Patch()
   @RequirePermissions(PERMISSIONS.SETTINGS_WRITE)

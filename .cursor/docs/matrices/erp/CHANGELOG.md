@@ -1,5 +1,10 @@
 # Changelog — erp
 
+## 2026-08-17 (Faza 10 kod)
+
+- **Šta:** Implementirano: Partner, CostEntry unique source+sourceId, Warehouse SITE|YARD|CISTERN, apply-stock idempotent, allowNegativeStock.
+- **Zašto:** Faza 10 izvršena.
+
 ## 2026-08-15 (peglanje)
 
 - **Šta:** Fuel ne skida cisternu auto; apply-stock opciono.
