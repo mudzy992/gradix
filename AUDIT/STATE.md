@@ -8,16 +8,17 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 1 ✅ završena (1.1 + 1.2 + 1.3).** Stanje: **KAPIJA 1** — čekam odobrenje vlasnika za FAZU 2.
+**FAZA 2 ✅ završena (2.1 plan + 2.2 registar segmenata); FAZA 3 u toku.** Vlasnik odobrio prelazak
+preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljanja.
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `dc858fc` (FAZA 1.3) |
+| Zadnji commit | `44c0b20` (CI zapis) + FAZA 2 commit (vidi dno) |
 | CI | ✅ [run 41500743672](https://github.com/mudzy992/gradix/actions/runs/41500743672) — 5/5 zelen za `dc858fc` |
-| Zadnji potvrđeno zelen run | [41498842533](https://github.com/mudzy992/gradix/actions/runs/41498842533) (`e531ca2`) ✅ |
-| Sljedeća kapija | **KAPIJA 1** (nakon FAZE 1) |
+| Zadnji potvrđeno zelen run | [41501240996](https://github.com/mudzy992/gradix/actions/runs/41501240996) (`44c0b20`) ✅ 5/5 |
+| Sljedeća kapija | **KAPIJA 2** (nakon FAZA 2–4) |
 
 ## Hronologija (šta je urađeno)
 
@@ -52,14 +53,34 @@
   nova paleta + WCAG 2.2 AA, produkcijski seed = 1 platform admin, brisanje MySQL backup-a).
 - Provjereni relativni linkovi u `docs/*.md` i `AUDIT/*.md` (13 fajlova, 0 pokvarenih).
 
+### 2026-11-02 — FAZA 2 (`A-04`, master plan)
+- `AUDIT/02_MASTER_AUDIT_PLAN.md`: mjerljivi kriteriji završetka po sloju, pravila izvršavanja
+  (jedan segment = kod + testovi + docs + dokaz + zelen CI), redoslijed, 59 segmenata sa
+  ulazom/rizikom/DoD, izbor alata sa alternativama i obrazloženjem, zavisnosti, rizici, Q1–Q5.
+- `scripts/audit/segments.json`: mašinski čitljiv registar 59 segmenata (STD 2, CI 7, INF 7,
+  BE 18, FE 16, MOB 7, TEST 2), svi na `planned`.
+- Nijedan alat nije dodan u ovom koraku (plan predviđa: Prettier svuda, oxlint za frontend,
+  Jest `coverageThreshold`, Playwright + axe-core, Maestro, `gitleaks`, pino, zod).
+
+### 2026-11-02 — FAZA 3 (`A-05`, inventar + matrica pokrivenosti)
+- `scripts/audit/lib.mjs`, `inventory.mjs`, `check-coverage.mjs` (bez novih zavisnosti: node
+  builtin + ručni CSV parser), `AUDIT/COVERAGE_MATRIX.csv` (jedan red po izvornom fajlu).
+- CI job `audit` pokreće `check-coverage`; crveno ako fajl nije u matrici, ako je označen
+  `pregledano` bez zapisa ili ako segment iz `segments.json` nema red u matrici.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **KAPIJA 1** — izvještaj vlasniku: šta je urađeno, nalazi, nova dokumentacija, otvorena
-   pitanja. **Stojim dok ne dobijem odobrenje.**
-3. Nakon odobrenja: **FAZA 2** — `AUDIT/02_MASTER_AUDIT_PLAN.md` (segmenti, kriteriji,
-   redoslijed, alati) → **KAPIJA 2** prije izvršavanja segmenata.
+1. **FAZA 4** — `AUDIT/segments/<ID>.md` skeletoni (10 sekcija) za svih 59 segmenata.
+2. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
+3. **KAPIJA 2** — izvještaj vlasniku sa planom, matricom pokrivenosti i **Q1–Q5**; stojim dok
+   ne dobijem odgovore i odobrenje za izvršavanje segmenata.
 
 ## Otvorena pitanja / blokatori
 
-Nema blokatora: vlasnik odobrio P1–P10 (odgovori zapisani u `docs/DECISIONS.md` D-001…D-011).
+Nema blokatora za FAZU 3/4. **Za izvršavanje segmenata treba odgovoriti Q1–Q5**
+(`AUDIT/02_MASTER_AUDIT_PLAN.md` §8):
+- **Q1** — paleta: dva predloga (A: „Gradix Green“; B: „Slate/Teal“) za FE-01.
+- **Q2** — SMTP: uključiti pravu dostavu ili ukloniti lažni „success“ (BE-16).
+- **Q3** — Redis: zadržati (rate-limit/cache) ili ukloniti (INF-07).
+- **Q4** — budžet bundle-a: 250 kB gzip kao granica (FE-06).
+- **Q5** — pod pokrivenosti testova: 40 % kao početni prag (TEST-01/CI-04).
