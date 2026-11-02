@@ -1,0 +1,1 @@
+-- PostgreSQL init za Gradix (prelazak sa MySQL)
