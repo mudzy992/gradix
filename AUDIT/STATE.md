@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-04` (firme/podešavanja/audit: atomski PUT, audit best-effort D-031, tenant helper) |
-| CI | ✅ [run 41534087012](https://github.com/mudzy992/gradix/actions/runs/41534087012) — **6/6** zelen za `refactor(settings) … [BE-04]` |
+| Zadnji commit | `BE-05` (projekti: scope pisanja za količine, decimalna validacija, progres u 2 upita) |
+| CI | ⏳ `fix(ops) … [BE-05]` — run se upisuje nakon `gh run watch` |
 | Zadnji potvrđeno zelen run | [41534087012](https://github.com/mudzy992/gradix/actions/runs/41534087012) (BE-04) ✅ 6/6 · prije: 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -214,10 +214,22 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   → **`41534087012` ✅ 6/6**.
 - **Za vlasnika:** F-BE-04-10 (nema PostgreSQL RLS) i D-031 dug (transakcioni audit za finansije).
 
+### 2026-11-02 — BE-05 (projekti, faze, dodjele, dokumenti, količine) → segment `done`
+- **Nalaz (visoko):** `PATCH /projects/:id/quantities/:qtyId` tražio je samo **vidljivost** projekta;
+  `create` je tražio dodjelu. Sada i `patch` zove `assertScopedWrite`.
+- **Nalaz (visoko):** `"abc"` kao `plannedQty`/`plannedBudget` stizao je do Prisma `Decimal` → 500.
+  Novo `common/utils/decimal.ts` (`parseDecimalString`, `parseNonNegativeDecimal`) → 400 sa imenom polja.
+- **Nalaz (srednje):** arhiviran projekat se dalje mogao mijenjati → `409 PROJECT_TERMINAL`.
+- **Nalaz (srednje):** `recalcProgress` je radio `1 + 2×N` upita → dva upita + čiste funkcije
+  `taskPercent`/`averagePercent` (testovi bez baze).
+- **Otvoreno (B8):** `AuditAction` je zatvoren enum bez akcija za izmjenu projekta/dodjele/faze/
+  dokumenta/količine → te izmjene se ne audituju; proširenje enuma ide u **BE-08** (migracija).
+- **Testovi:** **112/112**. Matrica **476 fajlova / 137 pregledano** (vidi `check-coverage`).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-05** (ops servisi: projekti, zadaci, timeri) — sljedeći segment po planu.
+2. **BE-06** (zadaci i dispečing) — sljedeći segment po planu.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

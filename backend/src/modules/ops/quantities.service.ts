@@ -36,6 +36,11 @@ export class QuantitiesService {
     }
     this.access.assertQtyWrite(project, false);
     await this.assertPhase(projectId, dto.phaseId);
+    const plannedQty = parseNonNegativeDecimal(dto.plannedQty, 'plannedQty');
+    const executedQty =
+      dto.executedQty === undefined
+        ? 0
+        : parseDecimalString(dto.executedQty, 'executedQty');
     const row = await this.prisma.quantityItem.create({
       data: {
         companyId: project.companyId,
@@ -43,8 +48,8 @@ export class QuantitiesService {
         phaseId: dto.phaseId ?? null,
         name: dto.name,
         unit: dto.unit,
-        plannedQty: dto.plannedQty,
-        executedQty: dto.executedQty ?? 0,
+        plannedQty,
+        executedQty,
         note: dto.note,
       },
     });
@@ -58,6 +63,9 @@ export class QuantitiesService {
     dto: PatchQuantityDto,
   ) {
     const project = await this.access.getVisibleProject(actor, projectId);
+    // BE-05: patch je tražio samo VIDLJIVOST projekta — svako ko vidi projekat mogao je
+    // mijenjati izvedene količine. Sada se traži i pravo pisanja na projektu.
+    await this.access.assertScopedWrite(actor, project);
     const existing = await this.prisma.quantityItem.findFirst({
       where: { id, projectId },
     });
@@ -88,8 +96,14 @@ export class QuantitiesService {
         phaseId: dto.phaseId,
         name: dto.name,
         unit: dto.unit,
-        plannedQty: dto.plannedQty,
-        executedQty: dto.executedQty,
+        plannedQty:
+          dto.plannedQty === undefined
+            ? undefined
+            : parseNonNegativeDecimal(dto.plannedQty, 'plannedQty'),
+        executedQty:
+          dto.executedQty === undefined
+            ? undefined
+            : parseDecimalString(dto.executedQty, 'executedQty'),
         note: dto.note,
       },
     });

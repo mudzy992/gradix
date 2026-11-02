@@ -65,6 +65,8 @@ backend/src/common/settings/registry.spec.ts,BE,common,BE-04,70,pregledano,"BE-0
 backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +findSetting/coerceSettingValue (Number.isFinite, min/max); 12 testova (F-08)",2026-11-02
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01: pregledano — Prisma.Decimal sa VALIDATION_FAILED na NaN,2026-11-02
+backend/src/common/utils/decimal.spec.ts,BE,common,BE-01,48,pregledano,"BE-05: 5 testova decimalne validacije (abc, prazno, zarez, 5 decimala, minus)",2026-11-02
+backend/src/common/utils/decimal.ts,BE,common,BE-01,35,pregledano,"BE-05: novo — parseDecimalString/parseNonNegativeDecimal, 400 umjesto 500 (F-02)",2026-11-02
 backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: pregledano — AppError PAGINATION_LIMIT za page<1/limit>100,2026-11-02
 backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-02: pregledano — argon2id, min 10 znakova (AUTH_PASSWORD_TOO_SHORT), SHA-256 hash refresh tokena",2026-11-02
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
@@ -128,7 +130,7 @@ backend/src/modules/ops/amendment-fleet.ts,BE,ops,BE-07,163,nepregledano,,
 backend/src/modules/ops/amendments.controller.ts,BE,ops,BE-07,23,nepregledano,,
 backend/src/modules/ops/amendments.dto.ts,BE,ops,BE-07,32,nepregledano,,
 backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,194,nepregledano,,
-backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,81,nepregledano,,
+backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,81,pregledano,BE-05: provjera korisnika u firmi i aktivnosti; gasi realtime sobu pri uklanjanju,2026-11-02
 backend/src/modules/ops/catalog.controller.ts,BE,ops,BE-10,45,nepregledano,,
 backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,185,nepregledano,,
 backend/src/modules/ops/dashboard-expiring.ts,BE,ops,BE-12,58,nepregledano,,
@@ -143,7 +145,7 @@ backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,67,nepregledano,,
 backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,nepregledano,,
 backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,133,nepregledano,,
 backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,203,nepregledano,,
-backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,51,nepregledano,,
+backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,51,pregledano,BE-05: dodjela/uklanjanje projektnih dokumenata uz assertScopedWrite,2026-11-02
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,nepregledano,,
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,55,nepregledano,,
 backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,119,nepregledano,,
@@ -167,24 +169,25 @@ backend/src/modules/ops/machine-status.ts,BE,ops,BE-09,18,nepregledano,,
 backend/src/modules/ops/machines.controller.ts,BE,ops,BE-09,87,nepregledano,,
 backend/src/modules/ops/machines.dto.ts,BE,ops,BE-09,74,nepregledano,,
 backend/src/modules/ops/machines.service.ts,BE,ops,BE-09,231,nepregledano,,
-backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,112,nepregledano,,
-backend/src/modules/ops/phases.service.ts,BE,ops,BE-05,100,nepregledano,,
-backend/src/modules/ops/progress.ts,BE,ops,BE-05,52,nepregledano,,
-backend/src/modules/ops/project-access.service.ts,BE,ops,BE-05,141,nepregledano,,
-backend/src/modules/ops/project-nested.controller.ts,BE,ops,BE-05,138,nepregledano,,
-backend/src/modules/ops/projects.controller.ts,BE,ops,BE-05,81,nepregledano,,
-backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,nepregledano,,
-backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,240,nepregledano,,
-backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,nepregledano,,
-backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,nepregledano,,
-backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,130,nepregledano,,
+backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,112,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri),2026-11-02
+backend/src/modules/ops/phases.service.ts,BE,ops,BE-05,100,pregledano,"BE-05: faza se ne briše ako ima zadataka (409), plannedRange validacija",2026-11-02
+backend/src/modules/ops/progress.spec.ts,BE,ops,BE-05,33,pregledano,"BE-05: 5 testova procenta (otkazani ne ulaze u imenilac, zaokruživanje)",2026-11-02
+backend/src/modules/ops/progress.ts,BE,ops,BE-05,80,pregledano,BE-05: dva upita umjesto 1+2N; čiste funkcije taskPercent/averagePercent (F-04),2026-11-02
+backend/src/modules/ops/project-access.service.ts,BE,ops,BE-05,141,pregledano,"BE-05: vidljivost vs pisanje (getVisibleProject/assertScopedWrite), budget maskiran hidesBudget",2026-11-02
+backend/src/modules/ops/project-nested.controller.ts,BE,ops,BE-05,138,pregledano,"BE-05: faze/dodjele/dokumenti/količine pod /projects/:id, sve tenant rute",2026-11-02
+backend/src/modules/ops/projects.controller.ts,BE,ops,BE-05,81,pregledano,BE-05: projects.read/write + tenant ruta; arhiviranje bez posebne permisije,2026-11-02
+backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,pregledano,"BE-05: plannedBudget se validira u servisu (decimal helper), ostalo nepromijenjeno",2026-11-02
+backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,253,pregledano,"BE-05: arhiviran projekat nije upisiv (F-03), budžet ≥0 (F-06), mrtav companyId uklonjen (F-07)",2026-11-02
+backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,pregledano,BE-05: quantities.read/write permisije; bez DELETE rute (količine se ne brišu),2026-11-02
+backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,pregledano,"BE-05: količine kao string (decimal helper u servisu), unit iz zatvorene liste",2026-11-02
+backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,144,pregledano,"BE-05: assertScopedWrite u patch (F-01), decimalna validacija (F-02), executedQty potpisan (F-06)",2026-11-02
 backend/src/modules/ops/serialize-diary.ts,BE,ops,BE-11,63,nepregledano,,
 backend/src/modules/ops/serialize-fleet.ts,BE,ops,BE-09,55,nepregledano,,
 backend/src/modules/ops/serialize-gps-device.ts,BE,ops,BE-09,14,nepregledano,,
 backend/src/modules/ops/serialize-machine.ts,BE,ops,BE-09,20,nepregledano,,
 backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,nepregledano,,
 backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,25,nepregledano,,
-backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,nepregledano,,
+backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,pregledano,BE-05: potrošnja bez dvostrukog brojanja (costEntry source/sourceId),2026-11-02
 backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,71,nepregledano,,
 backend/src/modules/ops/sync-push-diary.ts,BE,ops,BE-17,84,nepregledano,,
 backend/src/modules/ops/sync-push-fleet.ts,BE,ops,BE-17,101,nepregledano,,
@@ -283,11 +286,11 @@ backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,42,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,nepregledano,,
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
-backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,nepregledano,,
+backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,BE-05: pregledano — timer/task/quantities tok; SS dodijeljen na projekat (patch količina 200),2026-11-02
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,124,nepregledano,,
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
-backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,nepregledano,,
+backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,nepregledano,,
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02

@@ -14,6 +14,7 @@ import {
   parseOptionalDate,
 } from '../../common/scope/ops-dates';
 import { assertStatusTransition } from '../../common/scope/project-lock';
+import { parseNonNegativeDecimal } from '../../common/utils/decimal';
 import { projectListWhere } from '../../common/scope/scope-by-project';
 import { ProjectAccessService } from './project-access.service';
 import {
@@ -34,7 +35,6 @@ export class ProjectsService {
 
   async list(actor: AuthUser, query: ProjectListQueryDto) {
     this.access.assertCanList(actor);
-    const companyId = this.access.requireCompany(actor);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
     const archived = query.archived === 'true';
     if (
@@ -67,7 +67,6 @@ export class ProjectsService {
       }),
       this.prisma.project.count({ where }),
     ]);
-    void companyId;
     return listResult(
       rows.map((row) => this.access.serialize(row, actor)),
       total,
@@ -138,7 +137,10 @@ export class ProjectsService {
         lat: dto.lat,
         lng: dto.lng,
         geofenceRadius: radius,
-        plannedBudget: dto.plannedBudget,
+        plannedBudget:
+          dto.plannedBudget === undefined
+            ? undefined
+            : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
         client: dto.client,
         plannedStart,
         plannedEnd,
@@ -170,6 +172,14 @@ export class ProjectsService {
   async patch(actor: AuthUser, id: string, dto: PatchProjectDto) {
     const project = await this.access.getVisibleProject(actor, id);
     await this.access.assertScopedWrite(actor, project);
+    // BE-05: arhiviran projekat je zaključan — ranije se mogao dalje mijenjati.
+    if (project.archivedAt) {
+      throw new AppError(
+        ERROR_CODES.PROJECT_TERMINAL,
+        'Project is terminal or archived',
+        409,
+      );
+    }
     const plannedStart =
       dto.plannedStart !== undefined
         ? (parseOptionalDate(dto.plannedStart) ?? null)
@@ -192,7 +202,10 @@ export class ProjectsService {
         lat: dto.lat,
         lng: dto.lng,
         geofenceRadius: dto.geofenceRadius,
-        plannedBudget: dto.plannedBudget,
+        plannedBudget:
+          dto.plannedBudget === undefined
+            ? undefined
+            : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
         client: dto.client,
         plannedStart: dto.plannedStart !== undefined ? plannedStart : undefined,
         plannedEnd: dto.plannedEnd !== undefined ? plannedEnd : undefined,

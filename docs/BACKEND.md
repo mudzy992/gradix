@@ -76,6 +76,11 @@ backend/src/
   (nema modela reset tokena ni prave dostave); ADMIN resetuje lozinku kroz `POST /users/:id/reset-password`.
 - `@Public()` isključuje `JwtAuthGuard` (health, login, refresh, forgot/reset, javni sajt, IoT ingest).
 - Permisije: `@RequirePermissions('…')`, efektivno = **unija** permisija svih rola korisnika.
+- **Pisanje po projektu:** vidjeti projekat (npr. preko dodjele na zadatak) nije isto kao
+  pisati po njemu — svaka izmjena traži `assertScopedWrite` (dodjela na projekat ili
+  company-wide rola). Količine (`executedQty`) su do BE-05 bile izuzetak.
+- **Novac i količine** stižu kao string i validiraju se (`common/utils/decimal.ts`) — `"abc"` je
+  `400`, a ne 500 iz Prisma `Decimal`.
 - **Hijerarhija (D-030):** `users.write` ne dozvoljava upravljanje nalogom sa višom rolom — samo
   `SUPER_ADMIN`/`PLATFORM_ADMIN` diraju SUPER_ADMIN naloge, a `PLATFORM_ADMIN` se ne dodjeljuje
   kroz tenant rute (`common/rbac/role-hierarchy.ts`).
@@ -232,6 +237,7 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B5 | `common/scope/*` ponašanje nije pokriveno testovima | BE-04 |
 | B6 | Swagger šeme nisu provjerene u CI-ju (nema „contract“ testa) | BE-05 |
 | B7 | Nema `audit` UI-a u v1 (svjesno), ali `AuditEvent` se piše | — |
+| B8 | `AuditAction` je zatvoren enum i nema akcije za izmjenu/arhiviranje projekta, dodjele, faze, dokumenta ni količine → te izmjene se **ne** audituju | BE-08 (migracija), pa BE-05 dopuna |
 
 ---
 
