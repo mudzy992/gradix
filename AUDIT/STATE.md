@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-03` (rbac: hijerarhija rola D-030, tenant scope bez `!`, 54 unit testa) |
-| CI | ⏳ `fix(rbac) … [BE-03]` — run se upisuje nakon `gh run watch` |
-| Zadnji potvrđeno zelen run | [41528279151](https://github.com/mudzy992/gradix/actions/runs/41528279151) (BE-02) ✅ 6/6 · prije: 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41531137887](https://github.com/mudzy992/gradix/actions/runs/41531137887) — **6/6** zelen za `fix(rbac) … [BE-03]` |
+| Zadnji potvrđeno zelen run | [41531137887](https://github.com/mudzy992/gradix/actions/runs/41531137887) (BE-03) ✅ 6/6 · prije: 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -193,9 +193,10 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** 54 unit testa u `src/common` (hijerarhija, permisije, vremenske zone + DST,
   datumi, tranzicije projekta, opseg rola). Matrica **476 fajlova / 99 pregledano (20,8 %)**.
 - **Za vlasnika:** F-BE-03-06 (`hidesBudget` — MECHANIC/ACCOUNTANT vide budžet) = odluka, ne bug fix.
-- Prvi run (`41529872217`) pao na **e2e**: `throwUnique` je čitao samo `meta.target` pa je unikat
-  emaila vraćao `CONFLICT` umjesto `AUTH_EMAIL_TAKEN`. Ispravka: `meta.target` **+ fallback na
-  cijeli `meta`** (adapteri vraćaju različite oblike).
+- Tri iteracije do zelenog: (1) `41529872217` ❌ e2e — `throwUnique` je čitao samo `meta.target`
+  pa je unikat emaila vraćao `CONFLICT`; ispravka = `meta.target` **+ fallback na cijeli `meta`**.
+  (2) `41530476307` ❌ lint — nepotrebna tvrdnja (`error.meta as …`), uklonjena.
+  (3) **`41531137887` ✅ 6/6.**
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
