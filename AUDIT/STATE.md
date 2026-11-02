@@ -17,7 +17,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 |---|---|
 | Zadnji commit | `3a893dd` (FAZA 3+4 — inventar, gate, skeletoni) |
 | CI | ✅ [run 41503898016](https://github.com/mudzy992/gradix/actions/runs/41503898016) — **6/6** zelen za `3a893dd` (novi job `audit`) |
-| Zadnji potvrđeno zelen run | [41503540842](https://github.com/mudzy992/gradix/actions/runs/41503540842) (`b2acee4`) ✅ 5/5 |
+| Zadnji potvrđeno zelen run | [41504266438](https://github.com/mudzy992/gradix/actions/runs/41504266438) (`ed9f8e3`) ✅ 6/6 |
 | Sljedeća kapija | **KAPIJA 2** (nakon FAZA 2–4) |
 
 ## Hronologija (šta je urađeno)
