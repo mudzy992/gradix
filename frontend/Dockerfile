@@ -17,8 +17,18 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+# Coolify prosljeđuje SVE env varijable aplikacije kao Docker build-arg-ove
+# (uključujući NODE_ENV=production). Deklarisani ARG postaje env varijabla
+# dostupna u RUN koracima, pa ga ovdje namjerno deklarišemo da ponašanje bude
+# predvidivo (i da CI može reproducirati Coolify build).
+ARG NODE_ENV=production
+
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+
+# OBAVEZNO `--include=dev` + `NODE_ENV=development`:
+# kada je NODE_ENV=production, npm preskače devDependencies (vite, typescript,
+# tailwind, ...) → build pada sa "sh: vite: not found".
+RUN NODE_ENV=development npm ci --include=dev --no-audit --no-fund
 
 COPY . .
 
@@ -26,6 +36,12 @@ COPY . .
 # Prazno = relativni pozivi + nginx proxy (preporučeno).
 ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
+
+RUN if [ -n "$VITE_API_URL" ]; then \
+      echo "[gradix] VITE_API_URL='$VITE_API_URL' se ugrađuje u bundle."; \
+      echo "[gradix] Napomena: interni Docker hostovi (npr. http://backend:3000)"; \
+      echo "[gradix] ne rade u browseru — ostavi prazno za relativni /api."; \
+    fi
 
 RUN npm run build
 

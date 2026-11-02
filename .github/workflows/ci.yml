@@ -356,6 +356,18 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      - name: Frontend builder — Coolify emulacija (NODE_ENV=production)
+        # Coolify u build ubacuje NODE_ENV=production kao build-arg. Bez
+        # `npm ci --include=dev` npm tada preskoči devDependencies i build pada
+        # sa "sh: vite: not found". Ovaj korak čuva tu regresiju.
+        run: |
+          docker build --target builder \
+            --build-arg NODE_ENV=production \
+            --build-arg VITE_API_URL= \
+            -t gradix-frontend-builder:ci ./frontend
+          docker run --rm gradix-frontend-builder:ci \
+            node -e "require.resolve('vite/package.json'); console.log('vite je instaliran u builder stage-u')"
+
       - name: Smoke test — backend kontejner (migracije + /api/health)
         env:
           DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public

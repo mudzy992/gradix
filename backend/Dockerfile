@@ -15,7 +15,9 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev --no-audit --no-fund
+# Coolify u build ubacuje NODE_ENV=production; npm tada preskoči devDependencies.
+# Zato je `--include=dev` obavezan (potrebni su nest cli, prisma, ts-jest, ...).
+RUN NODE_ENV=development npm ci --include=dev --no-audit --no-fund
 
 # ---------- 2) Build (Prisma client + nest build) ----------
 FROM node:22-alpine AS builder

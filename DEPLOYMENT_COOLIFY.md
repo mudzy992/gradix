@@ -194,13 +194,59 @@ cd frontend && npm ci && npm run dev
 | `backend-e2e` | PostgreSQL servis → migracije → seed → `npm run test:e2e` |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` |
 | `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright |
-| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` → build oba image-a → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
+| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` → build oba image-a → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
 
 Ako je job `docker` zelen, Coolify build prolazi.
 
 ---
 
-## 8. Ostale napomene
+## 8. Česte greške pri Coolify buildu
+
+### `sh: vite: not found` (frontend) — `NODE_ENV=production` u buildu
+
+Coolify prosljeđuje **sve** env varijable aplikacije kao Docker build-arg-ove,
+uključujući `NODE_ENV=production`. Kada `NODE_ENV` ima vrijednost `production`,
+`npm ci` **preskače `devDependencies`** — a `vite`, `typescript` i `tailwind`
+su upravo tu. Zato build padne na `RUN npm run build` sa `vite: not found`.
+
+Rješenje (u repo-u, ne u Coolify UI):
+
+```dockerfile
+ARG NODE_ENV=production                       # Coolify ga prosljeđuje
+RUN NODE_ENV=development npm ci --include=dev --no-audit --no-fund
+```
+
+Isto važi i za backend (`nest`, `prisma`, `ts-jest` su dev zavisnosti u build
+fazi). CI zato ima korak **„Frontend builder — Coolify emulacija”** koji
+reproducira ovaj scenario i pada ako se zaštita ukloni.
+
+### Frontend se učita, ali svi API pozivi padaju (`ERR_NAME_NOT_RESOLVED`)
+
+Uzrok je `VITE_API_URL` postavljen na **interni Docker host**, npr.
+`http://backend:3000`. Vite varijable se ugrađuju u JavaScript bundle pri
+**build-u**, a browser ne može razriješiti Docker ime.
+
+U Coolify UI: `VITE_API_URL` ostavi **prazno** (frontend tada koristi relativne
+`/api` i `/socket.io` pozive, a nginx ih proksira na `BACKEND_URL`).
+Za odvojen API domen koristi javni URL (`https://api.tvoja-domena.ba`).
+
+### `DATABASE_URL je obavezan` pri deployu
+
+Compose koristi `:?` za obavezne varijable. Unesi `DATABASE_URL`,
+`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` u Coolify Environment Variables.
+Stare varijable iz v1 ere (`PGSSLROOTCERT`, `PGSSLMODE`, `REDIS_TLS_CA_FILE`,
+`POSTGRES_*`) nisu potrebne — mogu se obrisati.
+
+### Backend kontejner se restartuje u petlji
+
+1. Provjeri log: `docker logs <kontejner>` — najčešće `prisma migrate deploy`
+   ne može do baze (pogrešan `DATABASE_URL`, baza nije dostupna, `sslmode`).
+2. Migracije možeš privremeno isključiti sa `RUN_MIGRATIONS=false` da vidiš
+   log aplikacije.
+
+---
+
+## 9. Ostale napomene
 
 * `mobile/` (Expo) nije dio Docker/CI toka — nema produkcijskog image-a.
 * `minio/minio:latest` i `nginx:alpine` su „rolling” tagovi; za potpuno
