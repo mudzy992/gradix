@@ -5,8 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HealthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getHealth(): Promise<{ process: string; mysql: string }> {
+  async getHealth(): Promise<{ process: string; postgres: string }> {
     await this.prisma.$queryRaw`SELECT 1`;
-    return { process: 'ok', mysql: 'ok' };
+    return { process: 'ok', postgres: 'ok' };
   }
 }

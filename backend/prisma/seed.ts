@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../generated/client';
 import { hashPassword } from '../src/common/utils/password';
 import { defaultSettingRows } from '../src/modules/companies/default-settings';
@@ -12,7 +11,7 @@ function createPrisma(): PrismaClient {
   if (!url) {
     throw new Error('DATABASE_URL is required');
   }
-  return new PrismaClient({ adapter: new PrismaMariaDb(url) });
+  return new PrismaClient();
 }
 
 async function seed(): Promise<void> {

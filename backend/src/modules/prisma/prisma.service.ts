@@ -1,5 +1,4 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../../../generated/client';
 
 @Injectable()
@@ -12,7 +11,8 @@ export class PrismaService
     if (!url) {
       throw new Error('DATABASE_URL is required');
     }
-    super({ adapter: new PrismaMariaDb(url) });
+    // PostgreSQL — standard adapter bez Mariadb specifičnog adaptera
+    super({ datasources: { db: { url } } });
   }
 
   async onModuleInit(): Promise<void> {
