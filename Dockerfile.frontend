@@ -9,7 +9,7 @@ RUN npm ci --prefer-offline --no-audit
 
 COPY . .
 ENV PATH=/app/node_modules/.bin:$PATH
-RUN npm run build
+RUN npx vite build
 
 # Produkcijska slika — nginx za statičke fajlove (ili node preview)
 FROM nginx:alpine AS production
