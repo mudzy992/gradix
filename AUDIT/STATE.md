@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-01` (env validacija + bezbednosne popravke) |
-| CI | ✅ [run 41522506769](https://github.com/mudzy992/gradix/actions/runs/41522506769) — **6/6** zelen za `style(api) … [BE-01]` |
-| Zadnji potvrđeno zelen run | [41522506769](https://github.com/mudzy992/gradix/actions/runs/41522506769) (`BE-01`) ✅ 6/6 · prije: 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) — svi 6/6 |
+| Zadnji commit | `BE-01` (drugi prolaz: šema + config + guard `check:schema`) |
+| CI | ✅ [run 41524479730](https://github.com/mudzy992/gradix/actions/runs/41524479730) — **6/6** zelen za `feat(schema) … [BE-01]` |
+| Zadnji potvrđeno zelen run | [41524479730](https://github.com/mudzy992/gradix/actions/runs/41524479730) (BE-01/2) ✅ 6/6 · prije: 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
