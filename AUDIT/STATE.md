@@ -94,11 +94,16 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Odgovori na Q1–Q5 zapisani kao **D-012…D-016** (paleta B, email bez lažnog uspjeha, Redis
   ostaje, bundle 250 kB, coverage floor 40 %).
 
+### 2026-11-02 — CI-03 (`A-09`, pinning/timeouti/cache)
+- Sve GitHub akcije pinovane na commit SHA (`actions/checkout`, `setup-node`, `upload-artifact`,
+  `docker/setup-buildx-action`, `docker/build-push-action`) uz komentar taga.
+- `timeout-minutes` na svih 6 jobova (5/15/20/15/20/30) — dug C7 zatvoren.
+- Cache potvrđen (npm po paketu, Docker `type=gha`); job `audit` svjesno bez cache-a.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment po planu §3: **CI-03** (pinning/timeouti/cache), pa **CI-04** (static gate +
-   coverage prag), pa **INF-01**.
+2. Sljedeći segment po planu §3: **CI-04** (static gate + coverage prag), pa **INF-01**.
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

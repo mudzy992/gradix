@@ -35,7 +35,7 @@
       "id": "CI-03",
       "layer": "CI",
       "title": "Pinning po SHA, timeouti, cache",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Pinning/timeouti/cache se mijenjaju u ci.yml (vlasništvo CI-01); ovdje se mjeri efekt (trajanje, stabilnost)."
     },

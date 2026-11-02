@@ -36,6 +36,16 @@ Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** 
 \* iz runa [41495269647](https://github.com/mudzy992/gradix/actions/runs/41495269647) — jobovi
 rade paralelno, ukupno ~2,5 min.
 
+### Pinning, timeouti, cache (CI-03)
+
+- **Sve akcije su pinovane na commit SHA** (`@<sha> # vN`), ne na pokretni tag: tag se može
+  premjestiti, SHA ne može. Nadogradnja = svjesna izmjena SHA (planirano: renovate).
+- **`timeout-minutes` na svakom jobu**: `audit` 5, `backend` 15, `backend-e2e` 20, `frontend` 15,
+  `web-e2e` 20, `docker` 30. Bez ovoga zaglavljen job drži 6 h i blokira granu.
+- **Cache**: npm preko `actions/setup-node` (`cache: npm` + `cache-dependency-path` po paketu);
+  Docker slojevi preko `type=gha` (`scope=backend` / `scope=frontend`).
+- Job `audit` ne instalira ništa (nema `npm ci`), pa mu cache nije potreban.
+
 ### Guardovi koji već postoje (ne smiju se ukloniti)
 
 | Guard | Zašto |
@@ -81,7 +91,7 @@ on:
 | Mobile | Jest + **Maestro** na Android emulatoru (`reactivecircus/android-emulator-runner`), **posljednji** job (`needs: [...]`) | CI-07 |
 | Artefakti | JUnit XML, coverage `lcov`, Playwright report, Maestro screenshot/video | CI-06/07 |
 | Sažetak | `GITHUB_STEP_SUMMARY` po jobu | CI-06 |
-| Performanse | `timeout-minutes` po jobu, cache `npm`/Gradle, mjerenje trajanja | CI-03 |
+| Performanse | ✅ `timeout-minutes` po jobu, cache `npm`/Docker; mjerenje trajanja | CI-03 |
 
 ---
 
@@ -131,4 +141,4 @@ on:
 | C4 | Nema secret skena, `npm audit` ni license checka | CI-04 |
 | C5 | Nema coverage praga ni audit gate-a | CI-04/CI-05 |
 | C6 | Nema mobile joba | CI-07 |
-| C7 | Nema `timeout-minutes` na jobovima | CI-03 |
+| C7 | ~~Nema `timeout-minutes`~~ — ✅ dodati na sve jobove (CI-03) | CI-03 |

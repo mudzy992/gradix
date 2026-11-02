@@ -1,7 +1,7 @@
 file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,69,nepregledano,,
 .env.example,INF,compose,INF-01,69,nepregledano,,
-.github/workflows/ci.yml,CI,ci,CI-01,585,pregledano,PR trigger + arena/** glob uklonjeni (F-CI-01-01/02); push samo main + aktivna grana,2026-11-02
+.github/workflows/ci.yml,CI,ci,CI-01,591,pregledano,"CI-01: bez PR trigera, push samo main + aktivna grana. CI-03: sve akcije pinovane na SHA, timeout na svakom jobu, npm/Docker cache",2026-11-02
 Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
 Dockerfile.frontend,INF,frontend-image,INF-03,66,nepregledano,,
 backend/Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
