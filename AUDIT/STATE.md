@@ -139,10 +139,25 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   proxy/SPA rute, identičnost **oba** para korijenskih Dockerfile-ova.
 - `docs/INFRASTRUCTURE.md` §10 (nginx: proxy, keš, headeri, CSP, zamka `add_header`).
 
+### 2026-11-02 — BE-01 (`A-14`, temelj API-ja — jezgro)
+- **Env validacija** (`backend/src/config/env.ts`, bez nove zavisnosti — D-017): sve greške odjednom,
+  imenovane varijable; `ConfigModule.forRoot({ validate })`, pa aplikacija ne starta sa pola konfiguracije.
+- **Bootstrap**: `.catch` sa jasnom porukom + `exit 1`; `enableShutdownHooks()` (SIGTERM → Prisma
+  `$disconnect`); `PORT` iz `ConfigService`.
+- **Bezbednosne popravke**: Swagger isključen u produkciji (`ENABLE_API_DOCS`), prazan `CORS_ORIGIN`
+  u produkciji = same-origin (D-018), neočekivane greške se loguju a klijent dobija generički 500,
+  `429/503` mapirani na `RATE_LIMITED`/`SERVICE_UNAVAILABLE`.
+- **Testovi**: 29 ukupno (env 14, filter 4, envelope 4, timer 2 + …); coverage 0,18 % → **2,50 %**,
+  baseline podignut.
+- Guard `check:env` sada traži i da svaka backend varijabla bude **validirana**; popravljen glob bug
+  u `check-secrets` koji je propuštao `*.spec.ts` (lažni pozitiv se pojavio odmah).
+- Segment ostaje `in-progress`: schema (6), config fajlovi (5) i preostali guardovi u sljedećem prolazu.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment: **BE-01** (temelj API-ja: config, greške, ugovor).
+2. **BE-01** — drugi prolaz: `prisma/schema/*.prisma`, `package.json`/`tsconfig*`/`nest-cli`/
+   `eslint.config.mjs`, `storage-path.ts`; zatim **BE-02** (auth, refresh tajna).
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

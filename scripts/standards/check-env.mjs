@@ -77,6 +77,21 @@ for (const [name, sources] of [...usages].sort()) {
   report.violation([...sources].join('+'), `koristi ${name}, ali nije u ${DOC}`);
 }
 
+// --- provjera 1b: backend varijable moraju biti i VALIDIRANE pri startu (BE-01) ---
+// `config.get` vraća `undefined` bez greške; zato svaka varijabla koju backend čita mora
+// postojati u validacionoj šemi (`backend/src/config/env.ts`), inače aplikacija starta
+// sa pola konfiguracije.
+if (fs.existsSync(path.join(ROOT, 'backend/src/config/env.ts'))) {
+  const schema = read('backend/src/config/env.ts');
+  const validated = new Set([...schema.matchAll(/\b([A-Z][A-Z0-9_]{2,})\??:/g)].map((m) => m[1]));
+  for (const [name, sources] of [...usages].sort()) {
+    if (!sources.has('backend')) continue;
+    report.bump();
+    if (validated.has(name) || allowEnv.has(name)) continue;
+    report.violation('backend/src/config/env.ts', `ne validira ${name}, a backend ga čita`);
+  }
+}
+
 // --- provjera 2: dokumentovano, a niko ne čita (upozorenje, ne pad) ---
 for (const name of [...documented].sort()) {
   report.bump();

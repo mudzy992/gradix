@@ -109,6 +109,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `SEED_PASSWORD` | — | lozinka seed korisnika (min 10), koristi se samo pri seedu |
 | `BACKEND_URL` | `http://backend:3000` | nginx proxy target (frontend kontejner) |
 | `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx |
+| `ENABLE_API_DOCS` | `false` | `true` izlaže Swagger na `/api/docs` — u produkciji isključeno |
 
 ### 5.3 Host putanje (bind mount-ovi)
 

@@ -35,6 +35,10 @@ export class AppExceptionFilter implements ExceptionFilter {
       });
       return;
     }
+    // BE-01: neočekivane greške se loguju na serveru (stack), a klijent dobija
+    // generičku poruku — bez detalja implementacije. Strukturisano logovanje
+    // (pino) dolazi u INF-04; do tada je ovo jedini zapis.
+    console.error('[gradix] Neočekivana greška:', exception);
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
@@ -63,6 +67,8 @@ export class AppExceptionFilter implements ExceptionFilter {
       [HttpStatus.UNAUTHORIZED]: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
       [HttpStatus.CONFLICT]: ERROR_CODES.CONFLICT,
       [HttpStatus.BAD_REQUEST]: ERROR_CODES.VALIDATION_FAILED,
+      [HttpStatus.TOO_MANY_REQUESTS]: ERROR_CODES.RATE_LIMITED,
+      [HttpStatus.SERVICE_UNAVAILABLE]: ERROR_CODES.SERVICE_UNAVAILABLE,
     };
     return byStatus[status] ?? 'HTTP_ERROR';
   }

@@ -182,16 +182,25 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - `AppExceptionFilter` normalizuje sve u envelope; Neočekivane greške: `500 INTERNAL`.
 - ⚠️ **Dug:** Prisma greške (`P2002` unique, `P2025` not found) se ne mapiraju centralno u
   domenske kodove — provjera po modulu u BE segmentima.
-- ⚠️ **Dug:** nema strukturisanog logovanja (JSON) ni korelacionog ID-a; logovi idu kroz Nest
-  default logger.
-- ⚠️ **Dug:** nema validacije env-a pri startu (`ConfigModule.forRoot` bez `validationSchema`);
-  tajne pucaju tek pri prvoj upotrebi.
+- ✅ **Env validacija (BE-01):** `backend/src/config/env.ts` se izvršava kroz
+  `ConfigModule.forRoot({ validate })` **prije** nego što se podigne ijedan modul. Sve greške
+  idu odjednom, sa imenom varijable; aplikacija ne starta sa pola konfiguracije.
+- ✅ **Neočekivane greške se loguju** (`console.error` sa stack-om na serveru), a klijent dobija
+  generički `500 INTERNAL_ERROR` — bez detalja implementacije.
+- ⚠️ **Dug:** nema strukturisanog logovanja (JSON) ni korelacionog ID-a — INF-04 (pino).
 
 ---
 
 ## 6. Konfiguracija
 
-Sve kroz env (katalog: [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md) §5). Trenutno se čita:
+Sve kroz env (katalog: [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md) §5). **Validira se pri startu**
+(`backend/src/config/env.ts`): obavezno u razvoju `DATABASE_URL`, `JWT_ACCESS_SECRET` (min 32) i
+MinIO varijable (osim uz `MINIO_SKIP=true`); u produkciji dodatno `JWT_REFRESH_SECRET`; prazan
+`CORS_ORIGIN` u produkciji znači **same-origin** (nikakav strani origin), a u razvoju „dozvoli sve“. `PORT` i `MINIO_PORT`
+moraju biti cijeli brojevi 1–65535, `MINIO_USE_SSL`/`MINIO_SKIP`/`ENABLE_API_DOCS` su bool.
+Swagger je u produkciji isključen osim `ENABLE_API_DOCS=true`.
+
+Trenutno se čita:
 `DATABASE_URL`, `PORT`, `NODE_ENV`, `CORS_ORIGIN`, `MINIO_*`, `JWT_ACCESS_SECRET` (auth,
 realtime), `MINIO_SKIP` (testovi), `JEST_WORKER_ID` (isključivanje cronova pod testovima).
 `JWT_REFRESH_SECRET`, `SEED_PASSWORD` i `REDIS_*` se **ne** čitaju u `src/` (refresh je
@@ -205,7 +214,7 @@ hashiran u bazi; seed je zaseban proces).
 |---|---|---|
 | B1 | Email je stub (`trySend` samo inkrementira brojač) | BE-02 |
 | B2 | Nema centralnog mapiranja Prisma grešaka | BE-03 |
-| B3 | Nema env validacije pri startu | BE-01 |
+| B3 | ~~Nema env validacije pri startu~~ — ✅ riješeno (BE-01, `config/env.ts` + 17 testova) | BE-01 |
 | B4 | Samo 1 unit test (`timer-math.spec.ts`); nema coverage praga | TEST-01 |
 | B5 | `common/scope/*` ponašanje nije pokriveno testovima | BE-04 |
 | B6 | Swagger šeme nisu provjerene u CI-ju (nema „contract“ testa) | BE-05 |

@@ -4,7 +4,7 @@
 //
 //   node scripts/standards/check-secrets.mjs
 
-import { Report, finish, lineOf, loadAllowlist, read, walk } from './lib.mjs';
+import { Report, finish, lineOf, loadAllowlist, matchesAny, read, walk } from './lib.mjs';
 
 const report = new Report(
   'Nema tajni u kodu',
@@ -39,13 +39,7 @@ const files = [
   ...walk('scripts', (f) => /\.(mjs|js|sh)$/.test(f)),
   'docker-compose.yml', 'docker-compose.local-ports.yml', '.env.example', '.env.coolify',
   'Dockerfile', 'Dockerfile.frontend',
-].filter((f) => {
-  return !SKIP_FILES.some((g) => {
-    if (g.startsWith('**/')) return f.includes(g.slice(3));
-    if (g.endsWith('/**')) return f.startsWith(g.slice(0, -3));
-    return f === g;
-  });
-});
+].filter((f) => !matchesAny(f, SKIP_FILES));
 
 for (const file of files) {
   report.bump();

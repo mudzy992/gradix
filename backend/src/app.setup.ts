@@ -2,6 +2,7 @@ import { ValidationError, ValidationPipe } from '@nestjs/common';
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { isApiDocsEnabled, resolveCorsOrigin } from './config/env';
 import { AppError } from './common/errors/app-error';
 import { ERROR_CODES } from './common/errors/error-codes';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
@@ -24,12 +25,8 @@ function flattenErrors(errors: ValidationError[]): string[] {
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api');
   app.use(helmet());
-  const origins = (process.env.CORS_ORIGIN ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
   app.enableCors({
-    origin: origins.length ? origins : true,
+    origin: resolveCorsOrigin(process.env.NODE_ENV, process.env.CORS_ORIGIN),
     credentials: true,
   });
   app.useGlobalPipes(
@@ -47,12 +44,16 @@ export function configureApp(app: INestApplication): void {
   );
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalInterceptors(new EnvelopeInterceptor(app.get(Reflector)));
-  const swagger = new DocumentBuilder()
-    .setTitle('Gradix API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swagger), {
-    useGlobalPrefix: true,
-  });
+  // BE-01: u produkciji se API dokumentacija NE izlaže (osim uz ENABLE_API_DOCS=true) —
+  // inače je cijela površina API-ja javno popisana.
+  if (isApiDocsEnabled(process.env.NODE_ENV, process.env.ENABLE_API_DOCS)) {
+    const swagger = new DocumentBuilder()
+      .setTitle('Gradix API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swagger), {
+      useGlobalPrefix: true,
+    });
+  }
 }

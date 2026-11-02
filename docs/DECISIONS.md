@@ -160,6 +160,23 @@ obrazloženje u ovom fajlu.
 Odgovor na Q5. U skladu sa D-005; pragovi po fazi su u `docs/TESTING.md` §3. Prag se nikad ne
 spušta, samo podiže.
 
+### D-017 — Env validacija bez nove zavisnosti (ručna šema)
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na B3. `backend/src/config/env.ts` validira sve varijable koje backend čita, baca jednu
+grešku sa svim problemima i vraća **string mapu** (da `ConfigService` semantika i postojeće
+poređenje `=== 'true'` ostanu netaknuti). **Odbačeno:** `zod`/`joi` u backendu — dvije nove
+zavisnosti i drugi stil validacije pored `class-validator`; pravilo P6 traži pisano obrazloženje, a
+korist je mala za ~120 linija koda. Ako backend pređe na schema-first (npr. `zod` + OpenAPI),
+odluka se revidira.
+
+### D-018 — Swagger isključen u produkciji; prazan CORS = same-origin
+**Datum:** 2026-11-02 · **Status:** na snazi (revidirano prije implementacije)
+Odgovor na nalaze BE-01. `/api/docs` se registruje samo van produkcije ili uz `ENABLE_API_DOCS=true`.
+`CORS_ORIGIN` **nije** obavezan: prazna vrijednost je ranije značila „reflektuj svaki origin“ uz
+`credentials: true`, a sada znači **nijedan strani origin** u produkciji (`resolveCorsOrigin`);
+u razvoju ostaje dozvoljeno sve. **Zašto ne „obavezno“:** frontend ide kroz isti nginx, pa
+postavljanje CORS-a nije uslov za rad, a obaveznost bi rušila deploy bez stvarne koristi.
+
 ---
 
 ## Zamijenjene / povučene odluke

@@ -114,6 +114,7 @@ const RULES = [
   { re: /^backend\/coverage-baseline\.json$/, layer: 'TEST', module: 'coverage', segment: 'TEST-01' },
   { re: /^backend\/prisma\.config\.ts$|^backend\/(package\.json|tsconfig.*\.json|nest-cli\.json|eslint\.config\.mjs)$/, layer: 'BE', module: 'config', segment: 'BE-01' },
   { re: /^backend\/src\/(main|app\.module|app\.setup)\.ts$/, layer: 'BE', module: 'bootstrap', segment: 'BE-01' },
+  { re: /^backend\/src\/config\//, layer: 'BE', module: 'config', segment: 'BE-01' },
   { re: /^backend\/src\/modules\/prisma\//, layer: 'BE', module: 'prisma', segment: 'BE-01' },
   { re: /^backend\/src\/common\/(constants|types)\//, layer: 'BE', module: 'common', segment: 'BE-01' },
   { re: /^backend\/src\/common\/constants\.ts$/, layer: 'BE', module: 'common', segment: 'BE-01' },
