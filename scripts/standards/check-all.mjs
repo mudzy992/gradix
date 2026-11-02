@@ -49,6 +49,11 @@ const STEPS = [
     cmd: node('scripts/standards/check-console.mjs'),
   },
   {
+    id: 'image',
+    name: 'Backend slika + entrypoint (non-root, healthcheck, exec forma)',
+    cmd: node('scripts/standards/check-image.mjs'),
+  },
+  {
     id: 'env',
     name: 'Env varijable dokumentovane i usklađene (.env.example ↔ .env.coolify ↔ kod)',
     cmd: node('scripts/standards/check-env.mjs'),

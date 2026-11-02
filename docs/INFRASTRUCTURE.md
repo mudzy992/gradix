@@ -56,11 +56,17 @@
 
 | Slika | Faze | Ključne odluke |
 |---|---|---|
-| `backend` | `deps` → `builder` → `production` | `npm ci --include=dev` u build fazi (Coolify ubacuje `NODE_ENV=production`); Prisma klijent se generiše u `/app/generated`; **seed se kompajlira u `dist/prisma/seed.js`**; produkcijska faza `npm ci --omit=dev`; `HEALTHCHECK` preko `fetch('/api/health')` |
+| `backend` | `deps` → `builder` → `production` | `npm ci --include=dev` u build fazi (Coolify ubacuje `NODE_ENV=production`); Prisma klijent se generiše u `/app/generated`; **seed se kompajlira u `dist/prisma/seed.js`**; produkcijska faza `npm ci --omit=dev`; **`USER node`** (ne root, INF-02); `HOME=/home/node` + Prisma keš pod tim korisnikom; `HEALTHCHECK` preko `fetch('/api/health')` |
 | `frontend` | `builder` → `runtime` | Vite build sa `VITE_API_URL` (build-arg, default prazno ⇒ relativni pozivi); nginx template `frontend/nginx/default.conf.template` sa `BACKEND_URL` |
 
 `Dockerfile` i `Dockerfile.frontend` u korijenu su **identične kopije** app verzija; CI pada ako
 se razlikuju.
+
+**Guard bez Dockera (INF-02):** `npm run check:image` (`scripts/standards/check-image.mjs`) provjerava
+`USER node` u produkcijskoj fazi (prije `ENTRYPOINT`), `HEALTHCHECK` na `/api/health`, exec formu
+`ENTRYPOINT`/`CMD`, `set -e` + `exec "$@"` u entrypointu, redoslijed „SSL preflight prije
+migracija“ i provjeru `dist/prisma/seed.js` u buildu. CI job `docker` dodatno **stvarno** builda
+sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do Coolifyja.
 
 ---
 

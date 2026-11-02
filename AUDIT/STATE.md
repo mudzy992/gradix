@@ -118,10 +118,19 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   **ne čita** (refresh tok = BE-02); `REDIS_*` se prenose, kod ih ne čita (INF-07, D-014).
 - Negativan test: uklonjen `MINIO_PORT` → exit 1.
 
+### 2026-11-02 — INF-02 (`A-12`, backend slika)
+- Produkcijska backend slika **više ne radi kao root**: `USER node`, `--chown=node:node` na svim
+  `COPY` koracima, Prisma keš u `/home/node/.cache`, `HOME=/home/node`.
+- Novi guard `scripts/standards/check-image.mjs` (7 provjera bez Dockera): non-root prije
+  `ENTRYPOINT`, healthcheck na `/api/health`, exec forma, `set -e` + `exec "$@"`, SSL preflight
+  prije migracija, `dist/prisma/seed.js` u buildu.
+- Negativan test: stari Dockerfile (bez `USER`) → exit 1. Stvarna verifikacija = CI job `docker`
+  (build + seed iz produkcijske slike).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment po planu §3: **INF-02** (backend image + entrypoint), pa **INF-03** (frontend image + nginx), pa **BE-01**.
+2. Sljedeći segment: **INF-03** (frontend image + nginx), pa **BE-01** (temelj API-ja).
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

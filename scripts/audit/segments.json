@@ -82,7 +82,7 @@
       "id": "INF-02",
       "layer": "INF",
       "title": "Backend image + entrypoint",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {

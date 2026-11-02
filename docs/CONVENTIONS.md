@@ -104,6 +104,7 @@ ispisuje **pravilo → zašto → kako popraviti** i vraća non-zero. U CI-ju jo
 | `check:docs` | pokvareni relativni linkovi, baneri `PENZIONISANO`, potpunost `docs/README.md` i `_retired/INDEX.md`, zabrana linkovanja u `_retired/` (osim indeksa) | ✅ |
 | `check:secrets` | AWS/GitHub/Slack/Stripe ključevi, privatni ključevi, URL baze sa lozinkom | ✅ |
 | `check:logs` | nema `console.log`/`console.debug` u aplikativnom kodu (`error`/`warn` dozvoljeni) | ✅ |
+| `check:image` | backend slika: `USER node`, `HEALTHCHECK` na `/api/health`, exec forma, `set -e` + `exec` u entrypointu, preflight prije migracija | ✅ |
 | `check:env` | svaka env varijabla iz koda/compose-a dokumentovana, `.env.example` ↔ `.env.coolify` parity, nema referenci na penzionisane dokumente | ✅ |
 | `check:compose` | nema `ports:` u produkcijskom compose-u, `db_net`/`redis_net` external, CA mountovi `read_only`, mrtve MinIO slike, healthcheck backend/frontend | ✅ |
 | `check:coverage-matrix` | svaki fajl u matrici, legalni statusi, `loc` i klasifikacija bez drifta | ✅ |
