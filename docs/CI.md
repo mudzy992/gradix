@@ -26,7 +26,7 @@ Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** 
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
-| `audit` | `npm run check:all -- --only=coverage,segments,docs,secrets,logs,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
+| `audit` | `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` | ~28 s |
@@ -55,6 +55,7 @@ rade paralelno, ukupno ~2,5 min.
 | `check-coverage` exit 1 | fajl van matrice, nepoznat segment, ili „pregledano“ bez zapisa — audit se ne može tiho zaobići |
 | `check:docs` exit 1 | pokvaren link ili dokument van indeksa = dokumentacija laže |
 | `check:secrets` exit 1 | tajna u gitu je tajna zauvijek |
+| `check:schema` exit 1 | nov FK bez indeksa = polako brisanje/join na produkciji |
 | `check:image` exit 1 | root u kontejneru, healthcheck koji ne gađa `/api/health`, entrypoint bez `exec`, nginx blok koji poništava sigurnosne headere, neusklađene korijenske kopije Dockerfile-ova |
 | `check:env` exit 1 | nedokumentovana env varijabla = pad u produkciji; razilaženje `.env.example`/`.env.coolify` = deploy koji „radi kod mene“ |
 | `check:compose` exit 1 | host portovi, mrtva MinIO slika ili CA mount koji nedostaje ruše deploy |

@@ -155,11 +155,22 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Prvi run (`41521969883`) pao na **lintu** — `prettier` pravila; fajlovi formatirani, `no-unsafe-member-access`
   u testu zamijenjen tipiziranim pristupom. Ponovljeni run zelen.
 
+### 2026-11-02 — BE-01 drugi prolaz (`A-15`, šema + config) → segment `done`
+- Pregledana sva 6 `prisma/schema/*.prisma` (1115 linija), `backend/package.json`, `tsconfig*`,
+  `nest-cli.json`, `eslint.config.mjs`, `prisma.config.ts`, `storage-path.ts`.
+- Novi guard **`check:schema`**: svaki FK mora imati vodeći indeks. Nađen **51** takav slučaj →
+  zaključan u `backend/prisma/index-baseline.json` (guard pada na svaki novi, upozorava na zastarjele).
+- **Ništa u šemi nije mijenjano** — indeksi su migracija, a `User.email` unique je odluka o
+  podacima/auth-u. Obje odluke su u `AUDIT/segments/BE-01.md` §10 (F-BE-01-07, F-BE-01-08).
+- CI ne tipuje testove (`nest build` ih isključuje) → preneseno u TEST-01 (F-BE-01-09).
+- Matrica: 474 fajla, 65 pregledano (13,7 %).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-01** — drugi prolaz: `prisma/schema/*.prisma`, `package.json`/`tsconfig*`/`nest-cli`/
-   `eslint.config.mjs`, `storage-path.ts`; zatim **BE-02** (auth, refresh tajna).
+2. **BE-02** (auth) — prvo odluka o refresh tokenu (implementirati tok ili ukloniti iz ugovora);
+   zatim **BE-03** (korisnici/role/scope).
+3. Otvorene odluke vlasnika: F-BE-01-07 (indeksi) i F-BE-01-08 (`User.email` unique).
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

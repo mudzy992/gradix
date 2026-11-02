@@ -49,6 +49,11 @@ const STEPS = [
     cmd: node('scripts/standards/check-console.mjs'),
   },
   {
+    id: 'schema',
+    name: 'Prisma šema: nema novih FK bez indeksa',
+    cmd: node('scripts/standards/check-schema.mjs'),
+  },
+  {
     id: 'image',
     name: 'Backend slika + entrypoint (non-root, healthcheck, exec forma)',
     cmd: node('scripts/standards/check-image.mjs'),

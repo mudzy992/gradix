@@ -7,17 +7,18 @@ Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična k
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
 backend/coverage-baseline.json,TEST,coverage,TEST-01,12,pregledano,"ratchet baseline izmjeren 2026-11-02 (linije 0,18 %) — smije samo rasti (CI-04)",2026-11-02
 backend/docker-entrypoint.sh,INF,backend-image,INF-02,36,pregledano,"INF-02: provjeren — set -e, SSL preflight PRIJE migrate deploy, exec ""$@"" (signali do node-a)",2026-11-02
-backend/eslint.config.mjs,BE,config,BE-01,66,nepregledano,,
-backend/nest-cli.json,BE,config,BE-01,9,nepregledano,,
-backend/package.json,BE,config,BE-01,117,pregledano,lint:check/typecheck (STD-01) + jest coverageReporters json-summary/text-summary/lcov (CI-04),2026-11-02
-backend/prisma.config.ts,BE,config,BE-01,14,nepregledano,,
+backend/eslint.config.mjs,BE,config,BE-01,66,pregledano,BE-01: pregledano — typescript-eslint recommendedTypeChecked + prettier; ignoriše generated/dist/coverage,2026-11-02
+backend/nest-cli.json,BE,config,BE-01,9,pregledano,"BE-01: pregledano — deleteOutDir, sourceRoot src",2026-11-02
+backend/package.json,BE,config,BE-01,117,pregledano,"BE-01: pregledano — skripte (build/typecheck/lint:check/test:cov), jest config sa collectCoverageFrom **/*.(t|j)s i json-summary reporterom (CI-04)",2026-11-02
+backend/prisma.config.ts,BE,config,BE-01,14,pregledano,"BE-01: pregledano — schema: prisma/schema, seed: tsx prisma/seed.ts, DATABASE_URL iz env-a",2026-11-02
+backend/prisma/index-baseline.json,BE,migrations,BE-08,58,pregledano,BE-01→BE-08: baseline 51 FK/polimorfne reference bez vodećeg indeksa; guard check-schema pada na svaki NOVI takav slučaj; migracija je odluka vlasnika,2026-11-02
 backend/prisma/migrations/20261102130000_init_postgres/migration.sql,BE,migrations,BE-08,1334,nepregledano,,
-backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,95,nepregledano,,
-backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,227,nepregledano,,
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,263,nepregledano,,
-backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,381,nepregledano,,
-backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,135,nepregledano,,
-backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,nepregledano,,
+backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,95,pregledano,BE-01: pregledano — StockMovement/Warehouse/CostEntry bez indeksa na FK (baseline),2026-11-02
+backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,227,pregledano,BE-01: pregledano — Trip/FuelEntry bez indeksa na projectId/materialId/localId/deviceId (baseline); kaskade defisane,2026-11-02
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,263,pregledano,"BE-01: pregledano — generator prisma-client→generated/, multi-file šema; User.email/phone globalno unique (otvoreno pitanje F-BE-01-08), AuditEvent bez (companyId, createdAt) indeksa",2026-11-02
+backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,381,pregledano,"BE-01: pregledano — 380 linija, najviše modela; FK bez vodećih indeksa (Task.phaseId, TimerSession.userId, DiaryEntry.localId…) zaključani u index-baseline (F-BE-01-07)",2026-11-02
+backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,135,pregledano,BE-01: pregledano — Tender.convertedProjectId i ServiceRecord FK bez indeksa (baseline),2026-11-02
+backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
 backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,nepregledano,,
 backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,nepregledano,,
 backend/prisma/seed.ts,BE,seed,BE-08,116,nepregledano,,
@@ -58,7 +59,7 @@ backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: preg
 backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-01: pregledano — argon2id (19456 KiB, t=2, p=1), min 10 znakova",2026-11-02
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
-backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,nepregledano,,
+backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,"BE-01: pregledano — blokira .. i apsolutne putanje, traži prefiks companyId/ (403), buildObjectPath koristi globalni crypto.randomUUID (Node 22)",2026-11-02
 backend/src/config/env.spec.ts,BE,config,BE-01,149,pregledano,BE-01: 14 testova env validacije + CORS politike + Swagger flaga,2026-11-02
 backend/src/config/env.ts,BE,config,BE-01,216,pregledano,"BE-01: ručna env šema (D-017) — sve greške odjednom, imenovane varijable, produkcijska pravila; vraća string mapu",2026-11-02
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
@@ -277,8 +278,8 @@ backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,nepregledano,,
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,nepregledano,,
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,nepregledano,,
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,nepregledano,,
-backend/tsconfig.build.json,BE,config,BE-01,19,nepregledano,,
-backend/tsconfig.json,BE,config,BE-01,27,nepregledano,,
+backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
+backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
 docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
 frontend/.oxlintrc.json,FE,config,FE-02,9,nepregledano,,
@@ -458,16 +459,17 @@ mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,249,nepregledano,,
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,250,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,436,nepregledano,,
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
-scripts/standards/check-all.mjs,STD,standards,STD-01,166,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
+scripts/standards/check-all.mjs,STD,standards,STD-01,171,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
 scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02
 scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
 scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
 scripts/standards/check-env.mjs,STD,standards,STD-01,133,nepregledano,,
 scripts/standards/check-image.mjs,STD,standards,STD-01,140,pregledano,"INF-02/INF-03: 17 provjera — backend non-root/healthcheck/exec/preflight; frontend STOPSIGNAL, server_tokens, CSP, nasljeđivanje headera, proxy/SPA, identičnost korijenskih kopija",2026-11-02
+scripts/standards/check-schema.mjs,STD,standards,STD-01,68,pregledano,"BE-01: guard — parsira šemu, poredi sa baseline-om, upozorava na zastarjele unose",2026-11-02
 scripts/standards/check-secrets.mjs,STD,standards,STD-01,65,pregledano,6 pravila + allowlist; placeholderi izuzeti sa razlogom (STD-01),2026-11-02
 scripts/standards/lib.mjs,STD,standards,STD-01,106,pregledano,"zajednička logika guardraila: walk, glob, report, allowlist (STD-01)",2026-11-02
