@@ -14,8 +14,8 @@
 
 | | |
 |---|---|
-| Zadnji commit | `e531ca2` |
-| CI | push 3 commita (`2250924`, `c628249`, ovaj) — run se upisuje nakon provjere |
+| Zadnji commit | `dc858fc` (FAZA 1.3) |
+| CI | ✅ [run 41500743672](https://github.com/mudzy992/gradix/actions/runs/41500743672) — 5/5 zelen za `dc858fc` |
 | Zadnji potvrđeno zelen run | [41498842533](https://github.com/mudzy992/gradix/actions/runs/41498842533) (`e531ca2`) ✅ |
 | Sljedeća kapija | **KAPIJA 1** (nakon FAZE 1) |
 
