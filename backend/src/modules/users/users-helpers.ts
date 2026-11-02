@@ -3,17 +3,12 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { EMPLOYEE_CODE_PATTERN } from '../../common/constants';
+import { readUniqueTarget } from '../../common/utils/prisma-errors';
+import { requireTenantCompany } from '../../common/scope/tenant';
 import { PrismaService } from '../prisma/prisma.service';
 
 export function requireCompany(actor: AuthUser): string {
-  if (!actor.tenantCompanyId) {
-    throw new AppError(
-      ERROR_CODES.TENANT_HEADER_REQUIRED,
-      'X-Company-Id is required',
-      403,
-    );
-  }
-  return actor.tenantCompanyId;
+  return requireTenantCompany(actor);
 }
 
 export function assertPayrollWrite(actor: AuthUser): void {
@@ -53,16 +48,7 @@ export function throwUnique(error: unknown): never {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === 'P2002'
   ) {
-    // `meta.target` je u Prisma 7 obično niz imena polja/ograničenja, ali adapteri daju i
-    // string ili objekat — zato gledamo i strukturirano i cijeli `meta` (kao prije).
-    const meta = error.meta;
-    const target = meta?.target;
-    const fromTarget = Array.isArray(target)
-      ? target.map(String).join(',')
-      : typeof target === 'string'
-        ? target
-        : '';
-    const haystack = `${fromTarget} ${JSON.stringify(meta ?? '')}`;
+    const haystack = readUniqueTarget(error.meta);
     if (haystack.includes('email')) {
       throw new AppError(
         ERROR_CODES.AUTH_EMAIL_TAKEN,

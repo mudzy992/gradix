@@ -94,7 +94,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `POST /locations` (GPS telefona) | 1 / 15 s po korisniku |
 | `POST /machines/:id/gps` | 1 / 5 s |
 | `POST /iot/gps` | 1 / 5 s |
-| `GET /public/*` | 60/min |
+| `GET /public/*`, `GET /settings/public` | 60/min |
 
 ---
 
@@ -104,8 +104,8 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 |---|---|---|
 | `auth` | `/api/auth` | login, refresh (rotacija + reuse detekcija), logout/logout-all, change-password, forgot/reset |
 | `users` | `/api/users` | CRUD, role (hijerarhija D-030), temp lozinka (jednom), reset-password, deaktivacija (gasi timer + revoke) |
-| `companies` | `/api/companies`, `/api/company` | tenant CRUD (PLATFORM_ADMIN), `PATCH /company` (ADMIN), slug immutable |
-| `settings` | `/api/settings` | registry podešavanja firme (defaulti u `common/settings`) |
+| `companies` | `/api/companies`, `/api/company` | tenant CRUD (PLATFORM_ADMIN); `GET /company` traži `settings.read`, `PATCH /company` traži `settings.write`; slug immutable |
+| `settings` | `/api/settings` | registry podešavanja firme (`PUT` je atomski: validacija svih ključeva pa jedna transakcija); javni `GET /settings/public` maskira `SECRET` |
 | `notifications` | `/api/notifications` | in-app lista, read; emisija preko Socket.IO |
 | `files` | `/api/files` | upload/download (MinIO), path guard `{companyId}/`, MIME/veličina |
 | `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu |
@@ -113,7 +113,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `polish` | `/api/tenders`, `/services`, `/documents`, `/reports` | tenderi, servis mašina, istek dokumenata, fiksni izvještaji |
 | `erp` | `/api/partners`, `/costs`, `/warehouses`, `/stock` | partneri, troškovi, lager |
 | `public` | `/api/public` | javni one-page (whitelisted DTO, keš 60 s) |
-| `audit` | — | `AuditEvent` (zatvoren skup akcija) |
+| `audit` | — | `AuditEvent` (zatvoren skup akcija); **best-effort**: pad upisa se loguje i ne ruši zahtjev (D-031) |
 | `realtime` | `/socket.io` | JWT handshake, sobe `project:{id}` (server-side) |
 | `health` | `/api/health` | `SELECT 1` → `{ process, postgres }` |
 | `mail` | — | **stub** (vidi §7) |

@@ -58,20 +58,26 @@ backend/src/common/scope/ops-roles.spec.ts,BE,common,BE-03,97,pregledano,BE-03: 
 backend/src/common/scope/ops-roles.ts,BE,common,BE-03,87,pregledano,BE-03: hidesBudget je allow-by-default (F-06) — ponašanje zaključano testovima,2026-11-02
 backend/src/common/scope/project-lock.spec.ts,BE,common,BE-03,75,pregledano,BE-03: 9 testova tranzicija/terminalnih statusa,2026-11-02
 backend/src/common/scope/project-lock.ts,BE,common,BE-03,51,pregledano,BE-03: tranzicije statusa i terminalna zaštita; 9 testova,2026-11-02
-backend/src/common/scope/scope-by-project.ts,BE,common,BE-03,57,pregledano,BE-03: requireTenant() umjesto ! (F-02); pretraga insensitive (F-04),2026-11-02
-backend/src/common/settings/registry.ts,BE,common,BE-04,104,nepregledano,,
+backend/src/common/scope/scope-by-project.ts,BE,common,BE-03,44,pregledano,BE-03: requireTenant() umjesto ! (F-02); pretraga insensitive (F-04),2026-11-02
+backend/src/common/scope/tenant.spec.ts,BE,common,BE-03,22,pregledano,"BE-04: 403 TENANT_HEADER_REQUIRED bez tenanta, vraća id sa tenantom",2026-11-02
+backend/src/common/scope/tenant.ts,BE,common,BE-03,22,pregledano,"BE-04: novo — requireTenantCompany, jedna tenant provjera (F-06)",2026-11-02
+backend/src/common/settings/registry.spec.ts,BE,common,BE-04,70,pregledano,"BE-04: ključevi jedinstveni, defaulti u granicama, koercija bool/broj/string",2026-11-02
+backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +findSetting/coerceSettingValue (Number.isFinite, min/max); 12 testova (F-08)",2026-11-02
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01: pregledano — Prisma.Decimal sa VALIDATION_FAILED na NaN,2026-11-02
 backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: pregledano — AppError PAGINATION_LIMIT za page<1/limit>100,2026-11-02
 backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-02: pregledano — argon2id, min 10 znakova (AUTH_PASSWORD_TOO_SHORT), SHA-256 hash refresh tokena",2026-11-02
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
+backend/src/common/utils/prisma-errors.spec.ts,BE,common,BE-01,33,pregledano,BE-04: 5 testova oblika meta (niz/string/odsutan/velika slova),2026-11-02
+backend/src/common/utils/prisma-errors.ts,BE,common,BE-01,26,pregledano,BE-04: novo — readUniqueTarget (P2002) sa fallbackom na cijeli meta (F-07),2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,"BE-01: pregledano — blokira .. i apsolutne putanje, traži prefiks companyId/ (403), buildObjectPath koristi globalni crypto.randomUUID (Node 22)",2026-11-02
 backend/src/config/env.spec.ts,BE,config,BE-01,147,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
 backend/src/config/env.ts,BE,config,BE-01,200,pregledano,BE-02: uklonjena JWT_REFRESH_SECRET validacija (D-029); ostalo iz BE-01,2026-11-02
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
-backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,nepregledano,,
-backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,22,nepregledano,,
+backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,pregledano,"BE-04: @Global modul, samo izvoz AuditService",2026-11-02
+backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,54,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
+backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
 backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,149,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
@@ -82,12 +88,12 @@ backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,191,pregledano,BE-02: res
 backend/src/modules/auth/jwt.strategy.ts,BE,auth,BE-02,54,pregledano,"BE-02: baza na svaki zahtjev, PLATFORM_ADMIN izuzet od ugašene firme (F-06)",2026-11-02
 backend/src/modules/auth/map-auth-user.ts,BE,auth,BE-02,65,pregledano,BE-02: mapiranje bez tajni; toMeDto ne izlaže companyId ugovor više nego prije,2026-11-02
 backend/src/modules/auth/me.controller.ts,BE,auth,BE-02,27,pregledano,BE-02: čita samo AuthUser iz guard-a,2026-11-02
-backend/src/modules/companies/companies.controller.ts,BE,companies,BE-04,44,nepregledano,,
-backend/src/modules/companies/companies.dto.ts,BE,companies,BE-04,110,nepregledano,,
-backend/src/modules/companies/companies.module.ts,BE,companies,BE-04,15,nepregledano,,
-backend/src/modules/companies/companies.service.ts,BE,companies,BE-04,242,nepregledano,,
-backend/src/modules/companies/default-settings.ts,BE,companies,BE-04,14,nepregledano,,
-backend/src/modules/companies/tenant-company.controller.ts,BE,companies,BE-04,27,nepregledano,,
+backend/src/modules/companies/companies.controller.ts,BE,companies,BE-04,44,pregledano,BE-04: platform rute traže platform.companies (lista/kreiranje/izmjena),2026-11-02
+backend/src/modules/companies/companies.dto.ts,BE,companies,BE-04,110,pregledano,"BE-04: bez MaxLength (F-09, odgođeno); admin blok obavezan preko ValidateNested",2026-11-02
+backend/src/modules/companies/companies.module.ts,BE,companies,BE-04,15,pregledano,BE-04: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
+backend/src/modules/companies/companies.service.ts,BE,companies,BE-04,222,pregledano,"BE-04: requireTenantCompany + readUniqueTarget iz common (F-06, F-07); deaktivacija gasi sesije",2026-11-02
+backend/src/modules/companies/default-settings.ts,BE,companies,BE-04,14,pregledano,BE-04: default redovi iz registra — jedan izvor defaulta,2026-11-02
+backend/src/modules/companies/tenant-company.controller.ts,BE,companies,BE-04,27,pregledano,"BE-04: GET /company traži settings.read (F-01), PATCH settings.write",2026-11-02
 backend/src/modules/erp/costs.controller.ts,BE,erp,BE-14,57,nepregledano,,
 backend/src/modules/erp/costs.dto.ts,BE,erp,BE-14,72,nepregledano,,
 backend/src/modules/erp/costs.service.ts,BE,erp,BE-14,168,nepregledano,,
@@ -256,13 +262,13 @@ backend/src/modules/realtime/app.gateway.ts,BE,public-notify,BE-16,72,nepregleda
 backend/src/modules/realtime/join-project-rooms.ts,BE,public-notify,BE-16,54,nepregledano,,
 backend/src/modules/realtime/realtime.module.ts,BE,public-notify,BE-16,23,nepregledano,,
 backend/src/modules/realtime/realtime.service.ts,BE,public-notify,BE-16,54,nepregledano,,
-backend/src/modules/settings/settings.controller.ts,BE,settings,BE-04,38,nepregledano,,
-backend/src/modules/settings/settings.dto.ts,BE,settings,BE-04,7,nepregledano,,
-backend/src/modules/settings/settings.module.ts,BE,settings,BE-04,10,nepregledano,,
-backend/src/modules/settings/settings.service.ts,BE,settings,BE-04,172,nepregledano,,
+backend/src/modules/settings/settings.controller.ts,BE,settings,BE-04,37,pregledano,BE-04: list(actor) bez canWrite; javni /settings/public 60/min (F-05),2026-11-02
+backend/src/modules/settings/settings.dto.ts,BE,settings,BE-04,7,pregledano,BE-04: samo slug za javni upit,2026-11-02
+backend/src/modules/settings/settings.module.ts,BE,settings,BE-04,10,pregledano,BE-04: bez promjena; servis koristi globalni audit + realtime,2026-11-02
+backend/src/modules/settings/settings.service.ts,BE,settings,BE-04,116,pregledano,"BE-04: atomski PUT ($transaction, validacija svih ključeva), maskSecret (F-03, F-04)",2026-11-02
 backend/src/modules/users/role-escalation.ts,BE,users,BE-03,84,pregledano,BE-03: assertCanManageTarget (D-030) + postojeća pravila dodjele/posljednjeg SUPER_ADMIN-a,2026-11-02
 backend/src/modules/users/serialize-user.ts,BE,users,BE-03,41,pregledano,BE-03: hourlyRate skriven bez payroll.read; bez tajni u odgovoru,2026-11-02
-backend/src/modules/users/users-helpers.ts,BE,users,BE-03,100,pregledano,BE-03: throwUnique čita meta.target (F-07); payroll.write gate za satnicu,2026-11-02
+backend/src/modules/users/users-helpers.ts,BE,users,BE-03,86,pregledano,BE-03: throwUnique čita meta.target (F-07); payroll.write gate za satnicu,2026-11-02
 backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03: sve rute @TenantRoute + USERS_READ/WRITE (bez DELETE — deaktivacija),2026-11-02
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
@@ -284,7 +290,7 @@ backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,nepregledano,,
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,nepregledano,,
-backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,nepregledano,,
+backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02

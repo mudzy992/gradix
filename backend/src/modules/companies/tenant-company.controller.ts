@@ -13,7 +13,7 @@ export class TenantCompanyController {
   constructor(private readonly companies: CompaniesService) {}
 
   @Get()
-  @RequirePermissions(PERMISSIONS.SETTINGS_WRITE)
+  @RequirePermissions(PERMISSIONS.SETTINGS_READ)
   get(@CurrentUser() actor: AuthUser) {
     return this.companies.getTenant(actor);
   }

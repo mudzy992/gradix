@@ -10,6 +10,8 @@ import { defaultSettingRows } from './default-settings';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { assertSlug } from '../../common/utils/slug';
+import { readUniqueTarget } from '../../common/utils/prisma-errors';
+import { requireTenantCompany } from '../../common/scope/tenant';
 import { normalizePhone } from '../../common/utils/phone';
 import {
   createTemporaryPassword,
@@ -127,14 +129,7 @@ export class CompaniesService {
   }
 
   private requireTenant(actor: AuthUser): string {
-    if (!actor.tenantCompanyId) {
-      throw new AppError(
-        ERROR_CODES.TENANT_HEADER_REQUIRED,
-        'X-Company-Id is required',
-        403,
-      );
-    }
-    return actor.tenantCompanyId;
+    return requireTenantCompany(actor);
   }
 
   private async patchCompany(
@@ -223,19 +218,4 @@ export class CompaniesService {
     }
     throw error;
   }
-}
-
-/**
- * Prisma P2002 `meta.target` je ili string ili lista kolona.
- * Normalizujemo ga u string kako bi provjera unique polja bila deterministička.
- */
-function readUniqueTarget(meta: unknown): string {
-  if (typeof meta !== 'object' || meta === null || !('target' in meta)) {
-    return '';
-  }
-  const target = (meta as { target?: unknown }).target;
-  if (Array.isArray(target)) {
-    return target.filter((item) => typeof item === 'string').join(',');
-  }
-  return typeof target === 'string' ? target : '';
 }

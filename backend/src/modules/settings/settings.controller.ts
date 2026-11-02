@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Put, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SettingsService } from './settings.service';
 import { PublicSettingsQueryDto } from './settings.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -13,6 +14,7 @@ export class SettingsController {
   constructor(private readonly settings: SettingsService) {}
 
   @Public()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Get('public')
   publicBySlug(@Query() query: PublicSettingsQueryDto) {
     return this.settings.publicBySlug(query.slug);
@@ -22,10 +24,7 @@ export class SettingsController {
   @Get()
   @RequirePermissions(PERMISSIONS.SETTINGS_READ)
   list(@CurrentUser() actor: AuthUser) {
-    return this.settings.list(
-      actor,
-      actor.permissions.includes(PERMISSIONS.SETTINGS_WRITE),
-    );
+    return this.settings.list(actor);
   }
 
   @TenantRoute()

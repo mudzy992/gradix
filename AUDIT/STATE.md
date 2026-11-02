@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-03` (rbac: hijerarhija rola D-030, tenant scope bez `!`, 54 unit testa) |
-| CI | ✅ [run 41531577934](https://github.com/mudzy992/gradix/actions/runs/41531577934) — **6/6** zelen za `chore(audit): STATE … (BE-03 done)` |
+| Zadnji commit | `BE-04` (firme/podešavanja/audit: atomski PUT, audit best-effort D-031, tenant helper) |
+| CI | ⏳ `refactor(settings) … [BE-04]` — run se upisuje nakon `gh run watch` |
 | Zadnji potvrđeno zelen run | [41531577934](https://github.com/mudzy992/gradix/actions/runs/41531577934) (BE-03 STATE) ✅ 6/6 · prije: 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -198,10 +198,23 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   (2) `41530476307` ❌ lint — nepotrebna tvrdnja (`error.meta as …`), uklonjena.
   (3) **`41531137887` ✅ 6/6.**
 
+### 2026-11-02 — BE-04 (firme, podešavanja, audit) → segment `done`
+- **Nalaz (visoko):** pad **audit** upisa vraćao je 500 klijentu iako je poslovna izmjena već
+  committed → `AuditService.write` je sada best-effort (loguje, ne ruši) — **D-031**.
+- **Nalaz (srednje):** `PUT /settings` nije bio atomski (prvi ključevi ostaju upisani ako treći
+  padne) → validacija svih ključeva pa jedna `$transaction`; realtime/audit tek poslije upisa.
+- **Nalaz (srednje):** `GET /company` je tražio `settings.write` za čitanje → `settings.read`.
+- **DRY:** `requireTenantCompany` (bilo 4 kopije, 3 različita ponašanja) i `readUniqueTarget`
+  (bilo 2 verzije; jedna je pravila `CONFLICT` umjesto `AUTH_EMAIL_TAKEN`).
+- Registar podešavanja sada nosi i validaciju (`coerceSettingValue`) → testira se bez baze;
+  `NaN`/`Infinity` više ne prolaze kao brojevi.
+- **Testovi:** **102/102** lokalno (16 novih). Matrica **476 fajlova / 119 pregledano (25,0 %)**.
+- **Za vlasnika:** F-BE-04-10 (nema PostgreSQL RLS) i D-031 dug (transakcioni audit za finansije).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-04** (`common/scope/*` dubinska analiza + ops moduli po planu) — sljedeći segment.
+2. **BE-05** (ops servisi: projekti, zadaci, timeri) — sljedeći segment po planu.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

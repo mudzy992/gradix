@@ -202,6 +202,17 @@ svaka podjela na role u firmi bila kozmetička. **Cijena:** ADMIN više ne može
 SUPER_ADMIN-a — to radi drugi SUPER_ADMIN. **Odbačeno:** rangiranje svih 10 rola po „težini“
 (previše proizvoljno) i skrivanje SUPER_ADMIN-a iz liste (ne blokira direktan `PATCH`).
 
+### D-031 — Audit zapis je best-effort, ne uslov za poslovnu operaciju
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na F-BE-04-02. `AuditService.write()` hvata grešku, loguje je (action + entitet) i **ne
+ruši zahtjev** — poslovna izmjena je u tom trenutku već committed, pa bi `500` klijentu bio laž:
+zapis je nastao, a klijent misli da nije. **Zašto ne „fail the request“:** konzistentnost bi tražila
+da audit ide u istu transakciju kao izmjena, a to znači prosljeđivanje `tx` kroz sve servise i
+mijenja desetine potpisa; za v1 je važnije da operacije rade nego da nijedan audit zapis ne
+izostane. **Odbačeno:** outbox tabela + worker (previše za v1), tihi `catch {}` (nema traga).
+**Dug:** u BE-08 (šema) i BE-09 (ops servisi) preporuka je `tx.auditEvent.create` u istoj
+transakciji za finansijske operacije (payroll, stock, fuel).
+
 ---
 
 ## Zamijenjene / povučene odluke
