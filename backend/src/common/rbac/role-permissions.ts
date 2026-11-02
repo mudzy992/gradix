@@ -96,7 +96,9 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
 export function resolvePermissions(roles: AppRole[]): Permission[] {
   const unique = new Set<Permission>();
   for (const role of roles) {
-    for (const permission of ROLE_PERMISSIONS[role]) {
+    // Deny-by-default: rola koja nije u mapi (npr. nova vrijednost Prisma enuma) ne daje
+    // nikakvu permisiju, umjesto da sruši zahtjev na `undefined`.
+    for (const permission of ROLE_PERMISSIONS[role] ?? []) {
       unique.add(permission);
     }
   }

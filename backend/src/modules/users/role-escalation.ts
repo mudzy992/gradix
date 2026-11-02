@@ -1,4 +1,8 @@
 import { AppRole } from '../../common/rbac/roles';
+import {
+  canAssignRoles,
+  canManageRoles,
+} from '../../common/rbac/role-hierarchy';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -18,8 +22,6 @@ export async function assertRoleChange(params: {
       400,
     );
   }
-  const actorIsPlatform = actor.roles.includes('PLATFORM_ADMIN');
-  const actorIsSuper = actor.roles.includes('SUPER_ADMIN');
   if (nextRoles.includes('PLATFORM_ADMIN')) {
     throw new AppError(
       ERROR_CODES.FORBIDDEN,
@@ -27,7 +29,7 @@ export async function assertRoleChange(params: {
       403,
     );
   }
-  if (nextRoles.includes('SUPER_ADMIN') && !actorIsPlatform && !actorIsSuper) {
+  if (!canAssignRoles(actor.roles, nextRoles)) {
     throw new AppError(ERROR_CODES.FORBIDDEN, 'Cannot assign SUPER_ADMIN', 403);
   }
   const current = await prisma.userRoleAssignment.findMany({
@@ -37,6 +39,23 @@ export async function assertRoleChange(params: {
   const keepsSuper = nextRoles.includes('SUPER_ADMIN');
   if (hadSuper && !keepsSuper) {
     await assertNotLastSuper(prisma, targetUserId);
+  }
+}
+
+/**
+ * BE-03: sprečava eskalaciju kroz tuđi nalog — `users.write` (ADMIN) ne smije resetovati lozinku
+ * ni mijenjati role/isActive korisniku koji ima SUPER_ADMIN (ili PLATFORM_ADMIN).
+ */
+export function assertCanManageTarget(
+  actor: AuthUser,
+  targetRoles: readonly AppRole[],
+): void {
+  if (!canManageRoles(actor.roles, targetRoles)) {
+    throw new AppError(
+      ERROR_CODES.FORBIDDEN,
+      'Cannot manage a user with a higher role',
+      403,
+    );
   }
 }
 

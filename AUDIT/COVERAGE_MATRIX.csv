@@ -44,14 +44,21 @@ backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
 backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
 backend/src/common/notify/notify-roles.ts,BE,common,BE-16,46,nepregledano,,
-backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,nepregledano,,
-backend/src/common/rbac/role-permissions.ts,BE,common,BE-03,105,nepregledano,,
-backend/src/common/rbac/roles.ts,BE,common,BE-03,15,nepregledano,,
-backend/src/common/scope/company-tz.ts,BE,common,BE-03,113,nepregledano,,
+backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,pregledano,BE-03: 39 permisija; PLATFORM_COMPANIES odvojeno od firmi-skih,2026-11-02
+backend/src/common/rbac/role-hierarchy.spec.ts,BE,common,BE-03,39,pregledano,"BE-03: 9 testova hijerarhije (ADMIN vs SUPER_ADMIN, PLATFORM_ADMIN)",2026-11-02
+backend/src/common/rbac/role-hierarchy.ts,BE,common,BE-03,41,pregledano,"BE-03: novo — canManageRoles/canAssignRoles, osnova D-030",2026-11-02
+backend/src/common/rbac/role-permissions.spec.ts,BE,common,BE-03,41,pregledano,"BE-03: svaka rola ima mapu, PLATFORM_COMPANIES samo platform admin, deny-by-default",2026-11-02
+backend/src/common/rbac/role-permissions.ts,BE,common,BE-03,107,pregledano,BE-03: deny-by-default za nepoznatu rolu (F-05); union bez duplikata + 5 testova,2026-11-02
+backend/src/common/rbac/roles.ts,BE,common,BE-03,15,pregledano,"BE-03: 10 rola, AppRole iz jedne liste (izvor istine za DTO validaciju)",2026-11-02
+backend/src/common/scope/company-tz.spec.ts,BE,common,BE-03,85,pregledano,BE-03: 8 testova zona/DST/granica mjeseca,2026-11-02
+backend/src/common/scope/company-tz.ts,BE,common,BE-03,113,pregledano,"BE-03: kalendarski dan po zoni, DST opseg (23 h), mjesečni opseg; 8 testova",2026-11-02
+backend/src/common/scope/ops-dates.spec.ts,BE,common,BE-03,66,pregledano,"BE-03: 7 testova datuma, geofence granica, normalizacije kodova",2026-11-02
 backend/src/common/scope/ops-dates.ts,BE,common,BE-03,72,nepregledano,,
-backend/src/common/scope/ops-roles.ts,BE,common,BE-03,87,nepregledano,,
-backend/src/common/scope/project-lock.ts,BE,common,BE-03,51,nepregledano,,
-backend/src/common/scope/scope-by-project.ts,BE,common,BE-03,42,nepregledano,,
+backend/src/common/scope/ops-roles.spec.ts,BE,common,BE-03,97,pregledano,BE-03: 7 testova opsega rola (uključivo trenutno hidesBudget ponašanje),2026-11-02
+backend/src/common/scope/ops-roles.ts,BE,common,BE-03,87,pregledano,BE-03: hidesBudget je allow-by-default (F-06) — ponašanje zaključano testovima,2026-11-02
+backend/src/common/scope/project-lock.spec.ts,BE,common,BE-03,75,pregledano,BE-03: 9 testova tranzicija/terminalnih statusa,2026-11-02
+backend/src/common/scope/project-lock.ts,BE,common,BE-03,51,pregledano,BE-03: tranzicije statusa i terminalna zaštita; 9 testova,2026-11-02
+backend/src/common/scope/scope-by-project.ts,BE,common,BE-03,57,pregledano,BE-03: requireTenant() umjesto ! (F-02); pretraga insensitive (F-04),2026-11-02
 backend/src/common/settings/registry.ts,BE,common,BE-04,104,nepregledano,,
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01: pregledano — Prisma.Decimal sa VALIDATION_FAILED na NaN,2026-11-02
@@ -253,13 +260,13 @@ backend/src/modules/settings/settings.controller.ts,BE,settings,BE-04,38,nepregl
 backend/src/modules/settings/settings.dto.ts,BE,settings,BE-04,7,nepregledano,,
 backend/src/modules/settings/settings.module.ts,BE,settings,BE-04,10,nepregledano,,
 backend/src/modules/settings/settings.service.ts,BE,settings,BE-04,172,nepregledano,,
-backend/src/modules/users/role-escalation.ts,BE,users,BE-03,65,nepregledano,,
-backend/src/modules/users/serialize-user.ts,BE,users,BE-03,41,nepregledano,,
-backend/src/modules/users/users-helpers.ts,BE,users,BE-03,91,nepregledano,,
-backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,nepregledano,,
-backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,nepregledano,,
-backend/src/modules/users/users.module.ts,BE,users,BE-03,14,nepregledano,,
-backend/src/modules/users/users.service.ts,BE,users,BE-03,221,nepregledano,,
+backend/src/modules/users/role-escalation.ts,BE,users,BE-03,84,pregledano,BE-03: assertCanManageTarget (D-030) + postojeća pravila dodjele/posljednjeg SUPER_ADMIN-a,2026-11-02
+backend/src/modules/users/serialize-user.ts,BE,users,BE-03,41,pregledano,BE-03: hourlyRate skriven bez payroll.read; bez tajni u odgovoru,2026-11-02
+backend/src/modules/users/users-helpers.ts,BE,users,BE-03,97,pregledano,BE-03: throwUnique čita meta.target (F-07); payroll.write gate za satnicu,2026-11-02
+backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03: sve rute @TenantRoute + USERS_READ/WRITE (bez DELETE — deaktivacija),2026-11-02
+backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
+backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
+backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,192,nepregledano,,
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,47,nepregledano,,
@@ -278,8 +285,8 @@ backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,nepregledano,,
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,nepregledano,,
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,nepregledano,,
-backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,nepregledano,,
-backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,nepregledano,,
+backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02
+backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
 backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02

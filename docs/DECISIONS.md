@@ -190,6 +190,18 @@ trebala; neprozirni hashirani token ne nosi podatke koje klijent ne treba da vid
 jedini izvor istine. **Cijena:** jedan upit na bazu po refreshu (zanemarivo uz 20/min limit) i
 dnevni cron (03:00) koji briše istekle i tokene opozvane prije `REFRESH_RETENTION_DAYS` (7 dana).
 
+### D-030 — Ne upravljaš nalogom koji ima višu rolu od tvoje
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na F-BE-03-01. `users.write` daje pravo da menjaš korisnike **u svojoj firmi**, ali ne i
+da preuzmeš nalog iznad sebe. Pravilo (`common/rbac/role-hierarchy.ts`):
+`PLATFORM_ADMIN` se ne dodjeljuje kroz tenant rute i niko ne može njime upravljati; nalogom sa
+`SUPER_ADMIN` mogu upravljati samo `SUPER_ADMIN` i `PLATFORM_ADMIN`. Primjenjuje se u
+`PATCH /users/:id` i `POST /users/:id/reset-password`.
+**Zašto:** bez toga ADMIN u dva zahtjeva (reset lozinke → prijava) postaje SUPER_ADMIN, pa je
+svaka podjela na role u firmi bila kozmetička. **Cijena:** ADMIN više ne može resetovati lozinku
+SUPER_ADMIN-a — to radi drugi SUPER_ADMIN. **Odbačeno:** rangiranje svih 10 rola po „težini“
+(previše proizvoljno) i skrivanje SUPER_ADMIN-a iz liste (ne blokira direktan `PATCH`).
+
 ---
 
 ## Zamijenjene / povučene odluke

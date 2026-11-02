@@ -1,4 +1,4 @@
-import { PrismaService } from '../../modules/prisma/prisma.service';
+import type { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
 import { DEFAULT_TIMEZONE } from '../constants';

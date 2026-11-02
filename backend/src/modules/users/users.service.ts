@@ -15,7 +15,7 @@ import {
 import { normalizePhone } from '../../common/utils/phone';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { serializeUser } from './serialize-user';
-import { assertRoleChange } from './role-escalation';
+import { assertCanManageTarget, assertRoleChange } from './role-escalation';
 import { UsersQueryDto } from './users.dto';
 import {
   assertEmployeeCode,
@@ -44,10 +44,10 @@ export class UsersService {
       ...(query.q
         ? {
             OR: [
-              { firstName: { contains: query.q } },
-              { lastName: { contains: query.q } },
-              { email: { contains: query.q } },
-              { employeeCode: { contains: query.q } },
+              { firstName: { contains: query.q, mode: 'insensitive' } },
+              { lastName: { contains: query.q, mode: 'insensitive' } },
+              { email: { contains: query.q, mode: 'insensitive' } },
+              { employeeCode: { contains: query.q, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -122,6 +122,11 @@ export class UsersService {
 
   async patch(actor: AuthUser, id: string, dto: PatchUserDto) {
     const existing = await findScopedUser(this.prisma, actor, id);
+    // BE-03: ne diraj nalog sa višom rolom (ADMIN ne mijenja SUPER_ADMIN-a).
+    assertCanManageTarget(
+      actor,
+      existing.roles.map((item) => item.role),
+    );
     if (dto.roles) {
       await assertRoleChange({
         actor,
@@ -197,7 +202,12 @@ export class UsersService {
         403,
       );
     }
-    await findScopedUser(this.prisma, actor, id);
+    const target = await findScopedUser(this.prisma, actor, id);
+    // BE-03: reset tuđe lozinke je preuzimanje naloga — zabranjeno iznad svoje role.
+    assertCanManageTarget(
+      actor,
+      target.roles.map((item) => item.role),
+    );
     const temporaryPassword = createTemporaryPassword();
     await this.prisma.user.update({
       where: { id },

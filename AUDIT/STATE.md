@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-02` (auth: rotacija + retencija + D-029, uklonjen `JWT_REFRESH_SECRET`) |
-| CI | ✅ [run 41528279151](https://github.com/mudzy992/gradix/actions/runs/41528279151) — **6/6** zelen za `feat(auth) … [BE-02]` |
+| Zadnji commit | `BE-03` (rbac: hijerarhija rola D-030, tenant scope bez `!`, 54 unit testa) |
+| CI | ⏳ `fix(rbac) … [BE-03]` — run se upisuje nakon `gh run watch` |
 | Zadnji potvrđeno zelen run | [41528279151](https://github.com/mudzy992/gradix/actions/runs/41528279151) (BE-02) ✅ 6/6 · prije: 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -182,10 +182,22 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Testovi: `npx jest src/config src/modules/auth` → **28/28**; `check:all` (8 koraka) ✅;
   matrica **476 fajlova / 76 pregledano (16,0 %)**.
 
+### 2026-11-02 — BE-03 (korisnici, role, scope) → segment `done`
+- **Nalaz (visoko):** ADMIN sa `users.write` mogao je resetovati lozinku SUPER_ADMIN-u i preuzeti
+  nalog (eskalacija u dva zahtjeva). Dodato **D-030** + `common/rbac/role-hierarchy.ts`
+  (`assertCanManageTarget` u `PATCH /users/:id` i `reset-password`).
+- **Nalaz (visoko):** `projectListWhere` je koristio `tenantCompanyId!` → `companyId: undefined`
+  u Prisma-i znači **bez filtera po firmi**. Sada `requireTenant()` → `403`.
+- Ostalo: `scopeByCompany` 500 → 403; pretraga korisnika/projekata `mode: 'insensitive'`;
+  `resolvePermissions` deny-by-default za nepoznatu rolu; `throwUnique` čita `meta.target`.
+- **Testovi:** 54 unit testa u `src/common` (hijerarhija, permisije, vremenske zone + DST,
+  datumi, tranzicije projekta, opseg rola). Matrica **476 fajlova / 99 pregledano (20,8 %)**.
+- **Za vlasnika:** F-BE-03-06 (`hidesBudget` — MECHANIC/ACCOUNTANT vide budžet) = odluka, ne bug fix.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-03** (korisnici, role, scope) — sljedeći segment po planu; pa **BE-04** (`common/scope/*`).
+2. **BE-04** (`common/scope/*` dubinska analiza + ops moduli po planu) — sljedeći segment.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

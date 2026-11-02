@@ -76,6 +76,9 @@ backend/src/
   (nema modela reset tokena ni prave dostave); ADMIN resetuje lozinku kroz `POST /users/:id/reset-password`.
 - `@Public()` isključuje `JwtAuthGuard` (health, login, refresh, forgot/reset, javni sajt, IoT ingest).
 - Permisije: `@RequirePermissions('…')`, efektivno = **unija** permisija svih rola korisnika.
+- **Hijerarhija (D-030):** `users.write` ne dozvoljava upravljanje nalogom sa višom rolom — samo
+  `SUPER_ADMIN`/`PLATFORM_ADMIN` diraju SUPER_ADMIN naloge, a `PLATFORM_ADMIN` se ne dodjeljuje
+  kroz tenant rute (`common/rbac/role-hierarchy.ts`).
 - Tenant: `@TenantRoute()` + header `X-Company-Id` — **samo** za `PLATFORM_ADMIN`.
 - `mustChangePassword` ⇒ dozvoljeni su samo `/me`, change-password i logout(i); ostalo
   `403 AUTH_PASSWORD_CHANGE_REQUIRED`.
@@ -100,7 +103,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | Modul | Ruta (prefiks) | Odgovornost |
 |---|---|---|
 | `auth` | `/api/auth` | login, refresh (rotacija + reuse detekcija), logout/logout-all, change-password, forgot/reset |
-| `users` | `/api/users` | CRUD, role, temp lozinka (jednom), reset-password, deaktivacija (gasí timer + revoke) |
+| `users` | `/api/users` | CRUD, role (hijerarhija D-030), temp lozinka (jednom), reset-password, deaktivacija (gasi timer + revoke) |
 | `companies` | `/api/companies`, `/api/company` | tenant CRUD (PLATFORM_ADMIN), `PATCH /company` (ADMIN), slug immutable |
 | `settings` | `/api/settings` | registry podešavanja firme (defaulti u `common/settings`) |
 | `notifications` | `/api/notifications` | in-app lista, read; emisija preko Socket.IO |

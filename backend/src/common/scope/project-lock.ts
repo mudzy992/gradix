@@ -1,4 +1,4 @@
-import { ProjectStatus } from '../../../generated/client';
+import type { ProjectStatus } from '../../../generated/client';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
 
