@@ -78,4 +78,15 @@ else if (migrateIdx !== -1 && caIdx > migrateIdx) {
   report.violation('backend/docker-entrypoint.sh', 'SSL preflight mora biti prije `migrate deploy`');
 }
 
+// 7) korijenski Dockerfile je identična kopija app verzije (Coolify koristi korijen)
+report.bump();
+try {
+  const root = read('Dockerfile');
+  if (root !== dockerfile) {
+    report.violation('Dockerfile', 'nije identičan `backend/Dockerfile` (CI to traži u jobu `docker`)');
+  }
+} catch {
+  report.violation('Dockerfile', 'ne postoji korijenska kopija');
+}
+
 finish(report);

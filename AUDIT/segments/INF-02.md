@@ -69,6 +69,7 @@ predvidivi pri startu. Ovaj segment uvodi **non-root** izvršavanje i guard koji
 |---|---|---|
 | Guard pozitivno | `npm run check:all -- --only=image` | PASS (7 provjera) |
 | Guard negativno (stari Dockerfile bez `USER`) | `git stash -- backend/Dockerfile` + guard | exit 1 ✅ |
+| Korijenska kopija identična | `diff Dockerfile backend/Dockerfile` | identično ✅ |
 | Stvarni build + seed kao `node` | CI job `docker` | vidi `AUDIT/STATE.md` |
 
 ## 8. Rizici i rollback
@@ -90,5 +91,5 @@ predvidivi pri startu. Ovaj segment uvodi **non-root** izvršavanje i guard koji
 |---|---|
 | Datum | 2026-11-02 |
 | Commit(ovi) | `feat(infra): … [INF-02]` |
-| CI run | vidi `AUDIT/STATE.md` |
+| CI run | prvi run pao (job `docker`: root `Dockerfile` nije bio identičan) → popravljeno u sljedećem commitu; vidi `AUDIT/STATE.md` |
 | Status | `done` |

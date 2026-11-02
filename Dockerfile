@@ -48,27 +48,33 @@ RUN npm run build \
 FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production \
-    PORT=3000
+    PORT=3000 \
+    HOME=/home/node
 
 RUN apk add --no-cache openssl ca-certificates
 
 # Samo produkcijske zavisnosti (`prisma` CLI i `dotenv` su produkcijske
 # zavisnosti jer entrypoint pokreće `prisma migrate deploy`).
-COPY package.json package-lock.json ./
+COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
 
 # Buildani artefakti (dist/src/main.js je ulazna tačka — vidi "start:prod")
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/generated ./generated
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/generated ./generated
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 
 # Keš Prisma engine-a iz build faze — da `migrate deploy` ne mora da ih
-# preuzima sa interneta pri svakom pokretanju kontejnera.
-COPY --from=builder /root/.cache/prisma /root/.cache/prisma
+# preuzima sa interneta pri svakom pokretanju kontejnera. Kopira se u HOME
+# korisnika `node` (ispod se ne radi kao root).
+COPY --from=builder --chown=node:node /root/.cache/prisma /home/node/.cache/prisma
 
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chown=node:node docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# INF-02: kontejner NE radi kao root. Aplikacijski fajlovi su već u vlasništvu
+# `node` (--chown iznad i u COPY koracima), pa proces ne može mijenjati kod.
+USER node
 
 EXPOSE 3000
 

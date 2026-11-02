@@ -126,6 +126,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   prije migracija, `dist/prisma/seed.js` u buildu.
 - Negativan test: stari Dockerfile (bez `USER`) → exit 1. Stvarna verifikacija = CI job `docker`
   (build + seed iz produkcijske slike).
+- **Run 41514362265 je pao** (job `docker`, korak „Root Dockerfile-ovi moraju biti identični“):
+  izmijenjen je samo `backend/Dockerfile`. Popravka: korijenska kopija sinhronizovana + guard
+  `check-image` sada provjerava i identičnost (`F-INF-02-05`).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
