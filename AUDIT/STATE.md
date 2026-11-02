@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-05` (projekti: scope pisanja za količine, decimalna validacija, progres u 2 upita) |
-| CI | ⏳ `fix(ops) … [BE-05]` — run se upisuje nakon `gh run watch` |
-| Zadnji potvrđeno zelen run | [41534087012](https://github.com/mudzy992/gradix/actions/runs/41534087012) (BE-04) ✅ 6/6 · prije: 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41536108972](https://github.com/mudzy992/gradix/actions/runs/41536108972) — **6/6** zelen za `fix(ops) … [BE-05]` |
+| Zadnji potvrđeno zelen run | [41536108972](https://github.com/mudzy992/gradix/actions/runs/41536108972) (BE-05) ✅ 6/6 · prije: 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -230,6 +230,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `common/utils/decimal.ts` pored postojećeg `decimal-input.ts`. Oba popravljena; **novi lokalni
   gate:** `tsc --noEmit -p tsconfig.build.json | grep -E "TS2304|TS2552"` (hvata nedefinisane
   identifikatore iako Prisma tipovi nisu dostupni).
+- **Zeleno:** `106cca5` → **`41536108972` ✅ 6/6**.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
