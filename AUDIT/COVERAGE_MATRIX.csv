@@ -1,6 +1,6 @@
 file,layer,module,segment,loc,status,findings,date
-.env.coolify,INF,compose,INF-01,69,nepregledano,,
-.env.example,INF,compose,INF-01,69,nepregledano,,
+.env.coolify,INF,compose,INF-01,76,pregledano,INF-01: isti ključevi kao .env.example (parity guard); bez referenci na arhivu,2026-11-02
+.env.example,INF,compose,INF-01,76,pregledano,"INF-01: dodati PORT, MINIO_PORT, REDIS_TLS_CA_FILE; JWT_REFRESH_SECRET označen kao „kod ga još ne čita“; reference na penzionisan DEPLOYMENT_COOLIFY zamijenjene docs/INFRASTRUCTURE.md",2026-11-02
 .github/workflows/ci.yml,CI,ci,CI-01,605,pregledano,"CI-01: bez PR trigera, push samo main + aktivna grana. CI-03: sve akcije pinovane na SHA, timeout na svakom jobu, npm/Docker cache",2026-11-02
 Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
 Dockerfile.frontend,INF,frontend-image,INF-03,66,nepregledano,,
@@ -275,8 +275,8 @@ backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,nepregledano,,
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,nepregledano,,
 backend/tsconfig.build.json,BE,config,BE-01,19,nepregledano,,
 backend/tsconfig.json,BE,config,BE-01,27,nepregledano,,
-docker-compose.local-ports.yml,INF,compose,INF-01,24,nepregledano,,
-docker-compose.yml,INF,compose,INF-01,184,nepregledano,,
+docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
+docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
 frontend/.oxlintrc.json,FE,config,FE-02,9,nepregledano,,
 frontend/Dockerfile,INF,frontend-image,INF-03,66,nepregledano,,
 frontend/components.json,FE,config,FE-02,22,nepregledano,,
@@ -457,11 +457,12 @@ scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,248,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,436,nepregledano,,
-scripts/standards/allowlist.json,STD,standards,STD-01,23,pregledano,"3 izuzetka sa razlogom (1 log, 2 secret placeholdera) (STD-01)",2026-11-02
-scripts/standards/check-all.mjs,STD,standards,STD-01,156,pregledano,12 koraka; dodati coverage-ratchet; --only/--ci/--list (STD-01/CI-04),2026-11-02
+scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
+scripts/standards/check-all.mjs,STD,standards,STD-01,161,pregledano,INF-01: 13 koraka (dodat env),2026-11-02
 scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02
 scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
 scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
+scripts/standards/check-env.mjs,STD,standards,STD-01,118,nepregledano,,
 scripts/standards/check-secrets.mjs,STD,standards,STD-01,71,pregledano,6 pravila + allowlist; placeholderi izuzeti sa razlogom (STD-01),2026-11-02
 scripts/standards/lib.mjs,STD,standards,STD-01,106,pregledano,"zajednička logika guardraila: walk, glob, report, allowlist (STD-01)",2026-11-02

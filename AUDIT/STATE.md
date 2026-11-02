@@ -108,10 +108,20 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Negativan test izveden: baseline 5 % → exit 1.
 - `check:all` ima 12 koraka; `backend/coverage-baseline.json` ušao u matricu (TEST-01).
 
+### 2026-11-02 — INF-01 (`A-11`, compose/mreže/env)
+- Novi guard `scripts/standards/check-env.mjs` (67 provjera): svaka varijabla iz compose/entrypoint/
+  Dockerfile/backend/frontend/mobile postoji u `.env.example`; `.env.example` ↔ `.env.coolify` parity;
+  mrtve varijable = upozorenje; **zabrana referenci na penzionisane dokumente iz konfiguracije**.
+- Popravljeno: `.env.example`/`.env.coolify` dobili `PORT`, `MINIO_PORT`, `REDIS_TLS_CA_FILE`;
+  4 reference na penzionisan `DEPLOYMENT_COOLIFY.md` → `docs/INFRASTRUCTURE.md`.
+- Dokumentovano (bez promjene ponašanja): `JWT_REFRESH_SECRET` je obavezan u compose-u, ali ga kod
+  **ne čita** (refresh tok = BE-02); `REDIS_*` se prenose, kod ih ne čita (INF-07, D-014).
+- Negativan test: uklonjen `MINIO_PORT` → exit 1.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment po planu §3: **INF-01** (compose/mreže/env predlošci).
+2. Sljedeći segment po planu §3: **INF-02** (backend image + entrypoint), pa **INF-03** (frontend image + nginx), pa **BE-01**.
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

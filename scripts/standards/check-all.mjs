@@ -49,6 +49,11 @@ const STEPS = [
     cmd: node('scripts/standards/check-console.mjs'),
   },
   {
+    id: 'env',
+    name: 'Env varijable dokumentovane i usklađene (.env.example ↔ .env.coolify ↔ kod)',
+    cmd: node('scripts/standards/check-env.mjs'),
+  },
+  {
     id: 'compose',
     name: 'Compose invarijante (Coolify)',
     cmd: node('scripts/standards/check-compose.mjs'),

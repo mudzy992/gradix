@@ -18,5 +18,23 @@
       "match": "postgresql://gradix:gradix@localhost",
       "reason": "build-time placeholder da prisma generate radi bez baze; konekcija se ne otvara"
     }
+  ],
+  "env": [
+    {
+      "name": "DEV",
+      "reason": "Vite-ova ugrađena build-time konstanta (import.meta.env.DEV), nije env varijabla"
+    },
+    {
+      "name": "JEST_WORKER_ID",
+      "reason": "postavlja Jest; koristi se samo da se u testovima preskoči realna konekcija"
+    },
+    {
+      "name": "MINIO_SKIP",
+      "reason": "samo CI/testovi (preskače ensureBucket); u produkciji se ne postavlja namjerno"
+    },
+    {
+      "name": "EXPO_PUBLIC_API_URL",
+      "reason": "mobile još nema env predložak (bez objave, D-003); uvodi se u MOB-07"
+    }
   ]
 }

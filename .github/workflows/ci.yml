@@ -37,7 +37,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
-        run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose
+        run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,env,compose
 
       - name: Matrica je regenerabilna (nema drift-a)
         run: |

@@ -83,7 +83,7 @@ se razlikuju.
 |---|---|---|
 | `DATABASE_URL` | `postgresql://user:pass@postgres:5432/gradix?schema=public&sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | Prisma (runtime + migracije) — `:?` u compose-u |
 | `JWT_ACCESS_SECRET` | 32+ znaka (`openssl rand -base64 32`) | auth, realtime — `:?` |
-| `JWT_REFRESH_SECRET` | 32+ znaka | auth — `:?` |
+| `JWT_REFRESH_SECRET` | 32+ znaka | ⚠️ obavezan u compose-u (`:?`), ali ga **kod još ne čita** — refresh tok je ugovor za BE-02 |
 | `MINIO_ENDPOINT` | `minio` | `MinioService` (`getOrThrow`) |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `minioadmin` (promijeniti!) | `MinioService` |
 | `MINIO_BUCKET` | `gradix` | `MinioService` |
@@ -116,7 +116,18 @@ se razlikuju.
 ### 5.4 Mrtve / rezervisane varijable
 
 `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PREFIX`, `REDIS_TLS_CA_FILE` — prisutne u
-compose-u, **kod ih ne čita**. Uklanjanje ili aktiviranje je odluka vlasnika (D-009).
+compose-u, **kod ih ne čita**. Uklanjanje ili aktiviranje je odluka vlasnika (D-014: Redis ostaje,
+pa se Aktivacija/uklanjanje zatvara u INF-07).
+
+### 5.5 Guard (INF-01)
+
+`npm run check:env` (`scripts/standards/check-env.mjs`) provjerava:
+1. svaka varijabla koju traže compose, entrypoint, Dockerfile-ovi, backend (`config.get`/`getOrThrow`/
+   `process.env`), frontend (`import.meta.env`) i mobile (`process.env`/`EXPO_PUBLIC_*`) postoji u
+   `.env.example` (izuzeci u `scripts/standards/allowlist.json`, svaki sa razlogom);
+2. `.env.example` i `.env.coolify` imaju **iste ključeve**;
+3. dokumentovana varijabla koju niko ne čita = upozorenje (ne pad — može biti rezervisana);
+4. konfiguracija ne referencira **penzionisane** dokumente (`*.md` koji postoje samo u `_retired/`).
 
 ---
 
