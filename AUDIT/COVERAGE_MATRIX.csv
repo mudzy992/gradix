@@ -262,7 +262,7 @@ backend/src/modules/settings/settings.module.ts,BE,settings,BE-04,10,nepregledan
 backend/src/modules/settings/settings.service.ts,BE,settings,BE-04,172,nepregledano,,
 backend/src/modules/users/role-escalation.ts,BE,users,BE-03,84,pregledano,BE-03: assertCanManageTarget (D-030) + postojeća pravila dodjele/posljednjeg SUPER_ADMIN-a,2026-11-02
 backend/src/modules/users/serialize-user.ts,BE,users,BE-03,41,pregledano,BE-03: hourlyRate skriven bez payroll.read; bez tajni u odgovoru,2026-11-02
-backend/src/modules/users/users-helpers.ts,BE,users,BE-03,97,pregledano,BE-03: throwUnique čita meta.target (F-07); payroll.write gate za satnicu,2026-11-02
+backend/src/modules/users/users-helpers.ts,BE,users,BE-03,100,pregledano,BE-03: throwUnique čita meta.target (F-07); payroll.write gate za satnicu,2026-11-02
 backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03: sve rute @TenantRoute + USERS_READ/WRITE (bez DELETE — deaktivacija),2026-11-02
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
