@@ -183,6 +183,36 @@ Bez Dockera: `cd backend && npm ci && npx prisma migrate dev && npm run start:de
 
 ---
 
+## 10. Frontend nginx (cache, proxy, headeri)
+
+Template: `frontend/nginx/default.conf.template` (envsubst nad `${BACKEND_URL}` pri startu).
+
+| Tema | Pravilo |
+|---|---|
+| API | `location /api/` → `proxy_pass ${BACKEND_URL}/api/`, `client_max_body_size 20m`, read timeout 120 s |
+| WebSocket | `location /socket.io/` sa `Upgrade`/`Connection`, read timeout 3600 s |
+| SPA | `try_files $uri $uri/ /index.html` |
+| Keš | `/assets/` = `immutable` 1 g; `index.html` = `no-store` |
+| Sigurnost | `server_tokens off`, nosniff, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, **CSP** (vidi dolje) |
+
+**Zamka koju guard hvata:** `add_header` u dubljem `location` bloku **poništava** sve naslijeđene
+`add_header` iz `server` bloka. Zato `location /assets/` i `location = /index.html` ponavljaju
+sigurnosne headere — `check:image` pada ako neki blok sa svojim `add_header` ne ponovi
+`X-Content-Type-Options`.
+
+**CSP** (jednozemljisna aplikacija — API i Socket.IO idu kroz isti nginx):
+
+```
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;
+object-src 'none'; base-uri 'self'; frame-ancestors 'self'
+```
+
+`'unsafe-inline'` je samo za stilove (React/Tailwind inline `style`); skripte su strogo `'self'`.
+Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
+
+---
+
 ## 9. Poznati dugovi (ulaze u segmente)
 
 | # | Dug | Segment |

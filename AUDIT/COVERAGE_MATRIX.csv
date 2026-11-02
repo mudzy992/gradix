@@ -3,7 +3,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.example,INF,compose,INF-01,76,pregledano,"INF-01: dodati PORT, MINIO_PORT, REDIS_TLS_CA_FILE; JWT_REFRESH_SECRET označen kao „kod ga još ne čita“; reference na penzionisan DEPLOYMENT_COOLIFY zamijenjene docs/INFRASTRUCTURE.md",2026-11-02
 .github/workflows/ci.yml,CI,ci,CI-01,605,pregledano,"CI-01: bez PR trigera, push samo main + aktivna grana. CI-03: sve akcije pinovane na SHA, timeout na svakom jobu, npm/Docker cache",2026-11-02
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
-Dockerfile.frontend,INF,frontend-image,INF-03,66,nepregledano,,
+Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
 backend/coverage-baseline.json,TEST,coverage,TEST-01,12,pregledano,"ratchet baseline izmjeren 2026-11-02 (linije 0,18 %) — smije samo rasti (CI-04)",2026-11-02
 backend/docker-entrypoint.sh,INF,backend-image,INF-02,36,pregledano,"INF-02: provjeren — set -e, SSL preflight PRIJE migrate deploy, exec ""$@"" (signali do node-a)",2026-11-02
@@ -278,11 +278,11 @@ backend/tsconfig.json,BE,config,BE-01,27,nepregledano,,
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
 docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
 frontend/.oxlintrc.json,FE,config,FE-02,9,nepregledano,,
-frontend/Dockerfile,INF,frontend-image,INF-03,66,nepregledano,,
+frontend/Dockerfile,INF,frontend-image,INF-03,66,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/index.html,FE,config,FE-02,14,nepregledano,,
-frontend/nginx/default.conf.template,INF,frontend-image,INF-03,68,nepregledano,,
+frontend/nginx/default.conf.template,INF,frontend-image,INF-03,89,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
 frontend/package.json,FE,config,FE-02,51,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
 frontend/playwright.config.ts,FE,e2e,FE-06,13,nepregledano,,
 frontend/src/App.tsx,FE,app-shell,FE-02,17,nepregledano,,
@@ -464,6 +464,6 @@ scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana c
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
 scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
 scripts/standards/check-env.mjs,STD,standards,STD-01,118,nepregledano,,
-scripts/standards/check-image.mjs,STD,standards,STD-01,93,nepregledano,,
+scripts/standards/check-image.mjs,STD,standards,STD-01,140,pregledano,"INF-02/INF-03: 17 provjera — backend non-root/healthcheck/exec/preflight; frontend STOPSIGNAL, server_tokens, CSP, nasljeđivanje headera, proxy/SPA, identičnost korijenskih kopija",2026-11-02
 scripts/standards/check-secrets.mjs,STD,standards,STD-01,71,pregledano,6 pravila + allowlist; placeholderi izuzeti sa razlogom (STD-01),2026-11-02
 scripts/standards/lib.mjs,STD,standards,STD-01,106,pregledano,"zajednička logika guardraila: walk, glob, report, allowlist (STD-01)",2026-11-02

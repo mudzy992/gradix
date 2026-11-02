@@ -55,7 +55,7 @@ rade paralelno, ukupno ~2,5 min.
 | `check-coverage` exit 1 | fajl van matrice, nepoznat segment, ili „pregledano“ bez zapisa — audit se ne može tiho zaobići |
 | `check:docs` exit 1 | pokvaren link ili dokument van indeksa = dokumentacija laže |
 | `check:secrets` exit 1 | tajna u gitu je tajna zauvijek |
-| `check:image` exit 1 | root u kontejneru, healthcheck koji ne gađa `/api/health` ili entrypoint bez `exec` = ranjiv/„visi“ deploy |
+| `check:image` exit 1 | root u kontejneru, healthcheck koji ne gađa `/api/health`, entrypoint bez `exec`, nginx blok koji poništava sigurnosne headere, neusklađene korijenske kopije Dockerfile-ova |
 | `check:env` exit 1 | nedokumentovana env varijabla = pad u produkciji; razilaženje `.env.example`/`.env.coolify` = deploy koji „radi kod mene“ |
 | `check:compose` exit 1 | host portovi, mrtva MinIO slika ili CA mount koji nedostaje ruše deploy |
 | Eksterne mreže deklarisane (`db_net`, `redis_net`) | backend bez njih ne vidi bazu/Redis |

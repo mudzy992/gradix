@@ -130,10 +130,19 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   izmijenjen je samo `backend/Dockerfile`. Popravka: korijenska kopija sinhronizovana + guard
   `check-image` sada provjerava i identičnost (`F-INF-02-05`).
 
+### 2026-11-02 — INF-03 (`A-13`, nginx + frontend slika)
+- **Popravljena tiha greška:** `add_header` u `location /assets/` i `=/index.html` poništavao je
+  nosniff/X-Frame-Options/Referrer-Policy iz `server` bloka → headeri sada ponovljeni.
+- Dodati `Content-Security-Policy` (bez vanjskih izvora, `script-src 'self'`), `Permissions-Policy`,
+  `server_tokens off`.
+- Guard `check:image` proširen na frontend (17 provjera): STOPSIGNAL, CSP, nasljeđivanje headera,
+  proxy/SPA rute, identičnost **oba** para korijenskih Dockerfile-ova.
+- `docs/INFRASTRUCTURE.md` §10 (nginx: proxy, keš, headeri, CSP, zamka `add_header`).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment: **INF-03** (frontend image + nginx), pa **BE-01** (temelj API-ja).
+2. Sljedeći segment: **BE-01** (temelj API-ja: config, greške, ugovor).
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

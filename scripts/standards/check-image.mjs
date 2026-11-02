@@ -11,9 +11,9 @@
 import { Report, finish, read } from './lib.mjs';
 
 const report = new Report(
-  'Backend slika i entrypoint',
-  'root u kontejneru = pun pristup host bind mount-ovima; bez `exec` signali ne stižu do node-a, pa deploy „visi“ do timeouta',
-  'popravi backend/Dockerfile odnosno backend/docker-entrypoint.sh (vidi docs/INFRASTRUCTURE.md §3–§4)',
+  'Slike i entrypointi (backend + frontend)',
+  'root u kontejneru = pun pristup host bind mount-ovima; nginx `add_header` u dubljem bloku poništava naslijeđene headere; bez `exec` signali ne stižu do node-a',
+  'popravi Dockerfile/entrypoint/nginx template (vidi docs/INFRASTRUCTURE.md §3–§4 i §10)',
 );
 
 const dockerfile = read('backend/Dockerfile');
@@ -78,15 +78,62 @@ else if (migrateIdx !== -1 && caIdx > migrateIdx) {
   report.violation('backend/docker-entrypoint.sh', 'SSL preflight mora biti prije `migrate deploy`');
 }
 
-// 7) korijenski Dockerfile je identična kopija app verzije (Coolify koristi korijen)
+// --- FRONTEND (INF-03) ---
+const feDockerfile = read('frontend/Dockerfile');
+const nginx = read('frontend/nginx/default.conf.template');
+
+// 8) frontend slika: healthcheck, STOPSIGNAL, exec CMD
 report.bump();
-try {
-  const root = read('Dockerfile');
-  if (root !== dockerfile) {
-    report.violation('Dockerfile', 'nije identičan `backend/Dockerfile` (CI to traži u jobu `docker`)');
+if (!/^HEALTHCHECK\s/m.test(feDockerfile)) report.violation('frontend/Dockerfile', 'nema HEALTHCHECK');
+report.bump();
+if (!/^STOPSIGNAL\s+SIGQUIT/m.test(feDockerfile)) {
+  report.violation('frontend/Dockerfile', 'nema `STOPSIGNAL SIGQUIT` (nginx se gasi graceful)');
+}
+report.bump();
+if (!/^CMD\s+\[/m.test(feDockerfile)) report.violation('frontend/Dockerfile', 'CMD nije u exec formi');
+
+// 9) nginx: skrivena verzija + CSP
+report.bump();
+if (!/server_tokens\s+off;/.test(nginx)) report.violation('frontend/nginx/default.conf.template', 'nema `server_tokens off;`');
+report.bump();
+if (!/Content-Security-Policy/.test(nginx)) {
+  report.violation('frontend/nginx/default.conf.template', 'nema `Content-Security-Policy` headera');
+}
+
+// 10) nasljeđivanje headera: svaki blok sa svojim add_header mora ponoviti sigurnosne headere
+report.bump();
+for (const block of ['location /assets/', 'location = /index.html']) {
+  const start = nginx.indexOf(block);
+  if (start === -1) {
+    report.violation('frontend/nginx/default.conf.template', `nema blok \`${block}\``);
+    continue;
   }
-} catch {
-  report.violation('Dockerfile', 'ne postoji korijenska kopija');
+  const body = nginx.slice(start, nginx.indexOf('}', start));
+  if (/add_header/.test(body) && !body.includes('X-Content-Type-Options')) {
+    report.violation('frontend/nginx/default.conf.template', `blok \`${block}\` ima svoj add_header ali ne ponavlja sigurnosne headere (nginx ih tada poništi)`);
+  }
+}
+
+// 11) proxy i SPA fallback
+report.bump();
+for (const needle of ['proxy_pass ${BACKEND_URL}/api/', 'proxy_pass ${BACKEND_URL}/socket.io/', 'try_files $uri $uri/ /index.html']) {
+  if (!nginx.includes(needle)) report.violation('frontend/nginx/default.conf.template', `nema: ${needle}`);
+}
+
+// 12) korijenski Dockerfile-ovi su identične kopije app verzija (Coolify koristi korijen)
+report.bump();
+for (const [rootFile, appFile, appText] of [
+  ['Dockerfile', 'backend/Dockerfile', dockerfile],
+  ['Dockerfile.frontend', 'frontend/Dockerfile', feDockerfile],
+]) {
+  report.bump();
+  try {
+    if (read(rootFile) !== appText) {
+      report.violation(rootFile, `nije identičan \`${appFile}\` (CI to traži u jobu \`docker\`)`);
+    }
+  } catch {
+    report.violation(rootFile, 'ne postoji korijenska kopija');
+  }
 }
 
 finish(report);

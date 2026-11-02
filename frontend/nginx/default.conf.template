@@ -14,10 +14,21 @@ server {
     # Limit za upload fajlova (backend dozvoljava do 10 MB, ostavljamo rezervu).
     client_max_body_size 20m;
 
+    # Ne otkrivaj verziju nginx-a u odgovorima/error stranicama.
+    server_tokens off;
+
     # Sigurnosni headeri (backend šalje Helmet header-e za /api odgovore).
+    # VAŽNO: nginx `add_header` u dubljem bloku PONIŠTAVA sve naslijeđene headere —
+    # zato ih svaki `location` koji ima svoj `add_header` mora ponoviti (vidi /assets/
+    # i =/index.html). Guard `check:image` to provjerava.
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    # CSP: aplikacija je jednozemljisna (API i Socket.IO kroz isti nginx), pa nema
+    # potrebe za vanjskim izvorima. `'unsafe-inline'` je samo za stilove
+    # (React/Tailwind inline style), skripte su strogo `'self'`.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
 
     gzip on;
     gzip_types text/plain text/css application/javascript application/json image/svg+xml;
@@ -52,6 +63,12 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        # Ponovljeni sigurnosni headeri — `add_header` iznad se ne nasljeđuje
+        # kada ovaj blok ima svoj `add_header`.
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
         try_files $uri =404;
     }
 
@@ -63,5 +80,9 @@ server {
     # index.html se ne kešira — da deploy odmah bude vidljiv
     location = /index.html {
         add_header Cache-Control "no-store, must-revalidate";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
     }
 }

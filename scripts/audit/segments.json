@@ -89,7 +89,7 @@
       "id": "INF-03",
       "layer": "INF",
       "title": "Frontend image + nginx",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {
