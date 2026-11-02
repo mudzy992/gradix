@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/client';
 import { hashPassword } from '../src/common/utils/password';
 import { defaultSettingRows } from '../src/modules/companies/default-settings';
@@ -11,7 +12,8 @@ function createPrisma(): PrismaClient {
   if (!url) {
     throw new Error('DATABASE_URL is required');
   }
-  return new PrismaClient();
+  const adapter = new PrismaPg({ connectionString: url });
+  return new PrismaClient({ adapter });
 }
 
 async function seed(): Promise<void> {
