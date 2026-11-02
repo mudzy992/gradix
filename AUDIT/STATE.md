@@ -100,10 +100,18 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - `timeout-minutes` na svih 6 jobova (5/15/20/15/20/30) — dug C7 zatvoren.
 - Cache potvrđen (npm po paketu, Docker `type=gha`); job `audit` svjesno bez cache-a.
 
+### 2026-11-02 — CI-04 (`A-10`, coverage ratchet)
+- CI sada mjeri pokrivenost (`npm run test:cov`) i pušta **ratchet**:
+  `scripts/standards/check-coverage-ratchet.mjs` vs `backend/coverage-baseline.json`.
+  Baseline je **izmjereno** stanje (linije 0,18 %), ne želja; 40 % ostaje cilj faze (D-016).
+- Artefakt `backend-coverage` (lcov + summary, 7 dana) + tabela pokrivenosti u `GITHUB_STEP_SUMMARY`.
+- Negativan test izveden: baseline 5 % → exit 1.
+- `check:all` ima 12 koraka; `backend/coverage-baseline.json` ušao u matricu (TEST-01).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. Sljedeći segment po planu §3: **CI-04** (static gate + coverage prag), pa **INF-01**.
+2. Sljedeći segment po planu §3: **INF-01** (compose/mreže/env predlošci).
 3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori

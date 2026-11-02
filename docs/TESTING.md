@@ -46,11 +46,16 @@ lint/typecheck/build, web E2E (živi backend + `vite preview`), docker gate.
 
 | Faza | Backend | Frontend | Mobile |
 |---|---|---|---|
-| Sada | 0 % (mjeri se, ne blokira) | — | — |
+| Sada (CI-04) | **ratchet** na izmjerenom stanju (`backend/coverage-baseline.json`: linije 0,18 %), ne može pasti | — | — |
 | Nakon TEST-01 | **40 %** linija (globalno) + 70 % za `common/` i modul koji se dira | — | — |
 | Nakon FE-05 | 50 % | 30 % (komponente + helperi) | — |
 | Nakon MOB-03 | 60 % | 40 % | 40 % (logika: sync, timer, permissions) |
 | Cilj | 70 % | 60 % | 60 % |
+
+**Mehanizam (već na snazi):** `scripts/standards/check-coverage-ratchet.mjs` poredi
+`backend/coverage/coverage-summary.json` sa `backend/coverage-baseline.json`. Pad ispod baseline-a
+= crven CI. Kad pokrivenost poraste ≥ 5 pp, baseline se podiže **ručno** (`--write`) u istom
+commitu koji je dodao testove — prag tako nikad ne stagnira, a nikad se i ne spušta.
 
 Pragovi su **eksplicitni** u konfiguraciji po paketu i rastu u istom commitu kad segment
 zatvori pokrivenost. Izuzeci (npr. `generated/`, `dist/`, migracije) su navedeni u konfiguraciji

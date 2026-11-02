@@ -1,0 +1,11 @@
+{
+  "$comment": "Coverage ratchet (CI-04 / D-016). Vrijednosti su IZMJERENE, ne željene. Prag smije samo rasti; podiže se ručno: node scripts/standards/check-coverage-ratchet.mjs --write (uz zelene testove). Cilj faze je 40 % (docs/TESTING.md §3).",
+  "date": "2026-11-02",
+  "metrics": {
+    "lines": 0.18,
+    "statements": 0.17,
+    "functions": 0.34,
+    "branches": 0.09
+  },
+  "note": "Mjereno sa jednim test fajlom (src/modules/ops/timer-math.spec.ts). Ratchet postoji da se pokrivenost ne može vratiti unazad dok TEST-01/TEST-02 dižu stvarnu pokrivenost."
+}

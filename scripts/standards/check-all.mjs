@@ -54,6 +54,12 @@ const STEPS = [
     cmd: node('scripts/standards/check-compose.mjs'),
   },
   {
+    id: 'coverage-ratchet',
+    name: 'Coverage ratchet (ne smije pasti ispod baseline-a)',
+    cmd: node('scripts/standards/check-coverage-ratchet.mjs'),
+    needs: 'backend/coverage/coverage-summary.json',
+  },
+  {
     id: 'backend-lint',
     name: 'Backend: ESLint (bez --fix)',
     cmd: ['npm', 'run', 'lint:check'],
@@ -113,7 +119,9 @@ for (const step of selected) {
   if (missingDeps && !ci) {
     const hint = missing.includes('generated')
       ? 'pokreni `npx prisma generate` u backend/ i `npm ci` u tom paketu'
-      : 'pokreni `npm ci` u tom paketu';
+      : missing.includes('coverage')
+        ? 'pokreni `cd backend && npm run test:cov`'
+        : 'pokreni `npm ci` u tom paketu';
     console.log(`\n⏭  ${step.id}: preskočeno (nema ${missing.join(' ni ')}; ${hint})`);
     results.push({ ...step, status: 'skip' });
     continue;

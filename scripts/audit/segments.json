@@ -43,7 +43,7 @@
       "id": "CI-04",
       "layer": "CI",
       "title": "Static gate + coverage prag",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Static gate + coverage prag = izmjene u ci.yml + package.json pragovima; nema vlastitih fajlova."
     },

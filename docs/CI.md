@@ -27,7 +27,7 @@ Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
 | `audit` | `npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
-| `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm test` → `nest build` → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~48 s |
+| `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` | ~28 s |
 | `web-e2e` | živi backend (`dist/src/main.js`) + seed iz builda + `vite preview` → Playwright (chromium) | ~1 m 37 s |
@@ -90,7 +90,7 @@ on:
 | Web E2E | Playwright: trace/video na failure, `axe` za ključne ekrane | CI-06 |
 | Mobile | Jest + **Maestro** na Android emulatoru (`reactivecircus/android-emulator-runner`), **posljednji** job (`needs: [...]`) | CI-07 |
 | Artefakti | JUnit XML, coverage `lcov`, Playwright report, Maestro screenshot/video | CI-06/07 |
-| Sažetak | `GITHUB_STEP_SUMMARY` po jobu | CI-06 |
+| Sažetak | `GITHUB_STEP_SUMMARY`: tabela pokrivenosti iz ratchet skripte (job `backend`) | ✅ CI-04 |
 | Performanse | ✅ `timeout-minutes` po jobu, cache `npm`/Docker; mjerenje trajanja | CI-03 |
 
 ---
