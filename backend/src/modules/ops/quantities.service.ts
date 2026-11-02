@@ -5,6 +5,10 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { canWritePlannedQty, hasRole } from '../../common/scope/ops-roles';
+import {
+  parseDecimal,
+  parseNonNegativeDecimal,
+} from '../../common/utils/decimal-input';
 import { ProjectAccessService } from './project-access.service';
 import { CreateQuantityDto, PatchQuantityDto } from './quantities.dto';
 
@@ -40,7 +44,7 @@ export class QuantitiesService {
     const executedQty =
       dto.executedQty === undefined
         ? 0
-        : parseDecimalString(dto.executedQty, 'executedQty');
+        : parseDecimal(dto.executedQty, 'executedQty');
     const row = await this.prisma.quantityItem.create({
       data: {
         companyId: project.companyId,
@@ -103,7 +107,7 @@ export class QuantitiesService {
         executedQty:
           dto.executedQty === undefined
             ? undefined
-            : parseDecimalString(dto.executedQty, 'executedQty'),
+            : parseDecimal(dto.executedQty, 'executedQty'),
         note: dto.note,
       },
     });

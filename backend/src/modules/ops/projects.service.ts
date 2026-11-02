@@ -14,7 +14,7 @@ import {
   parseOptionalDate,
 } from '../../common/scope/ops-dates';
 import { assertStatusTransition } from '../../common/scope/project-lock';
-import { parseNonNegativeDecimal } from '../../common/utils/decimal';
+import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
 import { projectListWhere } from '../../common/scope/scope-by-project';
 import { ProjectAccessService } from './project-access.service';
 import {

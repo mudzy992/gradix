@@ -224,7 +224,12 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `taskPercent`/`averagePercent` (testovi bez baze).
 - **Otvoreno (B8):** `AuditAction` je zatvoren enum bez akcija za izmjenu projekta/dodjele/faze/
   dokumenta/količine → te izmjene se ne audituju; proširenje enuma ide u **BE-08** (migracija).
-- **Testovi:** **112/112**. Matrica **476 fajlova / 137 pregledano** (vidi `check-coverage`).
+- **Testovi:** **107/107**.
+- **Incident (zapisano):** prvi run `41535401598` ❌ — zamjena teksta u `quantities.service.ts`
+  nije ubacila import (`parseNonNegativeDecimal` nedefinisan → 500 u e2e), a uveden je i duplikat
+  `common/utils/decimal.ts` pored postojećeg `decimal-input.ts`. Oba popravljena; **novi lokalni
+  gate:** `tsc --noEmit -p tsconfig.build.json | grep -E "TS2304|TS2552"` (hvata nedefinisane
+  identifikatore iako Prisma tipovi nisu dostupni).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 

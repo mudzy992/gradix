@@ -64,9 +64,7 @@ backend/src/common/scope/tenant.ts,BE,common,BE-03,22,pregledano,"BE-04: novo �
 backend/src/common/settings/registry.spec.ts,BE,common,BE-04,70,pregledano,"BE-04: ključevi jedinstveni, defaulti u granicama, koercija bool/broj/string",2026-11-02
 backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +findSetting/coerceSettingValue (Number.isFinite, min/max); 12 testova (F-08)",2026-11-02
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
-backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01: pregledano — Prisma.Decimal sa VALIDATION_FAILED na NaN,2026-11-02
-backend/src/common/utils/decimal.spec.ts,BE,common,BE-01,48,pregledano,"BE-05: 5 testova decimalne validacije (abc, prazno, zarez, 5 decimala, minus)",2026-11-02
-backend/src/common/utils/decimal.ts,BE,common,BE-01,35,pregledano,"BE-05: novo — parseDecimalString/parseNonNegativeDecimal, 400 umjesto 500 (F-02)",2026-11-02
+backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02),2026-11-02
 backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: pregledano — AppError PAGINATION_LIMIT za page<1/limit>100,2026-11-02
 backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-02: pregledano — argon2id, min 10 znakova (AUTH_PASSWORD_TOO_SHORT), SHA-256 hash refresh tokena",2026-11-02
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
@@ -177,10 +175,10 @@ backend/src/modules/ops/project-access.service.ts,BE,ops,BE-05,141,pregledano,"B
 backend/src/modules/ops/project-nested.controller.ts,BE,ops,BE-05,138,pregledano,"BE-05: faze/dodjele/dokumenti/količine pod /projects/:id, sve tenant rute",2026-11-02
 backend/src/modules/ops/projects.controller.ts,BE,ops,BE-05,81,pregledano,BE-05: projects.read/write + tenant ruta; arhiviranje bez posebne permisije,2026-11-02
 backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,pregledano,"BE-05: plannedBudget se validira u servisu (decimal helper), ostalo nepromijenjeno",2026-11-02
-backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,253,pregledano,"BE-05: arhiviran projekat nije upisiv (F-03), budžet ≥0 (F-06), mrtav companyId uklonjen (F-07)",2026-11-02
+backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,253,pregledano,"BE-05: arhiviran projekat nije upisiv (F-03), budžet kroz decimal-input (F-06), mrtav companyId uklonjen (F-07)",2026-11-02
 backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,pregledano,BE-05: quantities.read/write permisije; bez DELETE rute (količine se ne brišu),2026-11-02
 backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,pregledano,"BE-05: količine kao string (decimal helper u servisu), unit iz zatvorene liste",2026-11-02
-backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,144,pregledano,"BE-05: assertScopedWrite u patch (F-01), decimalna validacija (F-02), executedQty potpisan (F-06)",2026-11-02
+backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,148,pregledano,"BE-05: assertScopedWrite u patch (F-01), decimal-input validacija (F-02), executedQty potpisan (F-06)",2026-11-02
 backend/src/modules/ops/serialize-diary.ts,BE,ops,BE-11,63,nepregledano,,
 backend/src/modules/ops/serialize-fleet.ts,BE,ops,BE-09,55,nepregledano,,
 backend/src/modules/ops/serialize-gps-device.ts,BE,ops,BE-09,14,nepregledano,,
