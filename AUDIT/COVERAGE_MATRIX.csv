@@ -22,7 +22,7 @@ backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,nepregledano,,
 backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,nepregledano,,
 backend/prisma/seed.ts,BE,seed,BE-08,116,nepregledano,,
 backend/src/app.module.ts,BE,bootstrap,BE-01,62,pregledano,BE-01: ConfigModule.forRoot({ validate: validateEnv }) — fail-fast prije podizanja modula,2026-11-02
-backend/src/app.setup.ts,BE,bootstrap,BE-01,60,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
+backend/src/app.setup.ts,BE,bootstrap,BE-01,65,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
 backend/src/common/constants.ts,BE,common,BE-01,37,pregledano,BE-01: pregledano — sve poslovne konstante na jednom mjestu; MIN_PASSWORD_LENGTH=10 usklađen sa env validacijom SEED_PASSWORD,2026-11-02
 backend/src/common/decorators/current-user.decorator.ts,BE,common,BE-01,10,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/public.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
@@ -32,7 +32,7 @@ backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregle
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
 backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
 backend/src/common/errors/error-codes.ts,BE,common,BE-01,38,pregledano,BE-01: dodat RATE_LIMITED i SERVICE_UNAVAILABLE (429/503 više nisu HTTP_ERROR),2026-11-02
-backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,78,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
+backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,96,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,76,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
 backend/src/common/geo/haversine.ts,BE,common,BE-12,33,nepregledano,,
 backend/src/common/guards/jwt-auth.guard.ts,BE,common,BE-01,30,pregledano,BE-01: pregledano — /api/docs izuzet od auth; @Public preko reflektora; dublja analiza u BE-02,2026-11-02
@@ -40,7 +40,7 @@ backend/src/common/guards/optional-throttler.guard.ts,BE,common,BE-01,13,pregled
 backend/src/common/guards/password-change.guard.ts,BE,common,BE-01,37,pregledano,"BE-01: pregledano — allowlist GET /api/me, change-password, logout, logout-all",2026-11-02
 backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,nepregledano,,
 backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
-backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,40,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
+backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
 backend/src/common/notify/notify-roles.ts,BE,common,BE-16,46,nepregledano,,
 backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,nepregledano,,
@@ -59,8 +59,8 @@ backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-01: pregl
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,nepregledano,,
-backend/src/config/env.spec.ts,BE,config,BE-01,124,pregledano,BE-01: 14 testova env validacije + CORS politike + Swagger flaga,2026-11-02
-backend/src/config/env.ts,BE,config,BE-01,188,pregledano,"BE-01: ručna env šema (D-017) — sve greške odjednom, imenovane varijable, produkcijska pravila; vraća string mapu",2026-11-02
+backend/src/config/env.spec.ts,BE,config,BE-01,149,pregledano,BE-01: 14 testova env validacije + CORS politike + Swagger flaga,2026-11-02
+backend/src/config/env.ts,BE,config,BE-01,216,pregledano,"BE-01: ručna env šema (D-017) — sve greške odjednom, imenovane varijable, produkcijska pravila; vraća string mapu",2026-11-02
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,nepregledano,,
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,22,nepregledano,,

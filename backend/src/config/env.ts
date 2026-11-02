@@ -41,7 +41,12 @@ function optional(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function asInt(name: string, value: string | undefined, fallback: number, errors: string[]): number {
+function asInt(
+  name: string,
+  value: string | undefined,
+  fallback: number,
+  errors: string[],
+): number {
   if (value === undefined || value.trim() === '') return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
@@ -51,7 +56,12 @@ function asInt(name: string, value: string | undefined, fallback: number, errors
   return parsed;
 }
 
-function asBool(name: string, value: string | undefined, fallback: boolean, errors: string[]): boolean {
+function asBool(
+  name: string,
+  value: string | undefined,
+  fallback: boolean,
+  errors: string[],
+): boolean {
   if (value === undefined || value.trim() === '') return fallback;
   if (['true', '1', 'yes'].includes(value.toLowerCase())) return true;
   if (['false', '0', 'no'].includes(value.toLowerCase())) return false;
@@ -71,7 +81,9 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
 
   const nodeEnvRaw = optional(raw.NODE_ENV) ?? 'development';
   if (!['development', 'test', 'production'].includes(nodeEnvRaw)) {
-    errors.push(`NODE_ENV mora biti development/test/production (nađeno "${nodeEnvRaw}")`);
+    errors.push(
+      `NODE_ENV mora biti development/test/production (nađeno "${nodeEnvRaw}")`,
+    );
   }
   const nodeEnv = nodeEnvRaw as NodeEnv;
   const isProduction = nodeEnv === 'production';
@@ -87,7 +99,9 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   if (!accessSecret) {
     errors.push('JWT_ACCESS_SECRET je obavezan');
   } else if (accessSecret.length < MIN_SECRET_LENGTH) {
-    errors.push(`JWT_ACCESS_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`);
+    errors.push(
+      `JWT_ACCESS_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`,
+    );
   }
 
   // Refresh tajna: kod je još ne čita (vidi AUDIT/segments/BE-02.md), ali je u produkciji
@@ -96,7 +110,9 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   if (!refreshSecret && isProduction) {
     errors.push('JWT_REFRESH_SECRET je obavezan u produkciji');
   } else if (refreshSecret && refreshSecret.length < MIN_SECRET_LENGTH) {
-    errors.push(`JWT_REFRESH_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`);
+    errors.push(
+      `JWT_REFRESH_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`,
+    );
   }
 
   // CORS: prazno u produkciji NIJE greška (frontend ide kroz isti nginx), ali se tada
@@ -115,13 +131,18 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
       ['MINIO_SECRET_KEY', minioSecretKey],
       ['MINIO_BUCKET', minioBucket],
     ] as const) {
-      if (!value) errors.push(`${name} je obavezan (ili postavi MINIO_SKIP=true u testovima)`);
+      if (!value)
+        errors.push(
+          `${name} je obavezan (ili postavi MINIO_SKIP=true u testovima)`,
+        );
     }
   }
 
   const seedPassword = optional(raw.SEED_PASSWORD);
   if (seedPassword && seedPassword.length < MIN_PASSWORD_LENGTH) {
-    errors.push(`SEED_PASSWORD mora imati najmanje ${MIN_PASSWORD_LENGTH} znakova`);
+    errors.push(
+      `SEED_PASSWORD mora imati najmanje ${MIN_PASSWORD_LENGTH} znakova`,
+    );
   }
 
   if (errors.length) {
@@ -143,13 +164,17 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   if (corsOrigin) out.CORS_ORIGIN = corsOrigin;
   if (minioEndpoint) out.MINIO_ENDPOINT = minioEndpoint;
   out.MINIO_PORT = String(asInt('MINIO_PORT', raw.MINIO_PORT, 9000, errors));
-  out.MINIO_USE_SSL = String(asBool('MINIO_USE_SSL', raw.MINIO_USE_SSL, false, errors));
+  out.MINIO_USE_SSL = String(
+    asBool('MINIO_USE_SSL', raw.MINIO_USE_SSL, false, errors),
+  );
   if (minioAccessKey) out.MINIO_ACCESS_KEY = minioAccessKey;
   if (minioSecretKey) out.MINIO_SECRET_KEY = minioSecretKey;
   if (minioBucket) out.MINIO_BUCKET = minioBucket;
   out.MINIO_SKIP = String(minioSkip);
   if (seedPassword) out.SEED_PASSWORD = seedPassword;
-  out.ENABLE_API_DOCS = String(asBool('ENABLE_API_DOCS', raw.ENABLE_API_DOCS, false, errors));
+  out.ENABLE_API_DOCS = String(
+    asBool('ENABLE_API_DOCS', raw.ENABLE_API_DOCS, false, errors),
+  );
 
   // `asInt`/`asBool` su već skupili greške — provjeri ih i poslije normalizacije.
   if (errors.length) {
@@ -181,7 +206,10 @@ export function resolveCorsOrigin(
 }
 
 /** API dokumentacija je u produkciji isključena osim ako se eksplicitno traži. */
-export function isApiDocsEnabled(nodeEnv: string | undefined, flag: string | undefined): boolean {
+export function isApiDocsEnabled(
+  nodeEnv: string | undefined,
+  flag: string | undefined,
+): boolean {
   if (['true', '1', 'yes'].includes((flag ?? '').toLowerCase())) return true;
   return nodeEnv !== 'production';
 }

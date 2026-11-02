@@ -24,22 +24,33 @@ describe('validateEnv', () => {
   });
 
   it('odbija env bez DATABASE_URL i imenuje varijablu', () => {
-    expect(() => validateEnv({ JWT_ACCESS_SECRET: 'a'.repeat(32) })).toThrow(/DATABASE_URL je obavezan/);
-  });
-
-  it('odbija MySQL URL (PostgreSQL je konačan, D-001)', () => {
-    expect(() => validateEnv({ ...BASE, DATABASE_URL: 'mysql://user:pass@db:3306/gradix' })).toThrow(
-      /postgresql:\/\//,
+    expect(() => validateEnv({ JWT_ACCESS_SECRET: 'a'.repeat(32) })).toThrow(
+      /DATABASE_URL je obavezan/,
     );
   });
 
+  it('odbija MySQL URL (PostgreSQL je konačan, D-001)', () => {
+    expect(() =>
+      validateEnv({
+        ...BASE,
+        DATABASE_URL: 'mysql://user:pass@db:3306/gradix',
+      }),
+    ).toThrow(/postgresql:\/\//);
+  });
+
   it('odbija prekratku access tajnu', () => {
-    expect(() => validateEnv({ ...BASE, JWT_ACCESS_SECRET: 'short' })).toThrow(/najmanje 32 znakova/);
+    expect(() => validateEnv({ ...BASE, JWT_ACCESS_SECRET: 'short' })).toThrow(
+      /najmanje 32 znakova/,
+    );
   });
 
   it('u produkciji traži JWT_REFRESH_SECRET', () => {
     expect(() =>
-      validateEnv({ ...BASE, NODE_ENV: 'production', JWT_ACCESS_SECRET: 'a'.repeat(32) }),
+      validateEnv({
+        ...BASE,
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'a'.repeat(32),
+      }),
     ).toThrow(/JWT_REFRESH_SECRET je obavezan u produkciji/);
   });
 
@@ -69,30 +80,44 @@ describe('validateEnv', () => {
   });
 
   it('traži MinIO varijable ako MINIO_SKIP nije uključen', () => {
-    expect(() => validateEnv({ ...BASE, MINIO_SKIP: 'false' })).toThrow(/MINIO_ENDPOINT je obavezan/);
+    expect(() => validateEnv({ ...BASE, MINIO_SKIP: 'false' })).toThrow(
+      /MINIO_ENDPOINT je obavezan/,
+    );
   });
 
   it('ne prihvata neispravan PORT', () => {
-    expect(() => validateEnv({ ...BASE, PORT: 'sedam' })).toThrow(/PORT mora biti cijeli broj/);
-    expect(() => validateEnv({ ...BASE, PORT: '70000' })).toThrow(/PORT mora biti cijeli broj/);
+    expect(() => validateEnv({ ...BASE, PORT: 'sedam' })).toThrow(
+      /PORT mora biti cijeli broj/,
+    );
+    expect(() => validateEnv({ ...BASE, PORT: '70000' })).toThrow(
+      /PORT mora biti cijeli broj/,
+    );
   });
 
   it('ne prihvata neispravan MINIO_USE_SSL', () => {
-    expect(() => validateEnv({ ...BASE, MINIO_USE_SSL: 'možda' })).toThrow(/true.*false|false.*true/);
+    expect(() => validateEnv({ ...BASE, MINIO_USE_SSL: 'možda' })).toThrow(
+      /true.*false|false.*true/,
+    );
   });
 
   it('traži SEED_PASSWORD od najmanje 10 znakova kad je postavljen', () => {
-    expect(() => validateEnv({ ...BASE, SEED_PASSWORD: 'kratko' })).toThrow(/SEED_PASSWORD/);
-    expect(() => validateEnv({ ...BASE, SEED_PASSWORD: 'GradixSeed1' })).not.toThrow();
+    expect(() => validateEnv({ ...BASE, SEED_PASSWORD: 'kratko' })).toThrow(
+      /SEED_PASSWORD/,
+    );
+    expect(() =>
+      validateEnv({ ...BASE, SEED_PASSWORD: 'GradixSeed1' }),
+    ).not.toThrow();
   });
 });
 
 describe('resolveCorsOrigin', () => {
   it('vraća listu kad je CORS_ORIGIN postavljen', () => {
-    expect(resolveCorsOrigin('production', 'https://gradix.ba, https://app.gradix.ba')).toEqual([
-      'https://gradix.ba',
-      'https://app.gradix.ba',
-    ]);
+    expect(
+      resolveCorsOrigin(
+        'production',
+        'https://gradix.ba, https://app.gradix.ba',
+      ),
+    ).toEqual(['https://gradix.ba', 'https://app.gradix.ba']);
   });
 
   it('u razvoju bez liste dozvoljava sve', () => {
