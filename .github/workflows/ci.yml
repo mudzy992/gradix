@@ -67,8 +67,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Provjeri ulaznu tačku builda
-        run: test -f dist/src/main.js
+      - name: Provjeri ulazne tačke builda (API + seed)
+        run: |
+          test -f dist/src/main.js
+          # Seed mora biti kompajliran u dist — u produkciji se pokreće sa
+          # `node dist/prisma/seed.js` (bez `tsx` i bez dev zavisnosti).
+          test -f dist/prisma/seed.js
 
   # ---------------------------------------------------------------------------
   # Backend E2E (NestJS + PostgreSQL)
@@ -240,9 +244,11 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npx prisma generate
-          npx prisma migrate deploy
-          npx prisma db seed
           npm run build
+          npx prisma migrate deploy
+          # Seed iz builda — identičan put kao u produkcijskoj slici
+          # (`node dist/prisma/seed.js`), ne `tsx prisma/seed.ts`.
+          node dist/prisma/seed.js
 
       - name: Backend — start
         working-directory: backend
@@ -370,6 +376,36 @@ jobs:
           load: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Seed iz produkcijske slike (dist/prisma/seed.js)
+        # Dokaz da seed radi u PRODUKCIJSKOJ slici: `npm ci --omit=dev`, bez
+        # `tsx` i bez TypeScript izvora. Entrypoint prvo pokrene
+        # `prisma migrate deploy`, pa seed — isti put kao na Coolifyju.
+        env:
+          DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+          SEED_PASSWORD: GradixSeed1
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e SEED_PASSWORD="$SEED_PASSWORD" \
+            gradix-backend:ci node dist/prisma/seed.js
+          docker run --rm --network host --entrypoint node \
+            -e DATABASE_URL="$DATABASE_URL" \
+            gradix-backend:ci -e "
+              const { Client } = require('pg');
+              (async () => {
+                const client = new Client({ connectionString: process.env.DATABASE_URL });
+                await client.connect();
+                const { rows } = await client.query('select count(*)::int as n from \"User\"');
+                await client.end();
+                console.log('Korisnika u bazi nakon seed-a:', rows[0].n);
+                if (rows[0].n < 2) {
+                  console.error('::error::Seed nije upisao ocekivane korisnike');
+                  process.exit(1);
+                }
+              })().catch((error) => { console.error(error); process.exit(1); });
+            "
 
       - name: MinIO servis iz compose-a (pull + healthcheck)
         # Coolify prije starta radi `docker compose pull` za image-based servise,

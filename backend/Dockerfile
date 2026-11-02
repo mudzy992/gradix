@@ -37,7 +37,12 @@ COPY prisma ./prisma
 RUN npx prisma generate && mkdir -p /root/.cache/prisma
 
 COPY src ./src
-RUN npm run build
+# `tsconfig.build.json` uključuje i `prisma/`, pa se seed kompajlira u
+# `dist/prisma/seed.js`. Guard ispod ruši build ako neka od ulaznih tačaka
+# nedostaje — bolje pasti u buildu nego na seed-u u produkciji.
+RUN npm run build \
+    && test -f dist/src/main.js \
+    && test -f dist/prisma/seed.js
 
 # ---------- 3) Produkcijska slika ----------
 FROM node:22-alpine AS production
@@ -70,5 +75,11 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
+# Seed (demo podaci) je dio slike: `dist/prisma/seed.js` (kompajliran iz
+# `prisma/seed.ts`, bez `tsx` i bez dev zavisnosti).
+#   docker compose run --rm backend node dist/prisma/seed.js
+# ili iz Coolify terminala nad backend kontejnerom:
+#   node dist/prisma/seed.js
+# Detalji: DEPLOYMENT_COOLIFY.md §5.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/src/main.js"]

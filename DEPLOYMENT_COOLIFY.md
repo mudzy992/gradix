@@ -181,19 +181,80 @@ Backend → *Persistent Storage* → mountaj
 
 ## 5. Migracije i seed
 
+### 5.1 Migracije
+
 * Migracije se pokreću automatski pri startu kontejnera
   (`docker-entrypoint.sh` → `prisma migrate deploy`). Isključi sa
   `RUN_MIGRATIONS=false` ako migracije pokrećeš kao poseban korak.
-* Seed (demo podaci) **nije** u produkcijskoj slici (izbjegavamo `tsx` i
-  TypeScript izvor u runtime image-u). Jednokratno, iz `builder` stage-a:
 
-  ```bash
-  docker build --target builder -t gradix-backend:seed ./backend
-  docker run --rm \
-    -e DATABASE_URL="postgresql://..." \
-    -e SEED_PASSWORD="GradixSeed1" \
-    gradix-backend:seed npx prisma db seed
-  ```
+### 5.2 Seed (demo podaci) — dio slike, pokreće se ručno jednom
+
+Seed **jeste** u produkcijskoj slici: `tsconfig.build.json` uključuje
+`prisma/`, pa `nest build` proizvede `dist/prisma/seed.js`. U runtime-u zato
+nema `tsx`-a, nema TypeScript izvora i nema dev zavisnosti — seed se pokreće
+običnim `node`-om, u istom image-u kao API.
+
+Pokreće se **jednom, ručno**, poslije prvog uspješnog deploya (migracije su
+već prošle pri startu kontejnera). Dvije varijante, isti rezultat — obje
+koriste `DATABASE_URL` i mrežu `db_net` koje backend već ima.
+
+**Varijanta 1 — Coolify terminal (najprostije)**
+
+Coolify → *Application / Service* → servis `backend` → **Terminal**:
+
+```bash
+node dist/prisma/seed.js
+```
+
+Kontejner već ima `DATABASE_URL`, `SEED_PASSWORD` i pristup `db_net` mreži, pa
+nema dodatnog setapa. (`npm run db:seed:prod` radi istu stvar.)
+
+**Varijanta 2 — `docker compose run` na Coolify hostu**
+
+```bash
+cd /data/coolify/applications/<uuid>     # direktorij u kojem Coolify drži compose
+docker compose run --rm backend node dist/prisma/seed.js
+```
+
+`docker compose run` diže **novi** kontejner sa istom konfiguracijom
+(`DATABASE_URL`, `SEED_PASSWORD`, `db_net`), entrypoint prvo odradi
+`prisma migrate deploy` (idempotentno), pa seed. Pokrenuti kontejneri se ne
+diraju.
+
+> Ne dodavati `RUN_SEED` u `docker-entrypoint.sh`: seed bi se tada vrtio na
+> svakom restartu/redeployu i resetovao podešavanja kompanije.
+
+**Šta seed upiše**
+
+| Podatak | Vrijednost |
+|---|---|
+| Kompanija | `Demo Gradnja` (slug `demo`, Sarajevo, BA) |
+| Platform admin | `platform@gradix.local` — `PLATFORM_ADMIN`, bez kompanije |
+| Admin kompanije | `admin@gradix.local` — `SUPER_ADMIN` |
+| Ops korisnici | `pm@`, `ss@`, `worker@`, `driver@`, `op@`, `mechanic@`, `accountant@` na `gradix.local` |
+| Lozinka (svi) | vrijednost `SEED_PASSWORD` (min 10 znakova) |
+| Demo projekat | `DEMO-1` „Sarajevo obilaznica”, javni; mašine, materijali, deponije, vozni list |
+
+**Provjera nakon seeda**
+
+1. Otvori frontend domen i prijavi se kao `admin@gradix.local` /
+   `SEED_PASSWORD` (ili platform admin za platformski dio).
+2. `curl -fsS https://<backend-domen>/api/health` → `{"status":"ok", ...}`.
+3. MinIO bucket `gradix` ne treba ručno praviti — `MinioService.ensureBucket`
+   ga kreira pri prvom uploadu.
+
+> **Pažnja:** seed je idempotentan za korisnike i kompaniju (`upsert`), ali
+> **resetuje `Setting` redove** kompanije `demo` na defaultne vrijednosti. Ako
+> je firma već u upotrebi (custom naziv, tagline, kontakt) — seed **ne**
+> pokretati ponovo, ili prvo napravi `pg_dump`.
+> U razvoju, uz `tsx`: `cd backend && npm run db:seed` (isti `prisma/seed.ts`).
+
+### 5.3 Prvi koraci poslije seeda
+
+1. Prijavi se kao `platform@gradix.local` i **promijeni lozinku** (seed
+   postavlja `mustChangePassword: false` da bi demo odmah radio).
+2. Napravi pravu kompaniju preko platform admin dijela; demo kompaniju
+   obriši kad više ne treba.
 
 ---
 
@@ -234,11 +295,11 @@ cd frontend && npm ci && npm run dev
 
 | Job | Provjera |
 |---|---|
-| `backend` | `npm ci` → `prisma generate` → `eslint` → unit testovi → `nest build` → postoji `dist/src/main.js` |
+| `backend` | `npm ci` → `prisma generate` → `eslint` → unit testovi → `nest build` → postoje `dist/src/main.js` **i `dist/prisma/seed.js`** |
 | `backend-e2e` | PostgreSQL servis → migracije → seed → `npm run test:e2e` |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` |
-| `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright |
-| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` (+ guard: **nema objavljenih host portova**, eksterne mreže deklarisane) → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
+| `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright; seed se pokreće iz builda (`node dist/prisma/seed.js`), istim putem kao u produkciji |
+| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` (+ guard: **nema objavljenih host portova**, eksterne mreže deklarisane) → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **seed iz produkcijske slike** (`node dist/prisma/seed.js` + provjera broja korisnika u bazi) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
 
 Ako je job `docker` zelen, Coolify build prolazi.
 
@@ -340,6 +401,27 @@ Servis mora biti dostupan Coolify proxyju preko Docker mreže:
 * ako si mreže definisao ručno, provjeri da Coolify može dodati svoju proxy
   mrežu (`docker network ls`, obično `coolify`) i da kontejner nije
   izolovan (`docker inspect <kontejner> --format '{{json .NetworkSettings.Networks}}'`).
+
+### `Cannot find module '/app/dist/prisma/seed.js'` pri pokretanju seeda
+
+Image je buildan prije nego što je `prisma/` ušao u `tsconfig.build.json`, pa
+u njemu nema kompajliranog seeda. Ponovo buildaj image
+(`docker compose build backend` / Coolify *Redeploy* + *Force rebuild*), pa
+provjeri:
+
+```bash
+docker run --rm --entrypoint ls gradix-backend /app/dist/prisma
+```
+
+Ako u produkciji vidiš grešku `Cannot find module 'tsx'` ili
+`prisma/seed.ts: not found`, neko je pokrenuo `npx prisma db seed` (razvojna
+varijanta) — u produkciji se koristi `node dist/prisma/seed.js`.
+
+### Seed pada sa `SEED_PASSWORD must be at least 10 characters`
+
+`SEED_PASSWORD` nije postavljen ili je prekratak. Postavi ga u Coolify
+Environment Variables (min 10 znakova) i pokreni seed ponovo. U produkciji
+**ne** koristi demo vrijednost `GradixSeed1`.
 
 ### `network db_net declared as external, but could not be found`
 
