@@ -224,7 +224,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `taskPercent`/`averagePercent` (testovi bez baze).
 - **Otvoreno (B8):** `AuditAction` je zatvoren enum bez akcija za izmjenu projekta/dodjele/faze/
   dokumenta/količine → te izmjene se ne audituju; proširenje enuma ide u **BE-08** (migracija).
-- **Testovi:** **107/107**.
+- **Testovi:** **107/107**. Matrica **490 fajlova / 136 pregledano (27,8 %)**.
 - **Incident (zapisano):** prvi run `41535401598` ❌ — zamjena teksta u `quantities.service.ts`
   nije ubacila import (`parseNonNegativeDecimal` nedefinisan → 500 u e2e), a uveden je i duplikat
   `common/utils/decimal.ts` pored postojećeg `decimal-input.ts`. Oba popravljena; **novi lokalni
