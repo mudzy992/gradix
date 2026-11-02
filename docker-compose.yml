@@ -18,7 +18,14 @@
 
 services:
   minio:
-    image: minio/minio:latest
+    # MinIO community image više nije javno dostupan na Docker Hub-u
+    # (`minio/minio`) ni na `quay.io/minio/minio` (401) — oba su ugašena/
+    # privatizovana. Default je Coolify-jev mirror klasičnog MinIO servera
+    # (testirano: S3 API na 9000 radi, `mc` postoji pa healthcheck prolazi).
+    #
+    # Alternativa (zvanični MinIO registry): quay.io/minio/aistor/minio:latest
+    # Override bez izmjene koda: MINIO_IMAGE=<registry>/<repo>:<tag>
+    image: ${MINIO_IMAGE:-ghcr.io/coollabsio/minio:latest}
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:

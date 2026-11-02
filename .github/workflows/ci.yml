@@ -356,6 +356,43 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      - name: MinIO servis iz compose-a (pull + healthcheck)
+        # Coolify prije starta radi `docker compose pull` za image-based servise,
+        # pa je nedostupna registry referenca tvrdi pad deploya
+        # ("pull access denied for minio/minio"). Ovaj korak diže isti servis
+        # iz docker-compose.yml i traži da postane `healthy`, čime se hvata i
+        # mrtva referenca i pokvaren healthcheck.
+        env:
+          DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+          JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+          JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
+        run: |
+          set -euo pipefail
+          image=$(docker compose config --images | grep -i minio | head -1)
+          if [ -z "$image" ]; then
+            echo "::error::MinIO image referenca nije pronađena u docker-compose.yml"
+            exit 1
+          fi
+          echo "MinIO image: $image"
+          if ! docker compose up -d minio 2>&1 | tail -20; then
+            echo "::error::docker compose up minio nije uspio za '$image'"
+            exit 1
+          fi
+          status="unknown"
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$(docker compose ps -q minio)" 2>/dev/null || echo "starting")
+            echo "status: $status ($i)"
+            if [ "$status" = "healthy" ]; then break; fi
+            sleep 3
+          done
+          docker compose logs --tail 25 minio || true
+          docker compose down
+          if [ "$status" != "healthy" ]; then
+            echo "::error::MinIO servis nije postao healthy (status: $status, image: $image)"
+            exit 1
+          fi
+          echo "MinIO je healthy sa image-om: $image"
+
       - name: Frontend builder — Coolify emulacija (NODE_ENV=production)
         # Coolify u build ubacuje NODE_ENV=production kao build-arg. Bez
         # `npm ci --include=dev` npm tada preskoči devDependencies i build pada

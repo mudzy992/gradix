@@ -33,6 +33,13 @@ Gradix deploya na Coolify tako da build **prođe iz prve**.
 | 15 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` bez defaulta u compose-u | `:?` → deploy pada odmah sa jasnom porukom umjesto starta sa praznim tajnama |
 | 16 | Root `Dockerfile` / `Dockerfile.frontend` su bili jedini Dockerfile-ovi (i to sa `../` putanjom) | Root fajlovi zadržani kao **identične kopije** (za stare Coolify konfiguracije koje pokazuju na `/Dockerfile`), a CI provjerava da su identični (`diff`) |
 
+### 1.4 Ispravke nakon prvih realnih Coolify deployeva
+
+| # | Simptom na Coolifyju | Uzrok | Popravka |
+|---|----------------------|-------|----------|
+| 23 | `RUN npm run build` → `sh: vite: not found` (exit 127) | Coolify prosljeđuje sve env varijable kao **build-arg-ove** (`NODE_ENV=production`), a npm tada preskače `devDependencies` — `vite`, `typescript`, `tailwind` | `ARG NODE_ENV` + `NODE_ENV=development npm ci --include=dev` (frontend i backend `deps` stage); CI ima korak koji to reproducira |
+| 24 | `docker compose pull` → `pull access denied for minio/minio` | **MinIO community image više nije javno dostupan**: `minio/minio` (Docker Hub) vraća „repository does not exist”, a `quay.io/minio/minio` vraća `401 Unauthorized` — potvrđeno sa čistog CI runnera, dakle nije stvar hostinga | Default `MINIO_IMAGE=ghcr.io/coollabsio/minio:latest` (Coolify-jev mirror klasičnog MinIO; testirano — S3 API radi, `mc` postoji); alternativa `quay.io/minio/aistor/minio:latest`; CI diže MinIO iz compose-a i traži `healthy` |
+
 ### 1.3 CI
 
 | # | Problem | Popravka |
@@ -194,7 +201,7 @@ cd frontend && npm ci && npm run dev
 | `backend-e2e` | PostgreSQL servis → migracije → seed → `npm run test:e2e` |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` |
 | `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright |
-| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` → build oba image-a → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
+| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
 
 Ako je job `docker` zelen, Coolify build prolazi.
 
@@ -219,6 +226,48 @@ RUN NODE_ENV=development npm ci --include=dev --no-audit --no-fund
 Isto važi i za backend (`nest`, `prisma`, `ts-jest` su dev zavisnosti u build
 fazi). CI zato ima korak **„Frontend builder — Coolify emulacija”** koji
 reproducira ovaj scenario i pada ako se zaštita ukloni.
+
+### `pull access denied for minio/minio` (deploy padne prije starta)
+
+Coolify prije starta radi `docker compose pull` za image-based servise. Deploy
+pada sa:
+
+```
+Error response from daemon: pull access denied for minio/minio, repository does not exist
+or may require 'docker login': denied: requested access to the resource is denied
+```
+
+**Ovo nije problem tvog servera.** MinIO community image više nije javno
+dostupan ni na jednom od dva stara mjesta:
+
+| Referenca | Status (provjereno 2026-11 sa čistog runnera) |
+|---|---|
+| `minio/minio:latest` (Docker Hub) | ❌ `repository does not exist` / access denied |
+| `quay.io/minio/minio:latest` | ❌ `401 Unauthorized` |
+| `ghcr.io/coollabsio/minio:latest` | ✅ **default u repo-u** — klasični MinIO, S3 API + `mc` rade |
+| `quay.io/minio/aistor/minio:latest` | ✅ zvanični MinIO registry (AIStor build) |
+
+Ako želiš drugu referencu, u Coolify env postavi `MINIO_IMAGE`, npr.:
+
+```
+MINIO_IMAGE=quay.io/minio/aistor/minio:latest
+# ili interni mirror:
+MINIO_IMAGE=registry.firma.local/minio/minio:latest
+```
+
+Provjera na serveru prije deploya:
+
+```bash
+docker pull ghcr.io/coollabsio/minio:latest
+docker run --rm -d --name minio-test -p 9000:9000 \
+  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+  ghcr.io/coollabsio/minio:latest server /data
+curl -fsS http://127.0.0.1:9000/minio/health/live && echo OK
+docker rm -f minio-test
+```
+
+> Ako u Coolify env-u već imaš `MINIO_IMAGE=minio/minio:latest` (stara
+> vrijednost), obriši je ili zamijeni — inače override vraća mrtvu referencu.
 
 ### Frontend se učita, ali svi API pozivi padaju (`ERR_NAME_NOT_RESOLVED`)
 
@@ -249,7 +298,8 @@ Stare varijable iz v1 ere (`PGSSLROOTCERT`, `PGSSLMODE`, `REDIS_TLS_CA_FILE`,
 ## 9. Ostale napomene
 
 * `mobile/` (Expo) nije dio Docker/CI toka — nema produkcijskog image-a.
-* `minio/minio:latest` i `nginx:alpine` su „rolling” tagovi; za potpuno
-  reproducibilne buildove pinuj konkretne verzije.
+* `ghcr.io/coollabsio/minio:latest`, `nginx:alpine` i `node:22-alpine` su
+  „rolling” tagovi; za potpuno reproducibilne buildove pinuj konkretne verzije
+  (`MINIO_IMAGE` u Coolify env-u olakšava pinovanje bez izmjene koda).
 * `.env.coolify` je **predložak** (placeholder tajne) — stvarne vrijednosti
   nikada ne commitovati.
