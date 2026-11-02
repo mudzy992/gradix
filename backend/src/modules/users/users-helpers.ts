@@ -55,7 +55,7 @@ export function throwUnique(error: unknown): never {
   ) {
     // `meta.target` je u Prisma 7 obično niz imena polja/ograničenja, ali adapteri daju i
     // string ili objekat — zato gledamo i strukturirano i cijeli `meta` (kao prije).
-    const meta = error.meta as Record<string, unknown> | undefined;
+    const meta = error.meta;
     const target = meta?.target;
     const fromTarget = Array.isArray(target)
       ? target.map(String).join(',')
