@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Gradix — Kompletna lista environment varijabli (Coolify / PostgreSQL / TLS)
 
 Ovaj dokument opisuje sve `env` varijable potrebne za pokretanje Gradix aplikacije u produkciji (Coolify) nakon prelaska sa MySQL na PostgreSQL.

@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 6 — Mobile Expo (**LOCKED** 2026-08-15)
 
 **Cilj:** Expo: timer, ture, gorivo, dnevnik, offline queue. Bio/FCM/voice nisu blocker.

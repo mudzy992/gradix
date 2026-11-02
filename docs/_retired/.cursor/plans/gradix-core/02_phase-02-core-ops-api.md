@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 2 — Core ops API (**LOCKED** 2026-08-15)
 
 **Cilj:** projects, phases, tasks, timer, dispatch, documents, quantities, TIMER amendment. Nema web UI, nema Machine/Trip.

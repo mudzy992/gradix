@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # PLAN FREEZE — Gradix v1
 
 Datum: 2026-08-15. **Ako nije ovdje (ili u navedenoj matrici), nije u v1.**

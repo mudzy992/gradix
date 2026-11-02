@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Service — matrica
 
 Status: **locked**. Faza 7.2. Status mašine: [fleet-status](../fleet-status/MATRIX.md).

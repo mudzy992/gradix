@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Redis CLI — ručno kreiranje korisnika, prefixa i prava (Coolify / TLS)
 
 > **NAPOMENA — EKSTERNI / GLOBALNI REDIS:** Gradix v1 **ne koristi Redis** (`Nema Redis/BullMQ` u `PLAN_FREEZE.md`). Redis je **globalni** (postoji izvan ovog `docker-compose`). Ove komande se pokreću **ručno** (`redis-cli`) protiv postojećeg globalnog Redis servera (port `6379`, TLS CA cert: `/data/coolify/ssl/redis-core/redis-ca.crt`). Cilj je kreirati **tačan ACL za ovu aplikaciju (`gradix-worker`)** sa tačnim prefixom (`gradix:queue:*`) i pravima (`+@all -@dangerous +publish +subscribe`) — ne za opšti pristup.

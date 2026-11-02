@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Diary — matrica
 
 Status: **locked**. API Faza 5.6; web 5.6; mobile 6.3; PDF 7.4.

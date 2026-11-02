@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # CI / deploy — matrica
 
 Status: **locked**. Faza 7.5. **Nema auto-deploy u v1.**

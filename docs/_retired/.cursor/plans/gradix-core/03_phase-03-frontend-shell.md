@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 3 — Frontend shell (**LOCKED** 2026-08-15)
 
 **Cilj:** Vite SPA: login, layout, settings, users, bell, Socket.IO. Nema projects/tasks/timer UI.

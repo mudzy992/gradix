@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Payroll / timesheet — matrica
 
 Status: **locked**. Šema hook Faza 2; UI/cron Faza 9.

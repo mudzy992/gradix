@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 1 — Foundation (**LOCKED** 2026-08-15)
 
 **Cilj:** Nest + MySQL + tenant + auth + settings + in-app notifications + upload + audit. Nema frontend/mobile, nema Project/Timer.

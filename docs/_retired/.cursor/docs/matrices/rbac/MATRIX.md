@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # RBAC — matrica
 
 Status: **locked** (model Faze 1). Permission string + guard. Unija uloga. Redovi: [data-scope](../data-scope/MATRIX.md). Stringovi: [permissions](../permissions/MATRIX.md). **Cijeli v1 katalog stringova u guardu od Faze 1** (rute kasnijih faza 404 dok ne postoje).

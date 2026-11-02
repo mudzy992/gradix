@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Gradix — domen
 
 Interni + javni sistem za niskogradnju: ured (web), teren (Expo), javni one-page firme, flota (telefon pa IoT), troškovi, tenderi, dnevnik, plate (sati × stopa).

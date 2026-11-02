@@ -8,7 +8,7 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 1.1 — „dokumentacija vs. stvarnost“ ✅ završena.** Sljedeće: FAZA 1.2 (penzionisanje starih dokumenata).
+**FAZA 1.2 — penzionisanje stare dokumentacije ✅ završena.** Sljedeće: FAZA 1.3 (nova dokumentacija).
 
 ## Zadnji commit i CI
 
@@ -35,11 +35,19 @@
 - Najteži nalazi: **MySQL vs PostgreSQL** (❌, riješeno odlukom D-001), email je stub (❌),
   `pull_request` trigger (❌ prema novim pravilima), nema env validacije/a11y/coverage praga.
 
+### 2026-11-02 — FAZA 1.2 (`A-02`)
+- **Penzionisano 85 dokumenata** u `docs/_retired/` (originalne putanje zadržane), svaki sa
+  banerom „⚠️ PENZIONISANO“; `docs/_retired/INDEX.md` sa opisom svakog fajla.
+- Uklonjeno (odluka D-010): `backup/migrations/**` (9 MySQL fajlova; vraćanje iz `5679a4b`).
+- `.cursorrules` i novi `.cursor/rules/00_project.mdc` postali pokazivači na `docs/` (D-011).
+- Reference na penzionisane dokumente u `docker-compose*.yml`, Dockerfile-ovima, entrypointu i
+  `tsconfig.build.json` preusmjerene na `docs/INFRASTRUCTURE.md`.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. FAZA 1.2 — `docs/_retired/` + baneri + `INDEX.md` + pokazivači (`.cursorrules`, `.cursor/rules`).
-2. FAZA 1.3 — nova dokumentacija (9 dokumenata).
-3. Push + zelen CI → **KAPIJA 1**.
+1. FAZA 1.3 — nova dokumentacija (9 dokumenata: ARCHITECTURE, INFRASTRUCTURE, BACKEND,
+   FRONTEND, MOBILE, TESTING, CI, CONVENTIONS, DECISIONS).
+2. Push + zelen CI → **KAPIJA 1** (izvještaj + čekanje odobrenja).
 
 ## Otvorena pitanja / blokatori
 

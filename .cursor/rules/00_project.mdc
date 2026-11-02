@@ -1,0 +1,24 @@
+---
+description: Gradix — pokazivač na izvor istine (docs/)
+alwaysApply: true
+---
+
+# Gradix
+
+**Izvor istine je `docs/`**, ne ovaj fajl:
+
+| Tema | Dokument |
+|---|---|
+| Arhitektura, slojevi, tokovi, model podataka | `docs/ARCHITECTURE.md` |
+| Docker/Coolify, env katalog, TLS, seed, backup | `docs/INFRASTRUCTURE.md` |
+| API ugovor, moduli, poslovna pravila | `docs/BACKEND.md` |
+| Web panel, dizajn sistem, a11y | `docs/FRONTEND.md` |
+| Expo, offline, mobile testovi | `docs/MOBILE.md` |
+| Testna strategija i pragovi | `docs/TESTING.md` |
+| CI pravila i guardovi | `docs/CI.md` |
+| Standardi, commit format, guardrail skripte | `docs/CONVENTIONS.md` |
+| Odluke (obavezujuće) | `docs/DECISIONS.md` |
+| Dnevnik rada i nalazi | `AUDIT/STATE.md`, `AUDIT/*` |
+
+Stack: NestJS 11 + Prisma 7 + **PostgreSQL** (odluka D-001) · React 19 + Vite 8 ·
+Expo SDK 57. Penzionisana dokumentacija (`docs/_retired/`) služi samo kao historija.

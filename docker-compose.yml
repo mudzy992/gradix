@@ -16,7 +16,7 @@
 #
 # Obavezne env varijable (Coolify → Environment Variables):
 #   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
-#   (vidi .env.example / DEPLOYMENT_COOLIFY.md)
+#   (vidi .env.example / docs/INFRASTRUCTURE.md §5)
 #
 # HOST MAPIRANJA (bind):
 #   /data/coolify/ssl/coolify-ca.crt        → /etc/ssl/certs/coolify-ca.crt (CA za bazu)
@@ -30,7 +30,7 @@
 #   "failed to bind host port 0.0.0.0:5173/tcp: address already in use"
 # Coolify proxy dolazi do kontejnera preko Docker mreže, pa host portovi nisu
 # potrebni. Ako ti ipak treba direktan pristup (npr. mobilna aplikacija na
-# IP:3000), vidi DEPLOYMENT_COOLIFY.md §6.
+# IP:3000), vidi docs/INFRASTRUCTURE.md §8.
 
 services:
   minio:

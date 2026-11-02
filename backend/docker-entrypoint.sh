@@ -18,7 +18,7 @@ if [ "${SSL_PREFLIGHT:-true}" = "true" ] && [ -n "${DATABASE_URL:-}" ]; then
       echo "[gradix]   ali tog fajla nema u kontejneru (ili je direktorij)." >&2
       echo "[gradix]   docker-compose.yml mapira POSTGRES_CA_FILE → /etc/ssl/certs/coolify-ca.crt." >&2
       echo "[gradix]   Na Coolify hostu provjeri /data/coolify/ssl/coolify-ca.crt ili postavi" >&2
-      echo "[gradix]   POSTGRES_CA_FILE na stvarnu putanju. Detalji: DEPLOYMENT_COOLIFY.md §4." >&2
+      echo "[gradix]   POSTGRES_CA_FILE na stvarnu putanju. Detalji: docs/INFRASTRUCTURE.md §4." >&2
       exit 1
     fi
     echo "[gradix] SSL CA za bazu: $ca_path"

@@ -3,6 +3,9 @@ description: Gradix project baseline — stack, scope, colors, bans
 alwaysApply: true
 ---
 
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
+
 # Gradix
 
 Construction-ops platform: web panel, Expo, public company one-page, multi-company, ERP-lite, payroll export, IoT fleet. Source of truth: `.cursor/docs/DECISIONS.md` + `.cursor/docs/DOMAIN.md` + matrices + `.cursor/plans/gradix-core/PLAN_FREEZE.md` (ako nije u freeze-u, nije v1).

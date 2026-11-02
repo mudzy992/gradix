@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Notifications — matrica
 
 Status: **locked** (Faza 1.6). Enum **zatvoren**; cijeli v1 katalog u Prisma od Faze 1.

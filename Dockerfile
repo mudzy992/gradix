@@ -80,6 +80,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
 #   docker compose run --rm backend node dist/prisma/seed.js
 # ili iz Coolify terminala nad backend kontejnerom:
 #   node dist/prisma/seed.js
-# Detalji: DEPLOYMENT_COOLIFY.md §5.
+# Detalji: docs/INFRASTRUCTURE.md §6 (seed).
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/src/main.js"]

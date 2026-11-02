@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Settings — matrica (stub)
 
 Status: **locked** (Faza 1). Registry u kodu + DB override. Faza 1.3.

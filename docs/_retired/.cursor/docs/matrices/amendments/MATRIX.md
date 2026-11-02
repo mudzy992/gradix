@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Amendments — ture, gorivo, timer
 
 Status: **locked** (TIMER Faza 2; TRIP/FUEL Faza 4).

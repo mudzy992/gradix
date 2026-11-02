@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Gradix — master checklist (implementacija)
 
 Ažurirano: 2026-08-17. Plan 1–11 **LOCKED**.

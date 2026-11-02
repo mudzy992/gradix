@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 8 — Javni one-page firme (**LOCKED** 2026-08-15)
 
 **Cilj:** `/p/:slug` bez auth. Apple-linear, responsive, iste boje.

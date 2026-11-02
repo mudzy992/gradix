@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Screens — web + mobile
 
 Status: **locked** (web Faza 3 shell; ostale rute Faza 5+). Stavka vidljiva ako unija permisija to da. Liste i dalje scoped.

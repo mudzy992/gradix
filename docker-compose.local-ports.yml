@@ -2,7 +2,7 @@
 #
 # Na Coolifyju se NE koristi: tamo Coolify proxy dolazi do kontejnera preko
 # Docker mreže, a fiksni host portovi padaju pri blue/green deployu
-# ("address already in use"). Vidi DEPLOYMENT_COOLIFY.md §6.
+# ("address already in use"). Vidi docs/INFRASTRUCTURE.md §8.
 #
 # Upotreba:
 #   docker network create db_net redis_net   (jednom)

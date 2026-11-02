@@ -2,7 +2,7 @@
   // `prisma/` je NAMJERNO uključen u build: seed (prisma/seed.ts) se kompajlira
   // u `dist/prisma/seed.js`, pa se u produkcijskoj slici može pokrenuti sa
   // `node dist/prisma/seed.js` (bez `tsx`, bez TypeScript izvora i bez dev
-  // zavisnosti). Vidi DEPLOYMENT_COOLIFY.md §5.
+  // zavisnosti). Vidi docs/INFRASTRUCTURE.md §6.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "."

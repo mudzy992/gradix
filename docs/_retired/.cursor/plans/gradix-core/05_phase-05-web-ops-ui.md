@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 5 — Web ops UI (**LOCKED** 2026-08-15)
 
 **Cilj:** projects/tasks/fleet/logistics/diary/HSE lista na Vite shellu. Nema tender/payroll/public/ERP.

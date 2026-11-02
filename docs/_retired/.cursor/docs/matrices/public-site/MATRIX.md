@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Public site — matrica
 
 Status: **locked**. Faza 8. Settings `public.*` smiju postojati prazni od Faze 1.

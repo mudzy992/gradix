@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Permissions — katalog
 
 Status: **locked** (katalog v1). Guard provjerava string. Role mapa = unija. PLATFORM_ADMIN ima `platform.companies` + sve uz `X-Company-Id`.

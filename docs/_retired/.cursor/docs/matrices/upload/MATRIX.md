@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Upload — matrica
 
 Status: **locked** (Faza 1.7). PublicAsset stream je Faza 8.

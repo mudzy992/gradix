@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Audit — matrica
 
 Status: **locked** (Faza 1 persist). `action` **zatvoren**; novi = ovaj fajl. Nema `/audit` UI.

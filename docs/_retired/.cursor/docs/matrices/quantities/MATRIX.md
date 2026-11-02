@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Quantities / predmjer — matrica
 
 Status: **locked** (Faza 2.5). **Ne** mijenja [spend-progress](../spend-progress/MATRIX.md) progress %.

@@ -1,1 +1,6 @@
-Gradix — see `.cursor/rules/00_project.mdc`, freeze `.cursor/plans/gradix-core/PLAN_FREEZE.md`, plan `.cursor/plans/gradix-core/00_overview.md`.
+Gradix — izvor istine je `docs/` (arhitektura, infra, backend, frontend, mobile, testovi, CI,
+konvencije) i `AUDIT/` (dnevnik i nalazi). Stara dokumentacija je penzionisana u
+`docs/_retired/` i NIJE relevantna za implementaciju.
+
+Pravila za rad u repou: `docs/CONVENTIONS.md` · CI: `docs/CI.md` · odluke: `docs/DECISIONS.md`.
+Aktivna grana: `arena/0bc0e56e-gradix`. Bez PR-ova.

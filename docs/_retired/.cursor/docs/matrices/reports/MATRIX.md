@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Reports — matrica
 
 Status: **locked**. Faza 7.4. **Nema** report builder, custom kolona, saved query.

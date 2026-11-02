@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Spend / progress — matrica
 
 Status: **locked** (progress Faza 2; spend kasnije). Bez formule nema KPI broja (prikaži “—”). Nema `/dashboard` u Fazi 2.

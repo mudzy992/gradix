@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Data scope — matrica
 
 Status: **locked** (Faza 2 projekti/taskovi; ostalo Faza 4+). Faza 1: `scopeByCompany` na User/Setting/Notification/Audit.

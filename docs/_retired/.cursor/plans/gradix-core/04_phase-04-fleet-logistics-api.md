@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 4 — Fleet + logistics API (**LOCKED** 2026-08-15)
 
 **Cilj:** machines, trips, fuel, UserLocation, geofence info-only. Nema web mape.

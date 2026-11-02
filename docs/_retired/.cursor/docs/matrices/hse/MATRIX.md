@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # HSE / incident
 
 Status: **locked**. Faza 6.0b / 5.7 lista. **v1 online-only.**

@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 10 — ERP-lite (**LOCKED** 2026-08-15)
 
 **Cilj:** partneri, ručni troškovi, lager. Nije knjigovodstvo.

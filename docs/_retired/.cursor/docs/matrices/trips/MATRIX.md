@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Trips / deponija / vagar — matrica
 
 Status: **locked** (Faza 4.2). Immutable + [amendments](../amendments/MATRIX.md).

@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Timer — matrica
 
 Status: **locked** (Faza 2.3; machineId Faza 4; offline startedAt Faza 6; PENDING Faza 9).

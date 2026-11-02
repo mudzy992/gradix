@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 7 — Tender, servis, dokumenti, izvještaji, CI (**LOCKED** 2026-08-15)
 
 **Preduslov:** tokovi 1–6. **Status:** zaključano. Kod tek na „izvrši Fazu 7“.

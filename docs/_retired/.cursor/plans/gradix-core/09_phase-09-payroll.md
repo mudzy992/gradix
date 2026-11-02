@@ -1,3 +1,5 @@
+> ⚠️ PENZIONISANO (retired) – NIJE RELEVANTNO za implementaciju. Služi samo kao historijska referenca. Datum penzionisanja: 2026-11-02.
+
 # Faza 9 — Obračun sati / payroll export (**LOCKED** 2026-08-15)
 
 **Status:** zaključano. Kod tek na „izvrši Fazu 9“.
