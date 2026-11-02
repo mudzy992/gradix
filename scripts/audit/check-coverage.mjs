@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ROOT, MATRIX_PATH, CSV_HEADER, STATUSES, REVIEWED, collectFiles, classify,
-  readMatrix, readSegments, parseCsvLine,
+  readMatrix, readSegments, parseCsvLine, countLoc,
 } from './lib.mjs';
 
 const verbose = process.argv.includes('--verbose');
@@ -76,6 +76,8 @@ for (const [file, row] of rows) {
   for (const key of ['layer', 'module', 'segment']) {
     if (row[key] !== cls[key]) fail(`drift: ${file} ${key}="${row[key]}" (kod kaže "${cls[key]}") — pokreni inventory`);
   }
+  const expectedLoc = countLoc(file);
+  if (Number(row.loc) !== expectedLoc) fail(`drift: ${file} loc=${row.loc} (stvarno ${expectedLoc}) — pokreni inventory`);
   if (!STATUSES.includes(row.status)) fail(`${file}: neispravan status "${row.status}"`);
   else byStatus.set(row.status, (byStatus.get(row.status) || 0) + 1);
   if (REVIEWED.has(row.status)) {

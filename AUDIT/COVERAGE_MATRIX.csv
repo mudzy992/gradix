@@ -1,7 +1,7 @@
 file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,69,nepregledano,,
 .env.example,INF,compose,INF-01,69,nepregledano,,
-.github/workflows/ci.yml,CI,ci,CI-01,584,pregledano,PR trigger + arena/** glob uklonjeni (F-CI-01-01/02); push samo main + aktivna grana,2026-11-02
+.github/workflows/ci.yml,CI,ci,CI-01,585,pregledano,PR trigger + arena/** glob uklonjeni (F-CI-01-01/02); push samo main + aktivna grana,2026-11-02
 Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
 Dockerfile.frontend,INF,frontend-image,INF-03,66,nepregledano,,
 backend/Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
@@ -450,7 +450,7 @@ mobile/sync/engine.ts,MOB,offline,MOB-04,99,nepregledano,,
 mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
-scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,121,nepregledano,,
+scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,243,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
