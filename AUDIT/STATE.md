@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `67ae110` (CI-04 — coverage ratchet) |
-| CI | ✅ [run 41510206349](https://github.com/mudzy992/gradix/actions/runs/41510206349) — **6/6** zelen za `67ae110` |
-| Zadnji potvrđeno zelen run | [41509656077](https://github.com/mudzy992/gradix/actions/runs/41509656077) (`867814a`, CI-03) ✅ 6/6 · [41510206349](https://github.com/mudzy992/gradix/actions/runs/41510206349) (`67ae110`, CI-04) ✅ 6/6 |
+| Zadnji commit | `INF-03` (nginx headeri + CSP) |
+| CI | ✅ [run 41515682989](https://github.com/mudzy992/gradix/actions/runs/41515682989) — **6/6** zelen za INF-03 commit |
+| Zadnji potvrđeno zelen run | [41513947158](https://github.com/mudzy992/gradix/actions/runs/41513947158) (INF-01) ✅ · [41514693571](https://github.com/mudzy992/gradix/actions/runs/41514693571) (INF-02, non-root slika) ✅ · [41515682989](https://github.com/mudzy992/gradix/actions/runs/41515682989) (INF-03) ✅ — svi 6/6 |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
