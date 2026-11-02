@@ -1,70 +1,435 @@
 {
-  "$comment": "Izvor istine za segmente audita. ID-evi moraju postojati u AUDIT/02_MASTER_AUDIT_PLAN.md. status: planned | in-progress | done.",
+  "$comment": "Izvor istine za segmente audita. ID-evi moraju postojati u AUDIT/02_MASTER_AUDIT_PLAN.md. status: planned | in-progress | done. scope: files (segment ima izvorne fajlove u matrici) | process (poprečni/procesni segment — vidi scopeReason; check-coverage ne zahtijeva redove u matrici).",
   "segments": [
-    { "id": "STD-01", "layer": "STD", "title": "Guardrail skripte + check:all", "status": "planned" },
-    { "id": "STD-02", "layer": "STD", "title": "Docs guard (linkovi, baneri, ažurnost)", "status": "planned" },
-
-    { "id": "CI-01", "layer": "CI", "title": "Okidači: samo aktivna grana, bez PR-a", "status": "planned" },
-    { "id": "CI-02", "layer": "CI", "title": "workflow_dispatch inputi (suite/verbose/tag)", "status": "planned" },
-    { "id": "CI-03", "layer": "CI", "title": "Pinning po SHA, timeouti, cache", "status": "planned" },
-    { "id": "CI-04", "layer": "CI", "title": "Static gate + coverage prag", "status": "planned" },
-    { "id": "CI-05", "layer": "CI", "title": "Audit gate (matrica + docs)", "status": "planned" },
-    { "id": "CI-06", "layer": "CI", "title": "Web E2E izvještaji + axe", "status": "planned" },
-    { "id": "CI-07", "layer": "CI", "title": "Mobile job (Jest + Maestro, posljednji)", "status": "planned" },
-
-    { "id": "INF-01", "layer": "INF", "title": "Compose, mreže, env predlošci", "status": "planned" },
-    { "id": "INF-02", "layer": "INF", "title": "Backend image + entrypoint", "status": "planned" },
-    { "id": "INF-03", "layer": "INF", "title": "Frontend image + nginx", "status": "planned" },
-    { "id": "INF-04", "layer": "INF", "title": "Strukturisano logovanje", "status": "planned" },
-    { "id": "INF-05", "layer": "INF", "title": "Health / readiness", "status": "planned" },
-    { "id": "INF-06", "layer": "INF", "title": "Backup / restore runbook + skripte", "status": "planned" },
-    { "id": "INF-07", "layer": "INF", "title": "Redis: aktivirati ili ukloniti", "status": "planned" },
-
-    { "id": "BE-01", "layer": "BE", "title": "Temelj API-ja: config, greške, ugovor", "status": "planned" },
-    { "id": "BE-02", "layer": "BE", "title": "Auth", "status": "planned" },
-    { "id": "BE-03", "layer": "BE", "title": "Korisnici, role, scope", "status": "planned" },
-    { "id": "BE-04", "layer": "BE", "title": "Firme, podešavanja, audit", "status": "planned" },
-    { "id": "BE-05", "layer": "BE", "title": "Projekti, faze, dodjele, dokumenti", "status": "planned" },
-    { "id": "BE-06", "layer": "BE", "title": "Zadaci i dispečing", "status": "planned" },
-    { "id": "BE-07", "layer": "BE", "title": "Timer i ispravke", "status": "planned" },
-    { "id": "BE-08", "layer": "BE", "title": "Seed, migracije, demo podaci", "status": "planned" },
-    { "id": "BE-09", "layer": "BE", "title": "Flota i IoT", "status": "planned" },
-    { "id": "BE-10", "layer": "BE", "title": "Logistika: ture, gorivo, šifarnici", "status": "planned" },
-    { "id": "BE-11", "layer": "BE", "title": "Dnevnik, HSE, fajlovi", "status": "planned" },
-    { "id": "BE-12", "layer": "BE", "title": "Dashboard i prisustvo", "status": "planned" },
-    { "id": "BE-13", "layer": "BE", "title": "Payroll", "status": "planned" },
-    { "id": "BE-14", "layer": "BE", "title": "ERP-lite", "status": "planned" },
-    { "id": "BE-15", "layer": "BE", "title": "Ured: tenderi, servis, dokumenti, reporti", "status": "planned" },
-    { "id": "BE-16", "layer": "BE", "title": "Javni sajt, notifikacije, email, realtime", "status": "planned" },
-    { "id": "BE-17", "layer": "BE", "title": "Sync (serverska strana)", "status": "planned" },
-    { "id": "BE-18", "layer": "BE", "title": "Health API ugovor", "status": "planned" },
-
-    { "id": "FE-01", "layer": "FE", "title": "Design tokeni + paleta", "status": "planned" },
-    { "id": "FE-02", "layer": "FE", "title": "Shell, navigacija, layout", "status": "planned" },
-    { "id": "FE-03", "layer": "FE", "title": "A11y (WCAG 2.2 AA)", "status": "planned" },
-    { "id": "FE-04", "layer": "FE", "title": "Admin dashboard (IA + redizajn)", "status": "planned" },
-    { "id": "FE-05", "layer": "FE", "title": "Testovi (unit/component)", "status": "planned" },
-    { "id": "FE-06", "layer": "FE", "title": "E2E tokovi", "status": "planned" },
-    { "id": "FE-07", "layer": "FE", "title": "Auth stranice", "status": "planned" },
-    { "id": "FE-08", "layer": "FE", "title": "Operacije (projekti, zadaci)", "status": "planned" },
-    { "id": "FE-09", "layer": "FE", "title": "Flota i logistika", "status": "planned" },
-    { "id": "FE-10", "layer": "FE", "title": "Dnevnik, HSE, dokumenti", "status": "planned" },
-    { "id": "FE-11", "layer": "FE", "title": "Ured (tenderi, servis, reporti)", "status": "planned" },
-    { "id": "FE-12", "layer": "FE", "title": "Payroll i ERP", "status": "planned" },
-    { "id": "FE-13", "layer": "FE", "title": "Administracija", "status": "planned" },
-    { "id": "FE-14", "layer": "FE", "title": "Javni sajt", "status": "planned" },
-    { "id": "FE-15", "layer": "FE", "title": "i18n, store, hookovi, helperi", "status": "planned" },
-    { "id": "FE-16", "layer": "FE", "title": "UI primitive", "status": "planned" },
-
-    { "id": "MOB-01", "layer": "MOB", "title": "Navigacija i shell", "status": "planned" },
-    { "id": "MOB-02", "layer": "MOB", "title": "Auth i tokeni", "status": "planned" },
-    { "id": "MOB-03", "layer": "MOB", "title": "Unit testovi", "status": "planned" },
-    { "id": "MOB-04", "layer": "MOB", "title": "Offline sync + indikator", "status": "planned" },
-    { "id": "MOB-05", "layer": "MOB", "title": "Maestro E2E", "status": "planned" },
-    { "id": "MOB-06", "layer": "MOB", "title": "Greške, i18n, pristupačnost", "status": "planned" },
-    { "id": "MOB-07", "layer": "MOB", "title": "Build profili (EAS)", "status": "planned" },
-
-    { "id": "TEST-01", "layer": "TEST", "title": "Coverage infrastruktura + pragovi", "status": "planned" },
-    { "id": "TEST-02", "layer": "TEST", "title": "Unit pokrivenost common/", "status": "planned" }
+    {
+      "id": "STD-01",
+      "layer": "STD",
+      "title": "Guardrail skripte + check:all",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "STD-02",
+      "layer": "STD",
+      "title": "Docs guard (linkovi, baneri, ažurnost)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Docs guard provjerava docs/*.md i AUDIT/*.md; dokumentacija nije izvorni kod i ima vlastiti guard (linkovi, baneri, indeks)."
+    },
+    {
+      "id": "CI-01",
+      "layer": "CI",
+      "title": "Okidači: samo aktivna grana, bez PR-a",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "CI-02",
+      "layer": "CI",
+      "title": "workflow_dispatch inputi (suite/verbose/tag)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Svi CI koraci su u jednom .github/workflows/ci.yml (matrica ga vodi pod CI-01); ovaj segment mijenja samo dispatch inpute u tom fajlu."
+    },
+    {
+      "id": "CI-03",
+      "layer": "CI",
+      "title": "Pinning po SHA, timeouti, cache",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Pinning/timeouti/cache se mijenjaju u ci.yml (vlasništvo CI-01); ovdje se mjeri efekt (trajanje, stabilnost)."
+    },
+    {
+      "id": "CI-04",
+      "layer": "CI",
+      "title": "Static gate + coverage prag",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Static gate + coverage prag = izmjene u ci.yml + package.json pragovima; nema vlastitih fajlova."
+    },
+    {
+      "id": "CI-05",
+      "layer": "CI",
+      "title": "Audit gate (matrica + docs)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Audit gate poziva scripts/audit/* (vlasništvo STD-01); ovdje se dodaje korak u ci.yml."
+    },
+    {
+      "id": "CI-06",
+      "layer": "CI",
+      "title": "Web E2E izvještaji + axe",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Web E2E izvještaji + axe se konfigurišu u ci.yml i playwright.config.ts (vlasništvo FE-06)."
+    },
+    {
+      "id": "CI-07",
+      "layer": "CI",
+      "title": "Mobile job (Jest + Maestro, posljednji)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Mobile job se dodaje u ci.yml; Maestro specifikacije vodi MOB-05."
+    },
+    {
+      "id": "INF-01",
+      "layer": "INF",
+      "title": "Compose, mreže, env predlošci",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "INF-02",
+      "layer": "INF",
+      "title": "Backend image + entrypoint",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "INF-03",
+      "layer": "INF",
+      "title": "Frontend image + nginx",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "INF-04",
+      "layer": "INF",
+      "title": "Strukturisano logovanje",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Strukturisano logovanje danas ne postoji (nalaz); implementacija ide u backend/src/common/logging (novi fajlovi u toku segmenta)."
+    },
+    {
+      "id": "INF-05",
+      "layer": "INF",
+      "title": "Health / readiness",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Healthcheck definicije su u docker-compose*.yml (vlasništvo INF-01), a endpoint u backend/src/modules/health (vlasništvo BE-18); ovdje se provjerava ugovor kraj-do-kraja."
+    },
+    {
+      "id": "INF-06",
+      "layer": "INF",
+      "title": "Backup / restore runbook + skripte",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Backup/restore skripte još ne postoje; nastaju u ovom segmentu (scripts/ops/backup*, runbook u docs/INFRASTRUCTURE.md)."
+    },
+    {
+      "id": "INF-07",
+      "layer": "INF",
+      "title": "Redis: aktivirati ili ukloniti",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Redis je danas konfigurisan kroz env/COOLIFY (vlasništvo INF-01); odluka zadržati/ukloniti mijenja compose, env i backend modul — bez vlastitog fajla."
+    },
+    {
+      "id": "BE-01",
+      "layer": "BE",
+      "title": "Temelj API-ja: config, greške, ugovor",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-02",
+      "layer": "BE",
+      "title": "Auth",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-03",
+      "layer": "BE",
+      "title": "Korisnici, role, scope",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-04",
+      "layer": "BE",
+      "title": "Firme, podešavanja, audit",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-05",
+      "layer": "BE",
+      "title": "Projekti, faze, dodjele, dokumenti",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-06",
+      "layer": "BE",
+      "title": "Zadaci i dispečing",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-07",
+      "layer": "BE",
+      "title": "Timer i ispravke",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-08",
+      "layer": "BE",
+      "title": "Seed, migracije, demo podaci",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-09",
+      "layer": "BE",
+      "title": "Flota i IoT",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-10",
+      "layer": "BE",
+      "title": "Logistika: ture, gorivo, šifarnici",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-11",
+      "layer": "BE",
+      "title": "Dnevnik, HSE, fajlovi",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-12",
+      "layer": "BE",
+      "title": "Dashboard i prisustvo",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-13",
+      "layer": "BE",
+      "title": "Payroll",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-14",
+      "layer": "BE",
+      "title": "ERP-lite",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-15",
+      "layer": "BE",
+      "title": "Ured: tenderi, servis, dokumenti, reporti",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-16",
+      "layer": "BE",
+      "title": "Javni sajt, notifikacije, email, realtime",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-17",
+      "layer": "BE",
+      "title": "Sync (serverska strana)",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "BE-18",
+      "layer": "BE",
+      "title": "Health API ugovor",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-01",
+      "layer": "FE",
+      "title": "Design tokeni + paleta",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-02",
+      "layer": "FE",
+      "title": "Shell, navigacija, layout",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-03",
+      "layer": "FE",
+      "title": "A11y (WCAG 2.2 AA)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "A11y je poprečna osobina svih FE ekrana (FE-07…FE-16); mjeri se axe testovima i ručnom provjerom, bez vlastitih fajlova."
+    },
+    {
+      "id": "FE-04",
+      "layer": "FE",
+      "title": "Admin dashboard (IA + redizajn)",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-05",
+      "layer": "FE",
+      "title": "Testovi (unit/component)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Frontend danas nema unit/component testova; testovi nastaju u ovom segmentu pored komponenti koje testiraju."
+    },
+    {
+      "id": "FE-06",
+      "layer": "FE",
+      "title": "E2E tokovi",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-07",
+      "layer": "FE",
+      "title": "Auth stranice",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-08",
+      "layer": "FE",
+      "title": "Operacije (projekti, zadaci)",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-09",
+      "layer": "FE",
+      "title": "Flota i logistika",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-10",
+      "layer": "FE",
+      "title": "Dnevnik, HSE, dokumenti",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-11",
+      "layer": "FE",
+      "title": "Ured (tenderi, servis, reporti)",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-12",
+      "layer": "FE",
+      "title": "Payroll i ERP",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-13",
+      "layer": "FE",
+      "title": "Administracija",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-14",
+      "layer": "FE",
+      "title": "Javni sajt",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-15",
+      "layer": "FE",
+      "title": "i18n, store, hookovi, helperi",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "FE-16",
+      "layer": "FE",
+      "title": "UI primitive",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "MOB-01",
+      "layer": "MOB",
+      "title": "Navigacija i shell",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "MOB-02",
+      "layer": "MOB",
+      "title": "Auth i tokeni",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "MOB-03",
+      "layer": "MOB",
+      "title": "Unit testovi",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Mobile danas nema unit testova; testovi nastaju u ovom segmentu pored modula koje testiraju."
+    },
+    {
+      "id": "MOB-04",
+      "layer": "MOB",
+      "title": "Offline sync + indikator",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "MOB-05",
+      "layer": "MOB",
+      "title": "Maestro E2E",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Maestro tokovi (.maestro/*.yaml) nastaju u ovom segmentu; CI pokretanje vodi CI-07."
+    },
+    {
+      "id": "MOB-06",
+      "layer": "MOB",
+      "title": "Greške, i18n, pristupačnost",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "MOB-07",
+      "layer": "MOB",
+      "title": "Build profili (EAS)",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "EAS profil (eas.json) nastaje u ovom segmentu; odgođeno odlukom D-003 (bez objave za sada)."
+    },
+    {
+      "id": "TEST-01",
+      "layer": "TEST",
+      "title": "Coverage infrastruktura + pragovi",
+      "status": "planned",
+      "scope": "files"
+    },
+    {
+      "id": "TEST-02",
+      "layer": "TEST",
+      "title": "Unit pokrivenost common/",
+      "status": "planned",
+      "scope": "process",
+      "scopeReason": "Pokrivenost common/ se mjeri kroz Jest coverage pragove (package.json, vlasništvo TEST-01); ovdje se pišu testovi za common/."
+    }
   ]
 }

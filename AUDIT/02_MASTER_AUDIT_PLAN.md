@@ -174,6 +174,8 @@ dva puta; (e) admin dashboard redizajn **nakon** tokena i a11y pravila i **nakon
 | Logovanje | **pino** (JSON) | standard, brz | Winston (teži), ručni logger |
 | Env validacija | **zod** (već u frontendu) | jedno pravilo za sve slojeve | `joi` (duplikat), ručne provjere |
 | Image pinning | digest + renovate | reproducibilnost | rolling tagovi (sadašnje stanje) |
+| Inventar audita | `scripts/audit/inventory.mjs` (node, bez zavisnosti) | klasifikacija je u kodu, matrica se generiše | ručno vođenje tabele (zastari odmah) |
+| Gate pokrivenosti | `scripts/audit/check-coverage.mjs` u CI jobu `audit` | fajl van matrice = crven CI | „disciplina“ (nije provjerljiva) |
 
 Svaka nova zavisnost ide u `docs/DECISIONS.md` (D-006).
 
@@ -218,6 +220,24 @@ Svaka nova zavisnost ide u `docs/DECISIONS.md` (D-006).
 | Q5 | Coverage prag 40 % sada (rast do 70 %) — prihvaćeno? | TEST-01 / CI-04 |
 
 ---
+
+## 9.1 Struktura `AUDIT/segments/<ID>.md`
+
+Skeletoni se generišu sa `node scripts/audit/scaffold-segments.mjs` (postojeći fajlovi se ne
+prepisuju; `--force` regeneriše, `--check` provjerava da svih 59 postoji). Deset sekcija:
+
+| # | Sekcija | Šta mora sadržavati |
+|---|---|---|
+| 1 | Svrha i obim | šta segment provjerava + izričita granica prema susjedima |
+| 2 | Ulaz | zavisni segmenti, lista fajlova iz matrice, pretpostavke |
+| 3 | Kriteriji završetka (DoD) | checklist iz §9, konkretizovan za segment |
+| 4 | Trenutno stanje (dokazi) | tabela `tvrdnja | fajl:linija | ✅/⚠️/❌/❓` |
+| 5 | Nalazi | `F-<ID>-NN`, težina (blokada/visoko/srednje/nisko), dokaz, odluka |
+| 6 | Popravke | šta/zašto, odbačene alternative, nove zavisnosti |
+| 7 | Testovi i verifikacija | komanda → rezultat |
+| 8 | Rizici i rollback | rizik → kako se vraća |
+| 9 | Dokumentacija | koji `docs/` fajl se mijenja (+ `DECISIONS.md` ako je odluka) |
+| 10 | Zapis izvršavanja | datum, commit(ovi), CI run, status |
 
 ## 9. Definition of Done (svaki segment)
 

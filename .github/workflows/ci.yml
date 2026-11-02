@@ -21,6 +21,27 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # Audit: svaki izvorni fajl mora biti u AUDIT/COVERAGE_MATRIX.csv i matrica
+  # mora biti regenerabilna iz koda (bez ručnog usklađivanja). Nema npm install.
+  # ---------------------------------------------------------------------------
+  audit:
+    name: Audit (matrica pokrivenosti)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Gate pokrivenosti (fajlovi, statusi, segmenti)
+        run: node scripts/audit/check-coverage.mjs --verbose
+
+      - name: Matrica je regenerabilna (nema drift-a)
+        run: |
+          node scripts/audit/inventory.mjs
+          git diff --exit-code -- AUDIT/COVERAGE_MATRIX.csv
+  # ---------------------------------------------------------------------------
   # Backend: instalacija, Prisma generate, lint, unit testovi, build
   # ---------------------------------------------------------------------------
   backend:

@@ -17,7 +17,7 @@ export const CSV_HEADER = ['file', 'layer', 'module', 'segment', 'loc', 'status'
 /**
  * IZUZECI (svjesno, sa obrazloženjem):
  *  - node_modules, .git               → vendor / VCS
- *  - backend/generated, **/dist, coverage → generisano build-om
+ *  - backend/generated, dist, coverage → generisano build-om
  *  - *.lock, package-lock.json        → generisano (npm), nema ručno pisane logike
  *  - mobile/assets, *.png|ttf|jpg|svg  → binarni resursi
  *  - *.md, docs/, AUDIT/              → dokumentacija (ima svoj guard: STD-02)
@@ -112,8 +112,8 @@ const RULES = [
   { re: /^backend\/src\/modules\/prisma\//, layer: 'BE', module: 'prisma', segment: 'BE-01' },
   { re: /^backend\/src\/common\/(constants|types)\//, layer: 'BE', module: 'common', segment: 'BE-01' },
   { re: /^backend\/src\/common\/constants\.ts$/, layer: 'BE', module: 'common', segment: 'BE-01' },
-  { re: /^backend\/src\/common\/(dto|errors|filters|interceptors|decorators|guards|utils)\//, layer: 'BE', module: 'common', segment: 'BE-01' },
   { re: /^backend\/src\/common\/utils\/storage-path\.ts$/, layer: 'BE', module: 'common', segment: 'BE-11' },
+  { re: /^backend\/src\/common\/(dto|errors|filters|interceptors|decorators|guards|utils)\//, layer: 'BE', module: 'common', segment: 'BE-01' },
   { re: /^backend\/src\/common\/(rbac|scope)\//, layer: 'BE', module: 'common', segment: 'BE-03' },
   { re: /^backend\/src\/common\/settings\//, layer: 'BE', module: 'common', segment: 'BE-04' },
   { re: /^backend\/src\/common\/notify\//, layer: 'BE', module: 'common', segment: 'BE-16' },
@@ -138,6 +138,10 @@ const RULES = [
   { re: /^backend\/src\/modules\/ops\/(machines?|machine-|gps|iot|locations?|devices?)/, layer: 'BE', module: 'ops', segment: 'BE-09' },
   { re: /^backend\/src\/modules\/ops\/(trips?|fuel|depots?|catalog|materials?)/, layer: 'BE', module: 'ops', segment: 'BE-10' },
   { re: /^backend\/src\/modules\/ops\/(diary|incidents?|hse)/, layer: 'BE', module: 'ops', segment: 'BE-11' },
+  { re: /^backend\/src\/modules\/ops\/serialize-diary/, layer: 'BE', module: 'ops', segment: 'BE-11' },
+  { re: /^backend\/src\/modules\/ops\/serialize-(fleet|gps-device|machine)|^backend\/src\/modules\/ops\/write-machine-gps/, layer: 'BE', module: 'ops', segment: 'BE-09' },
+  { re: /^backend\/src\/modules\/ops\/serialize-task/, layer: 'BE', module: 'ops', segment: 'BE-06' },
+  { re: /^backend\/src\/modules\/ops\/serialize-timer/, layer: 'BE', module: 'ops', segment: 'BE-07' },
   { re: /^backend\/src\/modules\/ops\/(dashboard|presence|geofence)/, layer: 'BE', module: 'ops', segment: 'BE-12' },
   { re: /^backend\/src\/modules\/ops\//, layer: 'BE', module: 'ops', segment: 'BE-05' },
   // --- backend: testovi ---

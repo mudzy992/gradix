@@ -119,6 +119,12 @@ maestro test e2e/login.yaml                 # traži pokrenut emulator
 
 ---
 
+## 7a. Pokrivenost audita (nije isto što i coverage testova)
+
+`AUDIT/COVERAGE_MATRIX.csv` prati **svaki izvorni fajl** (ko ga je pregledao, koji segment, koji
+nalaz). Gate je CI job `audit` (`scripts/audit/check-coverage.mjs`), detalji u
+`scripts/audit/README.md`. Coverage testova (Jest pragovi) je odvojen mehanizam — vidi §3.
+
 ## 8. Dugovi (mapiraju se na segmente)
 
 | # | Dug | Segment |

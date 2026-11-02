@@ -24,6 +24,7 @@ on:
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
+| `audit` | `check-coverage` (svaki izvorni fajl u `AUDIT/COVERAGE_MATRIX.csv`, statusi, segmenti) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~10 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm test` → `nest build` → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~48 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` | ~28 s |
@@ -38,6 +39,8 @@ rade paralelno, ukupno ~2,5 min.
 | Guard | Zašto |
 |---|---|
 | „Objavljenih host portova: 0“ | fiksni `ports:` ruše Coolify blue/green deploy |
+| „Matrica se ne mijenja regeneracijom“ | matrica pokrivenosti se ne održava ručno; drift znači da je fajl dodat bez inventarisanja |
+| `check-coverage` exit 1 | fajl van matrice, nepoznat segment, ili „pregledano“ bez zapisa — audit se ne može tiho zaobići |
 | Eksterne mreže deklarisane (`db_net`, `redis_net`) | backend bez njih ne vidi bazu/Redis |
 | CA mount-ovi u backendu | bez njih `ENOENT … coolify-ca.crt` u runtime-u |
 | MinIO `/data` je **bind** na host | podaci ne smiju živjeti u anonimnom volume-u |

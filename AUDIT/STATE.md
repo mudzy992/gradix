@@ -8,7 +8,7 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 2 ✅ završena (2.1 plan + 2.2 registar segmenata); FAZA 3 u toku.** Vlasnik odobrio prelazak
+**FAZA 2–4 ✅ završene.** Stanje: **KAPIJA 2** — čekam odgovore na Q1–Q5 i odobrenje za izvršavanje segmenata. Vlasnik odobrio prelazak
 preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljanja.
 
 ## Zadnji commit i CI
@@ -68,11 +68,17 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - CI job `audit` pokreće `check-coverage`; crveno ako fajl nije u matrici, ako je označen
   `pregledano` bez zapisa ili ako segment iz `segments.json` nema red u matrici.
 
+### 2026-11-02 — FAZA 4 (`A-06`, skeletoni segmenata)
+- `scripts/audit/scaffold-segments.mjs` generiše `AUDIT/segments/<ID>.md` (10 sekcija) iz
+  `segments.json` + matrice; postojeće ne prepisuje (`--force`, `--check`).
+- **59/59 segmenata** ima skeleton; svaki u sekciji 2 već ima tačan spisak svojih fajlova iz
+  matrice (procesni segmenti imaju `scopeReason` umjesto liste).
+- `AUDIT/02_MASTER_AUDIT_PLAN.md` §9.1: tabela 10 sekcija; §5: inventar + gate dodati u tabelu alata.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **FAZA 4** — `AUDIT/segments/<ID>.md` skeletoni (10 sekcija) za svih 59 segmenata.
-2. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-3. **KAPIJA 2** — izvještaj vlasniku sa planom, matricom pokrivenosti i **Q1–Q5**; stojim dok
+1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
+2. **KAPIJA 2** — izvještaj vlasniku sa planom, matricom pokrivenosti i **Q1–Q5**; stojim dok
    ne dobijem odgovore i odobrenje za izvršavanje segmenata.
 
 ## Otvorena pitanja / blokatori
