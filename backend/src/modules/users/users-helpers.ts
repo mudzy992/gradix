@@ -53,13 +53,16 @@ export function throwUnique(error: unknown): never {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === 'P2002'
   ) {
-    // `meta.target` je u Prisma 7 niz imena polja; stariji adapteri daju string.
-    const target = (error.meta as { target?: unknown } | undefined)?.target;
-    const haystack = Array.isArray(target)
+    // `meta.target` je u Prisma 7 obično niz imena polja/ograničenja, ali adapteri daju i
+    // string ili objekat — zato gledamo i strukturirano i cijeli `meta` (kao prije).
+    const meta = error.meta as Record<string, unknown> | undefined;
+    const target = meta?.target;
+    const fromTarget = Array.isArray(target)
       ? target.map(String).join(',')
       : typeof target === 'string'
         ? target
         : '';
+    const haystack = `${fromTarget} ${JSON.stringify(meta ?? '')}`;
     if (haystack.includes('email')) {
       throw new AppError(
         ERROR_CODES.AUTH_EMAIL_TAKEN,

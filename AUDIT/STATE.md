@@ -193,6 +193,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** 54 unit testa u `src/common` (hijerarhija, permisije, vremenske zone + DST,
   datumi, tranzicije projekta, opseg rola). Matrica **476 fajlova / 99 pregledano (20,8 %)**.
 - **Za vlasnika:** F-BE-03-06 (`hidesBudget` — MECHANIC/ACCOUNTANT vide budžet) = odluka, ne bug fix.
+- Prvi run (`41529872217`) pao na **e2e**: `throwUnique` je čitao samo `meta.target` pa je unikat
+  emaila vraćao `CONFLICT` umjesto `AUTH_EMAIL_TAKEN`. Ispravka: `meta.target` **+ fallback na
+  cijeli `meta`** (adapteri vraćaju različite oblike).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
