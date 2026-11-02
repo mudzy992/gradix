@@ -76,7 +76,7 @@ backend/src/config/env.spec.ts,BE,config,BE-01,147,pregledano,BE-02: test dokazu
 backend/src/config/env.ts,BE,config,BE-01,200,pregledano,BE-02: uklonjena JWT_REFRESH_SECRET validacija (D-029); ostalo iz BE-01,2026-11-02
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,pregledano,"BE-04: @Global modul, samo izvoz AuditService",2026-11-02
-backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,54,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
+backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02

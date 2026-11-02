@@ -209,6 +209,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Registar podešavanja sada nosi i validaciju (`coerceSettingValue`) → testira se bez baze;
   `NaN`/`Infinity` više ne prolaze kao brojevi.
 - **Testovi:** **102/102** lokalno (16 novih). Matrica **476 fajlova / 119 pregledano (25,0 %)**.
+- Prvi run (`41533565788`) pao na **lintu** (`no-unsafe-assignment` u `audit.service.spec.ts` —
+  `jest.Mock` generici); spec prepisan bez vlastitog tipa i bez cast-ova, `Logger.prototype` spy.
 - **Za vlasnika:** F-BE-04-10 (nema PostgreSQL RLS) i D-031 dug (transakcioni audit za finansije).
 
 ## Šta je sljedeće (tačan sljedeći korak)
