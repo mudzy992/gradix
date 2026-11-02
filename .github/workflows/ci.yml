@@ -26,7 +26,7 @@ jobs:
   # mora biti regenerabilna iz koda (bez ručnog usklađivanja). Nema npm install.
   # ---------------------------------------------------------------------------
   audit:
-    name: Audit (matrica pokrivenosti)
+    name: Audit (guardrail + matrica pokrivenosti)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,8 +35,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Gate pokrivenosti (fajlovi, statusi, segmenti)
-        run: node scripts/audit/check-coverage.mjs --verbose
+      - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
+        run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose
 
       - name: Matrica je regenerabilna (nema drift-a)
         run: |

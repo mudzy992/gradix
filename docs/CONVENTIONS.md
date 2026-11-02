@@ -92,27 +92,27 @@
 
 ---
 
-## 7. Guardrail skripte (planirane, segment STD-01)
+## 7. Guardrail skripte (STD-01 / STD-02)
 
-Jedna komanda `npm run check:all` pokreće sve; svaka skripta ispisuje **pravilo → lokacija →
-zašto → kako popraviti** i vraća non-zero.
+Jedna komanda: **`npm run check:all`** (u korijenu repoa; korijen nema zavisnosti). Svaka provjera
+ispisuje **pravilo → zašto → kako popraviti** i vraća non-zero. U CI-ju job `audit` pušta
+`npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose`.
 
-| Skripta | Provjerava |
-|---|---|
-| `check:format` | prettier (svi paketi) |
-| `check:lint` | eslint (backend) + oxlint (frontend/mobile) |
-| `check:types` | `tsc --noEmit` / `tsc -b` |
-| `check:architecture` | zabranjene zavisnosti između slojeva, ciklične zavisnosti |
-| `check:naming` | imena fajlova/simbola, struktura foldera |
-| `check:secrets` | hardkodovani ključevi/tokeni/URL-ovi |
-| `check:tokens` | nema sirovih boja/spacing-a u frontend komponentama |
-| `check:complexity` | max dužina fajla/funkcije, kompleksnost |
-| `check:logs` | nema `console.log` u aplikativnom kodu |
-| `check:endpoints` | svaki endpoint ima validaciju, auth pravilo i test |
-| `check:docs` | linkovi, ažurnost, `_retired` baneri |
-| `check:coverage-matrix` | svaki fajl je u matrici; zatvoren segment ⇒ svi fajlovi „pregledano“ |
+| Skripta | Provjerava | Status |
+|---|---|---|
+| `check:all` | orkestrator (11 koraka, `--only=`, `--ci`, `--list`) | ✅ |
+| `check:docs` | pokvareni relativni linkovi, baneri `PENZIONISANO`, potpunost `docs/README.md` i `_retired/INDEX.md`, zabrana linkovanja u `_retired/` (osim indeksa) | ✅ |
+| `check:secrets` | AWS/GitHub/Slack/Stripe ključevi, privatni ključevi, URL baze sa lozinkom | ✅ |
+| `check:logs` | nema `console.log`/`console.debug` u aplikativnom kodu (`error`/`warn` dozvoljeni) | ✅ |
+| `check:compose` | nema `ports:` u produkcijskom compose-u, `db_net`/`redis_net` external, CA mountovi `read_only`, mrtve MinIO slike, healthcheck backend/frontend | ✅ |
+| `check:coverage-matrix` | svaki fajl u matrici, legalni statusi, `loc` i klasifikacija bez drifta | ✅ |
+| `audit:segments` | svih 59 segmenata ima `AUDIT/segments/<ID>.md` | ✅ |
+| `check:format` | prettier (svi paketi) | ⏳ nije uveden (nema zavisnosti u korijenu) |
+| `check:lint` / `check:types` | `check:all` delegira na `backend`/`frontend` (`lint:check`, `typecheck`), preskače ako nema `node_modules` | ✅ delegirano |
+| `check:architecture`, `check:naming`, `check:tokens`, `check:complexity`, `check:endpoints` | vidi tabelu ispod | ⏳ planirano |
 
-**Izuzeci:** samo u konfiguraciji, svaki sa obrazloženjem i datumom.
+**Izuzeci:** samo u `scripts/standards/allowlist.json`, svaki sa fajlom, uzorkom i **razlogom**
+(trenutno: 1 log izuzetak, 2 secret placeholdera). Kad se dug riješi, unos se briše.
 
 **Hookovi:** `pre-commit` (format + lint + types) i `pre-push` (`check:all`) — lokalno; CI ih
 ponavlja kao izvor istine.

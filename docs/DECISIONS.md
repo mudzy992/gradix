@@ -134,6 +134,32 @@ Envelope `{success, data, meta}` / `{success:false, error:{code,message}}`; pagi
 Različiti alati po paketu se **zadržavaju** dok se ne odluči standardizacija (segment STD-01
 može predložiti jedinstven format/lint stack).
 
+### D-012 — Paleta: predlog B („Slate/Teal“)
+**Datum:** 2026-11-02 · **Status:** na snazi (vlasnik može promijeniti prije FE-01)
+Odgovor na Q1. Neutralna tamna osnova + teal akcent; lakše prolazi WCAG 2.2 AA kontrast na tamnoj
+podlozi i mirniji je za dugo radno vrijeme. Predlog A („Gradix Green“) ostaje zabilježen kao
+alternativa; zamjena palete je izmjena tokena, ne arhitekture.
+
+### D-013 — Email: lažni „success“ se uklanja dok nema SMTP-a
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na Q2. `email.service.ts` danas vraća uspjeh bez slanja. Do uvođenja SMTP-a (ili odluke da
+se email ukloni) API vraća jasnu grešku/„not configured“, nikad lažni uspjeh.
+
+### D-014 — Redis ostaje
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na Q3. Redis ostaje za rate-limit i cache; ako padne, aplikacija mora raditi sa
+degradiranim performansama (fallback se dokumentuje u INF-07).
+
+### D-015 — Bundle budžet: 250 kB gzip
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na Q4. FE-06 uvodi mjerenje; prelazak budžeta = pad CI-ja. Podizanje budžeta traži
+obrazloženje u ovom fajlu.
+
+### D-016 — Coverage floor: 40 % (start), +5 % po fazi
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na Q5. U skladu sa D-005; pragovi po fazi su u `docs/TESTING.md` §3. Prag se nikad ne
+spušta, samo podiže.
+
 ---
 
 ## Zamijenjene / povučene odluke

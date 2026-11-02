@@ -1,0 +1,22 @@
+{
+  "$comment": "Svaki izuzetak ima fajl, uzorak i RAZLOG. Bez razloga nema izuzetka. Kad se dug riješi, unos se briše.",
+  "logs": [
+    {
+      "file": "frontend/src/hooks/use-socket.ts",
+      "match": "console.debug",
+      "reason": "samo u DEV build-u (import.meta.env.DEV) i to za connect_error; strukturisano logovanje dolazi u INF-04"
+    }
+  ],
+  "secrets": [
+    {
+      "file": "docker-compose.yml",
+      "match": "postgresql://user:pass@host",
+      "reason": "primjer formata u poruci obaveznog env-a (${DATABASE_URL:?...}), nije stvarna vrijednost"
+    },
+    {
+      "file": "Dockerfile",
+      "match": "postgresql://gradix:gradix@localhost",
+      "reason": "build-time placeholder da prisma generate radi bez baze; konekcija se ne otvara"
+    }
+  ]
+}

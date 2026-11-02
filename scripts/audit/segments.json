@@ -5,14 +5,14 @@
       "id": "STD-01",
       "layer": "STD",
       "title": "Guardrail skripte + check:all",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {
       "id": "STD-02",
       "layer": "STD",
       "title": "Docs guard (linkovi, baneri, ažurnost)",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Docs guard provjerava docs/*.md i AUDIT/*.md; dokumentacija nije izvorni kod i ima vlastiti guard (linkovi, baneri, indeks)."
     },

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc -b",
     "lint": "oxlint",
+    "lint:check": "oxlint",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

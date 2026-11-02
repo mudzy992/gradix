@@ -26,7 +26,7 @@ Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** 
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
-| `audit` | `check-coverage` (svaki izvorni fajl u `AUDIT/COVERAGE_MATRIX.csv`, statusi, segmenti) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~10 s |
+| `audit` | `npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm test` → `nest build` → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~48 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` | ~28 s |
@@ -43,6 +43,9 @@ rade paralelno, ukupno ~2,5 min.
 | „Objavljenih host portova: 0“ | fiksni `ports:` ruše Coolify blue/green deploy |
 | „Matrica se ne mijenja regeneracijom“ | matrica pokrivenosti se ne održava ručno; drift znači da je fajl dodat bez inventarisanja |
 | `check-coverage` exit 1 | fajl van matrice, nepoznat segment, ili „pregledano“ bez zapisa — audit se ne može tiho zaobići |
+| `check:docs` exit 1 | pokvaren link ili dokument van indeksa = dokumentacija laže |
+| `check:secrets` exit 1 | tajna u gitu je tajna zauvijek |
+| `check:compose` exit 1 | host portovi, mrtva MinIO slika ili CA mount koji nedostaje ruše deploy |
 | Eksterne mreže deklarisane (`db_net`, `redis_net`) | backend bez njih ne vidi bazu/Redis |
 | CA mount-ovi u backendu | bez njih `ENOENT … coolify-ca.crt` u runtime-u |
 | MinIO `/data` je **bind** na host | podaci ne smiju živjeti u anonimnom volume-u |

@@ -76,11 +76,30 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   matrice (procesni segmenti imaju `scopeReason` umjesto liste).
 - `AUDIT/02_MASTER_AUDIT_PLAN.md` §9.1: tabela 10 sekcija; §5: inventar + gate dodati u tabelu alata.
 
+### 2026-11-02 — CI-01 (`A-07`, okidači)
+- `pull_request` trigger **uklonjen**; `push` samo `main` + `arena/0bc0e56e-gradix`; glob `arena/**`
+  zamijenjen tačnim imenom grane (F-CI-01-01/02). `workflow_dispatch` ostaje.
+- Gate je uhvatio drift matrice (`loc` za `ci.yml`) → `check-coverage` sada provjerava i `loc`, pa
+  se takav drift vidi lokalno, ne samo u CI-ju.
+
+### 2026-11-02 — STD-01 + STD-02 (`A-08`, guardrail)
+- Korijenski `package.json` (**bez zavisnosti**) sa `check:all`, `check:docs`, `check:secrets`,
+  `check:logs`, `check:compose`, `check:coverage-matrix`, `audit:inventory`, `audit:segments`.
+- `scripts/standards/`: orkestrator (11 koraka, `--only`, `--ci`, `--list`), docs guard (255
+  provjera), secret skener (6 pravila), `console.log` guard, compose guard (13 invarijanti) +
+  `allowlist.json` sa 3 izuzetka (svaki sa razlogom).
+- `backend/package.json` + `lint:check`/`typecheck`; `frontend/package.json` + `lint:check`/`typecheck`.
+- CI job `audit` sada pušta `npm run check:all -- --only=coverage,segments,docs,secrets,logs,compose`.
+- Negativni testovi izvedeni (pokvaren link → exit 1, uklonjen CA mount → exit 1).
+- Odgovori na Q1–Q5 zapisani kao **D-012…D-016** (paleta B, email bez lažnog uspjeha, Redis
+  ostaje, bundle 250 kB, coverage floor 40 %).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **KAPIJA 2** — izvještaj vlasniku sa planom, matricom pokrivenosti i **Q1–Q5**; stojim dok
-   ne dobijem odgovore i odobrenje za izvršavanje segmenata.
+2. Sljedeći segment po planu §3: **CI-03** (pinning/timeouti/cache), pa **CI-04** (static gate +
+   coverage prag), pa **INF-01**.
+3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori
 

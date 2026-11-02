@@ -30,10 +30,11 @@ const INCLUDE_DIRS = [
   'frontend/src', 'frontend/e2e',
   'mobile/app', 'mobile/components', 'mobile/lib', 'mobile/db', 'mobile/sync',
   'mobile/hooks', 'mobile/i18n', 'mobile/constants',
-  'scripts/audit', '.github/workflows',
+  'scripts/audit', 'scripts/standards', '.github/workflows',
 ];
 
 const INCLUDE_FILES = [
+  'package.json',
   'docker-compose.yml', 'docker-compose.local-ports.yml', 'Dockerfile', 'Dockerfile.frontend',
   '.env.example', '.env.coolify',
   'backend/Dockerfile', 'backend/docker-entrypoint.sh', 'backend/prisma.config.ts',
@@ -95,6 +96,8 @@ export function countLoc(rel) {
 // Redoslijed je bitan: prvo specifičnije pravilo.
 const RULES = [
   // --- standardi / audit alati ---
+  { re: /^scripts\/standards\//, layer: 'STD', module: 'standards', segment: 'STD-01' },
+  { re: /^package\.json$/, layer: 'STD', module: 'standards', segment: 'STD-01' },
   { re: /^scripts\/audit\//, layer: 'STD', module: 'audit-tools', segment: 'STD-01' },
   // --- CI ---
   { re: /^\.github\/workflows\//, layer: 'CI', module: 'ci', segment: 'CI-01' },

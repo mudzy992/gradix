@@ -3,80 +3,86 @@
 | | |
 |---|---|
 | Sloj | `STD` |
-| Obim | `procesni` |
-| Status | `planned` |
+| Obim | `process` |
+| Status | `done` |
 | Plan | [`AUDIT/02_MASTER_AUDIT_PLAN.md`](../02_MASTER_AUDIT_PLAN.md) |
-| Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) (filter `segment=STD-02`) |
+| Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) |
 | Živi dnevnik | [`AUDIT/STATE.md`](../STATE.md) |
+
+> **Procesni segment** — dokumentacija nije izvorni kod i ima vlastiti guard (`check-docs`), pa se
+> ne vodi red po fajl u matrici pokrivenosti.
 
 ## 1. Svrha i obim
 
-_Šta ovaj segment provjerava i šta izričito **ne** provjerava (granica prema susjednim segmentima)._
+Spriječiti da dokumentacija tiho laže: pokvaren link, penzionisan dokument bez banera, dokument
+koji nije u indeksu, ili živ dokument koji linkuje u arhivu.
+
+**Ne radi se ovdje:** „ažurnost“ u smislu `docs ↔ kod` sadržaja (to je posao svakog segmenta i
+`AUDIT/STATE.md`), niti provjera da su svi `fajl:linija` dokazi tačni (to radi audit po segmentu).
 
 ## 2. Ulaz
 
-**Zavisnosti (moraju biti gotove prije):** _(popuniti iz plana §6)_
+**Zavisnosti:** STD-01 (`lib.mjs`, allowlist).
 
-**Fajlovi:**
-
-> **Procesni segment** — nema vlastitih izvornih fajlova u matrici.
-> Razlog: Docs guard provjerava docs/*.md i AUDIT/*.md; dokumentacija nije izvorni kod i ima vlastiti guard (linkovi, baneri, indeks).
-
-Fajlovi koje segment mijenja ili provjerava (vlasništvo drugih segmenata):
-
-- _(popuniti pri izvršavanju)_
-
-**Pretpostavke:** _(šta se uzima zdravo za gotovo i šta ako ne važi)_
+**Fajlovi:** `scripts/standards/check-docs.mjs`, `docs/**/*.md`, `AUDIT/**/*.md`,
+`scripts/**/README.md`.
 
 ## 3. Kriteriji završetka (DoD)
 
-- [ ] Svi fajlovi segmenta pregledani; status u matrici ≥ `pregledano`
-- [ ] Svaki nalaz ima težinu, dokaz (`fajl:linija`) i odluku
-- [ ] Popravke imaju regression test (ili zapisano zašto test nije moguć)
-- [ ] `node scripts/audit/check-coverage.mjs` → PASS
-- [ ] Relevantni lokalni testovi zeleni
-- [ ] `docs/` ažuriran ako se ponašanje/konfiguracija mijenja (isti commit)
-- [ ] `AUDIT/STATE.md` ažuriran; commit + push + **zelen CI** (run ID zapisan)
+- [x] `npm run check:docs` prolazi na trenutnom repou
+- [x] Pokvaren link → exit 1 (negativan test izveden)
+- [x] Penzionisan dokument bez banera → exit 1
+- [x] Dokument van `docs/README.md` / `_retired/INDEX.md` → exit 1
+- [x] Živ dokument ne smije linkovati u `_retired/` (dozvoljen samo `_retired/INDEX.md`)
+- [x] Isti guard ide u CI (`check:all` u jobu `audit`)
 
 ## 4. Trenutno stanje (dokazi)
 
-| # | Tvrdnja / ponašanje | Dokaz (`fajl:linija`) | Ocjena |
+| # | Tvrdnja | Dokaz | Ocjena |
 |---|---|---|---|
-| 1 | _(popuniti)_ | `...:1` | ✅ / ⚠️ / ❌ / ❓ |
+| 1 | 255 linkova/provjera prolazi | `check-docs` → „Provjereno: 255“ | ✅ |
+| 2 | 85 penzionisanih dokumenata ima baner | `_retired/INDEX.md` + guard | ✅ |
+| 3 | 1 pokvaren link u arhivi | `docs/_retired/ENV_LIST.md` → `./backend/Dockerfile` | ⚠️ (zamrznuto, ne diramo) |
+| 4 | Živi dokumenti ulaze u arhivu samo kroz indeks | `docs/README.md`, `docs/INFRASTRUCTURE.md` | ✅ |
 
 ## 5. Nalazi
 
-Format: `F-STD-02-NN` — opis, težina (blokada / visoko / srednje / nisko), dokaz, odluka.
-
 | ID | Nalaz | Težina | Dokaz | Odluka |
 |---|---|---|---|---|
-| F-STD-02-01 | _(popuniti)_ | | | |
+| F-STD-02-01 | Nije postojao nikakav guard za dokumentaciju; linkovi su se kvarili tiho | visoko | nema alata | riješeno |
+| F-STD-02-02 | Arhivirani `ENV_LIST.md` ima pokvaren relativni link | nisko | `docs/_retired/ENV_LIST.md` | **prihvaćeno**: arhiva je zamrznuta i guard je preskače; originalna putanja se ne „popravlja“ da bi se sačuvao dokaz |
+| F-STD-02-03 | Baner `PENZIONISANO` nije bio provjerljiv | srednje | 85 fajlova u arhivi | riješeno: guard traži baner u prvih 15 linija |
 
 ## 6. Popravke
 
-_Za svaku popravku: šta se mijenja, zašto tako, koje su alternative odbačene i zašto._
-_Novi alati/zavisnosti: obrazloženje ide i u `docs/DECISIONS.md` (D-006)._
+- `check-docs.mjs` preskače `docs/_retired/` kao **izvor** (ne provjerava linkove unutar arhive),
+  ali provjerava da arhiva ima banere i da je svaki fajl u `_retired/INDEX.md`.
+- Živ dokument smije linkovati samo `_retired/INDEX.md` — arhiva ima jedan ulaz.
 
 ## 7. Testovi i verifikacija
 
 | Provjera | Komanda | Rezultat |
 |---|---|---|
-| _(popuniti)_ | `...` | |
+| Pozitivno | `npm run check:docs` | PASS (255 provjera) |
+| Negativno | dodat pokvaren link u `docs/CONVENTIONS.md` | exit 1 ✅ |
+| CI | job `audit` | vidi `AUDIT/STATE.md` |
 
 ## 8. Rizici i rollback
 
-- **Rizik:** _(popuniti)_ → **Rollback:** _(kako se vraća stanje)_
+- **Rizik:** guard postane bučan pri refaktorisanju dokumenata. Ublaženo: jedan indeks
+  (`docs/README.md`) i jedna arhiva sa indeksom — nema „negdje između“.
+- **Rollback:** ukloniti korak `docs` iz `check-all` i `ci.yml`.
 
 ## 9. Dokumentacija
 
-- [ ] `docs/` dokument(i): _(popuniti)_
-- [ ] `docs/DECISIONS.md` ako je odluka arhitektonska
+- [x] `docs/CONVENTIONS.md` §7, `docs/CI.md` (guard tabela)
+- [x] `scripts/audit/README.md` (obim inventara ne uključuje `.md`)
 
 ## 10. Zapis izvršavanja
 
 | | |
 |---|---|
-| Datum | _(prazno dok se ne počne)_ |
-| Commit(ovi) | |
-| CI run | |
-| Status | `planned` |
+| Datum | 2026-11-02 |
+| Commit(ovi) | isti commit kao STD-01 |
+| CI run | vidi `AUDIT/STATE.md` |
+| Status | `done` |

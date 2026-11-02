@@ -1,0 +1,20 @@
+{
+  "name": "gradix",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Gradix — monorepo korijen. Nema zavisnosti: služi samo kao ulaz u guardrail skripte (scripts/standards) i audit alate (scripts/audit).",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check:all": "node scripts/standards/check-all.mjs",
+    "check:ci": "node scripts/standards/check-all.mjs --ci",
+    "check:docs": "node scripts/standards/check-docs.mjs",
+    "check:secrets": "node scripts/standards/check-secrets.mjs",
+    "check:logs": "node scripts/standards/check-console.mjs",
+    "check:compose": "node scripts/standards/check-compose.mjs",
+    "check:coverage-matrix": "node scripts/audit/check-coverage.mjs",
+    "audit:inventory": "node scripts/audit/inventory.mjs",
+    "audit:segments": "node scripts/audit/scaffold-segments.mjs"
+  }
+}

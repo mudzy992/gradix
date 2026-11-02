@@ -8,7 +8,7 @@ backend/Dockerfile,INF,backend-image,INF-02,86,nepregledano,,
 backend/docker-entrypoint.sh,INF,backend-image,INF-02,36,nepregledano,,
 backend/eslint.config.mjs,BE,config,BE-01,66,nepregledano,,
 backend/nest-cli.json,BE,config,BE-01,9,nepregledano,,
-backend/package.json,BE,config,BE-01,110,nepregledano,,
+backend/package.json,BE,config,BE-01,112,pregledano,dodati lint:check (bez --fix) i typecheck (STD-01),2026-11-02
 backend/prisma.config.ts,BE,config,BE-01,14,nepregledano,,
 backend/prisma/migrations/20261102130000_init_postgres/migration.sql,BE,migrations,BE-08,1334,nepregledano,,
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,95,nepregledano,,
@@ -282,7 +282,7 @@ frontend/components.json,FE,config,FE-02,22,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/index.html,FE,config,FE-02,14,nepregledano,,
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,68,nepregledano,,
-frontend/package.json,FE,config,FE-02,49,nepregledano,,
+frontend/package.json,FE,config,FE-02,51,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
 frontend/playwright.config.ts,FE,e2e,FE-06,13,nepregledano,,
 frontend/src/App.tsx,FE,app-shell,FE-02,17,nepregledano,,
 frontend/src/components/companies/company-sheet.tsx,FE,ops-ui,FE-08,105,nepregledano,,
@@ -450,8 +450,16 @@ mobile/sync/engine.ts,MOB,offline,MOB-04,99,nepregledano,,
 mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
+package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,243,nepregledano,,
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,246,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,436,nepregledano,,
+scripts/standards/allowlist.json,STD,standards,STD-01,23,pregledano,"3 izuzetka sa razlogom (1 log, 2 secret placeholdera) (STD-01)",2026-11-02
+scripts/standards/check-all.mjs,STD,standards,STD-01,148,pregledano,orkestrator 11 koraka; --only/--ci/--list; preskakanje traži node_modules (STD-01),2026-11-02
+scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02
+scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
+scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
+scripts/standards/check-secrets.mjs,STD,standards,STD-01,71,pregledano,6 pravila + allowlist; placeholderi izuzeti sa razlogom (STD-01),2026-11-02
+scripts/standards/lib.mjs,STD,standards,STD-01,106,pregledano,"zajednička logika guardraila: walk, glob, report, allowlist (STD-01)",2026-11-02
