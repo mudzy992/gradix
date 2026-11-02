@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-03` (rbac: hijerarhija rola D-030, tenant scope bez `!`, 54 unit testa) |
-| CI | ✅ [run 41531137887](https://github.com/mudzy992/gradix/actions/runs/41531137887) — **6/6** zelen za `fix(rbac) … [BE-03]` |
-| Zadnji potvrđeno zelen run | [41531137887](https://github.com/mudzy992/gradix/actions/runs/41531137887) (BE-03) ✅ 6/6 · prije: 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41531577934](https://github.com/mudzy992/gradix/actions/runs/41531577934) — **6/6** zelen za `chore(audit): STATE … (BE-03 done)` |
+| Zadnji potvrđeno zelen run | [41531577934](https://github.com/mudzy992/gradix/actions/runs/41531577934) (BE-03 STATE) ✅ 6/6 · prije: 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
