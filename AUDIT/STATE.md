@@ -16,10 +16,10 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `3a893dd` (FAZA 3+4 — inventar, gate, skeletoni) |
-| CI | ✅ [run 41503898016](https://github.com/mudzy992/gradix/actions/runs/41503898016) — **6/6** zelen za `3a893dd` (novi job `audit`) |
-| Zadnji potvrđeno zelen run | [41504266438](https://github.com/mudzy992/gradix/actions/runs/41504266438) (`ed9f8e3`) ✅ 6/6 |
-| Sljedeća kapija | **KAPIJA 2** (nakon FAZA 2–4) |
+| Zadnji commit | `67ae110` (CI-04 — coverage ratchet) |
+| CI | ✅ [run 41510206349](https://github.com/mudzy992/gradix/actions/runs/41510206349) — **6/6** zelen za `67ae110` |
+| Zadnji potvrđeno zelen run | [41509656077](https://github.com/mudzy992/gradix/actions/runs/41509656077) (`867814a`, CI-03) ✅ 6/6 · [41510206349](https://github.com/mudzy992/gradix/actions/runs/41510206349) (`67ae110`, CI-04) ✅ 6/6 |
+| Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
 
