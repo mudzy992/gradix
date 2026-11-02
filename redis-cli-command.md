@@ -1,6 +1,6 @@
 # Redis CLI — ručno kreiranje korisnika, prefixa i prava (Coolify / TLS)
 
-> **NAPOMENA:** Gradix v1 **ne koristi Redis** (`Nema Redis/BullMQ` u `PLAN_FREEZE.md`). Ova linija je pripremljena za buduće faze (`Redis geo`, `BullMQ` kada `cron` ne staže) i za Coolify kompatibilnost.
+> **NAPOMENA — EKSTERNI / GLOBALNI REDIS:** Gradix v1 **ne koristi Redis** (`Nema Redis/BullMQ` u `PLAN_FREEZE.md`). Redis je **globalni** (postoji izvan ovog `docker-compose`). Ove komande se pokreću **ručno** (`redis-cli`) protiv postojećeg globalnog Redis servera (port `6379`, TLS CA cert: `/data/coolify/ssl/redis-core/redis-ca.crt`). Cilj je kreirati **tačan ACL za ovu aplikaciju (`gradix-worker`)** sa tačnim prefixom (`gradix:queue:*`) i pravima (`+@all -@dangerous +publish +subscribe`) — ne za opšti pristup.
 
 ---
 
@@ -19,9 +19,9 @@ redis-cli \
 
 ---
 
-## 2. Kreiranje ACL korisnika (`gradix-worker`) sa pravima i prefixom
+## 2. TAČAN ACL za Gradix aplikaciju (`gradix-worker`) — ručno na globalnom Redis-u
 
-Ova komanda kreira korisnika `gradix-worker`, postavlja lozinku (`gradixwork` — zamijeniti stvarnom!), ograničava ključeve na prefix `gradix:queue:*`, daje `+@all` prava osim opasnih (`-@dangerous`), i omogućava `publish`/`subscribe` (potrebno za BullMQ / Socket.IO pub-sub).
+Ova komanda (izvršava se **ručno** na globalnom Redis serveru, **NE** unutar `docker-compose`) kreira korisnika `gradix-worker` — **tačno za ovu Gradix aplikaciju**. Postavlja lozinku (`gradixwork` — zamijeniti stvarnom iz `.env.coolify` / Coolify!), ograničava ključeve na **tačan prefix** `gradix:queue:*` (da drugi servisi ne diraju ključeve ove aplikacije), daje `+@all` prava osim opasnih (`-@dangerous`), i omogućava `publish`/`subscribe` (potrebno za BullMQ / Socket.IO pub-sub).
 
 ```bash
 redis-cli \

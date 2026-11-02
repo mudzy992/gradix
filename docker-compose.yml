@@ -1,50 +1,6 @@
 services:
-  # PostgreSQL za Gradix (umjesto MySQL) — TLS CA cert mapiran sa hosta
-  db:
-    image: postgres:16-alpine
-    container_name: gradix-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-gradix}
-      POSTGRES_USER: ${POSTGRES_USER:-gradix_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gradix_password}
-      POSTGRES_SSL: "on"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # TLS CA cert (Coolify) — mapiran sa hosta
-      - /data/coolify/ssl/coolify-ca.crt:/etc/ssl/certs/coolify-ca.crt:ro
-    networks:
-      - gradix-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis za buduće BullMQ / queue radnike — TLS CA cert mapiran sa hosta
-  # NAPOMENA: Gradix v1 ne koristi Redis (Nema Redis/BullMQ u v1),
-  # ali konfigurisan za Coolify kompatibilnost i buduće faze.
-  redis:
-    image: redis:7-alpine
-    container_name: gradix-redis
-    restart: unless-stopped
-    command: >
-      sh -c "redis-server --tls-port 6379 --port 0 --tls-cert-file /etc/ssl/redis/redis.crt --tls-key-file /etc/ssl/redis/redis.key --tls-ca-cert-file /etc/ssl/redis/redis-ca.crt --tls-protocols 'TLSv1.3' --tls-ciphers 'DEFAULT@SECLEVEL=1' --appendonly yes"
-    volumes:
-      # TLS CA cert za Redis (Coolify) — mapiran sa hosta
-      - /data/coolify/ssl/redis-core/redis-ca.crt:/etc/ssl/redis/redis-ca.crt:ro
-      # Opcionalno: Redis ključ i cert (ako Coolify generiše)
-      - redis_tls_certs:/etc/ssl/redis
-      - redis_data:/data
-    networks:
-      - gradix-net
-    healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6379", "--tls", "--cacert", "/etc/ssl/redis/redis-ca.crt", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # MinIO (objektno skladište) — postojeće iz v1
+  # MinIO (objektno skladište) — JEDINI INTEGRISANI SERVIS u ovom compose
+  # Baza podataka (PostgreSQL) i Redis su EKSTERNI (već postoje u Dockeru / Coolify okruženju)
   minio:
     image: minio/minio:latest
     container_name: gradix-minio
@@ -66,7 +22,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # Backend (NestJS) — prilagođen za Coolify + PostgreSQL + TLS
+  # Backend (NestJS) — povezuje se na EKSTERNU PostgreSQL bazu i EKSTERNI Redis
   backend:
     build:
       context: ./backend
@@ -76,12 +32,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: ${PORT:-3000}
-      # PostgreSQL sa TLS verifikacijom CA cert-a
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-gradix_user}:${POSTGRES_PASSWORD:-gradix_password}@db:5432/${POSTGRES_DB:-gradix}?sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt"
-      # JWT tajne (min 32 znaka za produkciju)
+      # EKSTERNA PostgreSQL baza (Coolify / Docker / host) — TLS CA cert mapiran sa hosta
+      DATABASE_URL: ${DATABASE_URL:-postgresql://gradix_user:gradix_password@postgres.external:5432/gradix?sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt}
+      # JWT tajne (min 32 znaka za produkciju!)
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      # MinIO
+      # MinIO (interni — jedini servis u ovom compose)
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
       MINIO_PORT: ${MINIO_PORT:-9000}
       MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
@@ -90,24 +46,31 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-gradix}
       # CORS za Coolify domene
       CORS_ORIGIN: ${CORS_ORIGIN:-https://gradix.local}
-      # Seed lozinka (promijeniti za produkciju!)
+      # Seed lozinka — PROMIJENITI za produkciju!
       SEED_PASSWORD: ${SEED_PASSWORD:-GradixSeed1}
-      # TLS CA cert put (mapiran sa hosta) — koristi ga Prisma / Node PostgreSQL klijent
+      # TLS CA cert za PostgreSQL klijent (mapiran sa hosta Coolify)
       PGSSLROOTCERT: /etc/ssl/certs/coolify-ca.crt
       PGSSLMODE: verify-ca
+      # EKSTERNI Redis (globalni) — za buduće BullMQ / queue radnike (v1 ne koristi)
+      REDIS_HOST: ${REDIS_HOST:-redis.global}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-gradixwork}
+      REDIS_TLS_CA_FILE: /etc/ssl/redis/redis-ca.crt
+      REDIS_PREFIX: ${REDIS_PREFIX:-gradix:queue:}
     volumes:
+      # TLS CA cert za PostgreSQL (eksterna baza) — mapiran sa Coolify hosta
       - /data/coolify/ssl/coolify-ca.crt:/etc/ssl/certs/coolify-ca.crt:ro
+      # TLS CA cert za Redis (globalni) — mapiran sa Coolify hosta
+      - /data/coolify/ssl/redis-core/redis-ca.crt:/etc/ssl/redis/redis-ca.crt:ro
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
-      db:
-        condition: service_healthy
       minio:
         condition: service_started
     networks:
       - gradix-net
 
-  # Frontend (Vite / React) — opcionalno, može i preko Coolify statičkog sajta
+  # Frontend (Vite / React) — opcionalno; može i preko Coolify statičkog sajta / nginx
   frontend:
     build:
       context: ./frontend
@@ -115,7 +78,7 @@ services:
     container_name: gradix-frontend
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://backend:3000}
+      VITE_API_URL: ${VITE_API_URL:-http://gradix-backend:3000}
       NODE_ENV: production
     ports:
       - "5173:5173"
@@ -125,9 +88,6 @@ services:
       - gradix-net
 
 volumes:
-  postgres_data:
-  redis_tls_certs:
-  redis_data:
   minio_data:
 
 networks:

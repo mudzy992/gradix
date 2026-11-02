@@ -19,10 +19,10 @@ Gradix v1 je koristio `mysql` (`provider = "mysql"` u `prisma/schema/foundation.
 
 | Varijabla | Tip | Obavezno | Opis | Kako definisati |
 |---|---|---|---|---|
-| `POSTGRES_DB` | `string` | ✅ | Ime baze (npr. `gradix`) | `.env.coolify`, `docker-compose.yml` (`db` servis), Coolify `POSTGRES_DB` |
-| `POSTGRES_USER` | `string` | ✅ | DB korisnik (npr. `gradix_user`) | `.env.coolify`, `docker-compose.yml`, Coolify `POSTGRES_USER` |
-| `POSTGRES_PASSWORD` | `string` | ✅ | DB lozinka | `.env.coolify` (NE commitovati u git!), Coolify `POSTGRES_PASSWORD` |
-| `DATABASE_URL` | `string` | ✅ | Potpuni PostgreSQL URL sa TLS parametrima | `.env.coolify`, `docker-compose.yml` (`backend` servis `environment`) |
+| `POSTGRES_DB` | `string` | ✅ | Ime baze (npr. `gradix`) — EKSTERNA BAZA | `.env.coolify`, Coolify `POSTGRES_DB` (NE u `docker-compose.yml` — `db` servis NE postoji) |
+| `POSTGRES_USER` | `string` | ✅ | DB korisnik — EKSTERNI | `.env.coolify`, Coolify `POSTGRES_USER` |
+| `POSTGRES_PASSWORD` | `string` | ✅ | DB lozinka — EKSTERNA | `.env.coolify` (NE commitovati!), Coolify `POSTGRES_PASSWORD` |
+| `DATABASE_URL` | `string` | ✅ | Potpuni PostgreSQL URL sa TLS — EKSTERNA INSTANCA | `.env.coolify`, `docker-compose.yml` (`backend` servis `environment`) — pokazuje na `postgres.external` ili `COOLIFY_DATABASE_URL` |
 
 ### Primjer `DATABASE_URL` za PostgreSQL sa TLS (`verify-ca`):
 ```
@@ -91,8 +91,8 @@ Gradix v1 **ne koristi Redis** (`Nema Redis/BullMQ` u `PLAN_FREEZE.md` i `DECISI
 
 | Varijabla | Tip | Obavezno | Opis | Kako definisati |
 |---|---|---|---|---|
-| `REDIS_HOST` | `string` | ❌ (ako nema Redis u v1) | Hostname Redis servera (`redis`) | `.env.coolify`, `docker-compose.yml` (`redis` servis), Coolify `REDIS_HOST` |
-| `REDIS_PORT` | `int` | ❌ | TLS port (`6379`) | `.env.coolify`, `docker-compose.yml`, Coolify `REDIS_PORT` |
+| `REDIS_HOST` | `string` | ❌ | Hostname GLOBALNOG Redis servera (`redis.global`) — NE `redis` servis u compose | `.env.coolify`, Coolify `REDIS_HOST` |
+| `REDIS_PORT` | `int` | ❌ | TLS port globalnog Redis (`6379`) | `.env.coolify`, Coolify `REDIS_PORT` |
 | `REDIS_PASSWORD` | `string` | ❌ | Redis ACL lozinka | `.env.coolify`, Coolify `REDIS_PASSWORD` |
 | `REDIS_TLS_CA_FILE` | `string` | ❌ | Put do TLS CA cert fajla unutar kontejnera | `.env.coolify`, mapiran sa hosta: `/data/coolify/ssl/redis-core/redis-ca.crt` |
 | `REDIS_PREFIX` | `string` | ❌ | Prefix za Redis ključeve (npr. `gradix:queue:`) | `.env.coolify`, aplikacija (BullMQ `prefix` opcija) |
