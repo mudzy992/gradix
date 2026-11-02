@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `INF-03` (nginx headeri + CSP) |
-| CI | ✅ [run 41515682989](https://github.com/mudzy992/gradix/actions/runs/41515682989) — **6/6** zelen za INF-03 commit |
-| Zadnji potvrđeno zelen run | [41513947158](https://github.com/mudzy992/gradix/actions/runs/41513947158) (INF-01) ✅ · [41514693571](https://github.com/mudzy992/gradix/actions/runs/41514693571) (INF-02, non-root slika) ✅ · [41515682989](https://github.com/mudzy992/gradix/actions/runs/41515682989) (INF-03) ✅ — svi 6/6 |
+| Zadnji commit | `BE-01` (env validacija + bezbednosne popravke) |
+| CI | ✅ [run 41522506769](https://github.com/mudzy992/gradix/actions/runs/41522506769) — **6/6** zelen za `style(api) … [BE-01]` |
+| Zadnji potvrđeno zelen run | [41522506769](https://github.com/mudzy992/gradix/actions/runs/41522506769) (`BE-01`) ✅ 6/6 · prije: 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) — svi 6/6 |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -152,6 +152,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Guard `check:env` sada traži i da svaka backend varijabla bude **validirana**; popravljen glob bug
   u `check-secrets` koji je propuštao `*.spec.ts` (lažni pozitiv se pojavio odmah).
 - Segment ostaje `in-progress`: schema (6), config fajlovi (5) i preostali guardovi u sljedećem prolazu.
+- Prvi run (`41521969883`) pao na **lintu** — `prettier` pravila; fajlovi formatirani, `no-unsafe-member-access`
+  u testu zamijenjen tipiziranim pristupom. Ponovljeni run zelen.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
