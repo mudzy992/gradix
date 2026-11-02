@@ -98,15 +98,15 @@ Gradix v1 **ne koristi Redis** (`Nema Redis/BullMQ` u `PLAN_FREEZE.md` i `DECISI
 
 `docker-compose.yml` **ne pokreće** Redis servis — sve `REDIS_*` varijable su
 opcione i rezervisane za buduće faze. Ako koristiš eksterni Redis sa TLS-om,
-CA certifikat mountaj kroz Coolify Persistent Storage (nema hardkodovanih
-host putanja u compose fajlu).
+CA certifikat je već mapiran u backend kontejner
+(`REDIS_CA_FILE` → `/etc/ssl/redis/redis-ca.crt`, vidi §9).
 
 | Varijabla | Tip | Obavezno | Opis | Kako definisati |
 |---|---|---|---|---|
 | `REDIS_HOST` | `string` | ❌ | Hostname GLOBALNOG Redis servera (`redis.global`) — NE `redis` servis u compose | `.env.coolify`, Coolify `REDIS_HOST` |
 | `REDIS_PORT` | `int` | ❌ | TLS port globalnog Redis (`6379`) | `.env.coolify`, Coolify `REDIS_PORT` |
 | `REDIS_PASSWORD` | `string` | ❌ | Redis ACL lozinka | `.env.coolify`, Coolify `REDIS_PASSWORD` |
-| `REDIS_TLS_CA_FILE` | `string` | ❌ | Put do TLS CA cert fajla **unutar kontejnera** (ako ga montiraš) | Coolify Persistent Storage |
+| `REDIS_TLS_CA_FILE` | `string` | ❌ | Put do TLS CA cert fajla **unutar kontejnera** — default `/etc/ssl/redis/redis-ca.crt` (compose ga već mapira) | `docker-compose.yml` (`backend` servis) |
 | `REDIS_PREFIX` | `string` | ❌ | Prefix za Redis ključeve (npr. `gradix:queue:`) | `.env.coolify`, aplikacija (BullMQ `prefix` opcija) |
 
 ---
@@ -128,20 +128,29 @@ host putanja u compose fajlu).
 
 ---
 
-## 9. TLS certifikati (Coolify specifično)
+## 9. TLS certifikati i host putanje (Coolify specifično)
 
-`docker-compose.yml` **više ne sadrži** hardkodovane bind mount-e za CA
-certifikate: mount na nepostojeću host putanju Docker pretvara u direktorij i
-time ruši start kontejnera. TLS se definiše kroz `DATABASE_URL`
-(`sslmode=require` / `verify-ca`), a CA fajl — ako je potreban — montiraš
-eksplicitno (Coolify → *Persistent Storage*):
+`docker-compose.yml` **mapira** CA certifikate i MinIO podatke na host putanje.
+Bind mount-ovi koriste `create_host_path: false` — ako putanja na hostu ne
+postoji, `docker compose` padne sa `bind source path does not exist` umjesto da
+napravi prazan direktorij i sruši Prismu tek u runtime-u.
 
-| Host put (primjer) | Mapiranje u kontejneru | Svrha |
+| Host put (Coolify) | U kontejneru | Override (env) |
 |---|---|---|
-| `/data/coolify/ssl/cert.pem` | `/etc/ssl/certs/coolify-ca.crt:ro` | CA cert za PostgreSQL (`sslmode=verify-ca`) |
-| `/data/coolify/ssl/redis-core/redis-ca.crt` | `/etc/ssl/redis/redis-ca.crt:ro` | CA cert za Redis TLS (opciono) |
+| `/data/coolify/ssl/coolify-ca.crt` | `/etc/ssl/certs/coolify-ca.crt` (`ro`) | `POSTGRES_CA_FILE` |
+| `/data/coolify/ssl/redis-core/redis-ca.crt` | `/etc/ssl/redis/redis-ca.crt` (`ro`) | `REDIS_CA_FILE` |
+| `/mnt/shared-app-files/gradix/minio` | `/data` (MinIO) | `MINIO_DATA_DIR` |
 
-> Detalji: [`DEPLOYMENT_COOLIFY.md`](./DEPLOYMENT_COOLIFY.md) §4.
+| Varijabla | Tip | Obavezno | Opis | Gdje se definira |
+|---|---|---|---|---|
+| `POSTGRES_CA_FILE` | `string` | ❌ | Host putanja CA za PostgreSQL; target u kontejneru je uvijek `/etc/ssl/certs/coolify-ca.crt` i mora se poklapati sa `sslrootcert=` u `DATABASE_URL` | `docker-compose.yml`, Coolify env |
+| `REDIS_CA_FILE` | `string` | ❌ | Host putanja CA za Redis; target `/etc/ssl/redis/redis-ca.crt` | `docker-compose.yml`, Coolify env |
+| `MINIO_DATA_DIR` | `string` | ❌ | Host direktorij za MinIO podatke (default `/mnt/shared-app-files/gradix/minio`) | `docker-compose.yml`, Coolify env |
+| `SSL_PREFLIGHT` | `bool` | ❌ | `true` (default): entrypoint provjeri da CA iz `DATABASE_URL` postoji i padne odmah sa jasnom porukom | `docker-compose.yml`, Coolify env |
+
+> TLS se i dalje definiše kroz `DATABASE_URL` (`sslmode=require` /
+> `verify-ca`). Detalji i troubleshooting:
+> [`DEPLOYMENT_COOLIFY.md`](./DEPLOYMENT_COOLIFY.md) §4 i §8.
 
 ---
 
@@ -153,7 +162,9 @@ Kompletno uputstvo (uključujući dvije varijante deploya) je u
 1. **Novi resurs → Docker Compose**, `docker-compose.yml` iz root-a repoa.
 2. **Environment Variables** (obavezno): `DATABASE_URL`,
    `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`. Preporučeno: `CORS_ORIGIN`,
-   `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_IMAGE`.
+   `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_IMAGE`, `SEED_PASSWORD`.
+   Ako su CA/MinIO putanje na hostu drugačije: `POSTGRES_CA_FILE`,
+   `REDIS_CA_FILE`, `MINIO_DATA_DIR` (§9).
 3. **Domena** → frontend servis, port **80** (nginx).
    Za direktan API pristup (mobilna aplikacija) dodaj domenu na backend,
    port **3000**, i tu domenu unesi u `CORS_ORIGIN`.

@@ -354,6 +354,31 @@ jobs:
           networks=$(docker compose config --format json \
             | jq -r '[.networks | to_entries[] | select(.value.external == true) | .key] | join(", ")')
           echo "Eksterne mreže: $networks"
+          # CA certifikati MORAJU biti mapirani u backend. Bez toga Prisma padne
+          # u runtime-u: "ENOENT: open '/etc/ssl/certs/coolify-ca.crt'".
+          bind_targets=$(docker compose config --format json \
+            | jq -r '[.services.backend.volumes[]? | select(.type == "bind") | .target] | join(",")')
+          echo "Backend bind mountovi: $bind_targets"
+          for target in /etc/ssl/certs/coolify-ca.crt /etc/ssl/redis/redis-ca.crt; do
+            case ",$bind_targets," in
+              *",$target,"*) ;;
+              *)
+                echo "::error::Backend ne mapira $target — TLS prema bazi/Redis-u pada u runtime-u."
+                exit 1
+                ;;
+            esac
+          done
+          # MinIO podaci moraju ići na host (bind), ne u anonimni Docker volume.
+          minio_volume=$(docker compose config --format json \
+            | jq -r '.services.minio.volumes[]? | select(.target == "/data") | "\(.type) \(.source)"')
+          echo "MinIO /data → $minio_volume"
+          case "$minio_volume" in
+            bind\ \/*) ;;
+            *)
+              echo "::error::MinIO /data nije bind mount na host putanju (nađeno: '$minio_volume')."
+              exit 1
+              ;;
+          esac
 
       - uses: docker/setup-buildx-action@v3
 
@@ -376,6 +401,29 @@ jobs:
           load: true
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Preflight — nepostojeći SSL CA mora stati odmah
+        # Regresija koju hvatamo: bez preflighta Prisma padne tek pri prvom
+        # upitu sa "ENOENT: open '/etc/ssl/certs/coolify-ca.crt'".
+        run: |
+          set +e
+          out=$(docker run --rm \
+            -e DATABASE_URL='postgresql://u:p@127.0.0.1:5432/gradix?sslmode=verify-ca&sslrootcert=/etc/ssl/certs/nope.crt' \
+            -e JWT_ACCESS_SECRET=ci-access-secret-min-32-characters \
+            -e JWT_REFRESH_SECRET=ci-refresh-secret-min-32-characters \
+            gradix-backend:ci 2>&1)
+          code=$?
+          set -e
+          echo "$out" | tail -8
+          if [ "$code" -eq 0 ]; then
+            echo "::error::Kontejner je nastavio rad iako CA fajl ne postoji — SSL preflight ne radi."
+            exit 1
+          fi
+          echo "$out" | grep -q "GREŠKA: DATABASE_URL zahtijeva CA" || {
+            echo "::error::Preflight nije ispisao očekivanu poruku o CA fajlu."
+            exit 1
+          }
+          echo "Preflight OK — kontejner je stao sa jasnom porukom."
 
       - name: Seed iz produkcijske slike (dist/prisma/seed.js)
         # Dokaz da seed radi u PRODUKCIJSKOJ slici: `npm ci --omit=dev`, bez
@@ -428,6 +476,11 @@ jobs:
           # Eksterne mreže postoje na produkcijskom hostu; u CI-ju ih kreiramo.
           docker network create db_net >/dev/null 2>&1 || true
           docker network create redis_net >/dev/null 2>&1 || true
+          # MinIO sada piše na HOST putanju (bind mount). Na produkciji je to
+          # /mnt/shared-app-files/gradix/minio; u CI-ju je kreiramo sa širokim
+          # pravima jer je runner efemeralan.
+          sudo mkdir -p /mnt/shared-app-files/gradix/minio
+          sudo chmod 777 /mnt/shared-app-files/gradix/minio
           if ! docker compose up -d minio 2>&1 | tail -20; then
             echo "::error::docker compose up minio nije uspio za '$image'"
             exit 1

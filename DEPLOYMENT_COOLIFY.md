@@ -24,7 +24,7 @@ Gradix deploya na Coolify tako da build **prođe iz prve**.
 
 | # | Problem | Popravka |
 |---|---------|----------|
-| 9 | Hardkodovani bind mount-i `/data/coolify/ssl/coolify-ca.crt` i `/data/coolify/ssl/redis-core/redis-ca.crt` | Ako putanja ne postoji, Docker kreira **direktorij** i aplikacija puca na nejasnoj grešci. Mount-i uklonjeni — TLS se sada definiše kroz `DATABASE_URL` (uputstvo u §4) |
+| 9 | Bind mount-i za CA certifikate | Bez njih `DATABASE_URL` sa `sslrootcert=` puca u runtime-u (`ENOENT … coolify-ca.crt`, vidi 1.4 #27); sa običnim bind-om Docker na nepostojeću putanju napravi **direktorij** i maskira problem. Rješenje: mount-i su vraćeni sa `create_host_path: false` + env override (`POSTGRES_CA_FILE`/`REDIS_CA_FILE`) + preflight u entrypointu (§4) |
 | 10 | `MINIO_PORT` je korišten i za host mapiranje i kao interni port | Host portovi su odvojeni (`MINIO_API_PORT`, `MINIO_CONSOLE_PORT`), interni port MinIO-a je fiksan (9000) |
 | 11 | `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` korišteni kao MinIO root kredencijali — OK, ali ih je trebalo dokumentovati | Dokumentovano u `.env.example` / §3 |
 | 12 | Backend nije imao healthcheck; `depends_on` je bio `service_started` | Dodat healthcheck preko `GET /api/health` (node `fetch`, bez `curl` u slici) |
@@ -54,6 +54,8 @@ Gradix deploya na Coolify tako da build **prođe iz prve**.
 | 24 | `docker compose pull` → `pull access denied for minio/minio` | **MinIO community image više nije javno dostupan**: `minio/minio` (Docker Hub) vraća „repository does not exist”, a `quay.io/minio/minio` vraća `401 Unauthorized` — potvrđeno sa čistog CI runnera, dakle nije stvar hostinga | Default `MINIO_IMAGE=ghcr.io/coollabsio/minio:latest` (Coolify-jev mirror klasičnog MinIO; testirano — S3 API radi, `mc` postoji); alternativa `quay.io/minio/aistor/minio:latest`; CI diže MinIO iz compose-a i traži `healthy` |
 | 25 | `failed to bind host port 0.0.0.0:5173/tcp: address already in use` | Servisi su objavljivali **fiksne host portove**, a Coolify deploya blue/green — stari i novi kontejner kratko rade paralelno, pa dva kontejnera ne mogu držati isti host port | Uklonjeni `ports`, korišten `expose` (80/3000/9000/9001); Coolify proxy dolazi do kontejnera preko Docker mreže. CI provjerava da compose nema objavljenih host portova |
 | 26 | Backend nije mogao doći do baze/Redisa | Servisi su bili samo u internoj `gradix-net` mreži | Dodane **eksterne mreže `db_net` i `redis_net`** (`external: true`); backend je na `gradix-net` + `db_net` + `redis_net` |
+| 27 | `[Scheduler] PrismaClientKnownRequestError … ENOENT: no such file or directory, open '/etc/ssl/certs/coolify-ca.crt'` | `DATABASE_URL` koristi `sslrootcert=/etc/ssl/certs/coolify-ca.crt`, ali CA fajl **nije bio mapiran** u backend kontejner (Coolify ga drži na hostu) | `docker-compose.yml` mapira `POSTGRES_CA_FILE` (`/data/coolify/ssl/coolify-ca.crt`) → `/etc/ssl/certs/coolify-ca.crt` i `REDIS_CA_FILE` (`/data/coolify/ssl/redis-core/redis-ca.crt`) → `/etc/ssl/redis/redis-ca.crt` (`read_only`, `create_host_path: false`); entrypoint **preflight** pada odmah sa jasnom porukom; CI provjerava da su oba mounta tu |
+| 28 | MinIO podaci nisu bili na hostu | `/data` je bio anonimni Docker volume — teško se backupira i nestaje sa `docker compose down -v` | `/data` je sada **bind mount** na `/mnt/shared-app-files/gradix/minio` (override: `MINIO_DATA_DIR`); CI provjerava da je bind |
 
 ## 2. Struktura Docker fajlova
 
@@ -103,7 +105,21 @@ Frontend image:
    | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | promijeni `minioadmin` |
    | `MINIO_IMAGE` | opciono — default `ghcr.io/coollabsio/minio:latest` |
    | `RUN_MIGRATIONS` | `true` (default) |
+   | `POSTGRES_CA_FILE` | host putanja CA za bazu — default `/data/coolify/ssl/coolify-ca.crt` |
+   | `REDIS_CA_FILE` | host putanja CA za Redis — default `/data/coolify/ssl/redis-core/redis-ca.crt` |
+   | `MINIO_DATA_DIR` | host direktorij za MinIO — default `/mnt/shared-app-files/gradix/minio` |
+   | `SEED_PASSWORD` | min 10 znakova (samo za jednokratni seed — §5) |
    | `REDIS_HOST` / `REDIS_PORT` | opciono (v1 ne koristi Redis) |
+
+   > **Host putanje:** compose mapira CA certifikate i MinIO podatke (tabela u
+   > §4.1). Ako su na tvojoj mašini na drugom mjestu, postavi
+   > `POSTGRES_CA_FILE` / `REDIS_CA_FILE` / `MINIO_DATA_DIR` — targeti u
+   > kontejnerima se ne mijenjaju. Provjeri prije deploya:
+   >
+   > ```bash
+   > ls -l /data/coolify/ssl/coolify-ca.crt /data/coolify/ssl/redis-core/redis-ca.crt
+   > mkdir -p /mnt/shared-app-files/gradix/minio     # MinIO podaci
+   > ```
 
 4. **Mreže** — ovaj compose koristi dvije EKSTERNE mreže koje moraju
    postojati na hostu (u njima žive baza i Redis):
@@ -158,9 +174,15 @@ Frontend image:
 > Base Directory `/backend` (ili `/frontend`), ona i dalje radi — root
 > Dockerfile-ovi su identične kopije.
 
+> **Varijanta B ne koristi `docker-compose.yml`**, pa CA certifikate moraš
+> dodati ručno: backend → *Persistent Storage* → „Bind mount”
+> `/data/coolify/ssl/coolify-ca.crt` → `/etc/ssl/certs/coolify-ca.crt`
+> (read-only). Bez toga backend pada na `ENOENT … coolify-ca.crt` čim
+> `DATABASE_URL` sadrži `sslrootcert=`.
+
 ---
 
-## 4. TLS prema PostgreSQL bazi
+## 4. TLS prema PostgreSQL bazi (i Redis-u)
 
 `pg` (i Prisma preko `@prisma/adapter-pg`) čita SSL iz `DATABASE_URL`:
 
@@ -170,12 +192,37 @@ Frontend image:
 | TLS bez provjere certifikata | `...?schema=public&sslmode=require` |
 | TLS sa provjerom CA | `...?schema=public&sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt` |
 
-Za `verify-ca` CA fajl mora postojati **u kontejneru**. U Coolify:
-Backend → *Persistent Storage* → mountaj
-`/data/coolify/ssl/cert.pem` → `/etc/ssl/certs/coolify-ca.crt` (read-only).
+### 4.1 CA certifikati — već mapirani u `docker-compose.yml`
 
-> U `docker-compose.yml` namjerno **nema** hardkodovanih host putanja: bind
-> mount na nepostojeću putanju kreira direktorij i ruši start kontejnera.
+Coolify čuva CA fajlove na **hostu** (`/data/coolify/ssl/...`), a aplikacija ih
+traži **unutar kontejnera**. Compose zato mapira oba fajla u `backend` servis:
+
+| Host (Coolify) | U kontejneru | Env override |
+|---|---|---|
+| `/data/coolify/ssl/coolify-ca.crt` | `/etc/ssl/certs/coolify-ca.crt` | `POSTGRES_CA_FILE` |
+| `/data/coolify/ssl/redis-core/redis-ca.crt` | `/etc/ssl/redis/redis-ca.crt` | `REDIS_CA_FILE` |
+
+Oba su `read_only` i sa `create_host_path: false`: ako putanja na hostu ne
+postoji, `docker compose` padne sa `bind source path does not exist` — umjesto
+da tiho napravi **direktorij** i sruši Prismu tek u runtime-u.
+
+Put do CA **unutar kontejnera** mora se poklapati sa `sslrootcert=` u
+`DATABASE_URL` (standardno `/etc/ssl/certs/coolify-ca.crt`). Ako ti CA stoji
+na drugoj host putanji, mijenjaš samo `POSTGRES_CA_FILE` — target u kontejneru
+i `DATABASE_URL` ostaju isti.
+
+### 4.2 Preflight u kontejneru
+
+`backend/docker-entrypoint.sh` prije migracija provjeri da fajl iz
+`sslrootcert=` postoji. Ako ne postoji, kontejner stane odmah sa:
+
+```
+[gradix] GREŠKA: DATABASE_URL zahtijeva CA certifikat '/etc/ssl/certs/coolify-ca.crt',
+[gradix]   ali tog fajla nema u kontejneru (ili je direktorij).
+```
+
+Bez toga greška ispliva tek pri prvom upitu (npr. u scheduleru), satima nakon
+deploya. Isključivanje: `SSL_PREFLIGHT=false`.
 
 ---
 
@@ -271,6 +318,13 @@ cp .env.example .env             # popuni DATABASE_URL + JWT tajne
 docker compose up --build        # MinIO + backend + frontend
 ```
 
+> **Lokalno:** compose mapira CA fajlove sa Coolify host putanja. Ako ih nemaš,
+> u `.env` postavi `POSTGRES_CA_FILE` i `REDIS_CA_FILE` na bilo koji postojeći
+> PEM (npr. `POSTGRES_CA_FILE=/etc/ssl/certs/ca-certificates.crt`) — uz
+> `sslmode=disable` u `DATABASE_URL` taj sadržaj se ne koristi. MinIO podaci
+> idu na `MINIO_DATA_DIR` (default `/mnt/shared-app-files/gradix/minio`, lokalno
+> postavi npr. `MINIO_DATA_DIR=./.data/minio`).
+
 Servisi ne objavljuju host portove (Coolify blue/green). Za lokalni pregled
 koristi priloženi override `docker-compose.local-ports.yml`:
 
@@ -299,7 +353,7 @@ cd frontend && npm ci && npm run dev
 | `backend-e2e` | PostgreSQL servis → migracije → seed → `npm run test:e2e` |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` |
 | `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright; seed se pokreće iz builda (`node dist/prisma/seed.js`), istim putem kao u produkciji |
-| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` (+ guard: **nema objavljenih host portova**, eksterne mreže deklarisane) → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **seed iz produkcijske slike** (`node dist/prisma/seed.js` + provjera broja korisnika u bazi) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
+| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` (+ guard: **nema objavljenih host portova**, eksterne mreže deklarisane, **CA certifikati mapirani u backend**, **MinIO `/data` je bind na host**) → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **seed iz produkcijske slike** (`node dist/prisma/seed.js` + provjera broja korisnika u bazi) → **SSL preflight** (nepostojeći CA mora stati odmah) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
 
 Ako je job `docker` zelen, Coolify build prolazi.
 
@@ -422,6 +476,59 @@ varijanta) — u produkciji se koristi `node dist/prisma/seed.js`.
 `SEED_PASSWORD` nije postavljen ili je prekratak. Postavi ga u Coolify
 Environment Variables (min 10 znakova) i pokreni seed ponovo. U produkciji
 **ne** koristi demo vrijednost `GradixSeed1`.
+
+### `ENOENT: no such file or directory, open '/etc/ssl/certs/coolify-ca.crt'`
+
+To je **prvi deploj poslije dodavanja compose fajla bez CA mounta** (ili stari
+image). `DATABASE_URL` traži CA, a kontejner ga ne vidi — Prisma to objavi tek
+pri prvom upitu (najčešće scheduler: `TimerCronService.closeStale`).
+
+1. U repo verziji `docker-compose.yml` (commit sa `POSTGRES_CA_FILE`) mount
+   već postoji. Provjeri da Coolify koristi **taj** compose fajl.
+2. Provjeri da fajl na hostu stvarno postoji:
+   ```bash
+   ls -l /data/coolify/ssl/coolify-ca.crt
+   ls -l /data/coolify/ssl/redis-core/redis-ca.crt
+   ```
+3. Provjeri da ga kontejner vidi:
+   ```bash
+   docker compose exec backend ls -l /etc/ssl/certs/coolify-ca.crt
+   ```
+4. Ako je CA na drugoj putanji, postavi `POSTGRES_CA_FILE`
+   (i `REDIS_CA_FILE`) u Coolify env-u i redeploy.
+
+Novi image to ne dozvoljava „tiho”: entrypoint preflight stane odmah sa porukom
+`GREŠKA: DATABASE_URL zahtijeva CA certifikat …`.
+
+### `bind source path does not exist: /data/coolify/ssl/coolify-ca.crt`
+
+Namjerno ponašanje (`create_host_path: false`). Znači da na hostu nema tog
+fajla — Coolify ga tamo drži samo ako je baza/Redis kreiran kroz Coolify sa TLS
+podrškom. Rješenja:
+
+* postavi `POSTGRES_CA_FILE` / `REDIS_CA_FILE` na stvarnu putanju, ili
+* iz `DATABASE_URL` ukloni `sslrootcert=` i koristi `sslmode=require`
+  (TLS bez provjere CA) ili `sslmode=disable` (baza u `db_net` mreži).
+
+### Prebacivanje MinIO podataka sa starog volume-a na host
+
+Ranije je `/data` bio Docker volume (`minio_data`), sada je
+`/mnt/shared-app-files/gradix/minio`. Postojeći fajlovi se ne vide dok ih ne
+prekopiraš (jednokratno, dok MinIO ne radi):
+
+```bash
+docker compose stop minio
+# ime volume-a provjeri: docker volume ls | grep minio
+docker run --rm \
+  -v <projekat>_minio_data:/from:ro \
+  -v /mnt/shared-app-files/gradix/minio:/to \
+  alpine sh -c "cp -a /from/. /to/"
+docker compose up -d minio
+```
+
+Ako u logu MinIO-a vidiš `permission denied`, podesi vlasnika direktorija na
+hostu (`chown -R 1000:1000 /mnt/shared-app-files/gradix/minio`) — MinIO u
+Coolify image-u radi kao neprivilegovan korisnik.
 
 ### `network db_net declared as external, but could not be found`
 

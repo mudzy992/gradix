@@ -18,6 +18,12 @@
 #   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 #   (vidi .env.example / DEPLOYMENT_COOLIFY.md)
 #
+# HOST MAPIRANJA (bind):
+#   /data/coolify/ssl/coolify-ca.crt        → /etc/ssl/certs/coolify-ca.crt (CA za bazu)
+#   /data/coolify/ssl/redis-core/redis-ca.crt → /etc/ssl/redis/redis-ca.crt (CA za Redis)
+#   /mnt/shared-app-files/gradix/minio      → /data (MinIO podaci)
+# Override putanja: POSTGRES_CA_FILE, REDIS_CA_FILE, MINIO_DATA_DIR
+#
 # VAŽNO: servisi NE objavljuju fiksne host portove (`ports`), nego koriste
 # `expose`. Coolify deploya blue/green (stari i novi kontejner kratko rade
 # paralelno), pa fiksni host port padne sa:
@@ -46,7 +52,10 @@ services:
       - "9000"
       - "9001"
     volumes:
-      - minio_data:/data
+      # Podaci idu na HOST putanju (deljeni fajl sistem), ne u anonimni Docker
+      # volume: lakše se backupira i preživljava `docker compose down -v`.
+      # Override bez izmjene koda: MINIO_DATA_DIR=/neka/druga/putanja
+      - "${MINIO_DATA_DIR:-/mnt/shared-app-files/gradix/minio}:/data"
     networks:
       - gradix-net
     healthcheck:
@@ -80,13 +89,42 @@ services:
       # CORS — javni URL frontenda (prazno = dozvoljeni svi origin-i)
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
+      # Preflight u entrypointu: ako `DATABASE_URL` traži CA (`sslrootcert=...`)
+      # a fajla nema u kontejneru, kontejner padne ODMAH sa jasnom porukom
+      # (bez ovoga Prisma padne tek pri prvom upitu: "ENOENT ... coolify-ca.crt").
+      SSL_PREFLIGHT: ${SSL_PREFLIGHT:-true}
       # EKSTERNI Redis (mreža `redis_net`) — opcionalno, v1 ne koristi queue
       REDIS_HOST: ${REDIS_HOST:-}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PREFIX: ${REDIS_PREFIX:-gradix:queue:}
+      # CA za Redis (v1 kod ga ne čita, ali je fajl mapiran — vidi volumes)
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/etc/ssl/redis/redis-ca.crt}
     expose:
       - "3000"
+    volumes:
+      # --- CA certifikati (Coolify ih drži na hostu) ---
+      # DATABASE_URL koristi `sslrootcert=/etc/ssl/certs/coolify-ca.crt`, pa taj
+      # fajl MORA postojati u kontejneru. Bez ovoga Prisma padne u runtime-u:
+      #   ENOENT: no such file or directory, open '/etc/ssl/certs/coolify-ca.crt'
+      #
+      # `create_host_path: false` → ako putanja na hostu ne postoji, compose
+      # padne sa "bind source path does not exist" umjesto da tiho napravi
+      # direktorij (i maskira problem). Override: POSTGRES_CA_FILE=...
+      - type: bind
+        source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
+        target: /etc/ssl/certs/coolify-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      # CA za Redis — Coolify: /data/coolify/ssl/redis-core/redis-ca.crt
+      # Override: REDIS_CA_FILE=...
+      - type: bind
+        source: ${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}
+        target: /etc/ssl/redis/redis-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       # Backend sam ponavlja konekciju na MinIO (retry u MinioService),
       # pa healthcheck MinIO-a nije uslov za start.
@@ -132,9 +170,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-volumes:
-  minio_data:
 
 networks:
   gradix-net:
