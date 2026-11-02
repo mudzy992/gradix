@@ -135,7 +135,7 @@
       "id": "BE-02",
       "layer": "BE",
       "title": "Auth",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {

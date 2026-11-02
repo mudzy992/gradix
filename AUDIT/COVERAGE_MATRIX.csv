@@ -1,7 +1,7 @@
 file,layer,module,segment,loc,status,findings,date
-.env.coolify,INF,compose,INF-01,79,pregledano,INF-01: isti ključevi kao .env.example (parity guard); bez referenci na arhivu,2026-11-02
-.env.example,INF,compose,INF-01,80,pregledano,"INF-01: dodati PORT, MINIO_PORT, REDIS_TLS_CA_FILE; JWT_REFRESH_SECRET označen kao „kod ga još ne čita“; reference na penzionisan DEPLOYMENT_COOLIFY zamijenjene docs/INFRASTRUCTURE.md",2026-11-02
-.github/workflows/ci.yml,CI,ci,CI-01,605,pregledano,"CI-01: bez PR trigera, push samo main + aktivna grana. CI-03: sve akcije pinovane na SHA, timeout na svakom jobu, npm/Docker cache",2026-11-02
+.env.coolify,INF,compose,INF-01,76,pregledano,BE-02: uklonjen JWT_REFRESH_SECRET (D-029),2026-11-02
+.env.example,INF,compose,INF-01,79,pregledano,BE-02: uklonjen JWT_REFRESH_SECRET (D-029),2026-11-02
+.github/workflows/ci.yml,CI,ci,CI-01,598,pregledano,BE-02: uklonjen JWT_REFRESH_SECRET iz env-a jobova (D-029),2026-11-02
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -24,7 +24,7 @@ backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,nepregledano,,
 backend/prisma/seed.ts,BE,seed,BE-08,116,nepregledano,,
 backend/src/app.module.ts,BE,bootstrap,BE-01,62,pregledano,BE-01: ConfigModule.forRoot({ validate: validateEnv }) — fail-fast prije podizanja modula,2026-11-02
 backend/src/app.setup.ts,BE,bootstrap,BE-01,65,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
-backend/src/common/constants.ts,BE,common,BE-01,37,pregledano,BE-01: pregledano — sve poslovne konstante na jednom mjestu; MIN_PASSWORD_LENGTH=10 usklađen sa env validacijom SEED_PASSWORD,2026-11-02
+backend/src/common/constants.ts,BE,common,BE-01,39,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
 backend/src/common/decorators/current-user.decorator.ts,BE,common,BE-01,10,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/public.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/require-permissions.decorator.ts,BE,common,BE-01,8,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
@@ -32,7 +32,7 @@ backend/src/common/decorators/skip-envelope.decorator.ts,BE,common,BE-01,6,pregl
 backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
 backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
-backend/src/common/errors/error-codes.ts,BE,common,BE-01,38,pregledano,BE-01: dodat RATE_LIMITED i SERVICE_UNAVAILABLE (429/503 više nisu HTTP_ERROR),2026-11-02
+backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
 backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,96,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,76,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
 backend/src/common/geo/haversine.ts,BE,common,BE-12,33,nepregledano,,
@@ -56,23 +56,25 @@ backend/src/common/settings/registry.ts,BE,common,BE-04,104,nepregledano,,
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01: pregledano — Prisma.Decimal sa VALIDATION_FAILED na NaN,2026-11-02
 backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: pregledano — AppError PAGINATION_LIMIT za page<1/limit>100,2026-11-02
-backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-01: pregledano — argon2id (19456 KiB, t=2, p=1), min 10 znakova",2026-11-02
+backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-02: pregledano — argon2id, min 10 znakova (AUTH_PASSWORD_TOO_SHORT), SHA-256 hash refresh tokena",2026-11-02
 backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledano — E.164 normalizacija,2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,"BE-01: pregledano — blokira .. i apsolutne putanje, traži prefiks companyId/ (403), buildObjectPath koristi globalni crypto.randomUUID (Node 22)",2026-11-02
-backend/src/config/env.spec.ts,BE,config,BE-01,149,pregledano,BE-01: 14 testova env validacije + CORS politike + Swagger flaga,2026-11-02
-backend/src/config/env.ts,BE,config,BE-01,216,pregledano,"BE-01: ručna env šema (D-017) — sve greške odjednom, imenovane varijable, produkcijska pravila; vraća string mapu",2026-11-02
+backend/src/config/env.spec.ts,BE,config,BE-01,147,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
+backend/src/config/env.ts,BE,config,BE-01,200,pregledano,BE-02: uklonjena JWT_REFRESH_SECRET validacija (D-029); ostalo iz BE-01,2026-11-02
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,nepregledano,,
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,22,nepregledano,,
-backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,89,nepregledano,,
-backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,81,nepregledano,,
-backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,nepregledano,,
-backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,nepregledano,,
-backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,180,nepregledano,,
-backend/src/modules/auth/jwt.strategy.ts,BE,auth,BE-02,54,nepregledano,,
-backend/src/modules/auth/map-auth-user.ts,BE,auth,BE-02,65,nepregledano,,
-backend/src/modules/auth/me.controller.ts,BE,auth,BE-02,27,nepregledano,,
+backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
+backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
+backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,149,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
+backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,83,pregledano,BE-02: throttle 5/min na forgot/reset (F-05); ostale rute nepromijenjene,2026-11-02
+backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
+backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
+backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,191,pregledano,BE-02: reset() → 501 AUTH_RESET_NOT_AVAILABLE (F-02); login/changePassword pregledani,2026-11-02
+backend/src/modules/auth/jwt.strategy.ts,BE,auth,BE-02,54,pregledano,"BE-02: baza na svaki zahtjev, PLATFORM_ADMIN izuzet od ugašene firme (F-06)",2026-11-02
+backend/src/modules/auth/map-auth-user.ts,BE,auth,BE-02,65,pregledano,BE-02: mapiranje bez tajni; toMeDto ne izlaže companyId ugovor više nego prije,2026-11-02
+backend/src/modules/auth/me.controller.ts,BE,auth,BE-02,27,pregledano,BE-02: čita samo AuthUser iz guard-a,2026-11-02
 backend/src/modules/companies/companies.controller.ts,BE,companies,BE-04,44,nepregledano,,
 backend/src/modules/companies/companies.dto.ts,BE,companies,BE-04,110,nepregledano,,
 backend/src/modules/companies/companies.module.ts,BE,companies,BE-04,15,nepregledano,,
@@ -281,7 +283,7 @@ backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,nepregledano,,
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
 backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
-docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
+docker-compose.yml,INF,compose,INF-01,182,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
 frontend/.oxlintrc.json,FE,config,FE-02,9,nepregledano,,
 frontend/Dockerfile,INF,frontend-image,INF-03,66,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,nepregledano,,
@@ -392,7 +394,7 @@ frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,92,nepregledano,,
 frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,85,nepregledano,,
 frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,136,nepregledano,,
 frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,90,nepregledano,,
-frontend/src/pages/reset-page.tsx,FE,auth-pages,FE-07,61,nepregledano,,
+frontend/src/pages/reset-page.tsx,FE,auth-pages,FE-07,30,pregledano,"BE-02: stub stranica bez forme (backend 501), upućuje na ADMIN reset",2026-11-02
 frontend/src/pages/services-page.tsx,FE,office-pages,FE-11,96,nepregledano,,
 frontend/src/pages/settings-page.tsx,FE,admin-pages,FE-13,27,nepregledano,,
 frontend/src/pages/task-detail-page.tsx,FE,ops-pages,FE-08,82,nepregledano,,

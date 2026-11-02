@@ -15,7 +15,6 @@
 #   redis_net   — EKSTERNA mreža u kojoj živi Redis (external: true)
 #
 # Obavezne env varijable (Coolify → Environment Variables):
-#   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 #   (vidi .env.example / docs/INFRASTRUCTURE.md §5)
 #
 # HOST MAPIRANJA (bind):
@@ -78,7 +77,6 @@ services:
       # EKSTERNA PostgreSQL baza — hostname mora biti razrješiv u mreži `db_net`
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL je obavezan (postgresql://user:pass@host:5432/db)}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET je obavezan (min 32 znaka)}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET je obavezan (min 32 znaka)}
       # MinIO — interni servis iz ovog compose fajla
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
       MINIO_PORT: 9000

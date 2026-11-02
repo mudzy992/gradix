@@ -7,6 +7,8 @@ export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;
 export const ACCESS_TTL = '15m';
 export const REFRESH_DAYS = 30;
+/** Koliko dugo čuvamo opozvane/istekle refresh tokene prije brisanja (cron). */
+export const REFRESH_RETENTION_DAYS = 7;
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const ARGON2_MEMORY_KIB = 19456;
 export const ARGON2_TIME_COST = 2;

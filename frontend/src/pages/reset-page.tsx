@@ -1,36 +1,16 @@
-import { Link, useSearchParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
-import { resetPassword } from '@/lib/api'
-import { errorMessage } from '@/lib/error-message'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Field } from '@/components/field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-const schema = z.object({
-  token: z.string().min(1),
-  newPassword: z.string().min(10),
-})
-
+/**
+ * BE-02: backend `POST /api/auth/reset` odgovara `501 AUTH_RESET_NOT_AVAILABLE`
+ * (nema modela za reset tokene ni prave email dostave), pa stranica ne nudi formu
+ * koja bi glumila uspjeh. Pravi tok (token + email) dolazi u kasnijem segmentu
+ * zajedno sa `EmailService`-om; do tada ADMIN resetuje lozinku kroz `/users`.
+ */
 export function ResetPage() {
   const { t } = useTranslation()
-  const [params] = useSearchParams()
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: { token: params.get('token') ?? '', newPassword: '' },
-  })
-  const onSubmit = form.handleSubmit(async (values) => {
-    try {
-      await resetPassword(values)
-      toast.success(t('auth.forgotSuccess'))
-    } catch (error) {
-      toast.error(errorMessage(error))
-    }
-  })
   return (
     <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -39,20 +19,9 @@ export function ResetPage() {
           <CardDescription>{t('auth.resetStub')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4" onSubmit={onSubmit}>
-            <Field label="Token" htmlFor="token">
-              <Input id="token" {...form.register('token')} />
-            </Field>
-            <Field label={t('auth.newPassword')} htmlFor="newPassword" hint={t('auth.minPassword')}>
-              <Input id="newPassword" type="password" {...form.register('newPassword')} />
-            </Field>
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {t('auth.reset')}
-            </Button>
-            <Link className="text-sm text-primary underline-offset-4 hover:underline" to="/login">
-              {t('auth.backToLogin')}
-            </Link>
-          </form>
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/login">{t('auth.backToLogin')}</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

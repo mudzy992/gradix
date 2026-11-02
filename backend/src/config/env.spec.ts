@@ -44,14 +44,14 @@ describe('validateEnv', () => {
     );
   });
 
-  it('u produkciji traži JWT_REFRESH_SECRET', () => {
+  it('JWT_REFRESH_SECRET nije dio ugovora (D-029) — ne traži se ni u produkciji', () => {
     expect(() =>
       validateEnv({
         ...BASE,
         NODE_ENV: 'production',
         JWT_ACCESS_SECRET: 'a'.repeat(32),
       }),
-    ).toThrow(/JWT_REFRESH_SECRET je obavezan u produkciji/);
+    ).not.toThrow();
   });
 
   it('u produkciji ne traži CORS_ORIGIN (prazno = same-origin, D-018)', () => {
@@ -59,23 +59,21 @@ describe('validateEnv', () => {
       validateEnv({
         ...BASE,
         NODE_ENV: 'production',
-        JWT_REFRESH_SECRET: 'b'.repeat(32),
       }),
     ).not.toThrow();
   });
 
-  it('u produkciji prolazi kad su tajne i CORS postavljeni', () => {
+  it('u produkciji prolazi kad su obavezne tajne i CORS postavljeni', () => {
     const env = validateEnv({
       ...BASE,
       NODE_ENV: 'production',
-      JWT_REFRESH_SECRET: 'b'.repeat(32),
       CORS_ORIGIN: 'https://gradix.ba',
     });
     expect(env.NODE_ENV).toBe('production');
     expect(env.CORS_ORIGIN).toBe('https://gradix.ba');
   });
 
-  it('u razvoju ne traži CORS ni refresh tajnu', () => {
+  it('u razvoju ne traži CORS', () => {
     expect(() => validateEnv({ ...BASE })).not.toThrow();
   });
 

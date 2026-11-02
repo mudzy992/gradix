@@ -177,6 +177,19 @@ Odgovor na nalaze BE-01. `/api/docs` se registruje samo van produkcije ili uz `E
 u razvoju ostaje dozvoljeno sve. **Zašto ne „obavezno“:** frontend ide kroz isti nginx, pa
 postavljanje CORS-a nije uslov za rad, a obaveznost bi rušila deploy bez stvarne koristi.
 
+### D-029 — Refresh token je neprozirni slučajni string, ne JWT
+**Datum:** 2026-11-02 · **Status:** na snazi
+Odgovor na BE-02. Refresh token = **48 slučajnih bajtova** (base64url); u bazi se čuva samo
+`sha256` hash (`RefreshToken.tokenHash`, unique), `expiresAt = +30 dana` (`REFRESH_DAYS`), opoziv je
+`revokedAt` (soft). **Rotacija** na svaki refresh: stari token se opoziva i izdaje se novi par;
+ponovna upotreba već opozvanog tokena gasi **sve** sesije korisnika (`401 AUTH_REFRESH_REUSE`).
+Posljedica: **`JWT_REFRESH_SECRET` ne postoji** — uklonjen je iz `docker-compose.yml`,
+`.env.example`, `.env.coolify`, `backend/.env.example`, CI-ja i `config/env.ts`.
+**Zašto ne JWT refresh:** JWT se ne može opozvati bez server-side liste, pa bi tabela svakako
+trebala; neprozirni hashirani token ne nosi podatke koje klijent ne treba da vidi, a baza ostaje
+jedini izvor istine. **Cijena:** jedan upit na bazu po refreshu (zanemarivo uz 20/min limit) i
+dnevni cron (03:00) koji briše istekle i tokene opozvane prije `REFRESH_RETENTION_DAYS` (7 dana).
+
 ---
 
 ## Zamijenjene / povučene odluke

@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-01` (drugi prolaz: šema + config + guard `check:schema`) |
-| CI | ✅ [run 41524479730](https://github.com/mudzy992/gradix/actions/runs/41524479730) — **6/6** zelen za `feat(schema) … [BE-01]` |
+| Zadnji commit | `BE-02` (auth: rotacija + retencija + D-029, uklonjen `JWT_REFRESH_SECRET`) |
+| CI | ⏳ `feat(auth) … [BE-02]` — run se upisuje nakon `gh run watch` |
 | Zadnji potvrđeno zelen run | [41524479730](https://github.com/mudzy992/gradix/actions/runs/41524479730) (BE-01/2) ✅ 6/6 · prije: 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -114,8 +114,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   mrtve varijable = upozorenje; **zabrana referenci na penzionisane dokumente iz konfiguracije**.
 - Popravljeno: `.env.example`/`.env.coolify` dobili `PORT`, `MINIO_PORT`, `REDIS_TLS_CA_FILE`;
   4 reference na penzionisan `DEPLOYMENT_COOLIFY.md` → `docs/INFRASTRUCTURE.md`.
-- Dokumentovano (bez promjene ponašanja): `JWT_REFRESH_SECRET` je obavezan u compose-u, ali ga kod
-  **ne čita** (refresh tok = BE-02); `REDIS_*` se prenose, kod ih ne čita (INF-07, D-014).
+- Dokumentovano (bez promjene ponašanja): `JWT_REFRESH_SECRET` je tada bio obavezan u compose-u, a
+  kod ga nije čitao → **riješeno u BE-02** (varijabla uklonjena, D-029); `REDIS_*` se prenose, kod
+  ih ne čita (INF-07, D-014).
 - Negativan test: uklonjen `MINIO_PORT` → exit 1.
 
 ### 2026-11-02 — INF-02 (`A-12`, backend slika)
@@ -165,13 +166,30 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - CI ne tipuje testove (`nest build` ih isključuje) → preneseno u TEST-01 (F-BE-01-09).
 - Matrica: 474 fajla, 65 pregledano (13,7 %).
 
+### 2026-11-02 — BE-02 (auth) → segment `done`
+- **Nalaz (visoko):** `rotate()` je provjeravao samo token, ne i korisnika — deaktiviran korisnik,
+  ugašena firma ili korisnik bez rola mogli su **do 30 dana** obnavljati pristup. Sada odluku
+  donosi čista funkcija `evaluateRefreshToken` (`auth-token-rules.ts`, 6 ishoda, 9 unit testova),
+  a svaki negativan ishod gasi sve sesije korisnika.
+- **Nalaz (visoko):** `POST /auth/reset` vraćao `{ ok: true }` bez promjene lozinke → sada
+  **`501 AUTH_RESET_NOT_AVAILABLE`**; frontend `/reset` više ne nudi formu koja glumi uspjeh.
+- **Nalaz (visoko):** `JWT_REFRESH_SECRET` bio obavezan (`:?`) u compose-u/CI-ju, a nijedan kod ga
+  nije čitao → **uklonjen** iz 6 fajlova (9 pojava) i zapisan kao **D-029** (refresh = neprozirni
+  token, SHA-256 hash, rotacija + reuse detekcija).
+- **Retencija:** dnevni cron (03:00) briše istekle tokene i opozvane starije od 7 dana
+  (`REFRESH_RETENTION_DAYS`); `forgot`/`reset` dobili 5/min throttle; `PLATFORM_ADMIN` izuzet od
+  pravila „ugašena firma“ (usklađeno sa `JwtStrategy`).
+- Testovi: `npx jest src/config src/modules/auth` → **28/28**; `check:all` (8 koraka) ✅;
+  matrica **476 fajlova / 76 pregledano (16,0 %)**.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-02** (auth) — prvo odluka o refresh tokenu (implementirati tok ili ukloniti iz ugovora);
-   zatim **BE-03** (korisnici/role/scope).
-3. Otvorene odluke vlasnika: F-BE-01-07 (indeksi) i F-BE-01-08 (`User.email` unique).
-3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
+2. **BE-03** (korisnici, role, scope) — sljedeći segment po planu; pa **BE-04** (`common/scope/*`).
+3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
+   F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
+   emaila = zaseban segment).
+4. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori
 

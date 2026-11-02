@@ -65,6 +65,15 @@ backend/src/
 
 - `Authorization: Bearer <access>` — access traje **15 min** (`ACCESS_TTL`), refresh **30 dana**.
 - JWT nosi **samo `sub`**; role/permisije/firma se čitaju iz baze.
+- **Refresh token je neproziran** (48 slučajnih bajtova, base64url); u bazi stoji samo `sha256`
+  hash (`RefreshToken.tokenHash`), pa `JWT_REFRESH_SECRET` ne postoji (D-029).
+- **Rotacija na svaki refresh:** stari token se opoziva, izdaje se novi par. Ponovna upotreba već
+  opozvanog tokena gasi **sve** sesije korisnika (`401 AUTH_REFRESH_REUSE`) — znak krađe.
+- Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
+  (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
+  opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).
+- `POST /auth/reset` vraća **501 `AUTH_RESET_NOT_AVAILABLE`** — reset preko emaila nije implementiran
+  (nema modela reset tokena ni prave dostave); ADMIN resetuje lozinku kroz `POST /users/:id/reset-password`.
 - `@Public()` isključuje `JwtAuthGuard` (health, login, refresh, forgot/reset, javni sajt, IoT ingest).
 - Permisije: `@RequirePermissions('…')`, efektivno = **unija** permisija svih rola korisnika.
 - Tenant: `@TenantRoute()` + header `X-Company-Id` — **samo** za `PLATFORM_ADMIN`.
@@ -195,7 +204,8 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 
 Sve kroz env (katalog: [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md) §5). **Validira se pri startu**
 (`backend/src/config/env.ts`): obavezno u razvoju `DATABASE_URL`, `JWT_ACCESS_SECRET` (min 32) i
-MinIO varijable (osim uz `MINIO_SKIP=true`); u produkciji dodatno `JWT_REFRESH_SECRET`; prazan
+MinIO varijable (osim uz `MINIO_SKIP=true`); u produkciji **nema dodatne obavezne tajne** (refresh
+token je hashiran u bazi, D-029); prazan
 `CORS_ORIGIN` u produkciji znači **same-origin** (nikakav strani origin), a u razvoju „dozvoli sve“. `PORT` i `MINIO_PORT`
 moraju biti cijeli brojevi 1–65535, `MINIO_USE_SSL`/`MINIO_SKIP`/`ENABLE_API_DOCS` su bool.
 Swagger je u produkciji isključen osim `ENABLE_API_DOCS=true`.
@@ -203,8 +213,8 @@ Swagger je u produkciji isključen osim `ENABLE_API_DOCS=true`.
 Trenutno se čita:
 `DATABASE_URL`, `PORT`, `NODE_ENV`, `CORS_ORIGIN`, `MINIO_*`, `JWT_ACCESS_SECRET` (auth,
 realtime), `MINIO_SKIP` (testovi), `JEST_WORKER_ID` (isključivanje cronova pod testovima).
-`JWT_REFRESH_SECRET`, `SEED_PASSWORD` i `REDIS_*` se **ne** čitaju u `src/` (refresh je
-hashiran u bazi; seed je zaseban proces).
+`SEED_PASSWORD` i `REDIS_*` se **ne** čitaju u `src/` (seed je zaseban proces; Redis koristi
+infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 
 ---
 
@@ -212,7 +222,7 @@ hashiran u bazi; seed je zaseban proces).
 
 | # | Dug | Segment |
 |---|---|---|
-| B1 | Email je stub (`trySend` samo inkrementira brojač) | BE-02 |
+| B1 | Email je stub (`trySend` samo inkrementira brojač); zato je `POST /auth/reset` 501 | BE-02 (ostaje; pravi tok = novi segment) |
 | B2 | Nema centralnog mapiranja Prisma grešaka | BE-03 |
 | B3 | ~~Nema env validacije pri startu~~ — ✅ riješeno (BE-01, `config/env.ts` + 17 testova) | BE-01 |
 | B4 | Samo 1 unit test (`timer-math.spec.ts`); nema coverage praga | TEST-01 |

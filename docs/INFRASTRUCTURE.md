@@ -89,10 +89,12 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 |---|---|---|
 | `DATABASE_URL` | `postgresql://user:pass@postgres:5432/gradix?schema=public&sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | Prisma (runtime + migracije) — `:?` u compose-u |
 | `JWT_ACCESS_SECRET` | 32+ znaka (`openssl rand -base64 32`) | auth, realtime — `:?` |
-| `JWT_REFRESH_SECRET` | 32+ znaka | ⚠️ obavezan u compose-u (`:?`), ali ga **kod još ne čita** — refresh tok je ugovor za BE-02 |
 | `MINIO_ENDPOINT` | `minio` | `MinioService` (`getOrThrow`) |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `minioadmin` (promijeniti!) | `MinioService` |
 | `MINIO_BUCKET` | `gradix` | `MinioService` |
+
+> `JWT_REFRESH_SECRET` **ne postoji**: refresh token je neprozirni slučajni string, u bazi se čuva
+> samo njegov SHA-256 hash (D-029). Uklonjen je iz compose-a, `.env.example`, `.env.coolify` i CI-ja.
 
 ### 5.2 Važno za ponašanje
 

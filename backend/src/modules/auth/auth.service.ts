@@ -132,8 +132,19 @@ export class AuthService {
     return { ok: true };
   }
 
-  reset(): { ok: true } {
-    return { ok: true };
+  /**
+   * BE-02: reset lozinke NIJE implementiran (nema modela za reset tokene niti prave
+   * email dostave). Ranije je vraćao `{ ok: true }` bez ijedne promjene — lažni uspjeh.
+   * Sada jasno kaže da nije dostupno, da klijent ne može misliti da je lozinka promijenjena.
+   * Pravi tok (model reset tokena + email dostava) je zaseban posao; do tada ADMIN resetuje
+   * lozinku kroz `POST /users/:id/reset-password` (jednokratna temp lozinka).
+   */
+  reset(): never {
+    throw new AppError(
+      ERROR_CODES.AUTH_RESET_NOT_AVAILABLE,
+      'Password reset is not available yet',
+      501,
+    );
   }
 
   private async findLoginUser(dto: LoginDto) {

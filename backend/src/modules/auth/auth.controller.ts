@@ -65,6 +65,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(200)
   @Post('forgot')
   forgot(@Body() dto: ForgotDto) {
@@ -72,6 +73,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(200)
   @Post('reset')
   reset(@Body() _dto: ResetDto) {

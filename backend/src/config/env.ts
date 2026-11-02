@@ -20,7 +20,6 @@ export interface AppEnv {
   PORT: number;
   DATABASE_URL: string;
   JWT_ACCESS_SECRET: string;
-  JWT_REFRESH_SECRET?: string;
   CORS_ORIGIN?: string;
   MINIO_ENDPOINT?: string;
   MINIO_PORT: number;
@@ -86,7 +85,6 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
     );
   }
   const nodeEnv = nodeEnvRaw as NodeEnv;
-  const isProduction = nodeEnv === 'production';
 
   const databaseUrl = optional(raw.DATABASE_URL);
   if (!databaseUrl) {
@@ -104,19 +102,6 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
     );
   }
 
-  // Refresh tajna: kod je još ne čita (vidi AUDIT/segments/BE-02.md), ali je u produkciji
-  // obavezna jer compose i klijenti računaju na refresh tok.
-  const refreshSecret = optional(raw.JWT_REFRESH_SECRET);
-  if (!refreshSecret && isProduction) {
-    errors.push('JWT_REFRESH_SECRET je obavezan u produkciji');
-  } else if (refreshSecret && refreshSecret.length < MIN_SECRET_LENGTH) {
-    errors.push(
-      `JWT_REFRESH_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`,
-    );
-  }
-
-  // CORS: prazno u produkciji NIJE greška (frontend ide kroz isti nginx), ali se tada
-  // NE dozvoljava nijedan strani origin — vidi `resolveCorsOrigin` (D-018).
   const corsOrigin = optional(raw.CORS_ORIGIN);
 
   const minioSkip = asBool('MINIO_SKIP', raw.MINIO_SKIP, false, errors);
@@ -160,7 +145,6 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   out.PORT = String(asInt('PORT', raw.PORT, 3000, errors));
   out.DATABASE_URL = databaseUrl as string;
   out.JWT_ACCESS_SECRET = accessSecret as string;
-  if (refreshSecret) out.JWT_REFRESH_SECRET = refreshSecret;
   if (corsOrigin) out.CORS_ORIGIN = corsOrigin;
   if (minioEndpoint) out.MINIO_ENDPOINT = minioEndpoint;
   out.MINIO_PORT = String(asInt('MINIO_PORT', raw.MINIO_PORT, 9000, errors));
