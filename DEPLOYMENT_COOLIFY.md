@@ -33,13 +33,6 @@ Gradix deploya na Coolify tako da build **prođe iz prve**.
 | 15 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` bez defaulta u compose-u | `:?` → deploy pada odmah sa jasnom porukom umjesto starta sa praznim tajnama |
 | 16 | Root `Dockerfile` / `Dockerfile.frontend` su bili jedini Dockerfile-ovi (i to sa `../` putanjom) | Root fajlovi zadržani kao **identične kopije** (za stare Coolify konfiguracije koje pokazuju na `/Dockerfile`), a CI provjerava da su identični (`diff`) |
 
-### 1.4 Ispravke nakon prvih realnih Coolify deployeva
-
-| # | Simptom na Coolifyju | Uzrok | Popravka |
-|---|----------------------|-------|----------|
-| 23 | `RUN npm run build` → `sh: vite: not found` (exit 127) | Coolify prosljeđuje sve env varijable kao **build-arg-ove** (`NODE_ENV=production`), a npm tada preskače `devDependencies` — `vite`, `typescript`, `tailwind` | `ARG NODE_ENV` + `NODE_ENV=development npm ci --include=dev` (frontend i backend `deps` stage); CI ima korak koji to reproducira |
-| 24 | `docker compose pull` → `pull access denied for minio/minio` | **MinIO community image više nije javno dostupan**: `minio/minio` (Docker Hub) vraća „repository does not exist”, a `quay.io/minio/minio` vraća `401 Unauthorized` — potvrđeno sa čistog CI runnera, dakle nije stvar hostinga | Default `MINIO_IMAGE=ghcr.io/coollabsio/minio:latest` (Coolify-jev mirror klasičnog MinIO; testirano — S3 API radi, `mc` postoji); alternativa `quay.io/minio/aistor/minio:latest`; CI diže MinIO iz compose-a i traži `healthy` |
-
 ### 1.3 CI
 
 | # | Problem | Popravka |
@@ -52,6 +45,15 @@ Gradix deploya na Coolify tako da build **prođe iz prve**.
 | 22 | Nijedna provjera Docker builda | Novi `docker` job: `docker compose config`, build oba image-a i **smoke test** (backend kontejner + migracije + `/api/health`, frontend kontejner + nginx proxy na API) |
 
 ---
+
+### 1.4 Ispravke nakon prvih realnih Coolify deployeva
+
+| # | Simptom na Coolifyju | Uzrok | Popravka |
+|---|----------------------|-------|----------|
+| 23 | `RUN npm run build` → `sh: vite: not found` (exit 127) | Coolify prosljeđuje sve env varijable kao **build-arg-ove** (`NODE_ENV=production`), a npm tada preskače `devDependencies` — `vite`, `typescript`, `tailwind` | `ARG NODE_ENV` + `NODE_ENV=development npm ci --include=dev` (frontend i backend `deps` stage); CI ima korak koji to reproducira |
+| 24 | `docker compose pull` → `pull access denied for minio/minio` | **MinIO community image više nije javno dostupan**: `minio/minio` (Docker Hub) vraća „repository does not exist”, a `quay.io/minio/minio` vraća `401 Unauthorized` — potvrđeno sa čistog CI runnera, dakle nije stvar hostinga | Default `MINIO_IMAGE=ghcr.io/coollabsio/minio:latest` (Coolify-jev mirror klasičnog MinIO; testirano — S3 API radi, `mc` postoji); alternativa `quay.io/minio/aistor/minio:latest`; CI diže MinIO iz compose-a i traži `healthy` |
+| 25 | `failed to bind host port 0.0.0.0:5173/tcp: address already in use` | Servisi su objavljivali **fiksne host portove**, a Coolify deploya blue/green — stari i novi kontejner kratko rade paralelno, pa dva kontejnera ne mogu držati isti host port | Uklonjeni `ports`, korišten `expose` (80/3000/9000/9001); Coolify proxy dolazi do kontejnera preko Docker mreže. CI provjerava da compose nema objavljenih host portova |
+| 26 | Backend nije mogao doći do baze/Redisa | Servisi su bili samo u internoj `gradix-net` mreži | Dodane **eksterne mreže `db_net` i `redis_net`** (`external: true`); backend je na `gradix-net` + `db_net` + `redis_net` |
 
 ## 2. Struktura Docker fajlova
 
@@ -99,14 +101,36 @@ Frontend image:
    | `JWT_REFRESH_SECRET` | `openssl rand -base64 32` (min 32 znaka) |
    | `CORS_ORIGIN` | `https://app.tvoja-domena.ba` |
    | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | promijeni `minioadmin` |
-   | `FRONTEND_PORT` | host port za nginx, default `5173` |
-   | `BACKEND_PORT` | host port za API, default `3000` |
+   | `MINIO_IMAGE` | opciono — default `ghcr.io/coollabsio/minio:latest` |
    | `RUN_MIGRATIONS` | `true` (default) |
+   | `REDIS_HOST` / `REDIS_PORT` | opciono (v1 ne koristi Redis) |
 
-4. Domene: Coolify mapira domenu na **frontend** servis (port **80**).
-   Ako želiš i direktan API domen (mobilna aplikacija), mapiraj ga na
-   **backend** servis (port **3000**) i dodaj tu domenu u `CORS_ORIGIN`.
-5. Deploy. Prvi build traje duže (npm ci + Prisma engine).
+4. **Mreže** — ovaj compose koristi dvije EKSTERNE mreže koje moraju
+   postojati na hostu (u njima žive baza i Redis):
+
+   ```bash
+   # samo ako već ne postoje
+   docker network create db_net
+   docker network create redis_net
+   ```
+
+   Backend je priključen na `gradix-net` (interna), `db_net` i `redis_net`,
+   pa `DATABASE_URL` mora koristiti hostname baze **razrješiv u `db_net`**
+   (npr. ime kontejnera baze), a `REDIS_HOST` ime Redisa u `redis_net`.
+
+   > Ako mreža ne postoji, deploy pada sa
+   > `network db_net declared as external, but could not be found`.
+
+5. **Domene**: Coolify mapira domenu na **frontend** servis (port **80**).
+   Za direktan API domen (mobilna aplikacija) dodijeli domenu **backend**
+   servisu (port **3000**) i dodaj je u `CORS_ORIGIN`. MinIO konzola
+   (opciono): domena na **minio** servis, port **9001**.
+
+6. Deploy. Prvi build traje duže (npm ci + Prisma engine).
+
+> **Host portovi:** servisi namjerno ne objavljuju `ports` — Coolify radi
+> blue/green deploy i fiksni host port bi pao sa `address already in use`.
+> Ako ti treba direktan pristup preko IP-a, vidi §8.
 
 > Compose koristi `:?` za `DATABASE_URL` i JWT tajne — ako neka nedostaje,
 > deploy pada odmah sa porukom koja imenuje varijablu (namjerno, da se ne
@@ -175,9 +199,22 @@ Backend → *Persistent Storage* → mountaj
 
 ## 6. Lokalno pokretanje
 
+Compose koristi dvije **eksterne** mreže (`db_net`, `redis_net`), pa ih
+lokalno treba jednom kreirati (na Coolify hostu već postoje):
+
 ```bash
-cp .env.example .env          # popuni DATABASE_URL + JWT tajne
-docker compose up --build     # MinIO + backend + frontend
+docker network create db_net    2>/dev/null || true
+docker network create redis_net 2>/dev/null || true
+
+cp .env.example .env             # popuni DATABASE_URL + JWT tajne
+docker compose up --build        # MinIO + backend + frontend
+```
+
+Servisi ne objavljuju host portove (Coolify blue/green). Za lokalni pregled
+koristi priloženi override `docker-compose.local-ports.yml`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up --build
 
 # frontend   → http://localhost:5173
 # API        → http://localhost:3000/api/health
@@ -201,13 +238,13 @@ cd frontend && npm ci && npm run dev
 | `backend-e2e` | PostgreSQL servis → migracije → seed → `npm run test:e2e` |
 | `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` |
 | `web-e2e` | stvarni backend (`/api/health`) + buildani frontend kroz `vite preview` → Playwright |
-| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
+| `docker` | root Dockerfile-ovi identični kopijama → `docker compose config` (+ guard: **nema objavljenih host portova**, eksterne mreže deklarisane) → build oba image-a → **MinIO iz compose-a** (pull + `healthy` healthcheck) → **Coolify emulacija** (`--build-arg NODE_ENV=production` + provjera da `vite` postoji u builder stage-u) → **smoke test kontejnera** (migracije + `/api/health`, nginx + proxy) |
 
 Ako je job `docker` zelen, Coolify build prolazi.
 
 ---
 
-## 8. Česte greške pri Coolify buildu
+## 8. Česte greške (build i deploy)
 
 ### `sh: vite: not found` (frontend) — `NODE_ENV=production` u buildu
 
@@ -268,6 +305,54 @@ docker rm -f minio-test
 
 > Ako u Coolify env-u već imaš `MINIO_IMAGE=minio/minio:latest` (stara
 > vrijednost), obriši je ili zamijeni — inače override vraća mrtvu referencu.
+
+### `failed to bind host port 0.0.0.0:5173/tcp: address already in use`
+
+Coolify deploya **blue/green**: novi kontejner se digne prije nego što se stari
+ugasi, pa fiksni host port (`ports:`) ne može biti bindan dva puta.
+
+Rješenje je već u repo-u — servisi koriste samo `expose`:
+
+```yaml
+    expose:
+      - "80"
+```
+
+Coolify proxy dolazi do kontejnera preko Docker mreže, pa host port nije
+potreban. Ako i dalje vidiš grešku, na hostu provjeri ko drži port i ukloni
+stare kontejnere:
+
+```bash
+docker ps --format '{{.Names}}\t{{.Ports}}' | grep -E '5173|3000|9001'
+docker compose -p <coolify-project-name> down --remove-orphans
+```
+
+> Ako ti **treba** direktan pristup preko host porta (npr. mobilna aplikacija
+> na `IP:3000`), dodaj `ports` u compose, ali računaj na kratak prekid rada pri
+> svakom deployu (old + new kontejner ne mogu dijeliti isti port).
+
+### Domena vraća `502 Bad Gateway` nakon uklanjanja host portova
+
+Servis mora biti dostupan Coolify proxyju preko Docker mreže:
+
+* u Coolifyju provjeri da servis ima **domenu** i tačan **port**
+  (frontend `80`, backend `3000`, MinIO konzola `9001`),
+* ako si mreže definisao ručno, provjeri da Coolify može dodati svoju proxy
+  mrežu (`docker network ls`, obično `coolify`) i da kontejner nije
+  izolovan (`docker inspect <kontejner> --format '{{json .NetworkSettings.Networks}}'`).
+
+### `network db_net declared as external, but could not be found`
+
+Compose očekuje **postojeće** mreže za bazu i Redis:
+
+```bash
+docker network create db_net
+docker network create redis_net
+```
+
+Provjeri i da li se `DATABASE_URL` hostname razrješava unutar `db_net`
+(`docker run --rm --network db_net nicolaka/netshoot nslookup <db-host>`), a
+`REDIS_HOST` unutar `redis_net`.
 
 ### Frontend se učita, ali svi API pozivi padaju (`ERR_NAME_NOT_RESOLVED`)
 

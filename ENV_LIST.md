@@ -64,8 +64,7 @@ postgresql://gradix_user:gradix_password@db:5432/gradix?sslmode=verify-ca&sslroo
 |---|---|---|---|---|
 | `MINIO_ENDPOINT` | `string` | ✅ | URL ili hostname MinIO servera (npr. `minio` ili `localhost`) | `.env.coolify`, `docker-compose.yml` (`minio` servis), Coolify `MINIO_ENDPOINT` |
 | `MINIO_PORT` | `int` | ✅ | **Interni** port MinIO API-ja (`9000`, fiksan u compose-u) | `.env.coolify`, `.env.example`, Coolify `MINIO_PORT` |
-| `MINIO_API_PORT` | `int` | ❌ | Host port za MinIO API (default `9000`) | `.env.example`, Coolify `MINIO_API_PORT` |
-| `MINIO_CONSOLE_PORT` | `int` | ❌ | Host port za MinIO konzolu (default `9001`) | `.env.example`, Coolify `MINIO_CONSOLE_PORT` |
+| `MINIO_IMAGE` | `string` | ❌ | Registry referenca MinIO image-a (default `ghcr.io/coollabsio/minio:latest`) | `.env.example`, Coolify `MINIO_IMAGE` |
 | `MINIO_USE_SSL` | `bool` (`"true"` / `"false"`) | ✅ | Koristi li MinIO SSL | `.env.coolify`, `docker-compose.yml` (`minio` servis), Coolify `MINIO_USE_SSL` |
 | `MINIO_ACCESS_KEY` | `string` | ✅ | MinIO root korisnik (`minioadmin` za dev) | `.env.coolify`, `docker-compose.yml` (`MINIO_ROOT_USER`), Coolify `MINIO_ACCESS_KEY` |
 | `MINIO_SECRET_KEY` | `string` | ✅ | MinIO root lozinka (`minioadmin` za dev — PROMIJENITI!) | `.env.coolify` (NE commitovati!), `docker-compose.yml` (`MINIO_ROOT_PASSWORD`), Coolify `MINIO_SECRET_KEY` |
@@ -118,7 +117,7 @@ host putanja u compose fajlu).
 |---|---|---|---|---|
 | `VITE_API_URL` | `string` | ❌ | Apsolutni URL backenda. **Vite ga čita u build fazi** (`docker build --build-arg`), ne u runtime-u. | `frontend/.env`, Coolify *Build Arguments* |
 | `BACKEND_URL` | `string` | ❌ | URL backenda za nginx proxy (`/api`, `/socket.io`) — koristi se u runtime-u | `docker-compose.yml` (`frontend` servis), Coolify `BACKEND_URL` |
-| `FRONTEND_PORT` | `int` | ❌ | Host port za nginx (kontejner uvijek sluša na `80`) | `.env.example`, Coolify `FRONTEND_PORT` |
+| ~~`FRONTEND_PORT`~~ | — | — | Uklonjeno: servisi ne objavljuju host portove (Coolify blue/green), koristi se `expose` + Coolify domena | — |
 
 > **Preporučeno:** ostavi `VITE_API_URL` prazno — tada frontend koristi
 > relativne `/api` i `/socket.io` pozive, a nginx ih proksira na
@@ -154,7 +153,7 @@ Kompletno uputstvo (uključujući dvije varijante deploya) je u
 1. **Novi resurs → Docker Compose**, `docker-compose.yml` iz root-a repoa.
 2. **Environment Variables** (obavezno): `DATABASE_URL`,
    `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`. Preporučeno: `CORS_ORIGIN`,
-   `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `FRONTEND_PORT`, `BACKEND_PORT`.
+   `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_IMAGE`.
 3. **Domena** → frontend servis, port **80** (nginx).
    Za direktan API pristup (mobilna aplikacija) dodaj domenu na backend,
    port **3000**, i tu domenu unesi u `CORS_ORIGIN`.

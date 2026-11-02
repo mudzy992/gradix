@@ -332,7 +332,22 @@ jobs:
           DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
           JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
           JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          # Coolify deploya blue/green (stari i novi kontejner kratko rade
+          # paralelno) — fiksni host port tada pada sa
+          # "address already in use". Servisi zato koriste samo `expose`.
+          published=$(docker compose config --format json \
+            | jq '[.services[] | (.ports // []) | length] | add // 0')
+          echo "Objavljenih host portova: $published"
+          if [ "$published" != "0" ]; then
+            echo "::error::Compose objavljuje fiksne host portove — Coolify deploy će pasti sa 'address already in use'. Koristi 'expose'."
+            exit 1
+          fi
+          # Eksterne mreže iz compose-a moraju biti deklarisane kao external
+          networks=$(docker compose config --format json \
+            | jq -r '[.networks | to_entries[] | select(.value.external == true) | .key] | join(", ")')
+          echo "Eksterne mreže: $networks"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -374,6 +389,9 @@ jobs:
             exit 1
           fi
           echo "MinIO image: $image"
+          # Eksterne mreže postoje na produkcijskom hostu; u CI-ju ih kreiramo.
+          docker network create db_net >/dev/null 2>&1 || true
+          docker network create redis_net >/dev/null 2>&1 || true
           if ! docker compose up -d minio 2>&1 | tail -20; then
             echo "::error::docker compose up minio nije uspio za '$image'"
             exit 1

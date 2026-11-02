@@ -1,0 +1,23 @@
+# Lokalni override — objavljuje host portove za razvoj/pregled.
+#
+# Na Coolifyju se NE koristi: tamo Coolify proxy dolazi do kontejnera preko
+# Docker mreže, a fiksni host portovi padaju pri blue/green deployu
+# ("address already in use"). Vidi DEPLOYMENT_COOLIFY.md §6.
+#
+# Upotreba:
+#   docker network create db_net redis_net   (jednom)
+#   docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up --build
+
+services:
+  minio:
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web konzola
+
+  backend:
+    ports:
+      - "3000:3000"   # API
+
+  frontend:
+    ports:
+      - "5173:80"     # nginx

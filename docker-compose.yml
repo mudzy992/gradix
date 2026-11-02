@@ -6,15 +6,25 @@
 #   frontend  — Vite/React build serviran kroz nginx (port 80)
 #
 # EKSTERNO (ne pokreće se ovim compose fajlom):
-#   PostgreSQL — obavezan `DATABASE_URL`
-#   Redis      — opcionalan (v1 ne koristi queue)
+#   PostgreSQL — u mreži `db_net` (obavezan `DATABASE_URL`)
+#   Redis      — u mreži `redis_net` (opcionalno, v1 ne koristi queue)
+#
+# MREŽE:
+#   gradix-net  — interna mreža projekta (frontend ↔ backend ↔ minio)
+#   db_net      — EKSTERNA mreža u kojoj živi PostgreSQL (external: true)
+#   redis_net   — EKSTERNA mreža u kojoj živi Redis (external: true)
 #
 # Obavezne env varijable (Coolify → Environment Variables):
 #   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 #   (vidi .env.example / DEPLOYMENT_COOLIFY.md)
 #
-# Napomena: compose koristi `:?` za obavezne tajne — deploy pada odmah sa
-# jasnom porukom umjesto da aplikacija starta sa praznim JWT tajnama.
+# VAŽNO: servisi NE objavljuju fiksne host portove (`ports`), nego koriste
+# `expose`. Coolify deploya blue/green (stari i novi kontejner kratko rade
+# paralelno), pa fiksni host port padne sa:
+#   "failed to bind host port 0.0.0.0:5173/tcp: address already in use"
+# Coolify proxy dolazi do kontejnera preko Docker mreže, pa host portovi nisu
+# potrebni. Ako ti ipak treba direktan pristup (npr. mobilna aplikacija na
+# IP:3000), vidi DEPLOYMENT_COOLIFY.md §6.
 
 services:
   minio:
@@ -31,10 +41,10 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-    ports:
-      # Host portovi su konfigurabilni — interni portovi su fiksni (9000/9001).
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    expose:
+      # S3 API (backend) i web konzola (opciono — domen dodijeli u Coolifyju)
+      - "9000"
+      - "9001"
     volumes:
       - minio_data:/data
     networks:
@@ -56,7 +66,7 @@ services:
       PORT: 3000
       # Migracije se pokreću pri startu kontejnera (RUN_MIGRATIONS=false ih isključuje)
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
-      # EKSTERNA PostgreSQL baza (Coolify / Docker / host)
+      # EKSTERNA PostgreSQL baza — hostname mora biti razrješiv u mreži `db_net`
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL je obavezan (postgresql://user:pass@host:5432/db)}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET je obavezan (min 32 znaka)}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET je obavezan (min 32 znaka)}
@@ -67,16 +77,16 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-gradix}
-      # CORS — za nginx-proxy (frontend na istoj domeni) postavite javni URL
+      # CORS — javni URL frontenda (prazno = dozvoljeni svi origin-i)
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
-      # EKSTERNI Redis — opcionalno (v1 ne koristi queue radnike)
+      # EKSTERNI Redis (mreža `redis_net`) — opcionalno, v1 ne koristi queue
       REDIS_HOST: ${REDIS_HOST:-}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PREFIX: ${REDIS_PREFIX:-gradix:queue:}
-    ports:
-      - "${BACKEND_PORT:-3000}:3000"
+    expose:
+      - "3000"
     depends_on:
       # Backend sam ponavlja konekciju na MinIO (retry u MinioService),
       # pa healthcheck MinIO-a nije uslov za start.
@@ -84,6 +94,9 @@ services:
         condition: service_started
     networks:
       - gradix-net
+      # Eksterne mreže: baza i Redis
+      - db_net
+      - redis_net
     healthcheck:
       test:
         - CMD
@@ -106,8 +119,8 @@ services:
     environment:
       # nginx prosljeđuje /api i /socket.io na ovaj URL (interno ime servisa)
       BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
-    ports:
-      - "${FRONTEND_PORT:-5173}:80"
+    expose:
+      - "80"
     depends_on:
       backend:
         condition: service_started
@@ -126,3 +139,10 @@ volumes:
 networks:
   gradix-net:
     driver: bridge
+  # Postojeće mreže na hostu (Docker / Coolify) — moraju postojati prije deploya:
+  #   docker network create db_net     (ako već ne postoji)
+  #   docker network create redis_net
+  db_net:
+    external: true
+  redis_net:
+    external: true
