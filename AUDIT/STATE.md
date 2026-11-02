@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-02` (auth: rotacija + retencija + D-029, uklonjen `JWT_REFRESH_SECRET`) |
-| CI | ⏳ `feat(auth) … [BE-02]` — run se upisuje nakon `gh run watch` |
-| Zadnji potvrđeno zelen run | [41524479730](https://github.com/mudzy992/gradix/actions/runs/41524479730) (BE-01/2) ✅ 6/6 · prije: 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41528279151](https://github.com/mudzy992/gradix/actions/runs/41528279151) — **6/6** zelen za `feat(auth) … [BE-02]` |
+| Zadnji potvrđeno zelen run | [41528279151](https://github.com/mudzy992/gradix/actions/runs/41528279151) (BE-02) ✅ 6/6 · prije: 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
