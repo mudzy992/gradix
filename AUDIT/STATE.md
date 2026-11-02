@@ -8,14 +8,14 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 1.2 — penzionisanje stare dokumentacije ✅ završena.** Sljedeće: FAZA 1.3 (nova dokumentacija).
+**FAZA 1 ✅ završena (1.1 + 1.2 + 1.3).** Stanje: **KAPIJA 1** — čekam odobrenje vlasnika za FAZU 2.
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
 | Zadnji commit | `e531ca2` |
-| CI | ✅ run 41498842533 (5/5) za `e531ca2`; novi run za ovaj commit u toku |
+| CI | push 3 commita (`2250924`, `c628249`, ovaj) — run se upisuje nakon provjere |
 | Zadnji potvrđeno zelen run | [41498842533](https://github.com/mudzy992/gradix/actions/runs/41498842533) (`e531ca2`) ✅ |
 | Sljedeća kapija | **KAPIJA 1** (nakon FAZE 1) |
 
@@ -43,11 +43,22 @@
 - Reference na penzionisane dokumente u `docker-compose*.yml`, Dockerfile-ovima, entrypointu i
   `tsconfig.build.json` preusmjerene na `docs/INFRASTRUCTURE.md`.
 
+### 2026-11-02 — FAZA 1.3 (`A-03`)
+- Nova dokumentacija (jedini izvor istine): `docs/README.md` (indeks) + `ARCHITECTURE.md`,
+  `INFRASTRUCTURE.md`, `BACKEND.md`, `FRONTEND.md`, `MOBILE.md`, `TESTING.md`, `CI.md`,
+  `CONVENTIONS.md`, `DECISIONS.md` (D-001…D-011 odobrene + D-020…D-027 implementirane).
+- U `DECISIONS.md` zapisani svi odgovori vlasnika na P1–P10 (PostgreSQL konačan, penzionisanje
+  dokumenata, mobile bez objave, Maestro, test piramida, zavisnosti uz zapis, bez staginga,
+  nova paleta + WCAG 2.2 AA, produkcijski seed = 1 platform admin, brisanje MySQL backup-a).
+- Provjereni relativni linkovi u `docs/*.md` i `AUDIT/*.md` (13 fajlova, 0 pokvarenih).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. FAZA 1.3 — nova dokumentacija (9 dokumenata: ARCHITECTURE, INFRASTRUCTURE, BACKEND,
-   FRONTEND, MOBILE, TESTING, CI, CONVENTIONS, DECISIONS).
-2. Push + zelen CI → **KAPIJA 1** (izvještaj + čekanje odobrenja).
+1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
+2. **KAPIJA 1** — izvještaj vlasniku: šta je urađeno, nalazi, nova dokumentacija, otvorena
+   pitanja. **Stojim dok ne dobijem odobrenje.**
+3. Nakon odobrenja: **FAZA 2** — `AUDIT/02_MASTER_AUDIT_PLAN.md` (segmenti, kriteriji,
+   redoslijed, alati) → **KAPIJA 2** prije izvršavanja segmenata.
 
 ## Otvorena pitanja / blokatori
 
