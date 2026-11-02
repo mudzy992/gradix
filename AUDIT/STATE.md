@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-04` (firme/podešavanja/audit: atomski PUT, audit best-effort D-031, tenant helper) |
-| CI | ⏳ `refactor(settings) … [BE-04]` — run se upisuje nakon `gh run watch` |
-| Zadnji potvrđeno zelen run | [41531577934](https://github.com/mudzy992/gradix/actions/runs/41531577934) (BE-03 STATE) ✅ 6/6 · prije: 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41534087012](https://github.com/mudzy992/gradix/actions/runs/41534087012) — **6/6** zelen za `refactor(settings) … [BE-04]` |
+| Zadnji potvrđeno zelen run | [41534087012](https://github.com/mudzy992/gradix/actions/runs/41534087012) (BE-04) ✅ 6/6 · prije: 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -210,7 +210,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `NaN`/`Infinity` više ne prolaze kao brojevi.
 - **Testovi:** **102/102** lokalno (16 novih). Matrica **476 fajlova / 119 pregledano (25,0 %)**.
 - Prvi run (`41533565788`) pao na **lintu** (`no-unsafe-assignment` u `audit.service.spec.ts` —
-  `jest.Mock` generici); spec prepisan bez vlastitog tipa i bez cast-ova, `Logger.prototype` spy.
+  `jest.Mock` generici); spec prepisan bez vlastitog tipa i bez cast-ova, `Logger.prototype` spy
+  → **`41534087012` ✅ 6/6**.
 - **Za vlasnika:** F-BE-04-10 (nema PostgreSQL RLS) i D-031 dug (transakcioni audit za finansije).
 
 ## Šta je sljedeće (tačan sljedeći korak)
