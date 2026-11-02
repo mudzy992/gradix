@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { PartnersService } from './partners.service';
-import { CreatePartnerDto, PartnerQueryDto, PatchPartnerDto } from './partners.dto';
+import {
+  CreatePartnerDto,
+  PartnerQueryDto,
+  PatchPartnerDto,
+} from './partners.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
@@ -32,7 +44,11 @@ export class PartnersController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.ERP_WRITE)
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchPartnerDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchPartnerDto,
+  ) {
     return this.partners.patch(actor, id, dto);
   }
 }

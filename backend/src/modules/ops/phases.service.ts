@@ -3,7 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
-import { assertPlannedRange, parseOptionalDate } from '../../common/scope/ops-dates';
+import {
+  assertPlannedRange,
+  parseOptionalDate,
+} from '../../common/scope/ops-dates';
 import { ProjectAccessService } from './project-access.service';
 import { CreatePhaseDto, PatchPhaseDto } from './projects.dto';
 
@@ -44,16 +47,23 @@ export class PhasesService {
     });
   }
 
-  async patch(actor: AuthUser, projectId: string, id: string, dto: PatchPhaseDto) {
+  async patch(
+    actor: AuthUser,
+    projectId: string,
+    id: string,
+    dto: PatchPhaseDto,
+  ) {
     const project = await this.access.getVisibleProject(actor, projectId);
     await this.access.assertScopedWrite(actor, project);
     const phase = await this.requirePhase(projectId, id);
-    const plannedStart = dto.plannedStart !== undefined
-      ? parseOptionalDate(dto.plannedStart) ?? null
-      : phase.plannedStart;
-    const plannedEnd = dto.plannedEnd !== undefined
-      ? parseOptionalDate(dto.plannedEnd) ?? null
-      : phase.plannedEnd;
+    const plannedStart =
+      dto.plannedStart !== undefined
+        ? (parseOptionalDate(dto.plannedStart) ?? null)
+        : phase.plannedStart;
+    const plannedEnd =
+      dto.plannedEnd !== undefined
+        ? (parseOptionalDate(dto.plannedEnd) ?? null)
+        : phase.plannedEnd;
     assertPlannedRange(plannedStart, plannedEnd);
     return this.prisma.projectPhase.update({
       where: { id },
@@ -78,7 +88,9 @@ export class PhasesService {
   }
 
   private async requirePhase(projectId: string, id: string) {
-    const phase = await this.prisma.projectPhase.findFirst({ where: { id, projectId } });
+    const phase = await this.prisma.projectPhase.findFirst({
+      where: { id, projectId },
+    });
     if (!phase) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Phase not found', 404);
     }

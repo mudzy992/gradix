@@ -11,7 +11,12 @@ import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
-import { CreateTenderDto, PatchTenderDto, TenderAttachmentDto, TenderListQueryDto } from './tenders.dto';
+import {
+  CreateTenderDto,
+  PatchTenderDto,
+  TenderAttachmentDto,
+  TenderListQueryDto,
+} from './tenders.dto';
 import { assertTenderTransition } from './tender-status';
 import { serializeTender } from './serialize-tender';
 
@@ -42,7 +47,12 @@ export class TendersService {
       }),
       this.prisma.tender.count({ where }),
     ]);
-    return listResult(rows.map((row) => serializeTender(row, avg)), total, page, limit);
+    return listResult(
+      rows.map((row) => serializeTender(row, avg)),
+      total,
+      page,
+      limit,
+    );
   }
 
   async getById(actor: AuthUser, id: string) {
@@ -85,7 +95,10 @@ export class TendersService {
           ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue')
           : undefined,
         status: dto.status,
-        submittedAt: dto.status === 'SUBMITTED' && !row.submittedAt ? new Date() : undefined,
+        submittedAt:
+          dto.status === 'SUBMITTED' && !row.submittedAt
+            ? new Date()
+            : undefined,
       },
       include: { attachments: true },
     });
@@ -106,7 +119,11 @@ export class TendersService {
     const companyId = requireCompany(actor);
     const tender = await this.load(companyId, id);
     if (tender.status !== 'WON' || tender.convertedProjectId) {
-      throw new AppError(ERROR_CODES.TENDER_INVALID_STATUS, 'Convert requires WON', 409);
+      throw new AppError(
+        ERROR_CODES.TENDER_INVALID_STATUS,
+        'Convert requires WON',
+        409,
+      );
     }
     const radius = await this.defaultRadius(companyId);
     const project = await this.prisma.project.create({
@@ -122,7 +139,12 @@ export class TendersService {
     });
     if (hasRole(actor, 'PROJECT_MANAGER')) {
       await this.prisma.projectAssignment.create({
-        data: { companyId, projectId: project.id, userId: actor.id, role: 'PM' },
+        data: {
+          companyId,
+          projectId: project.id,
+          userId: actor.id,
+          role: 'PM',
+        },
       });
       this.realtime.joinProject(actor.id, project.id);
     }

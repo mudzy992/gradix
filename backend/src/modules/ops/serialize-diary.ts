@@ -1,4 +1,9 @@
-import { DiaryEntry, DiaryPhoto, Incident, IncidentPhoto } from '../../../generated/client';
+import {
+  DiaryEntry,
+  DiaryPhoto,
+  Incident,
+  IncidentPhoto,
+} from '../../../generated/client';
 import { dateOnlyIso } from '../../common/scope/company-tz';
 
 export function serializeDiaryPhoto(row: DiaryPhoto) {
@@ -33,7 +38,9 @@ export function serializeDiary(row: DiaryEntry & { photos?: DiaryPhoto[] }) {
   };
 }
 
-export function serializeIncident(row: Incident & { photos?: IncidentPhoto[] }) {
+export function serializeIncident(
+  row: Incident & { photos?: IncidentPhoto[] },
+) {
   return {
     id: row.id,
     companyId: row.companyId,
@@ -47,6 +54,9 @@ export function serializeIncident(row: Incident & { photos?: IncidentPhoto[] }) 
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    photos: (row.photos ?? []).map((photo) => ({ id: photo.id, path: photo.path })),
+    photos: (row.photos ?? []).map((photo) => ({
+      id: photo.id,
+      path: photo.path,
+    })),
   };
 }

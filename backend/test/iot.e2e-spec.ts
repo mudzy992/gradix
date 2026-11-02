@@ -144,7 +144,9 @@ describe('Phase 11 IoT fleet (e2e)', () => {
       .patch(`/api/machines/${machineId}/devices/${deviceId}`)
       .set(auth(admin))
       .send({ isActive: true });
-    const dead = await request(app.getHttpServer()).delete(`/api/machines/${machineId}`).set(auth(admin));
+    const dead = await request(app.getHttpServer())
+      .delete(`/api/machines/${machineId}`)
+      .set(auth(admin));
     expect(dead.status).toBe(200);
     const decommissioned = await request(app.getHttpServer())
       .post('/api/iot/gps')

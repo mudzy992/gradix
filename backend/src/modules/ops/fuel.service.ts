@@ -5,10 +5,16 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
-import { parseNonNegativeDecimal, parsePositiveDecimal } from '../../common/utils/decimal-input';
+import {
+  parseNonNegativeDecimal,
+  parsePositiveDecimal,
+} from '../../common/utils/decimal-input';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
-import { assertNotOnHold, assertProjectWritable } from '../../common/scope/project-lock';
+import {
+  assertNotOnHold,
+  assertProjectWritable,
+} from '../../common/scope/project-lock';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { fuelTotalCost, serializeFuel } from './serialize-fleet';
@@ -33,7 +39,7 @@ export class FuelService {
       companyId,
       ...(query.projectId ? { projectId: query.projectId } : {}),
       ...(query.machineId ? { machineId: query.machineId } : {}),
-      ...(await this.scopeWhere(actor)),
+      ...this.scopeWhere(actor),
     };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.fuelEntry.findMany({
@@ -56,7 +62,11 @@ export class FuelService {
     const companyId = requireCompany(actor);
     const machine = await this.requireMachine(companyId, dto.machineId);
     await this.assertCanFuelMachine(actor, machine.id);
-    const projectId = await this.resolveProjectId(actor, machine.id, dto.projectId);
+    const projectId = await this.resolveProjectId(
+      actor,
+      machine.id,
+      dto.projectId,
+    );
     if (dto.receiptPath) {
       assertStoragePath(dto.receiptPath, companyId);
     }
@@ -93,9 +103,15 @@ export class FuelService {
     const row = await this.loadVisible(actor, id);
     this.assertFuelWrite(actor);
     if (row.isSynced) {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Synced fuel cannot be edited', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Synced fuel cannot be edited',
+        409,
+      );
     }
-    const liters = dto.liters ? parsePositiveDecimal(dto.liters, 'liters') : row.liters;
+    const liters = dto.liters
+      ? parsePositiveDecimal(dto.liters, 'liters')
+      : row.liters;
     const unitPrice = dto.unitPrice
       ? parseNonNegativeDecimal(dto.unitPrice, 'unitPrice')
       : row.unitPrice;
@@ -117,7 +133,11 @@ export class FuelService {
     const row = await this.loadVisible(actor, id);
     this.assertFuelWrite(actor);
     if (row.isSynced) {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Synced fuel cannot be deleted', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Synced fuel cannot be deleted',
+        409,
+      );
     }
     await this.prisma.fuelEntry.delete({ where: { id: row.id } });
     if (row.projectId) {
@@ -134,13 +154,21 @@ export class FuelService {
       where: { machineId, endedAt: null },
     });
     if (active && !projectId) {
-      throw new AppError(ERROR_CODES.FUEL_PROJECT_REQUIRED, 'projectId required', 400);
+      throw new AppError(
+        ERROR_CODES.FUEL_PROJECT_REQUIRED,
+        'projectId required',
+        400,
+      );
     }
     if (!projectId) {
       return null;
     }
     if (active && active.projectId !== projectId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'projectId must match assignment', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'projectId must match assignment',
+        400,
+      );
     }
     const project = await this.access.getVisibleProject(actor, projectId);
     assertProjectWritable(project);
@@ -149,17 +177,30 @@ export class FuelService {
   }
 
   private async requireMachine(companyId: string, machineId: string) {
-    const machine = await this.prisma.machine.findFirst({ where: { id: machineId, companyId } });
+    const machine = await this.prisma.machine.findFirst({
+      where: { id: machineId, companyId },
+    });
     if (!machine) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid machineId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid machineId',
+        400,
+      );
     }
     if (machine.status === 'DECOMMISSIONED') {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Machine is decommissioned',
+        409,
+      );
     }
     return machine;
   }
 
-  private async assertCanFuelMachine(actor: AuthUser, machineId: string): Promise<void> {
+  private async assertCanFuelMachine(
+    actor: AuthUser,
+    machineId: string,
+  ): Promise<void> {
     if (isCompanyWide(actor) || hasRole(actor, 'SITE_SUPERVISOR')) {
       return;
     }
@@ -173,14 +214,22 @@ export class FuelService {
       where: { machineId, driverId: actor.id },
     });
     if (!driven) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Not allowed on this machine', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Not allowed on this machine',
+        403,
+      );
     }
   }
 
   private async loadVisible(actor: AuthUser, id: string) {
     this.assertFuelAccess(actor);
     const row = await this.prisma.fuelEntry.findFirst({
-      where: { id, companyId: requireCompany(actor), ...(await this.scopeWhere(actor)) },
+      where: {
+        id,
+        companyId: requireCompany(actor),
+        ...this.scopeWhere(actor),
+      },
     });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Fuel entry not found', 404);
@@ -188,15 +237,21 @@ export class FuelService {
     return row;
   }
 
-  private async scopeWhere(actor: AuthUser): Promise<Prisma.FuelEntryWhereInput> {
-    if (isCompanyWide(actor) || hasRole(actor, 'SITE_SUPERVISOR', 'PROJECT_MANAGER')) {
+  private scopeWhere(actor: AuthUser): Prisma.FuelEntryWhereInput {
+    if (
+      isCompanyWide(actor) ||
+      hasRole(actor, 'SITE_SUPERVISOR', 'PROJECT_MANAGER')
+    ) {
       return {};
     }
     return { userId: actor.id };
   }
 
   private assertFuelAccess(actor: AuthUser): void {
-    if (!actor.permissions.includes('fuel.write') && !actor.permissions.includes('fuel.reports')) {
+    if (
+      !actor.permissions.includes('fuel.write') &&
+      !actor.permissions.includes('fuel.reports')
+    ) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'Fuel access not allowed', 403);
     }
   }

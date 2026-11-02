@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import {
   CreateProjectDto,
@@ -42,7 +52,11 @@ export class ProjectsController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.PROJECTS_WRITE)
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchProjectDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchProjectDto,
+  ) {
     return this.projects.patch(actor, id, dto);
   }
 

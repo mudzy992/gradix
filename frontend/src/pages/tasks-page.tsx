@@ -15,7 +15,9 @@ const COLUMNS = ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'COMPLETED'] as
 export function TasksPage() {
   const { t } = useTranslation()
   const tenantReady = useTenantReady()
-  const canDispatch = useHasPermission('tasks.write') || useHasPermission('tasks.dispatch')
+  const canWriteTasks = useHasPermission('tasks.write')
+  const canDispatchTasks = useHasPermission('tasks.dispatch')
+  const canDispatch = canWriteTasks || canDispatchTasks
   const client = useQueryClient()
   const [open, setOpen] = useState(false)
   const query = useQuery({

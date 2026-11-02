@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { createRefreshToken, hashRefreshToken } from '../../common/utils/password';
+import {
+  createRefreshToken,
+  hashRefreshToken,
+} from '../../common/utils/password';
 import { REFRESH_DAYS } from '../../common/constants';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';

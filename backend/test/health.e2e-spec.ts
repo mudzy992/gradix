@@ -19,7 +19,7 @@ describe('Health (e2e)', () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.data.process).toBe('ok');
-    expect(response.body.data.mysql).toBe('ok');
+    expect(response.body.data.postgres).toBe('ok');
   });
 
   it('Swagger /api/docs', async () => {

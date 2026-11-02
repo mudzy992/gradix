@@ -15,7 +15,8 @@ describe('Projects (e2e)', () => {
     app = await createTestApp();
     adminToken = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     pmToken = (await login(app, 'pm@gradix.local')).body.data.accessToken;
-    workerToken = (await login(app, 'worker@gradix.local')).body.data.accessToken;
+    workerToken = (await login(app, 'worker@gradix.local')).body.data
+      .accessToken;
   });
 
   afterAll(async () => {
@@ -42,18 +43,29 @@ describe('Projects (e2e)', () => {
       .post('/api/auth/change-password')
       .set(auth(mechLogin.body.data.accessToken as string))
       .send({ currentPassword: temp, newPassword: 'MechanicPass1' });
-    const mechAfter = await login(app, mechanic.body.data.email, 'MechanicPass1');
+    const mechAfter = await login(
+      app,
+      mechanic.body.data.email,
+      'MechanicPass1',
+    );
     const mechList = await request(app.getHttpServer())
       .get('/api/projects')
       .set(auth(mechAfter.body.data.accessToken as string));
     expect(mechList.status).toBe(403);
-    const listed = await request(app.getHttpServer()).get('/api/projects').set(auth(pmToken));
+    const listed = await request(app.getHttpServer())
+      .get('/api/projects')
+      .set(auth(pmToken));
     expect(listed.status).toBe(200);
     expect(listed.body.data.length).toBeGreaterThan(0);
-    demoProjectId = listed.body.data.find((row: { code: string | null }) => row.code === 'DEMO-1')
-      .id as string;
-    const adminList = await request(app.getHttpServer()).get('/api/projects').set(auth(adminToken));
-    expect(adminList.body.data.length).toBeGreaterThanOrEqual(listed.body.data.length);
+    demoProjectId = listed.body.data.find(
+      (row: { code: string | null }) => row.code === 'DEMO-1',
+    ).id as string;
+    const adminList = await request(app.getHttpServer())
+      .get('/api/projects')
+      .set(auth(adminToken));
+    expect(adminList.body.data.length).toBeGreaterThanOrEqual(
+      listed.body.data.length,
+    );
   });
 
   it('WORKER detail hides budget; plannedEnd < start 400; geofence 0 400', async () => {

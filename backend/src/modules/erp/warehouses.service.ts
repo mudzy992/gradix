@@ -35,7 +35,11 @@ export class WarehousesService {
   async create(actor: AuthUser, dto: CreateWarehouseDto) {
     const companyId = requireCompany(actor);
     if (dto.type !== 'SITE' && dto.projectId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'projectId only allowed on SITE', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'projectId only allowed on SITE',
+        400,
+      );
     }
     if (dto.projectId) {
       const project = await this.prisma.project.findFirst({

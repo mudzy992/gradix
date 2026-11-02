@@ -1,0 +1,67 @@
+# Gradix frontend — nginx konfiguracija (envsubst template)
+#
+# `nginx:alpine` image zamjenjuje ${BACKEND_URL} stvarnom vrijednošću env
+# varijable pri startu kontejnera (samo varijable koje postoje u okruženju).
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Limit za upload fajlova (backend dozvoljava do 10 MB, ostavljamo rezervu).
+    client_max_body_size 20m;
+
+    # Sigurnosni headeri (backend šalje Helmet header-e za /api odgovore).
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # ---- API ----
+    location /api/ {
+        proxy_pass ${BACKEND_URL}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        client_max_body_size 20m;
+    }
+
+    # ---- WebSocket (Socket.IO) ----
+    location /socket.io/ {
+        proxy_pass ${BACKEND_URL}/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+    }
+
+    # ---- Buildovani asseti (hashirani nazivi) ----
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # ---- SPA fallback (react-router) ----
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # index.html se ne kešira — da deploy odmah bude vidljiv
+    location = /index.html {
+        add_header Cache-Control "no-store, must-revalidate";
+    }
+}

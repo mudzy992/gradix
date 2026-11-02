@@ -28,6 +28,7 @@ export class TimerService {
 
   async start(actor: AuthUser, dto: StartTimerDto) {
     rejectOnlineClientClock(dto);
+    await this.assertNoOpenTimer(actor, dto.machineId);
     return createTimerSession({
       prisma: this.prisma,
       access: this.access,
@@ -70,7 +71,9 @@ export class TimerService {
       data: { pausedAt: new Date() },
     });
     await syncTaskStatus(this.prisma, session.taskId);
-    const task = await this.prisma.task.findUniqueOrThrow({ where: { id: session.taskId } });
+    const task = await this.prisma.task.findUniqueOrThrow({
+      where: { id: session.taskId },
+    });
     this.realtime.emitProject(task.projectId, 'timer:paused', {
       id: session.id,
       projectId: task.projectId,
@@ -99,6 +102,42 @@ export class TimerService {
     return this.closer.closeSession(session, actor.id, 'stop');
   }
 
+  /**
+   * Invarijante za online start: jedan otvoren timer po korisniku i po mašini.
+   * (Offline sync replay namjerno prolazi kroz `createTimerSession` bez ove
+   * provjere — tamo se radi o naknadnoj rekonstrukciji već zabilježenih sesija.)
+   */
+  private async assertNoOpenTimer(
+    actor: AuthUser,
+    machineId?: string,
+  ): Promise<void> {
+    const open = await this.prisma.timerSession.findFirst({
+      where: { userId: actor.id, closedAt: null },
+      select: { id: true },
+    });
+    if (open) {
+      throw new AppError(
+        ERROR_CODES.TIMER_ALREADY_OPEN,
+        'Timer already open',
+        409,
+      );
+    }
+    if (!machineId) {
+      return;
+    }
+    const busy = await this.prisma.timerSession.findFirst({
+      where: { machineId, closedAt: null },
+      select: { id: true },
+    });
+    if (busy) {
+      throw new AppError(
+        ERROR_CODES.MACHINE_IN_USE,
+        'Machine already in use',
+        409,
+      );
+    }
+  }
+
   async me(actor: AuthUser) {
     const session = await this.prisma.timerSession.findFirst({
       where: { userId: actor.id, closedAt: null },
@@ -106,11 +145,23 @@ export class TimerService {
     if (!session) {
       return { session: null, elapsedMinutes: 0 };
     }
-    return { session, elapsedMinutes: computeElapsedMinutes(session, new Date()) };
+    return {
+      session,
+      elapsedMinutes: computeElapsedMinutes(session, new Date()),
+    };
   }
 
   async listByProject(actor: AuthUser, projectId: string) {
-    if (!hasRole(actor, 'ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN', 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
+    if (
+      !hasRole(
+        actor,
+        'ADMIN',
+        'SUPER_ADMIN',
+        'PLATFORM_ADMIN',
+        'PROJECT_MANAGER',
+        'SITE_SUPERVISOR',
+      )
+    ) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'Timer list not allowed', 403);
     }
     await this.access.getVisibleProject(actor, projectId);
@@ -121,7 +172,12 @@ export class TimerService {
 
   async findByLocalId(actor: AuthUser, deviceId: string, localId: string) {
     return this.prisma.timerSession.findFirst({
-      where: { companyId: actor.companyId ?? '', userId: actor.id, deviceId, localId },
+      where: {
+        companyId: actor.companyId ?? '',
+        userId: actor.id,
+        deviceId,
+        localId,
+      },
     });
   }
 

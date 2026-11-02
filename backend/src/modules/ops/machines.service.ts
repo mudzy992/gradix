@@ -5,7 +5,11 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
-import { canDecommission, hasRole, isCompanyWide } from '../../common/scope/ops-roles';
+import {
+  canDecommission,
+  hasRole,
+  isCompanyWide,
+} from '../../common/scope/ops-roles';
 import { normalizeMachineCode } from '../../common/scope/ops-dates';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
@@ -33,7 +37,11 @@ export class MachinesService {
       companyId,
       ...(query.status ? { status: parseMachineStatus(query.status) } : {}),
       ...(query.projectId
-        ? { assignments: { some: { projectId: query.projectId, endedAt: null } } }
+        ? {
+            assignments: {
+              some: { projectId: query.projectId, endedAt: null },
+            },
+          }
         : {}),
       ...(await this.scopeWhere(actor)),
     };
@@ -73,7 +81,8 @@ export class MachinesService {
       where: { id: machine.id },
       data: {
         name: dto.name,
-        code: dto.code !== undefined ? normalizeMachineCode(dto.code) : undefined,
+        code:
+          dto.code !== undefined ? normalizeMachineCode(dto.code) : undefined,
       },
     });
     return serializeMachine(row);
@@ -81,7 +90,11 @@ export class MachinesService {
 
   async decommission(actor: AuthUser, id: string) {
     if (!canDecommission(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Only ADMIN can decommission', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Only ADMIN can decommission',
+        403,
+      );
     }
     const machine = await this.loadWritable(actor, id);
     const row = await this.prisma.machine.update({
@@ -98,7 +111,11 @@ export class MachinesService {
   async assign(actor: AuthUser, id: string, dto: AssignMachineDto) {
     const machine = await this.loadWritable(actor, id);
     if (machine.status === 'DECOMMISSIONED') {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Machine is decommissioned',
+        409,
+      );
     }
     const project = await this.access.getVisibleProject(actor, dto.projectId);
     await this.access.assertScopedWrite(actor, project);
@@ -117,8 +134,15 @@ export class MachinesService {
       });
       return assignment;
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new AppError(ERROR_CODES.CONFLICT, 'Machine already assigned', 409);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppError(
+          ERROR_CODES.CONFLICT,
+          'Machine already assigned',
+          409,
+        );
       }
       throw error;
     }
@@ -146,7 +170,11 @@ export class MachinesService {
   private async loadReadable(actor: AuthUser, id: string) {
     this.assertFleetRead(actor);
     const machine = await this.prisma.machine.findFirst({
-      where: { id, companyId: requireCompany(actor), ...(await this.scopeWhere(actor)) },
+      where: {
+        id,
+        companyId: requireCompany(actor),
+        ...(await this.scopeWhere(actor)),
+      },
     });
     if (!machine) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Machine not found', 404);
@@ -173,11 +201,17 @@ export class MachinesService {
         select: { projectId: true },
       })
     ).map((row) => row.projectId);
-    const idle = hasRole(actor, 'PROJECT_MANAGER') ? [{ status: 'IDLE' as const }] : [];
+    const idle = hasRole(actor, 'PROJECT_MANAGER')
+      ? [{ status: 'IDLE' as const }]
+      : [];
     return {
       OR: [
         ...idle,
-        { assignments: { some: { endedAt: null, projectId: { in: projectIds } } } },
+        {
+          assignments: {
+            some: { endedAt: null, projectId: { in: projectIds } },
+          },
+        },
       ],
     };
   }

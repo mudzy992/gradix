@@ -18,7 +18,9 @@ export class QuantitiesService {
   async list(actor: AuthUser, projectId: string) {
     this.access.assertCanList(actor);
     await this.access.getVisibleProject(actor, projectId);
-    const rows = await this.prisma.quantityItem.findMany({ where: { projectId } });
+    const rows = await this.prisma.quantityItem.findMany({
+      where: { projectId },
+    });
     return rows.map((row) => this.serialize(row));
   }
 
@@ -26,7 +28,11 @@ export class QuantitiesService {
     const project = await this.access.getVisibleProject(actor, projectId);
     await this.access.assertScopedWrite(actor, project);
     if (!canWritePlannedQty(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'plannedQty write not allowed', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'plannedQty write not allowed',
+        403,
+      );
     }
     this.access.assertQtyWrite(project, false);
     await this.assertPhase(projectId, dto.phaseId);
@@ -45,19 +51,36 @@ export class QuantitiesService {
     return this.serialize(row);
   }
 
-  async patch(actor: AuthUser, projectId: string, id: string, dto: PatchQuantityDto) {
+  async patch(
+    actor: AuthUser,
+    projectId: string,
+    id: string,
+    dto: PatchQuantityDto,
+  ) {
     const project = await this.access.getVisibleProject(actor, projectId);
-    const existing = await this.prisma.quantityItem.findFirst({ where: { id, projectId } });
+    const existing = await this.prisma.quantityItem.findFirst({
+      where: { id, projectId },
+    });
     if (!existing) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Quantity not found', 404);
     }
-    const plannedTouched = dto.plannedQty !== undefined || dto.name !== undefined
-      || dto.unit !== undefined || dto.phaseId !== undefined;
+    const plannedTouched =
+      dto.plannedQty !== undefined ||
+      dto.name !== undefined ||
+      dto.unit !== undefined ||
+      dto.phaseId !== undefined;
     if (plannedTouched && !canWritePlannedQty(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'SS cannot patch planned fields', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'SS cannot patch planned fields',
+        403,
+      );
     }
     const isAdmin = hasRole(actor, 'ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN');
-    this.access.assertQtyWrite(project, isAdmin && dto.executedQty !== undefined);
+    this.access.assertQtyWrite(
+      project,
+      isAdmin && dto.executedQty !== undefined,
+    );
     await this.assertPhase(projectId, dto.phaseId);
     const row = await this.prisma.quantityItem.update({
       where: { id },
@@ -85,13 +108,22 @@ export class QuantitiesService {
     };
   }
 
-  private async assertPhase(projectId: string, phaseId?: string): Promise<void> {
+  private async assertPhase(
+    projectId: string,
+    phaseId?: string,
+  ): Promise<void> {
     if (!phaseId) {
       return;
     }
-    const phase = await this.prisma.projectPhase.findFirst({ where: { id: phaseId, projectId } });
+    const phase = await this.prisma.projectPhase.findFirst({
+      where: { id: phaseId, projectId },
+    });
     if (!phase) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'phaseId not in project', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'phaseId not in project',
+        400,
+      );
     }
   }
 }

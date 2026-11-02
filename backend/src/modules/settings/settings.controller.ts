@@ -22,7 +22,10 @@ export class SettingsController {
   @Get()
   @RequirePermissions(PERMISSIONS.SETTINGS_READ)
   list(@CurrentUser() actor: AuthUser) {
-    return this.settings.list(actor, actor.permissions.includes(PERMISSIONS.SETTINGS_WRITE));
+    return this.settings.list(
+      actor,
+      actor.permissions.includes(PERMISSIONS.SETTINGS_WRITE),
+    );
   }
 
   @TenantRoute()

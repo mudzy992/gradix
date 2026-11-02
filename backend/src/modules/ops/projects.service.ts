@@ -37,10 +37,27 @@ export class ProjectsService {
     const companyId = this.access.requireCompany(actor);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
     const archived = query.archived === 'true';
-    if (archived && !hasRole(actor, 'ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN', 'PROJECT_MANAGER')) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'archived filter not allowed', 403);
+    if (
+      archived &&
+      !hasRole(
+        actor,
+        'ADMIN',
+        'SUPER_ADMIN',
+        'PLATFORM_ADMIN',
+        'PROJECT_MANAGER',
+      )
+    ) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'archived filter not allowed',
+        403,
+      );
     }
-    const where = projectListWhere(actor, { status: query.status, q: query.q, archived });
+    const where = projectListWhere(actor, {
+      status: query.status,
+      q: query.q,
+      archived,
+    });
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.project.findMany({
         where,
@@ -51,12 +68,21 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
     void companyId;
-    return listResult(rows.map((row) => this.access.serialize(row, actor)), total, page, limit);
+    return listResult(
+      rows.map((row) => this.access.serialize(row, actor)),
+      total,
+      page,
+      limit,
+    );
   }
 
   async listPicker(actor: AuthUser) {
     if (!canPickProjects(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Project picker not allowed', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Project picker not allowed',
+        403,
+      );
     }
     const companyId = this.access.requireCompany(actor);
     const assigned = await this.prisma.projectAssignment.findMany({
@@ -90,7 +116,10 @@ export class ProjectsService {
   }
 
   async getById(actor: AuthUser, id: string) {
-    return this.access.serialize(await this.access.getVisibleProject(actor, id), actor);
+    return this.access.serialize(
+      await this.access.getVisibleProject(actor, id),
+      actor,
+    );
   }
 
   async create(actor: AuthUser, dto: CreateProjectDto) {
@@ -117,7 +146,12 @@ export class ProjectsService {
     });
     if (hasRole(actor, 'PROJECT_MANAGER')) {
       await this.prisma.projectAssignment.create({
-        data: { companyId, projectId: project.id, userId: actor.id, role: 'PM' },
+        data: {
+          companyId,
+          projectId: project.id,
+          userId: actor.id,
+          role: 'PM',
+        },
       });
       this.realtime.joinProject(actor.id, project.id);
     }
@@ -136,12 +170,14 @@ export class ProjectsService {
   async patch(actor: AuthUser, id: string, dto: PatchProjectDto) {
     const project = await this.access.getVisibleProject(actor, id);
     await this.access.assertScopedWrite(actor, project);
-    const plannedStart = dto.plannedStart !== undefined
-      ? parseOptionalDate(dto.plannedStart) ?? null
-      : project.plannedStart;
-    const plannedEnd = dto.plannedEnd !== undefined
-      ? parseOptionalDate(dto.plannedEnd) ?? null
-      : project.plannedEnd;
+    const plannedStart =
+      dto.plannedStart !== undefined
+        ? (parseOptionalDate(dto.plannedStart) ?? null)
+        : project.plannedStart;
+    const plannedEnd =
+      dto.plannedEnd !== undefined
+        ? (parseOptionalDate(dto.plannedEnd) ?? null)
+        : project.plannedEnd;
     assertPlannedRange(plannedStart, plannedEnd);
     if (dto.geofenceRadius !== undefined) {
       assertGeofenceRadius(dto.geofenceRadius);
@@ -149,7 +185,8 @@ export class ProjectsService {
     const updated = await this.prisma.project.update({
       where: { id },
       data: {
-        code: dto.code !== undefined ? normalizeProjectCode(dto.code) : undefined,
+        code:
+          dto.code !== undefined ? normalizeProjectCode(dto.code) : undefined,
         name: dto.name,
         locality: dto.locality,
         lat: dto.lat,

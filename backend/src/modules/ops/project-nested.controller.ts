@@ -1,9 +1,23 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { PhasesService } from './phases.service';
 import { AssignmentsService } from './assignments.service';
 import { DocumentsService } from './documents.service';
 import { LocationsService } from './locations.service';
-import { CreateAssignmentDto, CreateDocumentDto, CreatePhaseDto, PatchPhaseDto } from './projects.dto';
+import {
+  CreateAssignmentDto,
+  CreateDocumentDto,
+  CreatePhaseDto,
+  PatchPhaseDto,
+} from './projects.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
@@ -34,7 +48,11 @@ export class ProjectNestedController {
 
   @Post('phases')
   @RequirePermissions(PERMISSIONS.PROJECTS_WRITE)
-  createPhase(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: CreatePhaseDto) {
+  createPhase(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreatePhaseDto,
+  ) {
     return this.phases.create(actor, id, dto);
   }
 

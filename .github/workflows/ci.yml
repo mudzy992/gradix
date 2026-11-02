@@ -1,13 +1,84 @@
 name: CI
 
+# Pokreće se na main, na svim arena/* granama i na svakom PR-u.
 on:
   push:
-    branches: [arena/0874ef4b-gradix]
+    branches:
+      - main
+      - 'arena/**'
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Backend: instalacija, Prisma generate, lint, unit testovi, build
+  # ---------------------------------------------------------------------------
   backend:
+    name: Backend (lint + unit + build)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # `prisma generate` čita DATABASE_URL iz prisma.config.ts (bez konekcije)
+      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: gradix
+      MINIO_SKIP: 'true'
+      CORS_ORIGIN: http://127.0.0.1:4173
+      SEED_PASSWORD: GradixSeed1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalacija zavisnosti
+        run: npm ci --no-audit --no-fund
+
+      - name: Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: Unit testovi
+        run: npm test -- --passWithNoTests
+
+      - name: Build
+        run: npm run build
+
+      - name: Provjeri ulaznu tačku builda
+        run: test -f dist/src/main.js
+
+  # ---------------------------------------------------------------------------
+  # Backend E2E (NestJS + PostgreSQL)
+  # ---------------------------------------------------------------------------
+  backend-e2e:
+    name: Backend (e2e)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     services:
       postgres:
         image: postgres:16-alpine
@@ -23,53 +94,104 @@ jobs:
           --health-timeout=5s
           --health-retries=12
     env:
-      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?sslmode=disable
+      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
       JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
       MINIO_ENDPOINT: localhost
-      MINIO_PORT: "9000"
-      MINIO_USE_SSL: "false"
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: gradix
-      MINIO_SKIP: "true"
+      MINIO_SKIP: 'true'
       CORS_ORIGIN: http://127.0.0.1:4173
       SEED_PASSWORD: GradixSeed1
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-      - run: npx prisma db seed
-      - run: npx eslint "{src,apps,libs,test}/**/*.ts"
-      - run: npm test -- --passWithNoTests
-      - run: npm run test:e2e
-      - run: npm run build
 
+      - run: npm ci --no-audit --no-fund
+
+      - run: npx prisma generate
+
+      - name: Migracije
+        run: npx prisma migrate deploy
+
+      - name: Seed
+        run: npx prisma db seed
+
+      - name: E2E testovi
+        run: |
+          cat > /tmp/report-e2e.cjs <<'REPORT'
+          const fs = require('fs');
+          const path = '/tmp/e2e-report.json';
+          if (!fs.existsSync(path)) {
+            console.log('::error::Jest nije proizveo JSON izvještaj — provjeri prethodni korak.');
+            process.exit(1);
+          }
+          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const failed = [];
+          for (const file of report.testResults) {
+            for (const test of file.assertionResults) {
+              if (test.status === 'failed') {
+                failed.push({
+                  file: file.name.replace(`${process.cwd()}/`, ''),
+                  title: test.fullName,
+                  message: (test.failureMessages || []).join(' ').replace(/\s+/g, ' ').slice(0, 900),
+                });
+              }
+            }
+          }
+          console.log(`Ukupno testova: ${report.numTotalTests}, palo: ${failed.length}`);
+          for (const item of failed.slice(0, 10)) {
+            console.log(`::error file=${item.file}::${item.title} :: ${item.message}`);
+          }
+          process.exit(failed.length > 0 ? 1 : 0);
+          REPORT
+          node --experimental-vm-modules ./node_modules/jest/bin/jest.js \
+            --config ./test/jest-e2e.json \
+            --json --outputFile=/tmp/e2e-report.json --forceExit || true
+          node /tmp/report-e2e.cjs
+
+  # ---------------------------------------------------------------------------
+  # Frontend: lint, typecheck, build
+  # ---------------------------------------------------------------------------
   frontend:
+    name: Frontend (lint + typecheck + build)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: echo "Frontend build handled by Coolify Docker build (see Dockerfile.frontend)"
 
-  playwright:
+      - run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Build
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Web E2E (Playwright: stvarni backend + buildani frontend kroz vite preview)
+  # ---------------------------------------------------------------------------
+  web-e2e:
+    name: Web E2E (Playwright)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -86,45 +208,199 @@ jobs:
           --health-timeout=5s
           --health-retries=12
     env:
-      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?sslmode=disable
+      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
       JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
       MINIO_ENDPOINT: localhost
-      MINIO_PORT: "9000"
-      MINIO_USE_SSL: "false"
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: gradix
-      MINIO_SKIP: "true"
+      MINIO_SKIP: 'true'
       CORS_ORIGIN: http://127.0.0.1:4173
       SEED_PASSWORD: GradixSeed1
-      VITE_API_URL: http://127.0.0.1:3000
+      VITE_API_URL: ''
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:4173
       E2E_LOGIN_EMAIL: admin@gradix.local
       E2E_LOGIN_PASSWORD: GradixSeed1
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-      - name: Backend
+
+      - name: Backend — priprema baze i build
         working-directory: backend
         run: |
-          npm ci
+          npm ci --no-audit --no-fund
           npx prisma generate
           npx prisma migrate deploy
           npx prisma db seed
           npm run build
-          nohup node dist/main.js > /tmp/nest.log 2>&1 &
-      - name: Frontend
+
+      - name: Backend — start
+        working-directory: backend
+        run: |
+          nohup node dist/src/main.js > /tmp/nest.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /dev/null; then
+              echo "Backend je spreman"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend nije startao:"; cat /tmp/nest.log; exit 1
+
+      - name: Frontend — build
         working-directory: frontend
         run: |
-          npm ci
-          echo "Frontend build skipped in CI (see Dockerfile.frontend for Coolify build)"
-          npx playwright install --with-deps chromium
-          npx vite preview --host 127.0.0.1 --port 4173 &
-          npx playwright test
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Playwright — instalacija browsera
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend — preview server
+        working-directory: frontend
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 > /tmp/vite-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then
+              echo "Preview je spreman"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Vite preview nije startao:"; cat /tmp/vite-preview.log; exit 1
+
+      - name: Playwright testovi
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Logovi (na grešku)
+        if: failure()
+        run: |
+          echo "=== backend ==="; tail -100 /tmp/nest.log || true
+          echo "=== vite preview ==="; tail -50 /tmp/vite-preview.log || true
+
+      - name: Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Docker / Coolify gate — build produkcijskih slika i smoke test kontejnera.
+  # Ako je ovaj job zelen, Coolify build prolazi.
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Docker build (Coolify gate)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: gradix
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: root
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U root -d gradix"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Root Dockerfile-ovi moraju biti identični onima u app direktorijima
+        run: |
+          diff -u backend/Dockerfile Dockerfile
+          diff -u frontend/Dockerfile Dockerfile.frontend
+
+      - name: Docker Compose — validacija
+        env:
+          DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+          JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+          JWT_REFRESH_SECRET: ci-refresh-secret-min-32-characters
+        run: docker compose config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend slike
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          tags: gradix-backend:ci
+          load: true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build frontend slike
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          tags: gradix-frontend:ci
+          load: true
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Smoke test — backend kontejner (migracije + /api/health)
+        env:
+          DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+        run: |
+          docker run -d --name gradix-backend-ci --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e JWT_ACCESS_SECRET=ci-access-secret-min-32-characters \
+            -e JWT_REFRESH_SECRET=ci-refresh-secret-min-32-characters \
+            -e MINIO_SKIP=true \
+            -e MINIO_ENDPOINT=localhost \
+            -e MINIO_PORT=9000 \
+            -e MINIO_USE_SSL=false \
+            -e MINIO_ACCESS_KEY=minioadmin \
+            -e MINIO_SECRET_KEY=minioadmin \
+            -e MINIO_BUCKET=gradix \
+            -e CORS_ORIGIN=http://127.0.0.1:4173 \
+            gradix-backend:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /dev/null; then
+              echo "Backend kontejner je zdrav"
+              curl -s http://127.0.0.1:3000/api/health; echo
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Backend kontejner nije postao zdrav:"; docker logs gradix-backend-ci; exit 1
+
+      - name: Smoke test — frontend kontejner (nginx + proxy na API)
+        run: |
+          docker run -d --name gradix-frontend-ci --network host \
+            -e BACKEND_URL=http://127.0.0.1:3000 \
+            gradix-frontend:ci
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1/ > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1/ | grep -qi "<div id=\"root\"" || {
+            echo "index.html nije ispravan"; docker logs gradix-frontend-ci; exit 1;
+          }
+          echo "--- proxy /api/health kroz nginx ---"
+          curl -fsS http://127.0.0.1/api/health; echo
+
+      - name: Logovi kontejnera (na grešku)
+        if: failure()
+        run: |
+          docker logs gradix-backend-ci || true
+          docker logs gradix-frontend-ci || true
+          docker ps -a || true

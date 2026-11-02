@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateMaterialDto, PatchMaterialDto } from './fuel.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -21,7 +29,11 @@ export class MaterialsController {
   }
 
   @Patch(':id')
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchMaterialDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchMaterialDto,
+  ) {
     return this.catalog.patchMaterial(actor, id, dto);
   }
 

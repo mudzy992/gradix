@@ -41,7 +41,11 @@ describe('Users RBAC (e2e)', () => {
         currentPassword: worker.body.data.temporaryPassword,
         newPassword: 'WorkerPass1',
       });
-    const afterChange = await login(app, `worker-${suffix}@gradix.local`, 'WorkerPass1');
+    const afterChange = await login(
+      app,
+      `worker-${suffix}@gradix.local`,
+      'WorkerPass1',
+    );
     const forbidden = await request(app.getHttpServer())
       .post('/api/users')
       .set(auth(afterChange.body.data.accessToken as string))
@@ -74,7 +78,11 @@ describe('Users RBAC (e2e)', () => {
         currentPassword: combo.body.data.temporaryPassword,
         newPassword: 'ComboPass12',
       });
-    const comboAfter = await login(app, `combo-${suffix}@gradix.local`, 'ComboPass12');
+    const comboAfter = await login(
+      app,
+      `combo-${suffix}@gradix.local`,
+      'ComboPass12',
+    );
     const created = await request(app.getHttpServer())
       .post('/api/users')
       .set(auth(comboAfter.body.data.accessToken as string))
@@ -118,7 +126,11 @@ describe('Users RBAC (e2e)', () => {
         currentPassword: workerUser.body.data.temporaryPassword,
         newPassword: 'WratePass12',
       });
-    const wAfter = await login(app, `wrate-${suffix}@gradix.local`, 'WratePass12');
+    const wAfter = await login(
+      app,
+      `wrate-${suffix}@gradix.local`,
+      'WratePass12',
+    );
     const denied = await request(app.getHttpServer())
       .patch(`/api/users/${target.body.data.id}`)
       .set(auth(wAfter.body.data.accessToken as string))

@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
@@ -36,10 +42,14 @@ export class AppExceptionFilter implements ExceptionFilter {
   }
 
   private readMessage(payload: unknown): string {
-    if (typeof payload !== 'object' || payload === null || !('message' in payload)) {
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('message' in payload)
+    ) {
       return 'Request failed';
     }
-    const message = (payload as { message: unknown }).message;
+    const message = payload.message;
     if (Array.isArray(message)) {
       return message.join('; ');
     }
@@ -47,21 +57,13 @@ export class AppExceptionFilter implements ExceptionFilter {
   }
 
   private mapHttpCode(status: number): string {
-    if (status === HttpStatus.NOT_FOUND) {
-      return ERROR_CODES.NOT_FOUND;
-    }
-    if (status === HttpStatus.FORBIDDEN) {
-      return ERROR_CODES.FORBIDDEN;
-    }
-    if (status === HttpStatus.UNAUTHORIZED) {
-      return ERROR_CODES.AUTH_INVALID_CREDENTIALS;
-    }
-    if (status === HttpStatus.CONFLICT) {
-      return ERROR_CODES.CONFLICT;
-    }
-    if (status === HttpStatus.BAD_REQUEST) {
-      return ERROR_CODES.VALIDATION_FAILED;
-    }
-    return 'HTTP_ERROR';
+    const byStatus: Record<number, string> = {
+      [HttpStatus.NOT_FOUND]: ERROR_CODES.NOT_FOUND,
+      [HttpStatus.FORBIDDEN]: ERROR_CODES.FORBIDDEN,
+      [HttpStatus.UNAUTHORIZED]: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+      [HttpStatus.CONFLICT]: ERROR_CODES.CONFLICT,
+      [HttpStatus.BAD_REQUEST]: ERROR_CODES.VALIDATION_FAILED,
+    };
+    return byStatus[status] ?? 'HTTP_ERROR';
   }
 }

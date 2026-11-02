@@ -28,7 +28,10 @@ export function configureApp(app: INestApplication): void {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
-  app.enableCors({ origin: origins.length ? origins : true, credentials: true });
+  app.enableCors({
+    origin: origins.length ? origins : true,
+    credentials: true,
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -1,7 +1,23 @@
 import { Type } from 'class-transformer';
-import { Allow, IsArray, IsIn, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import {
+  Allow,
+  IsArray,
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 
-export const SYNC_ITEM_TYPES = ['TIMER', 'TRIP', 'FUEL', 'DIARY', 'PHOTO'] as const;
+export const SYNC_ITEM_TYPES = [
+  'TIMER',
+  'TRIP',
+  'FUEL',
+  'DIARY',
+  'PHOTO',
+] as const;
 export type SyncItemType = (typeof SYNC_ITEM_TYPES)[number];
 
 export class SyncPushItemDto {

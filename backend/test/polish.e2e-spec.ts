@@ -20,16 +20,24 @@ describe('Phase 7 polish (e2e)', () => {
     app = await createTestApp();
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
-    mechanic = (await login(app, 'mechanic@gradix.local')).body.data.accessToken;
-    accountant = (await login(app, 'accountant@gradix.local')).body.data.accessToken;
-    const me = await request(app.getHttpServer()).get('/api/me').set(auth(admin));
+    mechanic = (await login(app, 'mechanic@gradix.local')).body.data
+      .accessToken;
+    accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken;
+    const me = await request(app.getHttpServer())
+      .get('/api/me')
+      .set(auth(admin));
     companyId = me.body.data.company.id as string;
-    workerId = (await request(app.getHttpServer()).get('/api/me').set(auth(worker))).body.data
-      .id as string;
+    workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id as string;
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `P7 ${Date.now()}`, code: `P7${Date.now().toString().slice(-6)}` });
+      .send({
+        name: `P7 ${Date.now()}`,
+        code: `P7${Date.now().toString().slice(-6)}`,
+      });
     projectId = created.body.data.id as string;
     await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/assignments`)
@@ -138,11 +146,17 @@ describe('Phase 7 polish (e2e)', () => {
     const doc = await request(app.getHttpServer())
       .post('/api/documents/company')
       .set(auth(admin))
-      .send({ type: 'insurance', filePath: `${companyId}/ins.pdf`, expiresAt: past });
+      .send({
+        type: 'insurance',
+        filePath: `${companyId}/ins.pdf`,
+        expiresAt: past,
+      });
     expect(doc.status).toBe(201);
     const logged = await login(app, 'worker@gradix.local');
     expect(logged.status).toBe(200);
-    const open = await request(app.getHttpServer()).get('/api/timer/me').set(auth(worker));
+    const open = await request(app.getHttpServer())
+      .get('/api/timer/me')
+      .set(auth(worker));
     expect(open.status).toBe(200);
   });
 

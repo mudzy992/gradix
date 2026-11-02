@@ -49,8 +49,12 @@ describe('Phase 8 public site (e2e)', () => {
     expect(firm).toHaveProperty('tagline');
     expect(firm).toHaveProperty('logoAssetId');
     expect(firm).toHaveProperty('contact');
-    const missing = await request(app.getHttpServer()).get('/api/public/no-such-slug');
-    const foreign = await request(app.getHttpServer()).get('/api/public/other-co');
+    const missing = await request(app.getHttpServer()).get(
+      '/api/public/no-such-slug',
+    );
+    const foreign = await request(app.getHttpServer()).get(
+      '/api/public/other-co',
+    );
     expect(missing.status).toBe(404);
     expect(foreign.status).toBe(404);
     expect(missing.body.error.code).toBe('NOT_FOUND');
@@ -59,7 +63,9 @@ describe('Phase 8 public site (e2e)', () => {
   });
 
   it('isPublic=false is omitted; public project DTO has no budget/spend/coords', async () => {
-    const hidden = await request(app.getHttpServer()).get(`/api/public/${slug}/projects`);
+    const hidden = await request(app.getHttpServer()).get(
+      `/api/public/${slug}/projects`,
+    );
     expect(hidden.status).toBe(200);
     const before = hidden.body.data as { id: string }[];
     expect(before.some((row) => row.id === projectId)).toBe(false);
@@ -75,7 +81,9 @@ describe('Phase 8 public site (e2e)', () => {
       .send({ isPublic: true });
     expect(published.status).toBe(200);
     expect(published.body.data.isPublic).toBe(true);
-    const listed = await request(app.getHttpServer()).get(`/api/public/${slug}/projects`);
+    const listed = await request(app.getHttpServer()).get(
+      `/api/public/${slug}/projects`,
+    );
     const row = (listed.body.data as Record<string, unknown>[]).find(
       (item) => item.id === projectId,
     );
@@ -101,7 +109,9 @@ describe('Phase 8 public site (e2e)', () => {
       .attach('file', PNG, { filename: 'cover.png', contentType: 'image/png' });
     expect(uploaded.status).toBe(201);
     const assetId = uploaded.body.data.id as string;
-    const stream = await request(app.getHttpServer()).get(`/api/public/assets/${assetId}`);
+    const stream = await request(app.getHttpServer()).get(
+      `/api/public/assets/${assetId}`,
+    );
     expect(stream.status).toBe(200);
     expect(stream.headers['content-type']).toMatch(/image\/png/);
     expect(stream.body.length).toBeGreaterThan(0);

@@ -10,7 +10,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
-    const request = context.switchToHttp().getRequest<{ originalUrl?: string }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ originalUrl?: string }>();
     const path = request.originalUrl?.split('?')[0] ?? '';
     if (path.startsWith('/api/docs')) {
       return true;

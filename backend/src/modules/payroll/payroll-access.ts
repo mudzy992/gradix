@@ -38,7 +38,10 @@ export async function payrollProjectIds(
     return null;
   }
   const assigned = await prisma.projectAssignment.findMany({
-    where: { userId: actor.id, project: { companyId: actor.tenantCompanyId ?? '' } },
+    where: {
+      userId: actor.id,
+      project: { companyId: actor.tenantCompanyId ?? '' },
+    },
     select: { projectId: true },
   });
   return assigned.map((row) => row.projectId);
@@ -50,10 +53,18 @@ export async function assertCanDecidePayroll(
   session: { userId: string; task: { projectId: string } },
 ): Promise<void> {
   if (!canApprovePayroll(actor)) {
-    throw new AppError(ERROR_CODES.FORBIDDEN, 'Payroll approve not allowed', 403);
+    throw new AppError(
+      ERROR_CODES.FORBIDDEN,
+      'Payroll approve not allowed',
+      403,
+    );
   }
   if (!isPayrollAdmin(actor) && session.userId === actor.id) {
-    throw new AppError(ERROR_CODES.PAYROLL_SELF_APPROVE, 'Cannot approve own session', 403);
+    throw new AppError(
+      ERROR_CODES.PAYROLL_SELF_APPROVE,
+      'Cannot approve own session',
+      403,
+    );
   }
   if (isPayrollAdmin(actor)) {
     return;

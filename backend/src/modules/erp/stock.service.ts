@@ -89,7 +89,11 @@ export class StockService {
     }
     const warehouse = await this.loadWarehouse(companyId, dto.warehouseId);
     if (warehouse.type !== 'CISTERN') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'apply-stock requires CISTERN', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'apply-stock requires CISTERN',
+        400,
+      );
     }
     await this.loadMaterial(companyId, dto.materialId);
     const qty = fuel.liters.neg();
@@ -133,7 +137,9 @@ export class StockService {
   }
 
   private async loadWarehouse(companyId: string, id: string) {
-    const row = await this.prisma.warehouse.findFirst({ where: { id, companyId } });
+    const row = await this.prisma.warehouse.findFirst({
+      where: { id, companyId },
+    });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Warehouse not found', 404);
     }
@@ -141,7 +147,9 @@ export class StockService {
   }
 
   private async loadMaterial(companyId: string, id: string) {
-    const row = await this.prisma.material.findFirst({ where: { id, companyId } });
+    const row = await this.prisma.material.findFirst({
+      where: { id, companyId },
+    });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Material not found', 404);
     }

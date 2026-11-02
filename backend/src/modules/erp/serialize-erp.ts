@@ -1,4 +1,10 @@
-import { CostEntry, Partner, Prisma, StockMovement, Warehouse } from '../../../generated/client';
+import {
+  CostEntry,
+  Partner,
+  Prisma,
+  StockMovement,
+  Warehouse,
+} from '../../../generated/client';
 
 export function serializePartner(row: Partner) {
   return {

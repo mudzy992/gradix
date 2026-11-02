@@ -21,7 +21,9 @@ export function projectListWhere(
   const where: Prisma.ProjectWhereInput = {
     companyId,
     archivedAt: filters.archived ? { not: null } : null,
-    ...(filters.status ? { status: filters.status as Prisma.EnumProjectStatusFilter['equals'] } : {}),
+    ...(filters.status
+      ? { status: filters.status as Prisma.EnumProjectStatusFilter['equals'] }
+      : {}),
     ...(filters.q
       ? {
           OR: [

@@ -1,7 +1,19 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export const TENDER_STATUSES = ['DRAFT', 'SUBMITTED', 'WON', 'LOST', 'WITHDRAWN'] as const;
+export const TENDER_STATUSES = [
+  'DRAFT',
+  'SUBMITTED',
+  'WON',
+  'LOST',
+  'WITHDRAWN',
+] as const;
 
 export class TenderListQueryDto extends PaginationQueryDto {
   @IsOptional()

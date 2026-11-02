@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { DocsService } from './docs.service';
 import {
   CreateCompanyDocDto,
@@ -20,13 +28,19 @@ export class DocsController {
 
   @Get('company')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_READ)
-  listCompany(@CurrentUser() actor: AuthUser, @Query() query: DocsListQueryDto) {
+  listCompany(
+    @CurrentUser() actor: AuthUser,
+    @Query() query: DocsListQueryDto,
+  ) {
     return this.docs.listCompany(actor, query);
   }
 
   @Post('company')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_WRITE)
-  createCompany(@CurrentUser() actor: AuthUser, @Body() dto: CreateCompanyDocDto) {
+  createCompany(
+    @CurrentUser() actor: AuthUser,
+    @Body() dto: CreateCompanyDocDto,
+  ) {
     return this.docs.createCompany(actor, dto);
   }
 
@@ -48,19 +62,28 @@ export class DocsController {
 
   @Post('worker')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_WRITE)
-  createWorker(@CurrentUser() actor: AuthUser, @Body() dto: CreateWorkerDocDto) {
+  createWorker(
+    @CurrentUser() actor: AuthUser,
+    @Body() dto: CreateWorkerDocDto,
+  ) {
     return this.docs.createWorker(actor, dto);
   }
 
   @Get('machine')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_READ)
-  listMachine(@CurrentUser() actor: AuthUser, @Query() query: DocsListQueryDto) {
+  listMachine(
+    @CurrentUser() actor: AuthUser,
+    @Query() query: DocsListQueryDto,
+  ) {
     return this.docs.listMachine(actor, query);
   }
 
   @Post('machine')
   @RequirePermissions(PERMISSIONS.DOCUMENTS_WRITE)
-  createMachine(@CurrentUser() actor: AuthUser, @Body() dto: CreateMachineDocDto) {
+  createMachine(
+    @CurrentUser() actor: AuthUser,
+    @Body() dto: CreateMachineDocDto,
+  ) {
     return this.docs.createMachine(actor, dto);
   }
 }

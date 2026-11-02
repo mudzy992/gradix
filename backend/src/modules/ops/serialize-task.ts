@@ -1,6 +1,8 @@
-import { Task, TaskPriority, TaskStatus } from '../../../generated/client';
+import { Task, TaskPriority } from '../../../generated/client';
 
-export function serializeTask(task: Task & { assignees?: { userId: string }[] }) {
+export function serializeTask(
+  task: Task & { assignees?: { userId: string }[] },
+) {
   return {
     id: task.id,
     companyId: task.companyId,
@@ -8,8 +10,8 @@ export function serializeTask(task: Task & { assignees?: { userId: string }[] })
     phaseId: task.phaseId,
     title: task.title,
     description: task.description,
-    priority: task.priority as TaskPriority,
-    status: task.status as TaskStatus,
+    priority: task.priority,
+    status: task.status,
     plannedStart: task.plannedStart,
     plannedEnd: task.plannedEnd,
     totalTimeSpentMinutes: task.totalTimeSpentMinutes,

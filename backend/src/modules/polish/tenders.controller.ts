@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { TendersService } from './tenders.service';
 import {
   CreateTenderDto,
@@ -37,7 +45,11 @@ export class TendersController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.TENDERS_WRITE)
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchTenderDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchTenderDto,
+  ) {
     return this.tenders.patch(actor, id, dto);
   }
 

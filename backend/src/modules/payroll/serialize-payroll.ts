@@ -38,7 +38,9 @@ export type PayrollSessionDto = {
   approvalStatus: string;
 };
 
-export function serializePayrollSession(row: PayrollSessionSource): PayrollSessionDto {
+export function serializePayrollSession(
+  row: PayrollSessionSource,
+): PayrollSessionDto {
   const durationMinutes = row.durationMinutes ?? 0;
   return {
     id: row.id,

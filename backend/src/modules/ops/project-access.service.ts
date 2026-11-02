@@ -5,8 +5,15 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { requireCompany } from '../users/users-helpers';
-import { canListProjects, hidesBudget, isCompanyWide } from '../../common/scope/ops-roles';
-import { assertNotOnHold, assertProjectWritable } from '../../common/scope/project-lock';
+import {
+  canListProjects,
+  hidesBudget,
+  isCompanyWide,
+} from '../../common/scope/ops-roles';
+import {
+  assertNotOnHold,
+  assertProjectWritable,
+} from '../../common/scope/project-lock';
 
 @Injectable()
 export class ProjectAccessService {
@@ -18,7 +25,11 @@ export class ProjectAccessService {
 
   assertCanList(actor: AuthUser): void {
     if (!canListProjects(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Project list is not allowed', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Project list is not allowed',
+        403,
+      );
     }
   }
 
@@ -55,7 +66,9 @@ export class ProjectAccessService {
 
   async getVisibleProject(actor: AuthUser, id: string): Promise<Project> {
     const companyId = requireCompany(actor);
-    const project = await this.prisma.project.findFirst({ where: { id, companyId } });
+    const project = await this.prisma.project.findFirst({
+      where: { id, companyId },
+    });
     if (!project) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
     }
@@ -117,7 +130,11 @@ export class ProjectAccessService {
         project.status === 'CANCELLED') &&
       !isAdminCorrection
     ) {
-      throw new AppError(ERROR_CODES.PROJECT_TERMINAL, 'Project is terminal', 409);
+      throw new AppError(
+        ERROR_CODES.PROJECT_TERMINAL,
+        'Project is terminal',
+        409,
+      );
     }
   }
 }

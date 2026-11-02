@@ -24,13 +24,22 @@ describe('Sync push pull catalog (e2e)', () => {
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
     driver = (await login(app, 'driver@gradix.local')).body.data.accessToken;
-    workerId = (await request(app.getHttpServer()).get('/api/me').set(auth(worker))).body.data.id;
-    driverId = (await request(app.getHttpServer()).get('/api/me').set(auth(driver))).body.data.id;
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id;
+    driverId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(driver))
+    ).body.data.id;
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `Sync e2e ${Date.now()}`, code: `SY${Date.now().toString().slice(-6)}` });
+      .send({
+        name: `Sync e2e ${Date.now()}`,
+        code: `SY${Date.now().toString().slice(-6)}`,
+      });
     projectId = created.body.data.id as string;
     await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/assignments`)
@@ -105,7 +114,9 @@ describe('Sync push pull catalog (e2e)', () => {
           },
         ],
       });
-    expect(again.body.data.results[0].serverId).toBe(pushed.body.data.results[0].serverId);
+    expect(again.body.data.results[0].serverId).toBe(
+      pushed.body.data.results[0].serverId,
+    );
     const future = await request(app.getHttpServer())
       .post('/api/sync/push')
       .set(auth(worker))
@@ -115,13 +126,18 @@ describe('Sync push pull catalog (e2e)', () => {
             type: 'TIMER',
             localId: `future-${Date.now()}`,
             deviceId: 'e2e-phone',
-            payload: { taskId, startedAt: new Date(Date.now() + 10 * 60_000).toISOString() },
+            payload: {
+              taskId,
+              startedAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+            },
           },
         ],
       });
     expect(future.body.data.results[0].ok).toBe(false);
     expect(future.body.data.results[0].code).toBe('VALIDATION_FAILED');
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
   });
 
   it('driver cannot push timer; catalog has ttl 24h; decommissioned trip 409; duplicate trip localId', async () => {
@@ -139,7 +155,9 @@ describe('Sync push pull catalog (e2e)', () => {
         ],
       });
     expect(driverTimer.body.data.results[0].code).toBe('FORBIDDEN');
-    const catalog = await request(app.getHttpServer()).get('/api/sync/catalog').set(auth(driver));
+    const catalog = await request(app.getHttpServer())
+      .get('/api/sync/catalog')
+      .set(auth(driver));
     expect(catalog.status).toBe(200);
     expect(catalog.body.data.ttlHours).toBe(24);
     expect(catalog.body.data.pulledAt).toBeDefined();
@@ -189,18 +207,28 @@ describe('Sync push pull catalog (e2e)', () => {
         },
       ],
     };
-    const first = await request(app.getHttpServer()).post('/api/sync/push').set(auth(driver)).send(body);
-    const second = await request(app.getHttpServer()).post('/api/sync/push').set(auth(driver)).send(body);
+    const first = await request(app.getHttpServer())
+      .post('/api/sync/push')
+      .set(auth(driver))
+      .send(body);
+    const second = await request(app.getHttpServer())
+      .post('/api/sync/push')
+      .set(auth(driver))
+      .send(body);
     expect(first.body.data.results[0].ok).toBe(true);
-    expect(second.body.data.results[0].serverId).toBe(first.body.data.results[0].serverId);
+    expect(second.body.data.results[0].serverId).toBe(
+      first.body.data.results[0].serverId,
+    );
     const pulled = await request(app.getHttpServer())
       .post('/api/sync/pull')
       .set(auth(driver))
       .send({ since: new Date(0).toISOString() });
     expect(pulled.status).toBe(200);
-    expect(pulled.body.data.trips.some((row: { localId: string }) => row.localId === localId)).toBe(
-      true,
-    );
+    expect(
+      pulled.body.data.trips.some(
+        (row: { localId: string }) => row.localId === localId,
+      ),
+    ).toBe(true);
   });
 
   it('DRIVER+WORKER can push timer after dual role', async () => {

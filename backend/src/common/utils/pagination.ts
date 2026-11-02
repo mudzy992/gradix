@@ -13,7 +13,10 @@ export type ListResult<T> = {
   meta: PaginationMeta;
 };
 
-export function parsePagination(page?: number, limit?: number): {
+export function parsePagination(
+  page?: number,
+  limit?: number,
+): {
   page: number;
   limit: number;
   skip: number;

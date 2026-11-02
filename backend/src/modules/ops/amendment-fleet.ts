@@ -2,7 +2,10 @@ import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
-import { parseNonNegativeDecimal, parsePositiveDecimal } from '../../common/utils/decimal-input';
+import {
+  parseNonNegativeDecimal,
+  parsePositiveDecimal,
+} from '../../common/utils/decimal-input';
 import { fuelTotalCost } from './serialize-fleet';
 import { recalcSpend } from './spend';
 
@@ -17,9 +20,15 @@ export async function applyTripAmendment(
   newValue: string,
 ): Promise<{ oldValue: string; ownerId: string }> {
   if (!TRIP_FIELDS.has(field)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'TRIP field not allowed', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'TRIP field not allowed',
+      400,
+    );
   }
-  const trip = await prisma.trip.findFirst({ where: { id: entityId, companyId } });
+  const trip = await prisma.trip.findFirst({
+    where: { id: entityId, companyId },
+  });
   if (!trip) {
     throw new AppError(ERROR_CODES.NOT_FOUND, 'Trip not found', 404);
   }
@@ -30,7 +39,10 @@ export async function applyTripAmendment(
       data: { quantity: parsePositiveDecimal(newValue, 'quantity') },
     });
   } else if (field === 'notes') {
-    await prisma.trip.update({ where: { id: trip.id }, data: { notes: newValue } });
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: { notes: newValue },
+    });
   } else if (field === 'weighQty') {
     await prisma.trip.update({
       where: { id: trip.id },
@@ -41,7 +53,11 @@ export async function applyTripAmendment(
       where: { id: newValue, companyId, isActive: true },
     });
     if (!depot) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid destDepotId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid destDepotId',
+        400,
+      );
     }
     await prisma.trip.update({
       where: { id: trip.id },
@@ -63,17 +79,27 @@ export async function applyFuelAmendment(
   newValue: string,
 ): Promise<{ oldValue: string; ownerId: string }> {
   if (!FUEL_FIELDS.has(field)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'FUEL field not allowed', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'FUEL field not allowed',
+      400,
+    );
   }
-  const row = await prisma.fuelEntry.findFirst({ where: { id: entityId, companyId } });
+  const row = await prisma.fuelEntry.findFirst({
+    where: { id: entityId, companyId },
+  });
   if (!row) {
     throw new AppError(ERROR_CODES.NOT_FOUND, 'Fuel entry not found', 404);
   }
   const oldValue = readFuelField(row, field);
-  const liters = field === 'liters' ? parsePositiveDecimal(newValue, 'liters') : row.liters;
+  const liters =
+    field === 'liters' ? parsePositiveDecimal(newValue, 'liters') : row.liters;
   const unitPrice =
-    field === 'unitPrice' ? parseNonNegativeDecimal(newValue, 'unitPrice') : row.unitPrice;
-  const nextProjectId = field === 'projectId' ? newValue || null : row.projectId;
+    field === 'unitPrice'
+      ? parseNonNegativeDecimal(newValue, 'unitPrice')
+      : row.unitPrice;
+  const nextProjectId =
+    field === 'projectId' ? newValue || null : row.projectId;
   await prisma.fuelEntry.update({
     where: { id: row.id },
     data: {
@@ -94,7 +120,12 @@ export async function applyFuelAmendment(
 }
 
 function readTripField(
-  trip: { quantity: Prisma.Decimal; notes: string | null; weighQty: Prisma.Decimal | null; destDepotId: string | null },
+  trip: {
+    quantity: Prisma.Decimal;
+    notes: string | null;
+    weighQty: Prisma.Decimal | null;
+    destDepotId: string | null;
+  },
   field: string,
 ): string {
   if (field === 'quantity') {
@@ -110,7 +141,12 @@ function readTripField(
 }
 
 function readFuelField(
-  row: { liters: Prisma.Decimal; unitPrice: Prisma.Decimal; notes: string | null; projectId: string | null },
+  row: {
+    liters: Prisma.Decimal;
+    unitPrice: Prisma.Decimal;
+    notes: string | null;
+    projectId: string | null;
+  },
   field: string,
 ): string {
   if (field === 'liters') {

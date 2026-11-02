@@ -1,47 +1,72 @@
-# Dockerfile za Gradix Backend (Coolify / PostgreSQL / TLS)
-# Adaptirano sa MySQL/MariaDB na PostgreSQL
+# syntax=docker/dockerfile:1
+#
+# Gradix — backend (NestJS 11 + Prisma 7 + PostgreSQL)
+#
+# Build context je direktorij `backend/`:
+#   docker build -f backend/Dockerfile backend
+#
+# Coolify (Application):
+#   Base Directory      = /backend
+#   Dockerfile Location = /backend/Dockerfile
+#
+# Coolify (Docker Compose): koristite priloženi `docker-compose.yml`.
 
+# ---------- 1) Zavisnosti (kešira se dok se ne promijeni package-lock.json) ----------
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev --no-audit --no-fund
+
+# ---------- 2) Build (Prisma client + nest build) ----------
 FROM node:22-alpine AS builder
 WORKDIR /app
+ENV NODE_ENV=development
+# `prisma generate` čita DATABASE_URL iz prisma.config.ts, ali NE otvara konekciju.
+# Placeholder osigurava da generate radi u build fazi (bez baze).
+ENV DATABASE_URL="postgresql://gradix:gradix@localhost:5432/gradix?schema=public"
 
-# Kopiraj package fajlove i instaliraj sve zavisnosti (uključujući dev za build)
-COPY package*.json ./
-RUN npm ci --include=dev
+# Prisma (musl varijanta) traži openssl u alpine slici.
+RUN apk add --no-cache openssl ca-certificates
 
-# Kopiraj Prisma shemu i generiraj klijenta (prije builda da se izbjegnu problemi)
-COPY prisma.config.ts ./
-COPY prisma ./prisma/
-RUN npx prisma generate
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json prisma.config.ts nest-cli.json tsconfig.json tsconfig.build.json ./
+COPY prisma ./prisma
+# Generisani klijent se emituje u ./generated (vidi prisma/schema/foundation.prisma)
+RUN npx prisma generate && mkdir -p /root/.cache/prisma
 
-# Kopiraj sav source kod
-COPY . .
+COPY src ./src
 RUN npm run build
 
-# Produkcijska slika — samo buildani artifakti i produkcijske zavisnosti
+# ---------- 3) Produkcijska slika ----------
 FROM node:22-alpine AS production
 WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000
 
-# Postavi NODE_ENV
-ENV NODE_ENV=production
-ENV PORT=3000
+RUN apk add --no-cache openssl ca-certificates
 
-# Instaliraj samo produkcijske node_modules (za runtime)
-COPY package*.json ./
-RUN npm ci --omit=dev --prefer-offline --no-audit
+# Samo produkcijske zavisnosti (`prisma` CLI i `dotenv` su produkcijske
+# zavisnosti jer entrypoint pokreće `prisma migrate deploy`).
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 
-# Kopiraj buildane JS fajlove i Prisma klijent
+# Buildani artefakti (dist/src/main.js je ulazna tačka — vidi "start:prod")
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/generated ./generated
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
-# Postavi prava za TLS CA cert (mapiran iz Coolify hosta)
-RUN mkdir -p /etc/ssl/certs && chmod 755 /etc/ssl/certs
+# Keš Prisma engine-a iz build faze — da `migrate deploy` ne mora da ih
+# preuzima sa interneta pri svakom pokretanju kontejnera.
+COPY --from=builder /root/.cache/prisma /root/.cache/prisma
 
-# Expose port za Coolify / proxy
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 3000
 
-# Pokretanje aplikacije sa Prisma migrate deploy (opcionalno — za produkciju obično se migracije pokreću odvojeno)
-# Ovdje koristimo start:prod iz package.json, ali dodajemo migrate deploy prije starta
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["node", "dist/src/main.js"]

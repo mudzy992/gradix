@@ -18,14 +18,19 @@ describe('Tasks timer quantities (e2e)', () => {
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     ss = (await login(app, 'ss@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
-    const workerId = (await request(app.getHttpServer()).get('/api/me').set(auth(worker)))
-      .body.data.id as string;
-    const ssId = (await request(app.getHttpServer()).get('/api/me').set(auth(ss))).body.data
-      .id as string;
+    const workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id as string;
+    const ssId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(ss))
+    ).body.data.id as string;
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `Ops e2e ${Date.now()}`, code: `E2E${Date.now().toString().slice(-6)}` });
+      .send({
+        name: `Ops e2e ${Date.now()}`,
+        code: `E2E${Date.now().toString().slice(-6)}`,
+      });
     expect(created.status).toBe(201);
     projectId = created.body.data.id as string;
     await request(app.getHttpServer())
@@ -85,14 +90,18 @@ describe('Tasks timer quantities (e2e)', () => {
       .send({ taskId: assignedTaskId });
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('TIMER_ALREADY_OPEN');
-    const paused = await request(app.getHttpServer()).post('/api/timer/pause').set(auth(worker));
+    const paused = await request(app.getHttpServer())
+      .post('/api/timer/pause')
+      .set(auth(worker));
     expect(paused.status).toBe(201);
     const stillOpen = await request(app.getHttpServer())
       .post('/api/timer/start')
       .set(auth(worker))
       .send({ taskId: assignedTaskId });
     expect(stillOpen.status).toBe(409);
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const workerComplete = await request(app.getHttpServer())
       .post(`/api/tasks/${assignedTaskId}/complete`)
       .set(auth(worker));
@@ -107,7 +116,10 @@ describe('Tasks timer quantities (e2e)', () => {
       .send({
         projectId,
         title: 'Assigned no timer',
-        assigneeIds: [(await request(app.getHttpServer()).get('/api/me').set(auth(worker))).body.data.id],
+        assigneeIds: [
+          (await request(app.getHttpServer()).get('/api/me').set(auth(worker)))
+            .body.data.id,
+        ],
       });
     const done = await request(app.getHttpServer())
       .post(`/api/tasks/${fresh.body.data.id}/complete`)
@@ -166,7 +178,9 @@ describe('Tasks timer quantities (e2e)', () => {
         reason: 'typo fix',
       });
     expect(openAmend.status).toBe(409);
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const closed = await request(app.getHttpServer())
       .post('/api/amendments')
       .set(auth(ss))

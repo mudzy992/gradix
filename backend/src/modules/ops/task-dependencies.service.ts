@@ -28,10 +28,18 @@ export class TaskDependenciesService {
       where: { id: toId, projectId: task.projectId },
     });
     if (!from || !to) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Dependency must be same project', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Dependency must be same project',
+        400,
+      );
     }
     if (await this.wouldCycle(fromId, toId)) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Dependency cycle', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Dependency cycle',
+        400,
+      );
     }
     return this.prisma.taskDependency.create({
       data: { companyId: project.companyId, fromId, toId, type: 'FS' },
@@ -63,7 +71,9 @@ export class TaskDependenciesService {
         continue;
       }
       visited.add(current);
-      const next = await this.prisma.taskDependency.findMany({ where: { fromId: current } });
+      const next = await this.prisma.taskDependency.findMany({
+        where: { fromId: current },
+      });
       for (const edge of next) {
         stack.push(edge.toId);
       }

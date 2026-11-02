@@ -8,7 +8,9 @@ export async function assertMachineForTimer(
   companyId: string,
   projectId: string,
 ): Promise<void> {
-  const machine = await prisma.machine.findFirst({ where: { id: machineId, companyId } });
+  const machine = await prisma.machine.findFirst({
+    where: { id: machineId, companyId },
+  });
   if (!machine) {
     throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid machineId', 400);
   }
@@ -16,7 +18,11 @@ export async function assertMachineForTimer(
     throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
   }
   if (machine.status === 'IN_SERVICE') {
-    throw new AppError(ERROR_CODES.MACHINE_IN_SERVICE, 'Machine is in service', 409);
+    throw new AppError(
+      ERROR_CODES.MACHINE_IN_SERVICE,
+      'Machine is in service',
+      409,
+    );
   }
   if (machine.status === 'IDLE') {
     return;
@@ -27,5 +33,9 @@ export async function assertMachineForTimer(
   if (machine.status === 'ACTIVE' && active?.projectId === projectId) {
     return;
   }
-  throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Machine not available for this project', 400);
+  throw new AppError(
+    ERROR_CODES.VALIDATION_FAILED,
+    'Machine not available for this project',
+    400,
+  );
 }

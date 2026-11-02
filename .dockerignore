@@ -1,0 +1,17 @@
+# Root .dockerignore — relevantan samo ako se build pokreće sa kontekstom ".".
+# Kanonski Dockerfile-ovi su backend/Dockerfile i frontend/Dockerfile
+# (svaki ima svoj .dockerignore u svom direktoriju).
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/generated
+**/*.log
+mobile
+frontend/dist
+backend/dist

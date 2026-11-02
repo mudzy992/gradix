@@ -33,11 +33,20 @@ export class ServiceCronService {
   }
 
   private async maybeSchedule(
-    template: { id: string; companyId: string; intervalHours: number; title: string },
+    template: {
+      id: string;
+      companyId: string;
+      intervalHours: number;
+      title: string;
+    },
     machine: { id: string; currentWorkingHours: Prisma.Decimal },
   ): Promise<void> {
     const last = await this.prisma.serviceRecord.findFirst({
-      where: { machineId: machine.id, templateId: template.id, status: 'COMPLETED' },
+      where: {
+        machineId: machine.id,
+        templateId: template.id,
+        status: 'COMPLETED',
+      },
       orderBy: { completedAt: 'desc' },
     });
     const used = last?.completedAt
@@ -80,7 +89,10 @@ export class ServiceCronService {
     this.logger.log(`scheduled service ${created.id}`);
   }
 
-  private async hoursSince(machineId: string, since: Date): Promise<Prisma.Decimal> {
+  private async hoursSince(
+    machineId: string,
+    since: Date,
+  ): Promise<Prisma.Decimal> {
     const agg = await this.prisma.timerSession.aggregate({
       where: { machineId, closedAt: { gt: since } },
       _sum: { durationMinutes: true },

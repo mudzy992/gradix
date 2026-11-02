@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, SettingScope } from '../../../generated/client';
+import { SettingScope } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AuthUser } from '../../common/types/auth-user';
-import { SETTINGS_REGISTRY, SettingDefinition } from '../../common/settings/registry';
+import {
+  SETTINGS_REGISTRY,
+  SettingDefinition,
+} from '../../common/settings/registry';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 
@@ -40,8 +43,13 @@ export class SettingsService {
       const value = this.coerce(def, raw);
       await this.prisma.setting.upsert({
         where: { companyId_key: { companyId, key } },
-        create: { companyId, key, value: value as Prisma.InputJsonValue, scope: def.scope },
-        update: { value: value as Prisma.InputJsonValue },
+        create: {
+          companyId,
+          key,
+          value: value,
+          scope: def.scope,
+        },
+        update: { value: value },
       });
       this.realtime.emitSettingsUpdated(companyId, key);
       await this.audit.write({
@@ -65,7 +73,9 @@ export class SettingsService {
       where: { companyId: company.id, scope: SettingScope.PUBLIC },
     });
     const result: Record<string, unknown> = {};
-    for (const def of SETTINGS_REGISTRY.filter((item) => item.scope === 'PUBLIC')) {
+    for (const def of SETTINGS_REGISTRY.filter(
+      (item) => item.scope === 'PUBLIC',
+    )) {
       const row = rows.find((item) => item.key === def.key);
       result[def.key] = row ? row.value : def.defaultValue;
     }
@@ -74,7 +84,11 @@ export class SettingsService {
 
   private requireCompany(actor: AuthUser): string {
     if (!actor.tenantCompanyId) {
-      throw new AppError(ERROR_CODES.TENANT_HEADER_REQUIRED, 'X-Company-Id is required', 403);
+      throw new AppError(
+        ERROR_CODES.TENANT_HEADER_REQUIRED,
+        'X-Company-Id is required',
+        403,
+      );
     }
     return actor.tenantCompanyId;
   }
@@ -82,40 +96,73 @@ export class SettingsService {
   private requireDef(key: string): SettingDefinition {
     const def = SETTINGS_REGISTRY.find((item) => item.key === key);
     if (!def) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, `Unknown setting ${key}`, 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        `Unknown setting ${key}`,
+        400,
+      );
     }
     return def;
   }
 
-  private coerce(def: SettingDefinition, raw: unknown): string | number | boolean {
+  private coerce(
+    def: SettingDefinition,
+    raw: unknown,
+  ): string | number | boolean {
     if (def.type === 'boolean') {
       if (typeof raw !== 'boolean') {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, `${def.key} must be boolean`, 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          `${def.key} must be boolean`,
+          400,
+        );
       }
       return raw;
     }
     if (def.type === 'number') {
       if (typeof raw !== 'number') {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, `${def.key} must be number`, 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          `${def.key} must be number`,
+          400,
+        );
       }
       if (def.min !== undefined && raw < def.min) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, `${def.key} below min`, 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          `${def.key} below min`,
+          400,
+        );
       }
       if (def.max !== undefined && raw > def.max) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, `${def.key} above max`, 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          `${def.key} above max`,
+          400,
+        );
       }
       return raw;
     }
     if (typeof raw !== 'string') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, `${def.key} must be string`, 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        `${def.key} must be string`,
+        400,
+      );
     }
     return raw;
   }
 
-  private mask(def: SettingDefinition, value: unknown, canWrite: boolean): unknown {
+  private mask(
+    def: SettingDefinition,
+    value: unknown,
+    canWrite: boolean,
+  ): unknown {
     if (def.scope !== 'SECRET' || canWrite === false) {
       if (def.scope === 'SECRET') {
-        return typeof value === 'string' && value.length > 0 ? '********' : value;
+        return typeof value === 'string' && value.length > 0
+          ? '********'
+          : value;
       }
       return value;
     }

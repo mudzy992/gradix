@@ -31,12 +31,27 @@ export class ReportsService {
     parseDateOnly(to);
     const start = tzDayUtcRange(from, tz).start;
     const end = tzDayUtcRange(to, tz).end;
-    const projectIds = await this.scopedProjectIds(actor, companyId, query.projectId);
-    const table = await runReport(this.prisma, resolved, companyId, { start, end }, projectIds, query.projectId);
+    const projectIds = await this.scopedProjectIds(
+      actor,
+      companyId,
+      query.projectId,
+    );
+    const table = await runReport(
+      this.prisma,
+      resolved,
+      companyId,
+      { start, end },
+      projectIds,
+      query.projectId,
+    );
     return { slug: resolved, from, to, ...table };
   }
 
-  async exportXlsx(actor: AuthUser, slug: string, query: ReportQueryDto): Promise<Buffer> {
+  async exportXlsx(
+    actor: AuthUser,
+    slug: string,
+    query: ReportQueryDto,
+  ): Promise<Buffer> {
     const payload = await this.get(actor, slug, query);
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(payload.slug);
@@ -56,17 +71,32 @@ export class ReportsService {
   }
 
   private assertSlugAccess(actor: AuthUser, slug: ReportSlug): void {
-    if (slug === 'tender-comparison' && !actor.permissions.includes('tenders.read')) {
+    if (
+      slug === 'tender-comparison' &&
+      !actor.permissions.includes('tenders.read')
+    ) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'tenders.read required', 403);
     }
-    if (slug === 'phase-quantities' && !actor.permissions.includes('quantities.read')) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'quantities.read required', 403);
+    if (
+      slug === 'phase-quantities' &&
+      !actor.permissions.includes('quantities.read')
+    ) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'quantities.read required',
+        403,
+      );
     }
     if (slug === 'fuel-summary') {
       const ok =
-        actor.permissions.includes('reports.read') || actor.permissions.includes('fuel.reports');
+        actor.permissions.includes('reports.read') ||
+        actor.permissions.includes('fuel.reports');
       if (!ok) {
-        throw new AppError(ERROR_CODES.FORBIDDEN, 'fuel report not allowed', 403);
+        throw new AppError(
+          ERROR_CODES.FORBIDDEN,
+          'fuel report not allowed',
+          403,
+        );
       }
     }
   }

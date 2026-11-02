@@ -26,7 +26,11 @@ export class AmendmentsService {
   async list(actor: AuthUser, query: AmendmentListQueryDto) {
     this.assertWriter(actor);
     if (!query.entityType || !query.entityId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'entityType and entityId required', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'entityType and entityId required',
+        400,
+      );
     }
     const companyId = requireCompany(actor);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
@@ -55,8 +59,20 @@ export class AmendmentsService {
     }
     const applied =
       dto.entityType === 'TRIP'
-        ? await applyTripAmendment(this.prisma, companyId, dto.entityId, dto.field, dto.newValue)
-        : await applyFuelAmendment(this.prisma, companyId, dto.entityId, dto.field, dto.newValue);
+        ? await applyTripAmendment(
+            this.prisma,
+            companyId,
+            dto.entityId,
+            dto.field,
+            dto.newValue,
+          )
+        : await applyFuelAmendment(
+            this.prisma,
+            companyId,
+            dto.entityId,
+            dto.field,
+            dto.newValue,
+          );
     const action = dto.entityType === 'TRIP' ? 'TRIP_AMENDED' : 'FUEL_AMENDED';
     const row = await this.prisma.amendment.create({
       data: {
@@ -89,13 +105,25 @@ export class AmendmentsService {
     return row;
   }
 
-  private async createTimer(actor: AuthUser, companyId: string, dto: CreateAmendmentDto) {
+  private async createTimer(
+    actor: AuthUser,
+    companyId: string,
+    dto: CreateAmendmentDto,
+  ) {
     if (dto.field !== 'durationMinutes') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'TIMER field must be durationMinutes', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'TIMER field must be durationMinutes',
+        400,
+      );
     }
     const minutes = Number(dto.newValue);
     if (!Number.isInteger(minutes) || minutes < 0) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'durationMinutes must be integer >= 0', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'durationMinutes must be integer >= 0',
+        400,
+      );
     }
     const session = await this.prisma.timerSession.findFirst({
       where: { id: dto.entityId, companyId },
@@ -104,19 +132,27 @@ export class AmendmentsService {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Timer not found', 404);
     }
     if (!session.closedAt) {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Open timer cannot be amended', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Open timer cannot be amended',
+        409,
+      );
     }
     const delta = minutes - (session.durationMinutes ?? 0);
     await this.prisma.timerSession.update({
       where: { id: session.id },
       data: {
         durationMinutes: minutes,
-        ...(session.approvalStatus === 'APPROVED' ? { approvalStatus: 'PENDING' as const } : {}),
+        ...(session.approvalStatus === 'APPROVED'
+          ? { approvalStatus: 'PENDING' as const }
+          : {}),
       },
     });
     await addTaskMinutes(this.prisma, session.taskId, delta);
     await addMachineHours(this.prisma, session.machineId, delta);
-    const task = await this.prisma.task.findUniqueOrThrow({ where: { id: session.taskId } });
+    const task = await this.prisma.task.findUniqueOrThrow({
+      where: { id: session.taskId },
+    });
     await recalcProgress(this.prisma, task.projectId);
     const row = await this.prisma.amendment.create({
       data: {

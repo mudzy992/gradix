@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Project } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../../common/types/auth-user';
-import { hasRole, hidesBudget, isCompanyWide } from '../../common/scope/ops-roles';
+import {
+  hasRole,
+  hidesBudget,
+  isCompanyWide,
+} from '../../common/scope/ops-roles';
 import { projectListWhere } from '../../common/scope/scope-by-project';
 import {
   calendarDateInTz,
@@ -27,17 +31,25 @@ export class DashboardService {
     if (hasRole(actor, 'WORKER', 'MACHINE_OPERATOR')) {
       return this.fieldWorker(actor, companyId, unread);
     }
-    if (hasRole(actor, 'DRIVER') && !hasRole(actor, 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN')) {
+    if (
+      hasRole(actor, 'DRIVER') &&
+      !hasRole(actor, 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN')
+    ) {
       return this.driver(actor, companyId, unread);
     }
-    if (hasRole(actor, 'MECHANIC') && !isCompanyWide(actor) && !hasRole(actor, 'PROJECT_MANAGER')) {
+    if (
+      hasRole(actor, 'MECHANIC') &&
+      !isCompanyWide(actor) &&
+      !hasRole(actor, 'PROJECT_MANAGER')
+    ) {
       return this.mechanic(companyId, unread);
     }
     const projects = await this.prisma.project.findMany({
       where: projectListWhere(actor, { archived: false }),
     });
     const active = projects.filter(
-      (project) => project.status === 'PLANNING' || project.status === 'IN_PROGRESS',
+      (project) =>
+        project.status === 'PLANNING' || project.status === 'IN_PROGRESS',
     );
     if (isCompanyWide(actor)) {
       return this.admin(companyId, active, unread);
@@ -56,7 +68,10 @@ export class DashboardService {
     });
     const cards: DashboardCard[] = [
       { key: 'activeProjects', value: projects.length },
-      { key: 'spend', value: money.budget ? `${money.spend} / ${money.budget}` : null },
+      {
+        key: 'spend',
+        value: money.budget ? `${money.spend} / ${money.budget}` : null,
+      },
       { key: 'openTimers', value: openTimers },
       { key: 'unread', value: unread },
     ];
@@ -87,7 +102,10 @@ export class DashboardService {
     unread: number,
   ): Promise<DashboardPayload> {
     const myTasks = await this.prisma.taskAssignment.count({
-      where: { userId: actor.id, task: { companyId, status: { notIn: ['COMPLETED', 'CANCELLED'] } } },
+      where: {
+        userId: actor.id,
+        task: { companyId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+      },
     });
     const session = await this.prisma.timerSession.findFirst({
       where: { userId: actor.id, closedAt: null },
@@ -113,7 +131,11 @@ export class DashboardService {
     const today = calendarDateInTz(new Date(), tz);
     const { start, end } = tzDayUtcRange(today, tz);
     const tripsToday = await this.prisma.trip.count({
-      where: { driverId: actor.id, companyId, loadedAt: { gte: start, lt: end } },
+      where: {
+        driverId: actor.id,
+        companyId,
+        loadedAt: { gte: start, lt: end },
+      },
     });
     return {
       cards: [
@@ -124,7 +146,10 @@ export class DashboardService {
     };
   }
 
-  private async mechanic(companyId: string, unread: number): Promise<DashboardPayload> {
+  private async mechanic(
+    companyId: string,
+    unread: number,
+  ): Promise<DashboardPayload> {
     const machines = await this.prisma.machine.count({
       where: { companyId, status: { not: 'DECOMMISSIONED' } },
     });

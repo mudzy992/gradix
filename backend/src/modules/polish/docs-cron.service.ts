@@ -3,7 +3,10 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DOC_WARN_WINDOWS, DOCS_CRON } from '../../common/constants';
-import { calendarDateInTz, readCompanyTimezone } from '../../common/scope/company-tz';
+import {
+  calendarDateInTz,
+  readCompanyTimezone,
+} from '../../common/scope/company-tz';
 import { notifyRoles } from '../../common/notify/notify-roles';
 import type { Role } from '../../../generated/client';
 
@@ -25,7 +28,9 @@ export class DocsCronService {
 
   @Cron(DOCS_CRON, { disabled: Boolean(process.env.JEST_WORKER_ID) })
   async warnExpiring(): Promise<void> {
-    const companies = await this.prisma.company.findMany({ where: { isActive: true } });
+    const companies = await this.prisma.company.findMany({
+      where: { isActive: true },
+    });
     for (const company of companies) {
       const tz = await readCompanyTimezone(this.prisma, company.id);
       const hour = new Intl.DateTimeFormat('en-US', {
@@ -43,18 +48,34 @@ export class DocsCronService {
   private async scanCompany(companyId: string, tz: string): Promise<void> {
     const today = calendarDateInTz(new Date(), tz);
     const [company, worker, machine] = await Promise.all([
-      this.prisma.companyDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
-      this.prisma.workerDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
-      this.prisma.machineDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
+      this.prisma.companyDocument.findMany({
+        where: { companyId, expiresAt: { not: null } },
+      }),
+      this.prisma.workerDocument.findMany({
+        where: { companyId, expiresAt: { not: null } },
+      }),
+      this.prisma.machineDocument.findMany({
+        where: { companyId, expiresAt: { not: null } },
+      }),
     ]);
     for (const row of company) {
       await this.maybeNotify(row, 'company', today, ['ADMIN', 'SUPER_ADMIN']);
     }
     for (const row of worker) {
-      await this.maybeNotify(row, 'worker', today, ['ADMIN', 'SUPER_ADMIN'], row.userId ? [row.userId] : []);
+      await this.maybeNotify(
+        row,
+        'worker',
+        today,
+        ['ADMIN', 'SUPER_ADMIN'],
+        row.userId ? [row.userId] : [],
+      );
     }
     for (const row of machine) {
-      await this.maybeNotify(row, 'machine', today, ['ADMIN', 'SUPER_ADMIN', 'MECHANIC']);
+      await this.maybeNotify(row, 'machine', today, [
+        'ADMIN',
+        'SUPER_ADMIN',
+        'MECHANIC',
+      ]);
     }
   }
 

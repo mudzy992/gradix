@@ -8,12 +8,20 @@ import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parsePositiveDecimal } from '../../common/utils/decimal-input';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
-import { assertNotOnHold, assertProjectWritable } from '../../common/scope/project-lock';
+import {
+  assertNotOnHold,
+  assertProjectWritable,
+} from '../../common/scope/project-lock';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { serializeTrip } from './serialize-fleet';
 import { assertSyncedImmutable, assertTruckForTrip } from './trip-rules';
-import { CompleteTripDto, CreateTripDto, PatchTripDto, TripListQueryDto } from './trips.dto';
+import {
+  CompleteTripDto,
+  CreateTripDto,
+  PatchTripDto,
+  TripListQueryDto,
+} from './trips.dto';
 
 @Injectable()
 export class TripsService {
@@ -56,19 +64,36 @@ export class TripsService {
       where: { id: dto.machineId, companyId: project.companyId },
     });
     if (!machine) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid machineId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid machineId',
+        400,
+      );
     }
     await assertTruckForTrip(this.prisma, machine, project.id, actor.id);
     const material = await this.prisma.material.findFirst({
-      where: { id: dto.materialId, companyId: project.companyId, isActive: true },
+      where: {
+        id: dto.materialId,
+        companyId: project.companyId,
+        isActive: true,
+      },
     });
     if (!material) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid materialId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid materialId',
+        400,
+      );
     }
     if (dto.weighTicketPath) {
       assertStoragePath(dto.weighTicketPath, project.companyId);
     }
-    const dest = await this.resolveDest(project.companyId, dto.destDepotId, dto.destLat, dto.destLng);
+    const dest = await this.resolveDest(
+      project.companyId,
+      dto.destDepotId,
+      dto.destLat,
+      dto.destLng,
+    );
     const row = await this.prisma.trip.create({
       data: {
         companyId: project.companyId,
@@ -84,7 +109,9 @@ export class TripsService {
         destLat: dest.destLat,
         destLng: dest.destLng,
         weighTicketPath: dto.weighTicketPath,
-        weighQty: dto.weighQty ? parsePositiveDecimal(dto.weighQty, 'weighQty') : undefined,
+        weighQty: dto.weighQty
+          ? parsePositiveDecimal(dto.weighQty, 'weighQty')
+          : undefined,
         notes: dto.notes,
       },
     });
@@ -95,19 +122,29 @@ export class TripsService {
     const trip = await this.loadVisible(actor, id);
     this.assertOwnerWrite(actor, trip.driverId);
     assertSyncedImmutable(trip.isSynced);
-    const dest = dto.destDepotId !== undefined || dto.destLat !== undefined
-      ? await this.resolveDest(trip.companyId, dto.destDepotId, dto.destLat, dto.destLng)
-      : null;
+    const dest =
+      dto.destDepotId !== undefined || dto.destLat !== undefined
+        ? await this.resolveDest(
+            trip.companyId,
+            dto.destDepotId,
+            dto.destLat,
+            dto.destLng,
+          )
+        : null;
     const row = await this.prisma.trip.update({
       where: { id: trip.id },
       data: {
-        quantity: dto.quantity ? parsePositiveDecimal(dto.quantity, 'quantity') : undefined,
+        quantity: dto.quantity
+          ? parsePositiveDecimal(dto.quantity, 'quantity')
+          : undefined,
         notes: dto.notes,
         destDepotId: dest?.destDepotId,
         destLat: dest?.destLat,
         destLng: dest?.destLng,
         weighTicketPath: dto.weighTicketPath,
-        weighQty: dto.weighQty ? parsePositiveDecimal(dto.weighQty, 'weighQty') : undefined,
+        weighQty: dto.weighQty
+          ? parsePositiveDecimal(dto.weighQty, 'weighQty')
+          : undefined,
       },
     });
     return serializeTrip(row);
@@ -122,7 +159,9 @@ export class TripsService {
     let destLat = dto.destLat ?? trip.destLat?.toString() ?? null;
     let destLng = dto.destLng ?? trip.destLng?.toString() ?? null;
     if ((!destLat || !destLng) && trip.destDepotId) {
-      const depot = await this.prisma.depot.findFirst({ where: { id: trip.destDepotId } });
+      const depot = await this.prisma.depot.findFirst({
+        where: { id: trip.destDepotId },
+      });
       destLat = destLat ?? depot?.lat?.toString() ?? null;
       destLng = destLng ?? depot?.lng?.toString() ?? null;
     }
@@ -143,7 +182,11 @@ export class TripsService {
   private async loadVisible(actor: AuthUser, id: string) {
     this.assertTripsRead(actor);
     const trip = await this.prisma.trip.findFirst({
-      where: { id, companyId: requireCompany(actor), ...(await this.scopeWhere(actor)) },
+      where: {
+        id,
+        companyId: requireCompany(actor),
+        ...(await this.scopeWhere(actor)),
+      },
     });
     if (!trip) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Trip not found', 404);
@@ -155,7 +198,10 @@ export class TripsService {
     if (isCompanyWide(actor)) {
       return {};
     }
-    if (hasRole(actor, 'DRIVER') && !hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
+    if (
+      hasRole(actor, 'DRIVER') &&
+      !hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')
+    ) {
       return { driverId: actor.id };
     }
     const projectIds = (
@@ -174,13 +220,21 @@ export class TripsService {
     destLng?: string,
   ) {
     if (!destDepotId) {
-      return { destDepotId: null, destLat: destLat ?? null, destLng: destLng ?? null };
+      return {
+        destDepotId: null,
+        destLat: destLat ?? null,
+        destLng: destLng ?? null,
+      };
     }
     const depot = await this.prisma.depot.findFirst({
       where: { id: destDepotId, companyId, isActive: true },
     });
     if (!depot) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid destDepotId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid destDepotId',
+        400,
+      );
     }
     return {
       destDepotId: depot.id,

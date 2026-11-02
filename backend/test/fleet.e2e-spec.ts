@@ -24,9 +24,15 @@ describe('Fleet logistics (e2e)', () => {
     ss = (await login(app, 'ss@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
     driver = (await login(app, 'driver@gradix.local')).body.data.accessToken;
-    workerId = (await request(app.getHttpServer()).get('/api/me').set(auth(worker))).body.data.id;
-    driverId = (await request(app.getHttpServer()).get('/api/me').set(auth(driver))).body.data.id;
-    const ssId = (await request(app.getHttpServer()).get('/api/me').set(auth(ss))).body.data.id;
+    workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id;
+    driverId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(driver))
+    ).body.data.id;
+    const ssId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(ss))
+    ).body.data.id;
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
@@ -69,7 +75,9 @@ describe('Fleet logistics (e2e)', () => {
       .send({ name: 'Bager e2e', type: 'EXCAVATOR' });
     expect(machine.status).toBe(201);
     const machineId = machine.body.data.id as string;
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     await request(app.getHttpServer()).post('/api/timer/stop').set(auth(ss));
     const garbage = await request(app.getHttpServer())
       .post('/api/timer/start')
@@ -87,7 +95,9 @@ describe('Fleet logistics (e2e)', () => {
       .send({ taskId, machineId });
     expect(clash.status).toBe(409);
     expect(clash.body.error.code).toBe('MACHINE_IN_USE');
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const sessionId = far.body.data.id as string;
     const amended = await request(app.getHttpServer())
       .post('/api/amendments')
@@ -236,7 +246,9 @@ describe('Fleet logistics (e2e)', () => {
     await request(app.getHttpServer())
       .delete(`/api/machines/${dead.body.data.id}`)
       .set(auth(admin));
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const startDead = await request(app.getHttpServer())
       .post('/api/timer/start')
       .set(auth(worker))
@@ -254,9 +266,9 @@ describe('Fleet logistics (e2e)', () => {
       .get('/api/projects/picker')
       .set(auth(driver));
     expect(driverPicker.status).toBe(200);
-    const row = (driverPicker.body.data as { id: string; plannedBudget?: unknown }[]).find(
-      (item) => item.id === projectId,
-    );
+    const row = (
+      driverPicker.body.data as { id: string; plannedBudget?: unknown }[]
+    ).find((item) => item.id === projectId);
     expect(row).toBeDefined();
     expect(row).not.toHaveProperty('plannedBudget');
     expect(row).not.toHaveProperty('currentSpend');
@@ -277,22 +289,29 @@ describe('Fleet logistics (e2e)', () => {
       .get(`/api/projects/${projectId}/presence`)
       .set(auth(ss));
     expect(present.status).toBe(200);
-    const five = (present.body.data as { userId: string; lat?: unknown }[]).find(
-      (row) => row.userId === workerId,
-    );
+    const five = (
+      present.body.data as { userId: string; lat?: unknown }[]
+    ).find((row) => row.userId === workerId);
     expect(five).toBeDefined();
     expect(five).not.toHaveProperty('lat');
     expect(five).not.toHaveProperty('lng');
     await prisma.userLocation.updateMany({
-      where: { userId: workerId, recordedAt: { gte: new Date(Date.now() - 60_000) } },
+      where: {
+        userId: workerId,
+        recordedAt: { gte: new Date(Date.now() - 60_000) },
+      },
       data: { recordedAt: new Date(Date.now() - 31 * 60 * 1000) },
     });
     const stale = await request(app.getHttpServer())
       .get(`/api/projects/${projectId}/presence`)
       .set(auth(ss));
-    const gone = (stale.body.data as { userId: string }[]).find((row) => row.userId === workerId);
+    const gone = (stale.body.data as { userId: string }[]).find(
+      (row) => row.userId === workerId,
+    );
     expect(gone).toBeUndefined();
-    const iot = await request(app.getHttpServer()).post('/api/iot/gps').send({ lat: '1', lng: '1' });
+    const iot = await request(app.getHttpServer())
+      .post('/api/iot/gps')
+      .send({ lat: '1', lng: '1' });
     expect(iot.status).toBe(401);
     expect(iot.body.error.code).toBe('AUTH_INVALID_CREDENTIALS');
   });

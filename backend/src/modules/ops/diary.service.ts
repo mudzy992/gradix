@@ -90,13 +90,19 @@ export class DiaryService {
       });
       return serializeDiary(row);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         const existing = await this.prisma.diaryEntry.findFirst({
           where: { companyId: project.companyId, projectId: project.id, date },
           include: { photos: true },
         });
         await this.notifyConflict(project.companyId, project.id, actor.id);
-        throwDiaryConflict(existing ? serializeDiary(existing) : null, incomingFromDto(dto));
+        throwDiaryConflict(
+          existing ? serializeDiary(existing) : null,
+          incomingFromDto(dto),
+        );
       }
       throw error;
     }
@@ -122,9 +128,15 @@ export class DiaryService {
     const project = await this.access.getVisibleProject(actor, row.projectId);
     await this.access.assertScopedWrite(actor, project);
     assertProjectWritable(project);
-    const count = await this.prisma.diaryPhoto.count({ where: { diaryEntryId: id } });
+    const count = await this.prisma.diaryPhoto.count({
+      where: { diaryEntryId: id },
+    });
     if (count >= DIARY_PHOTO_MAX) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Max 20 diary photos', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Max 20 diary photos',
+        400,
+      );
     }
     const path = assertStoragePath(dto.path, project.companyId);
     const photo = await this.prisma.diaryPhoto.create({
@@ -151,7 +163,11 @@ export class DiaryService {
   private async loadVisible(actor: AuthUser, id: string) {
     assertDiaryRead(actor);
     const row = await this.prisma.diaryEntry.findFirst({
-      where: { id, companyId: requireCompany(actor), ...diaryProjectWhere(actor) },
+      where: {
+        id,
+        companyId: requireCompany(actor),
+        ...diaryProjectWhere(actor),
+      },
       include: { photos: true },
     });
     if (!row) {
@@ -160,7 +176,11 @@ export class DiaryService {
     return row;
   }
 
-  private async notifyConflict(companyId: string, projectId: string, actorId: string) {
+  private async notifyConflict(
+    companyId: string,
+    projectId: string,
+    actorId: string,
+  ) {
     const users = await this.prisma.projectAssignment.findMany({
       where: { projectId },
       select: { userId: true },

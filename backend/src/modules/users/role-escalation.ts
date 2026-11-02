@@ -12,12 +12,20 @@ export async function assertRoleChange(params: {
 }): Promise<void> {
   const { actor, targetUserId, nextRoles, prisma } = params;
   if (nextRoles.length === 0) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'At least one role is required', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'At least one role is required',
+      400,
+    );
   }
   const actorIsPlatform = actor.roles.includes('PLATFORM_ADMIN');
   const actorIsSuper = actor.roles.includes('SUPER_ADMIN');
   if (nextRoles.includes('PLATFORM_ADMIN')) {
-    throw new AppError(ERROR_CODES.FORBIDDEN, 'PLATFORM_ADMIN cannot be assigned', 403);
+    throw new AppError(
+      ERROR_CODES.FORBIDDEN,
+      'PLATFORM_ADMIN cannot be assigned',
+      403,
+    );
   }
   if (nextRoles.includes('SUPER_ADMIN') && !actorIsPlatform && !actorIsSuper) {
     throw new AppError(ERROR_CODES.FORBIDDEN, 'Cannot assign SUPER_ADMIN', 403);
@@ -32,7 +40,10 @@ export async function assertRoleChange(params: {
   }
 }
 
-async function assertNotLastSuper(prisma: PrismaService, userId: string): Promise<void> {
+async function assertNotLastSuper(
+  prisma: PrismaService,
+  userId: string,
+): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.companyId) {
     return;
@@ -44,6 +55,10 @@ async function assertNotLastSuper(prisma: PrismaService, userId: string): Promis
     },
   });
   if (count <= 1) {
-    throw new AppError(ERROR_CODES.FORBIDDEN, 'Cannot remove the last SUPER_ADMIN', 403);
+    throw new AppError(
+      ERROR_CODES.FORBIDDEN,
+      'Cannot remove the last SUPER_ADMIN',
+      403,
+    );
   }
 }

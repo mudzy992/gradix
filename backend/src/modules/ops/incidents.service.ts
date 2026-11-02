@@ -12,7 +12,11 @@ import { parseDecimal } from '../../common/utils/decimal-input';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
-import { CreateIncidentDto, IncidentListQueryDto, PatchIncidentDto } from './incidents.dto';
+import {
+  CreateIncidentDto,
+  IncidentListQueryDto,
+  PatchIncidentDto,
+} from './incidents.dto';
 import { serializeIncident } from './serialize-diary';
 
 @Injectable()
@@ -30,7 +34,9 @@ export class IncidentsService {
     const where: Prisma.IncidentWhereInput = {
       companyId,
       ...(query.projectId ? { projectId: query.projectId } : {}),
-      ...(query.status ? { status: query.status as Prisma.EnumIncidentStatusFilter['equals'] } : {}),
+      ...(query.status
+        ? { status: query.status as Prisma.EnumIncidentStatusFilter['equals'] }
+        : {}),
       ...this.scopeWhere(actor),
     };
     const [rows, total] = await this.prisma.$transaction([
@@ -56,7 +62,11 @@ export class IncidentsService {
     }
     const paths = dto.paths ?? [];
     if (paths.length > HSE_PHOTO_MAX) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Max 5 incident photos', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Max 5 incident photos',
+        400,
+      );
     }
     const row = await this.prisma.incident.create({
       data: {
@@ -110,16 +120,27 @@ export class IncidentsService {
       return {};
     }
     if (hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
-      return { OR: [{ projectId: null }, { project: { assignments: { some: { userId: actor.id } } } }] };
+      return {
+        OR: [
+          { projectId: null },
+          { project: { assignments: { some: { userId: actor.id } } } },
+        ],
+      };
     }
     return { userId: actor.id };
   }
 
-  private async notifyCreated(companyId: string, incidentId: string, projectId?: string) {
+  private async notifyCreated(
+    companyId: string,
+    incidentId: string,
+    projectId?: string,
+  ) {
     const recipients = await this.prisma.userRoleAssignment.findMany({
       where: {
         user: { companyId, isActive: true },
-        role: { in: ['ADMIN', 'SUPER_ADMIN', 'SITE_SUPERVISOR', 'PROJECT_MANAGER'] },
+        role: {
+          in: ['ADMIN', 'SUPER_ADMIN', 'SITE_SUPERVISOR', 'PROJECT_MANAGER'],
+        },
       },
       select: { userId: true },
     });

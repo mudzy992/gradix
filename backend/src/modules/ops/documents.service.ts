@@ -39,7 +39,9 @@ export class DocumentsService {
     const project = await this.access.getVisibleProject(actor, projectId);
     await this.access.assertScopedWrite(actor, project);
     assertProjectWritable(project);
-    const row = await this.prisma.projectDocument.findFirst({ where: { id, projectId } });
+    const row = await this.prisma.projectDocument.findFirst({
+      where: { id, projectId },
+    });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Document not found', 404);
     }

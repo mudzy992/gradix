@@ -26,20 +26,30 @@ describe('Phase 9 payroll (e2e)', () => {
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     ss = (await login(app, 'ss@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
-    accountant = (await login(app, 'accountant@gradix.local')).body.data.accessToken;
-    const adminMe = await request(app.getHttpServer()).get('/api/me').set(auth(admin));
+    accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken;
+    const adminMe = await request(app.getHttpServer())
+      .get('/api/me')
+      .set(auth(admin));
     adminId = adminMe.body.data.id as string;
     companyId = adminMe.body.data.company.id as string;
-    ssId = (await request(app.getHttpServer()).get('/api/me').set(auth(ss))).body.data.id as string;
-    workerId = (await request(app.getHttpServer()).get('/api/me').set(auth(worker))).body.data
-      .id as string;
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    ssId = (await request(app.getHttpServer()).get('/api/me').set(auth(ss)))
+      .body.data.id as string;
+    workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id as string;
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     await request(app.getHttpServer()).post('/api/timer/stop').set(auth(ss));
     await request(app.getHttpServer()).post('/api/timer/stop').set(auth(admin));
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `Pay ${Date.now()}`, code: `PY${Date.now().toString().slice(-6)}` });
+      .send({
+        name: `Pay ${Date.now()}`,
+        code: `PY${Date.now().toString().slice(-6)}`,
+      });
     projectId = created.body.data.id as string;
     await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/assignments`)
@@ -52,7 +62,11 @@ describe('Phase 9 payroll (e2e)', () => {
     const task = await request(app.getHttpServer())
       .post('/api/tasks')
       .set(auth(ss))
-      .send({ projectId, title: 'Pay timer', assigneeIds: [workerId, ssId, adminId] });
+      .send({
+        projectId,
+        title: 'Pay timer',
+        assigneeIds: [workerId, ssId, adminId],
+      });
     taskId = task.body.data.id as string;
     await request(app.getHttpServer())
       .patch(`/api/users/${workerId}`)
@@ -71,7 +85,9 @@ describe('Phase 9 payroll (e2e)', () => {
       .send({ taskId });
     expect(started.status).toBe(201);
     expect(started.body.data.approvalStatus).toBe('PENDING');
-    await request(app.getHttpServer()).post('/api/timer/stop').set(auth(worker));
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
     const liveId = started.body.data.id as string;
     const ssOk = await request(app.getHttpServer())
       .post(`/api/payroll/sessions/${liveId}/approve`)
@@ -146,7 +162,10 @@ describe('Phase 9 payroll (e2e)', () => {
     expect(String(exported.headers['content-type'])).toContain('spreadsheetml');
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(exported.body as Buffer);
-    const durations = (workbook.worksheets[0].getColumn(5).values ?? []).slice(2, -1);
+    const durations = (workbook.worksheets[0].getColumn(5).values ?? []).slice(
+      2,
+      -1,
+    );
     expect(durations).toContain(90);
     expect(durations).not.toContain(120);
     expect(durations).not.toContain(60);
@@ -206,8 +225,13 @@ describe('Phase 9 payroll (e2e)', () => {
       .get('/api/payroll/sessions')
       .query({ year: 2023, month: 12, status: 'PENDING' })
       .set(auth(admin));
-    const row = (listed.body.data as { id: string; durationMinutes: number; approvalStatus: string }[])
-      .find((item) => item.id === amended.id);
+    const row = (
+      listed.body.data as {
+        id: string;
+        durationMinutes: number;
+        approvalStatus: string;
+      }[]
+    ).find((item) => item.id === amended.id);
     expect(row?.approvalStatus).toBe('PENDING');
     expect(row?.durationMinutes).toBe(75);
   });

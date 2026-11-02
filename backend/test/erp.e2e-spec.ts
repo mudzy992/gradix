@@ -16,13 +16,20 @@ describe('Phase 10 erp-lite (e2e)', () => {
     app = await createTestApp();
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
-    accountant = (await login(app, 'accountant@gradix.local')).body.data.accessToken;
-    const me = await request(app.getHttpServer()).get('/api/me').set(auth(admin));
+    accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken;
+    const me = await request(app.getHttpServer())
+      .get('/api/me')
+      .set(auth(admin));
     companyId = me.body.data.company.id as string;
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `ERP ${Date.now()}`, code: `ER${Date.now().toString().slice(-6)}`, client: 'JP Ceste' });
+      .send({
+        name: `ERP ${Date.now()}`,
+        code: `ER${Date.now().toString().slice(-6)}`,
+        client: 'JP Ceste',
+      });
     projectId = created.body.data.id as string;
   });
 
@@ -31,9 +38,13 @@ describe('Phase 10 erp-lite (e2e)', () => {
   });
 
   it('ACC read, ADMIN write, WORKER 403; client string without partner', async () => {
-    const workerList = await request(app.getHttpServer()).get('/api/partners').set(auth(worker));
+    const workerList = await request(app.getHttpServer())
+      .get('/api/partners')
+      .set(auth(worker));
     expect(workerList.status).toBe(403);
-    const accList = await request(app.getHttpServer()).get('/api/partners').set(auth(accountant));
+    const accList = await request(app.getHttpServer())
+      .get('/api/partners')
+      .set(auth(accountant));
     expect(accList.status).toBe(200);
     const accWrite = await request(app.getHttpServer())
       .post('/api/partners')
@@ -60,7 +71,12 @@ describe('Phase 10 erp-lite (e2e)', () => {
     const fuel = await request(app.getHttpServer())
       .post('/api/fuel')
       .set(auth(admin))
-      .send({ machineId: machine.body.data.id, projectId, liters: '10', unitPrice: '2.50' });
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '10',
+        unitPrice: '2.50',
+      });
     expect(fuel.status).toBe(201);
     const afterFuel = await request(app.getHttpServer())
       .get(`/api/projects/${projectId}`)
@@ -141,7 +157,12 @@ describe('Phase 10 erp-lite (e2e)', () => {
     const fuel = await request(app.getHttpServer())
       .post('/api/fuel')
       .set(auth(admin))
-      .send({ machineId: machine.body.data.id, projectId, liters: '10', unitPrice: '1.00' });
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '10',
+        unitPrice: '1.00',
+      });
     const first = await request(app.getHttpServer())
       .post(`/api/fuel/${fuel.body.data.id}/apply-stock`)
       .set(auth(admin))

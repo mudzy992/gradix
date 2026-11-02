@@ -11,7 +11,9 @@ export function applyPauseAccum(
 ): { pauseAccumMinutes: number; pausedAt: null } {
   let pauseAccumMinutes = session.pauseAccumMinutes;
   if (session.pausedAt) {
-    pauseAccumMinutes += Math.floor((now.getTime() - session.pausedAt.getTime()) / 60_000);
+    pauseAccumMinutes += Math.floor(
+      (now.getTime() - session.pausedAt.getTime()) / 60_000,
+    );
   }
   return { pauseAccumMinutes, pausedAt: null };
 }
@@ -23,7 +25,8 @@ export function computeDurationMinutes(
 ): number {
   return Math.max(
     0,
-    Math.floor((closedAt.getTime() - startedAt.getTime()) / 60_000) - pauseAccumMinutes,
+    Math.floor((closedAt.getTime() - startedAt.getTime()) / 60_000) -
+      pauseAccumMinutes,
   );
 }
 

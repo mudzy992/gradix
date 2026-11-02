@@ -1,91 +1,117 @@
+# Gradix — produkcijski docker-compose (Coolify)
+#
+# Servisi:
+#   minio     — objektno skladište (interni servis)
+#   backend   — NestJS API (port 3000)
+#   frontend  — Vite/React build serviran kroz nginx (port 80)
+#
+# EKSTERNO (ne pokreće se ovim compose fajlom):
+#   PostgreSQL — obavezan `DATABASE_URL`
+#   Redis      — opcionalan (v1 ne koristi queue)
+#
+# Obavezne env varijable (Coolify → Environment Variables):
+#   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+#   (vidi .env.example / DEPLOYMENT_COOLIFY.md)
+#
+# Napomena: compose koristi `:?` za obavezne tajne — deploy pada odmah sa
+# jasnom porukom umjesto da aplikacija starta sa praznim JWT tajnama.
+
 services:
-  # MinIO (objektno skladište) — JEDINI INTEGRISANI SERVIS u ovom compose
-  # Baza podataka (PostgreSQL) i Redis su EKSTERNI (već postoje u Dockeru / Coolify okruženju)
   minio:
     image: minio/minio:latest
-    container_name: gradix-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     ports:
-      - "${MINIO_PORT:-9000}:9000"
+      # Host portovi su konfigurabilni — interni portovi su fiksni (9000/9001).
+      - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     networks:
       - gradix-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 20s
 
-  # Backend (NestJS) — povezuje se na EKSTERNU PostgreSQL bazu i EKSTERNI Redis
   backend:
     build:
       context: ./backend
-      dockerfile: ../Dockerfile
-    container_name: gradix-backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: ${PORT:-3000}
-      # EKSTERNA PostgreSQL baza (Coolify / Docker / host) — TLS CA cert mapiran sa hosta
-      DATABASE_URL: ${DATABASE_URL:-postgresql://gradix_user:gradix_password@postgres.external:5432/gradix?sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt}
-      # JWT tajne (min 32 znaka za produkciju!)
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      # MinIO (interni — jedini servis u ovom compose)
+      PORT: 3000
+      # Migracije se pokreću pri startu kontejnera (RUN_MIGRATIONS=false ih isključuje)
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      # EKSTERNA PostgreSQL baza (Coolify / Docker / host)
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL je obavezan (postgresql://user:pass@host:5432/db)}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET je obavezan (min 32 znaka)}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET je obavezan (min 32 znaka)}
+      # MinIO — interni servis iz ovog compose fajla
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
-      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_PORT: 9000
       MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-gradix}
-      # CORS za Coolify domene
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://gradix.local}
-      # Seed lozinka — PROMIJENITI za produkciju!
-      SEED_PASSWORD: ${SEED_PASSWORD:-GradixSeed1}
-      # TLS CA cert za PostgreSQL klijent (mapiran sa hosta Coolify)
-      PGSSLROOTCERT: /etc/ssl/certs/coolify-ca.crt
-      PGSSLMODE: verify-ca
-      # EKSTERNI Redis (globalni) — za buduće BullMQ / queue radnike (v1 ne koristi)
-      REDIS_HOST: ${REDIS_HOST:-redis.global}
+      # CORS — za nginx-proxy (frontend na istoj domeni) postavite javni URL
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
+      # EKSTERNI Redis — opcionalno (v1 ne koristi queue radnike)
+      REDIS_HOST: ${REDIS_HOST:-}
       REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-gradixwork}
-      REDIS_TLS_CA_FILE: /etc/ssl/redis/redis-ca.crt
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PREFIX: ${REDIS_PREFIX:-gradix:queue:}
-    volumes:
-      # TLS CA cert za PostgreSQL (eksterna baza) — mapiran sa Coolify hosta
-      - /data/coolify/ssl/coolify-ca.crt:/etc/ssl/certs/coolify-ca.crt:ro
-      # TLS CA cert za Redis (globalni) — mapiran sa Coolify hosta
-      - /data/coolify/ssl/redis-core/redis-ca.crt:/etc/ssl/redis/redis-ca.crt:ro
     ports:
-      - "${PORT:-3000}:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     depends_on:
+      # Backend sam ponavlja konekciju na MinIO (retry u MinioService),
+      # pa healthcheck MinIO-a nije uslov za start.
       minio:
         condition: service_started
     networks:
       - gradix-net
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
-  # Frontend (Vite / React) — opcionalno; može i preko Coolify statičkog sajta / nginx
   frontend:
     build:
       context: ./frontend
-      dockerfile: ../Dockerfile.frontend
-    container_name: gradix-frontend
+      dockerfile: Dockerfile
+      args:
+        # Prazno = relativni /api i /socket.io pozivi kroz nginx proxy ispod.
+        VITE_API_URL: ${VITE_API_URL:-}
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://gradix-backend:3000}
-      NODE_ENV: production
+      # nginx prosljeđuje /api i /socket.io na ovaj URL (interno ime servisa)
+      BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     networks:
       - gradix-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   minio_data:

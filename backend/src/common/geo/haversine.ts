@@ -25,5 +25,8 @@ export function isInsideGeofence(input: {
   centerLng: number;
   radiusM: number;
 }): boolean {
-  return distanceMeters(input.lat, input.lng, input.centerLat, input.centerLng) <= input.radiusM;
+  return (
+    distanceMeters(input.lat, input.lng, input.centerLat, input.centerLng) <=
+    input.radiusM
+  );
 }

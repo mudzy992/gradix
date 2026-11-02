@@ -35,14 +35,26 @@ export class GpsDevicesService {
       });
       return { ...serializeGpsDevice(row), apiKey };
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new AppError(ERROR_CODES.IOT_DEVICE_EXISTS, 'Machine already has a GPS device', 409);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppError(
+          ERROR_CODES.IOT_DEVICE_EXISTS,
+          'Machine already has a GPS device',
+          409,
+        );
       }
       throw error;
     }
   }
 
-  async patch(actor: AuthUser, machineId: string, deviceId: string, dto: PatchGpsDeviceDto) {
+  async patch(
+    actor: AuthUser,
+    machineId: string,
+    deviceId: string,
+    dto: PatchGpsDeviceDto,
+  ) {
     await this.loadWritable(actor, machineId);
     const device = await this.loadDevice(machineId, deviceId);
     const row = await this.prisma.gpsDevice.update({
@@ -91,7 +103,9 @@ export class GpsDevicesService {
   }
 
   private async loadDevice(machineId: string, deviceId: string) {
-    const device = await this.prisma.gpsDevice.findFirst({ where: { id: deviceId, machineId } });
+    const device = await this.prisma.gpsDevice.findFirst({
+      where: { id: deviceId, machineId },
+    });
     if (!device) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Device not found', 404);
     }

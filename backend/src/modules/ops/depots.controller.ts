@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateDepotDto, PatchDepotDto } from './fuel.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -21,7 +29,11 @@ export class DepotsController {
   }
 
   @Patch(':id')
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchDepotDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchDepotDto,
+  ) {
     return this.catalog.patchDepot(actor, id, dto);
   }
 

@@ -11,7 +11,10 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { assertSlug } from '../../common/utils/slug';
 import { normalizePhone } from '../../common/utils/phone';
-import { createTemporaryPassword, hashPassword } from '../../common/utils/password';
+import {
+  createTemporaryPassword,
+  hashPassword,
+} from '../../common/utils/password';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -125,7 +128,11 @@ export class CompaniesService {
 
   private requireTenant(actor: AuthUser): string {
     if (!actor.tenantCompanyId) {
-      throw new AppError(ERROR_CODES.TENANT_HEADER_REQUIRED, 'X-Company-Id is required', 403);
+      throw new AppError(
+        ERROR_CODES.TENANT_HEADER_REQUIRED,
+        'X-Company-Id is required',
+        403,
+      );
     }
     return actor.tenantCompanyId;
   }
@@ -137,10 +144,18 @@ export class CompaniesService {
     allowActive: boolean,
   ) {
     if (dto.slug !== undefined) {
-      throw new AppError(ERROR_CODES.TENANT_SLUG_IMMUTABLE, 'Slug cannot be changed', 409);
+      throw new AppError(
+        ERROR_CODES.TENANT_SLUG_IMMUTABLE,
+        'Slug cannot be changed',
+        409,
+      );
     }
     if (dto.isActive !== undefined && !allowActive) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'isActive requires platform access', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'isActive requires platform access',
+        403,
+      );
     }
     const existing = await this.prisma.company.findUnique({ where: { id } });
     if (!existing) {
@@ -163,7 +178,9 @@ export class CompaniesService {
     });
     if (allowActive && dto.isActive === false && existing.isActive) {
       await this.timers.closeOpenForCompany(id, actor.id);
-      const users = await this.prisma.user.findMany({ where: { companyId: id } });
+      const users = await this.prisma.user.findMany({
+        where: { companyId: id },
+      });
       await Promise.all(users.map((user) => this.tokens.revokeAll(user.id)));
       await this.audit.write({
         companyId: id,
@@ -187,16 +204,38 @@ export class CompaniesService {
   }
 
   private throwUnique(error: unknown): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      const target = String(error.meta?.target ?? '');
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      const target = readUniqueTarget(error.meta);
       if (target.includes('slug')) {
         throw new AppError(ERROR_CODES.CONFLICT, 'Slug already taken', 409);
       }
       if (target.includes('email')) {
-        throw new AppError(ERROR_CODES.AUTH_EMAIL_TAKEN, 'Email already taken', 409);
+        throw new AppError(
+          ERROR_CODES.AUTH_EMAIL_TAKEN,
+          'Email already taken',
+          409,
+        );
       }
       throw new AppError(ERROR_CODES.CONFLICT, 'Conflict', 409);
     }
     throw error;
   }
+}
+
+/**
+ * Prisma P2002 `meta.target` je ili string ili lista kolona.
+ * Normalizujemo ga u string kako bi provjera unique polja bila deterministička.
+ */
+function readUniqueTarget(meta: unknown): string {
+  if (typeof meta !== 'object' || meta === null || !('target' in meta)) {
+    return '';
+  }
+  const target = (meta as { target?: unknown }).target;
+  if (Array.isArray(target)) {
+    return target.filter((item) => typeof item === 'string').join(',');
+  }
+  return typeof target === 'string' ? target : '';
 }

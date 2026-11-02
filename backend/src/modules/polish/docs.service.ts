@@ -51,7 +51,9 @@ export class DocsService {
 
   async patchCompany(actor: AuthUser, id: string, dto: PatchDocDto) {
     const companyId = requireCompany(actor);
-    const existing = await this.prisma.companyDocument.findFirst({ where: { id, companyId } });
+    const existing = await this.prisma.companyDocument.findFirst({
+      where: { id, companyId },
+    });
     if (!existing) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Document not found', 404);
     }
@@ -64,7 +66,10 @@ export class DocsService {
         data: {
           type: dto.type,
           filePath: dto.filePath,
-          expiresAt: dto.expiresAt !== undefined ? parseExpires(dto.expiresAt) ?? null : undefined,
+          expiresAt:
+            dto.expiresAt !== undefined
+              ? (parseExpires(dto.expiresAt) ?? null)
+              : undefined,
           note: dto.note,
         },
       }),
@@ -89,7 +94,9 @@ export class DocsService {
   async createWorker(actor: AuthUser, dto: CreateWorkerDocDto) {
     const companyId = requireCompany(actor);
     assertStoragePath(dto.filePath, companyId);
-    const user = await this.prisma.user.findFirst({ where: { id: dto.userId, companyId } });
+    const user = await this.prisma.user.findFirst({
+      where: { id: dto.userId, companyId },
+    });
     if (!user) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid userId', 400);
     }
@@ -129,7 +136,11 @@ export class DocsService {
       where: { id: dto.machineId, companyId },
     });
     if (!machine) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid machineId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid machineId',
+        400,
+      );
     }
     return serializeDoc(
       await this.prisma.machineDocument.create({

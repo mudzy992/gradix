@@ -45,7 +45,11 @@ export class SyncService {
     const companyId = requireCompany(actor);
     const since = dto.since ? new Date(dto.since) : new Date(0);
     if (Number.isNaN(since.getTime())) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'since is invalid', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'since is invalid',
+        400,
+      );
     }
     const updated: Prisma.DateTimeFilter = { gte: since };
     const [timers, trips, fuel, diary, tasks] = await Promise.all([

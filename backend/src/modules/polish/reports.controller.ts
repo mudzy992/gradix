@@ -28,7 +28,10 @@ export class ReportsController {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
-    response.setHeader('Content-Disposition', `attachment; filename="${slug}.xlsx"`);
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${slug}.xlsx"`,
+    );
     response.send(buffer);
   }
 

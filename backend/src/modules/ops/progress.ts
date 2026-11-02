@@ -14,9 +14,14 @@ export async function recalcProgress(tx: Tx, projectId: string): Promise<void> {
       tasks.length === 0
         ? 0
         : Math.round(
-            (tasks.filter((task) => task.status === 'COMPLETED').length / tasks.length) * 100,
+            (tasks.filter((task) => task.status === 'COMPLETED').length /
+              tasks.length) *
+              100,
           );
-    await tx.project.update({ where: { id: projectId }, data: { progressPercent: percent } });
+    await tx.project.update({
+      where: { id: projectId },
+      data: { progressPercent: percent },
+    });
     return;
   }
   let sum = 0;
@@ -29,7 +34,9 @@ export async function recalcProgress(tx: Tx, projectId: string): Promise<void> {
       tasks.length === 0
         ? 0
         : Math.round(
-            (tasks.filter((task) => task.status === 'COMPLETED').length / tasks.length) * 100,
+            (tasks.filter((task) => task.status === 'COMPLETED').length /
+              tasks.length) *
+              100,
           );
     await tx.projectPhase.update({
       where: { id: phase.id },

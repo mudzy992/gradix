@@ -1,6 +1,5 @@
 import { Role } from '../../../generated/client';
 import { resolvePermissions } from '../../common/rbac/role-permissions';
-import { AppRole } from '../../common/rbac/roles';
 import { AuthUser } from '../../common/types/auth-user';
 
 type UserRecord = {
@@ -22,7 +21,7 @@ export function mapAuthUser(
   user: UserRecord,
   tenantCompanyId: string | null,
 ): AuthUser {
-  const roles = user.roles.map((item) => item.role as AppRole);
+  const roles = user.roles.map((item) => item.role);
   return {
     id: user.id,
     email: user.email,

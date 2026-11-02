@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 function toInt(value: unknown): unknown {

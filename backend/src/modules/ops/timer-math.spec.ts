@@ -1,4 +1,8 @@
-import { applyPauseAccum, computeDurationMinutes, computeElapsedMinutes } from './timer-math';
+import {
+  applyPauseAccum,
+  computeDurationMinutes,
+  computeElapsedMinutes,
+} from './timer-math';
 
 describe('timer-math', () => {
   it('pause-then-stop excludes paused minutes', () => {
@@ -10,7 +14,9 @@ describe('timer-math', () => {
       closedAt,
     );
     expect(paused.pauseAccumMinutes).toBe(10);
-    expect(computeDurationMinutes(startedAt, closedAt, paused.pauseAccumMinutes)).toBe(60);
+    expect(
+      computeDurationMinutes(startedAt, closedAt, paused.pauseAccumMinutes),
+    ).toBe(60);
   });
 
   it('elapsed while paused stops at pausedAt', () => {
@@ -20,7 +26,10 @@ describe('timer-math', () => {
       pausedAt: new Date('2026-08-16T08:20:00Z'),
       pauseAccumMinutes: 0,
     };
-    const elapsed = computeElapsedMinutes(session, new Date('2026-08-16T09:00:00Z'));
+    const elapsed = computeElapsedMinutes(
+      session,
+      new Date('2026-08-16T09:00:00Z'),
+    );
     expect(elapsed).toBe(20);
   });
 });

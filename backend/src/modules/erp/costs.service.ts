@@ -45,10 +45,18 @@ export class CostsService {
     const companyId = requireCompany(actor);
     const source = dto.source ?? 'MANUAL';
     if (source === 'MANUAL' && dto.sourceId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'MANUAL cannot set sourceId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'MANUAL cannot set sourceId',
+        400,
+      );
     }
     if (source !== 'MANUAL' && !dto.sourceId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'sourceId required', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'sourceId required',
+        400,
+      );
     }
     if (dto.projectId) {
       await this.assertProject(companyId, dto.projectId);
@@ -88,7 +96,11 @@ export class CostsService {
     if (dto.projectId) {
       await this.assertProject(companyId, dto.projectId);
     }
-    const built = await buildPayrollCost({ prisma: this.prisma, companyId, dto });
+    const built = await buildPayrollCost({
+      prisma: this.prisma,
+      companyId,
+      dto,
+    });
     try {
       const row = await this.prisma.costEntry.create({
         data: {
@@ -141,8 +153,13 @@ export class CostsService {
     }
   }
 
-  private async assertProject(companyId: string, projectId: string): Promise<void> {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, companyId } });
+  private async assertProject(
+    companyId: string,
+    projectId: string,
+  ): Promise<void> {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, companyId },
+    });
     if (!project) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
     }

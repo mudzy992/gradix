@@ -34,8 +34,13 @@ export function assertDiaryWrite(actor: AuthUser): void {
   }
 }
 
-export function diaryProjectWhere(actor: AuthUser): Prisma.DiaryEntryWhereInput {
-  if (isCompanyWide(actor) || hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
+export function diaryProjectWhere(
+  actor: AuthUser,
+): Prisma.DiaryEntryWhereInput {
+  if (
+    isCompanyWide(actor) ||
+    hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')
+  ) {
     if (isCompanyWide(actor)) {
       return {};
     }
@@ -44,10 +49,18 @@ export function diaryProjectWhere(actor: AuthUser): Prisma.DiaryEntryWhereInput 
   throw new AppError(ERROR_CODES.FORBIDDEN, 'Diary not allowed', 403);
 }
 
-export function throwDiaryConflict(existing: unknown, incoming: unknown): never {
-  throw new AppError(ERROR_CODES.DIARY_CONFLICT, 'Diary already exists for this day', 409, {
-    conflictData: { entityType: 'DIARY', existing, incoming },
-  });
+export function throwDiaryConflict(
+  existing: unknown,
+  incoming: unknown,
+): never {
+  throw new AppError(
+    ERROR_CODES.DIARY_CONFLICT,
+    'Diary already exists for this day',
+    409,
+    {
+      conflictData: { entityType: 'DIARY', existing, incoming },
+    },
+  );
 }
 
 export function diaryWriteData(dto: DiaryFields) {

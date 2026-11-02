@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TaskAssigneesService } from './task-assignees.service';
 import { TaskDependenciesService } from './task-dependencies.service';
@@ -48,7 +58,11 @@ export class TasksController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.TASKS_WRITE)
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchTaskDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchTaskDto,
+  ) {
     return this.tasks.patch(actor, id, dto);
   }
 
@@ -66,7 +80,11 @@ export class TasksController {
 
   @Post(':id/assignees')
   @RequirePermissions(PERMISSIONS.TASKS_WRITE)
-  addAssignee(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: AssigneeDto) {
+  addAssignee(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: AssigneeDto,
+  ) {
     return this.assignees.add(actor, id, dto);
   }
 
@@ -106,7 +124,11 @@ export class TasksController {
 
   @Post(':id/dependencies')
   @RequirePermissions(PERMISSIONS.TASKS_WRITE)
-  addDep(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: DependencyDto) {
+  addDep(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: DependencyDto,
+  ) {
     return this.deps.add(actor, id, dto);
   }
 

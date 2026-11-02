@@ -39,7 +39,9 @@ export class LocationsService {
         userId: actor.id,
         lat,
         lng,
-        accuracyM: dto.accuracyM ? parseDecimal(dto.accuracyM, 'accuracyM') : undefined,
+        accuracyM: dto.accuracyM
+          ? parseDecimal(dto.accuracyM, 'accuracyM')
+          : undefined,
       },
     });
     await notifyGeofenceTransitions({
@@ -51,7 +53,12 @@ export class LocationsService {
       prevLat: previous ? Number(previous.lat) : null,
       prevLng: previous ? Number(previous.lng) : null,
       projects: await this.prisma.project.findMany({
-        where: { companyId, lat: { not: null }, lng: { not: null }, archivedAt: null },
+        where: {
+          companyId,
+          lat: { not: null },
+          lng: { not: null },
+          archivedAt: null,
+        },
       }),
     });
     return {
@@ -72,7 +79,9 @@ export class LocationsService {
     const rows = await this.prisma.userLocation.findMany({
       where: { companyId: project.companyId, recordedAt: { gte: since } },
       orderBy: { recordedAt: 'desc' },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
     const latest = new Map<string, (typeof rows)[number]>();
     for (const row of rows) {
@@ -107,14 +116,21 @@ export class LocationsService {
     const projects = query.projectId
       ? [await this.access.getVisibleProject(actor, query.projectId)]
       : await this.prisma.project.findMany({
-          where: { companyId, lat: { not: null }, lng: { not: null }, archivedAt: null },
+          where: {
+            companyId,
+            lat: { not: null },
+            lng: { not: null },
+            archivedAt: null,
+          },
         });
     return projects
       .filter((project) => project.lat != null && project.lng != null)
       .map((project) => {
         const centerLat = Number(project.lat);
         const centerLng = Number(project.lng);
-        const distanceM = Math.round(distanceMeters(lat, lng, centerLat, centerLng));
+        const distanceM = Math.round(
+          distanceMeters(lat, lng, centerLat, centerLng),
+        );
         return {
           projectId: project.id,
           name: project.name,
@@ -124,14 +140,24 @@ export class LocationsService {
       });
   }
 
-  async pingMachine(actor: AuthUser, machineId: string, dto: MachineLocationDto) {
+  async pingMachine(
+    actor: AuthUser,
+    machineId: string,
+    dto: MachineLocationDto,
+  ) {
     const companyId = requireCompany(actor);
-    const machine = await this.prisma.machine.findFirst({ where: { id: machineId, companyId } });
+    const machine = await this.prisma.machine.findFirst({
+      where: { id: machineId, companyId },
+    });
     if (!machine) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Machine not found', 404);
     }
     if (machine.status === 'DECOMMISSIONED') {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Machine is decommissioned',
+        409,
+      );
     }
     await this.assertCanPingMachine(actor, machine.id);
     const lat = parseDecimal(dto.lat, 'lat');
@@ -156,7 +182,10 @@ export class LocationsService {
     };
   }
 
-  private async assertCanPingMachine(actor: AuthUser, machineId: string): Promise<void> {
+  private async assertCanPingMachine(
+    actor: AuthUser,
+    machineId: string,
+  ): Promise<void> {
     if (actor.permissions.includes('fleet.write')) {
       return;
     }
@@ -170,7 +199,11 @@ export class LocationsService {
       where: { userId: actor.id, machineId, closedAt: null },
     });
     if (!timer) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Cannot ping this machine', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Cannot ping this machine',
+        403,
+      );
     }
   }
 

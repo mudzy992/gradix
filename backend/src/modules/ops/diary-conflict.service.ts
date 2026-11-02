@@ -19,7 +19,11 @@ export class DiaryConflictService {
   async resolve(actor: AuthUser, dto: ResolveConflictDto) {
     assertDiaryWrite(actor);
     if (dto.entityType !== 'DIARY') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Unsupported entityType', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Unsupported entityType',
+        400,
+      );
     }
     const project = await this.access.getVisibleProject(actor, dto.projectId);
     await this.access.assertScopedWrite(actor, project);
@@ -36,7 +40,11 @@ export class DiaryConflictService {
     }
     if (dto.choice === 'B') {
       if (!dto.incoming) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'incoming required for B', 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          'incoming required for B',
+          400,
+        );
       }
       return serializeDiary(
         await this.prisma.diaryEntry.update({
@@ -47,16 +55,25 @@ export class DiaryConflictService {
       );
     }
     if (dto.choice !== 'MERGE') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'choice must be A, B, or MERGE', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'choice must be A, B, or MERGE',
+        400,
+      );
     }
     return serializeDiary(
       await this.prisma.diaryEntry.update({
         where: { id: existing.id },
         data: {
           workDescription:
-            dto.mergeWork ?? this.mergeText(existing.workDescription, dto.incoming?.workDescription),
+            dto.mergeWork ??
+            this.mergeText(
+              existing.workDescription,
+              dto.incoming?.workDescription,
+            ),
           problemsNoted:
-            dto.mergeProblems ?? this.mergeText(existing.problemsNoted, dto.incoming?.problemsNoted),
+            dto.mergeProblems ??
+            this.mergeText(existing.problemsNoted, dto.incoming?.problemsNoted),
         },
         include: { photos: true },
       }),

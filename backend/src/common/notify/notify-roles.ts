@@ -26,7 +26,9 @@ export async function notifyRoles(input: {
   message: string;
   data?: Prisma.InputJsonValue;
 }): Promise<void> {
-  const ids = new Set(await userIdsWithRoles(input.prisma, input.companyId, input.roles));
+  const ids = new Set(
+    await userIdsWithRoles(input.prisma, input.companyId, input.roles),
+  );
   for (const extra of input.extraUserIds ?? []) {
     ids.add(extra);
   }

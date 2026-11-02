@@ -12,7 +12,9 @@ export async function readCompanyTimezone(
   const row = await prisma.setting.findUnique({
     where: { companyId_key: { companyId, key: 'app.timezone' } },
   });
-  return typeof row?.value === 'string' && row.value ? row.value : DEFAULT_TIMEZONE;
+  return typeof row?.value === 'string' && row.value
+    ? row.value
+    : DEFAULT_TIMEZONE;
 }
 
 export function calendarDateInTz(now: Date, timeZone: string): string {
@@ -26,7 +28,11 @@ export function calendarDateInTz(now: Date, timeZone: string): string {
 
 export function parseDateOnly(value: string): Date {
   if (!DATE_ONLY.test(value)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'date must be YYYY-MM-DD', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'date must be YYYY-MM-DD',
+      400,
+    );
   }
   const parsed = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime())) {

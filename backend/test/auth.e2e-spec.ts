@@ -23,7 +23,9 @@ describe('Auth (e2e)', () => {
     expect(payload.sub).toBeDefined();
     expect(payload.role).toBeUndefined();
     expect(payload.roles).toBeUndefined();
-    const me = await request(app.getHttpServer()).get('/api/me').set(auth(token));
+    const me = await request(app.getHttpServer())
+      .get('/api/me')
+      .set(auth(token));
     expect(me.status).toBe(200);
     expect(me.body.data.firstName).toBe('Demo');
     expect(me.body.data.lastName).toBe('Admin');
@@ -85,7 +87,10 @@ describe('Auth (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/change-password')
       .set(auth(logged.body.data.accessToken as string))
-      .send({ currentPassword: process.env.SEED_PASSWORD, newPassword: 'shortnine' });
+      .send({
+        currentPassword: process.env.SEED_PASSWORD,
+        newPassword: 'shortnine',
+      });
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('AUTH_PASSWORD_TOO_SHORT');
   });

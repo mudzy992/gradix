@@ -37,7 +37,9 @@ describe('Files (e2e)', () => {
       .set(auth(token))
       .attach('file', PNG, { filename: 'dot.png', contentType: 'image/png' });
     expect(uploaded.status).toBe(201);
-    expect(uploaded.body.data.path).toMatch(/^[a-z0-9]+\/\d{4}\/\d{2}\/.+\.png$/);
+    expect(uploaded.body.data.path).toMatch(
+      /^[a-z0-9]+\/\d{4}\/\d{2}\/.+\.png$/,
+    );
     const companyId = logged.body.data.user.company.id as string;
     expect(uploaded.body.data.path.startsWith(`${companyId}/`)).toBe(true);
   });

@@ -44,13 +44,16 @@ export class TimerForceCloseService {
     });
     await addTaskMinutes(this.prisma, session.taskId, durationMinutes);
     await addMachineHours(this.prisma, session.machineId, durationMinutes);
-    const task = await this.prisma.task.findUniqueOrThrow({ where: { id: session.taskId } });
+    const task = await this.prisma.task.findUniqueOrThrow({
+      where: { id: session.taskId },
+    });
     if (reason !== 'complete' && reason !== 'cancel') {
       await syncTaskStatus(this.prisma, session.taskId);
     }
     await recalcProgress(this.prisma, task.projectId);
     if (reason === 'force' || reason === 'auto') {
-      const action = reason === 'auto' ? 'TIMER_AUTO_CLOSED' : 'TIMER_FORCE_CLOSED';
+      const action =
+        reason === 'auto' ? 'TIMER_AUTO_CLOSED' : 'TIMER_FORCE_CLOSED';
       await this.audit.write({
         companyId: session.companyId,
         actorId,

@@ -1,6 +1,9 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { DOC_WARN_WINDOWS } from '../../common/constants';
-import { calendarDateInTz, readCompanyTimezone } from '../../common/scope/company-tz';
+import {
+  calendarDateInTz,
+  readCompanyTimezone,
+} from '../../common/scope/company-tz';
 import type { ExpiringDoc } from './dashboard-types';
 
 export async function loadExpiring(
@@ -10,12 +13,23 @@ export async function loadExpiring(
   const tz = await readCompanyTimezone(prisma, companyId);
   const today = calendarDateInTz(new Date(), tz);
   const [company, worker, machine] = await Promise.all([
-    prisma.companyDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
-    prisma.workerDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
-    prisma.machineDocument.findMany({ where: { companyId, expiresAt: { not: null } } }),
+    prisma.companyDocument.findMany({
+      where: { companyId, expiresAt: { not: null } },
+    }),
+    prisma.workerDocument.findMany({
+      where: { companyId, expiresAt: { not: null } },
+    }),
+    prisma.machineDocument.findMany({
+      where: { companyId, expiresAt: { not: null } },
+    }),
   ]);
   const items: ExpiringDoc[] = [];
-  const push = (entityType: string, id: string, type: string, expiresAt: Date | null): void => {
+  const push = (
+    entityType: string,
+    id: string,
+    type: string,
+    expiresAt: Date | null,
+  ): void => {
     if (!expiresAt) {
       return;
     }

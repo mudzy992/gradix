@@ -6,7 +6,12 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { canReadCatalog, canWriteCatalog } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
-import { CreateDepotDto, CreateMaterialDto, PatchDepotDto, PatchMaterialDto } from './fuel.dto';
+import {
+  CreateDepotDto,
+  CreateMaterialDto,
+  PatchDepotDto,
+  PatchMaterialDto,
+} from './fuel.dto';
 
 const MATERIAL_UNITS = ['M3', 'T', 'M', 'M2', 'PCS', 'H', 'L'] as const;
 type MaterialUnit = (typeof MATERIAL_UNITS)[number];
@@ -39,7 +44,10 @@ export class CatalogService {
     await this.loadMaterial(actor, id);
     return this.prisma.material.update({
       where: { id },
-      data: { name: dto.name, unit: dto.unit ? this.parseUnit(dto.unit) : undefined },
+      data: {
+        name: dto.name,
+        unit: dto.unit ? this.parseUnit(dto.unit) : undefined,
+      },
     });
   }
 
@@ -48,7 +56,10 @@ export class CatalogService {
     const row = await this.loadMaterial(actor, id);
     const used = await this.prisma.trip.count({ where: { materialId: id } });
     if (used > 0) {
-      return this.prisma.material.update({ where: { id }, data: { isActive: false } });
+      return this.prisma.material.update({
+        where: { id },
+        data: { isActive: false },
+      });
     }
     await this.prisma.material.delete({ where: { id: row.id } });
     return { id };
@@ -82,7 +93,12 @@ export class CatalogService {
     await this.loadDepot(actor, id);
     const row = await this.prisma.depot.update({
       where: { id },
-      data: { name: dto.name, qrToken: dto.qrToken, lat: dto.lat, lng: dto.lng },
+      data: {
+        name: dto.name,
+        qrToken: dto.qrToken,
+        lat: dto.lat,
+        lng: dto.lng,
+      },
     });
     return this.serializeDepot(row);
   }
@@ -93,7 +109,10 @@ export class CatalogService {
     const used = await this.prisma.trip.count({ where: { destDepotId: id } });
     if (used > 0) {
       return this.serializeDepot(
-        await this.prisma.depot.update({ where: { id }, data: { isActive: false } }),
+        await this.prisma.depot.update({
+          where: { id },
+          data: { isActive: false },
+        }),
       );
     }
     await this.prisma.depot.delete({ where: { id: row.id } });
@@ -105,12 +124,20 @@ export class CatalogService {
     lng: { toString(): string } | null;
     [key: string]: unknown;
   }) {
-    return { ...row, lat: row.lat?.toString() ?? null, lng: row.lng?.toString() ?? null };
+    return {
+      ...row,
+      lat: row.lat?.toString() ?? null,
+      lng: row.lng?.toString() ?? null,
+    };
   }
 
   private parseUnit(unit: string): MaterialUnit {
     if (!MATERIAL_UNITS.includes(unit as MaterialUnit)) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid material unit', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid material unit',
+        400,
+      );
     }
     return unit as MaterialUnit;
   }
@@ -137,13 +164,21 @@ export class CatalogService {
 
   private assertRead(actor: AuthUser): void {
     if (!canReadCatalog(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Catalog read not allowed', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Catalog read not allowed',
+        403,
+      );
     }
   }
 
   private assertWrite(actor: AuthUser): void {
     if (!canWriteCatalog(actor)) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Catalog write not allowed', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Catalog write not allowed',
+        403,
+      );
     }
   }
 }

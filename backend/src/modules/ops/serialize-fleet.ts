@@ -46,6 +46,9 @@ export function serializeFuel(row: FuelEntry) {
   };
 }
 
-export function fuelTotalCost(liters: Prisma.Decimal, unitPrice: Prisma.Decimal): Prisma.Decimal {
+export function fuelTotalCost(
+  liters: Prisma.Decimal,
+  unitPrice: Prisma.Decimal,
+): Prisma.Decimal {
   return liters.mul(unitPrice).toDecimalPlaces(2);
 }

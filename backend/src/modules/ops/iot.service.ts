@@ -19,7 +19,11 @@ export class IotService {
   async ingest(rawKey: string | undefined, dto: IotGpsDto) {
     const device = await this.resolveDevice(rawKey);
     if (device.machine.status === 'DECOMMISSIONED' || !device.isActive) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Device is not allowed to ingest', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Device is not allowed to ingest',
+        403,
+      );
     }
     const lat = parseDecimal(dto.lat, 'lat');
     const lng = parseDecimal(dto.lng, 'lng');
@@ -49,14 +53,22 @@ export class IotService {
 
   private async resolveDevice(rawKey: string | undefined) {
     if (!rawKey) {
-      throw new AppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, 'Invalid credentials', 401);
+      throw new AppError(
+        ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        'Invalid credentials',
+        401,
+      );
     }
     const device = await this.prisma.gpsDevice.findUnique({
       where: { keyLookup: deviceKeyLookup(rawKey) },
       include: { machine: true },
     });
     if (!device || !(await verifyPassword(device.apiKeyHash, rawKey))) {
-      throw new AppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, 'Invalid credentials', 401);
+      throw new AppError(
+        ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        'Invalid credentials',
+        401,
+      );
     }
     return device;
   }

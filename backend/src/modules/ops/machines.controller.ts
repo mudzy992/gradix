@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { MachinesService } from './machines.service';
 import { LocationsService } from './locations.service';
 import {
@@ -38,7 +47,11 @@ export class MachinesController {
   }
 
   @Patch(':id')
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchMachineDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchMachineDto,
+  ) {
     return this.machines.patch(actor, id, dto);
   }
 
@@ -48,7 +61,11 @@ export class MachinesController {
   }
 
   @Post(':id/assign')
-  assign(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: AssignMachineDto) {
+  assign(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: AssignMachineDto,
+  ) {
     return this.machines.assign(actor, id, dto);
   }
 

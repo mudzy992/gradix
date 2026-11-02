@@ -31,7 +31,12 @@ export class DiaryPdfService {
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
     let y = 800;
     const line = (text: string, size = 11, useBold = false): void => {
-      page.drawText(text.slice(0, 110), { x: 48, y, size, font: useBold ? bold : font });
+      page.drawText(text.slice(0, 110), {
+        x: 48,
+        y,
+        size,
+        font: useBold ? bold : font,
+      });
       y -= size + 8;
     };
     line('Gradix — site diary (internal)', 14, true);

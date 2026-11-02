@@ -51,7 +51,10 @@ export class SyncCatalogService {
     };
   }
 
-  private projectWhere(actor: AuthUser, companyId: string): Prisma.ProjectWhereInput {
+  private projectWhere(
+    actor: AuthUser,
+    companyId: string,
+  ): Prisma.ProjectWhereInput {
     if (isCompanyWide(actor)) {
       return { companyId, archivedAt: null };
     }

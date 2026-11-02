@@ -31,15 +31,19 @@ export class TenantGuard implements CanActivate {
         400,
       );
     }
-    const isTenant = this.reflector.getAllAndOverride<boolean>(TENANT_ROUTE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const isTenant = this.reflector.getAllAndOverride<boolean>(
+      TENANT_ROUTE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!isTenant) {
       if (isPlatform && header) {
         const company = await this.assertCompany(header);
         user.tenantCompanyId = header;
-        user.company = { id: company.id, name: company.name, slug: company.slug };
+        user.company = {
+          id: company.id,
+          name: company.name,
+          slug: company.slug,
+        };
         return true;
       }
       user.tenantCompanyId = user.companyId;

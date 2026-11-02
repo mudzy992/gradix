@@ -23,7 +23,11 @@ describe('Users (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/users')
       .set(auth(adminToken))
-      .send({ email: `nfn-${suffix}@gradix.local`, lastName: 'X', roles: ['WORKER'] });
+      .send({
+        email: `nfn-${suffix}@gradix.local`,
+        lastName: 'X',
+        roles: ['WORKER'],
+      });
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_FAILED');
   });
@@ -101,4 +105,3 @@ describe('Users (e2e)', () => {
     expect(response.body.error.code).toBe('PAGINATION_LIMIT');
   });
 });
-

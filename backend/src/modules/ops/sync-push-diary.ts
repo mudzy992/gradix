@@ -50,7 +50,11 @@ export class SyncPushDiaryService {
       },
     });
     if (!entry) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'Diary entry not synced yet', 404);
+      throw new AppError(
+        ERROR_CODES.NOT_FOUND,
+        'Diary entry not synced yet',
+        404,
+      );
     }
     const dto: DiaryPhotoDto = {
       path: asString(item.payload.path, 'path'),

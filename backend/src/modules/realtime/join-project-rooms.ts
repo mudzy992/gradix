@@ -2,7 +2,12 @@ import { Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppRole } from '../../common/rbac/roles';
 
-const WIDE: AppRole[] = ['PLATFORM_ADMIN', 'SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'];
+const WIDE: AppRole[] = [
+  'PLATFORM_ADMIN',
+  'SUPER_ADMIN',
+  'ADMIN',
+  'ACCOUNTANT',
+];
 
 export async function joinScopedProjectRooms(
   client: Socket,
@@ -11,8 +16,12 @@ export async function joinScopedProjectRooms(
 ): Promise<void> {
   const roles = user.roles.map((item) => item.role as AppRole);
   const companyWide = roles.some((role) => WIDE.includes(role));
-  client.data.companyId = user.companyId;
-  client.data.companyWide = companyWide;
+  const data = client.data as {
+    companyId: string | null;
+    companyWide: boolean;
+  };
+  data.companyId = user.companyId;
+  data.companyWide = companyWide;
   if (!user.companyId) {
     return;
   }

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto, PatchCompanyDto } from './companies.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';

@@ -1,8 +1,15 @@
-const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DOCX =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export function detectMime(buffer: Buffer): string | null {
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
     return 'image/jpeg';
   }
   if (

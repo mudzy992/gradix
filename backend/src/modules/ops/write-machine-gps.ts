@@ -21,7 +21,10 @@ export async function writeMachineGps(input: {
     input.lastGpsAt &&
     now.getTime() - input.lastGpsAt.getTime() < MACHINE_GPS_TTL_MS
   ) {
-    throw new HttpException('Too many GPS updates', HttpStatus.TOO_MANY_REQUESTS);
+    throw new HttpException(
+      'Too many GPS updates',
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
   await input.prisma.gpsRecord.create({
     data: {
@@ -42,6 +45,8 @@ export async function writeMachineGps(input: {
       lastGpsSource: input.source,
     },
   });
-  input.realtime.emitCompany(input.companyId, 'machine:location', { id: input.machineId });
+  input.realtime.emitCompany(input.companyId, 'machine:location', {
+    id: input.machineId,
+  });
   return now;
 }

@@ -16,7 +16,9 @@ export class TimerCronService {
 
   @Cron(TIMER_CRON, { disabled: Boolean(process.env.JEST_WORKER_ID) })
   async closeStale(): Promise<void> {
-    const open = await this.prisma.timerSession.findMany({ where: { closedAt: null } });
+    const open = await this.prisma.timerSession.findMany({
+      where: { closedAt: null },
+    });
     for (const session of open) {
       const hours = await readMaxOpenHours(this.prisma, session.companyId);
       const ageMs = Date.now() - session.startedAt.getTime();
@@ -26,5 +28,4 @@ export class TimerCronService {
       }
     }
   }
-
 }

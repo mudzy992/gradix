@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
-import { CreateIncidentDto, IncidentListQueryDto, PatchIncidentDto } from './incidents.dto';
+import {
+  CreateIncidentDto,
+  IncidentListQueryDto,
+  PatchIncidentDto,
+} from './incidents.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
 import type { AuthUser } from '../../common/types/auth-user';

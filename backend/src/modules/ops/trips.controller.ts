@@ -1,6 +1,21 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { TripsService } from './trips.service';
-import { CompleteTripDto, CreateTripDto, PatchTripDto, TripListQueryDto } from './trips.dto';
+import {
+  CompleteTripDto,
+  CreateTripDto,
+  PatchTripDto,
+  TripListQueryDto,
+} from './trips.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
 import { SkipEnvelope } from '../../common/decorators/skip-envelope.decorator';
@@ -27,7 +42,11 @@ export class TripsController {
   }
 
   @Patch(':id')
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchTripDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchTripDto,
+  ) {
     return this.trips.patch(actor, id, dto);
   }
 

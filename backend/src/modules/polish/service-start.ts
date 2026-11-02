@@ -1,4 +1,8 @@
-import { Machine, MachineStatus, ServiceRecord } from '../../../generated/client';
+import {
+  Machine,
+  MachineStatus,
+  ServiceRecord,
+} from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TimerForceCloseService } from '../ops/timer-force-close.service';
 import { AppError } from '../../common/errors/app-error';
@@ -12,14 +16,25 @@ export async function startServiceRecord(input: {
   machine: Machine;
   actorId: string;
 }) {
-  if (input.record.status !== 'PLANNED' && input.record.status !== 'SCHEDULED') {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Service cannot start', 400);
+  if (
+    input.record.status !== 'PLANNED' &&
+    input.record.status !== 'SCHEDULED'
+  ) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Service cannot start',
+      400,
+    );
   }
   if (input.machine.status === 'DECOMMISSIONED') {
     throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
   }
   if (input.machine.status === 'IN_SERVICE') {
-    throw new AppError(ERROR_CODES.MACHINE_IN_SERVICE, 'Machine is in service', 409);
+    throw new AppError(
+      ERROR_CODES.MACHINE_IN_SERVICE,
+      'Machine is in service',
+      409,
+    );
   }
   const previous: MachineStatus =
     input.machine.status === 'ACTIVE' ? 'ACTIVE' : 'IDLE';

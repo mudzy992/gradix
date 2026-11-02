@@ -24,9 +24,21 @@ export type PayrollPeriod = {
   tz: string;
 };
 
-export function calendarMonthRange(year: number, month: number): { from: string; to: string } {
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid year or month', 400);
+export function calendarMonthRange(
+  year: number,
+  month: number,
+): { from: string; to: string } {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Invalid year or month',
+      400,
+    );
   }
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -46,11 +58,19 @@ export async function resolvePayrollPeriod(
   const hasYear = query.year !== undefined;
   const hasMonth = query.month !== undefined;
   if (hasYear !== hasMonth) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'year and month are required together', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'year and month are required together',
+      400,
+    );
   }
   const range = resolveDateRange(query, tz, hasYear && hasMonth);
   if (range.from > range.to) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'from must be <= to', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'from must be <= to',
+      400,
+    );
   }
   return {
     from: range.from,
@@ -71,7 +91,11 @@ function resolveDateRange(
   }
   if (query.from || query.to) {
     if (!query.from || !query.to) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'from and to are required together', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'from and to are required together',
+        400,
+      );
     }
     parseDateOnly(query.from);
     parseDateOnly(query.to);

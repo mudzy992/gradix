@@ -10,11 +10,18 @@ const NEXT: Record<TenderStatus, TenderStatus[]> = {
   WITHDRAWN: [],
 };
 
-export function assertTenderTransition(from: TenderStatus, to: TenderStatus): void {
+export function assertTenderTransition(
+  from: TenderStatus,
+  to: TenderStatus,
+): void {
   if (from === to) {
     return;
   }
   if (!NEXT[from].includes(to)) {
-    throw new AppError(ERROR_CODES.TENDER_INVALID_STATUS, 'Invalid tender status', 409);
+    throw new AppError(
+      ERROR_CODES.TENDER_INVALID_STATUS,
+      'Invalid tender status',
+      409,
+    );
   }
 }

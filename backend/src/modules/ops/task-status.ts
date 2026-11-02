@@ -1,9 +1,13 @@
 import { TaskStatus } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-type Tx = Parameters<Parameters<PrismaService['$transaction']>[0]>[0] | PrismaService;
+type Tx =
+  Parameters<Parameters<PrismaService['$transaction']>[0]>[0] | PrismaService;
 
-export async function syncTaskStatus(tx: Tx, taskId: string): Promise<TaskStatus> {
+export async function syncTaskStatus(
+  tx: Tx,
+  taskId: string,
+): Promise<TaskStatus> {
   const task = await tx.task.findUniqueOrThrow({
     where: { id: taskId },
     include: {
@@ -28,7 +32,11 @@ export async function syncTaskStatus(tx: Tx, taskId: string): Promise<TaskStatus
   return next;
 }
 
-export async function addTaskMinutes(tx: Tx, taskId: string, minutes: number): Promise<void> {
+export async function addTaskMinutes(
+  tx: Tx,
+  taskId: string,
+  minutes: number,
+): Promise<void> {
   await tx.task.update({
     where: { id: taskId },
     data: { totalTimeSpentMinutes: { increment: minutes } },

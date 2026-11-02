@@ -97,7 +97,10 @@ export class ServicesService {
   }
 
   async start(actor: AuthUser, id: string) {
-    const { record, machine } = await this.loadWithMachine(requireCompany(actor), id);
+    const { record, machine } = await this.loadWithMachine(
+      requireCompany(actor),
+      id,
+    );
     return startServiceRecord({
       prisma: this.prisma,
       closer: this.closer,
@@ -108,9 +111,16 @@ export class ServicesService {
   }
 
   async complete(actor: AuthUser, id: string, dto: CompleteServiceDto) {
-    const { record, machine } = await this.loadWithMachine(requireCompany(actor), id);
+    const { record, machine } = await this.loadWithMachine(
+      requireCompany(actor),
+      id,
+    );
     if (record.status !== 'IN_PROGRESS') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Service is not in progress', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Service is not in progress',
+        400,
+      );
     }
     const totalCost = dto.totalCost
       ? parseNonNegativeDecimal(dto.totalCost, 'totalCost')
@@ -132,9 +142,16 @@ export class ServicesService {
   }
 
   async cancel(actor: AuthUser, id: string) {
-    const { record, machine } = await this.loadWithMachine(requireCompany(actor), id);
+    const { record, machine } = await this.loadWithMachine(
+      requireCompany(actor),
+      id,
+    );
     if (record.status === 'COMPLETED' || record.status === 'CANCELLED') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Service is terminal', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Service is terminal',
+        400,
+      );
     }
     const wasOpen = record.status === 'IN_PROGRESS';
     const updated = await this.prisma.serviceRecord.update({
@@ -158,7 +175,9 @@ export class ServicesService {
   }
 
   private async loadTemplate(companyId: string, id: string) {
-    const row = await this.prisma.serviceTemplate.findFirst({ where: { id, companyId } });
+    const row = await this.prisma.serviceTemplate.findFirst({
+      where: { id, companyId },
+    });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Template not found', 404);
     }
@@ -166,7 +185,9 @@ export class ServicesService {
   }
 
   private async loadWithMachine(companyId: string, id: string) {
-    const record = await this.prisma.serviceRecord.findFirst({ where: { id, companyId } });
+    const record = await this.prisma.serviceRecord.findFirst({
+      where: { id, companyId },
+    });
     if (!record) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Service not found', 404);
     }

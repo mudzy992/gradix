@@ -8,7 +8,10 @@ import { AuthUser } from '../../common/types/auth-user';
 import { CreateUserDto, PatchUserDto } from './users.dto';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
-import { createTemporaryPassword, hashPassword } from '../../common/utils/password';
+import {
+  createTemporaryPassword,
+  hashPassword,
+} from '../../common/utils/password';
 import { normalizePhone } from '../../common/utils/phone';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { serializeUser } from './serialize-user';
@@ -59,7 +62,12 @@ export class UsersService {
       }),
       this.prisma.user.count({ where }),
     ]);
-    return listResult(rows.map((row) => serializeUser(row, actor)), total, page, limit);
+    return listResult(
+      rows.map((row) => serializeUser(row, actor)),
+      total,
+      page,
+      limit,
+    );
   }
 
   async getById(actor: AuthUser, id: string) {
@@ -70,7 +78,12 @@ export class UsersService {
     const companyId = requireCompany(actor);
     assertName(dto.firstName);
     assertName(dto.lastName);
-    await assertRoleChange({ actor, targetUserId: '', nextRoles: dto.roles, prisma: this.prisma });
+    await assertRoleChange({
+      actor,
+      targetUserId: '',
+      nextRoles: dto.roles,
+      prisma: this.prisma,
+    });
     assertEmployeeCode(dto.employeeCode);
     if (dto.hourlyRate !== undefined) {
       assertPayrollWrite(actor);
@@ -110,7 +123,12 @@ export class UsersService {
   async patch(actor: AuthUser, id: string, dto: PatchUserDto) {
     const existing = await findScopedUser(this.prisma, actor, id);
     if (dto.roles) {
-      await assertRoleChange({ actor, targetUserId: id, nextRoles: dto.roles, prisma: this.prisma });
+      await assertRoleChange({
+        actor,
+        targetUserId: id,
+        nextRoles: dto.roles,
+        prisma: this.prisma,
+      });
     }
     if (dto.hourlyRate !== undefined) {
       assertPayrollWrite(actor);
@@ -131,8 +149,12 @@ export class UsersService {
           data: {
             firstName: dto.firstName,
             lastName: dto.lastName,
-            phone: dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
-            employeeCode: dto.employeeCode === undefined ? undefined : dto.employeeCode || null,
+            phone:
+              dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
+            employeeCode:
+              dto.employeeCode === undefined
+                ? undefined
+                : dto.employeeCode || null,
             isActive: dto.isActive,
             hourlyRate: dto.hourlyRate,
             locale: dto.locale,
@@ -169,13 +191,20 @@ export class UsersService {
 
   async resetPassword(actor: AuthUser, id: string) {
     if (actor.id === id) {
-      throw new AppError(ERROR_CODES.FORBIDDEN, 'Use change-password for self', 403);
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        'Use change-password for self',
+        403,
+      );
     }
     await findScopedUser(this.prisma, actor, id);
     const temporaryPassword = createTemporaryPassword();
     await this.prisma.user.update({
       where: { id },
-      data: { passwordHash: await hashPassword(temporaryPassword), mustChangePassword: true },
+      data: {
+        passwordHash: await hashPassword(temporaryPassword),
+        mustChangePassword: true,
+      },
     });
     await this.tokens.revokeAll(id);
     await this.audit.write({

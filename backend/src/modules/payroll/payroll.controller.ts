@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { PayrollService } from './payroll.service';
 import { PayrollQueryDto, RejectPayrollDto } from './payroll.dto';
@@ -38,7 +47,10 @@ export class PayrollController {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
-    response.setHeader('Content-Disposition', 'attachment; filename="payroll.xlsx"');
+    response.setHeader(
+      'Content-Disposition',
+      'attachment; filename="payroll.xlsx"',
+    );
     response.send(buffer);
   }
 

@@ -8,7 +8,10 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
-import { assertPlannedRange, parseOptionalDate } from '../../common/scope/ops-dates';
+import {
+  assertPlannedRange,
+  parseOptionalDate,
+} from '../../common/scope/ops-dates';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { CreateTaskDto, PatchTaskDto, TaskListQueryDto } from './tasks.dto';
@@ -29,8 +32,12 @@ export class TasksService {
     const where: Prisma.TaskWhereInput = { companyId };
     if (query.projectId) where.projectId = query.projectId;
     if (query.status) where.status = query.status as TaskStatus;
-    if (query.assigneeId) where.assignees = { some: { userId: query.assigneeId } };
-    if (!isCompanyWide(actor) && !hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
+    if (query.assigneeId)
+      where.assignees = { some: { userId: query.assigneeId } };
+    if (
+      !isCompanyWide(actor) &&
+      !hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')
+    ) {
       where.assignees = { some: { userId: actor.id } };
     } else if (!isCompanyWide(actor)) {
       where.project = { assignments: { some: { userId: actor.id } } };
@@ -64,7 +71,11 @@ export class TasksService {
         where: { id: dto.phaseId, projectId: dto.projectId },
       });
       if (!phase) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'phaseId not in project', 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          'phaseId not in project',
+          400,
+        );
       }
     }
     const assigneeIds = dto.assigneeIds ?? [];
@@ -90,7 +101,12 @@ export class TasksService {
       include: { assignees: true },
     });
     if (assigneeIds.length) {
-      await this.notifyDispatch(project.companyId, task.id, dto.projectId, assigneeIds);
+      await this.notifyDispatch(
+        project.companyId,
+        task.id,
+        dto.projectId,
+        assigneeIds,
+      );
     }
     this.realtime.emitProject(dto.projectId, 'task:updated', {
       id: task.id,
@@ -107,19 +123,25 @@ export class TasksService {
     if (task.status === 'COMPLETED' || task.status === 'CANCELLED') {
       throw new AppError(ERROR_CODES.CONFLICT, 'Task is terminal', 409);
     }
-    const plannedStart = dto.plannedStart !== undefined
-      ? parseOptionalDate(dto.plannedStart) ?? null
-      : task.plannedStart;
-    const plannedEnd = dto.plannedEnd !== undefined
-      ? parseOptionalDate(dto.plannedEnd) ?? null
-      : task.plannedEnd;
+    const plannedStart =
+      dto.plannedStart !== undefined
+        ? (parseOptionalDate(dto.plannedStart) ?? null)
+        : task.plannedStart;
+    const plannedEnd =
+      dto.plannedEnd !== undefined
+        ? (parseOptionalDate(dto.plannedEnd) ?? null)
+        : task.plannedEnd;
     assertPlannedRange(plannedStart, plannedEnd);
     if (dto.phaseId) {
       const phase = await this.prisma.projectPhase.findFirst({
         where: { id: dto.phaseId, projectId: task.projectId },
       });
       if (!phase) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'phaseId not in project', 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          'phaseId not in project',
+          400,
+        );
       }
     }
     const updated = await this.prisma.task.update({
@@ -151,7 +173,10 @@ export class TasksService {
     if (!task) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Task not found', 404);
     }
-    if (isCompanyWide(actor) || hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')) {
+    if (
+      isCompanyWide(actor) ||
+      hasRole(actor, 'PROJECT_MANAGER', 'SITE_SUPERVISOR')
+    ) {
       await this.access.getVisibleProject(actor, task.projectId);
       return task;
     }
@@ -161,11 +186,20 @@ export class TasksService {
     return task;
   }
 
-  private async assertAssignees(companyId: string, userIds: string[]): Promise<void> {
+  private async assertAssignees(
+    companyId: string,
+    userIds: string[],
+  ): Promise<void> {
     for (const userId of userIds) {
-      const user = await this.prisma.user.findFirst({ where: { id: userId, companyId } });
+      const user = await this.prisma.user.findFirst({
+        where: { id: userId, companyId },
+      });
       if (!user || !user.isActive) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Inactive user cannot be assigned', 400);
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          'Inactive user cannot be assigned',
+          400,
+        );
       }
     }
   }
@@ -185,7 +219,11 @@ export class TasksService {
         message: 'You were assigned to a task',
         data: { taskId, projectId },
       });
-      this.realtime.emitProject(projectId, 'task:assigned', { id: taskId, projectId, taskId });
+      this.realtime.emitProject(projectId, 'task:assigned', {
+        id: taskId,
+        projectId,
+        taskId,
+      });
     }
   }
 }

@@ -2,7 +2,9 @@ import { Prisma } from '../../../generated/client';
 import { payrollAmount } from './payroll-amount';
 import { PAYROLL_INCLUDE } from './payroll-query';
 
-type ClosedRow = Prisma.TimerSessionGetPayload<{ include: typeof PAYROLL_INCLUDE }>;
+type ClosedRow = Prisma.TimerSessionGetPayload<{
+  include: typeof PAYROLL_INCLUDE;
+}>;
 
 export type PayrollSummary = {
   from: string;
@@ -30,7 +32,9 @@ export function buildPayrollSummary(
     const minutes = row.durationMinutes ?? 0;
     if (row.approvalStatus === 'APPROVED') {
       approvedMinutes += minutes;
-      approvedAmount = approvedAmount.add(payrollAmount(minutes, row.user.hourlyRate));
+      approvedAmount = approvedAmount.add(
+        payrollAmount(minutes, row.user.hourlyRate),
+      );
     } else if (row.approvalStatus === 'PENDING') {
       pendingMinutes += minutes;
       pendingCount += 1;

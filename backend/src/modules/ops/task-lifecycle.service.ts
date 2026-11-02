@@ -29,7 +29,11 @@ export class TaskLifecycleService {
     const project = await this.access.getVisibleProject(actor, task.projectId);
     await this.access.assertScopedWrite(actor, project);
     if (task.status === 'PENDING') {
-      throw new AppError(ERROR_CODES.CONFLICT, 'PENDING cannot be completed', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'PENDING cannot be completed',
+        409,
+      );
     }
     if (task.status === 'COMPLETED' || task.status === 'CANCELLED') {
       throw new AppError(ERROR_CODES.CONFLICT, 'Task is terminal', 409);

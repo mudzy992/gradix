@@ -22,9 +22,29 @@ export class MinioService implements OnModuleInit {
     if (process.env.MINIO_SKIP === 'true') {
       return;
     }
-    const exists = await this.client.bucketExists(this.bucket);
-    if (!exists) {
-      await this.client.makeBucket(this.bucket);
+    await this.ensureBucket();
+  }
+
+  /**
+   * MinIO u Dockeru/Coolifyju često starta paralelno sa backendom — pokušavamo
+   * nekoliko puta prije nego što aplikacija odustane.
+   */
+  private async ensureBucket(): Promise<void> {
+    const attempts = 10;
+    const delayMs = 3000;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const exists = await this.client.bucketExists(this.bucket);
+        if (!exists) {
+          await this.client.makeBucket(this.bucket);
+        }
+        return;
+      } catch (error) {
+        if (attempt === attempts) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
     }
   }
 }

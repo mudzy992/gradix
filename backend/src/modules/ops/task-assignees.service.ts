@@ -31,7 +31,11 @@ export class TaskAssigneesService {
       where: { id: dto.userId, companyId: project.companyId },
     });
     if (!user || !user.isActive) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Inactive user cannot be assigned', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Inactive user cannot be assigned',
+        400,
+      );
     }
     await this.prisma.taskAssignment.create({
       data: { companyId: project.companyId, taskId, userId: dto.userId },
@@ -61,7 +65,11 @@ export class TaskAssigneesService {
       where: { taskId, userId, closedAt: null },
     });
     if (open) {
-      throw new AppError(ERROR_CODES.CONFLICT, 'Assignee has an open timer', 409);
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Assignee has an open timer',
+        409,
+      );
     }
     const existing = await this.prisma.taskAssignment.findFirst({
       where: { taskId, userId },
@@ -88,11 +96,17 @@ export class TaskAssigneesService {
     });
   }
 
-  async removeAttachment(actor: AuthUser, taskId: string, id: string): Promise<void> {
+  async removeAttachment(
+    actor: AuthUser,
+    taskId: string,
+    id: string,
+  ): Promise<void> {
     const task = await this.tasks.loadVisibleTask(actor, taskId);
     const project = await this.access.getVisibleProject(actor, task.projectId);
     await this.access.assertScopedWrite(actor, project);
-    const row = await this.prisma.taskAttachment.findFirst({ where: { id, taskId } });
+    const row = await this.prisma.taskAttachment.findFirst({
+      where: { id, taskId },
+    });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Attachment not found', 404);
     }

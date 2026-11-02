@@ -6,7 +6,12 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 import { hashPassword, verifyPassword } from '../../common/utils/password';
 import { mapAuthUser, toMeDto } from './map-auth-user';
 import { AuthUser } from '../../common/types/auth-user';
-import { ChangePasswordDto, FcmTokenDto, LoginDto, PatchMeDto } from './auth.dto';
+import {
+  ChangePasswordDto,
+  FcmTokenDto,
+  LoginDto,
+  PatchMeDto,
+} from './auth.dto';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../mail/email.service';
 
@@ -31,7 +36,11 @@ export class AuthService {
       throw this.invalid();
     }
     if (!user.isActive) {
-      throw new AppError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE, 'Account inactive', 401);
+      throw new AppError(
+        ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
+        'Account inactive',
+        401,
+      );
     }
     if (user.roles.length === 0) {
       throw this.invalid();
@@ -49,7 +58,10 @@ export class AuthService {
 
   async changePassword(actor: AuthUser, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
-    if (!user || !(await verifyPassword(user.passwordHash, dto.currentPassword))) {
+    if (
+      !user ||
+      !(await verifyPassword(user.passwordHash, dto.currentPassword))
+    ) {
       throw this.invalid();
     }
     const passwordHash = await hashPassword(dto.newPassword);
@@ -73,7 +85,11 @@ export class AuthService {
     this.assertName(dto.firstName);
     this.assertName(dto.lastName);
     if (dto.locale && dto.locale !== 'bs' && dto.locale !== 'en') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'locale must be bs or en', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'locale must be bs or en',
+        400,
+      );
     }
     const user = await this.prisma.user.update({
       where: { id: actor.id },
@@ -102,7 +118,9 @@ export class AuthService {
   }
 
   async forgot(email: string): Promise<{ ok: true }> {
-    const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
     if (user?.companyId) {
       await this.email.trySend({
         companyId: user.companyId,
@@ -131,11 +149,19 @@ export class AuthService {
         include: USER_INCLUDE,
       });
     }
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'email or phone required', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'email or phone required',
+      400,
+    );
   }
 
   private invalid(): AppError {
-    return new AppError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, 'Invalid credentials', 401);
+    return new AppError(
+      ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+      'Invalid credentials',
+      401,
+    );
   }
 
   private assertName(value?: string): void {
@@ -143,7 +169,11 @@ export class AuthService {
       return;
     }
     if (value.length < 1 || value.length > 80) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Name must be 1–80 characters', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Name must be 1–80 characters',
+        400,
+      );
     }
   }
 }

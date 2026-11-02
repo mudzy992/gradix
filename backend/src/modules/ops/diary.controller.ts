@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { DiaryService } from './diary.service';
 import { DiaryPdfService } from './diary-pdf.service';
 import {
@@ -41,7 +49,11 @@ export class DiaryController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.DIARY_WRITE)
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchDiaryDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchDiaryDto,
+  ) {
     return this.diary.patch(actor, id, dto);
   }
 

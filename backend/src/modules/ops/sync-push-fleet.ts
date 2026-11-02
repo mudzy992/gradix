@@ -35,7 +35,10 @@ export class SyncPushFleetService {
     if (existing) {
       return syncOk(item.localId, 'TRIP', existing.id);
     }
-    const created = await this.trips.create(actor, this.toTripDto(item.payload));
+    const created = await this.trips.create(
+      actor,
+      this.toTripDto(item.payload),
+    );
     await this.prisma.trip.update({
       where: { id: created.id },
       data: { localId: item.localId, deviceId: item.deviceId, isSynced: true },

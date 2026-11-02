@@ -7,7 +7,9 @@ import { PUBLIC_GET_LIMIT, PUBLIC_GET_TTL_MS } from '../../common/constants';
 import { PublicService } from './public.service';
 import { PublicProjectsQueryDto } from './public.dto';
 
-const PUBLIC_GET = { default: { limit: PUBLIC_GET_LIMIT, ttl: PUBLIC_GET_TTL_MS } };
+const PUBLIC_GET = {
+  default: { limit: PUBLIC_GET_LIMIT, ttl: PUBLIC_GET_TTL_MS },
+};
 
 @Public()
 @Controller('public')
@@ -23,7 +25,10 @@ export class PublicController {
 
   @Get(':slug/projects')
   @Throttle(PUBLIC_GET)
-  listProjects(@Param('slug') slug: string, @Query() query: PublicProjectsQueryDto) {
+  listProjects(
+    @Param('slug') slug: string,
+    @Query() query: PublicProjectsQueryDto,
+  ) {
     return this.publicSite.listProjects(slug, query.page, query.limit);
   }
 

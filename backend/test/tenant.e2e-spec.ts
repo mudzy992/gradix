@@ -48,7 +48,11 @@ describe('Tenant (e2e)', () => {
         currentPassword: worker.body.data.temporaryPassword,
         newPassword: 'TheadPass12',
       });
-    const after = await login(app, `thead-${suffix}@gradix.local`, 'TheadPass12');
+    const after = await login(
+      app,
+      `thead-${suffix}@gradix.local`,
+      'TheadPass12',
+    );
     const response = await request(app.getHttpServer())
       .get('/api/me')
       .set(auth(after.body.data.accessToken as string))
@@ -72,7 +76,9 @@ describe('Tenant (e2e)', () => {
       .send({ slug: 'hacked' });
     expect(slug.status).toBe(409);
     expect(slug.body.error.code).toBe('TENANT_SLUG_IMMUTABLE');
-    const get = await request(app.getHttpServer()).get('/api/company').set(auth(token));
+    const get = await request(app.getHttpServer())
+      .get('/api/company')
+      .set(auth(token));
     expect(get.status).toBe(200);
     expect(get.body.data.city).toBe('Mostar');
   });
@@ -132,7 +138,11 @@ describe('Tenant (e2e)', () => {
         currentPassword: other.body.data.temporaryPassword,
         newPassword: 'OtherPass12',
       });
-    const otherAfter = await login(app, `other-admin-${suffix}@gradix.local`, 'OtherPass12');
+    const otherAfter = await login(
+      app,
+      `other-admin-${suffix}@gradix.local`,
+      'OtherPass12',
+    );
     const demoAdmin = await login(app, 'admin@gradix.local');
     const demoUsers = await request(app.getHttpServer())
       .get('/api/users')

@@ -10,7 +10,10 @@ import { SLUG_PATTERN } from '../../common/constants';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { requireCompany } from '../users/users-helpers';
 import { CreatePublicAssetDto, PatchProjectPublicDto } from './public.dto';
-import { serializePublicCompany, serializePublicProject } from './serialize-public';
+import {
+  serializePublicCompany,
+  serializePublicProject,
+} from './serialize-public';
 
 const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -40,7 +43,12 @@ export class PublicService {
       }),
       this.prisma.project.count({ where }),
     ]);
-    return listResult(rows.map(serializePublicProject), total, parsed.page, parsed.limit);
+    return listResult(
+      rows.map(serializePublicProject),
+      total,
+      parsed.page,
+      parsed.limit,
+    );
   }
 
   async streamAsset(id: string, response: Response): Promise<void> {
@@ -51,33 +59,58 @@ export class PublicService {
     if (!asset || !asset.company.isActive) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Not found', 404);
     }
-    const { stream } = await this.files.streamPublic(asset.companyId, asset.path);
+    const { stream } = await this.files.streamPublic(
+      asset.companyId,
+      asset.path,
+    );
     response.setHeader('Content-Type', asset.mime);
     response.setHeader('Cache-Control', 'public, max-age=3600');
     stream.pipe(response);
   }
 
-  async createAsset(actor: AuthUser, dto: CreatePublicAssetDto, file: Express.Multer.File) {
+  async createAsset(
+    actor: AuthUser,
+    dto: CreatePublicAssetDto,
+    file: Express.Multer.File,
+  ) {
     const companyId = requireCompany(actor);
     this.assertImage(file);
     if (dto.kind === 'COVER' && !dto.projectId) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'projectId required for COVER', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'projectId required for COVER',
+        400,
+      );
     }
     const uploaded = await this.files.upload(actor, file);
     const asset = await this.prisma.publicAsset.create({
-      data: { companyId, path: uploaded.path, mime: uploaded.mime, kind: dto.kind },
+      data: {
+        companyId,
+        path: uploaded.path,
+        mime: uploaded.mime,
+        kind: dto.kind,
+      },
     });
     if (dto.kind === 'LOGO') {
-      await this.prisma.company.update({ where: { id: companyId }, data: { logoAssetId: asset.id } });
+      await this.prisma.company.update({
+        where: { id: companyId },
+        data: { logoAssetId: asset.id },
+      });
     } else if (dto.projectId) {
       await this.linkCover(companyId, dto.projectId, asset.id);
     }
     return { id: asset.id, kind: asset.kind, mime: asset.mime };
   }
 
-  async patchProjectPublic(actor: AuthUser, id: string, dto: PatchProjectPublicDto) {
+  async patchProjectPublic(
+    actor: AuthUser,
+    id: string,
+    dto: PatchProjectPublicDto,
+  ) {
     const companyId = requireCompany(actor);
-    const project = await this.prisma.project.findFirst({ where: { id, companyId } });
+    const project = await this.prisma.project.findFirst({
+      where: { id, companyId },
+    });
     if (!project) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Not found', 404);
     }
@@ -102,7 +135,9 @@ export class PublicService {
     return company;
   }
 
-  private async readPublicSettings(companyId: string): Promise<Record<string, string>> {
+  private async readPublicSettings(
+    companyId: string,
+  ): Promise<Record<string, string>> {
     const rows = await this.prisma.setting.findMany({
       where: {
         companyId,
@@ -116,20 +151,36 @@ export class PublicService {
     return result;
   }
 
-  private async linkCover(companyId: string, projectId: string, assetId: string): Promise<void> {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, companyId } });
+  private async linkCover(
+    companyId: string,
+    projectId: string,
+    assetId: string,
+  ): Promise<void> {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, companyId },
+    });
     if (!project) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Not found', 404);
     }
-    await this.prisma.project.update({ where: { id: projectId }, data: { coverAssetId: assetId } });
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { coverAssetId: assetId },
+    });
   }
 
-  private async assertCoverAsset(companyId: string, assetId: string): Promise<void> {
+  private async assertCoverAsset(
+    companyId: string,
+    assetId: string,
+  ): Promise<void> {
     const asset = await this.prisma.publicAsset.findFirst({
       where: { id: assetId, companyId, kind: 'COVER' },
     });
     if (!asset) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid coverAssetId', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid coverAssetId',
+        400,
+      );
     }
   }
 
@@ -139,7 +190,11 @@ export class PublicService {
     }
     const mime = detectMime(file.buffer) ?? '';
     if (!IMAGE_MIMES.has(mime)) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Unsupported file type', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Unsupported file type',
+        400,
+      );
     }
   }
 }

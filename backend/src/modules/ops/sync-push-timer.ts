@@ -24,8 +24,13 @@ export class SyncPushTimerService {
 
   async push(actor: AuthUser, item: SyncPushItemDto) {
     this.assertTimerPerm(actor);
-    const existing = await this.timer.findByLocalId(actor, item.deviceId, item.localId);
-    const action = item.action ?? asOptionalString(item.payload.action) ?? 'start';
+    const existing = await this.timer.findByLocalId(
+      actor,
+      item.deviceId,
+      item.localId,
+    );
+    const action =
+      item.action ?? asOptionalString(item.payload.action) ?? 'start';
     if (existing && action === 'start') {
       return syncOk(item.localId, 'TIMER', existing.id);
     }
@@ -42,7 +47,11 @@ export class SyncPushTimerService {
     if (action === 'stop') {
       return this.stop(actor, item, session);
     }
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Unknown timer action', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Unknown timer action',
+      400,
+    );
   }
 
   private async start(actor: AuthUser, item: SyncPushItemDto) {
@@ -60,8 +69,17 @@ export class SyncPushTimerService {
       item.deviceId,
     );
     if (item.payload.closedAt) {
-      const closedAt = parseOptionalClosedAt(item.payload.closedAt, session.startedAt, new Date());
-      const closed = await this.closer.closeSession(session, actor.id, 'stop', closedAt);
+      const closedAt = parseOptionalClosedAt(
+        item.payload.closedAt,
+        session.startedAt,
+        new Date(),
+      );
+      const closed = await this.closer.closeSession(
+        session,
+        actor.id,
+        'stop',
+        closedAt,
+      );
       return syncOk(item.localId, 'TIMER', closed.id);
     }
     return syncOk(item.localId, 'TIMER', session.id);
@@ -96,9 +114,22 @@ export class SyncPushTimerService {
     return syncOk(item.localId, 'TIMER', session.id);
   }
 
-  private async stop(actor: AuthUser, item: SyncPushItemDto, session: TimerSession) {
-    const closedAt = parseOptionalClosedAt(item.payload.closedAt, session.startedAt, new Date());
-    const closed = await this.closer.closeSession(session, actor.id, 'stop', closedAt);
+  private async stop(
+    actor: AuthUser,
+    item: SyncPushItemDto,
+    session: TimerSession,
+  ) {
+    const closedAt = parseOptionalClosedAt(
+      item.payload.closedAt,
+      session.startedAt,
+      new Date(),
+    );
+    const closed = await this.closer.closeSession(
+      session,
+      actor.id,
+      'stop',
+      closedAt,
+    );
     return syncOk(item.localId, 'TIMER', closed.id);
   }
 

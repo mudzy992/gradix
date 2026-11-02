@@ -6,7 +6,11 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { requireCompany } from '../users/users-helpers';
-import { CreatePartnerDto, PartnerQueryDto, PatchPartnerDto } from './partners.dto';
+import {
+  CreatePartnerDto,
+  PartnerQueryDto,
+  PatchPartnerDto,
+} from './partners.dto';
 import { serializePartner } from './serialize-erp';
 
 @Injectable()

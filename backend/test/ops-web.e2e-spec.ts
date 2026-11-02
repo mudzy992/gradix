@@ -17,12 +17,16 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     ss = (await login(app, 'ss@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
-    const ssId = (await request(app.getHttpServer()).get('/api/me').set(auth(ss))).body.data
-      .id as string;
+    const ssId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(ss))
+    ).body.data.id as string;
     const created = await request(app.getHttpServer())
       .post('/api/projects')
       .set(auth(admin))
-      .send({ name: `P5 ${Date.now()}`, code: `P5${Date.now().toString().slice(-6)}` });
+      .send({
+        name: `P5 ${Date.now()}`,
+        code: `P5${Date.now().toString().slice(-6)}`,
+      });
     projectId = created.body.data.id as string;
     await request(app.getHttpServer())
       .post(`/api/projects/${projectId}/assignments`)
@@ -36,21 +40,38 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
   });
 
   it('WORKER cannot list projects; dashboard has no spend', async () => {
-    const list = await request(app.getHttpServer()).get('/api/projects').set(auth(worker));
+    const list = await request(app.getHttpServer())
+      .get('/api/projects')
+      .set(auth(worker));
     expect(list.status).toBe(403);
-    const dash = await request(app.getHttpServer()).get('/api/dashboard').set(auth(worker));
+    const dash = await request(app.getHttpServer())
+      .get('/api/dashboard')
+      .set(auth(worker));
     expect(dash.status).toBe(200);
-    const keys = (dash.body.data.cards as { key: string }[]).map((card) => card.key);
+    const keys = (dash.body.data.cards as { key: string }[]).map(
+      (card) => card.key,
+    );
     expect(keys).not.toContain('spend');
     expect(keys).toContain('myTasks');
     expect(dash.body.data.presence).toBeNull();
   });
 
   it('ADMIN dashboard cards include spend and unread', async () => {
-    const dash = await request(app.getHttpServer()).get('/api/dashboard').set(auth(admin));
+    const dash = await request(app.getHttpServer())
+      .get('/api/dashboard')
+      .set(auth(admin));
     expect(dash.status).toBe(200);
-    const keys = (dash.body.data.cards as { key: string }[]).map((card) => card.key);
-    expect(keys).toEqual(expect.arrayContaining(['activeProjects', 'spend', 'openTimers', 'unread']));
+    const keys = (dash.body.data.cards as { key: string }[]).map(
+      (card) => card.key,
+    );
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'activeProjects',
+        'spend',
+        'openTimers',
+        'unread',
+      ]),
+    );
   });
 
   it('second diary create same day returns DIARY_CONFLICT; resolve B', async () => {
@@ -65,7 +86,9 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       .send({ projectId, date, workDescription: 'B' });
     expect(second.status).toBe(409);
     expect(second.body.error.code).toBe('DIARY_CONFLICT');
-    expect(second.body.error.details.conflictData.incoming.workDescription).toBe('B');
+    expect(
+      second.body.error.details.conflictData.incoming.workDescription,
+    ).toBe('B');
     const resolved = await request(app.getHttpServer())
       .post('/api/sync/resolve-conflict')
       .set(auth(ss))
@@ -87,9 +110,13 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       .send({ projectId, severity: 'LOW', description: 'Near miss' });
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('OPEN');
-    const workerList = await request(app.getHttpServer()).get('/api/incidents').set(auth(worker));
+    const workerList = await request(app.getHttpServer())
+      .get('/api/incidents')
+      .set(auth(worker));
     expect(workerList.status).toBe(403);
-    const list = await request(app.getHttpServer()).get('/api/incidents').set(auth(ss));
+    const list = await request(app.getHttpServer())
+      .get('/api/incidents')
+      .set(auth(ss));
     expect(list.status).toBe(200);
     expect(list.body.data.length).toBeGreaterThan(0);
   });

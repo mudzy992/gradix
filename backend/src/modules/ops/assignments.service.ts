@@ -19,7 +19,9 @@ export class AssignmentsService {
     await this.access.getVisibleProject(actor, projectId);
     return this.prisma.projectAssignment.findMany({
       where: { projectId },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
   }
 
@@ -30,7 +32,11 @@ export class AssignmentsService {
       where: { id: dto.userId, companyId: project.companyId },
     });
     if (!user || !user.isActive) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'User inactive or not in company', 400);
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'User inactive or not in company',
+        400,
+      );
     }
     const row = await this.prisma.projectAssignment.create({
       data: {
@@ -44,7 +50,11 @@ export class AssignmentsService {
     return row;
   }
 
-  async remove(actor: AuthUser, projectId: string, userId: string): Promise<void> {
+  async remove(
+    actor: AuthUser,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
     const project = await this.access.getVisibleProject(actor, projectId);
     await this.access.assertScopedWrite(actor, project);
     const existing = await this.prisma.projectAssignment.findFirst({
@@ -59,7 +69,9 @@ export class AssignmentsService {
       include: { roles: true },
     });
     const wide = target?.roles.some((item) =>
-      ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'PLATFORM_ADMIN'].includes(item.role),
+      ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'PLATFORM_ADMIN'].includes(
+        item.role,
+      ),
     );
     if (!wide) {
       this.realtime.leaveProject(userId, projectId);

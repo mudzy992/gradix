@@ -12,9 +12,7 @@ export async function runReport(
   projectIds: string[] | null,
   projectId?: string,
 ): Promise<{ columns: string[]; rows: ReportRow[] }> {
-  const scoped = projectId
-    ? [projectId]
-    : projectIds;
+  const scoped = projectId ? [projectId] : projectIds;
   if (slug === 'project-spend') {
     return projectSpend(prisma, companyId, scoped);
   }
@@ -71,7 +69,12 @@ async function machineHours(
     _sum: { durationMinutes: true },
   });
   const machines = await prisma.machine.findMany({
-    where: { companyId, id: { in: sessions.map((row) => row.machineId).filter(Boolean) as string[] } },
+    where: {
+      companyId,
+      id: {
+        in: sessions.map((row) => row.machineId).filter(Boolean) as string[],
+      },
+    },
   });
   const names = new Map(machines.map((row) => [row.id, row.name]));
   return {
@@ -147,7 +150,9 @@ async function tenderComparison(prisma: PrismaService, companyId: string) {
     where: { companyId },
     orderBy: { createdAt: 'desc' },
   });
-  const avgSpend = avg._count._all ? avg._avg.currentSpend?.toString() ?? '0' : null;
+  const avgSpend = avg._count._all
+    ? (avg._avg.currentSpend?.toString() ?? '0')
+    : null;
   return {
     columns: ['title', 'submittedValue', 'avgCompletedSpend'],
     rows: tenders.map((row) => ({

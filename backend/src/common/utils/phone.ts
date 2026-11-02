@@ -2,7 +2,9 @@ import { E164_PATTERN } from '../constants';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
 
-export function normalizePhone(phone: string | null | undefined): string | null {
+export function normalizePhone(
+  phone: string | null | undefined,
+): string | null {
   if (phone === undefined || phone === null || phone === '') {
     return null;
   }

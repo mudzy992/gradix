@@ -43,5 +43,7 @@ async function linkedSourceIds(
     where: { projectId, source, sourceId: { not: null } },
     select: { sourceId: true },
   });
-  return rows.map((row) => row.sourceId).filter((id): id is string => Boolean(id));
+  return rows
+    .map((row) => row.sourceId)
+    .filter((id): id is string => Boolean(id));
 }

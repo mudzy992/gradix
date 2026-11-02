@@ -17,7 +17,9 @@ export async function loadPresence(
   companyId: string,
   projects: Pick<Project, 'id' | 'lat' | 'lng' | 'geofenceRadius'>[],
 ): Promise<PresencePerson[]> {
-  const geo = projects.filter((project) => project.lat != null && project.lng != null);
+  const geo = projects.filter(
+    (project) => project.lat != null && project.lng != null,
+  );
   if (geo.length === 0) {
     return [];
   }
@@ -25,7 +27,9 @@ export async function loadPresence(
   const rows = await prisma.userLocation.findMany({
     where: { companyId, recordedAt: { gte: since } },
     orderBy: { recordedAt: 'desc' },
-    include: { user: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      user: { select: { id: true, firstName: true, lastName: true } },
+    },
   });
   const latest = new Map<string, LocationRow>();
   for (const row of rows) {
@@ -60,10 +64,17 @@ export async function loadPresence(
   return people;
 }
 
-export function spendCard(projects: Pick<Project, 'plannedBudget' | 'currentSpend'>[]) {
-  const spend = projects.reduce((sum, project) => sum + Number(project.currentSpend), 0);
+export function spendCard(
+  projects: Pick<Project, 'plannedBudget' | 'currentSpend'>[],
+) {
+  const spend = projects.reduce(
+    (sum, project) => sum + Number(project.currentSpend),
+    0,
+  );
   const budgets = projects
-    .map((project) => (project.plannedBudget == null ? null : Number(project.plannedBudget)))
+    .map((project) =>
+      project.plannedBudget == null ? null : Number(project.plannedBudget),
+    )
     .filter((value): value is number => value != null);
   if (budgets.length === 0) {
     return { spend: spend.toFixed(2), budget: null as string | null };
@@ -72,10 +83,15 @@ export function spendCard(projects: Pick<Project, 'plannedBudget' | 'currentSpen
   return { spend: spend.toFixed(2), budget: budget.toFixed(2) };
 }
 
-export function avgProgress(projects: Pick<Project, 'progressPercent'>[]): number | null {
+export function avgProgress(
+  projects: Pick<Project, 'progressPercent'>[],
+): number | null {
   if (projects.length === 0) {
     return null;
   }
-  const sum = projects.reduce((total, project) => total + project.progressPercent, 0);
+  const sum = projects.reduce(
+    (total, project) => total + project.progressPercent,
+    0,
+  );
   return Math.round(sum / projects.length);
 }

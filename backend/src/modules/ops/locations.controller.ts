@@ -19,7 +19,10 @@ export class LocationsController {
   }
 
   @Get('geofence-check')
-  geofenceCheck(@CurrentUser() actor: AuthUser, @Query() query: GeofenceCheckQueryDto) {
+  geofenceCheck(
+    @CurrentUser() actor: AuthUser,
+    @Query() query: GeofenceCheckQueryDto,
+  ) {
     return this.locations.geofenceCheck(actor, query);
   }
 }

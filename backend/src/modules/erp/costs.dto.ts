@@ -2,7 +2,13 @@ import { Transform } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export const COST_CATEGORIES = ['FUEL', 'SERVICE', 'MATERIAL', 'LABOR', 'OTHER'] as const;
+export const COST_CATEGORIES = [
+  'FUEL',
+  'SERVICE',
+  'MATERIAL',
+  'LABOR',
+  'OTHER',
+] as const;
 export const COST_SOURCES = ['MANUAL', 'FUEL', 'SERVICE', 'PAYROLL'] as const;
 
 function toInt(value: unknown): unknown {

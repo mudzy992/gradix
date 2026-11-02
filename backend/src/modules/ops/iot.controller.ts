@@ -9,7 +9,10 @@ export class IotController {
   constructor(private readonly iot: IotService) {}
 
   @Post('gps')
-  ingest(@Headers('x-device-key') key: string | undefined, @Body() dto: IotGpsDto) {
+  ingest(
+    @Headers('x-device-key') key: string | undefined,
+    @Body() dto: IotGpsDto,
+  ) {
     return this.iot.ingest(key, dto);
   }
 }

@@ -30,7 +30,11 @@ export function assertProjectWritable(project: {
   status: ProjectStatus;
   archivedAt: Date | null;
 }): void {
-  if (project.archivedAt || project.status === 'COMPLETED' || project.status === 'CANCELLED') {
+  if (
+    project.archivedAt ||
+    project.status === 'COMPLETED' ||
+    project.status === 'CANCELLED'
+  ) {
     throw new AppError(
       ERROR_CODES.PROJECT_TERMINAL,
       'Project is terminal or archived',
@@ -41,10 +45,6 @@ export function assertProjectWritable(project: {
 
 export function assertNotOnHold(project: { status: ProjectStatus }): void {
   if (project.status === 'ON_HOLD') {
-    throw new AppError(
-      ERROR_CODES.PROJECT_ON_HOLD,
-      'Project is on hold',
-      409,
-    );
+    throw new AppError(ERROR_CODES.PROJECT_ON_HOLD, 'Project is on hold', 409);
   }
 }

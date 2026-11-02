@@ -1,4 +1,12 @@
-import { Body, Controller, Param, Patch, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -16,7 +24,9 @@ export class PublicWriteController {
   @Post('public/assets')
   @TenantRoute()
   @RequirePermissions(PERMISSIONS.PUBLIC_WRITE)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
   createAsset(
     @CurrentUser() actor: AuthUser,
     @Body() dto: CreatePublicAssetDto,

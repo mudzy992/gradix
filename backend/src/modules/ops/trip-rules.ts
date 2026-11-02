@@ -10,7 +10,11 @@ export async function assertTruckForTrip(
   driverId: string,
 ): Promise<void> {
   if (machine.type !== 'TRUCK') {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Trip machine must be TRUCK', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Trip machine must be TRUCK',
+      400,
+    );
   }
   if (machine.status === 'DECOMMISSIONED') {
     throw new AppError(ERROR_CODES.CONFLICT, 'Machine is decommissioned', 409);
@@ -30,11 +34,19 @@ export async function assertTruckForTrip(
   if (onProject) {
     return;
   }
-  throw new AppError(ERROR_CODES.FORBIDDEN, 'Truck not available for this trip', 403);
+  throw new AppError(
+    ERROR_CODES.FORBIDDEN,
+    'Truck not available for this trip',
+    403,
+  );
 }
 
 export function assertSyncedImmutable(isSynced: boolean): void {
   if (isSynced) {
-    throw new AppError(ERROR_CODES.TRIP_IMMUTABLE, 'Synced trip cannot be edited', 403);
+    throw new AppError(
+      ERROR_CODES.TRIP_IMMUTABLE,
+      'Synced trip cannot be edited',
+      403,
+    );
   }
 }

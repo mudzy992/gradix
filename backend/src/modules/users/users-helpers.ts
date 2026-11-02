@@ -40,25 +40,44 @@ export function assertEmployeeCode(value?: string): void {
     return;
   }
   if (!EMPLOYEE_CODE_PATTERN.test(value)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid employeeCode', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Invalid employeeCode',
+      400,
+    );
   }
 }
 
 export function throwUnique(error: unknown): never {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  ) {
     const haystack = JSON.stringify(error.meta ?? '');
     if (haystack.includes('email')) {
-      throw new AppError(ERROR_CODES.AUTH_EMAIL_TAKEN, 'Email already taken', 409);
+      throw new AppError(
+        ERROR_CODES.AUTH_EMAIL_TAKEN,
+        'Email already taken',
+        409,
+      );
     }
     if (haystack.includes('phone')) {
-      throw new AppError(ERROR_CODES.USER_PHONE_TAKEN, 'Phone already taken', 409);
+      throw new AppError(
+        ERROR_CODES.USER_PHONE_TAKEN,
+        'Phone already taken',
+        409,
+      );
     }
     throw new AppError(ERROR_CODES.CONFLICT, 'Conflict', 409);
   }
   throw error;
 }
 
-export async function findScopedUser(prisma: PrismaService, actor: AuthUser, id: string) {
+export async function findScopedUser(
+  prisma: PrismaService,
+  actor: AuthUser,
+  id: string,
+) {
   const companyId = requireCompany(actor);
   const user = await prisma.user.findFirst({
     where: { id, companyId },

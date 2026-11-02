@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { FuelService } from './fuel.service';
 import { CreateFuelDto, FuelListQueryDto, PatchFuelDto } from './fuel.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -27,7 +37,11 @@ export class FuelController {
   }
 
   @Patch(':id')
-  patch(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: PatchFuelDto) {
+  patch(
+    @CurrentUser() actor: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PatchFuelDto,
+  ) {
     return this.fuel.patch(actor, id, dto);
   }
 

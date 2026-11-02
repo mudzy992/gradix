@@ -6,7 +6,10 @@ import {
   PROJECT_CODE_PATTERN,
 } from '../constants';
 
-export function assertPlannedRange(start?: Date | null, end?: Date | null): void {
+export function assertPlannedRange(
+  start?: Date | null,
+  end?: Date | null,
+): void {
   if (start && end && end < start) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,
@@ -32,7 +35,11 @@ export function normalizeProjectCode(code?: string | null): string | null {
   }
   const value = code.trim().toUpperCase();
   if (!PROJECT_CODE_PATTERN.test(value)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid project code', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Invalid project code',
+      400,
+    );
   }
   return value;
 }
@@ -43,7 +50,11 @@ export function normalizeMachineCode(code?: string | null): string | null {
   }
   const value = code.trim().toUpperCase();
   if (!PROJECT_CODE_PATTERN.test(value)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid machine code', 400);
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Invalid machine code',
+      400,
+    );
   }
   return value;
 }

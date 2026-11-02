@@ -28,7 +28,10 @@ export class RealtimeService {
   joinCompanyWideToProject(companyId: string, projectId: string): void {
     void this.server?.fetchSockets().then((sockets) => {
       for (const socket of sockets) {
-        const data = socket.data as { companyId?: string; companyWide?: boolean };
+        const data = socket.data as {
+          companyId?: string;
+          companyWide?: boolean;
+        };
         if (data.companyId === companyId && data.companyWide) {
           void socket.join(`project:${projectId}`);
         }

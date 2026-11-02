@@ -14,7 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export function LogisticsPage() {
   const { t } = useTranslation()
   const tenantReady = useTenantReady()
-  const canWrite = useHasPermission('trips.write') || useHasPermission('settings.write')
+  const canWriteTrips = useHasPermission('trips.write')
+  const canWriteSettings = useHasPermission('settings.write')
+  const canWrite = canWriteTrips || canWriteSettings
   const client = useQueryClient()
   const [material, setMaterial] = useState('')
   const [depot, setDepot] = useState('')
