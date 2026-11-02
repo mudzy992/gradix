@@ -20,7 +20,7 @@
       "id": "CI-01",
       "layer": "CI",
       "title": "Okidači: samo aktivna grana, bez PR-a",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {

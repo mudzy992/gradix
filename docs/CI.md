@@ -8,17 +8,19 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) · **Nema PR
 
 ---
 
-## 1. Trenutno stanje (`e531ca2`)
+## 1. Trenutno stanje
 
-### Okidači (danas)
+### Okidači (nakon CI-01)
 
 ```yaml
 on:
   push:
-    branches: [main, 'arena/**']
-  pull_request:            # ⚠️ uklanja se (segment CI-01)
-  workflow_dispatch:
+    branches: [main, 'arena/0bc0e56e-gradix']   # samo main + aktivna grana
+  workflow_dispatch:                            # ručno, sa izborom suite-a (CI-02)
 ```
+
+Nema `pull_request` trigera i nema šablona `arena/**`: grana koja nije aktivna ne troši CI minute.
+Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** commitu.
 
 ### Jobovi
 
@@ -66,7 +68,7 @@ on:
 
 | Zahtjev | Kako | Segment |
 |---|---|---|
-| Bez `pull_request` okidača | ukloniti trigger | CI-01 |
+| Bez `pull_request` okidača | ✅ uklonjen (CI-01), filter samo `main` + aktivna grana | CI-01 |
 | Ručni run sa izborom suite-a | `workflow_dispatch` inputi + `if:` na jobovima | CI-02 |
 | Akcije pinovane po SHA | `actions/checkout@<sha> # v4.x` (Dependabot za bump) | CI-03 |
 | Static gate | lint, format check, `tsc`, secret scan (`gitleaks`), `npm audit --omit=dev`, license check | CI-04 |
@@ -120,7 +122,7 @@ on:
 
 | # | Dug | Segment |
 |---|---|---|
-| C1 | `pull_request` trigger još postoji | CI-01 |
+| C1 | ~~`pull_request` trigger~~ — ✅ riješeno (CI-01) | CI-01 |
 | C2 | Nema `workflow_dispatch` inputa | CI-02 |
 | C3 | Akcije su na tagovima (`@v4`), ne na SHA | CI-03 |
 | C4 | Nema secret skena, `npm audit` ni license checka | CI-04 |

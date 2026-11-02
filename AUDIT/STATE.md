@@ -8,7 +8,8 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 2–4 ✅ završene.** Stanje: **KAPIJA 2** — čekam odgovore na Q1–Q5 i odobrenje za izvršavanje segmenata. Vlasnik odobrio prelazak
+**FAZA 2–4 ✅ završene; KAPIJA 2 prošla** („nastavi dalje“ = odobrenje; Q1–Q5 usvojeni po preporuci,
+zapisani kao D-012…D-016 i mogu se mijenjati). **Izvršavanje segmenata u toku.** Vlasnik odobrio prelazak
 preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljanja.
 
 ## Zadnji commit i CI

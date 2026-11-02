@@ -1,12 +1,13 @@
 name: CI
 
-# Pokreće se na main, na svim arena/* granama i na svakom PR-u.
+# Okidači (CI-01): push SAMO na `main` i na aktivnu radnu granu + ručno pokretanje.
+# Namjerno NEMA `pull_request` trigera — radimo direktno na grani, bez PR-ova.
+# Kad se aktivna grana promijeni, ovaj filter i docs/CI.md se mijenjaju u istom commitu.
 on:
   push:
     branches:
       - main
-      - 'arena/**'
-  pull_request:
+      - 'arena/0bc0e56e-gradix'
   workflow_dispatch:
 
 concurrency:
