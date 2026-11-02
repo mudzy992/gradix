@@ -9,6 +9,7 @@ COPY package*.json ./
 RUN npm ci --include=dev
 
 # Kopiraj Prisma shemu i generiraj klijenta (prije builda da se izbjegnu problemi)
+COPY prisma.config.ts ./
 COPY prisma ./prisma/
 RUN npx prisma generate
 
