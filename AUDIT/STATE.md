@@ -662,7 +662,11 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
   refresh token ide u **sessionStorage**, a `storageState` čuva samo localStorage. Setup sada čekira
   `#remember`, provjerava da stanje nije prazno, a `beforeEach` tvrdi `toHaveURL(/dashboard/)`.
   Na pad se objavljuje artefakt `playwright-artifacts` (html + trace).
-- **Ukupno 18 E2E testova** u 6 fajlova (`setup`/`guest`/`admin`/`worker` projekti).
+- **Treći pad (41729231608):** `storageState` po testu ne radi jer backend **rotira** refresh token, a
+  ponovnu upotrebu starog tretira kao krađu i gasi **sve** sesije (`revokeAll`). Isto pogađa korisnika
+  sa dvije kartice → **F-FE-06-06** (preporuka za BE-02: grace period ili single-flight refresh).
+  E2E sada koristi **jednu sesiju po fajlu** (`e2e/session.ts`), pa reuse ne postoji.
+- **Ukupno 16 E2E testova** u 5 fajlova (`guest`/`admin`/`worker`).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 

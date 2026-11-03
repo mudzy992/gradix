@@ -1,22 +1,45 @@
 import { expect, test } from '@playwright/test'
+import type { BrowserContext, Page } from '@playwright/test'
+import { openSession } from './session'
 
 /**
  * FE-06 — admin tok na **stvarnom** backendu (seed `SEED_DEMO=true`).
  *
- * Sesija dolazi iz `auth.setup.ts` (`storageState`), da se ne troši rate-limit prijave (5/min po IP-u).
+ * Jedna prijava po fajlu (`e2e/session.ts`) — backend rotira refresh token i reuse tretira kao krađu,
+ * pa bi `storageState` po testu odjavio sve sesije (F-FE-06-06).
  * Unit testovi (FE-05) drže logiku; ovdje se provjerava da se ekrani zaista povezuju: dashboard →
  * prečica → lista → detalj, da navigacija označava aktivnu stranicu i da reflow radi na 320 px.
  * Podaci su iz `prisma/seed-demo-ops.ts` (`Sarajevo obilaznica`, faze `Zemljani radovi`/`Asfalt`,
  * zadatak `Iskop kanala`).
  */
+const ADMIN = {
+  email: process.env.E2E_LOGIN_EMAIL ?? '',
+  password: process.env.E2E_LOGIN_PASSWORD ?? '',
+}
+
+let context: BrowserContext
+let page: Page
+
 test.describe('FE-06 — admin tok', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeAll(async ({ browser }) => {
+    if (!ADMIN.email || !ADMIN.password) {
+      test.skip(true, 'E2E login kredencijali nisu postavljeni')
+      return
+    }
+    ;({ context, page } = await openSession(browser, ADMIN.email, ADMIN.password))
+  })
+
+  test.afterAll(async () => {
+    await context?.close()
+  })
+
+  test.beforeEach(async () => {
     await page.goto('/dashboard')
-    // Sesija iz `storageState`: ako padne, test mora reći „nismo prijavljeni“, ne „nema kartica“.
+    // Ako sesija padne, test mora reći „nismo prijavljeni“, ne „nema kartica“.
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
   })
 
-  test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async ({ page }) => {
+  test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/dashboard/i)
     await expect(page.getByRole('heading', { name: /ključni pokazatelji/i })).toHaveCount(1)
 
@@ -27,7 +50,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/dash\./)).toHaveCount(0)
   })
 
-  test('prečica vodi na projekte, red otvara detalj sa fazama', async ({ page }) => {
+  test('prečica vodi na projekte, red otvara detalj sa fazama', async () => {
     // Prečica (zona B), ne sidebar — ista prava, drugi put do ekrana.
     const quick = page.getByRole('region', { name: /brze akcije/i })
     await quick.getByRole('link', { name: 'Projekti' }).click()
@@ -45,7 +68,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText('Zemljani radovi')).toBeVisible({ timeout: 15_000 })
   })
 
-  test('zadatak iz seed-a se otvara sa svojim naslovom', async ({ page }) => {
+  test('zadatak iz seed-a se otvara sa svojim naslovom', async () => {
     await page.goto('/tasks')
     const task = page.getByRole('link', { name: /Iskop kanala/ })
     await expect(task).toBeVisible({ timeout: 15_000 })
@@ -55,7 +78,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/iskop kanala/i)
   })
 
-  test('navigacija označava aktivnu stranicu (aria-current)', async ({ page }) => {
+  test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).
     const active = page.locator('a[aria-current="page"]').first()
@@ -63,7 +86,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(active).toHaveText(/projekti/i)
   })
 
-  test('dashboard nema horizontalnog skrola na 320 px i ima jedno h1', async ({ page }) => {
+  test('dashboard nema horizontalnog skrola na 320 px i ima jedno h1', async () => {
     await page.setViewportSize({ width: 320, height: 640 })
     await page.goto('/dashboard')
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)

@@ -13,26 +13,16 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  // FE-06: prijava se radi jednom po roli (`auth.setup.ts`) — backend dozvoljava 5 prijava/min po
-  // IP-u, pa 16 testova koji se svaki prijavljuju troše kvotu i padaju bez krivice koda.
+  // FE-06: svaki spec fajl otvara **jednu** sesiju (`e2e/session.ts`) — backend rotira refresh
+  // token i reuse tretira kao krađu, pa `storageState` po testu odjavljuje sve sesije (F-FE-06-06).
+  // `guest` projekat nema sesiju: prijava, a11y i guardovi se provjeravaju bez prijave.
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'guest',
       testMatch: [/login\.spec\.ts/, /a11y\.spec\.ts/, /guards\.spec\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'admin',
-      testMatch: /flows\.spec\.ts/,
-      dependencies: ['setup'],
-      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/admin.json' },
-    },
-    {
-      name: 'worker',
-      testMatch: /worker-flow\.spec\.ts/,
-      dependencies: ['setup'],
-      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/worker.json' },
-    },
+    { name: 'admin', testMatch: /flows\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'worker', testMatch: /worker-flow\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
   ],
 })
