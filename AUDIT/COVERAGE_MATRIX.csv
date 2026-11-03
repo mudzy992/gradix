@@ -118,7 +118,7 @@ backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,73,nepregledano,,
 backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,pregledano,"BE-11: MIME iz magic bytes (jpeg/png/webp/pdf/docx/xlsx), ne iz imena fajla",2026-11-03
 backend/src/modules/files/files.controller.ts,BE,files,BE-11,72,pregledano,"BE-11 (F-12): download šalje `Content-Type`/`Content-Length`/`nosniff`/`CSP sandbox`/`no-store`, greška streama uništi odgovor",2026-11-03
 backend/src/modules/files/files.module.ts,BE,files,BE-11,12,pregledano,BE-11: modul izvozi `FilesService` za dnevnik (PDF) i javne assete,2026-11-03
-backend/src/modules/files/files.service.ts,BE,files,BE-11,124,pregledano,BE-11 (F-12): `streamPublic` čita `statObject` (tip/veličina); upload sniffing + limit veličine,2026-11-03
+backend/src/modules/files/files.service.ts,BE,files,BE-11,129,pregledano,BE-11 (F-12): `streamPublic` čita `statObject` (tip/veličina); upload sniffing + limit veličine,2026-11-03
 backend/src/modules/files/minio.service.ts,BE,files,BE-11,51,pregledano,BE-11: bucket se osigurava sa 10 pokušaja (MinIO starta paralelno),2026-11-03
 backend/src/modules/health/health.controller.ts,BE,health,BE-18,15,nepregledano,,
 backend/src/modules/health/health.module.ts,BE,health,BE-18,10,nepregledano,,

@@ -357,6 +357,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
   `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
   strukturu). Oba popravljena u istom danu; novi run se upisuje ispod.
+- **CI ispravka (run 41636435039 ❌ samo Audit):** matrica je bila zastarjela poslije zadnjih
+  izmjena (`loc` se promijenio) → `inventory.mjs` ponovo pokrenut; kod i e2e su bili zeleni.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
