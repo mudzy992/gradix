@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   Allow,
+  ArrayMaxSize,
   IsArray,
   IsIn,
   IsObject,
@@ -10,6 +11,8 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+
+import { SYNC_PUSH_MAX_ITEMS } from '../../common/constants';
 
 export const SYNC_ITEM_TYPES = [
   'TIMER',
@@ -45,6 +48,9 @@ export class SyncPushItemDto {
 
 export class SyncPushDto {
   @IsArray()
+  // BE-17 (F-01): bez gornje granice je jedan zahtjev mogao nositi neograničen broj
+  // itema — klijent šalje u serijama, pa je 200 i više nego dovoljno za jedan batch.
+  @ArrayMaxSize(SYNC_PUSH_MAX_ITEMS)
   @ValidateNested({ each: true })
   @Type(() => SyncPushItemDto)
   items!: SyncPushItemDto[];

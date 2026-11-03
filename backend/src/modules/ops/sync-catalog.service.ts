@@ -40,7 +40,14 @@ export class SyncCatalogService {
       ttlHours: SYNC_CATALOG_TTL_HOURS,
       projects: projects.map((row) => this.access.serialize(row, actor)),
       machines: machines.map(serializeMachine),
-      materials,
+      // BE-17 (F-06): sirovi red je nosio `companyId` i vremenske oznake koje klijent
+      // ne koristi; katalog je whitelist.
+      materials: materials.map((row) => ({
+        id: row.id,
+        name: row.name,
+        unit: row.unit,
+        isActive: row.isActive,
+      })),
       depots: depots.map((row) => ({
         id: row.id,
         name: row.name,

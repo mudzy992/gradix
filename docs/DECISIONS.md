@@ -264,6 +264,25 @@ zaključuje tek na kraju); (C) retroaktivni preračun uz audit (mijenja već isp
 **Posljedica:** izmjena satnice više nije „popravka“ starih mjeseci; ako je satnica bila pogrešna u
 trenutku rada, ispravka ide kroz `/amendments` + ručni `CostEntry`, ne kroz `PATCH /users/:id`.
 
+### D-036 — Sync ugovor: limiti batch-a, limit pull-a i watermark bez preskakanja
+**Datum:** 2026-11-03 · **Status:** na snazi
+Offline klijent šalje sve što je skupio u jednom `POST /sync/push` i pamti `lastSyncTimestamp` iz
+`POST /sync/pull`. Do BE-17 tri stvari nisu bile ugovor nego slučajnost: (1) batch nije imao
+gornju granicu — jedan zahtjev je mogao nositi hiljade itema i držati worker proces; (2) `pull` je
+vraćao **sve** redove od `since`, pa je prvi sync poslije duge pauze bio neograničen odgovor;
+(3) `lastSyncTimestamp` je bio `new Date()` u trenutku odgovora, pa je red upisan između upita i
+odgovora imao `updatedAt` **manji** od watermark-a i klijent ga nikad nije dobio (tihi gubitak).
+Sada: push prima najviše **200** itema (`SYNC_PUSH_MAX_ITEMS`, klijent reže red u
+`mobile/sync/engine.ts`), pull vraća najviše **1000** redova po kolekciji (`SYNC_PULL_LIMIT`),
+watermark je najmanji zadnji `updatedAt` među kolekcijama koje su nešto vratile (inače `since`), a
+`since` u budućnosti je `400` umjesto klijenta koji zauvijek ne dobija podatke.
+**Odbačeno:** (A) keyset paginacija sa `cursor` poljem — ispravno, ali mijenja ugovor za sve
+klijente i traži verzionisanje; `take` + watermark daje isto jamstvo uz nula novih polja (red na
+granici se šalje ponovo, a klijent je idempotentan po `localId`/`serverId`); (B) server-side
+`since` korekcija na `min(updatedAt)` **samo** kad je odgovor pun — i dalje propušta redove kad
+kolekcija nije puna, pa je pravilo jedno za sve slučajeve.
+**Posljedica:** red na granici može doći dvaput; klijent mora upsertovati (radi po `id`).
+
 ---
 
 ## Zamijenjene / povučene odluke

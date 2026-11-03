@@ -31,7 +31,22 @@ export class SyncPushTimerService {
       return syncOk(item.localId, 'TIMER', existing.id);
     }
     if (action === 'start') {
-      return this.start(actor, item);
+      try {
+        return await this.start(actor, item);
+      } catch (error) {
+        // BE-17 (F-03): paralelni replay istog `localId`. `mapTimerUnique` P2002 pretvara u
+        // `409 TIMER_ALREADY_OPEN`, pa prije nego to vratimo klijentu provjeravamo da li je
+        // pobjednik upisao **baš ovaj** `localId` — ako jest, item je ionako primijenjen.
+        const won = await this.timer.findByLocalId(
+          actor,
+          item.deviceId,
+          item.localId,
+        );
+        if (won) {
+          return syncOk(item.localId, 'TIMER', won.id);
+        }
+        throw error;
+      }
     }
     const session = existing ?? (await this.timer.requireMine(actor));
     if (action === 'pause') {

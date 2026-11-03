@@ -21,11 +21,16 @@ export type SyncPushResult = {
   code?: string;
 };
 
+/** BE-17 (F-01): server prima najviše 200 itema po `push`-u (`SYNC_PUSH_MAX_ITEMS`).
+ * Bez ovog reza bi dugi offline red (npr. 300 fotografija) dobijao `400` za **cijeli**
+ * batch i ništa se ne bi sinhronizovalo; ostatak ide u sljedećem prolazu. */
+const PUSH_BATCH_SIZE = 200;
+
 export async function pushPending(): Promise<SyncPushResult[]> {
   if (!(await isOnline())) {
     return [];
   }
-  const rows = await pendingRows();
+  const rows = (await pendingRows()).slice(0, PUSH_BATCH_SIZE);
   if (rows.length === 0) {
     return [];
   }

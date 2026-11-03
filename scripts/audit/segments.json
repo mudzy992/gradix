@@ -240,7 +240,7 @@
       "id": "BE-17",
       "layer": "BE",
       "title": "Sync (serverska strana)",
-      "status": "planned",
+      "status": "done",
       "scope": "files"
     },
     {

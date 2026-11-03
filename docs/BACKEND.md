@@ -192,7 +192,19 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 
 ### 4.7 Sync (mobile)
 - Unique `(companyId, userId, deviceId, localId)` — idempotentnost push-a.
-- Katalog TTL **24 h**; sync odbija `DECOMMISSIONED` mašine i `ON_HOLD` projekte.
+- `POST /api/sync/push` prima **najviše 200** itema (`SYNC_PUSH_MAX_ITEMS`); više je `400
+  VALIDATION_FAILED` za cijeli batch. Klijent šalje u rezovima od 200 (`mobile/sync/engine.ts`).
+- Item se obrađuje **po redu** (TIMER → TRIP → FUEL → DIARY → PHOTO zavisi od klijentskog reda);
+  `PHOTO` prije svog `DIARY` zapisa je `404 'Diary entry not synced yet'` — namjerno.
+- Greška jednog itema **ne obara batch** (`results[]` nosi `ok/code/message` po itemu). Poznate
+  Prisma greške: unique (`P2002`) → `409`, nestali zapis (`P2025`) → `404`; paralelni replay
+  istog `localId` se ponavlja jednom i vraća pobjednikov `serverId` (nema `500`, nema duplikata).
+- `POST /api/sync/pull` vraća najviše **1000** redova **po kolekciji** (`SYNC_PULL_LIMIT`);
+  `lastSyncTimestamp` je najmanji zadnji `updatedAt` među kolekcijama koje su nešto vratile
+  (inače nepromijenjen `since`) — red na granici se šalje ponovo, nijedan se ne preskače;
+  `serverTime` je trenutak odgovora. `since` u budućnosti ili neispravan datum → `400`.
+- Katalog TTL **24 h**; sync odbija `DECOMMISSIONED` mašine i `ON_HOLD` projekte. Katalog je
+  whitelist (`id/name/…`), bez `companyId` i vremenskih oznaka.
 
 ### 4.8 IoT
 - **1 uređaj po mašini** (`IOT_DEVICE_EXISTS`); ključ se čuva kao Argon2id + SHA-256 lookup,

@@ -16,8 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-16` — Javni sajt, notifikacije, email, realtime: email više ne lažno tvrdi uspjeh (D‑013), gateway CORS po D‑018, `companywide` soba, orphan upload, bulk notifikacije — `done` |
-| CI | ✅ [run 41653715576](https://github.com/mudzy992/gradix/actions/runs/41653715576) — **6/6** zelen (`feat(platform): BE-16 …`) |
+| Zadnji commit | `BE-17` — Sync (serverska strana): limit batch-a 200, limit pull-a 1000/ kolekcija, watermark bez preskakanja (D‑036), per-item `409/404` umjesto `500`, whitelist kataloga — `done` |
+| CI | upisuje se poslije `gh run watch` (`feat(platform): BE-17 …`) |
+| Zadnji potvrđeno zelen run (BE-16) | ✅ [41653715576](https://github.com/mudzy992/gradix/actions/runs/41653715576) — **6/6** (`feat(platform): BE-16 …`) · docs [41654152375](https://github.com/mudzy992/gradix/actions/runs/41654152375) ✅ |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
 | Zadnji potvrđeno zelen run | [41653715576](https://github.com/mudzy992/gradix/actions/runs/41653715576) ✅ 6/6 · prije: [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) ✅ 6/6 · prije: [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
@@ -481,10 +482,32 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   e2e `public` +1 i `polish` zamijenjen test emaila. Matrica **516 fajlova / 311 pregledano (60,3 %)**.
 - **Zatvoreno:** `BE-16` — zelen CI **41653715576** (6/6, prvi pokušaj); **24/59** segmenata `done`.
 
+### 2026-11-03 — BE-17 (sync, serverska strana)
+- **Nalaz (visoko):** `POST /sync/push` nije imao granicu broja itema → `@ArrayMaxSize(200)`
+  (`SYNC_PUSH_MAX_ITEMS`); mobilni engine reže red na 200 da dugi offline red ne dobije `400`.
+- **Nalaz (visoko):** `lastSyncTimestamp` je bio `new Date()` — red upisan između upita i odgovora
+  imao je manji `updatedAt` i klijent ga **nikad** nije dobio. Sada `pullWatermark()` = najmanji
+  zadnji `updatedAt` među kolekcijama koje su nešto vratile (D‑036); `serverTime` ostaje trenutak
+  odgovora.
+- **Nalaz (visoko):** paralelni replay istog `localId` rušio je **cijeli** batch `500` (`P2002`).
+  Sada `dispatchIdempotent()` ponavlja dispatch jednom, a `mapPrismaError()` daje per-item
+  `409`/`404`; nepoznate greške i dalje `500`.
+- **Nalaz (srednje):** `pull` bez `take` (sve od `since`) → **1000** po kolekciji
+  (`SYNC_PULL_LIMIT`); `since` u budućnosti je `400` (prije je klijent trajno ostajao bez podataka).
+- **Nalaz (nisko):** katalog je vraćao sirove `materials` (`companyId`, vremenske oznake) →
+  whitelist; neograničen katalog **prihvaćen** (offline rad traži cijeli šifarnik), prag ~2 MB za
+  buduću odluku.
+- **Svjesno ostaje:** `PHOTO` prije `DIARY` = `404 'Diary entry not synced yet'` (klijent ponavlja);
+  push je sekvencijalan i prekida se na **nepoznatoj** grešci.
+- **Testovi:** **190/190** unit (+4: `sync-watermark.spec.ts`); e2e `sync` +3 (limit batch-a,
+  watermark, paralelni replay).
+- **Matrica:** **518 fajlova / 321 pregledano (62,0 %)**; `check:all` 15 koraka / 0 palo (5 preskočeno).
+- **Zatvoreno:** `BE-17` — **25/59** segmenata `done` (CI upisan u tabeli iznad).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **BE-17** — preostali backend segmenti (vidi `scripts/audit/segments.json`); zatim **INF-04…07**
-   (logovanje, observability, Redis, skaliranje) i FE/MOB segmenti.
+1. **BE-18** (Health API ugovor) — zatim **INF-04…07** (logovanje, observability, Redis,
+   skaliranje) i FE/MOB segmenti (vidi `scripts/audit/segments.json`).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

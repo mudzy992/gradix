@@ -231,6 +231,137 @@ describe('Sync push pull catalog (e2e)', () => {
     ).toBe(true);
   });
 
+  it('BE-17: batch je ograničen na 200 itema, `since` u budućnosti je 400', async () => {
+    const tooMany = await request(app.getHttpServer())
+      .post('/api/sync/push')
+      .set(auth(worker))
+      .send({
+        items: Array.from({ length: 201 }, (_, index) => ({
+          type: 'TIMER',
+          localId: `bulk-${Date.now()}-${index}`,
+          deviceId: 'e2e-phone',
+          payload: { taskId },
+        })),
+      });
+    expect(tooMany.status).toBe(400);
+    expect(tooMany.body.error.code).toBe('VALIDATION_FAILED');
+    const future = await request(app.getHttpServer())
+      .post('/api/sync/pull')
+      .set(auth(worker))
+      .send({ since: new Date(Date.now() + 3_600_000).toISOString() });
+    expect(future.status).toBe(400);
+    expect(future.body.error.code).toBe('VALIDATION_FAILED');
+    const invalid = await request(app.getHttpServer())
+      .post('/api/sync/pull')
+      .set(auth(worker))
+      .send({ since: 'nije-datum' });
+    expect(invalid.status).toBe(400);
+  });
+
+  it('BE-17: watermark ne preskače redove upisane tokom pull-a', async () => {
+    const first = await request(app.getHttpServer())
+      .post('/api/sync/pull')
+      .set(auth(worker))
+      .send({});
+    expect(first.status).toBe(200);
+    const watermark = first.body.data.lastSyncTimestamp as string;
+    // Vodena oznaka nikad nije „sada“ iznad stvarnih redova.
+    expect(new Date(watermark).getTime()).toBeLessThanOrEqual(
+      new Date(first.body.data.serverTime).getTime(),
+    );
+    // Novi zapis poslije prvog pull-a mora doći u drugom (prije je `new Date()`
+    // watermark mogao preskočiti red upisan između upita i odgovora).
+    const pushed = await request(app.getHttpServer())
+      .post('/api/sync/push')
+      .set(auth(worker))
+      .send({
+        items: [
+          {
+            type: 'TIMER',
+            localId: `wm-${Date.now()}`,
+            deviceId: 'e2e-phone',
+            payload: {
+              taskId,
+              startedAt: new Date(Date.now() - 30_000).toISOString(),
+            },
+          },
+        ],
+      });
+    expect(pushed.status).toBe(200);
+    const serverId = pushed.body.data.results[0].serverId as string;
+    const second = await request(app.getHttpServer())
+      .post('/api/sync/pull')
+      .set(auth(worker))
+      .send({ since: watermark });
+    expect(second.status).toBe(200);
+    const timers = second.body.data.timers as {
+      id: string;
+      updatedAt: string;
+    }[];
+    expect(timers.some((row) => row.id === serverId)).toBe(true);
+    for (const row of timers) {
+      expect(new Date(row.updatedAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(watermark).getTime(),
+      );
+    }
+    expect(
+      new Date(second.body.data.lastSyncTimestamp).getTime(),
+    ).toBeGreaterThanOrEqual(new Date(watermark).getTime());
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
+  });
+
+  it('BE-17: paralelni replay istog `localId` ne daje 500 ni drugu sesiju', async () => {
+    const localId = `race-${Date.now()}`;
+    const startedAt = new Date(Date.now() - 60_000).toISOString();
+    const push = () =>
+      request(app.getHttpServer())
+        .post('/api/sync/push')
+        .set(auth(worker))
+        .send({
+          items: [
+            {
+              type: 'TIMER',
+              localId,
+              deviceId: 'e2e-phone',
+              payload: { taskId, startedAt },
+            },
+          ],
+        });
+    const results = await Promise.all([push(), push(), push()]);
+    // Nijedan paralelni replay ne smije oboriti batch (500).
+    expect(results.map((row) => row.status)).toEqual([200, 200, 200]);
+    const ok = results.filter((row) => row.body.data.results[0].ok === true);
+    expect(ok.length).toBeGreaterThanOrEqual(1);
+    expect(
+      new Set(ok.map((row) => row.body.data.results[0].serverId as string))
+        .size,
+    ).toBe(1);
+    for (const row of results) {
+      if (row.body.data.results[0].ok !== true) {
+        expect(['TIMER_ALREADY_OPEN', 'CONFLICT']).toContain(
+          row.body.data.results[0].code,
+        );
+      }
+    }
+    // Tačno jedna otvorena sesija za korisnika (db unique, ne aplikativna provjera).
+    expect(
+      await prisma.timerSession.count({
+        where: { userId: workerId, closedAt: null },
+      }),
+    ).toBe(1);
+    // Sekvencijalni replay istog `localId` vraća isti `serverId` (idempotentno).
+    const replay = await push();
+    expect(replay.body.data.results[0].ok).toBe(true);
+    expect(replay.body.data.results[0].serverId).toBe(
+      ok[0].body.data.results[0].serverId,
+    );
+    await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
+  });
+
   it('DRIVER+WORKER can push timer after dual role', async () => {
     await prisma.userRoleAssignment.create({
       data: { userId: driverId, role: 'WORKER' },

@@ -30,7 +30,7 @@ backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,pregledano,BE-08: pregledano �
 backend/prisma/seed.ts,BE,seed,BE-08,135,pregledano,"BE-08: SEED_DEMO prekidač — produkcija = samo platform admin (P9), demo = firma + ops + flota",2026-11-03
 backend/src/app.module.ts,BE,bootstrap,BE-01,62,pregledano,BE-01: ConfigModule.forRoot({ validate: validateEnv }) — fail-fast prije podizanja modula,2026-11-02
 backend/src/app.setup.ts,BE,bootstrap,BE-01,65,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
-backend/src/common/constants.ts,BE,common,BE-01,41,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
+backend/src/common/constants.ts,BE,common,BE-01,45,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
 backend/src/common/decorators/current-user.decorator.ts,BE,common,BE-01,10,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/public.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/require-permissions.decorator.ts,BE,common,BE-01,8,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
@@ -205,14 +205,16 @@ backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,pregledano,BE-06: seri
 backend/src/modules/ops/serialize-timer.spec.ts,BE,ops,BE-07,96,pregledano,"BE-07: 7 testova — self/crew ne izlažu uređaj ni firmu, crew elapsedMinutes",2026-11-03
 backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,67,pregledano,"BE-07: tri ugovora — sync (puni red), self (bez deviceId/localId/companyId), crew (elapsedMinutes) (F-04)",2026-11-03
 backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,pregledano,BE-10: pregledano — recalcSpend prima TransactionClient; isključuje gorivo/servise vezane na CostEntry,2026-11-03
-backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,71,pregledano,BE-10: pregledano — katalog (projekti/mašine/materijali/depoi) sa ttlHours,2026-11-03
-backend/src/modules/ops/sync-push-diary.ts,BE,ops,BE-17,84,nepregledano,,
-backend/src/modules/ops/sync-push-fleet.ts,BE,ops,BE-17,102,pregledano,BE-10: offline identitet u jednom create umjesto create+update (F-06),2026-11-03
-backend/src/modules/ops/sync-push-timer.ts,BE,ops,BE-17,130,pregledano,BE-07: offline pause/resume delegiraju na TimerService (nema duplikata logike) (F-02),2026-11-03
-backend/src/modules/ops/sync-result.ts,BE,ops,BE-17,42,nepregledano,,
-backend/src/modules/ops/sync.controller.ts,BE,ops,BE-17,45,nepregledano,,
-backend/src/modules/ops/sync.dto.ts,BE,ops,BE-17,76,nepregledano,,
-backend/src/modules/ops/sync.service.ts,BE,ops,BE-17,126,nepregledano,,
+backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,78,pregledano,"BE-17: whitelist materijala (nema companyId/createdAt); katalog scoped (firma-wide vs dodjele), TTL 24h; veličina kataloga prihvaćena (F-17-07)",2026-11-03
+backend/src/modules/ops/sync-push-diary.ts,BE,ops,BE-17,84,pregledano,"BE-17: assertDiaryWrite; PHOTO prije DIARY = 404 Not synced yet (namjerno, klijent ponavlja)",2026-11-03
+backend/src/modules/ops/sync-push-fleet.ts,BE,ops,BE-17,102,pregledano,BE-17: per-item RBAC trips.write/fuel.write; offline identitet u jednom create (BE-10),2026-11-03
+backend/src/modules/ops/sync-push-timer.ts,BE,ops,BE-17,145,pregledano,BE-17: poslije 409 TIMER_ALREADY_OPEN provjera findByLocalId (paralelni replay istog localId = ok); pause/resume/stop delegiraju na TimerService,2026-11-03
+backend/src/modules/ops/sync-result.ts,BE,ops,BE-17,42,pregledano,BE-17: syncErr/syncOk nose ok/code/message/serverId po itemu — greška jednog itema ne obara batch,2026-11-03
+backend/src/modules/ops/sync-watermark.spec.ts,BE,ops,BE-17,41,pregledano,"BE-17: 4 testa — prazne kolekcije, min po kolekcijama, take granica, ignorisanje praznih",2026-11-03
+backend/src/modules/ops/sync-watermark.ts,BE,ops,BE-17,23,pregledano,"BE-17: novo — pullWatermark(since, collections) = min zadnji updatedAt (D-036), 4 unit testa",2026-11-03
+backend/src/modules/ops/sync.controller.ts,BE,ops,BE-17,45,pregledano,"BE-17: push/pull su 200 (idempotentni POST), resolve-conflict traži diary.write na ruti (F-17-12 provjereno)",2026-11-03
+backend/src/modules/ops/sync.dto.ts,BE,ops,BE-17,82,pregledano,BE-17: @ArrayMaxSize(SYNC_PUSH_MAX_ITEMS=200) na items; payload/action i dalje whitelist,2026-11-03
+backend/src/modules/ops/sync.service.ts,BE,ops,BE-17,200,pregledano,"BE-17: push limit 200 + retry-once na P2002 + per-item 409/404; pull take 1000/ kolekcija, watermark = min zadnji updatedAt (D-036), since u budućnosti 400",2026-11-03
 backend/src/modules/ops/task-assignees.service.ts,BE,ops,BE-06,162,pregledano,BE-08: TASK_ASSIGNED/UNASSIGNED + ATTACHMENT_ADDED/REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/task-dependencies.service.ts,BE,ops,BE-06,114,pregledano,BE-08: TASK_DEPENDENCY_ADDED / TASK_DEPENDENCY_REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/task-lifecycle.service.ts,BE,ops,BE-06,104,pregledano,"BE-06: complete/cancel gase timere, audit + notifikacije; bez assertProjectWritable (F-09, namjerno)",2026-11-03
@@ -301,7 +303,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,nepregledano,,
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,pregledano,BE-12: `/api/health` (process+postgres) i `/api/docs` dostupni u e2e env-u,2026-11-03
@@ -312,11 +314,11 @@ backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
-backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,"BE-13: self-approve 403, ADMIN self 200, druga odluka 409, TZ mjesec, pauza van exporta, ime exporta",2026-11-03
-backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,nepregledano,,
+backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
-backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,nepregledano,,
-backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,pregledano,BE-06: pregledano — dodjela izvršioca pa push timera (dual role),2026-11-03
+backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02
@@ -494,7 +496,7 @@ mobile/lib/theme.ts,MOB,app,MOB-01,29,nepregledano,,
 mobile/lib/timer-actions.ts,MOB,domain,MOB-06,26,nepregledano,,
 mobile/metro.config.js,MOB,app,MOB-01,22,nepregledano,,
 mobile/package.json,MOB,app,MOB-01,49,nepregledano,,
-mobile/sync/engine.ts,MOB,offline,MOB-04,99,nepregledano,,
+mobile/sync/engine.ts,MOB,offline,MOB-04,111,nepregledano,,
 mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,

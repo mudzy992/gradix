@@ -26,6 +26,10 @@ export const DIARY_PHOTO_MAX = 20;
 export const HSE_PHOTO_MAX = 5;
 export const DEFAULT_TIMEZONE = 'Europe/Sarajevo';
 export const SYNC_CATALOG_TTL_HOURS = 24;
+/** BE-17: najviše itema u jednom `POST /sync/push` (klijent šalje u serijama). */
+export const SYNC_PUSH_MAX_ITEMS = 200;
+/** BE-17: najviše redova po kolekciji u jednom `POST /sync/pull`. */
+export const SYNC_PULL_LIMIT = 1000;
 export const TIMER_STARTED_AT_FUTURE_SLACK_MS = 5 * 60 * 1000;
 export const SERVICE_DUE_HOURS = 50;
 export const SERVICE_CRON = '0 */6 * * *';
