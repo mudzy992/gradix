@@ -96,7 +96,7 @@
       "id": "INF-04",
       "layer": "INF",
       "title": "Strukturisano logovanje",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Strukturisano logovanje danas ne postoji (nalaz); implementacija ide u backend/src/common/logging (novi fajlovi u toku segmenta)."
     },

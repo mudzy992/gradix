@@ -18,7 +18,7 @@
 | Cache/queue | **Redis** u mreži `redis_net` — kod ga ne koristi | ⚪ rezervisano |
 | Reverse proxy | Coolify proxy (Traefik) → kontejneri po domenama | ✅ |
 | Secrets | Coolify Environment Variables (ne u repou) | ✅ |
-| Observability | Nest default logger + Docker healthcheckovi | ⚠️ bez strukturisanih logova i metrika |
+| Observability | **JSON logovi** (jedan red = jedan zapis, `level`/`context`/`requestId`) + Docker healthcheckovi (`/api/health` liveness, `/api/health/ready` readiness) | ⚠️ bez metrika/tracinga (INF-05) |
 | Backup | nije automatizovan (vidi §7) | ⚠️ dug |
 | Okruženja | lokalno (dev) + produkcija (Coolify); **nema staginga** (odluka D-007) | ✅ |
 
@@ -101,6 +101,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | Varijabla | Default | Efekat |
 |---|---|---|
 | `NODE_ENV` | `production` | logovanje / ponašanje biblioteka |
+| `LOG_LEVEL` | `info` | nivo JSON logova (`error`/`warn`/`info`/`debug`); prazno = `info` u produkciji, `debug` u razvoju, `error` u testovima (INF-04) |
 | `PORT` | `3000` | port API-ja |
 | `CORS_ORIGIN` | prazno = svi origin-i | whitelist, zarezom razdvojeno |
 | `RUN_MIGRATIONS` | `true` | `false` = migracije kao poseban korak |
@@ -235,7 +236,7 @@ Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
 
 | # | Dug | Segment |
 |---|---|---|
-| I1 | Nema strukturisanog logovanja (`pino`) ni korelacionog ID-a | INF-04 |
+| I1 | ~~Nema strukturisanog logovanja ni korelacionog ID-a~~ **riješeno** u INF-04 (JSON logger + `x-request-id`) | INF-04 |
 | I2 | Nema metrika/readiness endpointa (samo `SELECT 1`) | INF-05 |
 | I3 | Nema automatskog backup/restore testa | INF-06 |
 | I4 | Nema SBOM/skeniranja slika ni pinovanja po digestu | CI-04 |

@@ -8,7 +8,7 @@ import { Report, finish, loadAllowlist, read, walk } from './lib.mjs';
 
 const report = new Report(
   'Nema console.log u aplikativnom kodu',
-  'strukturisano logovanje (pino, INF-04) je jedini način da logovi dođu do Coolifyja sa nivoom i kontekstom',
+  'strukturisano logovanje (JSON logger + korelacioni ID, INF-04) je jedini način da logovi dođu do Coolifyja sa nivoom i kontekstom',
   'koristi Logger (kad postoji) ili console.error/warn; ako je izuzetak opravdan, dodaj ga u allowlist.json',
 );
 

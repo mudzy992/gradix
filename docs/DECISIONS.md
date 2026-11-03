@@ -301,6 +301,24 @@ ruta ostane bez ikakvog ograničenja.
 opciono dostupan monitoringu (`/api/health/ready`). Stari `{process, postgres}` oblik nestaje —
 nijedan klijent ga nije čitao (provjereno grep-om po `frontend/`, `mobile/`, `scripts/`, CI-ju).
 
+### D-038 — Logovanje: JSON red na stdout + korelacioni ID, bez `pino` zavisnosti
+**Datum:** 2026-11-03 · **Status:** na snazi
+Do INF-04 log je bio Nest-ov tekstualni format i tri `console.error` mjesta; bez korelacionog ID-a
+se greška iz Coolify loga nije mogla povezati sa zahtjevom, a nivo se nije mogao filtrirati.
+Sada `JsonLogger` (implementira Nest `LoggerService`) piše **jedan JSON red** po zapisu
+(`ts/level/context/msg/requestId/meta`), `requestLogMiddleware` daje svakom zahtjevu `x-request-id`
+(validan klijentski se prihvata, inače `randomUUID`) i jednu `http_request` liniju
+(`method/path/status/durationMs`), a `redact()` čisti tajne i PII iz meta. Nivo je `LOG_LEVEL`.
+**Odbačeno:** (A) `pino` + `pino-http` — najzrelije rješenje, ali dvije nove zavisnosti i transport
+konfiguracija za izlaz koji Coolify ionako čita sa stdout-a; P6 traži pisano obrazloženje, a
+funkcionalno ništa ne dobijamo u v1 (rotaciju i drain radi Docker/Coolify). Ako zatreba
+`traceId`/sampling ili više destinacija, `pino` je prvi izbor i tada se ova odluka mijenja;
+(B) `nestjs-pino` — dodatno vuče `pino` i `pino-http` (tri zavisnosti); (C) samo `requestId` bez
+strukture — Coolify bi i dalje dobijao neparsirane linije.
+**Posljedica:** `console.log/debug` je zabranjen guardrail-om, a `console.error` je dozvoljen
+(za slučajeve prije nego što logger postoji — koristi se u `main.ts` bootstrap-u). Nijedan log red
+ne smije sadržavati tijelo zahtjeva, headere, query string, email/telefon ni tajne.
+
 ---
 
 ## Zamijenjene / povučene odluke

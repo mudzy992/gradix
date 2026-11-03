@@ -16,10 +16,10 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-18` — Health API ugovor: liveness (bez baze) odvojen od readiness-a (`503`, limit 2 s), ravan JSON bez envelope-a (D‑037) — `done` |
-| CI | ✅ [run 41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) — **6/6** zelen, prvi pokušaj (`feat(health): BE-18 …`) |
+| Zadnji commit | `INF-04` — Strukturisano logovanje: JSON red po zapisu, `x-request-id` korelacioni ID, redakcija tajni/PII, `LOG_LEVEL` (D‑038) — `done` |
+| CI | ⏳ upisuje se poslije `gh run watch` (`feat(logging): INF-04 …`) |
 | Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
-| Zadnji potvrđeno zelen run (BE-18) | ✅ [41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) — **6/6** · prije: [41656273912](https://github.com/mudzy992/gradix/actions/runs/41656273912) ✅ 6/6 (`feat(sync): BE-17 …`) |
+| Zadnji potvrđeno zelen run (BE-18) | ✅ [41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) — **6/6** · docs [41657891438](https://github.com/mudzy992/gradix/actions/runs/41657891438) ✅ · prije: [41656273912](https://github.com/mudzy992/gradix/actions/runs/41656273912) ✅ 6/6 (`feat(sync): BE-17 …`) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
 | Zadnji potvrđeno zelen run | [41653715576](https://github.com/mudzy992/gradix/actions/runs/41653715576) ✅ 6/6 · prije: [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) ✅ 6/6 · prije: [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
@@ -517,12 +517,29 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** **194/194** unit (+4: `health.service.spec.ts`); e2e `health` prepisan (liveness bez
   envelope-a, readiness sa `checks.postgres`).
 - **Matrica:** **519 fajlova / 325 pregledano (62,6 %)**; `check:all` 15 koraka / 0 palo (5 preskočeno).
-- **Zatvoreno:** `BE-18` — **26/59** segmenata `done` (CI upisan u tabeli iznad).
+- **Zatvoreno:** `BE-18` — **26/59** segmenata `done` (CI upisan u tabeli iznad).### 2026-11-03 — INF-04 (strukturisano logovanje)
+- **Nalaz (visoko):** nije bilo korelacionog ID-a — `500 INTERNAL_ERROR` se nije mogao povezati sa
+  zapisom u Coolify logu. Sada `x-request-id` (validan klijentski se prihvata, inače `randomUUID`),
+  vraća se u odgovoru, putuje kroz `AsyncLocalStorage` i nosi ga svaki log red (D‑038).
+- **Nalaz (srednje):** Nest tekstualni log bez nivoa koji se može filtrirati → `JsonLogger`
+  (`LoggerService`) piše jedan JSON red; `LOG_LEVEL` (`error|warn|info|debug`) je validiran env
+  (prazno = `info` u produkciji, `debug` u razvoju, `error` u testovima).
+- **Nalaz (srednje):** nije bilo zaštite od PII/tajni → `redact()` po imenu ključa (ugniježđeno),
+  HTTP linija loguje samo `method/path` (bez query-ja), `status`, `durationMs`; nikad tijelo,
+  headeri ni IP. Pravilo u BACKEND §5.1.
+- **Nalaz (nisko):** bootstrap greška (`env`/baza) bila je `console.error` → sada JSON red;
+  svaki zahtjev dobija `http_request` liniju (5xx = `error` nivo).
+- **Zašto bez `pino`:** dvije do tri zavisnosti za isti izlaz; D‑038, alternativa ostaje otvorena.
+- **Testovi:** **206/206** unit (+12: logging 11, env 1); e2e `health` +1 (`x-request-id`).
+- **Guardrail:** `check:env` 88 varijabli (nova `LOG_LEVEL` u `.env.example` i `.env.coolify`);
+  dug **I1** (nema strukturisanog logovanja) zatvoren.
+- **Matrica:** **526 fajlova / 332 pregledano (63,1 %)**; `check:all` 15 koraka / 0 palo.
+- **Zatvoreno:** `INF-04` — **27/59** segmenata `done` (CI upisan u tabeli iznad).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **INF-04** (strukturisano logovanje / korelacioni ID) — zatim **INF-05** (observability,
-   readiness metrike), **INF-06**, **INF-07** (Redis) i FE/MOB segmenti
+1. **INF-05** (observability: readiness sa MinIO/migracijama, `/api/ready`) — zatim **INF-06**
+   (backup/restore runbook), **INF-07** (Redis) i FE/MOB segmenti
    (vidi `scripts/audit/segments.json`).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko

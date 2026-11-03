@@ -31,6 +31,7 @@ export interface AppEnv {
   SEED_PASSWORD?: string;
   SEED_DEMO: string;
   ENABLE_API_DOCS: boolean;
+  LOG_LEVEL?: 'error' | 'warn' | 'info' | 'debug';
 }
 
 const MIN_SECRET_LENGTH = 32;
@@ -162,6 +163,18 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   out.ENABLE_API_DOCS = String(
     asBool('ENABLE_API_DOCS', raw.ENABLE_API_DOCS, false, errors),
   );
+  // INF-04: `LOG_LEVEL` je opcion; neispravna vrijednost je greška (a ne tiho `info`),
+  // jer bi pogrešno ime nivoa tiho isključilo logove koje neko očekuje.
+  const logLevel = optional(raw.LOG_LEVEL)?.toLowerCase();
+  if (logLevel !== undefined) {
+    if (!['error', 'warn', 'info', 'debug'].includes(logLevel)) {
+      errors.push(
+        `LOG_LEVEL mora biti error/warn/info/debug (nađeno "${raw.LOG_LEVEL}")`,
+      );
+    } else {
+      out.LOG_LEVEL = logLevel;
+    }
+  }
 
   // `asInt`/`asBool` su već skupili greške — provjeri ih i poslije normalizacije.
   if (errors.length) {

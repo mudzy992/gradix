@@ -305,9 +305,27 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - ✅ **Env validacija (BE-01):** `backend/src/config/env.ts` se izvršava kroz
   `ConfigModule.forRoot({ validate })` **prije** nego što se podigne ijedan modul. Sve greške
   idu odjednom, sa imenom varijable; aplikacija ne starta sa pola konfiguracije.
-- ✅ **Neočekivane greške se loguju** (`console.error` sa stack-om na serveru), a klijent dobija
-  generički `500 INTERNAL_ERROR` — bez detalja implementacije.
-- ⚠️ **Dug:** nema strukturisanog logovanja (JSON) ni korelacionog ID-a — INF-04 (pino).
+- ✅ **Neočekivane greške se loguju** (JSON red sa imenom, porukom i skraćenim stack-om), a klijent
+  dobija generički `500 INTERNAL_ERROR` — bez detalja implementacije.
+
+### 5.1 Strukturisano logovanje (INF-04, D-038)
+
+- **Jedan zapis = jedan JSON red** na stdout: `{ ts, level, context, msg, requestId?, …meta }`.
+  Coolify/Docker `json-file` drajver ga parsira; `level` je `error|warn|info|debug`.
+- **Korelacioni ID:** svaki zahtjev dobija `x-request-id` (validan klijentski/nginx ID se
+  prihvata, inače `randomUUID`), vraća se u odgovoru i putuje kroz async lanac
+  (`AsyncLocalStorage`), pa ga svaki log red u tom zahtjevu nosi kao `requestId`.
+- **Bez PII i tajni:** log linija zahtjeva sadrži **samo** `method`, `path` (bez query stringa),
+  `status`, `durationMs`; tijelo, headeri (osim validnog `x-request-id`), IP i query se ne loguju.
+  Meta objekti prolaze kroz `redact()` — ključevi kao `password`, `token`, `authorization`,
+  `cookie`, `apiKey`, `databaseUrl`, `email`, `phone`, `name`, `lat/lng` postaju `[redacted]`
+  (i ugniježđeno), a dugački stringovi se skraćuju.
+- **Nivo:** `LOG_LEVEL` (`error|warn|info|debug`); prazno = `info` u produkciji, `debug` u
+  razvoju, `error` u testovima. Neispravna vrijednost je greška pri startu (validacija env-a).
+- Nest `Logger` u cijeloj aplikaciji piše kroz isti logger (`app.useLogger(new JsonLogger())`), pa
+  nema „drugog“ formata; `console.log/debug` je i dalje zabranjen guardrail-om.
+- **Zašto bez `pino`:** isti izlaz (JSON red + nivo) uz ~150 linija koda i **nula** novih
+  zavisnosti (P6/D-006); ako zatreba transport/rotacija, `pino` se dodaje uz obrazloženje (D-038).
 
 ---
 

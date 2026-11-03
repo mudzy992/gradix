@@ -19,9 +19,17 @@ function makeResponse(): MockResponse {
 describe('AppExceptionFilter', () => {
   const filter = new AppExceptionFilter();
   let errorLog: jest.SpyInstance;
+  let written: string[];
 
   beforeEach(() => {
-    errorLog = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    // INF-04: filter piše JSON red na stdout (kroz JsonLogger), ne `console.error`.
+    written = [];
+    errorLog = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation((chunk: unknown): boolean => {
+        written.push(String(chunk));
+        return true;
+      });
   });
   afterEach(() => errorLog.mockRestore());
 
@@ -82,6 +90,9 @@ describe('AppExceptionFilter', () => {
       hostWith(response),
     );
     expect(errorLog).toHaveBeenCalled();
+    const logged = JSON.parse(written.join(''));
+    expect(logged.level).toBe('error');
+    expect(logged.msg).toBe('Neočekivana greška');
     expect(response.status).toHaveBeenCalledWith(500);
     expect(response.json).toHaveBeenCalledWith({
       success: false,

@@ -8,6 +8,8 @@ import { ERROR_CODES } from './common/errors/error-codes';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { EnvelopeInterceptor } from './common/interceptors/envelope.interceptor';
 import { Reflector } from '@nestjs/core';
+import { JsonLogger } from './common/logging/json-logger';
+import { requestLogMiddleware } from './common/logging/request-log.middleware';
 
 function flattenErrors(errors: ValidationError[]): string[] {
   const messages: string[] = [];
@@ -23,6 +25,10 @@ function flattenErrors(errors: ValidationError[]): string[] {
 }
 
 export function configureApp(app: INestApplication): void {
+  // INF-04: svi Nest logovi idu kao JSON redovi (Coolify ih filtrira po `level`), a svaki
+  // zahtjev dobija korelacioni ID koji se vraća u `x-request-id` i nosi kroz async lanac.
+  app.useLogger(new JsonLogger());
+  app.use(requestLogMiddleware());
   app.setGlobalPrefix('api');
   app.use(helmet());
   app.enableCors({

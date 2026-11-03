@@ -17,6 +17,16 @@ describe('validateEnv', () => {
     expect(env.MINIO_SKIP).toBe('true');
   });
 
+  it('LOG_LEVEL: prihvata validan nivo, odbija nepoznat (INF-04)', () => {
+    expect(validateEnv({ ...BASE, LOG_LEVEL: 'debug' }).LOG_LEVEL).toBe(
+      'debug',
+    );
+    expect(validateEnv({ ...BASE }).LOG_LEVEL).toBeUndefined();
+    expect(() => validateEnv({ ...BASE, LOG_LEVEL: 'sve' })).toThrow(
+      /LOG_LEVEL/,
+    );
+  });
+
   it('vraća string mapu (ConfigService semantika se ne mijenja)', () => {
     const env = validateEnv({ ...BASE, PORT: '8080' });
     expect(typeof env.PORT).toBe('string');

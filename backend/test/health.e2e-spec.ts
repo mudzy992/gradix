@@ -34,6 +34,20 @@ describe('Health (e2e)', () => {
     expect(typeof response.body.checks.postgres.latencyMs).toBe('number');
   });
 
+  it('INF-04: korelacioni ID — validan se vraća, neispravan se zamjenjuje', async () => {
+    const echoed = await request(app.getHttpServer())
+      .get('/api/health')
+      .set('x-request-id', 'nginx-abc-123');
+    expect(echoed.headers['x-request-id']).toBe('nginx-abc-123');
+    const replaced = await request(app.getHttpServer())
+      .get('/api/health')
+      .set('x-request-id', 'neispravan id sa razmacima');
+    expect(replaced.headers['x-request-id']).not.toBe(
+      'neispravan id sa razmacima',
+    );
+    expect(String(replaced.headers['x-request-id'])).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it('Swagger /api/docs', async () => {
     const response = await request(app.getHttpServer()).get('/api/docs');
     expect(response.status).toBe(200);

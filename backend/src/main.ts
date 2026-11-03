@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
+import { JsonLogger } from './common/logging/json-logger';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -14,9 +15,16 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  // Namjerno `console.error`, ne Logger: ovo se dešava PRIJE nego što je
-  // aplikacija spremna (npr. validacija env-a ili baza nedostupna).
-  console.error('[gradix] Start nije uspio:');
-  console.error(error instanceof Error ? error.message : String(error));
+  // INF-04: i ovaj zapis je JSON red (Coolify ga parsira kao i ostale). Logger se pravi ručno
+  // jer aplikacija još nije podignuta (npr. pad validacije env-a ili nedostupna baza).
+  const logger = new JsonLogger();
+  logger.error(
+    'Start nije uspio',
+    error instanceof Error ? error.stack : undefined,
+    'Bootstrap',
+  );
+  logger.write('error', 'Start nije uspio', 'Bootstrap', {
+    reason: error instanceof Error ? error.message : String(error),
+  });
   process.exit(1);
 });

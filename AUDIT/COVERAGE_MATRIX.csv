@@ -1,6 +1,6 @@
 file,layer,module,segment,loc,status,findings,date
-.env.coolify,INF,compose,INF-01,79,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
-.env.example,INF,compose,INF-01,82,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
+.env.coolify,INF,compose,INF-01,83,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
+.env.example,INF,compose,INF-01,86,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
 .github/workflows/ci.yml,CI,ci,CI-01,628,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
@@ -29,7 +29,7 @@ backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,pregledano,BE-08: pregledano 
 backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,pregledano,BE-08: pregledano — demo korisnici/projekti/zadaci; nema otvorenih timera (ne krši parcijalni unique),2026-11-03
 backend/prisma/seed.ts,BE,seed,BE-08,135,pregledano,"BE-08: SEED_DEMO prekidač — produkcija = samo platform admin (P9), demo = firma + ops + flota",2026-11-03
 backend/src/app.module.ts,BE,bootstrap,BE-01,62,pregledano,BE-01: ConfigModule.forRoot({ validate: validateEnv }) — fail-fast prije podizanja modula,2026-11-02
-backend/src/app.setup.ts,BE,bootstrap,BE-01,65,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
+backend/src/app.setup.ts,BE,bootstrap,BE-01,71,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
 backend/src/common/constants.ts,BE,common,BE-01,48,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
 backend/src/common/decorators/current-user.decorator.ts,BE,common,BE-01,10,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/public.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
@@ -39,8 +39,8 @@ backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregle
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
 backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
 backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
-backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,96,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
-backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,76,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
+backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,107,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
+backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,80,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
 backend/src/common/geo/haversine.spec.ts,BE,common,BE-12,77,pregledano,BE-12: 4 testa udaljenosti i granice geofence-a,2026-11-03
 backend/src/common/geo/haversine.ts,BE,common,BE-12,33,pregledano,"BE-12: haversine ispravan (testovi: Sarajevo-Mostar, antimeridijan, polovi); geofence inkluzivan na granici",2026-11-03
 backend/src/common/guards/jwt-auth.guard.ts,BE,common,BE-01,30,pregledano,BE-01: pregledano — /api/docs izuzet od auth; @Public preko reflektora; dublja analiza u BE-02,2026-11-02
@@ -50,6 +50,13 @@ backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,nepregledano,,
 backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
 backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
+backend/src/common/logging/json-logger.spec.ts,BE,logging,INF-04,92,pregledano,"INF-04: +7 testova — JSON red, filter nivoa, requestId, redakcija tajni/PII, cirkularna meta, redact, resolveLogLevel",2026-11-03
+backend/src/common/logging/json-logger.ts,BE,logging,INF-04,106,pregledano,INF-04: Nest LoggerService koji piše jedan JSON red (ts/level/context/msg/requestId/meta); serijalizacija nikad ne baca; nivo iz LOG_LEVEL (D-038),2026-11-03
+backend/src/common/logging/log-level.ts,BE,logging,INF-04,38,pregledano,INF-04: error|warn|info|debug sa fiksnim poretkom; default info (prod) / debug (dev) / error (test),2026-11-03
+backend/src/common/logging/redact.ts,BE,logging,INF-04,42,pregledano,INF-04: tajne i PII po imenu ključa (ugniježđeno do dubine 4) → [redacted]; stringovi skraćeni na 2000; ulaz se ne mijenja,2026-11-03
+backend/src/common/logging/request-context.ts,BE,logging,INF-04,23,pregledano,INF-04: AsyncLocalStorage za requestId kroz async lanac (bez zavisnosti),2026-11-03
+backend/src/common/logging/request-log.middleware.spec.ts,BE,logging,INF-04,104,pregledano,"INF-04: +4 testa — validan ID se vraća, neispravan se zamjenjuje UUID, log bez query-ja (email/token), 5xx = error",2026-11-03
+backend/src/common/logging/request-log.middleware.ts,BE,logging,INF-04,56,pregledano,"INF-04: x-request-id (regex 8–64, inače UUID) + header u odgovoru + jedna http_request linija (method/path bez query-ja/status/durationMs), 5xx = error",2026-11-03
 backend/src/common/notify/notify-roles.ts,BE,common,BE-16,45,pregledano,F-05: createManyAndReturn umjesto N inserta,2026-11-03
 backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,pregledano,BE-03: 39 permisija; PLATFORM_COMPANIES odvojeno od firmi-skih,2026-11-02
 backend/src/common/rbac/role-hierarchy.spec.ts,BE,common,BE-03,39,pregledano,"BE-03: 9 testova hijerarhije (ADMIN vs SUPER_ADMIN, PLATFORM_ADMIN)",2026-11-02
@@ -83,9 +90,9 @@ backend/src/common/utils/prisma-errors.spec.ts,BE,common,BE-01,33,pregledano,BE-
 backend/src/common/utils/prisma-errors.ts,BE,common,BE-01,26,pregledano,BE-04: novo — readUniqueTarget (P2002) sa fallbackom na cijeli meta (F-07),2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,BE-11: traversal i strani prefiks odbijeni; `buildObjectPath` = `{companyId}/{yyyy}/{mm}/{uuid}.{ext}`,2026-11-03
-backend/src/config/env.spec.ts,BE,config,BE-01,155,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
-backend/src/config/env.ts,BE,config,BE-01,203,pregledano,BE-08: SEED_DEMO u validacionoj šemi (default false) — bez toga bi seed pao tiho na produkcijski režim,2026-11-03
-backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
+backend/src/config/env.spec.ts,BE,config,BE-01,165,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
+backend/src/config/env.ts,BE,config,BE-01,216,pregledano,BE-08: SEED_DEMO u validacionoj šemi (default false) — bez toga bi seed pao tiho na produkcijski režim,2026-11-03
+backend/src/main.ts,BE,bootstrap,BE-01,31,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,pregledano,"BE-04: @Global modul, samo izvoz AuditService",2026-11-02
 backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
@@ -307,7 +314,7 @@ backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
-backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,42,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
+backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,56,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
@@ -504,7 +511,7 @@ mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,250,nepregledano,,
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,252,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,436,nepregledano,,
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02

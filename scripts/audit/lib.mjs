@@ -125,6 +125,8 @@ const RULES = [
   { re: /^backend\/src\/common\/settings\//, layer: 'BE', module: 'common', segment: 'BE-04' },
   { re: /^backend\/src\/common\/notify\//, layer: 'BE', module: 'common', segment: 'BE-16' },
   { re: /^backend\/src\/common\/geo\//, layer: 'BE', module: 'common', segment: 'BE-12' },
+  // INF-04: strukturisano logovanje (JSON, korelacioni ID) — cross-cutting, ali kod živi u backendu.
+  { re: /^backend\/src\/common\/logging\//, layer: 'BE', module: 'logging', segment: 'INF-04' },
   // --- backend: moduli ---
   { re: /^backend\/src\/modules\/auth\//, layer: 'BE', module: 'auth', segment: 'BE-02' },
   { re: /^backend\/src\/modules\/users\//, layer: 'BE', module: 'users', segment: 'BE-03' },

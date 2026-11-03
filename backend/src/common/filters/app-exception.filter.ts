@@ -8,9 +8,12 @@ import {
 import type { Response } from 'express';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
+import { JsonLogger } from '../logging/json-logger';
 
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
+  private readonly logger = new JsonLogger();
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
     if (exception instanceof AppError) {
@@ -35,10 +38,11 @@ export class AppExceptionFilter implements ExceptionFilter {
       });
       return;
     }
-    // BE-01: neočekivane greške se loguju na serveru (stack), a klijent dobija
-    // generičku poruku — bez detalja implementacije. Strukturisano logovanje
-    // (pino) dolazi u INF-04; do tada je ovo jedini zapis.
-    console.error('[gradix] Neočekivana greška:', exception);
+    // BE-01 + INF-04: neočekivane greške idu kao JSON red (ime, poruka, stack) sa
+    // korelacionim ID-om; klijent dobija generičku poruku — bez detalja implementacije.
+    this.logger.write('error', 'Neočekivana greška', 'ExceptionFilter', {
+      error: exception instanceof Error ? exception : String(exception),
+    });
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
