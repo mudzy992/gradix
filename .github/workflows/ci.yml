@@ -330,13 +330,23 @@ jobs:
 
       - name: Playwright testovi
         working-directory: frontend
-        run: npx playwright test
+        run: |
+          set -o pipefail
+          npx playwright test 2>&1 | tee /tmp/playwright.log
 
       - name: Logovi (na grešku)
         if: failure()
         run: |
           echo "=== backend ==="; tail -100 /tmp/nest.log || true
           echo "=== vite preview ==="; tail -50 /tmp/vite-preview.log || true
+          echo "=== playwright ==="; tail -60 /tmp/playwright.log || true
+          # Anotacije su jedini pouzdan kanal za dijagnostiku iz ovog okruženja
+          # (job logovi vraćaju EOF), pa se ključni redovi objavljuju kao `::error::`.
+          if [ -f /tmp/playwright.log ]; then
+            grep -E "(Error|error|Expected|Received|FAILED|✘|›)" /tmp/playwright.log \
+              | tail -25 \
+              | while IFS= read -r line; do echo "::error::${line}"; done
+          fi
 
       - name: Playwright report
         if: always()
