@@ -475,26 +475,52 @@ jobs:
           SEED_PASSWORD: GradixSeed1
         run: |
           set -euo pipefail
+          count_users() {
+            docker run --rm --network host --entrypoint node \
+              -e DATABASE_URL="$DATABASE_URL" \
+              gradix-backend:ci -e "
+                const { Client } = require('pg');
+                (async () => {
+                  const client = new Client({ connectionString: process.env.DATABASE_URL });
+                  await client.connect();
+                  const { rows } = await client.query('select count(*)::int as n from \"User\"');
+                  const roles = await client.query(
+                    'select r.role from \"UserRoleAssignment\" r join \"User\" u on u.id = r.\"userId\" where u.email = \'platform@gradix.local\'',
+                  );
+                  await client.end();
+                  console.log('Korisnika u bazi nakon seed-a:', rows[0].n);
+                  console.log('Role platform admina:', roles.rows.map((r) => r.role).join(','));
+                  if (roles.rows.length !== 1 || roles.rows[0].role !== 'PLATFORM_ADMIN') {
+                    console.error('::error::Platform admin nema tačno rolu PLATFORM_ADMIN');
+                    process.exit(1);
+                  }
+                  process.stdout.write('COUNT=' + rows[0].n + '\n');
+                })().catch((error) => { console.error(error); process.exit(1); });
+              "
+          }
+          # 1) Produkcijski seed (bez SEED_DEMO): SAMO platform admin (P9).
           docker run --rm --network host \
             -e DATABASE_URL="$DATABASE_URL" \
             -e SEED_PASSWORD="$SEED_PASSWORD" \
             gradix-backend:ci node dist/prisma/seed.js
-          docker run --rm --network host --entrypoint node \
+          out=$(count_users)
+          echo "$out"
+          if [ "$(echo "$out" | sed -n 's/^COUNT=//p' | tail -1)" != "1" ]; then
+            echo "::error::Produkcijski seed (bez SEED_DEMO) mora upisati tačno 1 korisnika."
+            exit 1
+          fi
+          # 2) Demo seed (SEED_DEMO=true): firma + demo korisnici (razvoj/e2e).
+          docker run --rm --network host \
             -e DATABASE_URL="$DATABASE_URL" \
-            gradix-backend:ci -e "
-              const { Client } = require('pg');
-              (async () => {
-                const client = new Client({ connectionString: process.env.DATABASE_URL });
-                await client.connect();
-                const { rows } = await client.query('select count(*)::int as n from \"User\"');
-                await client.end();
-                console.log('Korisnika u bazi nakon seed-a:', rows[0].n);
-                if (rows[0].n < 2) {
-                  console.error('::error::Seed nije upisao ocekivane korisnike');
-                  process.exit(1);
-                }
-              })().catch((error) => { console.error(error); process.exit(1); });
-            "
+            -e SEED_PASSWORD="$SEED_PASSWORD" \
+            -e SEED_DEMO=true \
+            gradix-backend:ci node dist/prisma/seed.js
+          out=$(count_users)
+          echo "$out"
+          if [ "$(echo "$out" | sed -n 's/^COUNT=//p' | tail -1)" -lt 2 ]; then
+            echo "::error::Demo seed (SEED_DEMO=true) nije upisao ocekivane korisnike."
+            exit 1
+          fi
 
       - name: MinIO servis iz compose-a (pull + healthcheck)
         # Coolify prije starta radi `docker compose pull` za image-based servise,

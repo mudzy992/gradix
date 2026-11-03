@@ -17,7 +17,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-08` (migracija: 51 FK indeks, 19 audit akcija, parcijalni unique timer indeksi; seed: prod vs demo) |
-| CI | ✅ [run 41585201977](https://github.com/mudzy992/gradix/actions/runs/41585201977) — **6/6** zelen (`chore(audit): BE-07 zatvoren…`) |
+| CI | ❌ [run 41585836789](https://github.com/mudzy992/gradix/actions/runs/41585836789) — 5/6 (migracija+seed+e2e ✅; **Docker gate** je tražio ≥2 korisnika) → popravka gate-a |
 | Zadnji potvrđeno zelen run | [41585201977](https://github.com/mudzy992/gradix/actions/runs/41585201977) ✅ 6/6 · prije: 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -270,6 +270,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   unique indeksi (`WHERE "closedAt" IS NULL`); aplikacija već mapira P2002 na 409.
 - **Nalaz (visoko, P9):** seed je u produkciji punio demo firmu i poznate lozinke → `SEED_DEMO` prekidač
   (default `false` = samo `platform@gradix.local`); CI e2e i Playwright postavljaju `true`.
+- **Incident:** run `41585836789` — migracija, seed i e2e ✅, ali Docker gate je padao jer je tražio
+  ≥2 korisnika nakon produkcijskog seeda. Gate sada provjerava oba režima (1 korisnik + rola
+  `PLATFORM_ADMIN` bez `SEED_DEMO`; ≥2 sa `SEED_DEMO=true`).
 - **Testovi:** **124/124** (+2 env). Matrica **495 fajlova / 170 pregledano (34,3 %)**.
 - ⚠️ **Za vlasnika prije produkcijske migracije:** provjeriti duple otvorene timere (SQL u `AUDIT/segments/BE-08.md` §8)
   i odlučiti koje zatvoriti — to je izmjena stvarnih podataka.
