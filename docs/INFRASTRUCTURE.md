@@ -148,7 +148,8 @@ pa se Aktivacija/uklanjanje zatvara u INF-07).
   (51 indeks na stranim ključevima, 19 novih `AuditAction` vrijednosti, 2 parcijalna unique
   indeksa za otvorene timere) i `20261103140000_be09_machine_open_assignment` (parcijalni unique
   indeks: mašina na najviše jednom projektu) i `20261103160000_be10_fleet_audit_actions`
-  (17 novih `AuditAction` vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike).
+  (17 novih `AuditAction` vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike) i
+  `20261103180000_be13_diary_hse_audit_actions` (6 akcija za dnevnik i HSE).
   Stariji MySQL set je uklonjen (odluka D-010).
 - **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`,
   `MachineAssignment_open_machine_key`)

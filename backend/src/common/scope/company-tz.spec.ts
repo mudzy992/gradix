@@ -29,6 +29,20 @@ describe('parseDateOnly', () => {
     expect(() => parseDateOnly('02.11.2026')).toThrow(/YYYY-MM-DD/);
     expect(() => parseDateOnly('2026-11-02T10:00:00Z')).toThrow(/YYYY-MM-DD/);
   });
+
+  // BE-13 (F-04): nepostojeći datumi su ranije tiho „prebačeni“ na sljedeći mjesec.
+  it('odbija datume koji ne postoje u kalendaru', () => {
+    expect(() => parseDateOnly('2026-02-31')).toThrow(/Invalid date/);
+    expect(() => parseDateOnly('2026-04-31')).toThrow(/Invalid date/);
+    expect(() => parseDateOnly('2026-13-01')).toThrow(/Invalid date/);
+    expect(() => parseDateOnly('2026-00-10')).toThrow(/Invalid date/);
+    // 2026. nije prestupna — 29. februar ne postoji
+    expect(() => parseDateOnly('2026-02-29')).toThrow(/Invalid date/);
+    // 2024. jeste prestupna
+    expect(parseDateOnly('2024-02-29').toISOString()).toBe(
+      '2024-02-29T00:00:00.000Z',
+    );
+  });
 });
 
 describe('tzDayUtcRange', () => {

@@ -24,6 +24,13 @@ export type PayrollPeriod = {
   tz: string;
 };
 
+/** BE-13: granice godine — `year=0` ili `year=99999` su rušili upit (Prisma/Date). */
+export const PAYROLL_YEAR_MIN = 1970;
+export const PAYROLL_YEAR_MAX = 2999;
+
+/** BE-13: gornja granica perioda (izvještaj/export), da se ne vuče decenija odjednom. */
+export const PAYROLL_MAX_SPAN_DAYS = 366;
+
 export function calendarMonthRange(
   year: number,
   month: number,
@@ -32,7 +39,9 @@ export function calendarMonthRange(
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
     month < 1 ||
-    month > 12
+    month > 12 ||
+    year < PAYROLL_YEAR_MIN ||
+    year > PAYROLL_YEAR_MAX
   ) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,
@@ -72,6 +81,7 @@ export async function resolvePayrollPeriod(
       400,
     );
   }
+  assertPeriodSpan(range.from, range.to);
   return {
     from: range.from,
     to: range.to,
@@ -79,6 +89,24 @@ export async function resolvePayrollPeriod(
     end: tzDayUtcRange(range.to, tz).end,
     tz,
   };
+}
+
+/**
+ * BE-13 (F-05): period duži od `PAYROLL_MAX_SPAN_DAYS` se odbija (`400`) — export i
+ * summary učitavaju sve sesije perioda u memoriju, pa neograničen `from`/`to` može
+ * da obori proces. Godišnji izvještaj (366 dana) i dalje prolazi.
+ */
+export function assertPeriodSpan(from: string, to: string): void {
+  const start = parseDateOnly(from).getTime();
+  const end = parseDateOnly(to).getTime();
+  const days = Math.round((end - start) / 86_400_000) + 1;
+  if (days > PAYROLL_MAX_SPAN_DAYS) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      `period must be at most ${PAYROLL_MAX_SPAN_DAYS} days`,
+      400,
+    );
+  }
 }
 
 function resolveDateRange(

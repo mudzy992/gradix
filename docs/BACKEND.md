@@ -174,8 +174,17 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 
 ### 4.6 Payroll
 - Mjesec se računa u **TZ firme**; dan = kalendarski dan `startedAt` (nema splita preko ponoći).
-- SS/PM **ne** odobravaju sebe (`PAYROLL_SELF_APPROVE`).
-- U satima **nema** pauze. Export `.xlsx` (ExcelJS).
+- SS/PM **ne** odobravaju sebe (`PAYROLL_SELF_APPROVE`); radnik ne vidi platu (`403`).
+- Odluka (odobri/odbij) je **atomska**: `updateMany` sa uslovom `approvalStatus = PENDING`;
+  druga odluka na istu sesiju je `409 CONFLICT` (nikad tiho prepisivanje). Zapis ide u audit
+  (`PAYROLL_APPROVED`/`PAYROLL_REJECTED`).
+- Period: `year`+`month` (1970–2999) ili `from`+`to`; **najviše 366 dana** po zahtjevu.
+  Neispravan kalendarski datum (`2026-02-31`) je `400`, ne tiho prebacivanje na mart.
+- U satima **nema** pauze. Export `.xlsx` (ExcelJS), ime nosi period
+  (`payroll-2026-11-01_2026-11-30.xlsx`); u tabeli su **samo** odobrene sesije, a `TOTAL` je
+  suma odobrenih sati i iznosa.
+- **Dug (B12):** iznos se računa **trenutnom** satnicom korisnika, ne satnicom koja je važila kada
+  je posao rađen — poslije povišice mijenjaju se i stari mjeseci.
 
 ### 4.7 Sync (mobile)
 - Unique `(companyId, userId, deviceId, localId)` — idempotentnost push-a.
@@ -254,7 +263,8 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B8 | ~~`AuditAction` bez akcija za projekat/dodjelu/fazu/dokument/količinu/zadatak~~ — ✅ riješeno (BE-08: 19 novih akcija + pozivi u `projects`, `assignments`, `phases`, `documents`, `quantities`, `tasks`, `task-assignees`, `task-dependencies`) | BE-08 |
 | B9 | ~~`PATCH/DELETE /trips/:id` i `PATCH/DELETE /fuel/:id` su mrtve rute~~ — ✅ riješeno (BE-10, odluka vlasnika: **opcija A**) — rute, servisne metode i `Patch*Dto` uklonjeni; zapis je nepromjenjiv, ispravke idu kroz `/amendments` | BE-10 |
 | B10 | ~~Flota, GPS uređaji, ture, gorivo i šifarnici nisu u auditu~~ — ✅ riješeno (BE-10: 17 novih akcija u migraciji `20261103160000_be10_fleet_audit_actions` + pozivi u `machines`, `gps-devices`, `trips`, `fuel`, `catalog`) | BE-10 |
-| B11 | Dnevnik, HSE i fajlovi **nisu u auditu** (`AuditAction` nema `DIARY_*`, `INCIDENT_*`) — akcije + pozivi u sljedećoj migraciji | BE-12 |
+| B11 | ~~Dnevnik, HSE i fajlovi nisu u auditu~~ — ✅ riješeno (BE-13: `DIARY_CREATED/UPDATED/PHOTO_ADDED/PDF_GENERATED`, `INCIDENT_CREATED/STATUS_CHANGED` u migraciji `20261103180000_be13_diary_hse_audit_actions`) | BE-13 |
+| B12 | **Satnica u payrollu nije istorijska**: iznos se računa `user.hourlyRate` u trenutku čitanja, pa povišica retroaktivno mijenja starije mjesece. Preporuka: `hourlyRateSnapshot` na `TimerSession` (upis pri zatvaranju sesije), payroll koristi snapshot uz fallback na trenutnu satnicu. Traži odluku (koji trenutak je mjerodavan) + migraciju | BE-14 |
 
 ---
 

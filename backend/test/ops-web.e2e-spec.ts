@@ -3,6 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 describe('Phase 5 dashboard diary HSE (e2e)', () => {
   let app: INestApplication<App>;
@@ -11,9 +12,11 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
   let worker: string;
   let projectId: string;
   let date: string;
+  let prisma: PrismaService;
 
   beforeAll(async () => {
     app = await createTestApp();
+    prisma = app.get(PrismaService);
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     ss = (await login(app, 'ss@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
@@ -155,6 +158,15 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       .send({ status: 'ACK' });
     expect(ackOwn.status).toBe(200);
     expect(ackOwn.body.data.status).toBe('ACK');
+    // BE-13 (B11): HSE prijava i promjena statusa su u auditu.
+    const incidentAudit = (
+      await prisma.auditEvent.findMany({
+        where: { entityType: 'Incident', entityId: ownId },
+      })
+    ).map((row) => row.action);
+    expect(incidentAudit).toEqual(
+      expect.arrayContaining(['INCIDENT_CREATED', 'INCIDENT_STATUS_CHANGED']),
+    );
     const patchForeign = await request(app.getHttpServer())
       .patch(`/api/incidents/${ssIncidentId}`)
       .set(auth(worker))
@@ -193,6 +205,15 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       .send({});
     expect(pdf.status).toBe(201);
     expect(pdf.body.data.pdfUrl).toMatch(/\.pdf$/);
+    // BE-13 (B11): dnevnik i PDF su sada u auditu.
+    const diaryAudit = (
+      await prisma.auditEvent.findMany({
+        where: { entityType: 'DiaryEntry', entityId: created.body.data.id },
+      })
+    ).map((row) => row.action);
+    expect(diaryAudit).toEqual(
+      expect.arrayContaining(['DIARY_CREATED', 'DIARY_PDF_GENERATED']),
+    );
     const denied = await request(app.getHttpServer())
       .post(`/api/diary/${created.body.data.id}/pdf`)
       .set(auth(worker))

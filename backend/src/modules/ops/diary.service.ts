@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
@@ -37,6 +38,7 @@ export class DiaryService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: DiaryListQueryDto) {
@@ -107,6 +109,15 @@ export class DiaryService {
         },
         include: { photos: true },
       });
+      // BE-13 (B11): dnevnik je bio jedina poslovna promjena bez audita.
+      await this.audit.write({
+        companyId: row.companyId,
+        actorId: actor.id,
+        action: 'DIARY_CREATED',
+        entityType: 'DiaryEntry',
+        entityId: row.id,
+        payload: { projectId: row.projectId, date: dto.date },
+      });
       return serializeDiary(row);
     } catch (error) {
       if (
@@ -137,6 +148,14 @@ export class DiaryService {
       where: { id },
       data: diaryWriteData(dto),
       include: { photos: true },
+    });
+    await this.audit.write({
+      companyId: updated.companyId,
+      actorId: actor.id,
+      action: 'DIARY_UPDATED',
+      entityType: 'DiaryEntry',
+      entityId: updated.id,
+      payload: { fields: Object.keys(dto) },
     });
     return serializeDiary(updated);
   }
@@ -178,6 +197,14 @@ export class DiaryService {
         lat: coords.lat ?? undefined,
         lng: coords.lng ?? undefined,
       },
+    });
+    await this.audit.write({
+      companyId: photo.companyId,
+      actorId: actor.id,
+      action: 'DIARY_PHOTO_ADDED',
+      entityType: 'DiaryPhoto',
+      entityId: photo.id,
+      payload: { diaryEntryId: id, path: photo.path },
     });
     return photo;
   }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
@@ -27,6 +28,7 @@ export class IncidentsService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: IncidentListQueryDto) {
@@ -108,6 +110,15 @@ export class IncidentsService {
       },
       include: { photos: true },
     });
+    // BE-13 (B11): HSE prijava je sigurnosni zapis — mora ostaviti trag u auditu.
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'INCIDENT_CREATED',
+      entityType: 'Incident',
+      entityId: row.id,
+      payload: { severity: row.severity, projectId: row.projectId },
+    });
     await this.notifyCreated(companyId, row.id, dto.projectId);
     return serializeIncident(row);
   }
@@ -125,6 +136,14 @@ export class IncidentsService {
       where: { id },
       data: { status: dto.status },
       include: { photos: true },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'INCIDENT_STATUS_CHANGED',
+      entityType: 'Incident',
+      entityId: updated.id,
+      payload: { from: row.status, to: updated.status },
     });
     return serializeIncident(updated);
   }

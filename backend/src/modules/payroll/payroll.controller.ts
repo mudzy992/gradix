@@ -42,14 +42,15 @@ export class PayrollController {
     @Query() query: PayrollQueryDto,
     @Res() response: Response,
   ) {
-    const buffer = await this.payroll.exportXlsx(actor, query);
+    const { buffer, filename } = await this.payroll.exportXlsx(actor, query);
     response.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
+    // BE-13 (F-06): ime nosi period (`payroll-2026-11-01_2026-11-30.xlsx`).
     response.setHeader(
       'Content-Disposition',
-      'attachment; filename="payroll.xlsx"',
+      `attachment; filename="${filename}"`,
     );
     response.send(buffer);
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -23,6 +23,8 @@ import { buildPayrollSummary } from './payroll-summary';
 
 @Injectable()
 export class PayrollService {
+  private readonly logger = new Logger(PayrollService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -40,16 +42,28 @@ export class PayrollService {
     return buildPayrollSummary(period.from, period.to, period.tz, rows);
   }
 
-  async exportXlsx(actor: AuthUser, query: PayrollQueryDto): Promise<Buffer> {
-    const { rows } = await this.loadClosed(actor, query);
+  /**
+   * BE-13 (F-06): uz buffer se vraća i ime fajla sa periodom — prije je svaki export
+   * bio `payroll.xlsx`, pa se u folderu “Preuzimanja” nije znalo koji je koji mjesec.
+   */
+  async exportXlsx(
+    actor: AuthUser,
+    query: PayrollQueryDto,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const { period, rows } = await this.loadClosed(actor, query);
     const approved = rows
       .filter((row) => row.approvalStatus === 'APPROVED')
       .map(serializePayrollSession);
     const totals = buildPayrollSummary('', '', '', rows);
-    return writePayrollXlsx(approved, {
+    const buffer = await writePayrollXlsx(approved, {
       minutes: totals.approvedMinutes,
       amount: totals.approvedAmount,
     });
+    const filename =
+      period.from === period.to
+        ? `payroll-${period.from}.xlsx`
+        : `payroll-${period.from}_${period.to}.xlsx`;
+    return { buffer, filename };
   }
 
   async approve(actor: AuthUser, id: string) {
@@ -121,9 +135,20 @@ export class PayrollService {
     if (session.approvalStatus !== 'PENDING') {
       throw new AppError(ERROR_CODES.CONFLICT, 'Session is not pending', 409);
     }
-    const updated = await this.prisma.timerSession.update({
-      where: { id: session.id },
+    // BE-13 (F-01): odluka mora biti atomska. Prije je bio `findFirst` (provjera
+    // `PENDING`) pa `update` — dva paralelna zahtjeva (odobri / odbij) oba su prošla
+    // provjeru, pa je drugi tiho pregazio prvog i oba su ostavila audit zapis.
+    // Sada `updateMany` sa uslovom `approvalStatus: 'PENDING'`; ako nijedan red nije
+    // pogođen, odluka je već donesena u međuvremenu.
+    const applied = await this.prisma.timerSession.updateMany({
+      where: { id: session.id, companyId, approvalStatus: 'PENDING' },
       data: { approvalStatus: next },
+    });
+    if (applied.count === 0) {
+      throw new AppError(ERROR_CODES.CONFLICT, 'Session is not pending', 409);
+    }
+    const updated = await this.prisma.timerSession.findFirstOrThrow({
+      where: { id: session.id },
       include: PAYROLL_INCLUDE,
     });
     await this.audit.write({
@@ -135,7 +160,17 @@ export class PayrollService {
       payload: { next, reason: reason ?? null },
     });
     if (next === 'REJECTED') {
-      await this.notifyReject(session, reason);
+      // BE-13 (F-02): odluka je već upisana (i u auditu) — pad notifikacije ili
+      // e-maila ne smije klijentu vratiti 500 za uspješno odbijanje.
+      try {
+        await this.notifyReject(session, reason);
+      } catch (error) {
+        this.logger.warn(
+          `PAYROLL_REJECTED notifikacija nije poslana (session ${session.id}): ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
     }
     return serializePayrollSession(updated);
   }

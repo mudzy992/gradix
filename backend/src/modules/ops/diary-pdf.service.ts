@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PDFDocument, PDFFont, PDFPage, StandardFonts } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { FilesService } from '../files/files.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
@@ -23,6 +24,7 @@ export class DiaryPdfService {
     private readonly prisma: PrismaService,
     private readonly files: FilesService,
     private readonly access: ProjectAccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async generate(actor: AuthUser, id: string) {
@@ -101,6 +103,14 @@ export class DiaryPdfService {
       where: { id },
       data: { pdfUrl: path },
       include: { photos: true },
+    });
+    await this.audit.write({
+      companyId: updated.companyId,
+      actorId: actor.id,
+      action: 'DIARY_PDF_GENERATED',
+      entityType: 'DiaryEntry',
+      entityId: updated.id,
+      payload: { path, photos: row.photos.length },
     });
     return serializeDiary(updated);
   }

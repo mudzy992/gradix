@@ -35,7 +35,10 @@ export function parseDateOnly(value: string): Date {
     );
   }
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime())) {
+  // BE-13 (F-04): `new Date('2026-02-31')` ne pada — JavaScript ga tiho prebaci na
+  // 3. mart. Za platni period (i dnevnik) to je pogrešan mjesec, pa se datum mora
+  // poklopiti sa ulazom.
+  if (Number.isNaN(parsed.getTime()) || dateOnlyIso(parsed) !== value) {
     throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid date', 400);
   }
   return parsed;

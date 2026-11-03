@@ -114,6 +114,14 @@ describe('Phase 9 payroll (e2e)', () => {
       .post(`/api/payroll/sessions/${adminOwn.id}/approve`)
       .set(auth(admin));
     expect(selfAdmin.status).toBe(200);
+    // BE-13 (F-01): odluka je atomska — druga odluka na istu sesiju je 409, ne
+    // tiho prepisivanje (prije je `update` pregazio već donesenu odluku).
+    const again = await request(app.getHttpServer())
+      .post(`/api/payroll/sessions/${adminOwn.id}/reject`)
+      .set(auth(admin))
+      .send({ reason: 'too late' });
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('CONFLICT');
     const workerList = await request(app.getHttpServer())
       .get('/api/payroll/sessions')
       .set(auth(worker));
@@ -160,6 +168,10 @@ describe('Phase 9 payroll (e2e)', () => {
       });
     expect(exported.status).toBe(200);
     expect(String(exported.headers['content-type'])).toContain('spreadsheetml');
+    // BE-13 (F-06): ime fajla nosi period.
+    expect(String(exported.headers['content-disposition'])).toContain(
+      'payroll-2023-11-01_2023-11-30.xlsx',
+    );
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(exported.body as Buffer);
     const durations = (workbook.worksheets[0].getColumn(5).values ?? []).slice(
