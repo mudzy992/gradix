@@ -16,8 +16,8 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
 
 | | |
 |---|---|
-| Zadnji commit | `test(fe): FE-06` — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
-| CI | ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
+| Zadnji commit | `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| CI | ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -668,6 +668,8 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
   E2E sada koristi **jednu sesiju po fajlu** (`e2e/session.ts`), pa reuse ne postoji.
 - **Četvrti run (41730126620):** sesije rade; padale su samo moje URL provjere jer aplikacija koristi
   **CUID** ID-jeve (`cmw197…`), a regex je tražio heksadecimalni UUID → ispravljeno (F-FE-06-07).
+- **Zeleno:** [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — 6/6, Web E2E prolazi
+  sa svih 16 testova (admin 5, radnik 3, guest 8).
 - **Ukupno 16 E2E testova** u 5 fajlova (`guest`/`admin`/`worker`).
 
 ## Šta je sljedeće (tačan sljedeći korak)
