@@ -43,18 +43,17 @@ export function requestLogMiddleware(
         Number(process.hrtime.bigint() - startedAt) / 1_000_000;
       const path = req.originalUrl?.split('?')[0] ?? req.url.split('?')[0];
       const level =
-        res.statusCode >= 500 ? 'error' : PROBE_PATHS.has(path) ? 'debug' : 'info';
-      logger.write(
-        level,
-        'http_request',
-        'HTTP',
-        {
-          method: req.method,
-          path,
-          status: res.statusCode,
-          durationMs: Math.round(durationMs * 10) / 10,
-        },
-      );
+        res.statusCode >= 500
+          ? 'error'
+          : PROBE_PATHS.has(path)
+            ? 'debug'
+            : 'info';
+      logger.write(level, 'http_request', 'HTTP', {
+        method: req.method,
+        path,
+        status: res.statusCode,
+        durationMs: Math.round(durationMs * 10) / 10,
+      });
     };
 
     res.on('finish', emit);

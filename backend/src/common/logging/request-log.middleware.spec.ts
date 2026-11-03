@@ -115,11 +115,18 @@ describe('requestLogMiddleware (INF-04)', () => {
     const lines: string[] = [];
     const logger = new JsonLogger((line: string) => lines.push(line), 'error');
     const debugLines: string[] = [];
-    const debugLogger = new JsonLogger((line: string) => debugLines.push(line), 'debug');
+    const debugLogger = new JsonLogger(
+      (line: string) => debugLines.push(line),
+      'debug',
+    );
 
     const probe = fakeResponse();
     requestLogMiddleware(debugLogger)(
-      { headers: {}, method: 'GET', originalUrl: '/api/health' } as unknown as Request,
+      {
+        headers: {},
+        method: 'GET',
+        originalUrl: '/api/health',
+      } as unknown as Request,
       probe,
       (() => undefined) as NextFunction,
     );
@@ -134,7 +141,11 @@ describe('requestLogMiddleware (INF-04)', () => {
     // Na `info` nivou probe se ne pišu (zato log nije zatrpan healthcheck-om).
     const quiet = fakeResponse();
     requestLogMiddleware(logger)(
-      { headers: {}, method: 'GET', originalUrl: '/api/health' } as unknown as Request,
+      {
+        headers: {},
+        method: 'GET',
+        originalUrl: '/api/health',
+      } as unknown as Request,
       quiet,
       (() => undefined) as NextFunction,
     );

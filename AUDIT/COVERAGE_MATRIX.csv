@@ -56,8 +56,8 @@ backend/src/common/logging/json-logger.ts,BE,logging,INF-04,106,pregledano,INF-0
 backend/src/common/logging/log-level.ts,BE,logging,INF-04,38,pregledano,INF-04: error|warn|info|debug sa fiksnim poretkom; default info (prod) / debug (dev) / error (test),2026-11-03
 backend/src/common/logging/redact.ts,BE,logging,INF-04,42,pregledano,INF-04: tajne i PII po imenu ključa (ugniježđeno do dubine 4) → [redacted]; stringovi skraćeni na 2000; ulaz se ne mijenja,2026-11-03
 backend/src/common/logging/request-context.ts,BE,logging,INF-04,23,pregledano,INF-04: AsyncLocalStorage za requestId kroz async lanac (bez zavisnosti),2026-11-03
-backend/src/common/logging/request-log.middleware.spec.ts,BE,logging,INF-04,145,pregledano,"INF-04: +4 testa — validan ID se vraća, neispravan se zamjenjuje UUID, log bez query-ja (email/token), 5xx = error",2026-11-03
-backend/src/common/logging/request-log.middleware.ts,BE,logging,INF-04,65,pregledano,"INF-04: x-request-id (regex 8–64, inače UUID) + header u odgovoru + jedna http_request linija (method/path bez query-ja/status/durationMs), 5xx = error",2026-11-03
+backend/src/common/logging/request-log.middleware.spec.ts,BE,logging,INF-04,156,pregledano,"INF-04: +4 testa — validan ID se vraća, neispravan se zamjenjuje UUID, log bez query-ja (email/token), 5xx = error",2026-11-03
+backend/src/common/logging/request-log.middleware.ts,BE,logging,INF-04,64,pregledano,"INF-04: x-request-id (regex 8–64, inače UUID) + header u odgovoru + jedna http_request linija (method/path bez query-ja/status/durationMs), 5xx = error",2026-11-03
 backend/src/common/notify/notify-roles.ts,BE,common,BE-16,45,pregledano,F-05: createManyAndReturn umjesto N inserta,2026-11-03
 backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,pregledano,BE-03: 39 permisija; PLATFORM_COMPANIES odvojeno od firmi-skih,2026-11-02
 backend/src/common/rbac/role-hierarchy.spec.ts,BE,common,BE-03,39,pregledano,"BE-03: 9 testova hijerarhije (ADMIN vs SUPER_ADMIN, PLATFORM_ADMIN)",2026-11-02
