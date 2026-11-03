@@ -2,7 +2,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,87,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
 .env.example,INF,compose,INF-01,91,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,148,nepregledano,,
-.github/workflows/ci.yml,CI,ci,CI-01,628,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
+.github/workflows/ci.yml,CI,ci,CI-01,638,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -345,7 +345,7 @@ docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkci
 frontend/.oxlintrc.json,FE,config,FE-02,9,pregledano,FE-02: react/only-export-components (warn) + rules-of-hooks (error); nema a11y plugina (FE-03),2026-11-03
 frontend/Dockerfile,INF,frontend-image,INF-03,66,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
-frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,43,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
+frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,51,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,89,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
@@ -415,7 +415,7 @@ frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/polish-en.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,25,nepregledano,,
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,25,nepregledano,,
-frontend/src/index.css,FE,design,FE-01,125,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
+frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.ts,FE,shared,FE-15,156,nepregledano,,
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,nepregledano,,
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,nepregledano,,
