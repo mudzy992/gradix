@@ -140,6 +140,13 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
+          cards.length === 0 ? (
+            <Card>
+              <CardContent className="py-4 text-sm text-muted-foreground">
+                {tenantReady ? t('dashboard.noCards') : t('dashboard.selectCompany')}
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => {
               const meta = CARD_META[card.key] ?? { icon: ChartColumn as LucideIcon }
@@ -168,6 +175,7 @@ export function DashboardPage() {
               )
             })}
           </div>
+          )
         )}
         {query.isError ? (
           <div

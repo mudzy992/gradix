@@ -177,6 +177,10 @@ const RULES = [
   { re: /^frontend\/src\/components\/layout\//, layer: 'FE', module: 'layout', segment: 'FE-02' },
   { re: /^frontend\/src\/components\/ui\//, layer: 'FE', module: 'ui', segment: 'FE-16' },
   { re: /^frontend\/src\/components\/ops\//, layer: 'FE', module: 'ops-ui', segment: 'FE-08' },
+  // FE-05 (D-044): unit/component testovi frontenda — spec fajlovi i testna infrastruktura.
+  { re: /^frontend\/src\/.*\.spec\.tsx?$/, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
+  { re: /^frontend\/test\//, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
+  { re: /^frontend\/vitest\.config\.ts$/, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
   { re: /^frontend\/src\/components\/erp-/, layer: 'FE', module: 'erp-ui', segment: 'FE-12' },
   { re: /^frontend\/src\/components\/diary-/, layer: 'FE', module: 'diary-ui', segment: 'FE-10' },
   { re: /^frontend\/src\/components\/public-/, layer: 'FE', module: 'public-ui', segment: 'FE-14' },

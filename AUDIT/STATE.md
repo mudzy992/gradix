@@ -8,22 +8,16 @@
 
 ## Trenutna faza / segment / korak
 
-**FAZA 2–4 ✅ završene; KAPIJA 2 prošla** („nastavi dalje“ = odobrenje; Q1–Q5 usvojeni po preporuci,
-zapisani kao D-012…D-016 i mogu se mijenjati). **Izvršavanje segmenata u toku.** Vlasnik odobrio prelazak
-preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljanja.
+**FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
+(„Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
+kratak izvještaj poslije svakog. Trenutno: **35/59 segmenata `done`** (zadnji: FE-05).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `FE-02` — shell i navigacija: grupisana nav (5 grupa, ikone), a11y shell (skip-link, fokus, naslov taba, `<html lang>`), lazy rute → bundle 207.7 kB gzip — `done` |
-| CI | ✅ [run 41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) — **6/6** (`feat(fe): FE-02 …`) · prije: ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01), [41694602350](https://github.com/mudzy992/gradix/actions/runs/41694602350) (INF-07) · prije: ✅ [41672093941](https://github.com/mudzy992/gradix/actions/runs/41672093941) (`docs(design): FE-01 — dva predloga palete`) · prije: ✅ [41671542849](https://github.com/mudzy992/gradix/actions/runs/41671542849) (INF-07 port 6380) · ✅ [41666523698](https://github.com/mudzy992/gradix/actions/runs/41666523698) — **6/6** zelen (`feat(infra): INF-07 …`) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ (backup → restore, pokrenut push-om na `scripts/ops/**`) |
-| Drill (backup → restore) | ✅ [run 41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) — 8 tabela identično izvoru, migracije `7/7`; prije njega 4 pala runa (libpq `?schema=public`, quoted imena tabela, prazan izlaz poređenja, `migration_lock.toml`) |
-| Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
-| Zadnji potvrđeno zelen run (INF-06) | ✅ [41663240359](https://github.com/mudzy992/gradix/actions/runs/41663240359) — **6/6** · drill [41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) ✅ · prije: [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) ✅ 6/6 (INF-05) |
-| Prije (INF-05) | ✅ [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) — **6/6** · prije: [41659369533](https://github.com/mudzy992/gradix/actions/runs/41659369533) ✅ 6/6 (INF-04) · [41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) ✅ 6/6 (BE-18) |
-| Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
-| Zadnji potvrđeno zelen run | [41653715576](https://github.com/mudzy992/gradix/actions/runs/41653715576) ✅ 6/6 · prije: [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) ✅ 6/6 · prije: [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| CI | ⏳ `FE-05` (run se upisuje poslije push-a) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -609,22 +603,66 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Otvoreno:** vlasnik bira A / B / kombinaciju — tek tada `FE-01` prelazi u `done` i paleta ulazi
   na ekrane (FE-02…).
 
+### 2026-11-03 — BE-18 (javni sajt, kontakt, pretraga, upload) → segment `done`
+- Javne rute bez tokena (`/public/*`), rate-limit po IP-u, `PublicModule` odvojen od tenant scope-a;
+  e2e `public.e2e-spec.ts` pokriva kontakt formu, pretragu i upload bez prijave.
+
+### 2026-11-03 — FE-01 (tokeni i paleta) → segment `done`
+- Vlasnik izabrao **„Kombinacija“** (D-040): svjetla tema `#F7F8F6` / `#14201A`, primarna `#0F5132`,
+  akcent `#0F766E`, radius `0.75rem`; najniži kontrast **5.02:1** (WCAG 2.2 AA).
+- Tokeni u `frontend/src/index.css`; komponente ih već koriste, pa primjena nije dirala ekrane.
+
+### 2026-11-03 — FE-02 (shell i navigacija) → segment `done`
+- `NAV_SECTIONS` (5 grupa: pregled → posao → teren → ured → administracija), `isNavItemVisible`
+  (permission / `anyPermission` / obračun / plateau), `activeNavPath` = najduži prefiks,
+  a11y shell (skip-link, fokus, `<html lang>`, naslov taba), lazy rute → bundle **207.7 kB gzip**.
+
+### 2026-11-03 — FE-03 (a11y, WCAG 2.2 AA) → segment `done`
+- Pravila primijenjena na shell i primitive: vidljiv fokus (unlayered CSS, jer `@layer base` gubi od
+  `outline-none`), `role="alert"` za greške, labela + opis polja, reflow na 320 px bez horizontalnog
+  skrola; Playwright test fokusa (prvi `Tab` u headless-u traži prethodni `focus()` na polje).
+
+### 2026-11-03 — FE-04 (admin dashboard) → segment `done`
+- **IA prije koda** (`docs/design/FE-04-dashboard-ia.md`, D-043): tri pitanja po roli (šta ističe, ko je
+  na terenu, koliko trošimo), zone A–F, eksplicitno šta **ne** prikazuje (trendovi, realtime, drag).
+- Ekran: zaglavlje sa lokalizovanim datumom, do 4 prečice filtrirane `isNavItemVisible` + `tenantReady`,
+  KPI kartice sa ikonom i linkom, rokovi sortirani po hitnosti (boja **i** tekst), prisustvo sa avatarima,
+  skeleton (`aria-busy`), trajna greška `role="alert"` + „Pokušaj ponovo“.
+- **Bez novih backend upita** — dashboard pokazuje postojeće stanje i vodi dalje.
+
+### 2026-11-03 — FE-05 (testovi) → segment `done`
+- **Testna okosnica (D-044):** Vitest + Testing Library + jsdom + `@vitest/coverage-v8` (samo dev
+  zavisnosti). Razlog: ESM + Vite projekat, isti alias `@` i TS pipeline bez druge konfiguracije.
+- **28 testova / 4 fajla:** `dash()` (nula ≠ „nema podataka“), `navigation` (vidljivost, najduži prefiks,
+  jedinstvene rute), `dashboard-page` (prečice po pravima, hitnost rokova, prisustvo, greška + retry,
+  stanje bez firme), `i18n` (svi `dash.*`/`dashboard.*` ključevi; `dash` u tačno jednom modulu).
+- **Coverage ratchet:** mjere se samo pokriveni moduli (95,1 % linija), pragovi 85/85/85/75 rastu po segmentu.
+- **Ispravljen netačan FE-04 nalaz:** `dash` ključevi **nisu** bili sirovi — postojali su u `ops-bs.ts`;
+  stvarni defekt je bio duplikat u `bs.ts`/`en.ts` koji `index.ts` spread tiho pregazi. Duplikat uklonjen,
+  labele normalizovane, dodat test-guard. Ispravka upisana u `FE-04.md` i D-043.
+- **Novo stanje na dashboardu:** platform admin bez izabrane firme vidi „Izaberite firmu…“, ne praznu mrežu.
+- **CI:** job `frontend` sada ima `npm run test:cov` + artefakt `frontend-coverage`.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **FE-01 — čeka odluku vlasnika**: A „Gradix Green“ ili B „Slate / Teal“
-   (`docs/design/palette-preview.html`). Poslije izbora: tokeni u `frontend/src/index.css`, pa
-   primjena kroz ekrane (FE-02…) i MOB segmenti (`scripts/audit/segments.json`).
-2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
-   F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
-   emaila = zaseban segment).
+1. **FE-06 — E2E tokovi (Playwright)**: pokriti ono što unit testovi ne mogu — prijava → dashboard →
+   projekti → zadatak → timer → dnevnik, uz reflow 320 px i provjeru fokusa na pravim rutama; proširiti
+   `frontend/e2e/` (postojeći `smoke`/`a11y`).
+2. Zatim **FE-07…FE-14** (ekrani po domenima, svaki dodaje svoje unit testove u `coverage.include`),
+   pa **MOB-01…MOB-07**.
+3. **Vlasnik (Coolify, D-041)** — obavezno prije produkcijske provjere: ① backend
+   `CORS_ORIGIN=https://gradix.ba101.top`, ② frontend `CSP_API_ORIGIN=https://api.gradix.ba101.top`,
+   ③ frontend `VITE_API_URL=https://api.gradix.ba101.top` → **rebuild**; `TRUST_PROXY` ostaviti `1`.
 4. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori
 
-Nema blokatora za FAZU 3/4. **Za izvršavanje segmenata treba odgovoriti Q1–Q5**
-(`AUDIT/02_MASTER_AUDIT_PLAN.md` §8):
-- **Q1** — paleta: dva predloga (A: „Gradix Green“; B: „Slate/Teal“) za FE-01.
-- **Q2** — SMTP: uključiti pravu dostavu ili ukloniti lažni „success“ (BE-16).
-- **Q3** — Redis: zadržati (rate-limit/cache) ili ukloniti (INF-07).
-- **Q4** — budžet bundle-a: 250 kB gzip kao granica (FE-06).
-- **Q5** — pod pokrivenosti testova: 40 % kao početni prag (TEST-01/CI-04).
+**Nema blokatora za izvršavanje segmenata.** P1–P10 i Q1–Q5 su odgovoreni (vidi `docs/DECISIONS.md`
+i `AUDIT/02_MASTER_AUDIT_PLAN.md` §8); D-041 (dva domena) je obavezan uslov za produkciju.
+
+**Otvoreno za vlasnika (ne blokira kod):**
+- **Coolify env + rebuild frontenda** (D-041, koraci u §3 iznad) — bez toga prijava na produkciji pada
+  (CORS/CSP) iako je kod ispravan.
+- Redis `ACL SETUSER gradix …` (D-014) ako još nije izvršen; `REDIS_PORT=6380`, TLS CA mount.
+- `GET /api/files` traži `Authorization`, pa `<img src>` ne može učitati logo — kandidat za budući
+  backend segment (potpisani URL-ovi ili javni logo).

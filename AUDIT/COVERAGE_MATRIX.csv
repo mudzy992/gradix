@@ -2,7 +2,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,93,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
 .env.example,INF,compose,INF-01,98,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,148,nepregledano,,
-.github/workflows/ci.yml,CI,ci,CI-01,638,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
+.github/workflows/ci.yml,CI,ci,CI-01,653,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,73,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -349,7 +349,7 @@ frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,65,pregledano,"FE-03: 4 provjere bez prij
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,91,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
-frontend/package.json,FE,config,FE-02,51,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
+frontend/package.json,FE,config,FE-02,60,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
 frontend/playwright.config.ts,FE,e2e,FE-06,13,nepregledano,,
 frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
 frontend/src/components/companies/company-sheet.tsx,FE,ops-ui,FE-08,105,nepregledano,,
@@ -359,6 +359,7 @@ frontend/src/components/erp/erp-stock-tab.tsx,FE,ops-ui,FE-08,89,nepregledano,,
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
 frontend/src/components/layout/company-switcher.tsx,FE,layout,FE-02,54,pregledano,FE-02: vidljiv samo platform adminu; poslije promjene firme ponovo učita /me (permisije se mijenjaju po firmi),2026-11-03
+frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,103,pregledano,"FE-05: isNavItemVisible (permission/anyPermission/obračun/plateau), activeNavPath najduži prefiks, jedinstvene rute, label ključevi",2026-11-03
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,143,pregledano,"FE-02: jedan spisak navigacije (5 grupa, ikone uz tekst), isNavItemVisible (permission/anyPermission/payroll/tenant), activeNavPath = najduži prefiks",2026-11-03
 frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
 frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,80,pregledano,"FE-02: grupisana navigacija sa aria-current=""page"", focus-visible ring, disabled stavke dok firma nije izabrana",2026-11-03
@@ -402,13 +403,14 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,210,pregledano,"FE-04: dash.* (11 ključeva) i dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); ranije su se prikazivali sirovi ključevi",2026-11-03
-frontend/src/i18n/en.ts,FE,shared,FE-15,210,pregledano,FE-04: engleski parnjaci dash.* i dashboard.* (isti skup ključeva kao bs),2026-11-03
+frontend/src/i18n/bs.ts,FE,shared,FE-15,200,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
+frontend/src/i18n/en.ts,FE,shared,FE-15,200,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
+frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,107,nepregledano,,
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,107,nepregledano,,
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,107,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,107,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,53,nepregledano,,
@@ -427,6 +429,7 @@ frontend/src/lib/api-types.ts,FE,shared,FE-15,103,nepregledano,,
 frontend/src/lib/api.ts,FE,shared,FE-15,115,nepregledano,,
 frontend/src/lib/constants.ts,FE,shared,FE-15,37,nepregledano,,
 frontend/src/lib/csv.ts,FE,shared,FE-15,13,nepregledano,,
+frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() — null/undefined/prazno → „—“, nula ostaje 0, tekst nepromijenjen",2026-11-03
 frontend/src/lib/dash.ts,FE,shared,FE-15,7,nepregledano,,
 frontend/src/lib/error-message.ts,FE,shared,FE-15,17,nepregledano,,
 frontend/src/lib/format-date.ts,FE,shared,FE-15,25,nepregledano,,
@@ -440,7 +443,8 @@ frontend/src/lib/utils.ts,FE,shared,FE-15,7,nepregledano,,
 frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
 frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,83,nepregledano,,
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,123,nepregledano,,
-frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,271,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); bez novih backend upita (D-043)",2026-11-03
+frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme",2026-11-03
+frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,279,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); FE-05: stanje „izaberite firmu“/„nema pokazatelja“, dash() sa defaultValue",2026-11-03
 frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,79,nepregledano,,
 frontend/src/pages/documents-page.tsx,FE,site-pages,FE-10,135,nepregledano,,
 frontend/src/pages/erp-page.tsx,FE,money-pages,FE-12,79,nepregledano,,
@@ -523,7 +527,7 @@ mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,258,nepregledano,,
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,262,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,438,nepregledano,,
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03

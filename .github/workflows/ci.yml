@@ -205,7 +205,7 @@ jobs:
   # Frontend: lint, typecheck, build
   # ---------------------------------------------------------------------------
   frontend:
-    name: Frontend (lint + typecheck + build)
+    name: Frontend (lint + typecheck + test + build)
     timeout-minutes: 15
     runs-on: ubuntu-latest
     defaults:
@@ -228,8 +228,23 @@ jobs:
       - name: Typecheck
         run: npx tsc -b
 
+      # FE-05 (D-044): unit/component testovi — Vitest + Testing Library (jsdom).
+      # Coverage je ratchet: mjeri samo module koje su segmenti pokrili
+      # (`vitest.config.ts` → `coverage.include`), pragovi rastu sa svakim segmentom.
+      - name: Unit testovi + coverage
+        run: npm run test:cov
+
       - name: Build
         run: npm run build
+
+      - name: Coverage artefakt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+          if-no-files-found: warn
+          retention-days: 7
 
   # ---------------------------------------------------------------------------
   # Web E2E (Playwright: stvarni backend + buildani frontend kroz vite preview)

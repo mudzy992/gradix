@@ -459,10 +459,11 @@ na broj hopova — inače bi klijentski IP bio CDN-ov.
 ### D-043 — Dashboard: tri pitanja po roli, bez novih podataka na backendu
 **Datum:** 2026-11-03 · **Status:** na snazi
 
-Dashboard je prije bio lista kartica sa sirovim ključevima (`dash.activeProjects` se **nije
-prevodio** — u i18n-u nije postojala `dash` sekcija), bez stanja učitavanja/greške i bez prečica.
-Plan (§4.3) traži da se prvo zapiše informaciona arhitektura, pa kod — zapis je
-`docs/design/FE-04-dashboard-ia.md`.
+Dashboard je prije bio lista kartica bez stanja učitavanja/greške, bez prečica i bez ikakvog
+reda po hitnosti; `dash.*` prijevodi su postojali (**`ops-bs.ts`/`ops-en.ts`**), pa su labele bile
+prevedene — ali u `bs.ts`/`en.ts` ih nije bilo, što je zbunjivalo i pravilo rizik od tihog
+pregazivanja pri spread-u resursa. Plan (§4.3) traži da se prvo zapiše informaciona arhitektura, pa
+kod — zapis je `docs/design/FE-04-dashboard-ia.md`.
 
 **Odluka:** dashboard odgovara na **tri pitanja** i to različito po roli (backend već bira kartice u
 `dashboard-role.ts`): šta ističe, ko je na terenu, koliko trošimo. Zone su: zaglavlje (pozdrav +
@@ -476,8 +477,31 @@ agregiranja (i po jedan novi upit po ekranu). Dashboard time ne postaje mjesto g
 
 **Posljedica:** hitnost (`daysLeft`) je izražena **bojem i tekstom** („isteklo prije 3 d“, „još 5 d“),
 pa je čitljiva i bez razlikovanja boja (WCAG 1.4.1); greška je `role="alert"` sa dugmetom
-„Pokušaj ponovo“ umjesto toasta koji nestane; skeleton ima `aria-busy`. Dodati su svi `dash.*` i
-`dashboard.*` ključevi u **bs** i **en**.
+„Pokušaj ponovo“ umjesto toasta koji nestane; skeleton ima `aria-busy`. `dash.*` ključevi su
+**konsolidovani na jedno mjesto** (`ops-bs.ts`/`ops-en.ts`, jer `index.ts` spreaduje te fajlove
+poslije `bs`/`en`, pa bi duplikat bio mrtav kod), a `dashboard.*` ključevi su dodati u **bs** i **en**.
+FE-05 je dodao test koji padne ako se `dash` sekcija vrati u `bs.ts`/`en.ts`.
+
+### D-044 — Frontend testovi: Vitest + Testing Library, coverage ratchet po segmentu
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Do FE-05 frontend **nije imao** unit/component testove — samo Playwright u CI-ju. To znači da se
+greška u logici (npr. pogrešno filtriranje prečica, prazna vrijednost prikazana kao `0`) vidjela tek
+u browseru i to samo ako je E2E pokrije.
+
+**Odluka:** `vitest` + `@testing-library/react` + `user-event` + `jest-dom` + `jsdom` + `@vitest/coverage-v8`
+(samo `devDependencies`; produkcijski bundle se ne mijenja). Razlog za **Vitest** a ne Jest: projekat
+je ESM + Vite, pa Vitest koristi isti alias `@`, isti TS pipeline i isti `transform` bez druge
+konfiguracije; Jest bi tražio `ts-jest`/Babel i ručno mapiranje modula.
+
+**Coverage ratchet (P5):** `coverage.include` nabraja **samo** module koje su segmenti stvarno
+pokrili (`dash.ts`, `payroll-access.ts`, `navigation.ts`, `dashboard-page.tsx`) sa pragovima
+85/85/85/75. Globalni procenat preko 500+ fajlova koje segmenti još nisu obradili ne bi ništa
+garantovao; svaki sljedeći FE segment dodaje svoj fajl u listu, prag ostaje visok. Playwright
+(`e2e/`) ostaje za tokove kroz pravi backend — Vitest ga **ne** pokupi.
+
+**Posljedica:** CI job `frontend` sada ima korak `npm run test:cov` (i artefakt `frontend-coverage`);
+`tsconfig.app.json` uključuje `test/` (setup fajl donosi jest-dom matchere i tipove).
 
 ---
 

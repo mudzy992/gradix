@@ -70,25 +70,15 @@ export const bs = {
     presenceUnavailable: 'Prisustvo nije dostupno za vašu rolu.',
     loadError: 'Podaci se nisu učitali.',
     retry: 'Pokušaj ponovo',
+    selectCompany: 'Izaberite firmu da vidite pokazatelje.',
+    noCards: 'Za vašu rolu trenutno nema pokazatelja.',
     entity: {
       company: 'Firma',
       worker: 'Radnik',
       machine: 'Vozilo',
     },
   },
-  dash: {
-    activeProjects: 'Aktivni projekti',
-    scopedProjects: 'Projekti',
-    spend: 'Potrošeno / budžet',
-    openTimers: 'Otvoreni timer-i',
-    unread: 'Nepročitane obavijesti',
-    presence: 'Na terenu',
-    myTasks: 'Moji zadaci',
-    myTimer: 'Moj timer',
-    progress: 'Prosječan napredak',
-    machines: 'Vozila',
-    tripsToday: 'Ture danas',
-  },
+
   settings: {
     title: 'Postavke',
     registry: 'Aplikacija',

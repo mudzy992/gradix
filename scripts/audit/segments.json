@@ -285,7 +285,7 @@
       "id": "FE-05",
       "layer": "FE",
       "title": "Testovi (unit/component)",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Frontend danas nema unit/component testova; testovi nastaju u ovom segmentu pored komponenti koje testiraju."
     },

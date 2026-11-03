@@ -70,25 +70,15 @@ export const en = {
     presenceUnavailable: 'Presence is not available for your role.',
     loadError: 'The data could not be loaded.',
     retry: 'Try again',
+    selectCompany: 'Select a company to see the indicators.',
+    noCards: 'There are currently no indicators for your role.',
     entity: {
       company: 'Company',
       worker: 'Worker',
       machine: 'Vehicle',
     },
   },
-  dash: {
-    activeProjects: 'Active projects',
-    scopedProjects: 'Projects',
-    spend: 'Spent / budget',
-    openTimers: 'Open timers',
-    unread: 'Unread notifications',
-    presence: 'On site',
-    myTasks: 'My tasks',
-    myTimer: 'My timer',
-    progress: 'Average progress',
-    machines: 'Vehicles',
-    tripsToday: 'Trips today',
-  },
+
   settings: {
     title: 'Settings',
     registry: 'Application',

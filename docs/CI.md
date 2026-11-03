@@ -49,7 +49,7 @@ broja primijenjenih migracija → dump kao artefakt 7 dana. Runbook:
 | `audit` | `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
-| `frontend` | `npm ci` → `oxlint` → `tsc -b` → `vite build` | ~28 s |
+| `frontend` (Frontend lint + typecheck + test + build) | `npm ci` → `oxlint` → `tsc -b` → **`npm run test:cov`** (Vitest + Testing Library, jsdom) → `vite build` → artefakt `frontend-coverage` | ~45 s |
 | `web-e2e` | živi backend (`dist/src/main.js`) + seed iz builda + `vite preview` → Playwright (chromium) | ~1 m 37 s |
 | `docker` (Coolify gate) | root/app Dockerfile identičnost → `docker compose config` + guardovi → build obje slike → **seed iz produkcijske slike** → **SSL preflight** → MinIO iz compose-a (`healthy`) → „Coolify emulacija“ (`NODE_ENV=production`, `vite` u builderu) → smoke test backend kontejnera → smoke test frontend kontejnera | ~1 m 42 s |
 
