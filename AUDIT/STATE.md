@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-10` (logistika: novac goriva u transakciji, koordinate tura/depoa, offline identitet jednim upisom) |
-| CI | ✅ [run 41629137137](https://github.com/mudzy992/gradix/actions/runs/41629137137) — **6/6** zelen (`chore(audit): BE-09 zatvoren…`) |
-| Zadnji potvrđeno zelen run | [41628748891](https://github.com/mudzy992/gradix/actions/runs/41628748891) ✅ 6/6 · prije: 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-10` (logistika: novac goriva u transakciji, koordinate tura/depoa, offline identitet jednim upisom) — `done`, green 41630016287 |
+| CI | ✅ [run 41630016287](https://github.com/mudzy992/gradix/actions/runs/41630016287) — **6/6** zelen (`fix(logistics) … [BE-10]`) |
+| Zadnji potvrđeno zelen run | [41630016287](https://github.com/mudzy992/gradix/actions/runs/41630016287) ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
