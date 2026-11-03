@@ -1,24 +1,8 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { TripsService } from './trips.service';
-import {
-  CompleteTripDto,
-  CreateTripDto,
-  PatchTripDto,
-  TripListQueryDto,
-} from './trips.dto';
+import { CompleteTripDto, CreateTripDto, TripListQueryDto } from './trips.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { TenantRoute } from '../../common/decorators/tenant-route.decorator';
-import { SkipEnvelope } from '../../common/decorators/skip-envelope.decorator';
 import type { AuthUser } from '../../common/types/auth-user';
 
 @TenantRoute()
@@ -41,15 +25,6 @@ export class TripsController {
     return this.trips.getById(actor, id);
   }
 
-  @Patch(':id')
-  patch(
-    @CurrentUser() actor: AuthUser,
-    @Param('id') id: string,
-    @Body() dto: PatchTripDto,
-  ) {
-    return this.trips.patch(actor, id, dto);
-  }
-
   @Post(':id/complete')
   complete(
     @CurrentUser() actor: AuthUser,
@@ -57,12 +32,5 @@ export class TripsController {
     @Body() dto: CompleteTripDto,
   ) {
     return this.trips.complete(actor, id, dto);
-  }
-
-  @Delete(':id')
-  @HttpCode(204)
-  @SkipEnvelope()
-  remove(@CurrentUser() actor: AuthUser, @Param('id') id: string) {
-    return this.trips.remove(actor, id);
   }
 }

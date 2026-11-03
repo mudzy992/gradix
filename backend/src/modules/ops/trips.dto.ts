@@ -58,36 +58,6 @@ export class CreateTripDto {
   notes?: string;
 }
 
-export class PatchTripDto {
-  @IsOptional()
-  @IsString()
-  quantity?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsString()
-  destDepotId?: string;
-
-  @IsOptional()
-  @IsString()
-  destLat?: string;
-
-  @IsOptional()
-  @IsString()
-  destLng?: string;
-
-  @IsOptional()
-  @IsString()
-  weighTicketPath?: string;
-
-  @IsOptional()
-  @IsString()
-  weighQty?: string;
-}
-
 export class CompleteTripDto {
   @IsOptional()
   @IsString()

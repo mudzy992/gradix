@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -12,7 +13,10 @@ import { CreateGpsDeviceDto, PatchGpsDeviceDto } from './gps-devices.dto';
 
 @Injectable()
 export class GpsDevicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(actor: AuthUser, machineId: string) {
     await this.loadReadable(actor, machineId);
@@ -32,6 +36,14 @@ export class GpsDevicesService {
           apiKeyHash: await hashDeviceKey(apiKey),
           keyLookup: deviceKeyLookup(apiKey),
         },
+      });
+      await this.audit.write({
+        companyId: machine.companyId,
+        actorId: actor.id,
+        action: 'IOT_DEVICE_CREATED',
+        entityType: 'GpsDevice',
+        entityId: row.id,
+        payload: { machineId: machine.id, name: row.name },
       });
       return { ...serializeGpsDevice(row), apiKey };
     } catch (error) {
@@ -61,6 +73,14 @@ export class GpsDevicesService {
       where: { id: device.id },
       data: { name: dto.name, isActive: dto.isActive },
     });
+    await this.audit.write({
+      companyId: device.companyId,
+      actorId: actor.id,
+      action: 'IOT_DEVICE_UPDATED',
+      entityType: 'GpsDevice',
+      entityId: row.id,
+      payload: { fields: Object.keys(dto) },
+    });
     return serializeGpsDevice(row);
   }
 
@@ -74,6 +94,14 @@ export class GpsDevicesService {
         apiKeyHash: await hashDeviceKey(apiKey),
         keyLookup: deviceKeyLookup(apiKey),
       },
+    });
+    await this.audit.write({
+      companyId: device.companyId,
+      actorId: actor.id,
+      action: 'IOT_DEVICE_ROTATED',
+      entityType: 'GpsDevice',
+      entityId: row.id,
+      payload: { machineId },
     });
     return { ...serializeGpsDevice(row), apiKey };
   }

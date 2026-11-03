@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -20,7 +21,7 @@ import { ProjectAccessService } from './project-access.service';
 import { fuelTotalCost, serializeFuel } from './serialize-fleet';
 import { recalcSpend } from './spend';
 import { maybeNotifyFuelAnomaly } from './fuel-anomaly';
-import { CreateFuelDto, FuelListQueryDto, PatchFuelDto } from './fuel.dto';
+import { CreateFuelDto, FuelListQueryDto } from './fuel.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -29,6 +30,7 @@ export class FuelService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: FuelListQueryDto) {
@@ -99,6 +101,19 @@ export class FuelService {
       }
       return created;
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'FUEL_CREATED',
+      entityType: 'FuelEntry',
+      entityId: row.id,
+      payload: {
+        machineId: machine.id,
+        projectId,
+        liters: row.liters.toString(),
+        totalCost: row.totalCost.toString(),
+      },
+    });
     await maybeNotifyFuelAnomaly({
       prisma: this.prisma,
       notifications: this.notifications,
@@ -108,72 +123,6 @@ export class FuelService {
       fuelId: row.id,
     });
     return serializeFuel(row);
-  }
-
-  async patch(actor: AuthUser, id: string, dto: PatchFuelDto) {
-    const row = await this.loadVisible(actor, id);
-    this.assertFuelWrite(actor);
-    if (row.isSynced) {
-      throw new AppError(
-        ERROR_CODES.CONFLICT,
-        'Synced fuel cannot be edited',
-        409,
-      );
-    }
-    const liters = dto.liters
-      ? parsePositiveDecimal(dto.liters, 'liters')
-      : row.liters;
-    const unitPrice = dto.unitPrice
-      ? parseNonNegativeDecimal(dto.unitPrice, 'unitPrice')
-      : row.unitPrice;
-    // BE-10 (F-02): novi projekat mora proći ista pravila kao pri kreiranju (vidljivost,
-    // zapisivost, „nije na čekanju“, poklapanje sa dodjelom mašine). Ranije je `projectId`
-    // išao pravo u bazu — i `currentSpend` se **nije** ponovo računao nakon izmjene.
-    const nextProjectId =
-      dto.projectId === undefined
-        ? row.projectId
-        : dto.projectId === ''
-          ? null
-          : await this.resolveProjectId(actor, row.machineId, dto.projectId);
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const saved = await tx.fuelEntry.update({
-        where: { id: row.id },
-        data: {
-          liters,
-          unitPrice,
-          totalCost: fuelTotalCost(liters, unitPrice),
-          notes: dto.notes,
-          projectId: nextProjectId,
-          receiptPath: dto.receiptPath,
-        },
-      });
-      if (row.projectId) {
-        await recalcSpend(tx, row.projectId);
-      }
-      if (nextProjectId && nextProjectId !== row.projectId) {
-        await recalcSpend(tx, nextProjectId);
-      }
-      return saved;
-    });
-    return serializeFuel(updated);
-  }
-
-  async remove(actor: AuthUser, id: string): Promise<void> {
-    const row = await this.loadVisible(actor, id);
-    this.assertFuelWrite(actor);
-    if (row.isSynced) {
-      throw new AppError(
-        ERROR_CODES.CONFLICT,
-        'Synced fuel cannot be deleted',
-        409,
-      );
-    }
-    await this.prisma.$transaction(async (tx) => {
-      await tx.fuelEntry.delete({ where: { id: row.id } });
-      if (row.projectId) {
-        await recalcSpend(tx, row.projectId);
-      }
-    });
   }
 
   private async resolveProjectId(

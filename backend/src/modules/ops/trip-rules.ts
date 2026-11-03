@@ -40,13 +40,3 @@ export async function assertTruckForTrip(
     403,
   );
 }
-
-export function assertSyncedImmutable(isSynced: boolean): void {
-  if (isSynced) {
-    throw new AppError(
-      ERROR_CODES.TRIP_IMMUTABLE,
-      'Synced trip cannot be edited',
-      403,
-    );
-  }
-}

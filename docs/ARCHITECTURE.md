@@ -107,8 +107,9 @@ Detalji i pravila: [`BACKEND.md`](./BACKEND.md).
 `fleet`, `polish`, `erp`, `public` — 1.115 linija. Tri migracije:
 `20261102130000_init_postgres` (1.333 linije — inicijalna šema),
 `20261103120000_be08_indexes_audit` (~90 linija — FK indeksi, nove audit akcije,
-parcijalni unique indeksi za otvorene timere) i `20261103140000_be09_machine_open_assignment`
-(parcijalni unique indeks: mašina na najviše jednom projektu).
+parcijalni unique indeksi za otvorene timere), `20261103140000_be09_machine_open_assignment`
+(parcijalni unique indeks: mašina na najviše jednom projektu) i
+`20261103160000_be10_fleet_audit_actions` (17 audit akcija za flotu i logistiku).
 
 | Grupa | Entiteti |
 |---|---|

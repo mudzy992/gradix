@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -27,6 +28,7 @@ export class MachinesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: MachineListQueryDto) {
@@ -72,6 +74,14 @@ export class MachinesService {
         type: dto.type,
       },
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'MACHINE_CREATED',
+      entityType: 'Machine',
+      entityId: row.id,
+      payload: { name: row.name, type: row.type },
+    });
     return serializeMachine(row);
   }
 
@@ -84,6 +94,14 @@ export class MachinesService {
         code:
           dto.code !== undefined ? normalizeMachineCode(dto.code) : undefined,
       },
+    });
+    await this.audit.write({
+      companyId: machine.companyId,
+      actorId: actor.id,
+      action: 'MACHINE_UPDATED',
+      entityType: 'Machine',
+      entityId: row.id,
+      payload: { fields: Object.keys(dto) },
     });
     return serializeMachine(row);
   }
@@ -108,6 +126,14 @@ export class MachinesService {
         data: { isActive: false },
       });
       return row;
+    });
+    await this.audit.write({
+      companyId: machine.companyId,
+      actorId: actor.id,
+      action: 'MACHINE_DECOMMISSIONED',
+      entityType: 'Machine',
+      entityId: row.id,
+      payload: {},
     });
     return serializeMachine(row);
   }
@@ -157,6 +183,14 @@ export class MachinesService {
         });
         return assignment;
       });
+      await this.audit.write({
+        companyId: machine.companyId,
+        actorId: actor.id,
+        action: 'MACHINE_ASSIGNED',
+        entityType: 'Machine',
+        entityId: machine.id,
+        payload: { projectId: project.id, userId: dto.userId ?? null },
+      });
       return assignment;
     } catch (error) {
       if (
@@ -192,6 +226,14 @@ export class MachinesService {
         where: { id: machine.id },
         data: { status: machine.status === 'ACTIVE' ? 'IDLE' : machine.status },
       });
+    });
+    await this.audit.write({
+      companyId: machine.companyId,
+      actorId: actor.id,
+      action: 'MACHINE_UNASSIGNED',
+      entityType: 'Machine',
+      entityId: machine.id,
+      payload: { projectId: active.projectId },
     });
     return serializeMachine(row);
   }

@@ -15,9 +15,10 @@ backend/prisma/index-baseline.json,BE,migrations,BE-08,6,pregledano,BE-08: basel
 backend/prisma/migrations/20261102130000_init_postgres/migration.sql,BE,migrations,BE-08,1334,pregledano,"BE-08: pregledano  inicijalna ema (1.333 linije); pokriva sve modele, enum i indekse iz eme",2026-11-03
 backend/prisma/migrations/20261103120000_be08_indexes_audit/migration.sql,BE,migrations,BE-08,94,pregledano,BE-08: 51 FK indeksa + 19 audit akcija + 2 parcijalna unique indeksa za otvorene timere,2026-11-03
 backend/prisma/migrations/20261103140000_be09_machine_open_assignment/migration.sql,BE,migrations,BE-08,9,pregledano,BE-09: parcijalni unique indeks — mašina na najviše jednom projektu (F-03),2026-11-03
+backend/prisma/migrations/20261103160000_be10_fleet_audit_actions/migration.sql,BE,migrations,BE-08,22,pregledano,"BE-10 (B10): 17 novih AuditAction vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike",2026-11-03
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,288,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,306,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,404,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
@@ -134,7 +135,7 @@ backend/src/modules/ops/amendments.dto.ts,BE,ops,BE-07,36,pregledano,BE-07: AMEN
 backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,203,pregledano,"BE-07: TIMER i TRIP/FUEL ispravke u transakciji sa zapisom ispravke (F-06,F-07); list skopiran (provjereno)",2026-11-03
 backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,99,pregledano,BE-08: PROJECT_ASSIGNED / PROJECT_UNASSIGNED u audit (B8),2026-11-03
 backend/src/modules/ops/catalog.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — materijali/depoi pod canReadCatalog/canWriteCatalog,2026-11-03
-backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,216,pregledano,"BE-10: koordinate depoa kroz parseOptionalLatLng (F-03), qrToken prazan 400 / duplikat 409 (F-05), soft-delete materijala i depoa",2026-11-03
+backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,281,pregledano,"BE-10: koordinate depoa kroz parseOptionalLatLng (F-03), qrToken prazan 400 / duplikat 409 (F-05), soft-delete materijala i depoa",2026-11-03
 backend/src/modules/ops/dashboard-expiring.ts,BE,ops,BE-12,58,nepregledano,,
 backend/src/modules/ops/dashboard-presence.ts,BE,ops,BE-12,98,nepregledano,,
 backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,nepregledano,,
@@ -149,12 +150,12 @@ backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,133,nepregledano,,
 backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,203,nepregledano,,
 backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,70,pregledano,BE-08: PROJECT_DOCUMENT_ADDED / PROJECT_DOCUMENT_REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregledano — 30-dnevni prosjek po mašini, prag FUEL_ANOMALY_PCT, notifikacija rolama",2026-11-03
-backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,55,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
-backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,119,pregledano,BE-10: pregledano — liters/unitPrice stringovi; projectId opcion,2026-11-03
-backend/src/modules/ops/fuel.service.ts,BE,ops,BE-10,296,pregledano,"BE-10: gorivo + recalcSpend u transakciji (F-01), projectId kroz resolveProjectId (F-02), identitet u create (F-06)",2026-11-03
+backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
+backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,97,pregledano,BE-10: pregledano — liters/unitPrice stringovi; projectId opcion,2026-11-03
+backend/src/modules/ops/fuel.service.ts,BE,ops,BE-10,245,pregledano,"BE-10: gorivo + recalcSpend u transakciji (F-01), projectId kroz resolveProjectId (F-02), identitet u create (F-06)",2026-11-03
 backend/src/modules/ops/geofence-notify.ts,BE,ops,BE-12,58,nepregledano,,
 backend/src/modules/ops/gps-devices.dto.ts,BE,ops,BE-09,27,pregledano,BE-09: pregledano — name/isActive,2026-11-03
-backend/src/modules/ops/gps-devices.service.ts,BE,ops,BE-09,115,pregledano,BE-09: pregledano — ključ se vraća samo pri kreiranju/rotaciji; P2002 → 409 IOT_DEVICE_EXISTS,2026-11-03
+backend/src/modules/ops/gps-devices.service.ts,BE,ops,BE-09,143,pregledano,BE-09: pregledano — ključ se vraća samo pri kreiranju/rotaciji; P2002 → 409 IOT_DEVICE_EXISTS,2026-11-03
 backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,nepregledano,,
 backend/src/modules/ops/incidents.dto.ts,BE,ops,BE-11,56,nepregledano,,
 backend/src/modules/ops/incidents.service.ts,BE,ops,BE-11,160,nepregledano,,
@@ -170,7 +171,7 @@ backend/src/modules/ops/machine-hours.ts,BE,ops,BE-09,20,pregledano,"BE-09: preg
 backend/src/modules/ops/machine-status.ts,BE,ops,BE-09,18,pregledano,BE-09: pregledano — parseMachineStatus odbija nepoznat status (400),2026-11-03
 backend/src/modules/ops/machines.controller.ts,BE,ops,BE-09,87,pregledano,"BE-09: pregledano — fleet.* permisije, @Throttle na /location, DELETE = decommission",2026-11-03
 backend/src/modules/ops/machines.dto.ts,BE,ops,BE-09,74,pregledano,BE-09: pregledano — tipovi mašina kroz IsIn; MachineLocationDto nosi stringove (validacija u geo.ts),2026-11-03
-backend/src/modules/ops/machines.service.ts,BE,ops,BE-09,260,pregledano,"BE-09: assign/unassign/decommission u transakcijama (F-02), jedna otvorena dodjela + IN_SERVICE 409 (F-03,F-05), status se ne pregazi (F-06)",2026-11-03
+backend/src/modules/ops/machines.service.ts,BE,ops,BE-09,302,pregledano,"BE-09: assign/unassign/decommission u transakcijama (F-02), jedna otvorena dodjela + IN_SERVICE 409 (F-03,F-05), status se ne pregazi (F-06)",2026-11-03
 backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,112,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri),2026-11-02
 backend/src/modules/ops/phases.service.ts,BE,ops,BE-05,120,pregledano,BE-08: PROJECT_PHASE_CREATED / PROJECT_PHASE_UPDATED u audit (B8),2026-11-03
 backend/src/modules/ops/progress.spec.ts,BE,ops,BE-05,33,pregledano,"BE-05: 5 testova procenta (otkazani ne ulaze u imenilac, zaokruživanje)",2026-11-02
@@ -220,10 +221,10 @@ backend/src/modules/ops/timer-settings.ts,BE,ops,BE-07,12,nepregledano,,
 backend/src/modules/ops/timer.controller.ts,BE,ops,BE-07,49,pregledano,BE-07: sve rute @TenantRoute + tasks.timer; list zahtijeva projectId,2026-11-03
 backend/src/modules/ops/timer.dto.ts,BE,ops,BE-07,30,pregledano,BE-07: StartTimerDto namjerno propušta startedAt/durationMinutes da ih servis odbije sa 400,2026-11-03
 backend/src/modules/ops/timer.service.ts,BE,ops,BE-07,225,pregledano,"BE-07: pauseSession/resumeSession (transakcija) dijeljene sa sync-om; me/list kroz serializere (F-02,F-04); findByLocalId requireCompany (F-05)",2026-11-03
-backend/src/modules/ops/trip-rules.ts,BE,ops,BE-10,53,pregledano,BE-10: pregledano — TRUCK + dekomisionirana 409 + dodjela/driver; assertSyncedImmutable,2026-11-03
-backend/src/modules/ops/trips.controller.ts,BE,ops,BE-10,69,pregledano,BE-10: pregledano — 6 ruta pod trips.read/write; PATCH/DELETE su mrtvi zbog isSynced (F-07),2026-11-03
-backend/src/modules/ops/trips.dto.ts,BE,ops,BE-10,100,pregledano,"BE-10: pregledano — lat/lng su opcioni stringovi, validiraju se u geo.ts; quantity obavezan",2026-11-03
-backend/src/modules/ops/trips.service.ts,BE,ops,BE-10,283,pregledano,"BE-10: koordinate origin/dest kroz parseOptionalLatLng (F-03), assertProjectWritable u patch (F-04), offline identitet u create (F-06)",2026-11-03
+backend/src/modules/ops/trip-rules.ts,BE,ops,BE-10,43,pregledano,BE-10: pregledano — TRUCK + dekomisionirana 409 + dodjela/driver; assertSyncedImmutable,2026-11-03
+backend/src/modules/ops/trips.controller.ts,BE,ops,BE-10,37,pregledano,BE-10: pregledano — 6 ruta pod trips.read/write; PATCH/DELETE su mrtvi zbog isSynced (F-07),2026-11-03
+backend/src/modules/ops/trips.dto.ts,BE,ops,BE-10,70,pregledano,"BE-10: pregledano — lat/lng su opcioni stringovi, validiraju se u geo.ts; quantity obavezan",2026-11-03
+backend/src/modules/ops/trips.service.ts,BE,ops,BE-10,258,pregledano,"BE-10: koordinate origin/dest kroz parseOptionalLatLng (F-03), assertProjectWritable u patch (F-04), offline identitet u create (F-06)",2026-11-03
 backend/src/modules/ops/write-machine-gps.ts,BE,ops,BE-09,57,pregledano,BE-09: GPS tačka + pozicija mašine u jednoj transakciji (F-01),2026-11-03
 backend/src/modules/payroll/payroll-access.ts,BE,payroll,BE-13,79,nepregledano,,
 backend/src/modules/payroll/payroll-amount.ts,BE,payroll,BE-13,12,nepregledano,,
@@ -285,7 +286,7 @@ backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03:
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,192,nepregledano,,
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,47,nepregledano,,
-backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,319,pregledano,"BE-09: pregledano — IoT 401, GPS/presence, dodjela mašine, decommission 409 na timer/gorivo",2026-11-03
+backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,434,pregledano,"BE-09: pregledano — IoT 401, GPS/presence, dodjela mašine, decommission 409 na timer/gorivo",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,nepregledano,,
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,

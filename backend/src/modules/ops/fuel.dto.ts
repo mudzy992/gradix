@@ -34,28 +34,6 @@ export class CreateFuelDto {
   receiptPath?: string;
 }
 
-export class PatchFuelDto {
-  @IsOptional()
-  @IsString()
-  liters?: string;
-
-  @IsOptional()
-  @IsString()
-  unitPrice?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsString()
-  projectId?: string;
-
-  @IsOptional()
-  @IsString()
-  receiptPath?: string;
-}
-
 export class CreateMaterialDto {
   @IsString()
   @MinLength(1)

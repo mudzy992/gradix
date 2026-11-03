@@ -116,7 +116,7 @@ describe('Fleet logistics (e2e)', () => {
     expect(Number(after.body.data.currentWorkingHours)).toBe(1);
   });
 
-  it('trips: quantity required, ON_HOLD 409, complete without dest GPS, TRIP_IMMUTABLE, amend whitelist', async () => {
+  it('trips: quantity required, ON_HOLD 409, complete without dest GPS, no PATCH (404), amend whitelist', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/machines')
       .set(auth(admin))
@@ -175,12 +175,13 @@ describe('Fleet logistics (e2e)', () => {
       .set(auth(driver))
       .send({});
     expect(completed.status).toBe(201);
+    // BE-10 / B9 (odluka vlasnika, opcija A): izmjena ture ne postoji — zapis je nepromjenjiv,
+    // ispravke idu kroz `/amendments`. Ruta je uklonjena, pa je odgovor 404.
     const put = await request(app.getHttpServer())
       .patch(`/api/trips/${trip.body.data.id}`)
       .set(auth(driver))
       .send({ notes: 'nope' });
-    expect(put.status).toBe(403);
-    expect(put.body.error.code).toBe('TRIP_IMMUTABLE');
+    expect(put.status).toBe(404);
     const qty = await request(app.getHttpServer())
       .post('/api/amendments')
       .set(auth(ss))
@@ -314,5 +315,119 @@ describe('Fleet logistics (e2e)', () => {
       .send({ lat: '1', lng: '1' });
     expect(iot.status).toBe(401);
     expect(iot.body.error.code).toBe('AUTH_INVALID_CREDENTIALS');
+  });
+
+  /**
+   * BE-10 (B10): flota, GPS uređaji, ture, gorivo i šifarnici su ranije bili **van audita**
+   * (`AuditAction` je bio zatvoren enum). Ovaj test prolazi kroz sve pet servisa i čita
+   * `AuditEvent` direktno iz baze — API za audit još ne postoji.
+   */
+  it('audit: flota, GPS, ture, gorivo i šifarnici se bilježe (B10)', async () => {
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Audit machine', type: 'TRUCK' });
+    expect(machine.status).toBe(201);
+    const machineId = machine.body.data.id as string;
+    await request(app.getHttpServer())
+      .patch(`/api/machines/${machineId}`)
+      .set(auth(admin))
+      .send({ name: 'Audit machine 2' });
+    await request(app.getHttpServer())
+      .post(`/api/machines/${machineId}/assign`)
+      .set(auth(admin))
+      .send({ projectId, userId: driverId });
+    await request(app.getHttpServer())
+      .post(`/api/machines/${machineId}/unassign`)
+      .set(auth(admin));
+    const device = await request(app.getHttpServer())
+      .post(`/api/machines/${machineId}/devices`)
+      .set(auth(admin))
+      .send({ name: 'Teltonika audit' });
+    expect(device.status).toBe(201);
+    const deviceId = device.body.data.id as string;
+    await request(app.getHttpServer())
+      .patch(`/api/machines/${machineId}/devices/${deviceId}`)
+      .set(auth(admin))
+      .send({ isActive: false });
+    await request(app.getHttpServer())
+      .post(`/api/machines/${machineId}/devices/${deviceId}/rotate`)
+      .set(auth(admin));
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Audit material', unit: 'M3' });
+    const materialId = material.body.data.id as string;
+    await request(app.getHttpServer())
+      .patch(`/api/materials/${materialId}`)
+      .set(auth(admin))
+      .send({ name: 'Audit material 2' });
+    await request(app.getHttpServer())
+      .delete(`/api/materials/${materialId}`)
+      .set(auth(admin));
+    const depot = await request(app.getHttpServer())
+      .post('/api/depots')
+      .set(auth(admin))
+      .send({ name: 'Audit depot' });
+    expect(depot.status).toBe(201);
+    const depotId = depot.body.data.id as string;
+    await request(app.getHttpServer())
+      .patch(`/api/depots/${depotId}`)
+      .set(auth(admin))
+      .send({ name: 'Audit depot 2' });
+    await request(app.getHttpServer())
+      .delete(`/api/depots/${depotId}`)
+      .set(auth(admin));
+    // Tura i gorivo: audit akcije `TRIP_*` / `FUEL_CREATED` provjeravamo na postojećim
+    // zapisima iz ranijih testova (isti `projectId`).
+    const trip = await prisma.trip.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(trip).not.toBeNull();
+    const fuel = await prisma.fuelEntry.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(fuel).not.toBeNull();
+
+    const actions = async (entityType: string, entityId: string) =>
+      (
+        await prisma.auditEvent.findMany({ where: { entityType, entityId } })
+      ).map((row) => row.action);
+
+    expect(await actions('Machine', machineId)).toEqual(
+      expect.arrayContaining([
+        'MACHINE_CREATED',
+        'MACHINE_UPDATED',
+        'MACHINE_ASSIGNED',
+        'MACHINE_UNASSIGNED',
+      ]),
+    );
+    expect(await actions('GpsDevice', deviceId)).toEqual(
+      expect.arrayContaining([
+        'IOT_DEVICE_CREATED',
+        'IOT_DEVICE_UPDATED',
+        'IOT_DEVICE_ROTATED',
+      ]),
+    );
+    expect(await actions('Material', materialId)).toEqual(
+      expect.arrayContaining([
+        'MATERIAL_CREATED',
+        'MATERIAL_UPDATED',
+        'MATERIAL_REMOVED',
+      ]),
+    );
+    expect(await actions('Depot', depotId)).toEqual(
+      expect.arrayContaining([
+        'DEPOT_CREATED',
+        'DEPOT_UPDATED',
+        'DEPOT_REMOVED',
+      ]),
+    );
+    expect(await actions('Trip', trip!.id)).toEqual(
+      expect.arrayContaining(['TRIP_CREATED', 'TRIP_COMPLETED']),
+    );
+    expect(await actions('FuelEntry', fuel!.id)).toContain('FUEL_CREATED');
   });
 });

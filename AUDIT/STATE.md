@@ -16,7 +16,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-10` (logistika: novac goriva u transakciji, koordinate tura/depoa, offline identitet jednim upisom) — `done`, green 41630016287 |
+| Zadnji commit | `BE-10` dopuna — **B9 (opcija A): mrtve rute tura/goriva uklonjene** + **B10: 17 audit akcija** za flotu/logistiku (migracija `20261103160000_be10_fleet_audit_actions`) |
 | CI | ✅ [run 41630016287](https://github.com/mudzy992/gradix/actions/runs/41630016287) — **6/6** zelen (`fix(logistics) … [BE-10]`) |
 | Zadnji potvrđeno zelen run | [41630016287](https://github.com/mudzy992/gradix/actions/runs/41630016287) ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
@@ -306,10 +306,37 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** **133/133** (+3). Matrica **498 fajlova / 205 pregledano (41,2 %)**.
 - **B-stavke:** B9 (mrtve rute — odluka vlasnika), B10 (audit akcije za flotu i logistiku).
 
+### 2026-11-03 — BE-10 dopuna: B9 (opcija A) + B10
+- **Odluka vlasnika (B9 → opcija A):** mrtve rute **uklonjene**; zapis ture/goriva ostaje nepromjenjiv.
+  - API: `PATCH/DELETE /api/trips/:id` i `PATCH/DELETE /api/fuel/:id` **više ne postoje** (`404`).
+    Ispravke idu kroz `/amendments` (`TRIP`, `FUEL`, `TIMER`).
+  - Kod: `trips.controller/fuel.controller` (rute), `TripsService.patch/remove`, `FuelService.patch`,
+    `PatchTripDto`/`PatchFuelDto`, `assertSyncedImmutable` — sve obrisano. Bez mrtvog koda i bez
+    održavanja putanje koja se ne može izvršiti (F‑BE‑10‑01/02/04 time postaju nevažeći).
+  - `fleet.e2e-spec.ts`: test nepromjenjivosti sada čeka **`404`** (umjesto `403 TRIP_IMMUTABLE`).
+  - Provjereno: `frontend` i `mobile` **nikad** nisu zvali te rute → nema klijentske regresije.
+- **B10 (audit za flotu i logistiku):** `AuditAction` +17 vrijednosti
+  (`MACHINE_CREATED/UPDATED/ASSIGNED/UNASSIGNED/DECOMMISSIONED`, `IOT_DEVICE_CREATED/UPDATED/ROTATED`,
+  `TRIP_CREATED/COMPLETED`, `FUEL_CREATED`, `MATERIAL_CREATED/UPDATED/REMOVED`,
+  `DEPOT_CREATED/UPDATED/REMOVED`) u migraciji `20261103160000_be10_fleet_audit_actions`
+  (`ALTER TYPE … ADD VALUE`, PG ≥ 12 dozvoljava u transakciji).
+  - Pozivi: `machines.service.ts` (5), `gps-devices.service.ts` (3), `trips.service.ts` (2),
+    `fuel.service.ts` (1, **prije** notifikacije o anomaliji da se ne izgubi zapis), `catalog.service.ts` (6).
+  - Time je zatvorena i B-stavka iz BE-09 (F‑BE‑09‑07: GPS/mašine nisu bili u auditu).
+  - Šifarnici: `createDepot` je koristio inline `requireCompany(actor)` (izvučeno u `companyId`
+    const radi audita), a `patchMaterial` je bio `return prisma.material.update(...)` — sada
+    `const row = await …` + audit + `return row`.
+  - `removeMaterial`/`removeDepot` pišu audit **poslije** brisanja: pad brisanja (FK) ne smije
+    ostaviti zapis da je zapis uklonjen.
+  - **E2E dokaz:** novi test u `fleet.e2e-spec.ts` prolazi kroz mašinu, GPS uređaj, materijal, depo,
+    turu i gorivo pa čita `AuditEvent` direktno iz baze (API za audit još ne postoji).
+- **Testovi:** **133/133**. Matrica **499 fajlova / 206 pregledano (41,3 %)**; `check:all` 9/9 (bez e2e).
+- **Stanje segmenata:** `done` **18/59**; sljedeći **BE-11** (dnevnik, HSE, fajlovi).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-11** (dnevnik, HSE, fajlovi) — sljedeći segment po planu.
+2. **BE-11** (dnevnik, HSE, fajlovi) — sljedeći segment po planu; B9/B10 su zatvoreni.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

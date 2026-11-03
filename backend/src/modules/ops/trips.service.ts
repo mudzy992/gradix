@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -16,19 +17,15 @@ import {
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { serializeTrip } from './serialize-fleet';
-import { assertSyncedImmutable, assertTruckForTrip } from './trip-rules';
-import {
-  CompleteTripDto,
-  CreateTripDto,
-  PatchTripDto,
-  TripListQueryDto,
-} from './trips.dto';
+import { assertTruckForTrip } from './trip-rules';
+import { CompleteTripDto, CreateTripDto, TripListQueryDto } from './trips.dto';
 
 @Injectable()
 export class TripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: TripListQueryDto) {
@@ -127,40 +124,17 @@ export class TripsService {
         deviceId: identity?.deviceId,
       },
     });
-    return serializeTrip(row);
-  }
-
-  async patch(actor: AuthUser, id: string, dto: PatchTripDto) {
-    const trip = await this.loadVisible(actor, id);
-    this.assertOwnerWrite(actor, trip.driverId);
-    assertSyncedImmutable(trip.isSynced);
-    // BE-10 (F-04): izmjena ture u arhiviranom/terminalnom projektu je bila moguća.
-    assertProjectWritable(
-      await this.access.getVisibleProject(actor, trip.projectId),
-    );
-    const dest =
-      dto.destDepotId !== undefined || dto.destLat !== undefined
-        ? await this.resolveDest(
-            trip.companyId,
-            dto.destDepotId,
-            dto.destLat,
-            dto.destLng,
-          )
-        : null;
-    const row = await this.prisma.trip.update({
-      where: { id: trip.id },
-      data: {
-        quantity: dto.quantity
-          ? parsePositiveDecimal(dto.quantity, 'quantity')
-          : undefined,
-        notes: dto.notes,
-        destDepotId: dest?.destDepotId,
-        destLat: dest?.destLat,
-        destLng: dest?.destLng,
-        weighTicketPath: dto.weighTicketPath,
-        weighQty: dto.weighQty
-          ? parsePositiveDecimal(dto.weighQty, 'weighQty')
-          : undefined,
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TRIP_CREATED',
+      entityType: 'Trip',
+      entityId: row.id,
+      payload: {
+        projectId: project.id,
+        machineId: machine.id,
+        materialId: material.id,
+        quantity: row.quantity.toString(),
       },
     });
     return serializeTrip(row);
@@ -186,14 +160,15 @@ export class TripsService {
       where: { id: trip.id },
       data: { unloadedAt: new Date(), destLat, destLng },
     });
+    await this.audit.write({
+      companyId: trip.companyId,
+      actorId: actor.id,
+      action: 'TRIP_COMPLETED',
+      entityType: 'Trip',
+      entityId: row.id,
+      payload: { projectId: trip.projectId },
+    });
     return serializeTrip(row);
-  }
-
-  async remove(actor: AuthUser, id: string): Promise<void> {
-    const trip = await this.loadVisible(actor, id);
-    this.assertOwnerWrite(actor, trip.driverId);
-    assertSyncedImmutable(trip.isSynced);
-    await this.prisma.trip.delete({ where: { id: trip.id } });
   }
 
   private async loadVisible(actor: AuthUser, id: string) {

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -20,7 +21,10 @@ type MaterialUnit = (typeof MATERIAL_UNITS)[number];
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async listMaterials(actor: AuthUser) {
     this.assertRead(actor);
@@ -32,39 +36,71 @@ export class CatalogService {
 
   async createMaterial(actor: AuthUser, dto: CreateMaterialDto) {
     this.assertWrite(actor);
-    return this.prisma.material.create({
+    const companyId = requireCompany(actor);
+    const row = await this.prisma.material.create({
       data: {
-        companyId: requireCompany(actor),
+        companyId,
         name: dto.name,
         unit: this.parseUnit(dto.unit),
       },
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'MATERIAL_CREATED',
+      entityType: 'Material',
+      entityId: row.id,
+      payload: { name: row.name, unit: row.unit },
+    });
+    return row;
   }
 
   async patchMaterial(actor: AuthUser, id: string, dto: PatchMaterialDto) {
     this.assertWrite(actor);
     await this.loadMaterial(actor, id);
-    return this.prisma.material.update({
+    const row = await this.prisma.material.update({
       where: { id },
       data: {
         name: dto.name,
         unit: dto.unit ? this.parseUnit(dto.unit) : undefined,
       },
     });
+    await this.audit.write({
+      companyId: row.companyId,
+      actorId: actor.id,
+      action: 'MATERIAL_UPDATED',
+      entityType: 'Material',
+      entityId: row.id,
+      payload: { fields: Object.keys(dto) },
+    });
+    return row;
   }
 
   async removeMaterial(actor: AuthUser, id: string) {
     this.assertWrite(actor);
     const row = await this.loadMaterial(actor, id);
     const used = await this.prisma.trip.count({ where: { materialId: id } });
+    // BE-10 (B10): audit se piše **poslije** upisa — ako brisanje padne (FK), ne smije
+    // ostati zapis da je materijal uklonjen.
+    let result: { id: string } | { isActive: boolean; id: string };
     if (used > 0) {
-      return this.prisma.material.update({
+      result = await this.prisma.material.update({
         where: { id },
         data: { isActive: false },
       });
+    } else {
+      await this.prisma.material.delete({ where: { id: row.id } });
+      result = { id };
     }
-    await this.prisma.material.delete({ where: { id: row.id } });
-    return { id };
+    await this.audit.write({
+      companyId: row.companyId,
+      actorId: actor.id,
+      action: 'MATERIAL_REMOVED',
+      entityType: 'Material',
+      entityId: id,
+      payload: { soft: used > 0 },
+    });
+    return result;
   }
 
   async listDepots(actor: AuthUser) {
@@ -79,15 +115,24 @@ export class CatalogService {
   async createDepot(actor: AuthUser, dto: CreateDepotDto) {
     this.assertWrite(actor);
     // BE-10 (F-03): koordinate depoa se validiraju kao i svaka druga vanjska koordinata.
+    const companyId = requireCompany(actor);
     const coords = parseOptionalLatLng(dto.lat, dto.lng);
     const row = await this.prisma.depot.create({
       data: {
-        companyId: requireCompany(actor),
+        companyId,
         name: dto.name,
         qrToken: dto.qrToken?.trim() || randomUUID(),
         lat: coords.lat,
         lng: coords.lng,
       },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'DEPOT_CREATED',
+      entityType: 'Depot',
+      entityId: row.id,
+      payload: { name: row.name },
     });
     return this.serializeDepot(row);
   }
@@ -117,6 +162,14 @@ export class CatalogService {
           lng: coords.lng,
         },
       });
+      await this.audit.write({
+        companyId: row.companyId,
+        actorId: actor.id,
+        action: 'DEPOT_UPDATED',
+        entityType: 'Depot',
+        entityId: row.id,
+        payload: { fields: Object.keys(dto) },
+      });
       return this.serializeDepot(row);
     } catch (error) {
       // BE-10 (F-05): `qrToken` je @unique — duplikat je ranije bio 500 (P2002).
@@ -138,16 +191,28 @@ export class CatalogService {
     this.assertWrite(actor);
     const row = await this.loadDepot(actor, id);
     const used = await this.prisma.trip.count({ where: { destDepotId: id } });
+    // BE-10 (B10): audit poslije upisa (vidi `removeMaterial`).
+    let result: unknown;
     if (used > 0) {
-      return this.serializeDepot(
+      result = this.serializeDepot(
         await this.prisma.depot.update({
           where: { id },
           data: { isActive: false },
         }),
       );
+    } else {
+      await this.prisma.depot.delete({ where: { id: row.id } });
+      result = { id };
     }
-    await this.prisma.depot.delete({ where: { id: row.id } });
-    return { id };
+    await this.audit.write({
+      companyId: row.companyId,
+      actorId: actor.id,
+      action: 'DEPOT_REMOVED',
+      entityType: 'Depot',
+      entityId: id,
+      payload: { soft: used > 0 },
+    });
+    return result;
   }
 
   private serializeDepot(row: {
