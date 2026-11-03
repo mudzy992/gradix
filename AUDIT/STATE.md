@@ -17,9 +17,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-15` — Ured: atomski životni ciklus servisa i konverzija tendera, tenant provjera `projectId`/`templateId`, 12 audit akcija, scope izvještaja, striktni datumi — `done` |
-| CI | ⏳ upisuje se poslije `gh run watch` (BE-15) — prethodni: ✅ [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) **6/6** (BE-14) |
+| CI | ✅ [run 41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) — **6/6** zelen (`feat(office): BE-15 …`) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
-| Zadnji potvrđeno zelen run | [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji potvrđeno zelen run | [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) ✅ 6/6 · prije: [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -460,7 +460,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   firmi; GPS cleanup briše u serijama po 10.000.
 - **Testovi:** **180/180** unit (+10: `date-input.spec.ts`, `tender-status.spec.ts`);
   e2e `polish` +5. Matrica **514 fajlova / 292 pregledano (56,8 %)**.
-- **Zatvoreno:** `BE-15` — CI run u tabeli iznad; **23/59** segmenata `done`.
+- **Zatvoreno:** `BE-15` — zelen CI **41652116613** (6/6, prvi pokušaj); **23/59** segmenata `done`.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
