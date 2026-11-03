@@ -655,7 +655,10 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
 - **Nalaz F-FE-06-01 (za FE-10/BE):** `WORKER` ima `hse.write` ali **ne** `hse.read`, pa radnik ne
   može otvoriti HSE ekran iako je glavni prijavljivač. Nije mijenjano — pravila rola su BE odluka;
   test trenutno stanje dokumentuje.
-- **Ukupno 16 E2E testova** u 4 fajla; CI job `Web E2E` ih izvršava na stvarnom backendu + seedu.
+- **Rate-limit je oborio prvi run** (41727820440): 16 testova × prijava > 5/min po IP-u (D-042 daje
+  pravi IP) → polovina padne na `/login`. Riješeno: `auth.setup.ts` pravi **jednu prijavu po roli** i
+  čuva `storageState`; `guest` projekti (`login`, `a11y`, `guards`) rade bez sesije — **3 prijave po runu**.
+- **Ukupno 18 E2E testova** u 6 fajlova (`setup`/`guest`/`admin`/`worker` projekti).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 

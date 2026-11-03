@@ -1,30 +1,18 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 /**
- * FE-06 — E2E tokovi na **stvarnom** backendu (seed `SEED_DEMO=true`).
+ * FE-06 — admin tok na **stvarnom** backendu (seed `SEED_DEMO=true`).
  *
- * Unit testovi (FE-05) drže logiku; ovdje se provjerava da se ekrani zaista povezuju: prijava →
- * dashboard → prečica → lista → detalj, da guardovi rade bez prijave i da navigacija označava
- * aktivnu stranicu. Podaci su iz `prisma/seed-demo-ops.ts` (`Sarajevo obilaznica`, `Iskop kanala`).
+ * Sesija dolazi iz `auth.setup.ts` (`storageState`), da se ne troši rate-limit prijave (5/min po IP-u).
+ * Unit testovi (FE-05) drže logiku; ovdje se provjerava da se ekrani zaista povezuju: dashboard →
+ * prečica → lista → detalj, da navigacija označava aktivnu stranicu i da reflow radi na 320 px.
+ * Podaci su iz `prisma/seed-demo-ops.ts` (`Sarajevo obilaznica`, faze `Zemljani radovi`/`Asfalt`,
+ * zadatak `Iskop kanala`).
  */
-const ADMIN = {
-  email: process.env.E2E_LOGIN_EMAIL ?? '',
-  password: process.env.E2E_LOGIN_PASSWORD ?? '',
-}
-
-async function login(page: Page, email: string, password: string) {
-  await page.goto('/login')
-  await page.locator('#identifier').fill(email)
-  await page.locator('#password').fill(password)
-  await page.getByRole('button', { name: /prijavi|sign in/i }).click()
-  await expect(page).toHaveURL(/dashboard/, { timeout: 20_000 })
-}
-
 test.describe('FE-06 — admin tok', () => {
-  test.skip(!ADMIN.email || !ADMIN.password, 'E2E login credentials nisu postavljeni')
-
   test.beforeEach(async ({ page }) => {
-    await login(page, ADMIN.email, ADMIN.password)
+    await page.goto('/dashboard')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 })
   })
 
   test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async ({ page }) => {
@@ -32,7 +20,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByRole('heading', { name: /ključni pokazatelji/i })).toHaveCount(1)
 
     // Kartice po roli (SUPER_ADMIN → admin bucket): barem jedna poznata labela.
-    await expect(page.getByText('Aktivni projekti')).toBeVisible()
+    await expect(page.getByText('Aktivni projekti')).toBeVisible({ timeout: 15_000 })
 
     // Regresija (FE-04/FE-05): nijedan sirovi `dash.` ključ ne smije doći do ekrana.
     await expect(page.getByText(/dash\./)).toHaveCount(0)
@@ -51,7 +39,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{8,}/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/sarajevo obilaznica/i)
 
-    // Faze iz seed-a (`Zemljani radovi`, `Asfalt`) su na tabu „Faze".
+    // Faze iz seed-a su na tabu „Faze".
     await page.getByRole('tab', { name: 'Faze' }).click()
     await expect(page.getByText('Zemljani radovi')).toBeVisible({ timeout: 15_000 })
   })
@@ -82,18 +70,5 @@ test.describe('FE-06 — admin tok', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     expect(overflow).toBeLessThanOrEqual(1)
-  })
-})
-
-test.describe('FE-06 — guardovi bez prijave', () => {
-  test('zaštićena ruta preusmjerava na prijavu', async ({ page }) => {
-    await page.goto('/projects')
-    await expect(page).toHaveURL(/\/login$/)
-    await expect(page.locator('#identifier')).toBeVisible()
-  })
-
-  test('detalj zadatka takođe traži prijavu (nema curenja podataka)', async ({ page }) => {
-    await page.goto('/tasks/00000000-0000-0000-0000-000000000000')
-    await expect(page).toHaveURL(/\/login$/)
   })
 })

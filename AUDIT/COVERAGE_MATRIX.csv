@@ -346,13 +346,15 @@ frontend/.oxlintrc.json,FE,config,FE-02,9,pregledano,FE-02: react/only-export-co
 frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,65,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,100,pregledano,"FE-06: admin tok — dashboard (prevedene kartice, bez sirovih dash.*), prečica → projekti → detalj (faze), zadatak iz seed-a, aria-current, reflow 320 px; guardovi bez prijave → /login",2026-11-03
+frontend/e2e/auth.setup.ts,FE,e2e,FE-06,64,nepregledano,,
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,75,pregledano,"FE-06: admin tok (sesija iz storageState) — dashboard sa prevedenim karticama, prečica → projekti → detalj (Faze), zadatak iz seeda, aria-current, reflow 320 px + jedno h1",2026-11-03
+frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
-frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,72,pregledano,"FE-06: tok radnika — rola-based kartice (Moji zadaci), prisustvo nedostupno, prečice samo Zadaci (nema Projekti/Flota/HSE), timer start → pauza → stop",2026-11-03
+frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,58,pregledano,"FE-06: tok radnika — rola-based kartice (Moji zadaci), prisustvo nedostupno, prečice samo Zadaci (nema Projekti/Flota/HSE), timer start → pauza → stop",2026-11-03
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,91,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
 frontend/package.json,FE,config,FE-02,60,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
-frontend/playwright.config.ts,FE,e2e,FE-06,18,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
+frontend/playwright.config.ts,FE,e2e,FE-06,39,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
 frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
 frontend/src/components/companies/company-sheet.tsx,FE,ops-ui,FE-08,105,nepregledano,,
 frontend/src/components/erp/erp-costs-tab.tsx,FE,ops-ui,FE-08,80,nepregledano,,

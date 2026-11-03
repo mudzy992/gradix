@@ -13,5 +13,26 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // FE-06: prijava se radi jednom po roli (`auth.setup.ts`) — backend dozvoljava 5 prijava/min po
+  // IP-u, pa 16 testova koji se svaki prijavljuju troše kvotu i padaju bez krivice koda.
+  projects: [
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    {
+      name: 'guest',
+      testMatch: [/login\.spec\.ts/, /a11y\.spec\.ts/, /guards\.spec\.ts/],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'admin',
+      testMatch: /flows\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/admin.json' },
+    },
+    {
+      name: 'worker',
+      testMatch: /worker-flow\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/worker.json' },
+    },
+  ],
 })
