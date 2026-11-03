@@ -1,7 +1,7 @@
 # INF-06 — noćni test backup/restore lanca.
 #
-# Okida se **samo** po rasporedu i ručno (`workflow_dispatch`); nema `pull_request` trigger-a
-# (pravilo iz CI-01). Dokaz koji ovaj workflow daje: dump napravljen `backup.sh`-om može se
+# Okida se noćno (`schedule`), ručno (`workflow_dispatch`) i na push **samo** kad se mijenjaju
+# skripte/workflow (paths filter). Nema `pull_request` trigger-a (pravilo iz CI-01). Dokaz koji ovaj workflow daje: dump napravljen `backup.sh`-om može se
 # vratiti `restore.sh`-om u **drugu** bazu i brojevi redova se poklapaju sa izvorom.
 name: Backup/restore drill
 
@@ -10,6 +10,13 @@ on:
     # 03:30 UTC (05:30 u BiH ljeti) — van radnog vremena, prije jutarnjih deploya.
     - cron: '30 3 * * *'
   workflow_dispatch:
+  # Pravilo iz docs/CI.md: `push` samo na eksplicitno imenovanoj aktivnoj grani. Drill se ovdje
+  # pokreće samo kad se mijenjaju skripte/workflow (ne na svaki commit), da ne duplira CI trošak.
+  push:
+    branches: [arena/0bc0e56e-gradix]
+    paths:
+      - 'scripts/ops/**'
+      - '.github/workflows/backup-restore.yml'
 
 concurrency:
   group: backup-restore

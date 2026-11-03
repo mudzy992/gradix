@@ -22,6 +22,26 @@ on:
 Nema `pull_request` trigera i nema šablona `arena/**`: grana koja nije aktivna ne troši CI minute.
 Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** commitu.
 
+### Noćni backup/restore drill (INF-06)
+
+Workflow [`.github/workflows/backup-restore.yml`](../.github/workflows/backup-restore.yml) je
+**odvojen** od `ci.yml`:
+
+```yaml
+on:
+  schedule: [{ cron: '30 3 * * *' }]     # noćno, 03:30 UTC
+  workflow_dispatch:                     # ručno
+  push:                                  # samo kad se mijenjaju ops skripte/workflow
+    branches: ['arena/0bc0e56e-gradix']
+    paths: ['scripts/ops/**', '.github/workflows/backup-restore.yml']
+```
+
+Job `drill` (limit 20 min): Postgres 16 servis → `migrate deploy` + seed → `scripts/ops/backup.sh`
+→ restore u `gradix_restore` (`scripts/ops/restore.sh`) → poređenje broja redova
+(`users, companies, projects, tasks, timer_sessions, audit_logs, cost_entries, diary_entries`) i
+broja primijenjenih migracija → dump kao artefakt 7 dana. Runbook:
+[`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md) §7.
+
 ### Jobovi
 
 | Job | Šta radi | Trajanje* |
@@ -145,3 +165,4 @@ on:
 | C5 | Nema coverage praga ni audit gate-a | CI-04/CI-05 |
 | C6 | Nema mobile joba | CI-07 |
 | C7 | ~~Nema `timeout-minutes`~~ — ✅ dodati na sve jobove (CI-03) | CI-03 |
+| C8 | ~~Nema automatskog backup/restore testa~~ — ✅ riješeno u INF-06 (noćni drill + skripte) | INF-06 |
