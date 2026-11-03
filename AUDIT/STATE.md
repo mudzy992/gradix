@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-06` (zadaci: status filter iz liste, duplikati 409, nextTaskStatus + testovi) — `done`, green 41583988902 |
-| CI | ✅ [run 41583988902](https://github.com/mudzy992/gradix/actions/runs/41583988902) — **6/6** zelen (`fix(tasks): type-only import…`) |
+| Zadnji commit | `BE-07` (timer: transakcije, suženi odgovori, cron keš; ispravke atomske) |
+| CI | ✅ [run 41584220516](https://github.com/mudzy992/gradix/actions/runs/41584220516) — **6/6** zelen (`chore(audit): BE-06 zatvoren…`) |
 | Zadnji potvrđeno zelen run | [41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) ✅ 6/6 · prije: 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -246,10 +246,25 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** **113/113**. Matrica **492 fajlova / 147 pregledano (29,9 %)**.
 - **Otvoreno:** B8 (audit akcije za zadatke) → BE-08; best-effort notifikacije → BE-16.
 
+### 2026-11-03 — BE-07 (timer i ispravke) → segment `done`
+- **Nalaz (visoko):** zatvaranje timera nije bilo atomično — sesija se zatvori, pa minuti na zadatak,
+  sati na mašinu, status i progres odvojeno; pad u sredini = **izgubljene zarade**. Sada jedan `$transaction`.
+- **Nalaz (srednje):** `pause`/`resume` nisu atomični, a offline replay je imao vlastitu kopiju logike →
+  `pauseSession`/`resumeSession` (transakcija) dijeljene između HTTP i sync puta.
+- **Nalaz (srednje):** `/timer/me`, `start`, `pause`, `resume`, `stop` i `GET /timer` vraćali su sirove redove
+  (`companyId`, `deviceId`, u nadzoru i **tuđe** `deviceId`/`localId`) → `serializeTimerSelf` / `serializeCrewTimer`
+  (potonji daje `elapsedMinutes`); sync pull zadržava puni `serializeTimer`.
+- **Nalaz (srednje):** ispravke TIMER/TRIP/FUEL nisu bile atomične sa zapisom ispravke → transakcija.
+- **Nalaz (nisko):** cron je čitao `timer.maxOpenHours` po sesiji → keš po firmi; `?entityType=` u listi ispravki
+  je bio slobodan string → `@IsIn`; `findByLocalId` je koristio `companyId ?? ''` → `requireCompany`.
+- **Provjereno i odbačeno:** sumnja na cross-tenant curenje u `GET /amendments` — `where` je bio u oba upita.
+- **Testovi:** **122/122** (+9). Matrica **494 fajla / 165 pregledano (33,4 %)**.
+- **B-stavka:** parcijalni unique indeks za otvorene timere (korisnik, mašina) → **BE-08**.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-07** (timer i ispravke) — sljedeći segment po planu.
+2. **BE-08** (seed, migracije, demo podaci) — uključuje B8 (`AuditAction` akcije za zadatke) i F-BE-07-09 (parcijalni unique indeks).
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

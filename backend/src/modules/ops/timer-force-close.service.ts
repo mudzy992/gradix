@@ -33,24 +33,32 @@ export class TimerForceCloseService {
       closedAt,
       paused.pauseAccumMinutes,
     );
-    const updated = await this.prisma.timerSession.update({
-      where: { id: session.id },
-      data: {
-        closedAt,
-        pausedAt: null,
-        pauseAccumMinutes: paused.pauseAccumMinutes,
-        durationMinutes,
+    // BE-07 (F-01): zatvaranje timera je jedna transakcija — sesija, minuti na zadatku,
+    // sati na mašini, status zadatka i progres projekta. Ranije je pad u sredini (npr. na
+    // `addTaskMinutes`) ostavljao zatvoren timer bez minuta na zadatku (izgubljene zarade).
+    const { updated, projectId } = await this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.timerSession.update({
+          where: { id: session.id },
+          data: {
+            closedAt,
+            pausedAt: null,
+            pauseAccumMinutes: paused.pauseAccumMinutes,
+            durationMinutes,
+          },
+        });
+        await addTaskMinutes(tx, session.taskId, durationMinutes);
+        await addMachineHours(tx, session.machineId, durationMinutes);
+        const task = await tx.task.findUniqueOrThrow({
+          where: { id: session.taskId },
+        });
+        if (reason !== 'complete' && reason !== 'cancel') {
+          await syncTaskStatus(tx, session.taskId);
+        }
+        await recalcProgress(tx, task.projectId);
+        return { updated, projectId: task.projectId };
       },
-    });
-    await addTaskMinutes(this.prisma, session.taskId, durationMinutes);
-    await addMachineHours(this.prisma, session.machineId, durationMinutes);
-    const task = await this.prisma.task.findUniqueOrThrow({
-      where: { id: session.taskId },
-    });
-    if (reason !== 'complete' && reason !== 'cancel') {
-      await syncTaskStatus(this.prisma, session.taskId);
-    }
-    await recalcProgress(this.prisma, task.projectId);
+    );
     if (reason === 'force' || reason === 'auto') {
       const action =
         reason === 'auto' ? 'TIMER_AUTO_CLOSED' : 'TIMER_FORCE_CLOSED';
@@ -71,9 +79,9 @@ export class TimerForceCloseService {
         data: { timerId: session.id, taskId: session.taskId },
       });
     }
-    this.realtime.emitProject(task.projectId, 'timer:stopped', {
+    this.realtime.emitProject(projectId, 'timer:stopped', {
       id: session.id,
-      projectId: task.projectId,
+      projectId,
       taskId: session.taskId,
     });
     return updated;

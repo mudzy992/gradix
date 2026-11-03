@@ -10,16 +10,12 @@ import { parseOptionalClosedAt } from './timer-clock';
 import { SyncPushItemDto } from './sync.dto';
 import { asOptionalString, asString, syncOk } from './sync-result';
 import { StartTimerDto } from './timer.dto';
-import { applyPauseAccum } from './timer-math';
-import { PrismaService } from '../prisma/prisma.service';
-import { syncTaskStatus } from './task-status';
 
 @Injectable()
 export class SyncPushTimerService {
   constructor(
     private readonly timer: TimerService,
     private readonly closer: TimerForceCloseService,
-    private readonly prisma: PrismaService,
   ) {}
 
   async push(actor: AuthUser, item: SyncPushItemDto) {
@@ -85,16 +81,13 @@ export class SyncPushTimerService {
     return syncOk(item.localId, 'TIMER', session.id);
   }
 
+  /** BE-07 (F-02): offline replay koristi istu (transakcionu) implementaciju kao online put. */
   private async pause(item: SyncPushItemDto, session: TimerSession) {
     if (session.closedAt) {
       return syncOk(item.localId, 'TIMER', session.id);
     }
     if (!session.pausedAt) {
-      await this.prisma.timerSession.update({
-        where: { id: session.id },
-        data: { pausedAt: new Date() },
-      });
-      await syncTaskStatus(this.prisma, session.taskId);
+      await this.timer.pauseSession(session);
     }
     return syncOk(item.localId, 'TIMER', session.id);
   }
@@ -104,12 +97,7 @@ export class SyncPushTimerService {
       return syncOk(item.localId, 'TIMER', session.id);
     }
     if (session.pausedAt) {
-      const paused = applyPauseAccum(session, new Date());
-      await this.prisma.timerSession.update({
-        where: { id: session.id },
-        data: { pauseAccumMinutes: paused.pauseAccumMinutes, pausedAt: null },
-      });
-      await syncTaskStatus(this.prisma, session.taskId);
+      await this.timer.resumeSession(session);
     }
     return syncOk(item.localId, 'TIMER', session.id);
   }

@@ -9,11 +9,13 @@ import {
 import { fuelTotalCost } from './serialize-fleet';
 import { recalcSpend } from './spend';
 
+type Db = Prisma.TransactionClient | PrismaService;
+
 const TRIP_FIELDS = new Set(['quantity', 'notes', 'weighQty', 'destDepotId']);
 const FUEL_FIELDS = new Set(['liters', 'unitPrice', 'notes', 'projectId']);
 
 export async function applyTripAmendment(
-  prisma: PrismaService,
+  prisma: Db,
   companyId: string,
   entityId: string,
   field: string,
@@ -72,7 +74,7 @@ export async function applyTripAmendment(
 }
 
 export async function applyFuelAmendment(
-  prisma: PrismaService,
+  prisma: Db,
   companyId: string,
   entityId: string,
   field: string,

@@ -18,9 +18,16 @@ export class TimerCronService {
   async closeStale(): Promise<void> {
     const open = await this.prisma.timerSession.findMany({
       where: { closedAt: null },
+      orderBy: { startedAt: 'asc' },
     });
+    // BE-07 (F-03): `timer.maxOpenHours` se čita jednom po firmi, ne po sesiji.
+    const hoursByCompany = new Map<string, number>();
     for (const session of open) {
-      const hours = await readMaxOpenHours(this.prisma, session.companyId);
+      let hours = hoursByCompany.get(session.companyId);
+      if (hours === undefined) {
+        hours = await readMaxOpenHours(this.prisma, session.companyId);
+        hoursByCompany.set(session.companyId, hours);
+      }
       const ageMs = Date.now() - session.startedAt.getTime();
       if (ageMs >= hours * 60 * 60 * 1000) {
         await this.closer.closeSession(session, session.userId, 'auto');

@@ -36,7 +36,7 @@ export class AmendmentsService {
     const { page, limit, skip } = parsePagination(query.page, query.limit);
     const where: Prisma.AmendmentWhereInput = {
       companyId,
-      entityType: query.entityType as 'TIMER' | 'TRIP' | 'FUEL',
+      entityType: query.entityType,
       entityId: query.entityId,
     };
     const [rows, total] = await this.prisma.$transaction([
@@ -57,34 +57,39 @@ export class AmendmentsService {
     if (dto.entityType === 'TIMER') {
       return this.createTimer(actor, companyId, dto);
     }
-    const applied =
-      dto.entityType === 'TRIP'
-        ? await applyTripAmendment(
-            this.prisma,
-            companyId,
-            dto.entityId,
-            dto.field,
-            dto.newValue,
-          )
-        : await applyFuelAmendment(
-            this.prisma,
-            companyId,
-            dto.entityId,
-            dto.field,
-            dto.newValue,
-          );
     const action = dto.entityType === 'TRIP' ? 'TRIP_AMENDED' : 'FUEL_AMENDED';
-    const row = await this.prisma.amendment.create({
-      data: {
-        companyId,
-        entityType: dto.entityType,
-        entityId: dto.entityId,
-        field: dto.field,
-        oldValue: applied.oldValue,
-        newValue: dto.newValue,
-        reason: dto.reason,
-        actorId: actor.id,
-      },
+    // BE-07 (F-07): izmjena entiteta i zapis ispravke su jedna transakcija — ranije je pad
+    // na `amendment.create` ostavljao promijenjene podatke bez traga o ispravci.
+    const { row, applied } = await this.prisma.$transaction(async (tx) => {
+      const applied =
+        dto.entityType === 'TRIP'
+          ? await applyTripAmendment(
+              tx,
+              companyId,
+              dto.entityId,
+              dto.field,
+              dto.newValue,
+            )
+          : await applyFuelAmendment(
+              tx,
+              companyId,
+              dto.entityId,
+              dto.field,
+              dto.newValue,
+            );
+      const row = await tx.amendment.create({
+        data: {
+          companyId,
+          entityType: dto.entityType,
+          entityId: dto.entityId,
+          field: dto.field,
+          oldValue: applied.oldValue,
+          newValue: dto.newValue,
+          reason: dto.reason,
+          actorId: actor.id,
+        },
+      });
+      return { row, applied };
     });
     await this.audit.write({
       companyId,
@@ -139,32 +144,36 @@ export class AmendmentsService {
       );
     }
     const delta = minutes - (session.durationMinutes ?? 0);
-    await this.prisma.timerSession.update({
-      where: { id: session.id },
-      data: {
-        durationMinutes: minutes,
-        ...(session.approvalStatus === 'APPROVED'
-          ? { approvalStatus: 'PENDING' as const }
-          : {}),
-      },
-    });
-    await addTaskMinutes(this.prisma, session.taskId, delta);
-    await addMachineHours(this.prisma, session.machineId, delta);
-    const task = await this.prisma.task.findUniqueOrThrow({
-      where: { id: session.taskId },
-    });
-    await recalcProgress(this.prisma, task.projectId);
-    const row = await this.prisma.amendment.create({
-      data: {
-        companyId,
-        entityType: 'TIMER',
-        entityId: session.id,
-        field: 'durationMinutes',
-        oldValue: String(session.durationMinutes ?? 0),
-        newValue: String(minutes),
-        reason: dto.reason,
-        actorId: actor.id,
-      },
+    // BE-07 (F-06): minuti na zadatku, sati na mašini, progres i zapis ispravke moraju biti
+    // atomični sa promjenom same sesije — inače ispravka ostaje „pola primijenjena“.
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.timerSession.update({
+        where: { id: session.id },
+        data: {
+          durationMinutes: minutes,
+          ...(session.approvalStatus === 'APPROVED'
+            ? { approvalStatus: 'PENDING' as const }
+            : {}),
+        },
+      });
+      await addTaskMinutes(tx, session.taskId, delta);
+      await addMachineHours(tx, session.machineId, delta);
+      const task = await tx.task.findUniqueOrThrow({
+        where: { id: session.taskId },
+      });
+      await recalcProgress(tx, task.projectId);
+      return await tx.amendment.create({
+        data: {
+          companyId,
+          entityType: 'TIMER',
+          entityId: session.id,
+          field: 'durationMinutes',
+          oldValue: String(session.durationMinutes ?? 0),
+          newValue: String(minutes),
+          reason: dto.reason,
+          actorId: actor.id,
+        },
+      });
     });
     await this.audit.write({
       companyId,

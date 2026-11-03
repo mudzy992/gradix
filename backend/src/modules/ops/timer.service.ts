@@ -15,6 +15,8 @@ import { parseOfflineStartedAt, rejectOnlineClientClock } from './timer-clock';
 import { createTimerSession } from './timer-create';
 import { readMaxOpenHours } from './timer-settings';
 import { requireCompany } from '../users/users-helpers';
+import type { TimerSession } from '../../../generated/client';
+import { serializeCrewTimer, serializeTimerSelf } from './serialize-timer';
 
 @Injectable()
 export class TimerService {
@@ -29,7 +31,7 @@ export class TimerService {
   async start(actor: AuthUser, dto: StartTimerDto) {
     rejectOnlineClientClock(dto);
     await this.assertNoOpenTimer(actor, dto.machineId);
-    return createTimerSession({
+    const session = await createTimerSession({
       prisma: this.prisma,
       access: this.access,
       tasks: this.tasks,
@@ -38,6 +40,7 @@ export class TimerService {
       dto,
       identity: { startedAt: new Date() },
     });
+    return serializeTimerSelf(session);
   }
 
   async startOffline(
@@ -62,44 +65,65 @@ export class TimerService {
   }
 
   async pause(actor: AuthUser) {
-    const session = await this.requireMine(actor);
+    return this.pauseSession(await this.requireMine(actor));
+  }
+
+  /**
+   * BE-07 (F-02): pauza je jedna transakcija (sesija + status zadatka) i jedina
+   * implementacija — koristi je i `POST /timer/pause` i offline replay (`SyncPushTimerService`).
+   */
+  async pauseSession(session: TimerSession) {
     if (session.pausedAt) {
       throw new AppError(ERROR_CODES.CONFLICT, 'Already paused', 409);
     }
-    const updated = await this.prisma.timerSession.update({
-      where: { id: session.id },
-      data: { pausedAt: new Date() },
-    });
-    await syncTaskStatus(this.prisma, session.taskId);
-    const task = await this.prisma.task.findUniqueOrThrow({
-      where: { id: session.taskId },
-    });
-    this.realtime.emitProject(task.projectId, 'timer:paused', {
+    const { updated, projectId } = await this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.timerSession.update({
+          where: { id: session.id },
+          data: { pausedAt: new Date() },
+        });
+        await syncTaskStatus(tx, session.taskId);
+        const task = await tx.task.findUniqueOrThrow({
+          where: { id: session.taskId },
+        });
+        return { updated, projectId: task.projectId };
+      },
+    );
+    this.realtime.emitProject(projectId, 'timer:paused', {
       id: session.id,
-      projectId: task.projectId,
+      projectId,
       taskId: session.taskId,
     });
-    return updated;
+    return serializeTimerSelf(updated);
   }
 
   async resume(actor: AuthUser) {
-    const session = await this.requireMine(actor);
+    return this.resumeSession(await this.requireMine(actor));
+  }
+
+  /** BE-07 (F-02): nastavak je jedna transakcija; dijeli se sa offline replay-em. */
+  async resumeSession(session: TimerSession) {
     if (!session.pausedAt) {
       throw new AppError(ERROR_CODES.CONFLICT, 'Not paused', 409);
     }
     const now = new Date();
     const paused = applyPauseAccum(session, now);
-    const updated = await this.prisma.timerSession.update({
-      where: { id: session.id },
-      data: { pauseAccumMinutes: paused.pauseAccumMinutes, pausedAt: null },
+    const { updated } = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.timerSession.update({
+        where: { id: session.id },
+        data: { pauseAccumMinutes: paused.pauseAccumMinutes, pausedAt: null },
+      });
+      await syncTaskStatus(tx, session.taskId);
+      return { updated };
     });
-    await syncTaskStatus(this.prisma, session.taskId);
-    return updated;
+    return serializeTimerSelf(updated);
   }
 
   async stop(actor: AuthUser) {
     const session = await this.requireMine(actor);
-    return this.closer.closeSession(session, actor.id, 'stop');
+    return serializeTimerSelf(
+      await this.closer.closeSession(session, actor.id, 'stop'),
+    );
   }
 
   /**
@@ -145,9 +169,10 @@ export class TimerService {
     if (!session) {
       return { session: null, elapsedMinutes: 0 };
     }
+    const now = new Date();
     return {
-      session,
-      elapsedMinutes: computeElapsedMinutes(session, new Date()),
+      session: serializeTimerSelf(session),
+      elapsedMinutes: computeElapsedMinutes(session, now),
     };
   }
 
@@ -165,15 +190,21 @@ export class TimerService {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'Timer list not allowed', 403);
     }
     await this.access.getVisibleProject(actor, projectId);
-    return this.prisma.timerSession.findMany({
+    const now = new Date();
+    const rows = await this.prisma.timerSession.findMany({
       where: { closedAt: null, task: { projectId } },
+      orderBy: { startedAt: 'asc' },
     });
+    return rows.map((row) => serializeCrewTimer(row, now));
   }
 
   async findByLocalId(actor: AuthUser, deviceId: string, localId: string) {
+    // BE-07 (F-05): ranije `actor.companyId ?? ''` — platform admin bez X-Company-Id
+    // nikad nije našao svoju sesiju, pa je offline replay pravio duplikat. Sada 400.
+    const companyId = requireCompany(actor);
     return this.prisma.timerSession.findFirst({
       where: {
-        companyId: actor.companyId ?? '',
+        companyId,
         userId: actor.id,
         deviceId,
         localId,

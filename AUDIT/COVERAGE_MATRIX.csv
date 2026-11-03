@@ -124,10 +124,10 @@ backend/src/modules/notifications/notifications.controller.ts,BE,public-notify,B
 backend/src/modules/notifications/notifications.dto.ts,BE,public-notify,BE-16,9,nepregledano,,
 backend/src/modules/notifications/notifications.module.ts,BE,public-notify,BE-16,11,nepregledano,,
 backend/src/modules/notifications/notifications.service.ts,BE,public-notify,BE-16,79,nepregledano,,
-backend/src/modules/ops/amendment-fleet.ts,BE,ops,BE-07,163,nepregledano,,
-backend/src/modules/ops/amendments.controller.ts,BE,ops,BE-07,23,nepregledano,,
-backend/src/modules/ops/amendments.dto.ts,BE,ops,BE-07,32,nepregledano,,
-backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,194,nepregledano,,
+backend/src/modules/ops/amendment-fleet.ts,BE,ops,BE-07,165,pregledano,"BE-07: apply*Amendment primaju TransactionClient; dozvoljena polja, depot iz firme, recalcSpend",2026-11-03
+backend/src/modules/ops/amendments.controller.ts,BE,ops,BE-07,23,pregledano,BE-07: @TenantRoute; writer provjera (canAmend) u servisu,2026-11-03
+backend/src/modules/ops/amendments.dto.ts,BE,ops,BE-07,36,pregledano,BE-07: AMENDMENT_ENTITIES + IsIn u create i list (F-08),2026-11-03
+backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,203,pregledano,"BE-07: TIMER i TRIP/FUEL ispravke u transakciji sa zapisom ispravke (F-06,F-07); list skopiran (provjereno)",2026-11-03
 backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,81,pregledano,BE-05: provjera korisnika u firmi i aktivnosti; gasi realtime sobu pri uklanjanju,2026-11-02
 backend/src/modules/ops/catalog.controller.ts,BE,ops,BE-10,45,nepregledano,,
 backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,185,nepregledano,,
@@ -184,12 +184,13 @@ backend/src/modules/ops/serialize-fleet.ts,BE,ops,BE-09,55,nepregledano,,
 backend/src/modules/ops/serialize-gps-device.ts,BE,ops,BE-09,14,nepregledano,,
 backend/src/modules/ops/serialize-machine.ts,BE,ops,BE-09,20,nepregledano,,
 backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,pregledano,BE-06: serijalizacija bez tajni; assigneeIds samo kad su uključeni,2026-11-03
-backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,25,nepregledano,,
+backend/src/modules/ops/serialize-timer.spec.ts,BE,ops,BE-07,96,pregledano,"BE-07: 7 testova — self/crew ne izlažu uređaj ni firmu, crew elapsedMinutes",2026-11-03
+backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,67,pregledano,"BE-07: tri ugovora — sync (puni red), self (bez deviceId/localId/companyId), crew (elapsedMinutes) (F-04)",2026-11-03
 backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,pregledano,BE-05: potrošnja bez dvostrukog brojanja (costEntry source/sourceId),2026-11-02
 backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,71,nepregledano,,
 backend/src/modules/ops/sync-push-diary.ts,BE,ops,BE-17,84,nepregledano,,
 backend/src/modules/ops/sync-push-fleet.ts,BE,ops,BE-17,101,nepregledano,,
-backend/src/modules/ops/sync-push-timer.ts,BE,ops,BE-17,142,nepregledano,,
+backend/src/modules/ops/sync-push-timer.ts,BE,ops,BE-17,130,pregledano,BE-07: offline pause/resume delegiraju na TimerService (nema duplikata logike) (F-02),2026-11-03
 backend/src/modules/ops/sync-result.ts,BE,ops,BE-17,42,nepregledano,,
 backend/src/modules/ops/sync.controller.ts,BE,ops,BE-17,45,nepregledano,,
 backend/src/modules/ops/sync.dto.ts,BE,ops,BE-17,76,nepregledano,,
@@ -203,17 +204,18 @@ backend/src/modules/ops/task-statuses.ts,BE,ops,BE-06,18,pregledano,BE-06: novo 
 backend/src/modules/ops/tasks.controller.ts,BE,ops,BE-06,147,pregledano,BE-06: pregledano — sve rute @TenantRoute + tasks.read/write,2026-11-03
 backend/src/modules/ops/tasks.dto.ts,BE,ops,BE-06,110,pregledano,BE-06: ?status= kroz IsIn(TASK_STATUSES) (F-01); ostali DTO-i nepromijenjeni,2026-11-03
 backend/src/modules/ops/tasks.service.ts,BE,ops,BE-06,234,pregledano,"BE-06: status filter bez casta (F-01), dedupe assigneeIds (F-04), jedan upit za izvršioce (F-05)",2026-11-03
-backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,nepregledano,,
-backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,nepregledano,,
-backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,32,nepregledano,,
-backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,122,nepregledano,,
-backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,nepregledano,,
-backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,nepregledano,,
-backend/src/modules/ops/timer-math.ts,BE,ops,BE-07,41,nepregledano,,
+backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,pregledano,"BE-07: online sat se odbija; offline startedAt/closedAt validacija (budućnost, maxOpenHours)",2026-11-03
+backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,pregledano,BE-07: vidljiv zadatak + zapisiv projekat + dodjela/SS + mašina; P2002 mapiran na TIMER_ALREADY_OPEN/MACHINE_IN_USE,2026-11-03
+backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,39,pregledano,BE-07: timer.maxOpenHours se čita jednom po firmi (F-03),2026-11-03
+backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,79,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours",2026-11-03
+backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,130,pregledano,BE-07: zatvaranje timera u jednoj $transaction (F-01); audit/notifikacije/realtime poslije,2026-11-03
+backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,pregledano,"BE-07: mašina iz firme, DECOMMISSIONED/IN_SERVICE 409, ACTIVE samo na svom projektu",2026-11-03
+backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,pregledano,BE-07: pregledano — pauze i trajanje,2026-11-03
+backend/src/modules/ops/timer-math.ts,BE,ops,BE-07,41,pregledano,BE-07: čiste funkcije; floor po pauzi dokumentovan kao F-10 (cijelobrojni minuti),2026-11-03
 backend/src/modules/ops/timer-settings.ts,BE,ops,BE-07,12,nepregledano,,
-backend/src/modules/ops/timer.controller.ts,BE,ops,BE-07,49,nepregledano,,
-backend/src/modules/ops/timer.dto.ts,BE,ops,BE-07,30,nepregledano,,
-backend/src/modules/ops/timer.service.ts,BE,ops,BE-07,194,nepregledano,,
+backend/src/modules/ops/timer.controller.ts,BE,ops,BE-07,49,pregledano,BE-07: sve rute @TenantRoute + tasks.timer; list zahtijeva projectId,2026-11-03
+backend/src/modules/ops/timer.dto.ts,BE,ops,BE-07,30,pregledano,BE-07: StartTimerDto namjerno propušta startedAt/durationMinutes da ih servis odbije sa 400,2026-11-03
+backend/src/modules/ops/timer.service.ts,BE,ops,BE-07,225,pregledano,"BE-07: pauseSession/resumeSession (transakcija) dijeljene sa sync-om; me/list kroz serializere (F-02,F-04); findByLocalId requireCompany (F-05)",2026-11-03
 backend/src/modules/ops/trip-rules.ts,BE,ops,BE-10,53,nepregledano,,
 backend/src/modules/ops/trips.controller.ts,BE,ops,BE-10,69,nepregledano,,
 backend/src/modules/ops/trips.dto.ts,BE,ops,BE-10,100,nepregledano,,
