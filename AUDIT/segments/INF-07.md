@@ -143,6 +143,6 @@ problema u v1, a uvodi invalidaciju i „hladni“ podatke bez vlasnika.
 | | |
 |---|---|
 | Datum | 2026-11-03 |
-| Commit(ovi) | `feat(infra): INF-07 …` (klijent + storage + env + readiness + ACL skripta + docs) |
-| CI run | (upisuje se poslije push-a) |
+| Commit(ovi) | `f20d1db` — `feat(infra): INF-07 …` (klijent + storage + env + readiness + ACL skripta + docs) |
+| CI run | ✅ **`41666523698`** — **6/6** zelen · drill **`41666523647`** ✅ |
 | Status | `done` |
