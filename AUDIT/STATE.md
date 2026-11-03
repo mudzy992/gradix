@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **35/59 segmenata `done`** (zadnji: FE-05).
+kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: FE-06).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `test(fe): FE-06` — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -643,13 +643,27 @@ kratak izvještaj poslije svakog. Trenutno: **35/59 segmenata `done`** (zadnji: 
 - **Novo stanje na dashboardu:** platform admin bez izabrane firme vidi „Izaberite firmu…“, ne praznu mrežu.
 - **CI:** job `frontend` sada ima `npm run test:cov` + artefakt `frontend-coverage`.
 
+### 2026-11-03 — FE-06 (E2E tokovi) → segment `done`
+- `flows.spec.ts` (7): prijava → dashboard (prevedene kartice, nema sirovih `dash.*`) → prečica
+  „Projekti“ → lista → detalj sa fazama (`Zemljani radovi`), zadatak iz seed-a, `aria-current`,
+  reflow 320 px + jedno `h1`; guardovi: `/projects` i `/tasks/:id` bez prijave → `/login`.
+- `worker-flow.spec.ts` (3): radnik dobija **svoje** kartice (`Moji zadaci`, prisustvo nedostupno),
+  prečice bez zabranjenih ekrana, **timer start → pauza → stop** na dodijeljenom zadatku
+  (sa zaštitom od timera ostavljenog prethodnim runom).
+- `playwright.config.ts`: `retries: CI ? 1 : 0`, `trace: 'retain-on-failure'`, screenshot na pad,
+  html izvještaj — prije se trace **nije snimao** jer nije bilo retry-ja (F-FE-06-02).
+- **Nalaz F-FE-06-01 (za FE-10/BE):** `WORKER` ima `hse.write` ali **ne** `hse.read`, pa radnik ne
+  može otvoriti HSE ekran iako je glavni prijavljivač. Nije mijenjano — pravila rola su BE odluka;
+  test trenutno stanje dokumentuje.
+- **Ukupno 16 E2E testova** u 4 fajla; CI job `Web E2E` ih izvršava na stvarnom backendu + seedu.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **FE-06 — E2E tokovi (Playwright)**: pokriti ono što unit testovi ne mogu — prijava → dashboard →
-   projekti → zadatak → timer → dnevnik, uz reflow 320 px i provjeru fokusa na pravim rutama; proširiti
-   `frontend/e2e/` (postojeći `smoke`/`a11y`).
-2. Zatim **FE-07…FE-14** (ekrani po domenima, svaki dodaje svoje unit testove u `coverage.include`),
-   pa **MOB-01…MOB-07**.
+1. **FE-07 — Auth stranice** (`login`, `forgot`, `reset`, `change-password`): IA redizajn na tokenima
+   (D-040) uz FE-03 pravila, poruke grešaka po polju, stanja slanja; pa **FE-08** (projekti/zadaci).
+2. Zatim **FE-08…FE-14** (ekrani po domenima, svaki dodaje svoje unit testove u `coverage.include`
+   i, gdje ima smisla, E2E tok), pa **MOB-01…MOB-07**.
+3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu.
 3. **Vlasnik (Coolify, D-041)** — obavezno prije produkcijske provjere: ① backend
    `CORS_ORIGIN=https://gradix.ba101.top`, ② frontend `CSP_API_ORIGIN=https://api.gradix.ba101.top`,
    ③ frontend `VITE_API_URL=https://api.gradix.ba101.top` → **rebuild**; `TRUST_PROXY` ostaviti `1`.

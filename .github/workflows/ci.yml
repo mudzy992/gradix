@@ -283,6 +283,9 @@ jobs:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:4173
       E2E_LOGIN_EMAIL: admin@gradix.local
       E2E_LOGIN_PASSWORD: GradixSeed1
+      # FE-06: tok radnika (rola-based dashboard + timer start/pauza/stop).
+      E2E_WORKER_EMAIL: worker@gradix.local
+      E2E_WORKER_PASSWORD: GradixSeed1
       # BE-08: Playwright se prijavljuje kao demo admin → seed mora napuniti demo podatke.
       SEED_DEMO: 'true'
     steps:
