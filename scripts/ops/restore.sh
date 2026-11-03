@@ -85,7 +85,7 @@ pg_restore \
   "$DUMP"
 
 echo "→ provjera restore-a"
-TABLES="${RESTORE_VERIFY_TABLES:-users,projects,tasks,timer_sessions,audit_logs,cost_entries}"
+TABLES="${RESTORE_VERIFY_TABLES:-User,Company,Project,Task,TimerSession,AuditEvent,CostEntry,DiaryEntry}"
 FAILED=0
 for table in ${TABLES//,/ }; do
   COUNT="$(psql "$(pg_conn "$RESTORE_DATABASE_URL")" -tAc "SELECT count(*) FROM \"$table\"" 2>/dev/null || echo "ERR")"

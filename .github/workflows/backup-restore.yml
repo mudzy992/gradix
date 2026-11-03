@@ -84,20 +84,29 @@ jobs:
           npm run db:seed
 
       - name: Backup (backup.sh)
-        run: ./scripts/ops/backup.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          ./scripts/ops/backup.sh 2>&1 | tee backup.log
 
       - name: Ciljna baza za restore
         run: |
           psql "$PG_SOURCE" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE gradix_restore'
 
       - name: Restore (restore.sh)
-        run: ./scripts/ops/restore.sh "$BACKUP_DIR"/gradix-*.dump
+        shell: bash
+        run: |
+          set -o pipefail
+          ./scripts/ops/restore.sh "$BACKUP_DIR"/gradix-*.dump 2>&1 | tee restore.log
 
       - name: Uporedi brojeve redova izvor ↔ restore
+        shell: bash
         run: |
+          exec > >(tee compare.log) 2>&1
           set -euo pipefail
           failed=0
-          for table in users companies projects tasks timer_sessions audit_logs cost_entries diary_entries; do
+          # Imena tabela su Prisma modeli (bez @@map) — u Postgresu su quoted: "User", "Project"...
+          for table in User Company Project Task TimerSession AuditEvent CostEntry DiaryEntry; do
             src=$(psql "$PG_SOURCE" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
             dst=$(psql "$PG_TARGET" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
             if [ "$src" != "$dst" ]; then
@@ -114,6 +123,17 @@ jobs:
           echo "✓ migracije u restore-u: $applied / $expected"
           if [ "$applied" -lt "$expected" ]; then failed=1; echo "✗ nedostaju migracije u restore-u"; fi
           exit $failed
+
+      - name: Dijagnostika na pad (anotacije)
+        if: failure()
+        shell: bash
+        run: |
+          for f in restore.log backup.log compare.log; do
+            [ -f "$f" ] || continue
+            while IFS= read -r line; do
+              echo "::error title=$f::$line"
+            done < <(tail -n 12 "$f")
+          done
 
       - name: Sačuvaj dump kao artefakt (7 dana)
         if: always()
