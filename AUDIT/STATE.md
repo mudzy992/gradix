@@ -17,7 +17,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `INF-07` — Redis aktiviran: `redis.service` + `failover-throttler.storage` (throttle u Redisu, fail-open) + ACL skripta — `done` |
-| CI | ✅ [run 41666523698](https://github.com/mudzy992/gradix/actions/runs/41666523698) — **6/6** zelen (`feat(infra): INF-07 …`) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ (backup → restore, pokrenut push-om na `scripts/ops/**`) |
+| CI | ✅ [run 41671542849](https://github.com/mudzy992/gradix/actions/runs/41671542849) — **6/6** (`fix(infra): INF-07 — Redis TLS port 6380`) · prije: ✅ [41666523698](https://github.com/mudzy992/gradix/actions/runs/41666523698) — **6/6** zelen (`feat(infra): INF-07 …`) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ (backup → restore, pokrenut push-om na `scripts/ops/**`) |
 | Drill (backup → restore) | ✅ [run 41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) — 8 tabela identično izvoru, migracije `7/7`; prije njega 4 pala runa (libpq `?schema=public`, quoted imena tabela, prazan izlaz poređenja, `migration_lock.toml`) |
 | Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
 | Zadnji potvrđeno zelen run (INF-06) | ✅ [41663240359](https://github.com/mudzy992/gradix/actions/runs/41663240359) — **6/6** · drill [41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) ✅ · prije: [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) ✅ 6/6 (INF-05) |
@@ -595,11 +595,25 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   = greška pri startu.
 - **Zatvoreno:** `INF-07` — **30/59** segmenata `done` (CI upisan u tabeli iznad).
 
+
+### 2026-11-03 — FE-01 (paleta) — predlozi spremni, čeka odluku vlasnika
+- Vlasnik je ranije tražio **oba predloga** prije primjene; izrađeni tokeni za oba seta (svjetla +
+  tamna tema) i vizuelni pregled istih komponenti jedan pored drugog:
+  `docs/design/palette-preview.html` (interaktivno) + `palette-A.png`, `palette-B.png`,
+  `palette-comparison.png`.
+- **A „Gradix Green“**: primary `#0F5132`, akcenat amber `#B45309`, topla podloga `#F7F8F6`.
+  **B „Slate / Teal“**: primary `#0F172A`, akcenat teal `#0F766E`, hladna podloga `#F8FAFC`.
+- Svi parovi teksta prolaze **WCAG 2.2 AA** (najniži 5.02:1 u svjetloj, 6.29:1 u tamnoj temi);
+  tabela kontrasta u `docs/design/FE-01-palette-proposals.md` §4.
+- Primjena dira **samo** `frontend/src/index.css` (tokeni); komponente već koriste tokene.
+- **Otvoreno:** vlasnik bira A / B / kombinaciju — tek tada `FE-01` prelazi u `done` i paleta ulazi
+  na ekrane (FE-02…).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **FE-01** (nova paleta + dizajn tokeni) — vlasnik tražio **oba predloga** (A „Gradix Green“,
-   B „Slate/Teal“) sa pregledom prije primjene; zatim ostali FE/MOB segmenti
-   (vidi `scripts/audit/segments.json`).
+1. **FE-01 — čeka odluku vlasnika**: A „Gradix Green“ ili B „Slate / Teal“
+   (`docs/design/palette-preview.html`). Poslije izbora: tokeni u `frontend/src/index.css`, pa
+   primjena kroz ekrane (FE-02…) i MOB segmenti (`scripts/audit/segments.json`).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

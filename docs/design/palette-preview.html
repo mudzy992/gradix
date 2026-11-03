@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gradix — FE-01: predlog palete (A / B)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px;
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    background: #eceef0; color: #111827;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 24px; color: #4b5563; font-size: 14px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+
+  /* ==== svaki panel dobija svoj token set; ništa drugo se ne mijenja ==== */
+  .pane {
+    background: var(--background); color: var(--foreground);
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    font-size: 14px;
+  }
+  .pane-A {
+    --background: #f7f8f6; --foreground: #14201a; --card: #ffffff;
+    --primary: #0f5132; --primary-fg: #ffffff;
+    --secondary: #e7efe9; --secondary-fg: #0f5132;
+    --muted: #eff2ee; --muted-fg: #5a6b60;
+    --accent: #b45309; --accent-fg: #ffffff;
+    --destructive: #b42318; --success: #15803d;
+    --border: #d8e0d9; --ring: #0f5132;
+  }
+  .pane-B {
+    --background: #f8fafc; --foreground: #0f172a; --card: #ffffff;
+    --primary: #0f172a; --primary-fg: #ffffff;
+    --secondary: #e8eef3; --secondary-fg: #0f172a;
+    --muted: #f1f5f9; --muted-fg: #52627a;
+    --accent: #0f766e; --accent-fg: #ffffff;
+    --destructive: #b42318; --success: #15803d;
+    --border: #dde5ed; --ring: #0f766e;
+  }
+  .pane-head { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .pane-head strong { font-size: 15px; }
+  .pane-head span { color: var(--muted-fg); font-size: 12px; }
+  .body { padding: 18px; display: grid; gap: 16px; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn { border-radius: 10px; border: 1px solid transparent; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--primary); color: var(--primary-fg); }
+  .btn-secondary { background: var(--secondary); color: var(--secondary-fg); }
+  .btn-outline { background: var(--card); color: var(--foreground); border-color: var(--border); }
+  .btn-danger { background: var(--card); color: var(--destructive); border-color: var(--border); }
+  .btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .card .label { color: var(--muted-fg); font-size: 12px; }
+  .card .value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+  .card .delta { font-size: 12px; font-weight: 700; margin-top: 4px; }
+  .up { color: var(--success); } .down { color: var(--destructive); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  th { text-align: left; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-fg); background: var(--muted); padding: 10px 14px; }
+  td { padding: 11px 14px; border-top: 1px solid var(--border); }
+  tbody tr:nth-child(even) { background: var(--muted); }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--muted); }
+  .badge-ok { color: var(--success); }
+  .badge-late { color: var(--destructive); }
+  .badge-plan { color: var(--muted-fg); }
+  .badge-accent { background: var(--accent); color: var(--accent-fg); }
+
+  label { display: block; font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+  input[type="text"] {
+    width: 100%; padding: 10px 12px; border-radius: 10px; font: inherit;
+    background: var(--card); color: var(--foreground); border: 1px solid var(--border);
+  }
+  input[type="text"]:focus { outline: 3px solid var(--ring); outline-offset: 1px; border-color: var(--ring); }
+
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .sw { border-radius: 8px; border: 1px solid var(--border); height: 38px; }
+  .sw-name { font-size: 10px; color: var(--muted-fg); margin-top: 4px; }
+  .sw-hex { font-size: 10px; font-weight: 700; font-family: ui-monospace, monospace; }
+
+  .note { font-size: 12px; color: var(--muted-fg); }
+  .aa { font-size: 12px; font-weight: 700; color: var(--success); }
+</style>
+</head>
+<body>
+  <h1>FE-01 — dva predloga palete</h1>
+  <p class="lead">
+    Ista komponenta, isti raspored, samo drugi tokeni. Izbor utiče na cijelu aplikaciju
+    (dugmad, kartice, tabele, fokus, grafike) — zato odluka prije primjene na stranice.
+  </p>
+
+  <div class="cols">
+    <!-- ================= PREDLOG A ================= -->
+    <section class="pane pane-A">
+      <div class="pane-head">
+        <strong>Predlog A — „Gradix Green“</strong>
+        <span>duboka zelena + sigurnosna amber</span>
+      </div>
+      <div class="body">
+        <div class="row">
+          <button class="btn btn-primary">Novi projekat</button>
+          <button class="btn btn-secondary">Izvezi</button>
+          <button class="btn btn-outline">Filteri</button>
+          <button class="btn btn-danger">Arhiviraj</button>
+        </div>
+
+        <div class="cards">
+          <div class="card"><div class="label">Aktivni projekti</div><div class="value">12</div><div class="delta up">+2 ovaj mjesec</div></div>
+          <div class="card"><div class="label">Zadaci u toku</div><div class="value">148</div><div class="delta up">+18 danas</div></div>
+          <div class="card"><div class="label">Kasni rokovi</div><div class="value">3</div><div class="delta down">−1 od juče</div></div>
+        </div>
+
+        <div class="row">
+          <span class="badge badge-ok">U toku</span>
+          <span class="badge badge-late">Kasni</span>
+          <span class="badge badge-plan">Planirano</span>
+          <span class="badge badge-accent">Završeno</span>
+        </div>
+
+        <table>
+          <thead><tr><th>Projekat</th><th>Status</th><th>Rok</th><th>Budžet</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Stambena zgrada Ilidža</strong></td><td class="badge-ok"><strong>U toku</strong></td><td>12.11.2026</td><td>1.240.000 KM</td></tr>
+            <tr><td>Poslovni centar Marijin Dvor</td><td class="badge-late"><strong>Kasni</strong></td><td>28.10.2026</td><td>3.980.000 KM</td></tr>
+            <tr><td>Rekonstrukcija škole Visoko</td><td class="badge-plan"><strong>Planirano</strong></td><td>05.12.2026</td><td>860.000 KM</td></tr>
+          </tbody>
+        </table>
+
+        <div>
+          <label for="a1">Naziv novog projekta</label>
+          <input id="a1" type="text" placeholder="npr. Stambena zgrada Dobrinja" />
+        </div>
+
+        <div>
+          <div class="swatches">
+            <div><div class="sw" style="background: var(--primary)"></div><div class="sw-name">primary</div><div class="sw-hex">#0F5132</div></div>
+            <div><div class="sw" style="background: var(--accent)"></div><div class="sw-name">accent</div><div class="sw-hex">#B45309</div></div>
+            <div><div class="sw" style="background: var(--success)"></div><div class="sw-name">success</div><div class="sw-hex">#15803D</div></div>
+            <div><div class="sw" style="background: var(--destructive)"></div><div class="sw-name">destructive</div><div class="sw-hex">#B42318</div></div>
+            <div><div class="sw" style="background: var(--muted)"></div><div class="sw-name">muted</div><div class="sw-hex">#EFF2EE</div></div>
+          </div>
+          <p class="aa">WCAG 2.2 AA — svi parovi ≥ 4.5:1</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PREDLOG B ================= -->
+    <section class="pane pane-B">
+      <div class="pane-head">
+        <strong>Predlog B — „Slate / Teal“</strong>
+        <span>neutralni slate + teal akcenat</span>
+      </div>
+      <div class="body">
+        <div class="row">
+          <button class="btn btn-primary">Novi projekat</button>
+          <button class="btn btn-secondary">Izvezi</button>
+          <button class="btn btn-outline">Filteri</button>
+          <button class="btn btn-danger">Arhiviraj</button>
+        </div>
+
+        <div class="cards">
+          <div class="card"><div class="label">Aktivni projekti</div><div class="value">12</div><div class="delta up">+2 ovaj mjesec</div></div>
+          <div class="card"><div class="label">Zadaci u toku</div><div class="value">148</div><div class="delta up">+18 danas</div></div>
+          <div class="card"><div class="label">Kasni rokovi</div><div class="value">3</div><div class="delta down">−1 od juče</div></div>
+        </div>
+
+        <div class="row">
+          <span class="badge badge-ok">U toku</span>
+          <span class="badge badge-late">Kasni</span>
+          <span class="badge badge-plan">Planirano</span>
+          <span class="badge badge-accent">Završeno</span>
+        </div>
+
+        <table>
+          <thead><tr><th>Projekat</th><th>Status</th><th>Rok</th><th>Budžet</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Stambena zgrada Ilidža</strong></td><td class="badge-ok"><strong>U toku</strong></td><td>12.11.2026</td><td>1.240.000 KM</td></tr>
+            <tr><td>Poslovni centar Marijin Dvor</td><td class="badge-late"><strong>Kasni</strong></td><td>28.10.2026</td><td>3.980.000 KM</td></tr>
+            <tr><td>Rekonstrukcija škole Visoko</td><td class="badge-plan"><strong>Planirano</strong></td><td>05.12.2026</td><td>860.000 KM</td></tr>
+          </tbody>
+        </table>
+
+        <div>
+          <label for="b1">Naziv novog projekta</label>
+          <input id="b1" type="text" placeholder="npr. Stambena zgrada Dobrinja" />
+        </div>
+
+        <div>
+          <div class="swatches">
+            <div><div class="sw" style="background: var(--primary)"></div><div class="sw-name">primary</div><div class="sw-hex">#0F172A</div></div>
+            <div><div class="sw" style="background: var(--accent)"></div><div class="sw-name">accent</div><div class="sw-hex">#0F766E</div></div>
+            <div><div class="sw" style="background: var(--success)"></div><div class="sw-name">success</div><div class="sw-hex">#15803D</div></div>
+            <div><div class="sw" style="background: var(--destructive)"></div><div class="sw-name">destructive</div><div class="sw-hex">#B42318</div></div>
+            <div><div class="sw" style="background: var(--muted)"></div><div class="sw-name">muted</div><div class="sw-hex">#F1F5F9</div></div>
+          </div>
+          <p class="aa">WCAG 2.2 AA — svi parovi ≥ 4.5:1</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <p class="note" style="margin-top: 20px">
+    Kupovna cijena promjene: FE-01 dira samo <code>frontend/src/index.css</code> (tokeni) — nijedna
+    komponenta ne mijenja strukturu. Ako se izabere A, akcenat (amber) ostaje za „upozorenje/HSE“;
+    ako se izabere B, teal preuzima akcenat, a amber se koristi samo za upozorenja.
+  </p>
+</body>
+</html>

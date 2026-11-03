@@ -14,6 +14,7 @@
 | [`CI.md`](./CI.md) | jobovi, okidači, guardovi, troubleshooting | pri svakom pushu |
 | [`CONVENTIONS.md`](./CONVENTIONS.md) | imenovanje, veličine, commit format, guardrail skripte | prije prvog commita |
 | [`DECISIONS.md`](./DECISIONS.md) | odluke vlasnika (D-001…), zamijenjene odluke | kad nešto „treba promijeniti“ |
+| [`design/FE-01-palette-proposals.md`](./design/FE-01-palette-proposals.md) | dva predloga palete (A „Gradix Green“ / B „Slate / Teal“) sa tokenima i kontrastima — **čeka odluku vlasnika** | pri izboru vizuelnog identiteta |
 | [`_retired/INDEX.md`](./_retired/INDEX.md) | šta je penzionisano i zašto | samo za historijski kontekst |
 | [`../AUDIT/STATE.md`](../AUDIT/STATE.md) | dnevnik rada: gdje smo stali, zadnji CI run | početak svake sesije |
 
