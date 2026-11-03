@@ -100,6 +100,26 @@ if (!/Content-Security-Policy/.test(nginx)) {
   report.violation('frontend/nginx/default.conf.template', 'nema `Content-Security-Policy` headera');
 }
 
+// 9b) D-041: API može biti na drugom domenu → CSP mora imati `${CSP_API_ORIGIN}` u `img-src` i
+// `connect-src`, i sva tri `add_header` bloka moraju biti IDENTIČNA (inače jedan blok tiho
+// ostane bez dozvole za API domen).
+report.bump();
+{
+  const headers = [...nginx.matchAll(/add_header Content-Security-Policy "([^"]+)"/g)].map((m) => m[1]);
+  if (headers.length !== 3) {
+    report.violation('frontend/nginx/default.conf.template', `CSP header mora biti u sva 3 bloka (nađeno ${headers.length})`);
+  } else if (new Set(headers).size !== 1) {
+    report.violation('frontend/nginx/default.conf.template', 'CSP headeri se razlikuju između blokova (nginx ih tada ne nasljeđuje isto)');
+  }
+  const csp = headers[0] ?? '';
+  if (!/img-src[^;]*\$\{CSP_API_ORIGIN\}/.test(csp)) {
+    report.violation('frontend/nginx/default.conf.template', 'CSP `img-src` nema `${CSP_API_ORIGIN}` (logo/fajlovi sa API domena se ne bi prikazali)');
+  }
+  if (!/connect-src[^;]*\$\{CSP_API_ORIGIN\}/.test(csp)) {
+    report.violation('frontend/nginx/default.conf.template', 'CSP `connect-src` nema `${CSP_API_ORIGIN}` (fetch na API domen bi bio blokiran)');
+  }
+}
+
 // 10) nasljeđivanje headera: svaki blok sa svojim add_header mora ponoviti sigurnosne headere
 report.bump();
 for (const block of ['location /assets/', 'location = /index.html']) {

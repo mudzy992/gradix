@@ -1,8 +1,13 @@
 import { ValidationError, ValidationPipe } from '@nestjs/common';
 import { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import { isApiDocsEnabled, resolveCorsOrigin } from './config/env';
+import {
+  isApiDocsEnabled,
+  resolveCorsOrigin,
+  resolveTrustProxy,
+} from './config/env';
 import { AppError } from './common/errors/app-error';
 import { ERROR_CODES } from './common/errors/error-codes';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
@@ -30,6 +35,12 @@ export function configureApp(app: INestApplication): void {
   app.useLogger(new JsonLogger());
   app.use(requestLogMiddleware());
   app.setGlobalPrefix('api');
+  // D-042: iza Coolify proxy-ja bez ovoga `req.ip` je IP proxy-ja → jedan throttle bucket za sve.
+  // Vjerujemo samo prvom hopu (kontejner nije direktno izložen; portovi su `expose`, ne `ports`).
+  (app as NestExpressApplication).set(
+    'trust proxy',
+    resolveTrustProxy(process.env.TRUST_PROXY),
+  );
   app.use(helmet());
   app.enableCors({
     origin: resolveCorsOrigin(process.env.NODE_ENV, process.env.CORS_ORIGIN),

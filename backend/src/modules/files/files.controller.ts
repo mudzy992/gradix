@@ -58,6 +58,11 @@ export class FilesController {
     );
     response.setHeader('Cache-Control', 'private, no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
+    // D-041: frontend je na drugom domenu; Helmet po defaultu šalje
+    // `Cross-Origin-Resource-Policy: same-origin`, što bi blokiralo prikaz fajla preko
+    // `<img>`/`<video>` sa API domena. Fajl je korisnički sadržaj i sam po sebi nije izvršiv
+    // (uz `nosniff` i sandbox CSP ispod), pa je `cross-origin` bezbjedan i potreban.
+    response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     response.setHeader(
       'Content-Security-Policy',
       "sandbox; default-src 'none'",

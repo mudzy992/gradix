@@ -412,6 +412,50 @@ biblioteci ne pomaže jer se Leaflet ionako koristi samo na jednoj ruti; lazy po
 ekran postoji ali se ne vidi u meniju — FE-05 dobija test koji provlači sve rute iz `appRoutes` i
 traži da svaka ima stavku (ili je svjesno bez nje: `/change-password`).
 
+### D-041 — Dva domena: frontend i API su odvojeni (obavezno)
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Vlasnik je odredio da deploy **mora** biti dvodomenski: frontend `https://gradix.ba101.top`,
+API `https://api.gradix.ba101.top`. Do sada je nginx bio jednozemljisni (`connect-src 'self'`) i
+apsolutni `VITE_API_URL` bio je blokiran u browseru, pa je login padao bez ikakve serverske greške.
+
+**Odluka:** API se servira sa svog domena, a frontend ga dobija kroz tri usklađene postavke:
+`VITE_API_URL` (build-time, pun URL API-ja), `CSP_API_ORIGIN` (nginx `connect-src` + `img-src`) i
+`CORS_ORIGIN` na backendu (frontend origin, i za HTTP i za Socket.IO — oba koriste
+`resolveCorsOrigin`).
+
+**Zašto ne „samo dodaj domen u CSP“:** `connect-src` pokriva `fetch`, ali logo firme i fajlovi se
+prikazuju kroz `<img src="https://api…/api/files">`, pa bi bez `img-src` slike tiho nestale; zato
+`CSP_API_ORIGIN` ide u **oba** direktiva i guard (`check:image`) provjerava sva tri `add_header`
+bloka (nginx ne nasljeđuje headere u blokovima koji imaju svoj `add_header`).
+
+**Default ostaje prazan:** kod kuće/lokalno i u CI-ju API je na istom originu; vrijednosti se
+postavljaju u Coolify env-u. `frontend/Dockerfile` ima `ENV CSP_API_ORIGIN=""` jer `envsubst`
+preskače nedefinisane varijable — bez toga bi u nginx konfiguraciji ostao literal `${…}` i nginx bi
+pao pri startu.
+
+**Posljedica:** deploy checklista je u `docs/INFRASTRUCTURE.md` §10.1 (redoslijed: backend CORS →
+frontend rebuild sa `VITE_API_URL` + `CSP_API_ORIGIN` → provjera u DevTools). CORS je sada stvarno
+na kritičnoj putanji (u jednozemljisnom režimu nije bio), pa `CORS_ORIGIN` mora biti tačan origin
+(bez trailing slash-a) — inače browser blokira odgovor iako server vraća `200`.
+
+### D-042 — `trust proxy` = 1 (per-IP throttle iza Coolify proxy-ja)
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Kontejneri nemaju `ports:` (samo `expose`, D-020), pa sve zahtjeve prima Coolify/Traefik i prosljeđuje
+ih na `backend:3000`. Express bez `trust proxy` tada vraća **IP proxy-ja** kao `req.ip`, a
+`ThrottlerGuard` po njemu broji — posljedica je jedan globalni bucket (npr. `POST /auth/login`
+5/min za **sve** korisnike, a globalni limit 120/min za cijelu firmu). Sa Redis storage-om (INF-07)
+to bi važilo i između replika, pa problem postaje trajan, a ne „dok se kontejner ne restartuje“.
+
+**Odluka:** `configureApp` postavlja `trust proxy` na `TRUST_PROXY` (default **1**). Vjerujemo samo
+prvom hopu jer aplikacija nije direktno izložena (nema host portova); `TRUST_PROXY=0` je za lokalni
+rad bez proxy-ja. Vrijednost se validira (0–10), a smeće pada na 1.
+
+**Posljedica:** `req.ip` i `x-forwarded-for` lanac su tačni → throttle je per-IP, a logovi (koji IP
+namjerno ne pišu) ostaju bez PII. Ako se ispred Coolify-ja ikad doda CDN, `TRUST_PROXY` se povećava
+na broj hopova — inače bi klijentski IP bio CDN-ov.
+
 ---
 
 ## Zamijenjene / povučene odluke

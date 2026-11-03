@@ -86,6 +86,9 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-gradix}
       # CORS — javni URL frontenda (prazno = dozvoljeni svi origin-i)
       CORS_ORIGIN: ${CORS_ORIGIN:-}
+      # D-042: koliko proxy hopova vjerovati (Coolify/Traefik = 1). Bez ovoga `req.ip` je IP
+      # proxy-ja → svi korisnici dijele jedan throttle bucket.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
       SEED_PASSWORD: ${SEED_PASSWORD:-}
       # Preflight u entrypointu: ako `DATABASE_URL` traži CA (`sslrootcert=...`)
       # a fajla nema u kontejneru, kontejner padne ODMAH sa jasnom porukom
@@ -151,12 +154,16 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Prazno = relativni /api i /socket.io pozivi kroz nginx proxy ispod.
+        # D-041: ako je API na drugom domenu, ovdje ide njegov pun URL (build-time!). Prazno =
+        # relativni /api i /socket.io kroz nginx proxy ispod (jednozemljisni deploy).
         VITE_API_URL: ${VITE_API_URL:-}
     restart: unless-stopped
     environment:
       # nginx prosljeđuje /api i /socket.io na ovaj URL (interno ime servisa)
       BACKEND_URL: ${BACKEND_URL:-http://backend:3000}
+      # D-041: API na drugom domenu → ovaj origin ide u CSP (`connect-src` za fetch,
+      # `img-src` za logo/fajlove). Prazno = CSP dozvoljava samo `'self'`.
+      CSP_API_ORIGIN: ${CSP_API_ORIGIN:-}
     expose:
       - "80"
     depends_on:

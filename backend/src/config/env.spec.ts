@@ -1,4 +1,9 @@
-import { isApiDocsEnabled, resolveCorsOrigin, validateEnv } from './env';
+import {
+  isApiDocsEnabled,
+  resolveCorsOrigin,
+  resolveTrustProxy,
+  validateEnv,
+} from './env';
 
 const BASE = {
   DATABASE_URL: 'postgresql://user:pass@postgres:5432/gradix?schema=public',
@@ -167,6 +172,23 @@ describe('resolveCorsOrigin', () => {
   it('u produkciji bez liste zabranjuje strane origin-e', () => {
     expect(resolveCorsOrigin('production', undefined)).toBe(false);
     expect(resolveCorsOrigin('production', '  ')).toBe(false);
+  });
+});
+
+describe('resolveTrustProxy (D-042)', () => {
+  it('default je 1 hop (Coolify proxy), 0 je dozvoljeno, smeće pada na 1', () => {
+    expect(resolveTrustProxy(undefined)).toBe(1);
+    expect(resolveTrustProxy('2')).toBe(2);
+    expect(resolveTrustProxy('0')).toBe(0);
+    expect(resolveTrustProxy('mnogo')).toBe(1);
+    expect(resolveTrustProxy('99')).toBe(1);
+  });
+
+  it('validateEnv odbija TRUST_PROXY van 0–10', () => {
+    expect(validateEnv({ ...BASE, TRUST_PROXY: '1' }).TRUST_PROXY).toBe('1');
+    expect(() => validateEnv({ ...BASE, TRUST_PROXY: '11' })).toThrow(
+      /TRUST_PROXY/,
+    );
   });
 });
 

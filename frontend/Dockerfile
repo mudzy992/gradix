@@ -52,6 +52,11 @@ FROM nginx:alpine AS production
 
 ENV BACKEND_URL=http://backend:3000
 
+# Origin backenda kad je API na drugom domenu (npr. https://api.gradix.ba101.top). Prazno = CSP
+# dozvoljava samo `'self'`. Vrijednost MORA biti definisana (envsubst preskače nedefinisane
+# varijable, pa bi u nginx konfiguraciji ostao literal `${CSP_API_ORIGIN}`).
+ENV CSP_API_ORIGIN=""
+
 # `nginx:alpine` automatski pokreće envsubst nad /etc/nginx/templates/*.template
 # i rezultat upisuje u /etc/nginx/conf.d/.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template

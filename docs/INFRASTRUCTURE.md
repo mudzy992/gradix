@@ -103,7 +103,8 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `NODE_ENV` | `production` | logovanje / ponašanje biblioteka |
 | `LOG_LEVEL` | `info` | nivo JSON logova (`error`/`warn`/`info`/`debug`); prazno = `info` u produkciji, `debug` u razvoju, `error` u testovima (INF-04) |
 | `PORT` | `3000` | port API-ja |
-| `CORS_ORIGIN` | prazno = svi origin-i | whitelist, zarezom razdvojeno |
+| `TRUST_PROXY` | `1` | broj proxy hopova (Coolify/Traefik = 1); bez toga `req.ip` je IP proxy-ja i throttle je globalan (D-042) |
+| `CORS_ORIGIN` | prazno (prod: `https://gradix.ba101.top`) | whitelist, zarezom razdvojeno; bez njega u produkciji samo same-origin (D-041) |
 | `RUN_MIGRATIONS` | `true` | `false` = migracije kao poseban korak |
 | `SSL_PREFLIGHT` | `true` | `false` = preskoči provjeru CA |
 | `MINIO_PORT` | `9000` | S3 port |
@@ -112,7 +113,8 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `SEED_PASSWORD` | — | lozinka seed korisnika (min 10), koristi se samo pri seedu |
 | `SEED_DEMO` | `false` | `true` = seed puni demo firmu i demo podatke; `false` = samo platform administrator (P9) |
 | `BACKEND_URL` | `http://backend:3000` | nginx proxy target (frontend kontejner) |
-| `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx; ako nije prazno, mora biti u CSP `connect-src` (§10.1) |
+| `VITE_API_URL` | prazno (prod: `https://api.gradix.ba101.top`) | **build-time**: prazno ⇒ relativni `/api` kroz nginx; ako nije prazno, mora odgovarati `CSP_API_ORIGIN` (§10.1, D-041) |
+| `CSP_API_ORIGIN` | prazno (prod: `https://api.gradix.ba101.top`) | origin API-ja u nginx CSP (`connect-src` + `img-src`); prazno = strogo `'self'` |
 | `ENABLE_API_DOCS` | `false` | `true` izlaže Swagger na `/api/docs` — u produkciji isključeno |
 | `REDIS_*` | vidi §5.4 | throttle storage u Redisu; bez `REDIS_HOST` sve ostaje u memoriji (INF-07) |
 
@@ -283,24 +285,53 @@ object-src 'none'; base-uri 'self'; frame-ancestors 'self'
 `'unsafe-inline'` je samo za stilove (React/Tailwind inline `style`); skripte su strogo `'self'`.
 Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
 
-### 10.1 CSP i `VITE_API_URL` — najčešća greška pri deployu
+### 10.1 Dva domena: frontend `gradix.ba101.top` + API `api.gradix.ba101.top` (D-041)
 
-`VITE_API_URL` je **build-time** varijabla: ako nije prazna, apsolutni URL ulazi u bundle i browser
-šalje zahtjeve na **drugi origin**. Pošto je CSP `connect-src 'self' ws: wss:`, takav zahtjev biva
-blokiran:
+Deploy je **dvodomenski** (odluka vlasnika): frontend se servira na `https://gradix.ba101.top`,
+API na `https://api.gradix.ba101.top`. Posljedice su tri postavke koje moraju biti usklađene —
+ako jedna nedostaje, login padne na način koji izgleda kao „mrežna greška“:
+
+| Varijabla | Gdje se postavlja | Vrijednost | Ako nedostaje |
+|---|---|---|---|
+| `VITE_API_URL` | **build-arg frontenda** (Coolify env, pa **rebuild**) | `https://api.gradix.ba101.top` | bundle zove relativni `/api` na frontend domenu → 404 (frontend nema API) |
+| `CSP_API_ORIGIN` | env kontejnera frontenda | `https://api.gradix.ba101.top` | nginx CSP blokira `fetch` („violates … connect-src“) i `<img>` sa API domena |
+| `CORS_ORIGIN` | env backenda | `https://gradix.ba101.top` | browser blokira odgovor („No 'Access-Control-Allow-Origin'“) |
+
+**Zašto CSP mora znati API origin:** `connect-src` pokriva `fetch` (login, svi pozivi) i Socket.IO
+(`ws:`/`wss:` su već dozvoljeni za sve hostove), a `img-src` pokriva logo firme i fajlove koji se
+prikazuju preko `<img src="https://api…/api/files?path=…">`. Zato `CSP_API_ORIGIN` ulazi u **oba**
+direktiva:
 
 ```
-Connecting to 'https://api.<domen>/api/auth/login' violates the following Content Security Policy
-directive: "connect-src 'self' ws: wss:". The action has been blocked.
+img-src 'self' data: blob: ${CSP_API_ORIGIN};
+connect-src 'self' ws: wss: ${CSP_API_ORIGIN};
 ```
 
-| Situacija | Šta uraditi |
-|---|---|
-| **Preporučeno** (jedan domen) | `VITE_API_URL` **prazno** → bundle zove relativni `/api/...` → nginx proksira na `BACKEND_URL`. Poslije promjene obavezan **rebuild** frontenda (vrijednost je ugrađena u bundle) |
-| Namjerno dva domena | dodaj origin u `connect-src` (`frontend/nginx/default.conf.template`, sva tri bloka) **i** postavi `CORS_ORIGIN=https://<frontend-domen>` na backendu — CSP je time širi, pa to mora biti svjesna odluka |
+Vrijednost je **prazna po defaultu** (lokalni razvoj i jednozemljisni deploy ostaju strogi
+`'self'`), a `nginx:alpine` je zamjenjuje pri startu kontejnera (`envsubst`). Zato je u
+`frontend/Dockerfile` postavljen `ENV CSP_API_ORIGIN=""` — envsubst preskače **nedefinisane**
+varijable i u konfiguraciji bi ostao literal `${CSP_API_ORIGIN}`, što nginx odbija.
 
-`Dockerfile.frontend` u build logu ispisuje upozorenje kad `VITE_API_URL` nije prazan (vidi
-`⚠` linije) — to je signal da će CSP blokirati pozive ako nginx nije prilagođen.
+**Guard:** `check:image` traži da sva tri `add_header` bloka imaju **identičan** CSP i da i `img-src`
+i `connect-src` sadrže `${CSP_API_ORIGIN}` — tako se ne može desiti da se ažurira samo `server`
+blok, a `/assets/` i `= /index.html` ostanu bez dozvole.
+
+**Poznati gap prije dva domena:** `GET /api/files` traži `Authorization` header, a `<img src>` ga ne
+šalje — logo firme se zato prikazuje samo ako se fajl dovlači kroz `fetch` + `blob:` URL. Sa dva
+domena to je vidljivije (i `Cross-Origin-Resource-Policy` je sada `cross-origin` na tom odgovoru).
+Rješenje (potpisani kratkotrajni URL za `GET /api/files` ili javni logo endpoint) je **posebna
+backend stavka** — do tada logo u postavkama firme koristi blob putanju.
+
+**Redoslijed deploya (Coolify):**
+
+1. Backend: `CORS_ORIGIN=https://gradix.ba101.top` → deploy.
+2. Frontend: `VITE_API_URL=https://api.gradix.ba101.top` + `CSP_API_ORIGIN=https://api.gradix.ba101.top`
+   → **rebuild** (prva je build-time, druga se čita pri startu kontejnera).
+3. Provjera: login u browseru + u DevTools → Network (POST `/api/auth/login` → `200`) i
+   Console (nema CSP/CORS greške).
+
+> Jednozemljisni deploy (API kroz isti nginx na `/api`) i dalje radi bez izmjena: oba ključa ostaju
+> prazna, `BACKEND_URL` pokazuje na interni servis, a CSP je tada strogo `'self'`.
 
 ---
 

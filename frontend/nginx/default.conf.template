@@ -25,10 +25,12 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-    # CSP: aplikacija je jednozemljisna (API i Socket.IO kroz isti nginx), pa nema
-    # potrebe za vanjskim izvorima. `'unsafe-inline'` je samo za stilove
-    # (React/Tailwind inline style), skripte su strogo `'self'`.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
+    # CSP: `CSP_API_ORIGIN` je origin backenda kad se API servira sa **drugog domena**
+    # (npr. https://api.gradix.ba101.top) — D-041. Kad je prazno, CSP je strogo jednozemljisni
+    # (`'self'`). `ws:`/`wss:` pokrivaju Socket.IO na bilo kojem hostu; `img-src` dobija isti
+    # origin jer se logotipi/fajlovi prikazuju preko `<img src="https://api…/api/files">`.
+    # `'unsafe-inline'` je samo za stilove; skripte su strogo `'self'`.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${CSP_API_ORIGIN}; font-src 'self' data:; connect-src 'self' ws: wss: ${CSP_API_ORIGIN}; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
 
     gzip on;
     gzip_types text/plain text/css application/javascript application/json image/svg+xml;
@@ -68,7 +70,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${CSP_API_ORIGIN}; font-src 'self' data:; connect-src 'self' ws: wss: ${CSP_API_ORIGIN}; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
         try_files $uri =404;
     }
 
@@ -83,6 +85,6 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${CSP_API_ORIGIN}; font-src 'self' data:; connect-src 'self' ws: wss: ${CSP_API_ORIGIN}; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" always;
     }
 }

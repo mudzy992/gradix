@@ -39,6 +39,8 @@ export interface AppEnv {
   REDIS_PASSWORD?: string;
   REDIS_PREFIX: string;
   REDIS_TLS_CA_FILE?: string;
+  /** Broj proxy hopova koje aplikacija smije vjerovati (Coolify/Traefik = 1). */
+  TRUST_PROXY?: number;
 }
 
 const MIN_SECRET_LENGTH = 32;
@@ -202,6 +204,20 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
       optional(raw.REDIS_TLS_CA_FILE) ?? '/etc/ssl/redis/redis-ca.crt';
   }
 
+  // D-042: iza Coolify proxy-ja `req.ip` je IP proxy-ja bez ovoga — tada svi korisnici dijele
+  // jedan throttle bucket (npr. 5 prijava/min za cijelu firmu). `TRUST_PROXY` je broj hopova.
+  const trustProxy = optional(raw.TRUST_PROXY);
+  if (trustProxy !== undefined) {
+    const parsed = Number(trustProxy);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10) {
+      errors.push(
+        `TRUST_PROXY mora biti cijeli broj 0–10 (nađeno "${raw.TRUST_PROXY}")`,
+      );
+    } else {
+      out.TRUST_PROXY = String(parsed);
+    }
+  }
+
   // `asInt`/`asBool` su već skupili greške — provjeri ih i poslije normalizacije.
   if (errors.length) {
     throw new Error(
@@ -211,6 +227,16 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   }
 
   return out;
+}
+
+/**
+ * D-042: koliko proxy hopova vjerovati. Default `1` (Coolify/Traefik ispred kontejnera) — bez
+ * toga `req.ip` je IP proxy-ja i throttle je globalan. `0` = ne vjeruj nijednom (direktno izložen
+ * proces, npr. lokalni `npm run dev` bez proxy-ja).
+ */
+export function resolveTrustProxy(raw: string | undefined): number {
+  const parsed = Number(raw ?? '1');
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 10 ? parsed : 1;
 }
 
 /**
