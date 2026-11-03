@@ -135,7 +135,7 @@ backend/src/modules/files/files.service.ts,BE,files,BE-11,129,pregledano,BE-11 (
 backend/src/modules/files/minio.service.ts,BE,files,BE-11,56,pregledano,INF-05: healthCheck() = bucketExists bez retry-ja (readiness ima vlastiti 2 s limit),2026-11-03
 backend/src/modules/health/health.controller.ts,BE,health,BE-18,22,pregledano,"BE-18/INF-05: samo liveness (GET /api/health), @Public + @SkipEnvelope; readiness je premješten na /api/ready",2026-11-03
 backend/src/modules/health/health.module.ts,BE,health,BE-18,13,pregledano,INF-05: imports [FilesModule] (MinioService) + HealthController i ReadyController,2026-11-03
-backend/src/modules/health/health.service.spec.ts,BE,health,BE-18,119,pregledano,"INF-05: 7 testova — liveness bez baze, sve ok, Postgres pao, MinIO pao, migracije pending, timeout, MINIO_SKIP=skipped",2026-11-03
+backend/src/modules/health/health.service.spec.ts,BE,health,BE-18,128,pregledano,"INF-05: 7 testova — liveness bez baze, sve ok, Postgres pao, MinIO pao, migracije pending, timeout, MINIO_SKIP=skipped",2026-11-03
 backend/src/modules/health/health.service.ts,BE,health,BE-18,170,pregledano,"INF-05: readiness = postgres (SELECT 1), storage (MinIO bucketExists), migrations (_prisma_migrations vs folderi, pending/unknown); svaka provjera limit 2 s, greške bez detalja konekcije",2026-11-03
 backend/src/modules/health/migration-count.ts,BE,health,BE-18,22,pregledano,INF-05: expectedMigrationCount() broji foldere prisma/migrations; null kad folder ne postoji (provjera tada ne obara readiness),2026-11-03
 backend/src/modules/health/ready.controller.ts,BE,health,BE-18,25,pregledano,"INF-05: GET /api/ready (plan §4.3) — @Public + @SkipEnvelope, 200/503; liveness ostaje /api/health",2026-11-03

@@ -67,6 +67,7 @@ obara readiness; `_prisma_migrations` je tabela koju piše `prisma migrate deplo
 | F-INF-05-04 | **Migracije kao dio readiness-a**: deploy u toku (`migrate deploy` u entrypointu) nije bio vidljiv, pa je instanca primala saobraćaj sa polovinom šeme | srednje | nije postojalo | riješeno: `migrations` provjera poredi **završene** redove `_prisma_migrations` sa brojem foldera u `prisma/migrations`; `applied < expected` ⇒ `pending` ⇒ `503`; `expected=null` (nema foldera u slici) ⇒ `unknown` (ne obara readiness). Prisma vraća `COUNT(*)` kao `BigInt` — pretvara se u `number` prije JSON-a |
 | F-INF-05-05 | **E2E bi pukao na novoj provjeri** jer in-memory MinIO nema health metodu | nisko | `test/helpers/minio-memory.ts:54-61` (prije) | riješeno: `healthCheck()` u zamjeni; e2e tvrdi `storage.status='ok'` i `migrations.applied >= expected` |
 | F-INF-05-06 | `MINIO_SKIP=true` (testovi/lokalno bez MinIO-a) ne smije praviti lažni `503` | nisko | — | riješeno: `storage: { status:'ok', detail:'skipped' }` — provjera je iskreno označena kao preskočena, a ne kao uspješna |
+| F-INF-05-07 | **Test zavisi od env-a iz CI-ja**: unit testovi u CI-ju se pokreću sa `MINIO_SKIP=true`, pa je test „MinIO pao“ dobijao `skipped` umjesto `unreachable` — prvi CI run je pao samo na tome (`41660146614`, `Backend (lint + unit + build)` → `Unit testovi`) | nisko | `health.service.spec.ts` (prva verzija) | riješeno: `beforeEach` postavlja `MINIO_SKIP='false'` i vraća original u `afterAll`; provjereno lokalno sa `MINIO_SKIP=true npx jest src/modules/health` |
 
 ## 6. Popravke
 

@@ -33,6 +33,20 @@ function migrationRows(count: number): jest.Mock {
 
 describe('HealthService (BE-18 + INF-05)', () => {
   const expected = expectedMigrationCount();
+  const originalSkip = process.env.MINIO_SKIP;
+
+  // CI pokreće unit testove sa `MINIO_SKIP=true`; provjere ispod tvrde ponašanje **sa** MinIO-om,
+  // pa je okruženje eksplicitno zadato (test ne smije zavisiti od env-a iz CI-ja).
+  beforeEach(() => {
+    process.env.MINIO_SKIP = 'false';
+  });
+  afterAll(() => {
+    if (originalSkip === undefined) {
+      delete process.env.MINIO_SKIP;
+    } else {
+      process.env.MINIO_SKIP = originalSkip;
+    }
+  });
 
   it('liveness ne dira bazu', () => {
     const queryRaw = jest.fn();
@@ -102,17 +116,12 @@ describe('HealthService (BE-18 + INF-05)', () => {
   });
 
   it('readiness: `MINIO_SKIP=true` označava storage kao preskočen, ne kao grešku', async () => {
-    const previous = process.env.MINIO_SKIP;
     process.env.MINIO_SKIP = 'true';
-    try {
-      const service = serviceWith({ queryRaw: migrationRows(expected ?? 0) });
-      const result = await service.getReadiness();
-      expect(result.checks.storage).toMatchObject({
-        status: 'ok',
-        detail: 'skipped',
-      });
-    } finally {
-      process.env.MINIO_SKIP = previous;
-    }
+    const service = serviceWith({ queryRaw: migrationRows(expected ?? 0) });
+    const result = await service.getReadiness();
+    expect(result.checks.storage).toMatchObject({
+      status: 'ok',
+      detail: 'skipped',
+    });
   });
 });
