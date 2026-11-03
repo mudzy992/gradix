@@ -17,8 +17,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-11` — dnevnik/HSE/fajlovi: PDF ne pada na bh. slovima i ne siječe tekst, idempotentan offline dnevnik, validacija temperature/koordinata/`taskId`/`status`, sigurni headeri za download — `done`, green 41636860530 |
-| CI | ✅ [run 41636860530](https://github.com/mudzy992/gradix/actions/runs/41636860530) — **6/6** zelen (`fix(diary) … [BE-11]`) |
-| Zadnji potvrđeno zelen run | [41636860530](https://github.com/mudzy992/gradix/actions/runs/41636860530) ✅ 6/6 · prije: 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| CI | ✅ [run 41639119312](https://github.com/mudzy992/gradix/actions/runs/41639119312) — **6/6** zelen (`feat(hse) … opcija A [BE-11]`) |
+| Zadnji potvrđeno zelen run | [41639119312](https://github.com/mudzy992/gradix/actions/runs/41639119312) ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -358,7 +358,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **CI ispravka (run 41638725137 ❌):** e2e je padao jer radnik nije bio dodijeljen projektu, pa je
   `POST /api/incidents` vraćao `404` (vidljivost projekta) — u testu je dodana dodjela radnika
   („WORKER“) na projekat; kod nije mijenjan.
-- **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6); 19/59 segmenata `done`.
+- **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6) i **41639119312** (6/6, opcija A); 19/59 segmenata `done`.
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
   `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
