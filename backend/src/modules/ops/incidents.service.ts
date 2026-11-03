@@ -129,8 +129,17 @@ export class IncidentsService {
     return serializeIncident(updated);
   }
 
+  /**
+   * BE-11 / odluka vlasnika (opcija A, 2026-11-03): prijave vide oni koji ih **prijavljuju**.
+   * `hse.read` daje pristup po domenu (firma / dodijeljeni projekti, vidi `scopeWhere`),
+   * a `hse.write` bez `hse.read` (WORKER, DRIVER, MACHINE_OPERATOR) daje **samo vlastite**
+   * prijave — prije su vidjeli 403 na sopstvenu prijavu.
+   */
   private assertRead(actor: AuthUser): true {
-    if (!actor.permissions.includes('hse.read')) {
+    const canRead =
+      actor.permissions.includes('hse.read') ||
+      actor.permissions.includes('hse.write');
+    if (!canRead) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'HSE read not allowed', 403);
     }
     return true;

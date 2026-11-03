@@ -103,22 +103,63 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     expect(resolved.body.data.workDescription).toBe('B');
   });
 
-  it('SS creates incident; WORKER list 403', async () => {
+  /**
+   * BE-11 / odluka vlasnika (opcija A): prijavljivač vidi **svoje** prijave.
+   * Prije je WORKER dobijao 403 i na listu i na vlastitu prijavu, iako je jedini
+   * koji HSE prijave unosi. Tuđe prijave ostaju nevidljive (scope po `userId`).
+   */
+  it('HSE: radnik vidi samo vlastite prijave; tuđe ne vidi (opcija A)', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/incidents')
       .set(auth(ss))
       .send({ projectId, severity: 'LOW', description: 'Near miss' });
     expect(created.status).toBe(201);
     expect(created.body.data.status).toBe('OPEN');
+    const ssIncidentId = created.body.data.id as string;
+
+    const workerEmpty = await request(app.getHttpServer())
+      .get('/api/incidents')
+      .set(auth(worker));
+    expect(workerEmpty.status).toBe(200);
+    expect(
+      (workerEmpty.body.data as { id: string }[]).map((row) => row.id),
+    ).not.toContain(ssIncidentId);
+
+    const own = await request(app.getHttpServer())
+      .post('/api/incidents')
+      .set(auth(worker))
+      .send({ projectId, severity: 'MEDIUM', description: 'Klizav pod' });
+    expect(own.status).toBe(201);
+    const ownId = own.body.data.id as string;
+
     const workerList = await request(app.getHttpServer())
       .get('/api/incidents')
       .set(auth(worker));
-    expect(workerList.status).toBe(403);
+    expect(workerList.status).toBe(200);
+    const ids = (workerList.body.data as { id: string }[]).map((row) => row.id);
+    expect(ids).toContain(ownId);
+    expect(ids).not.toContain(ssIncidentId);
+
+    // prijavljivač smije zatvoriti svoju prijavu, tuđu ne (404, ne 403 — ne otkriva postojanje)
+    const ackOwn = await request(app.getHttpServer())
+      .patch(`/api/incidents/${ownId}`)
+      .set(auth(worker))
+      .send({ status: 'ACK' });
+    expect(ackOwn.status).toBe(200);
+    expect(ackOwn.body.data.status).toBe('ACK');
+    const patchForeign = await request(app.getHttpServer())
+      .patch(`/api/incidents/${ssIncidentId}`)
+      .set(auth(worker))
+      .send({ status: 'CLOSED' });
+    expect(patchForeign.status).toBe(404);
+
     const list = await request(app.getHttpServer())
       .get('/api/incidents')
       .set(auth(ss));
     expect(list.status).toBe(200);
-    expect(list.body.data.length).toBeGreaterThan(0);
+    expect((list.body.data as { id: string }[]).map((row) => row.id)).toContain(
+      ssIncidentId,
+    );
   });
 
   /**

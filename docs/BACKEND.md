@@ -167,7 +167,10 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 ### 4.5 Dnevnik i HSE
 - Dnevnik: unique `(companyId, projectId, datum u TZ firme)`; konflikt se rješava ručno;
   max **20** foto; PDF je interni dokument.
-- HSE: **online-only**, max **5** foto, obavezan GPS + opis.
+- HSE: **online-only**, max **5** foto, GPS (oba ili nijedan) + opis.
+- HSE vidljivost (D-033): `hse.read` = firma ili dodijeljeni projekti; `hse.write` bez `hse.read`
+  (WORKER, DRIVER, MACHINE_OPERATOR) = **samo vlastite prijave**, i smiju ih ACK/CLOSE; tuđa
+  prijava je `404` (ne otkriva postojanje).
 
 ### 4.6 Payroll
 - Mjesec se računa u **TZ firme**; dan = kalendarski dan `startedAt` (nema splita preko ponoći).

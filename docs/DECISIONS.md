@@ -226,6 +226,16 @@ sandbox` i `Cache-Control: private, no-store`; greška streama uništi odgovor u
 **Kada revidirati:** čim se pojavi dijeljenje fajla van firme, javni link na prilog ili
 fajl koji pripada više firmi.
 
+### D-033 — HSE: prijavljivač vidi svoje prijave
+**Datum:** 2026-11-03 · **Status:** na snazi (odluka vlasnika, opcija A)
+Do BE-11 lista incidenata je tražila `hse.read`, a `WORKER`/`DRIVER`/`MACHINE_OPERATOR` imaju samo
+`hse.write` — dakle **jedini ljudi koji HSE prijave unose nisu mogli da ih vide** (403 i na listu i
+na sopstvenu prijavu). Sada: `hse.read` daje domen (firma / dodijeljeni projekti), a `hse.write` bez
+`hse.read` daje **samo vlastite** prijave (`userId = actor.id`) i dozvoljava ACK/CLOSE tih prijava.
+Tuđa prijava vraća `404`, ne `403` — da se ne otkriva postojanje. **Odbačeno:** (B) zadržati 403
+(prijavljivač ne vidi šta je prijavio — nerealno za HSE obrazac); (C) dati `hse.read` svim radnicima
+(otvara sve HSE zapise firme). **Revidirati** ako se traži anonimno prijavljivanje.
+
 ---
 
 ## Zamijenjene / povučene odluke

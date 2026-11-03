@@ -351,8 +351,10 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   best-effort (D‑031); duplikat fotografije na replay → dedupe po `path`.
 - **Testovi:** **141/141** unit (+8). Matrica **501 fajl / 224 pregledano (44,7 %)**; `check:all` 0 padova.
 - **B-stavke:** **B11** — dnevnik/HSE/fajlovi nisu u auditu (sljedeća migracija).
-- **Otvoreno pitanje (vlasnik):** radnici ne vide vlastite HSE prijave (`hse.read` je uslov za listu);
-  postojeći e2e to zaključava, pa nije mijenjano bez odluke — vidi `AUDIT/segments/BE-11.md` §5.
+- **Odluka vlasnika (opcija A):** prijavljivač vidi **svoje** HSE prijave. `hse.read` = domen
+  (firma/dodijeljeni projekti), `hse.write` bez `hse.read` = samo vlastite prijave (+ ACK/CLOSE);
+  tuđa prijava `404`. Zapisano kao **D‑033**; e2e test „WORKER list 403“ zamijenjen testom koji
+  dokazuje scopiranje.
 - **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6); 19/59 segmenata `done`.
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao

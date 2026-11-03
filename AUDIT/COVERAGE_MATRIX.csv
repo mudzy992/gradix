@@ -158,9 +158,9 @@ backend/src/modules/ops/fuel.service.ts,BE,ops,BE-10,245,pregledano,"BE-10: gori
 backend/src/modules/ops/geofence-notify.ts,BE,ops,BE-12,58,nepregledano,,
 backend/src/modules/ops/gps-devices.dto.ts,BE,ops,BE-09,27,pregledano,BE-09: pregledano — name/isActive,2026-11-03
 backend/src/modules/ops/gps-devices.service.ts,BE,ops,BE-09,143,pregledano,BE-09: pregledano — ključ se vraća samo pri kreiranju/rotaciji; P2002 → 409 IOT_DEVICE_EXISTS,2026-11-03
-backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,pregledano,BE-11: list/create/patch; patch traži `hse.read` (vidi F-BE-11-14),2026-11-03
+backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,pregledano,BE-11: list/create/patch; vidljivost HSE (D-033) odlučuje servis,2026-11-03
 backend/src/modules/ops/incidents.dto.ts,BE,ops,BE-11,58,pregledano,"BE-11 (F-07): `status` filter `@IsIn([OPEN,ACK,CLOSED])`",2026-11-03
-backend/src/modules/ops/incidents.service.ts,BE,ops,BE-11,198,pregledano,"BE-11 (F-07/08/09/10): status validacija, `taskId` scoping, koordinate, best-effort notifikacija",2026-11-03
+backend/src/modules/ops/incidents.service.ts,BE,ops,BE-11,207,pregledano,"BE-11 (F-07/08/09/10) + opcija A: `hse.read` ili `hse.write` za prijavljivača (samo vlastite); status validacija, `taskId` scoping, koordinate, best-effort notifikacija",2026-11-03
 backend/src/modules/ops/iot-key.ts,BE,ops,BE-09,15,pregledano,BE-09: pregledano — keyLookup (SHA-256) + bcrypt hash; ključ se ne čuva u čistom obliku,2026-11-03
 backend/src/modules/ops/iot.controller.ts,BE,ops,BE-09,19,pregledano,BE-09: pregledano — @Public + x-device-key (jedini javni ulaz osim health/auth),2026-11-03
 backend/src/modules/ops/iot.dto.ts,BE,ops,BE-09,10,pregledano,"BE-09: pregledano — lat/lng su stringovi, validiraju se u geo.ts",2026-11-03
@@ -296,7 +296,7 @@ backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,244,nepregledano,,
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,285,nepregledano,"BE-11: dnevnik (konflikt, PDF sa bh. slovima, validacije) + HSE opcija A (vlastite prijave, tuđa 404)",
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
