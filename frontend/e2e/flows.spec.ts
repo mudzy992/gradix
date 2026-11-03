@@ -60,7 +60,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(project).toBeVisible({ timeout: 15_000 })
     await project.click()
 
-    await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{8,}/)
+    await expect(page).toHaveURL(/\/projects\/[0-9a-z]{20,}$/i) // CUID, ne UUID
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/sarajevo obilaznica/i)
 
     // Faze iz seed-a su na tabu „Faze".
@@ -74,7 +74,7 @@ test.describe('FE-06 — admin tok', () => {
     await expect(task).toBeVisible({ timeout: 15_000 })
     await task.click()
 
-    await expect(page).toHaveURL(/\/tasks\/[0-9a-f-]{8,}/)
+    await expect(page).toHaveURL(/\/tasks\/[0-9a-z]{20,}$/i) // CUID, ne UUID
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/iskop kanala/i)
   })
 

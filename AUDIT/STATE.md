@@ -666,6 +666,8 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
   ponovnu upotrebu starog tretira kao krađu i gasi **sve** sesije (`revokeAll`). Isto pogađa korisnika
   sa dvije kartice → **F-FE-06-06** (preporuka za BE-02: grace period ili single-flight refresh).
   E2E sada koristi **jednu sesiju po fajlu** (`e2e/session.ts`), pa reuse ne postoji.
+- **Četvrti run (41730126620):** sesije rade; padale su samo moje URL provjere jer aplikacija koristi
+  **CUID** ID-jeve (`cmw197…`), a regex je tražio heksadecimalni UUID → ispravljeno (F-FE-06-07).
 - **Ukupno 16 E2E testova** u 5 fajlova (`guest`/`admin`/`worker`).
 
 ## Šta je sljedeće (tačan sljedeći korak)
