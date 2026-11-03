@@ -8,10 +8,12 @@ import { HealthService } from './health.service';
 import { expectedMigrationCount } from './migration-count';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MinioService } from '../files/minio.service';
+import type { RedisService } from '../../common/redis/redis.service';
 
 interface Stubs {
   queryRaw?: jest.Mock;
   storage?: jest.Mock;
+  redisPing?: jest.Mock;
 }
 
 function serviceWith(stubs: Stubs = {}): HealthService {
@@ -20,9 +22,15 @@ function serviceWith(stubs: Stubs = {}): HealthService {
   const minio = {
     healthCheck: stubs.storage ?? jest.fn().mockResolvedValue(true),
   } as unknown as MinioService;
+  const redis = {
+    ping:
+      stubs.redisPing ??
+      jest.fn().mockResolvedValue({ status: 'disabled', latencyMs: 0 }),
+  } as unknown as RedisService;
   return new HealthService(
     { $queryRaw: queryRaw } as unknown as PrismaService,
     minio,
+    redis,
   );
 }
 
@@ -113,6 +121,24 @@ describe('HealthService (BE-18 + INF-05)', () => {
     expect(result.status).toBe('error');
     expect(result.checks.postgres.error).toBe('unreachable');
     jest.useRealTimers();
+  });
+
+  it('readiness: Redis nije konfigurisan → `disabled`, ne utiče na status', async () => {
+    const service = serviceWith({ queryRaw: migrationRows(expected ?? 0) });
+    const result = await service.getReadiness();
+    expect(result.checks.redis.status).toBe('disabled');
+    expect(result.status).toBe('ok');
+  });
+
+  it('readiness: Redis konfigurisan ali nedostupan → `error` u detaljima, ali 200', async () => {
+    const service = serviceWith({
+      queryRaw: migrationRows(expected ?? 0),
+      redisPing: jest.fn().mockResolvedValue({ status: 'error', latencyMs: 2 }),
+    });
+    const result = await service.getReadiness();
+    expect(result.checks.redis.status).toBe('error');
+    // INF-07: Redis je opciona zavisnost — aplikacija radi bez njega (throttle fail-open).
+    expect(result.status).toBe('ok');
   });
 
   it('readiness: `MINIO_SKIP=true` označava storage kao preskočen, ne kao grešku', async () => {

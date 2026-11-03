@@ -32,6 +32,13 @@ export interface AppEnv {
   SEED_DEMO: string;
   ENABLE_API_DOCS: boolean;
   LOG_LEVEL?: 'error' | 'warn' | 'info' | 'debug';
+  // INF-07: Redis je opcion — grupa se validira samo ako je `REDIS_HOST` zadat.
+  REDIS_HOST?: string;
+  REDIS_PORT: number;
+  REDIS_USER?: string;
+  REDIS_PASSWORD?: string;
+  REDIS_PREFIX: string;
+  REDIS_TLS_CA_FILE?: string;
 }
 
 const MIN_SECRET_LENGTH = 32;
@@ -174,6 +181,25 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
     } else {
       out.LOG_LEVEL = logLevel;
     }
+  }
+
+  // INF-07 (D-039): Redis je **opcion** — prazan `REDIS_HOST` znači „ne koristi Redis“
+  // (throttle ostaje u memoriji). Ako je host zadat, ostalo mora biti konzistentno:
+  // bez lozinke bi ACL korisnik tiho pao na `default` korisnika, pa je to greška, ne warning.
+  const redisHost = optional(raw.REDIS_HOST);
+  out.REDIS_PORT = String(asInt('REDIS_PORT', raw.REDIS_PORT, 6379, errors));
+  out.REDIS_PREFIX = optional(raw.REDIS_PREFIX) ?? 'gradix:';
+  if (redisHost) {
+    out.REDIS_HOST = redisHost;
+    out.REDIS_USER = optional(raw.REDIS_USER) ?? 'gradix';
+    const redisPassword = optional(raw.REDIS_PASSWORD);
+    if (!redisPassword) {
+      errors.push('REDIS_PASSWORD je obavezan kad je REDIS_HOST zadat');
+    } else {
+      out.REDIS_PASSWORD = redisPassword;
+    }
+    out.REDIS_TLS_CA_FILE =
+      optional(raw.REDIS_TLS_CA_FILE) ?? '/etc/ssl/redis/redis-ca.crt';
   }
 
   // `asInt`/`asBool` su već skupili greške — provjeri ih i poslije normalizacije.

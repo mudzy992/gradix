@@ -100,6 +100,8 @@ const RULES = [
   { re: /^scripts\/standards\//, layer: 'STD', module: 'standards', segment: 'STD-01' },
   { re: /^package\.json$/, layer: 'STD', module: 'standards', segment: 'STD-01' },
   { re: /^scripts\/audit\//, layer: 'STD', module: 'audit-tools', segment: 'STD-01' },
+  // INF-07: ACL linija za Redis korisnika.
+  { re: /^scripts\/ops\/redis-acl\.sh$/, layer: 'INF', module: 'redis', segment: 'INF-07' },
   // INF-06: operativne skripte (backup/restore runbook).
   { re: /^scripts\/ops\//, layer: 'INF', module: 'ops-scripts', segment: 'INF-06' },
   // --- CI ---
@@ -129,6 +131,8 @@ const RULES = [
   { re: /^backend\/src\/common\/geo\//, layer: 'BE', module: 'common', segment: 'BE-12' },
   // INF-04: strukturisano logovanje (JSON, korelacioni ID) — cross-cutting, ali kod živi u backendu.
   { re: /^backend\/src\/common\/logging\//, layer: 'BE', module: 'logging', segment: 'INF-04' },
+  // INF-07: Redis klijent + throttle storage (cross-cutting, kod u backendu).
+  { re: /^backend\/src\/common\/redis\//, layer: 'INF', module: 'redis', segment: 'INF-07' },
   // --- backend: moduli ---
   { re: /^backend\/src\/modules\/auth\//, layer: 'BE', module: 'auth', segment: 'BE-02' },
   { re: /^backend\/src\/modules\/users\//, layer: 'BE', module: 'users', segment: 'BE-03' },

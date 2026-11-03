@@ -7,7 +7,7 @@
 #
 # EKSTERNO (ne pokreće se ovim compose fajlom):
 #   PostgreSQL — u mreži `db_net` (obavezan `DATABASE_URL`)
-#   Redis      — u mreži `redis_net` (opcionalno, v1 ne koristi queue)
+#   Redis      — u mreži `redis_net` (INF-07: throttle brojač; bez njega radi u memoriji)
 #
 # MREŽE:
 #   gradix-net  — interna mreža projekta (frontend ↔ backend ↔ minio)
@@ -91,12 +91,14 @@ services:
       # a fajla nema u kontejneru, kontejner padne ODMAH sa jasnom porukom
       # (bez ovoga Prisma padne tek pri prvom upitu: "ENOENT ... coolify-ca.crt").
       SSL_PREFLIGHT: ${SSL_PREFLIGHT:-true}
-      # EKSTERNI Redis (mreža `redis_net`) — opcionalno, v1 ne koristi queue
+      # EKSTERNI Redis (mreža `redis_net`, INF-07) — opciono; prazno = throttle u memoriji.
+      # Ako je REDIS_HOST zadat, REDIS_PASSWORD je obavezan (env validacija neće pustiti app).
       REDIS_HOST: ${REDIS_HOST:-}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_USER: ${REDIS_USER:-gradix}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PREFIX: ${REDIS_PREFIX:-gradix:queue:}
-      # CA za Redis (v1 kod ga ne čita, ali je fajl mapiran — vidi volumes)
+      REDIS_PREFIX: ${REDIS_PREFIX:-gradix:}
+      # CA za Redis — TLS provjera servera (isti fajl se mapira u volumes ispod)
       REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/etc/ssl/redis/redis-ca.crt}
     expose:
       - "3000"

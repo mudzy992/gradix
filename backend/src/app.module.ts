@@ -2,10 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorageService } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { OptionalThrottlerGuard } from './common/guards/optional-throttler.guard';
+import { RedisModule } from './common/redis/redis.module';
+import { RedisService } from './common/redis/redis.service';
+import { FailoverThrottlerStorage } from './common/redis/failover-throttler.storage';
 import { PasswordChangeGuard } from './common/guards/password-change.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
@@ -29,8 +32,20 @@ import { ErpModule } from './modules/erp/erp.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
-    ThrottlerModule.forRoot({
-      throttlers: [{ name: 'default', ttl: 60000, limit: 120 }],
+    RedisModule,
+    // INF-07 (D-039): brojač throttlea u Redisu (važi između replika), uz memorijski
+    // fallback ako Redis nije konfigurisan ili padne — throttle nikad ne ruši zahtjev.
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [RedisService],
+      useFactory: (redis: RedisService) => ({
+        throttlers: [{ name: 'default', ttl: 60000, limit: 120 }],
+        storage: new FailoverThrottlerStorage(
+          redis.client,
+          redis.prefix,
+          new ThrottlerStorageService(),
+        ),
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,

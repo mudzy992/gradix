@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `INF-06` — Backup/restore: `scripts/ops/backup.sh` + `restore.sh` (sha256, retencija, zaštite) i noćni drill workflow — `done` |
-| CI | ✅ [run 41663240359](https://github.com/mudzy992/gradix/actions/runs/41663240359) — **6/6** zelen (`docs(audit): INF-06 done …`) |
+| Zadnji commit | `INF-07` — Redis aktiviran: `redis.service` + `failover-throttler.storage` (throttle u Redisu, fail-open) + ACL skripta — `done` |
+| CI | ⏳ INF-07 push u toku (run se upisuje poslije završetka); prethodni: ✅ [41664192101](https://github.com/mudzy992/gradix/actions/runs/41664192101) — **6/6** (`docs(audit): INF-06` zapis) |
 | Drill (backup → restore) | ✅ [run 41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) — 8 tabela identično izvoru, migracije `7/7`; prije njega 4 pala runa (libpq `?schema=public`, quoted imena tabela, prazan izlaz poređenja, `migration_lock.toml`) |
 | Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
 | Zadnji potvrđeno zelen run (INF-06) | ✅ [41663240359](https://github.com/mudzy992/gradix/actions/runs/41663240359) — **6/6** · drill [41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) ✅ · prije: [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) ✅ 6/6 (INF-05) |
@@ -577,9 +577,27 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   Runbook: `docs/INFRASTRUCTURE.md` §7 (RPO ≤ 24 h, RTO ≤ 1 h).
 - **Zatvoreno:** `INF-06` — **29/59** segmenata `done` (CI upisan u tabeli iznad).
 
+
+### 2026-11-03 — INF-07 (Redis aktiviran) — završeno
+- **Odluka vlasnika:** Redis se aktivira (`redis-core`, mreža `redis_net`, TLS sa postojećim CA);
+  ACL korisnika dodaje vlasnik lično kroz `redis-cli`, lozinku generiše on, prefiks također.
+- **Nalaz (visoko):** `REDIS_*` je bila mrtva konfiguracija (I7) — throttle je bio memorijski po
+  procesu, pa limit nije važio između replika i resetovao se restartom. Sada
+  `backend/src/common/redis/` (`RedisService` + `FailoverThrottlerStorage` + `RedisModule`):
+  `INCR`+`PEXPIRE NX`+`PTTL` u `MULTI` nad `<prefix>throttle:<throttler>:<key>`.
+- **Fail-open:** prazan `REDIS_HOST` = staro ponašanje (memorijski storage); pad Redisa ⇒ isto, uz
+  jedno `warn` logovanje; `/api/ready` prikazuje `checks.redis` ali **ne** vraća `503` zbog njega.
+- **ACL:** `scripts/ops/redis-acl.sh` ispisuje `ACL SETUSER <user> reset on ><LOZINKA>
+  ~<prefix>* +ping +multi +exec +incr +pexpire +pttl +get +set +del +exists +ttl` — bez `@admin`;
+  lozinka ne postoji u repou/logovima. Runbook: `docs/INFRASTRUCTURE.md` §11.
+- **Nova zavisnost:** `ioredis@5` uz pisano obrazloženje (D-039); env validacija: host bez lozinke
+  = greška pri startu.
+- **Zatvoreno:** `INF-07` — **30/59** segmenata `done` (CI upisan u tabeli iznad).
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **INF-07** (Redis: aktivirati ili ukloniti — **odluka vlasnika**, Q3) — pa FE/MOB segmenti
+1. **FE-01** (nova paleta + dizajn tokeni) — vlasnik tražio **oba predloga** (A „Gradix Green“,
+   B „Slate/Teal“) sa pregledom prije primjene; zatim ostali FE/MOB segmenti
    (vidi `scripts/audit/segments.json`).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko

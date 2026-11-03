@@ -90,7 +90,8 @@ backend/src/
 
 ### 2.4 Rate limiting
 
-Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
+Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije (INF-07: brojač je u Redisu kad je
+`REDIS_HOST` zadat — limit važi između replika; bez Redisa/memorijski i dalje radi, D-039):
 
 | Ruta | Limit |
 |---|---|
@@ -333,6 +334,21 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - **Zašto bez `pino`:** isti izlaz (JSON red + nivo) uz ~150 linija koda i **nula** novih
   zavisnosti (P6/D-006); ako zatreba transport/rotacija, `pino` se dodaje uz obrazloženje (D-038).
 
+### 5.2 Redis: throttle storage i fail-open (INF-07, D-039)
+
+- `RedisService` (`src/common/redis/`) drži **jedan** `ioredis` klijent za proces: TLS sa CA iz
+  `REDIS_TLS_CA_FILE`, ACL korisnik `REDIS_USER` (default `gradix`), `lazyConnect` — start
+  aplikacije ne čeka Redis. `onApplicationShutdown` radi `quit()`.
+- `FailoverThrottlerStorage` zamjenjuje memorijski storage u `ThrottlerModule`: po zahtjevu
+  `INCR` + `PEXPIRE NX` + `PTTL` u jednom `MULTI` nad ključem
+  `<REDIS_PREFIX>throttle:<throttler>:<hash>`; rezultat se mapira u `totalHits/timeToExpire/
+  isBlocked/timeToBlockExpire`.
+- **Fail-open:** prazan `REDIS_HOST` ⇒ storage odmah koristi memoriju; greška u Redisu ⇒ isto,
+  uz jedno `warn` logovanje. Nema `500` zbog Redisa i nema retry-petlje koja drži zahtjev.
+- `/api/ready` dodaje `checks.redis` (`disabled` bez hosta, `ok`/`error` sa hostom) i **ne**
+  vraća `503` zbog Redisa — on nije zavisnost bez koje API ne može.
+- Redis se koristi **samo** za brojač; nikakvi poslovni podaci tamo ne idu (D-039).
+
 ---
 
 ## 6. Konfiguracija
@@ -348,8 +364,9 @@ Swagger je u produkciji isključen osim `ENABLE_API_DOCS=true`.
 Trenutno se čita:
 `DATABASE_URL`, `PORT`, `NODE_ENV`, `CORS_ORIGIN`, `MINIO_*`, `JWT_ACCESS_SECRET` (auth,
 realtime), `MINIO_SKIP` (testovi), `JEST_WORKER_ID` (isključivanje cronova pod testovima).
-`SEED_PASSWORD` i `REDIS_*` se **ne** čitaju u `src/` (seed je zaseban proces; Redis koristi
-infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
+`SEED_PASSWORD` se **ne** čita u `src/` (seed je zaseban proces). `REDIS_*` se čitaju od INF-07
+(`RedisService`; grupa je validirana — host bez lozinke je greška pri startu). `JWT_REFRESH_SECRET`
+više ne postoji kao varijabla (D-029).
 
 ---
 

@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from '../files/minio.service';
+import { RedisService } from '../../common/redis/redis.service';
 import { HEALTH_PROBE_TIMEOUT_MS } from '../../common/constants';
 import { expectedMigrationCount } from './migration-count';
 
-export type HealthStatus = 'ok' | 'error' | 'pending' | 'unknown';
+export type HealthStatus = 'ok' | 'error' | 'pending' | 'unknown' | 'disabled';
 
 export interface CheckResult {
   status: HealthStatus;
@@ -22,6 +23,7 @@ export interface ReadinessResponse {
     postgres: CheckResult;
     storage: CheckResult;
     migrations: CheckResult;
+    redis: CheckResult;
   };
 }
 
@@ -32,6 +34,7 @@ export class HealthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly minio: MinioService,
+    private readonly redis: RedisService,
   ) {}
 
   /**
@@ -49,10 +52,11 @@ export class HealthService {
    * kontroler to prevodi u `503`. Detalji greške se ne vraćaju (mogu sadržavati host/kredencijale).
    */
   async getReadiness(): Promise<ReadinessResponse> {
-    const [postgres, storage, migrations] = await Promise.all([
+    const [postgres, storage, migrations, redis] = await Promise.all([
       this.checkPostgres(),
       this.checkStorage(),
       this.checkMigrations(),
+      this.checkRedis(),
     ]);
     const failed = [postgres, storage, migrations].some(
       (check) => check.status === 'error' || check.status === 'pending',
@@ -60,7 +64,7 @@ export class HealthService {
     return {
       status: failed ? 'error' : 'ok',
       uptimeSeconds: Math.round(process.uptime()),
-      checks: { postgres, storage, migrations },
+      checks: { postgres, storage, migrations, redis },
     };
   }
 
@@ -97,6 +101,30 @@ export class HealthService {
           error instanceof Error ? error.name : 'unknown'
         })`,
       );
+      return {
+        status: 'error',
+        latencyMs: Date.now() - startedAt,
+        error: 'unreachable',
+      };
+    }
+  }
+
+  /**
+   * INF-07 (D-039): Redis je **opciona** zavisnost — `disabled` kad `REDIS_HOST` nije zadat,
+   * a `error` ne obara readiness, jer aplikacija namjerno radi bez Redisa (throttle tada
+   * pada na memorijski storage). Status je tu da monitoring vidi da je Redis otpao.
+   */
+  private async checkRedis(): Promise<CheckResult> {
+    const startedAt = Date.now();
+    try {
+      const result = await this.withTimeout<{
+        status: 'ok' | 'error' | 'disabled';
+      }>(this.redis.ping());
+      return {
+        status: result.status,
+        latencyMs: Date.now() - startedAt,
+      };
+    } catch {
       return {
         status: 'error',
         latencyMs: Date.now() - startedAt,

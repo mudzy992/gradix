@@ -119,10 +119,10 @@
     {
       "id": "INF-07",
       "layer": "INF",
-      "title": "Redis: aktivirati ili ukloniti",
-      "status": "planned",
+      "title": "Redis: aktiviran (throttle storage, ACL, fail-open)",
+      "status": "done",
       "scope": "process",
-      "scopeReason": "Redis je danas konfigurisan kroz env/COOLIFY (vlasništvo INF-01); odluka zadržati/ukloniti mijenja compose, env i backend modul — bez vlastitog fajla."
+      "scopeReason": "Redis klijent i throttle storage su u backend/src/common/redis (INF-07), ACL linija u scripts/ops/redis-acl.sh; compose/env šabloni ostaju vlasništvo INF-01."
     },
     {
       "id": "BE-01",

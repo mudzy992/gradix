@@ -27,6 +27,29 @@ describe('validateEnv', () => {
     );
   });
 
+  it('REDIS_*: bez hosta je isključen, sa hostom traži lozinku (INF-07)', () => {
+    const off = validateEnv({ ...BASE });
+    expect(off.REDIS_HOST).toBeUndefined();
+    expect(off.REDIS_PREFIX).toBe('gradix:');
+    expect(off.REDIS_PORT).toBe('6379');
+
+    const on = validateEnv({
+      ...BASE,
+      REDIS_HOST: 'redis-core',
+      REDIS_PASSWORD: 'tajna',
+    });
+    expect(on.REDIS_HOST).toBe('redis-core');
+    expect(on.REDIS_USER).toBe('gradix');
+    expect(on.REDIS_TLS_CA_FILE).toBe('/etc/ssl/redis/redis-ca.crt');
+
+    expect(() => validateEnv({ ...BASE, REDIS_HOST: 'redis-core' })).toThrow(
+      /REDIS_PASSWORD/,
+    );
+    expect(() => validateEnv({ ...BASE, REDIS_PORT: '99999' })).toThrow(
+      /REDIS_PORT/,
+    );
+  });
+
   it('vraća string mapu (ConfigService semantika se ne mijenja)', () => {
     const env = validateEnv({ ...BASE, PORT: '8080' });
     expect(typeof env.PORT).toBe('string');

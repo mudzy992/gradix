@@ -321,6 +321,39 @@ strukture — Coolify bi i dalje dobijao neparsirane linije.
 (za slučajeve prije nego što logger postoji — koristi se u `main.ts` bootstrap-u). Nijedan log red
 ne smije sadržavati tijelo zahtjeva, headere, query string, email/telefon ni tajne.
 
+
+### D-039 — Redis aktiviran: throttle u Redisu, ACL po prefiksu, fail-open
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+`REDIS_*` je do INF-07 bila mrtva konfiguracija (I7): ključevi su postojali u compose-u i env
+šablonima, ali ih nijedan modul nije čitao, a throttle je bio memorijski po procesu — dva
+backenda su imala dva nezavisna limita, a restart je resetovao brojač. Vlasnik je odlučio da se
+Redis aktivira (`redis-core`, mreža `redis_net`, TLS sa postojećim CA, ACL korisnik čiju lozinku
+on generiše i unosi kroz `redis-cli`/Coolify).
+
+**Odluka:** Redis nosi **samo** throttle brojač (`<prefix>throttle:<throttler>:<key>`), preko
+`ioredis` klijenta sa TLS-om i ACL korisnikom; sve ostalo (sessions, fajlovi, queue) ostaje van
+Redisa. Storage je `FailoverThrottlerStorage`: `INCR` + `PEXPIRE NX` + `PTTL` u jednom `MULTI`
+(prozor identičan memorijskom), a na bilo koju grešku se vraća na `ThrottlerStorageService`
+(fail-open, jedno `warn` logovanje). `/api/ready` prikazuje `checks.redis`
+(`disabled`/`ok`/`error`), ali Redis **ne obara** readiness — D-014 je od početka tražila da
+aplikacija radi i bez njega.
+
+**Prava:** ACL korisnik (`REDIS_USER`, default `gradix`) dobija `on` + `~<REDIS_PREFIX>*` +
+`+ping +multi +exec +incr +pexpire +pttl +get +set +del +exists +ttl`, ništa iz `@admin`.
+`reset` u `ACL SETUSER` liniji čini je idempotentnom; liniju ispisuje `scripts/ops/redis-acl.sh`,
+a lozinku nikad ne dodirujemo (repo/CI/logovi).
+
+**Nova zavisnost:** `ioredis@5` (P6 — pisano obrazloženje). Alternative: (A) `redis`
+(node-redis v4) — jednako sposoban, ali TLS opcije i `MULTI` ergonomija su lošije za ovaj slučaj;
+(B) ručni RESP klijent — ~200 linija koda za reconnect/TLS/parse, bez koristi; (C) nastaviti sa
+memorijskim throttle-om — ne rješava I7 ni razliku između replika. Rizik: nova zavisnost u produkcijskoj
+putanji; ublaženo time što je cijela upotreba iza `FailoverThrottlerStorage`-a i što Redis nije
+obavezan (prazan `REDIS_HOST` = staro ponašanje).
+
+**Posljedica:** deploy bez `REDIS_PASSWORD` uz zadat `REDIS_HOST` **ne starta** (validacija u
+`env.ts`) — namjerno, jer bi tiho pao na `default` korisnika ili na neautentifikovanu vezu.
+
 ---
 
 ## Zamijenjene / povučene odluke

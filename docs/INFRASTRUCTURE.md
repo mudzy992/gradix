@@ -15,10 +15,10 @@
 | Web | `frontend/Dockerfile` (Vite build → `nginx:alpine`) | ✅ |
 | Baza | **eksterni PostgreSQL** u mreži `db_net` (nije u compose-u) | ✅ |
 | Storage | MinIO (`ghcr.io/coollabsio/minio:latest`), podaci na hostu | ✅ |
-| Cache/queue | **Redis** u mreži `redis_net` — kod ga ne koristi | ⚪ rezervisano |
+| Cache/queue | **Redis** u mreži `redis_net` — throttle brojač između replika (TLS + ACL, vidi §11) | ✅ INF-07 |
 | Reverse proxy | Coolify proxy (Traefik) → kontejneri po domenama | ✅ |
 | Secrets | Coolify Environment Variables (ne u repou) | ✅ |
-| Observability | **JSON logovi** (jedan red = jedan zapis, `level`/`context`/`requestId`) + `/api/health` (liveness) + `/api/ready` (Postgres/MinIO/migracije) | ⚠️ bez metrika/tracinga (van obima v1) |
+| Observability | **JSON logovi** (jedan red = jedan zapis, `level`/`context`/`requestId`) + `/api/health` (liveness) + `/api/ready` (Postgres/MinIO/migracije/Redis) | ⚠️ bez metrika/tracinga (van obima v1) |
 | Backup | nije automatizovan (vidi §7) | ⚠️ dug |
 | Okruženja | lokalno (dev) + produkcija (Coolify); **nema staginga** (odluka D-007) | ✅ |
 
@@ -34,12 +34,12 @@
                      └─────────────── gradix-net (bridge) ───────────────────┘
                                         │                    │
                                     minio:9000/9001     db_net ──▶ PostgreSQL
-                                                        redis_net ──▶ Redis (ne koristi se)
+                                                        redis_net ──▶ Redis (throttle, TLS+ACL)
 ```
 
 | Servis | Image / build | Portovi | Volumeni | Healthcheck |
 |---|---|---|---|---|
-| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` = **liveness** (30 s, start 60 s, 5 retry); `GET /api/ready` = readiness (Postgres + MinIO + migracije, `503`) za external monitoring/blue-green gate |
+| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` = **liveness** (30 s, start 60 s, 5 retry); `GET /api/ready` = readiness (Postgres + MinIO + migracije + Redis, `503`; Redis je opcion — njegov pad ne obara readiness) za external monitoring/blue-green gate |
 | `frontend` | `build: ./frontend` | `expose 80` | — | `wget --spider http://127.0.0.1/` |
 | `minio` | `${MINIO_IMAGE:-ghcr.io/coollabsio/minio:latest}` | `expose 9000`, `9001` | host bind `${MINIO_DATA_DIR:-/mnt/shared-app-files/gradix/minio}:/data` | `mc ready local` |
 
@@ -114,6 +114,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `BACKEND_URL` | `http://backend:3000` | nginx proxy target (frontend kontejner) |
 | `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx |
 | `ENABLE_API_DOCS` | `false` | `true` izlaže Swagger na `/api/docs` — u produkciji isključeno |
+| `REDIS_*` | vidi §5.4 | throttle storage u Redisu; bez `REDIS_HOST` sve ostaje u memoriji (INF-07) |
 
 ### 5.3 Host putanje (bind mount-ovi)
 
@@ -124,11 +125,18 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `MINIO_DATA_DIR` | `/mnt/shared-app-files/gradix/minio` | `/data` (MinIO) |
 | `MINIO_IMAGE` | `ghcr.io/coollabsio/minio:latest` | — (image referenca) |
 
-### 5.4 Mrtve / rezervisane varijable
+### 5.4 Redis (INF-07) — aktivirano
 
-`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_PREFIX`, `REDIS_TLS_CA_FILE` — prisutne u
-compose-u, **kod ih ne čita**. Uklanjanje ili aktiviranje je odluka vlasnika (D-014: Redis ostaje,
-pa se Aktivacija/uklanjanje zatvara u INF-07).
+| Varijabla | Default | Efekat |
+|---|---|---|
+| `REDIS_HOST` | prazno | prazno = **Redis se ne koristi** (throttle u memoriji, kao prije INF-07); postavi `redis-core` |
+| `REDIS_PORT` | `6379` | port |
+| `REDIS_USER` | `gradix` | ACL korisnik (linija za `redis-cli`: `scripts/ops/redis-acl.sh`) |
+| `REDIS_PASSWORD` | — | **obavezan kad je `REDIS_HOST` zadat** (env validacija ne pušta app bez njega) |
+| `REDIS_PREFIX` | `gradix:` | prefiks svih ključeva; mora odgovarati ACL obrascu `~<prefix>*` |
+| `REDIS_TLS_CA_FILE` | `/etc/ssl/redis/redis-ca.crt` | CA za provjeru servera; izvor je `REDIS_CA_FILE` (§5.3) |
+
+Detalji (ACL, fail-open, provjera): §11.
 
 ### 5.5 Guard (INF-01)
 
@@ -287,5 +295,63 @@ Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
 | I4 | Nema SBOM/skeniranja slika ni pinovanja po digestu | CI-04 |
 | I5 | Kontejneri rade kao `root` (backend/frontend) | INF-03 |
 | I6 | Nema resource limita (`cpus`, `mem_limit`) u compose-u | INF-03 |
-| I7 | `REDIS_*` mrtva konfiguracija | INF-07 |
+| I7 | ~~`REDIS_*` mrtva konfiguracija~~ **riješeno** u INF-07 (throttle u Redisu, TLS + ACL, fail-open) | INF-07 |
 | I8 | Nema staging okruženja (svjesna odluka D-007) | — |
+
+---
+
+## 11. Redis (INF-07) — throttle i ACL
+
+Redis (`redis-core`, eksterna mreža `redis_net`) koristi se za **jedan** posao u v1: brojač
+throttlea (`120 zahtjeva / 60 s`, isti limit kao prije). Time limit važi **između replika** i
+preživljava restart; memorijski `ThrottlerStorage` je i dalje tu kao fallback.
+
+### 11.1 Šta je u kodu
+
+| Fajl | Uloga |
+|---|---|
+| `backend/src/common/redis/redis.service.ts` | jedan `ioredis` klijent (`lazyConnect`, TLS sa CA iz `REDIS_TLS_CA_FILE`, ACL `REDIS_USER`), `ping()` za readiness, korektno `quit()` pri gašenju |
+| `backend/src/common/redis/failover-throttler.storage.ts` | `INCR` + `PEXPIRE (NX)` + `PTTL` u jednom `MULTI` po ključu `<prefix>throttle:<throttler>:<key>`; na grešku → memorijski storage (fail-open) |
+| `backend/src/common/redis/redis.module.ts` | `@Global()` modul (isti klijent za throttle i readiness) |
+| `backend/src/config/env.ts` | validacija `REDIS_*` grupe (host bez lozinke = greška pri startu) |
+| `backend/src/modules/health/health.service.ts` | `checks.redis` u `/api/ready`: `disabled` (nema hosta) / `ok` / `error` — **ne obara** readiness |
+
+Ključevi su jedini podaci koje backend piše u Redis: `<prefix>throttle:*`. Nema queue-ova ni
+trajnih podataka — ako se Redis obriše, gubi se samo trenutni brojač (rate limit se resetuje).
+
+### 11.2 ACL korisnik (radi vlasnik infrastrukture)
+
+Lozinku generiše i unosi **vlasnik** (Coolify → Environment Variables → `REDIS_PASSWORD`).
+Liniju za `redis-cli` ispisuje skripta (prava su minimalna, bez `@admin`):
+
+```bash
+REDIS_USER=gradix REDIS_PREFIX='gradix:' ./scripts/ops/redis-acl.sh
+# → ACL SETUSER gradix reset on ><LOZINKA> ~gradix:* +ping +multi +exec +incr +pexpire +pttl ...
+```
+
+`reset` čini komandu idempotentnom (ponovno pokretanje zamjenjuje prava). Ako server koristi
+`aclfile`, poslije dodavanja treba `ACL SAVE` — inače se korisnik gubi pri restartu Redisa.
+
+### 11.3 Provjera poslije uključivanja
+
+```bash
+# 1) ACL je tačan (očekivano: on, ~gradix:*, bez @admin)
+ACL GETUSER gradix
+# 2) backend vidi Redis
+curl -s https://<api-domen>/api/ready | jq '.checks.redis'   # {"status":"ok","latencyMs":1}
+# 3) throttle zaista broji u Redisu (ključ postoji i ima TTL)
+redis-cli --user gradix --pass '<LOZINKA>' --tls --cacert <CA> KEYS '<prefix>throttle:*'
+```
+
+### 11.4 Fail-open pravilo (D-014, D-039)
+
+- Redis **nije** obavezna zavisnost: prazan `REDIS_HOST` = identično ponašanje kao prije INF-07.
+- Ako Redis padne u radu: throttle se vraća na memorijski storage (jedno `warn` logovanje),
+  `/api/ready` prikaže `checks.redis.status = "error"`, ali ostaje `200` — API nastavlja raditi.
+- Redis se **nikad** ne koristi za podatke koji se ne smiju izgubiti (sessions, queue, fajlovi).
+
+### 11.5 Zavisnost
+
+`ioredis@5` (jedina nova zavisnost segmenta) — obrazloženje u `docs/DECISIONS.md` D-039:
+TLS + ACL + `MULTI` bez dodatnog koda; alternative (`redis`/node-redis, ručni RESP klijent)
+odbačene su jer traže više koda za isto ponašanje.
