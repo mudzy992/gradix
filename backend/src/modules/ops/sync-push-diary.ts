@@ -31,11 +31,11 @@ export class SyncPushDiaryService {
     }
     const dto = this.toUpsert(item.payload);
     dto.localId = item.localId;
+    // BE-11 (F-04): identitet se upisuje u **istom** `create`-u. Prije je slijedio
+    // `create` + `update`; pad između je ostavljao zapis bez `deviceId`, pa je ponovni
+    // sync padao na dnevni unique (`DIARY_CONFLICT`) umjesto da vrati postojeći zapis.
+    dto.deviceId = item.deviceId;
     const created = await this.diary.create(actor, dto);
-    await this.prisma.diaryEntry.update({
-      where: { id: created.id },
-      data: { deviceId: item.deviceId, localId: item.localId, isSynced: true },
-    });
     return syncOk(item.localId, 'DIARY', created.id);
   }
 

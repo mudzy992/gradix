@@ -76,7 +76,7 @@ backend/src/common/utils/phone.ts,BE,common,BE-01,20,pregledano,BE-01: pregledan
 backend/src/common/utils/prisma-errors.spec.ts,BE,common,BE-01,33,pregledano,BE-04: 5 testova oblika meta (niz/string/odsutan/velika slova),2026-11-02
 backend/src/common/utils/prisma-errors.ts,BE,common,BE-01,26,pregledano,BE-04: novo — readUniqueTarget (P2002) sa fallbackom na cijeli meta (F-07),2026-11-02
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
-backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,"BE-01: pregledano — blokira .. i apsolutne putanje, traži prefiks companyId/ (403), buildObjectPath koristi globalni crypto.randomUUID (Node 22)",2026-11-02
+backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,BE-11: traversal i strani prefiks odbijeni; `buildObjectPath` = `{companyId}/{yyyy}/{mm}/{uuid}.{ext}`,2026-11-03
 backend/src/config/env.spec.ts,BE,config,BE-01,155,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
 backend/src/config/env.ts,BE,config,BE-01,203,pregledano,BE-08: SEED_DEMO u validacionoj šemi (default false) — bez toga bi seed pao tiho na produkcijski režim,2026-11-03
 backend/src/main.ts,BE,bootstrap,BE-01,23,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
@@ -115,11 +115,11 @@ backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,159,nepregledano,,
 backend/src/modules/erp/warehouses.controller.ts,BE,erp,BE-14,33,nepregledano,,
 backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,54,nepregledano,,
 backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,73,nepregledano,,
-backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,nepregledano,,
-backend/src/modules/files/files.controller.ts,BE,files,BE-11,51,nepregledano,,
-backend/src/modules/files/files.module.ts,BE,files,BE-11,12,nepregledano,,
-backend/src/modules/files/files.service.ts,BE,files,BE-11,105,nepregledano,,
-backend/src/modules/files/minio.service.ts,BE,files,BE-11,51,nepregledano,,
+backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,pregledano,"BE-11: MIME iz magic bytes (jpeg/png/webp/pdf/docx/xlsx), ne iz imena fajla",2026-11-03
+backend/src/modules/files/files.controller.ts,BE,files,BE-11,72,pregledano,"BE-11 (F-12): download šalje `Content-Type`/`Content-Length`/`nosniff`/`CSP sandbox`/`no-store`, greška streama uništi odgovor",2026-11-03
+backend/src/modules/files/files.module.ts,BE,files,BE-11,12,pregledano,BE-11: modul izvozi `FilesService` za dnevnik (PDF) i javne assete,2026-11-03
+backend/src/modules/files/files.service.ts,BE,files,BE-11,124,pregledano,BE-11 (F-12): `streamPublic` čita `statObject` (tip/veličina); upload sniffing + limit veličine,2026-11-03
+backend/src/modules/files/minio.service.ts,BE,files,BE-11,51,pregledano,BE-11: bucket se osigurava sa 10 pokušaja (MinIO starta paralelno),2026-11-03
 backend/src/modules/health/health.controller.ts,BE,health,BE-18,15,nepregledano,,
 backend/src/modules/health/health.module.ts,BE,health,BE-18,10,nepregledano,,
 backend/src/modules/health/health.service.ts,BE,health,BE-18,13,nepregledano,,
@@ -142,12 +142,14 @@ backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,nepregledano,,
 backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,17,nepregledano,,
 backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,167,nepregledano,,
 backend/src/modules/ops/depots.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — depoi kroz isti CatalogService,2026-11-03
-backend/src/modules/ops/diary-access.ts,BE,ops,BE-11,89,nepregledano,,
-backend/src/modules/ops/diary-conflict.service.ts,BE,ops,BE-11,87,nepregledano,,
-backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,67,nepregledano,,
-backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,nepregledano,,
-backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,133,nepregledano,,
-backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,203,nepregledano,,
+backend/src/modules/ops/diary-access.ts,BE,ops,BE-11,112,pregledano,"BE-11 (F-03): `parseDiaryTemp` (−100…100, `400`); scope pravila dnevnika",2026-11-03
+backend/src/modules/ops/diary-conflict.service.ts,BE,ops,BE-11,87,pregledano,BE-11: resolve A/B/MERGE traži `diary.write` + scoped write; merge čuva oba teksta,2026-11-03
+backend/src/modules/ops/diary-pdf-text.spec.ts,BE,ops,BE-11,50,pregledano,BE-11: 8 testova za WinAnsi fold i prelamanje (uključujući riječ širu od reda),2026-11-03
+backend/src/modules/ops/diary-pdf-text.ts,BE,ops,BE-11,131,pregledano,"BE-11 (novo): `toWinAnsi` + `wrapLines`, čiste funkcije",2026-11-03
+backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,118,pregledano,BE-11 (F-01/02/13): WinAnsi fold + wrap + više stranica; `diary.read` + company scope,2026-11-03
+backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,pregledano,"BE-11: rute dnevnika (lista, create, patch, fotografija, PDF) — sve kroz servisne provjere",2026-11-03
+backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,141,pregledano,BE-11 (F-04): `localId`/`deviceId` validirani (`@MaxLength(120)`),2026-11-03
+backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,243,pregledano,"BE-11 (F-04/05/06/11): idempotentan offline create, koordinate fotografije, dedupe po putanji, best-effort notifikacija",2026-11-03
 backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,70,pregledano,BE-08: PROJECT_DOCUMENT_ADDED / PROJECT_DOCUMENT_REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregledano — 30-dnevni prosjek po mašini, prag FUEL_ANOMALY_PCT, notifikacija rolama",2026-11-03
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
@@ -156,9 +158,9 @@ backend/src/modules/ops/fuel.service.ts,BE,ops,BE-10,245,pregledano,"BE-10: gori
 backend/src/modules/ops/geofence-notify.ts,BE,ops,BE-12,58,nepregledano,,
 backend/src/modules/ops/gps-devices.dto.ts,BE,ops,BE-09,27,pregledano,BE-09: pregledano — name/isActive,2026-11-03
 backend/src/modules/ops/gps-devices.service.ts,BE,ops,BE-09,143,pregledano,BE-09: pregledano — ključ se vraća samo pri kreiranju/rotaciji; P2002 → 409 IOT_DEVICE_EXISTS,2026-11-03
-backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,nepregledano,,
-backend/src/modules/ops/incidents.dto.ts,BE,ops,BE-11,56,nepregledano,,
-backend/src/modules/ops/incidents.service.ts,BE,ops,BE-11,160,nepregledano,,
+backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,pregledano,BE-11: list/create/patch; patch traži `hse.read` (vidi F-BE-11-14),2026-11-03
+backend/src/modules/ops/incidents.dto.ts,BE,ops,BE-11,58,pregledano,"BE-11 (F-07): `status` filter `@IsIn([OPEN,ACK,CLOSED])`",2026-11-03
+backend/src/modules/ops/incidents.service.ts,BE,ops,BE-11,198,pregledano,"BE-11 (F-07/08/09/10): status validacija, `taskId` scoping, koordinate, best-effort notifikacija",2026-11-03
 backend/src/modules/ops/iot-key.ts,BE,ops,BE-09,15,pregledano,BE-09: pregledano — keyLookup (SHA-256) + bcrypt hash; ključ se ne čuva u čistom obliku,2026-11-03
 backend/src/modules/ops/iot.controller.ts,BE,ops,BE-09,19,pregledano,BE-09: pregledano — @Public + x-device-key (jedini javni ulaz osim health/auth),2026-11-03
 backend/src/modules/ops/iot.dto.ts,BE,ops,BE-09,10,pregledano,"BE-09: pregledano — lat/lng su stringovi, validiraju se u geo.ts",2026-11-03
@@ -184,7 +186,7 @@ backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,270,pregledano,BE-08: P
 backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,pregledano,BE-05: quantities.read/write permisije; bez DELETE rute (količine se ne brišu),2026-11-02
 backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,pregledano,"BE-05: količine kao string (decimal helper u servisu), unit iz zatvorene liste",2026-11-02
 backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,167,pregledano,BE-08: PROJECT_QUANTITY_CREATED / PROJECT_QUANTITY_UPDATED u audit (B8),2026-11-03
-backend/src/modules/ops/serialize-diary.ts,BE,ops,BE-11,63,nepregledano,,
+backend/src/modules/ops/serialize-diary.ts,BE,ops,BE-11,63,pregledano,"BE-11: dnevnik/HSE serijalizacija — `Decimal` u string, datum u ISO dan",2026-11-03
 backend/src/modules/ops/serialize-fleet.ts,BE,ops,BE-09,55,pregledano,BE-10: pregledano — Decimal u string; fuelTotalCost zaokružuje na 2 decimale,2026-11-03
 backend/src/modules/ops/serialize-gps-device.ts,BE,ops,BE-09,14,pregledano,BE-09: pregledano — ne izlaže apiKeyHash ni keyLookup,2026-11-03
 backend/src/modules/ops/serialize-machine.ts,BE,ops,BE-09,20,pregledano,"BE-09: pregledano — Decimal u string, nema internih polja",2026-11-03
@@ -285,16 +287,16 @@ backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uv
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,192,nepregledano,,
-backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,47,nepregledano,,
+backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,434,pregledano,"BE-09: pregledano — IoT 401, GPS/presence, dodjela mašine, decommission 409 na timer/gorivo",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,nepregledano,,
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
-backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,42,nepregledano,,
+backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,124,nepregledano,,
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,244,nepregledano,,
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02

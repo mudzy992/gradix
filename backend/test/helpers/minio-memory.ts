@@ -1,6 +1,10 @@
 import { Readable } from 'node:stream';
 
-type Stored = { buffer: Buffer; size: number };
+type Stored = {
+  buffer: Buffer;
+  size: number;
+  metaData: Record<string, string>;
+};
 
 export class MemoryMinioClient {
   private readonly objects = new Map<string, Stored>();
@@ -18,8 +22,24 @@ export class MemoryMinioClient {
     objectPath: string,
     buffer: Buffer,
     size: number,
+    metaData: Record<string, string> = {},
   ): Promise<void> {
-    this.objects.set(objectPath, { buffer, size });
+    const lowered: Record<string, string> = {};
+    for (const [key, value] of Object.entries(metaData)) {
+      lowered[key.toLowerCase()] = value;
+    }
+    this.objects.set(objectPath, { buffer, size, metaData: lowered });
+  }
+
+  async statObject(
+    _bucket: string,
+    objectPath: string,
+  ): Promise<{ size: number; metaData: Record<string, string> }> {
+    const stored = this.objects.get(objectPath);
+    if (!stored) {
+      throw new Error('not found');
+    }
+    return { size: stored.size, metaData: stored.metaData };
   }
 
   async getObject(_bucket: string, objectPath: string): Promise<Readable> {

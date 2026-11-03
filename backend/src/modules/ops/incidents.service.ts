@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -8,7 +8,7 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 import { HSE_PHOTO_MAX } from '../../common/constants';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { assertStoragePath } from '../../common/utils/storage-path';
-import { parseDecimal } from '../../common/utils/decimal-input';
+import { parseOptionalLatLng } from '../../common/utils/geo';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
@@ -21,6 +21,8 @@ import { serializeIncident } from './serialize-diary';
 
 @Injectable()
 export class IncidentsService {
+  private readonly logger = new Logger(IncidentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
@@ -34,9 +36,7 @@ export class IncidentsService {
     const where: Prisma.IncidentWhereInput = {
       companyId,
       ...(query.projectId ? { projectId: query.projectId } : {}),
-      ...(query.status
-        ? { status: query.status as Prisma.EnumIncidentStatusFilter['equals'] }
-        : {}),
+      ...(query.status ? { status: query.status } : {}),
       ...this.scopeWhere(actor),
     };
     const [rows, total] = await this.prisma.$transaction([
@@ -68,6 +68,27 @@ export class IncidentsService {
         400,
       );
     }
+    if (dto.taskId) {
+      // BE-11 (F-08): `taskId` je išao u bazu bez provjere firme/projekta — FK je
+      // dozvoljavao referencu na tuđi zadatak.
+      const task = await this.prisma.task.findFirst({
+        where: {
+          id: dto.taskId,
+          companyId,
+          ...(dto.projectId ? { projectId: dto.projectId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!task) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_FAILED,
+          'Invalid taskId for this project',
+          400,
+        );
+      }
+    }
+    // BE-11 (F-09): koordinate su bile nevalidirane i mogle su doći „samo lat“.
+    const coords = parseOptionalLatLng(dto.lat, dto.lng);
     const row = await this.prisma.incident.create({
       data: {
         companyId,
@@ -76,8 +97,8 @@ export class IncidentsService {
         userId: actor.id,
         severity: dto.severity,
         description: dto.description,
-        lat: dto.lat ? parseDecimal(dto.lat, 'lat') : undefined,
-        lng: dto.lng ? parseDecimal(dto.lng, 'lng') : undefined,
+        lat: coords.lat ?? undefined,
+        lng: coords.lng ?? undefined,
         photos: {
           create: paths.map((path) => ({
             companyId,
@@ -131,6 +152,23 @@ export class IncidentsService {
   }
 
   private async notifyCreated(
+    companyId: string,
+    incidentId: string,
+    projectId?: string,
+  ) {
+    // BE-11 (F-10): incident je već upisan — pad notifikacije ne smije dati 500.
+    try {
+      await this.sendCreated(companyId, incidentId, projectId);
+    } catch (error) {
+      this.logger.warn(
+        `HSE_CREATED notifikacija nije poslana (incident ${incidentId}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private async sendCreated(
     companyId: string,
     incidentId: string,
     projectId?: string,

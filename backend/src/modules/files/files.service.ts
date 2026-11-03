@@ -78,14 +78,33 @@ export class FilesService {
     return this.streamPublic(companyId, rawPath);
   }
 
+  /**
+   * BE-11 (F-12): uz stream se vraćaju i veličina i tip objekta. Prije ih ruta nije
+   * postavljala, pa su browseri dobijali `application/octet-stream` (PDF u iframe-u se
+   * nije prikazivao, slike su se oslanjale na sniffing).
+   */
   async streamPublic(companyId: string, rawPath: string) {
     const objectPath = assertStoragePath(rawPath, companyId);
     try {
+      const stat = await this.minio.client.statObject(
+        this.minio.bucket,
+        objectPath,
+      );
       const stream = await this.minio.client.getObject(
         this.minio.bucket,
         objectPath,
       );
-      return { stream, path: objectPath };
+      const contentType =
+        stat.metaData?.['content-type'] ?? stat.metaData?.['Content-Type'];
+      return {
+        stream,
+        path: objectPath,
+        size: stat.size,
+        contentType:
+          typeof contentType === 'string' && contentType.length > 0
+            ? contentType
+            : 'application/octet-stream',
+      };
     } catch {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'File not found', 404);
     }

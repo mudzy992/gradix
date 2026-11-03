@@ -213,6 +213,19 @@ izostane. **Odbačeno:** outbox tabela + worker (previše za v1), tihi `catch {}
 **Dug:** u BE-08 (šema) i BE-09 (ops servisi) preporuka je `tx.auditEvent.create` u istoj
 transakciji za finansijske operacije (payroll, stock, fuel).
 
+### D-032 — Fajlovi: pristup po firmi, bez ACL-a po fajlu
+**Datum:** 2026-11-03 · **Status:** na snazi
+`GET /api/files?path=…` provjerava tenant prefiks (`{companyId}/`, `assertStoragePath`) i ništa više.
+Nema tabele dozvola po objektu, nema potpisanih URL-ova. **Zašto tako:** putanje su
+`{companyId}/{yyyy}/{mm}/{uuid}.{ext}` — nema listinga i nema načina da se putanja pogodi; svaka
+putanja se do klijenta vraća **samo kroz endpoint koji već provjerava dozvolu** (dnevnik, HSE,
+vagan, dokument, tender). Za v1 je to proporcionalno: pravi ACL bi tražio novu tabelu, provjeru u
+svakom od ~8 tokova i UI za dijeljenje. **Popravljeno u BE-11:** odgovor sada nosi tačan
+`Content-Type`/`Content-Length`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy:
+sandbox` i `Cache-Control: private, no-store`; greška streama uništi odgovor umjesto da visi.
+**Kada revidirati:** čim se pojavi dijeljenje fajla van firme, javni link na prilog ili
+fajl koji pripada više firmi.
+
 ---
 
 ## Zamijenjene / povučene odluke

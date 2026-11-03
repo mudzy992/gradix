@@ -42,5 +42,27 @@ describe('Files (e2e)', () => {
     );
     const companyId = logged.body.data.user.company.id as string;
     expect(uploaded.body.data.path.startsWith(`${companyId}/`)).toBe(true);
+
+    // BE-11 (F-12): preuzimanje mora nositi tip i veličinu (prije: octet-stream) i
+    // zaštitu od MIME sniffing-a, jer je sadržaj korisnički.
+    const download = await request(app.getHttpServer())
+      .get('/api/files')
+      .query({ path: uploaded.body.data.path as string })
+      .set(auth(token));
+    expect(download.status).toBe(200);
+    expect(download.headers['content-type']).toBe('image/png');
+    expect(download.headers['content-length']).toBe(String(PNG.length));
+    expect(download.headers['x-content-type-options']).toBe('nosniff');
+    expect(download.headers['cache-control']).toBe('private, no-store');
+  });
+
+  it('rejects a path outside the company prefix', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const response = await request(app.getHttpServer())
+      .get('/api/files')
+      .query({ path: 'other-company/2026/11/x.png' })
+      .set(auth(logged.body.data.accessToken as string));
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe('FORBIDDEN');
   });
 });

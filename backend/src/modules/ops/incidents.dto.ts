@@ -13,9 +13,11 @@ export class IncidentListQueryDto extends PaginationQueryDto {
   @IsString()
   projectId?: string;
 
+  // BE-11 (F-07): status je bio slobodan string koji se cast-ovao u Prisma enum —
+  // `?status=x` je padao na Prisma validaciji (500) umjesto 400.
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsIn(['OPEN', 'ACK', 'CLOSED'])
+  status?: 'OPEN' | 'ACK' | 'CLOSED';
 }
 
 export class CreateIncidentDto {

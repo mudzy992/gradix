@@ -44,7 +44,28 @@ export class FilesController {
     if (!rawPath) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'path required', 400);
     }
-    const { stream } = await this.files.getObject(actor, rawPath);
+    const { stream, path, size, contentType } = await this.files.getObject(
+      actor,
+      rawPath,
+    );
+    // BE-11 (F-12): eksplicitni tip/veličina + zaštita od MIME sniffing-a. Fajl je
+    // korisnički sadržaj, pa se nikad ne izvršava u kontekstu aplikacije.
+    response.setHeader('Content-Type', contentType);
+    response.setHeader('Content-Length', String(size));
+    response.setHeader(
+      'Content-Disposition',
+      `inline; filename="${path.split('/').pop() ?? 'file'}"`,
+    );
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader(
+      'Content-Security-Policy',
+      "sandbox; default-src 'none'",
+    );
+    // Stream greška (npr. MinIO prekine vezu) ne smije ostaviti odgovor da visi.
+    stream.on('error', () => {
+      response.destroy();
+    });
     stream.pipe(response);
   }
 }

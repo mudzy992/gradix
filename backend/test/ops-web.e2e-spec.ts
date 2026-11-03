@@ -120,4 +120,124 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     expect(list.status).toBe(200);
     expect(list.body.data.length).toBeGreaterThan(0);
   });
+
+  /**
+   * BE-11: PDF dnevnika je padao na 500 za bh. slova (`č`, `ć`, `đ` — WinAnsi ih ne
+   * kodira) i sjekao je tekst na 110 znakova; sada se lomi i ide na više stranica.
+   */
+  it('diary: PDF sa bh. slovima i višerednim tekstom; radnik bez diary.read 403', async () => {
+    const day = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const created = await request(app.getHttpServer())
+      .post('/api/diary')
+      .set(auth(ss))
+      .send({
+        projectId,
+        date: day,
+        workDescription:
+          'Čišćenje čelične konstrukcije i đžepova temelja.\nDrugi red — šljunak.',
+        problemsNoted: 'Čekamo ćeramičara; žalba na buku.',
+      });
+    expect(created.status).toBe(201);
+    const pdf = await request(app.getHttpServer())
+      .post(`/api/diary/${created.body.data.id}/pdf`)
+      .set(auth(ss))
+      .send({});
+    expect(pdf.status).toBe(201);
+    expect(pdf.body.data.pdfUrl).toMatch(/\.pdf$/);
+    const denied = await request(app.getHttpServer())
+      .post(`/api/diary/${created.body.data.id}/pdf`)
+      .set(auth(worker))
+      .send({});
+    expect(denied.status).toBe(403);
+  });
+
+  it('diary: temperatura i koordinate fotografije se validiraju (BE-11)', async () => {
+    const day = new Date(Date.now() + 172_800_000).toISOString().slice(0, 10);
+    const badTemp = await request(app.getHttpServer())
+      .post('/api/diary')
+      .set(auth(ss))
+      .send({ projectId, date: day, tempMin: 'abc' });
+    expect(badTemp.status).toBe(400);
+    const hugeTemp = await request(app.getHttpServer())
+      .post('/api/diary')
+      .set(auth(ss))
+      .send({ projectId, date: day, tempMax: '500' });
+    expect(hugeTemp.status).toBe(400);
+    const ok = await request(app.getHttpServer())
+      .post('/api/diary')
+      .set(auth(ss))
+      .send({ projectId, date: day, tempMin: '-3.5', tempMax: '11.2' });
+    expect(ok.status).toBe(201);
+    const entryId = ok.body.data.id as string;
+    const me = await request(app.getHttpServer()).get('/api/me').set(auth(ss));
+    const companyId = me.body.data.user.company.id as string;
+    const path = `${companyId}/2026/11/photo-${Date.now()}.png`;
+    const halfCoords = await request(app.getHttpServer())
+      .post(`/api/diary/${entryId}/photos`)
+      .set(auth(ss))
+      .send({ path, lat: '43.85' });
+    expect(halfCoords.status).toBe(400);
+    const outOfRange = await request(app.getHttpServer())
+      .post(`/api/diary/${entryId}/photos`)
+      .set(auth(ss))
+      .send({ path, lat: '999', lng: '18.4' });
+    expect(outOfRange.status).toBe(400);
+    const first = await request(app.getHttpServer())
+      .post(`/api/diary/${entryId}/photos`)
+      .set(auth(ss))
+      .send({ path, lat: '43.85', lng: '18.41', caption: 'Temelj' });
+    expect(first.status).toBe(201);
+    // isti objekat dvaput (offline replay) → isti zapis, bez duplikata
+    const again = await request(app.getHttpServer())
+      .post(`/api/diary/${entryId}/photos`)
+      .set(auth(ss))
+      .send({ path, lat: '43.85', lng: '18.41', caption: 'Temelj' });
+    expect(again.status).toBe(201);
+    expect(again.body.data.id).toBe(first.body.data.id);
+  });
+
+  it('HSE: nevalidan status filter i nevalidne koordinate zadatka (BE-11)', async () => {
+    const badStatus = await request(app.getHttpServer())
+      .get('/api/incidents')
+      .query({ status: 'BOGUS' })
+      .set(auth(ss));
+    expect(badStatus.status).toBe(400);
+    const goodStatus = await request(app.getHttpServer())
+      .get('/api/incidents')
+      .query({ status: 'OPEN' })
+      .set(auth(ss));
+    expect(goodStatus.status).toBe(200);
+    const badTask = await request(app.getHttpServer())
+      .post('/api/incidents')
+      .set(auth(ss))
+      .send({ projectId, severity: 'LOW', description: 'x', taskId: 'nema' });
+    expect(badTask.status).toBe(400);
+    const halfCoords = await request(app.getHttpServer())
+      .post('/api/incidents')
+      .set(auth(ss))
+      .send({ projectId, severity: 'LOW', description: 'x', lat: '43.85' });
+    expect(halfCoords.status).toBe(400);
+    const outOfRange = await request(app.getHttpServer())
+      .post('/api/incidents')
+      .set(auth(ss))
+      .send({
+        projectId,
+        severity: 'LOW',
+        description: 'x',
+        lat: '43.85',
+        lng: '999',
+      });
+    expect(outOfRange.status).toBe(400);
+    const ok = await request(app.getHttpServer())
+      .post('/api/incidents')
+      .set(auth(ss))
+      .send({
+        projectId,
+        severity: 'MEDIUM',
+        description: 'Near miss',
+        lat: '43.85',
+        lng: '18.41',
+      });
+    expect(ok.status).toBe(201);
+  });
 });

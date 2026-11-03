@@ -56,7 +56,15 @@ export class UpsertDiaryDto {
   workersCount?: number;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
   localId?: string;
+
+  /** BE-11 (F-04): offline identitet uređaja — zajedno sa `localId` daje idempotentno ponavljanje. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  deviceId?: string;
 }
 
 export class PatchDiaryDto {

@@ -112,7 +112,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `companies` | `/api/companies`, `/api/company` | tenant CRUD (PLATFORM_ADMIN); `GET /company` traži `settings.read`, `PATCH /company` traži `settings.write`; slug immutable |
 | `settings` | `/api/settings` | registry podešavanja firme (`PUT` je atomski: validacija svih ključeva pa jedna transakcija); javni `GET /settings/public` maskira `SECRET` |
 | `notifications` | `/api/notifications` | in-app lista, read; emisija preko Socket.IO |
-| `files` | `/api/files` | upload/download (MinIO), path guard `{companyId}/`, MIME/veličina |
+| `files` | `/api/files` | upload/download (MinIO), path guard `{companyId}/`, MIME sniffing + veličina, download nosi `Content-Type`/`Content-Length`/`nosniff`; pristup je **po firmi** (bez ACL-a po fajlu — D-032) |
 | `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu; zadaci: `?status=` iz zatvorene liste (`400` na nepoznat), duplikat dodjele/zavisnosti je `409`; timer: zatvaranje/pauza/nastavak su transakcije (sesija + minuti + status zadatka), `/timer/me` i `GET /timer` ne vraćaju `deviceId`/`localId`, `GET /timer` daje `elapsedMinutes`; ispravke (`/amendments`): `entityType` iz zatvorene liste, primjena + zapis ispravke su jedna transakcija; flota: koordinate se validiraju (`-90..90`/`-180..180`), jedna otvorena dodjela po mašini (`409`), GPS tačka + pozicija mašine su jedna transakcija; logistika: ture/gorivo/šifarnici — koordinate ture i depoa se validiraju, gorivo + `currentSpend` su jedna transakcija, offline identitet se upisuje u istom `create`; tura i gorivo su **nepromjenjivi** (`complete` je jedina izmjena ture; ispravke idu kroz `/amendments`) |
 | `payroll` | `/api/payroll` | obračun po mjesecu, approve/reject, export `.xlsx` |
 | `polish` | `/api/tenders`, `/services`, `/documents`, `/reports` | tenderi, servis mašina, istek dokumenata, fiksni izvještaji |
@@ -240,6 +240,7 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B8 | ~~`AuditAction` bez akcija za projekat/dodjelu/fazu/dokument/količinu/zadatak~~ — ✅ riješeno (BE-08: 19 novih akcija + pozivi u `projects`, `assignments`, `phases`, `documents`, `quantities`, `tasks`, `task-assignees`, `task-dependencies`) | BE-08 |
 | B9 | ~~`PATCH/DELETE /trips/:id` i `PATCH/DELETE /fuel/:id` su mrtve rute~~ — ✅ riješeno (BE-10, odluka vlasnika: **opcija A**) — rute, servisne metode i `Patch*Dto` uklonjeni; zapis je nepromjenjiv, ispravke idu kroz `/amendments` | BE-10 |
 | B10 | ~~Flota, GPS uređaji, ture, gorivo i šifarnici nisu u auditu~~ — ✅ riješeno (BE-10: 17 novih akcija u migraciji `20261103160000_be10_fleet_audit_actions` + pozivi u `machines`, `gps-devices`, `trips`, `fuel`, `catalog`) | BE-10 |
+| B11 | Dnevnik, HSE i fajlovi **nisu u auditu** (`AuditAction` nema `DIARY_*`, `INCIDENT_*`) — akcije + pozivi u sljedećoj migraciji | BE-12 |
 
 ---
 

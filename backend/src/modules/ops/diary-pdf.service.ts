@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFPage, StandardFonts } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
+import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { serializeDiary } from './serialize-diary';
+import { assertDiaryRead, diaryProjectWhere } from './diary-access';
+import { toWinAnsi, wrapLines } from './diary-pdf-text';
+
+const PAGE_WIDTH = 595;
+const PAGE_HEIGHT = 842;
+const MARGIN = 48;
+const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+const BOTTOM_LIMIT = 60;
 
 @Injectable()
 export class DiaryPdfService {
@@ -17,38 +26,70 @@ export class DiaryPdfService {
   ) {}
 
   async generate(actor: AuthUser, id: string) {
+    // BE-11 (F-01): ruta je ranije tražila samo vidljiv projekat, ne i `diary.read`
+    // — korisnik sa pristupom projektu (npr. radnik) mogao je da izvuče PDF dnevnika.
+    assertDiaryRead(actor);
+    const companyId = requireCompany(actor);
     const row = await this.prisma.diaryEntry.findFirst({
-      where: { id },
+      where: { id, companyId, ...diaryProjectWhere(actor) },
       include: { photos: true, project: true },
     });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Diary entry not found', 404);
     }
+    // Zadržano: projektni pristup (SS/PM) mora biti vidljiv; `diaryProjectWhere`
+    // pokriva dnevnik, ovo pokriva i slučaj kada se pravila raziđu.
     await this.access.getVisibleProject(actor, row.projectId);
+
     const pdf = await PDFDocument.create();
-    const page = pdf.addPage([595, 842]);
     const font = await pdf.embedFont(StandardFonts.Helvetica);
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    let y = 800;
-    const line = (text: string, size = 11, useBold = false): void => {
-      page.drawText(text.slice(0, 110), {
-        x: 48,
-        y,
-        size,
-        font: useBold ? bold : font,
-      });
-      y -= size + 8;
+    let page: PDFPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    let y = PAGE_HEIGHT - MARGIN;
+
+    // BE-11 (F-02): tekst se više ne siječe na 110 znakova i ne gubi prelome redova;
+    // lomi se po stvarnoj širini fonta, uz nove stranice kad ponestane prostora.
+    const draw = (text: string, size = 11, useBold = false): void => {
+      const activeFont: PDFFont = useBold ? bold : font;
+      const safe = toWinAnsi(text);
+      for (const line of wrapLines(safe, CONTENT_WIDTH, (value) =>
+        activeFont.widthOfTextAtSize(value, size),
+      )) {
+        if (y < BOTTOM_LIMIT) {
+          page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+          y = PAGE_HEIGHT - MARGIN;
+        }
+        page.drawText(line, { x: MARGIN, y, size, font: activeFont });
+        y -= size + 6;
+      }
     };
-    line('Gradix — site diary (internal)', 14, true);
-    line('Not a legal form. Internal copy only.', 9);
-    y -= 8;
-    line(`Project: ${row.project.name}`);
-    line(`Date: ${row.date.toISOString().slice(0, 10)}`);
-    line(`Weather: ${row.weather ?? '—'}`);
-    line(`Workers: ${row.workersCount ?? '—'}`);
-    line(`Work: ${row.workDescription ?? '—'}`);
-    line(`Problems: ${row.problemsNoted ?? '—'}`);
-    line(`Photos: ${row.photos.length}`);
+    const blank = (height = 8): void => {
+      y -= height;
+    };
+
+    draw('Gradix — site diary (internal)', 14, true);
+    draw('Not a legal form. Internal copy only.', 9);
+    blank();
+    draw(`Project: ${row.project.name}`);
+    draw(`Date: ${row.date.toISOString().slice(0, 10)}`);
+    draw(`Weather: ${row.weather ?? '—'}`);
+    draw(`Temperature: ${this.tempText(row.tempMin, row.tempMax)}`);
+    draw(`Workers: ${row.workersCount ?? '—'}`);
+    blank();
+    draw('Work:', 11, true);
+    draw(row.workDescription ?? '—');
+    blank();
+    draw('Problems:', 11, true);
+    draw(row.problemsNoted ?? '—');
+    blank();
+    draw(`Photos: ${row.photos.length}`);
+    for (const [index, photo] of row.photos.entries()) {
+      draw(
+        `${index + 1}. ${photo.caption ? `${photo.caption} — ` : ''}${photo.path}`,
+        9,
+      );
+    }
+
     const bytes = await pdf.save();
     const path = await this.files.putGenerated(
       row.companyId,
@@ -62,5 +103,15 @@ export class DiaryPdfService {
       include: { photos: true },
     });
     return serializeDiary(updated);
+  }
+
+  private tempText(
+    min: { toString(): string } | null,
+    max: { toString(): string } | null,
+  ): string {
+    if (!min && !max) {
+      return '—';
+    }
+    return `${min?.toString() ?? '—'} / ${max?.toString() ?? '—'} °C`;
   }
 }

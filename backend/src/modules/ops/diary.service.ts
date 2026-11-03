@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -8,7 +8,7 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 import { DIARY_PHOTO_MAX } from '../../common/constants';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { assertStoragePath } from '../../common/utils/storage-path';
-import { parseDecimal } from '../../common/utils/decimal-input';
+import { parseOptionalLatLng } from '../../common/utils/geo';
 import { assertProjectWritable } from '../../common/scope/project-lock';
 import { parseDateOnly } from '../../common/scope/company-tz';
 import { requireCompany } from '../users/users-helpers';
@@ -31,6 +31,8 @@ import {
 
 @Injectable()
 export class DiaryService {
+  private readonly logger = new Logger(DiaryService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
@@ -77,6 +79,22 @@ export class DiaryService {
   async create(actor: AuthUser, dto: UpsertDiaryDto) {
     const project = await this.requireWritableProject(actor, dto.projectId);
     const date = parseDateOnly(dto.date);
+    // BE-11 (F-04): offline ponavljanje mora vratiti **postojeći** zapis. Prije se
+    // `localId` upisivao bez `deviceId` (i u drugom upisu, kroz sync), pa je ponovni
+    // sync uvijek padao na dnevni unique kao `DIARY_CONFLICT`.
+    if (typeof dto.localId === 'string' && dto.localId !== '') {
+      const replay = await this.prisma.diaryEntry.findFirst({
+        where: {
+          companyId: project.companyId,
+          localId: dto.localId,
+          deviceId: typeof dto.deviceId === 'string' ? dto.deviceId : null,
+        },
+        include: { photos: true },
+      });
+      if (replay) {
+        return serializeDiary(replay);
+      }
+    }
     try {
       const row = await this.prisma.diaryEntry.create({
         data: {
@@ -85,6 +103,7 @@ export class DiaryService {
           date,
           ...diaryWriteData(dto),
           localId: typeof dto.localId === 'string' ? dto.localId : undefined,
+          deviceId: typeof dto.deviceId === 'string' ? dto.deviceId : undefined,
         },
         include: { photos: true },
       });
@@ -128,6 +147,15 @@ export class DiaryService {
     const project = await this.access.getVisibleProject(actor, row.projectId);
     await this.access.assertScopedWrite(actor, project);
     assertProjectWritable(project);
+    const path = assertStoragePath(dto.path, project.companyId);
+    // BE-11 (F-11): offline sync ponovo šalje istu fotografiju (isti objekat u MinIO)
+    // → vrati postojeći zapis umjesto duplikata. `path` je jedinstven po uploadu.
+    const duplicate = await this.prisma.diaryPhoto.findFirst({
+      where: { diaryEntryId: id, path },
+    });
+    if (duplicate) {
+      return duplicate;
+    }
     const count = await this.prisma.diaryPhoto.count({
       where: { diaryEntryId: id },
     });
@@ -138,15 +166,17 @@ export class DiaryService {
         400,
       );
     }
-    const path = assertStoragePath(dto.path, project.companyId);
+    // BE-11 (F-05): koordinate fotografije su išle u bazu bez provjere opsega i
+    // dozvoljavale su „samo lat“ (ista klasa kao F-BE-09-04 / F-BE-10-03).
+    const coords = parseOptionalLatLng(dto.lat, dto.lng);
     const photo = await this.prisma.diaryPhoto.create({
       data: {
         companyId: project.companyId,
         diaryEntryId: id,
         path,
         caption: dto.caption,
-        lat: dto.lat ? parseDecimal(dto.lat, 'lat') : undefined,
-        lng: dto.lng ? parseDecimal(dto.lng, 'lng') : undefined,
+        lat: coords.lat ?? undefined,
+        lng: coords.lng ?? undefined,
       },
     });
     return photo;
@@ -181,22 +211,32 @@ export class DiaryService {
     projectId: string,
     actorId: string,
   ) {
-    const users = await this.prisma.projectAssignment.findMany({
-      where: { projectId },
-      select: { userId: true },
-    });
-    for (const row of users) {
-      if (row.userId === actorId) {
-        continue;
-      }
-      await this.notifications.createForUser({
-        companyId,
-        userId: row.userId,
-        type: 'DIARY_CONFLICT',
-        title: 'Diary conflict',
-        message: 'Two diary entries for the same day',
-        data: { projectId },
+    // BE-11 (F-06): notifikacija je obavještenje, ne uslov za 409 — prije je pad
+    // notifikacije pretvarao `DIARY_CONFLICT` u 500.
+    try {
+      const users = await this.prisma.projectAssignment.findMany({
+        where: { projectId },
+        select: { userId: true },
       });
+      for (const row of users) {
+        if (row.userId === actorId) {
+          continue;
+        }
+        await this.notifications.createForUser({
+          companyId,
+          userId: row.userId,
+          type: 'DIARY_CONFLICT',
+          title: 'Diary conflict',
+          message: 'Two diary entries for the same day',
+          data: { projectId },
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `DIARY_CONFLICT notifikacija nije poslana (project ${projectId}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 }
