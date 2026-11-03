@@ -73,6 +73,7 @@ definisan.“
 | F-INF-07-06 | **Start aplikacije ne smije zavisiti od Redisa**: `lazyConnect` + `void client.connect().catch()` — ako Redis još nije spreman, app starta, throttle je privremeno memorijski | srednje | `backend/src/common/redis/redis.service.ts` | riješeno |
 | F-INF-07-07 | **Nova zavisnost** (`ioredis@5`) u produkcijskoj putanji — P6 traži pisano obrazloženje | srednje | `backend/package.json` | prihvaćeno: D‑039 (alternative `redis`/node-redis i ručni RESP klijent odbačene; upotreba je iza fail-open wrappera) |
 | F-INF-07-08 | **TLS bez CA** bi tiho degradirao na nešifrovanu vezu ako fajl nedostaje — u produkciji to mora biti vidljivo | nisko | `redis.service.ts` (warn grana) | riješeno: `warn` log u startu + CA putanja u env katalogu; `REDIS_TLS_CA_FILE` default je putanja iz compose mount-a |
+| F-INF-07-10 | **ioredis ready check traži `INFO`** koji ACL korisnik namjerno nema → pri svakom startu log „Skipping the ready check because INFO command fails“ (izgleda kao greška konfiguracije) | nisko | produkcijski log vlasnika, 2026-11-03 | riješeno: `enableReadyCheck: false` (spremnost = naš `PING` u `/api/ready`); alternativa `+info` odbačena jer korisniku ne treba nijedna admin komanda |
 | F-INF-07-09 | **Host bez lozinke**: da validacija nije uvela pravilo, klijent bi se tiho autentifikovao kao `default` korisnik | nisko | `backend/src/config/env.spec.ts` | riješeno: `REDIS_PASSWORD` je obavezan kad je `REDIS_HOST` zadat (greška pri startu, ne warning) |
 
 ## 6. Popravke

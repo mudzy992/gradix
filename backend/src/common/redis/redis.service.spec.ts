@@ -55,6 +55,7 @@ describe('RedisService (INF-07)', () => {
         username: 'gradix',
         password: 'tajna',
         lazyConnect: true,
+        enableReadyCheck: false,
         enableOfflineQueue: false,
         maxRetriesPerRequest: 1,
       }),

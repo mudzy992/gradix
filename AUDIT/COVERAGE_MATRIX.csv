@@ -68,8 +68,8 @@ backend/src/common/rbac/roles.ts,BE,common,BE-03,15,pregledano,"BE-03: 10 rola, 
 backend/src/common/redis/failover-throttler.storage.spec.ts,INF,redis,INF-07,88,pregledano,"INF-07: 4 testa — fallback bez Redisa, brojanje/blokada u Redisu, pad Redisa → memorija, PTTL -1 = pun TTL",2026-11-03
 backend/src/common/redis/failover-throttler.storage.ts,INF,redis,INF-07,80,pregledano,INF-07: INCR+PEXPIRE NX+PTTL u MULTI nad <prefix>throttle:<throttler>:<key>; na grešku memorijski storage (fail-open),2026-11-03
 backend/src/common/redis/redis.module.ts,INF,redis,INF-07,11,pregledano,INF-07: @Global modul — isti klijent za throttle storage i readiness,2026-11-03
-backend/src/common/redis/redis.service.spec.ts,INF,redis,INF-07,87,pregledano,"INF-07: 4 testa — disabled bez hosta, ACL/TLS opcije klijenta, ping error bez bacanja, quit na shutdown",2026-11-03
-backend/src/common/redis/redis.service.ts,INF,redis,INF-07,87,pregledano,"INF-07: jedan ioredis klijent (TLS sa CA, ACL REDIS_USER, lazyConnect, quit na shutdown); ping() za /api/ready (D-039)",2026-11-03
+backend/src/common/redis/redis.service.spec.ts,INF,redis,INF-07,88,pregledano,"INF-07: 4 testa — disabled bez hosta, ACL/TLS opcije klijenta, ping error bez bacanja, quit na shutdown",2026-11-03
+backend/src/common/redis/redis.service.ts,INF,redis,INF-07,91,pregledano,"INF-07: jedan ioredis klijent (TLS sa CA, ACL REDIS_USER, lazyConnect, quit na shutdown); ping() za /api/ready (D-039)",2026-11-03
 backend/src/common/scope/company-tz.spec.ts,BE,common,BE-03,99,pregledano,"BE-13: +1 test za nepostojeće datume (31.02., 29.02. nep(r)estupna)",2026-11-03
 backend/src/common/scope/company-tz.ts,BE,common,BE-03,116,pregledano,BE-13 (F-04): `parseDateOnly` odbija nepostojeće datume (prije tiho prebacivanje),2026-11-03
 backend/src/common/scope/ops-dates.spec.ts,BE,common,BE-03,66,pregledano,"BE-03: 7 testova datuma, geofence granica, normalizacije kodova",2026-11-02
@@ -526,7 +526,7 @@ scripts/audit/lib.mjs,STD,audit-tools,STD-01,258,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,438,nepregledano,,
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
-scripts/ops/redis-acl.sh,INF,redis,INF-07,39,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
+scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
 scripts/ops/restore.sh,INF,ops-scripts,INF-06,105,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
 scripts/standards/check-all.mjs,STD,standards,STD-01,171,pregledano,INF-02: 14 koraka (dodat image),2026-11-02

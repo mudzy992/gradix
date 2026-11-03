@@ -10,7 +10,8 @@
 #   - ključevi samo `<prefix>*` (`~<prefix>*`) — throttle brojači i budući cache,
 #   - komande koje backend zaista koristi: PING, MULTI/EXEC, INCR, PEXPIRE, PTTL
 #     (+ GET/SET/DEL/EXISTS/TTL za cache),
-#   - ništa administrativno (bez `@admin`, bez `FLUSHALL`, bez `CONFIG`, bez `KEYS`).
+#   - ništa administrativno (bez `@admin`, bez `FLUSHALL`, bez `CONFIG`, bez `KEYS`, bez `INFO`).
+#     Zato backend isključuje ioredis ready check (`enableReadyCheck: false`) i sam radi `PING`.
 set -euo pipefail
 
 USER_NAME="${REDIS_USER:-gradix}"

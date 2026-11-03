@@ -46,6 +46,10 @@ export class RedisService implements OnApplicationShutdown {
       password: config.get<string>('REDIS_PASSWORD') ?? undefined,
       tls,
       lazyConnect: true,
+      // ACL korisnik namjerno NEMA `+info` (D-039), pa ioredis-ov ready check (`INFO`) padne i
+      // loguje „Skipping the ready check…“ pri svakom startu. Spremnost provjeravamo sami —
+      // `PING` u `/api/ready` — pa je ready check isključen (nema lažne greške u logu).
+      enableReadyCheck: false,
       // Jedan pokušaj po komandi: throttle ne smije čekati sekunde na mrtav Redis.
       maxRetriesPerRequest: 1,
       connectTimeout: 2_000,

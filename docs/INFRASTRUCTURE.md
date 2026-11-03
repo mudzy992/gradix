@@ -333,6 +333,11 @@ REDIS_USER=gradix REDIS_PREFIX='gradix:' ./scripts/ops/redis-acl.sh
 `reset` čini komandu idempotentnom (ponovno pokretanje zamjenjuje prava). Ako server koristi
 `aclfile`, poslije dodavanja treba `ACL SAVE` — inače se korisnik gubi pri restartu Redisa.
 
+> **Namjerno nema `+info`:** korisniku ne treba nijedna administrativna komanda. Zbog toga je u
+> klijentu isključen ioredis-ov *ready check* (`enableReadyCheck: false`) — on šalje `INFO` i bez
+> dozvole loguje „Skipping the ready check because INFO command fails“. Spremnost provjeravamo
+> sami, `PING`-om u `/api/ready` (§11.1).
+
 ### 11.3 Provjera poslije uključivanja
 
 ```bash

@@ -354,6 +354,11 @@ obavezan (prazan `REDIS_HOST` = staro ponašanje).
 **Posljedica:** deploy bez `REDIS_PASSWORD` uz zadat `REDIS_HOST` **ne starta** (validacija u
 `env.ts`) — namjerno, jer bi tiho pao na `default` korisnika ili na neautentifikovanu vezu.
 
+**Dopuna (2026-11-03):** ACL korisnik **nema `+info`** (nije mu potreban), pa je u klijentu
+isključen ioredis ready check (`enableReadyCheck: false`) — bez toga svaki start loguje
+„Skipping the ready check because INFO command fails“, što izgleda kao greška konfiguracije.
+Spremnost provjerava `PING` u `/api/ready`.
+
 **Dopuna (2026-11-03, vlasnik):** `redis-core` sluša **TLS na portu 6380**, obični 6379 je
 isključen (`--tls-port 6380 --port 0`). Zato je default `REDIS_PORT=6380` u kodu, compose-u, env
 šablonima i ACL skripti — pogrešan port bi dao `ECONNREFUSED` koji se lako pročita kao „Redis ne
