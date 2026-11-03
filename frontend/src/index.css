@@ -93,6 +93,25 @@
   * {
     @apply border-border;
   }
+
+  /* FE-03 (WCAG 2.2 AA, 2.4.7/2.4.11): fokus je uvijek vidljiv — i na elementima koji nemaju
+     vlastiti `focus-visible:ring` (linkovi, <summary>, polja u tabelama). */
+  :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* FE-03 (2.3.3): poštuj sistemsku postavku za smanjeno kretanje. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   html {
     color-scheme: light;
   }

@@ -112,6 +112,22 @@ frontend/src/
    boju, poštovanje `prefers-reduced-motion`.
 5. Light tema je primarna; dark se uvodi samo ako se odobri (danas nije u obimu).
 
+### 4.4 Pristupačnost (FE-03) — šta je obezbijeđeno
+
+| Zahtjev (WCAG 2.2 AA) | Kako je riješeno | Gdje |
+|---|---|---|
+| 2.4.7 / 2.4.11 vidljiv fokus | globalni `:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px }` — i za elemente bez `ring` klase | `index.css` (base layer) |
+| 2.3.3 animacije | `@media (prefers-reduced-motion: reduce)` skraćuje animacije/transition i gasi `scroll-behavior` | `index.css` |
+| 1.3.1 / 3.3.1 / 3.3.2 labele i greške | `Field` vezuje `label ↔ polje ↔ poruka` (`aria-describedby`), greška ide u `role="alert"` i polje dobija `aria-invalid` | `components/field.tsx` |
+| 1.3.1 tabele | `TableHead` po defaultu ima `scope="col"` | `components/ui/table.tsx` |
+| 2.4.1 preskakanje blokova | skip-link na `#main` + `main` sa `tabIndex={-1}` i fokusom poslije navigacije | `components/layout/app-shell.tsx` (FE-02) |
+| 1.4.10 reflow | nema horizontalnog skrola na 320 px (provjerava E2E) | `e2e/a11y.spec.ts` |
+| 4.1.2 imena | ikonična dugmad imaju `aria-label` (`aria-hidden` na ikoni) | komponente |
+
+**Namjerno bez `axe`:** uvođenje `@axe-core/playwright` je nova zavisnost i +1 korak u CI-ju; četiri
+ciljane provjere (naslov, `aria-invalid` + poruka, vidljiv fokus, reflow) pokrivaju regresije koje su
+se stvarno dešavale. `axe` ostaje kandidat u FE-06 (E2E tokovi) uz pisano obrazloženje.
+
 ### 4.3 Admin dashboard — obavezan postupak
 Prije implementacije: (1) informaciona arhitektura (navigacija, grupe, prečice), (2) wireframe
 opis po ekranu, (3) lista komponenti i stanja (loading/empty/error/success) → **odobrenje
@@ -127,7 +143,7 @@ vlasnika** → tek onda kod.
 | Format | ❌ nema | `prettier --check` (jedan alat za cijeli monorepo) |
 | Tipovi | `tsc -b` u CI-ju | isto + `strict` u svim paketima |
 | Tokeni | ❌ nema provjere | skripta pada na sirovim bojama/spacing-u u komponentama |
-| A11y | ❌ | `axe` u Playwright testovima za ključne ekrane |
+| A11y | ✅ CSS pravila (fokus, reduced motion) + 4 Playwright provjere (`e2e/a11y.spec.ts`) | `axe` za ključne ekrane (kad se doda zavisnost — FE-06) |
 | Testovi | 1 Playwright spec | page objects + fixtures po tokovima (vidi `TESTING.md`) |
 | Bundle | nema budžeta | `vite build` + budžet po chunk-u (npr. initial < 250 kB gzip) |
 
@@ -141,6 +157,6 @@ vlasnika** → tek onda kod.
 | F2 | Nema unit/component testova (npr. `planned-gantt`, `quantity-tab`, forme) | FE-05 |
 | F3 | Nema design token guard-a; sirove boje u nekim komponentama (`❓` mjeri se u FE-01) | FE-01 |
 | F4 | ~~Dark varijanta u CSS-u je mrtva~~ **riješeno** u FE-01 (`.dark` tokeni; klasa se još ne dodaje) | FE-01 |
-| F5 | Nema a11y provjere (fokus, labele, kontrast, tastatura) | FE-03 |
+| F5 | ~~Nema a11y provjere~~ **riješeno** u FE-03 (globalni `focus-visible`, `prefers-reduced-motion`, `Field` veže grešku uz polje, `TableHead` `scope="col"`, 4 E2E provjere) | FE-03 |
 | F6 | Admin dashboard nije redizajniran (informaciona arhitektura čeka odobrenje) | FE-04 |
 | F7 | Nema `prettier`/format provjere; lint je samo oxlint | FE-02 |

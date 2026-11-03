@@ -36,6 +36,7 @@ export const en = {
     phone: 'Phone',
     password: 'Password',
     remember: 'Remember me',
+    required: 'This field is required.',
     submit: 'Sign in',
     forgot: 'Forgot password',
     forgotHint: 'Enter your email. If the account exists, we will send instructions.',

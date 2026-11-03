@@ -345,6 +345,7 @@ docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkci
 frontend/.oxlintrc.json,FE,config,FE-02,9,pregledano,FE-02: react/only-export-components (warn) + rules-of-hooks (error); nema a11y plugina (FE-03),2026-11-03
 frontend/Dockerfile,INF,frontend-image,INF-03,66,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
+frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,43,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,89,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
@@ -355,7 +356,7 @@ frontend/src/components/companies/company-sheet.tsx,FE,ops-ui,FE-08,105,nepregle
 frontend/src/components/erp/erp-costs-tab.tsx,FE,ops-ui,FE-08,80,nepregledano,,
 frontend/src/components/erp/erp-partners-tab.tsx,FE,ops-ui,FE-08,53,nepregledano,,
 frontend/src/components/erp/erp-stock-tab.tsx,FE,ops-ui,FE-08,89,nepregledano,,
-frontend/src/components/field.tsx,FE,ops-ui,FE-08,20,nepregledano,,
+frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
 frontend/src/components/layout/company-switcher.tsx,FE,layout,FE-02,54,pregledano,FE-02: vidljiv samo platform adminu; poslije promjene firme ponovo učita /me (permisije se mijenjaju po firmi),2026-11-03
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,143,pregledano,"FE-02: jedan spisak navigacije (5 grupa, ikone uz tekst), isNavItemVisible (permission/anyPermission/payroll/tenant), activeNavPath = najduži prefiks",2026-11-03
@@ -390,7 +391,7 @@ frontend/src/components/ui/separator.tsx,FE,ui,FE-16,27,nepregledano,,
 frontend/src/components/ui/sheet.tsx,FE,ui,FE-16,142,nepregledano,,
 frontend/src/components/ui/sonner.tsx,FE,ui,FE-16,37,nepregledano,,
 frontend/src/components/ui/switch.tsx,FE,ui,FE-16,36,nepregledano,,
-frontend/src/components/ui/table.tsx,FE,ui,FE-16,117,nepregledano,,
+frontend/src/components/ui/table.tsx,FE,ui,FE-16,119,pregledano,"FE-03: TableHead default scope=""col"" (WCAG 1.3.1); ostatak komponenti nepromijenjen",2026-11-03
 frontend/src/components/ui/tabs.tsx,FE,ui,FE-16,90,nepregledano,,
 frontend/src/components/ui/textarea.tsx,FE,ui,FE-16,19,nepregledano,,
 frontend/src/components/users/temp-password-dialog.tsx,FE,ops-ui,FE-08,46,nepregledano,,
@@ -401,8 +402,8 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,179,nepregledano,,
-frontend/src/i18n/en.ts,FE,shared,FE-15,179,nepregledano,,
+frontend/src/i18n/bs.ts,FE,shared,FE-15,180,pregledano,FE-03: dodan auth.required (poruka greške obrasca),2026-11-03
+frontend/src/i18n/en.ts,FE,shared,FE-15,180,pregledano,FE-03: dodan auth.required (poruka greške obrasca),2026-11-03
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
@@ -414,7 +415,7 @@ frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/polish-en.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,25,nepregledano,,
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,25,nepregledano,,
-frontend/src/index.css,FE,design,FE-01,106,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
+frontend/src/index.css,FE,design,FE-01,125,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.ts,FE,shared,FE-15,156,nepregledano,,
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,nepregledano,,
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,nepregledano,,
@@ -447,7 +448,7 @@ frontend/src/pages/fleet-map-page.tsx,FE,fleet-pages,FE-09,49,nepregledano,,
 frontend/src/pages/fleet-page.tsx,FE,fleet-pages,FE-09,143,nepregledano,,
 frontend/src/pages/forgot-page.tsx,FE,auth-pages,FE-07,51,nepregledano,,
 frontend/src/pages/hse-page.tsx,FE,site-pages,FE-10,110,nepregledano,,
-frontend/src/pages/login-page.tsx,FE,auth-pages,FE-07,80,nepregledano,,
+frontend/src/pages/login-page.tsx,FE,auth-pages,FE-07,96,pregledano,"FE-03: h1 u kartici, Label za „zapamti me“, greške po polju kroz i18n ključ auth.required",2026-11-03
 frontend/src/pages/logistics-page.tsx,FE,fleet-pages,FE-09,120,nepregledano,,
 frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,167,nepregledano,,
 frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,92,nepregledano,,

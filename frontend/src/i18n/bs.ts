@@ -36,6 +36,7 @@ export const bs = {
     phone: 'Telefon',
     password: 'Lozinka',
     remember: 'Zapamti me',
+    required: 'Obavezno polje.',
     submit: 'Prijavi se',
     forgot: 'Zaboravljena lozinka',
     forgotHint: 'Unesite email. Ako nalog postoji, poslat ćemo upute.',

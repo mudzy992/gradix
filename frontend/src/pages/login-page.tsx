@@ -12,12 +12,14 @@ import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { Field } from '@/components/field'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
+// FE-03: poruke su i18n ključevi (prevode se pri prikazu), a ne fiksni tekst.
 const schema = z.object({
-  identifier: z.string().min(1),
-  password: z.string().min(1),
+  identifier: z.string().min(1, 'auth.required'),
+  password: z.string().min(1, 'auth.required'),
   remember: z.boolean(),
 })
 
@@ -29,6 +31,8 @@ export function LoginPage() {
     resolver: zodResolver(schema),
     defaultValues: { identifier: '', password: '', remember: false },
   })
+  const errors = form.formState.errors
+  const errorText = (message?: string) => (message ? t(message) : undefined)
   const onSubmit = form.handleSubmit(async (values) => {
     const identifier = values.identifier.trim()
     const body = identifier.includes('@')
@@ -48,23 +52,35 @@ export function LoginPage() {
     <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{t('auth.login')}</CardTitle>
+          {/* FE-03: svaki ekran ima jedno `h1` — i prijava (ranije je naslov bio `div`). */}
+          <h1 className="text-lg font-semibold leading-none">{t('auth.login')}</h1>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={onSubmit}>
-            <Field label={t('auth.emailOrPhone')} htmlFor="identifier">
+            <Field
+              label={t('auth.emailOrPhone')}
+              htmlFor="identifier"
+              error={errorText(errors.identifier?.message)}
+            >
               <Input id="identifier" autoComplete="username" {...form.register('identifier')} />
             </Field>
-            <Field label={t('auth.password')} htmlFor="password">
+            <Field
+              label={t('auth.password')}
+              htmlFor="password"
+              error={errorText(errors.password?.message)}
+            >
               <Input id="password" type="password" autoComplete="current-password" {...form.register('password')} />
             </Field>
-            <label className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm">
               <Checkbox
+                id="remember"
                 checked={form.watch('remember')}
                 onCheckedChange={(checked) => form.setValue('remember', checked === true)}
               />
-              {t('auth.remember')}
-            </label>
+              <Label htmlFor="remember" className="font-normal">
+                {t('auth.remember')}
+              </Label>
+            </div>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {t('auth.submit')}
             </Button>

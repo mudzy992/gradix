@@ -270,7 +270,7 @@
       "id": "FE-03",
       "layer": "FE",
       "title": "A11y (WCAG 2.2 AA)",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "A11y je poprečna osobina svih FE ekrana (FE-07…FE-16); mjeri se axe testovima i ručnom provjerom, bez vlastitih fajlova."
     },
