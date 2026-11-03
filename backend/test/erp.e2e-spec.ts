@@ -248,7 +248,7 @@ describe('Phase 10 erp-lite (e2e)', () => {
     const warehouse = await request(app.getHttpServer())
       .post('/api/warehouses')
       .set(auth(admin))
-      .send({ name: 'Magacin audit', type: 'CENTRAL' });
+      .send({ name: 'Magacin audit', type: 'YARD' });
     expect(warehouse.status).toBe(201);
     const partnerAudit = await prisma.auditEvent.findMany({
       where: {

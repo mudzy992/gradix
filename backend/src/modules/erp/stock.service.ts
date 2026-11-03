@@ -55,27 +55,24 @@ export class StockService {
     // BE-14 F-01: provjera stanja i upis pokreta su ranije bili odvojeni (check-then-insert),
     // pa su dva paralelna izlaza mogla oba proći provjeru i stanje bi otišlo u minus.
     // Sada su u jednoj SERIALIZABLE transakciji.
-    const row = await this.prisma.$transaction(
-      async (tx) => {
-        await this.assertNotNegative(
-          tx,
+    const row = await this.runStockTx(async (tx) => {
+      await this.assertNotNegative(
+        tx,
+        companyId,
+        warehouse.id,
+        dto.materialId,
+        qty,
+      );
+      return tx.stockMovement.create({
+        data: {
           companyId,
-          warehouse.id,
-          dto.materialId,
+          warehouseId: warehouse.id,
+          materialId: dto.materialId,
           qty,
-        );
-        return tx.stockMovement.create({
-          data: {
-            companyId,
-            warehouseId: warehouse.id,
-            materialId: dto.materialId,
-            qty,
-            projectId: dto.projectId ?? warehouse.projectId,
-          },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+          projectId: dto.projectId ?? warehouse.projectId,
+        },
+      });
+    });
     await this.audit.write({
       companyId,
       actorId: actor.id,
@@ -117,28 +114,25 @@ export class StockService {
     // i upis su u SERIALIZABLE transakciji.
     let row;
     try {
-      row = await this.prisma.$transaction(
-        async (tx) => {
-          await this.assertNotNegative(
-            tx,
+      row = await this.runStockTx(async (tx) => {
+        await this.assertNotNegative(
+          tx,
+          companyId,
+          warehouse.id,
+          dto.materialId,
+          qty,
+        );
+        return tx.stockMovement.create({
+          data: {
             companyId,
-            warehouse.id,
-            dto.materialId,
+            warehouseId: warehouse.id,
+            materialId: dto.materialId,
             qty,
-          );
-          return tx.stockMovement.create({
-            data: {
-              companyId,
-              warehouseId: warehouse.id,
-              materialId: dto.materialId,
-              qty,
-              projectId: fuel.projectId,
-              fuelEntryId: fuel.id,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+            projectId: fuel.projectId,
+            fuelEntryId: fuel.id,
+          },
+        });
+      });
     } catch (error) {
       const raced = await this.raceWinner(companyId, fuelId, error);
       if (raced) {
@@ -155,6 +149,38 @@ export class StockService {
       payload: { fuelEntryId: fuel.id },
     });
     return { created: true, row: serializeMovement(row) };
+  }
+
+  /**
+   * BE-14 F-01: SERIALIZABLE transakcija za zalihe. Pod paralelizmom PostgreSQL može
+   * vratiti `40001` (Prisma: `P2034`) — to nije greška klijenta nego signal da treba
+   * ponoviti. Bez retry-a bi ispravan zahtjev završio kao `500`.
+   */
+  private async runStockTx<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    const maxAttempts = 3;
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        const retryable =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (!retryable) {
+          throw error;
+        }
+        if (attempt >= maxAttempts) {
+          throw new AppError(
+            ERROR_CODES.CONFLICT,
+            'Stock is being updated concurrently, retry',
+            409,
+          );
+        }
+      }
+    }
   }
 
   /** BE-14 F-02: paralelni `apply-stock` je već upisao pokret → vrati postojeći red. */

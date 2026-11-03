@@ -306,20 +306,21 @@ describe('Phase 9 payroll (e2e)', () => {
       .query({ year: 2024, month: 5 })
       .set(auth(admin));
     expect(legacy.body.data.approvedAmount).toBe('109.00');
-    // Vrati satnicu da kasniji testovi (ako ih bude) vide stabilno stanje.
-    await request(app.getHttpServer())
-      .patch(`/api/users/${workerId}`)
-      .set(auth(admin))
-      .send({ hourlyRate: '20.00' });
     expect(snapshotted.id).toBeTruthy();
 
-    // ERP: izvoz plata u troškove koristi isti snapshot, ne trenutnu satnicu.
+    // ERP: izvoz plata u troškove koristi isti snapshot, ne trenutnu satnicu
+    // (10,00 iz snapshot sesije + 99,00 iz sesije bez snapshota).
     const cost = await request(app.getHttpServer())
       .post('/api/cost-entries/from-payroll')
       .set(auth(admin))
       .send({ year: 2024, month: 5 });
     expect(cost.status).toBe(201);
     expect(cost.body.data.amount).toBe('109.00');
+    // Vrati satnicu da kasniji testovi (ako ih bude) vide stabilno stanje.
+    await request(app.getHttpServer())
+      .patch(`/api/users/${workerId}`)
+      .set(auth(admin))
+      .send({ hourlyRate: '20.00' });
   });
 
   async function insertSession(input: {
