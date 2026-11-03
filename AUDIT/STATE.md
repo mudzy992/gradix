@@ -17,7 +17,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-08` (migracija: 51 FK indeks, 19 audit akcija, parcijalni unique timer indeksi; seed: prod vs demo) |
-| CI | ❌ [run 41585836789](https://github.com/mudzy992/gradix/actions/runs/41585836789) — 5/6 (migracija+seed+e2e ✅; **Docker gate** je tražio ≥2 korisnika) → popravka gate-a |
+| CI | ⏳ `fix(ci) … [BE-08]` — docker gate zelen, audit traži regenerisanu matricu |
 | Zadnji potvrđeno zelen run | [41585201977](https://github.com/mudzy992/gradix/actions/runs/41585201977) ✅ 6/6 · prije: 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 

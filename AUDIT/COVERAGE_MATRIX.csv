@@ -1,7 +1,7 @@
 file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,79,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
 .env.example,INF,compose,INF-01,82,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
-.github/workflows/ci.yml,CI,ci,CI-01,602,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
+.github/workflows/ci.yml,CI,ci,CI-01,628,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
