@@ -6,6 +6,16 @@ import {
 } from '../../common/scope/company-tz';
 import type { ExpiringDoc } from './dashboard-types';
 
+/**
+ * BE-12 (F-06): koliko dana **unazad** se prikazuju istekli dokumenti.
+ * Prije su istekli dokumenti (`daysLeft < 0`) bili filtrirani iz odgovora, pa je
+ * dokument istekao juče tiho nestajao sa dashboarda — upravo kada je najvažniji.
+ */
+export const EXPIRED_LOOKBACK_DAYS = 90;
+
+/** Gornja granica liste, da firma sa hiljadama dokumenata ne vuče sve u dashboard. */
+export const EXPIRING_MAX_ITEMS = 100;
+
 export async function loadExpiring(
   prisma: PrismaService,
   companyId: string,
@@ -24,6 +34,7 @@ export async function loadExpiring(
     }),
   ]);
   const items: ExpiringDoc[] = [];
+  const max = Math.max(...DOC_WARN_WINDOWS);
   const push = (
     entityType: string,
     id: string,
@@ -38,8 +49,9 @@ export async function loadExpiring(
         Date.parse(`${today}T00:00:00.000Z`)) /
         86_400_000,
     );
-    const max = Math.max(...DOC_WARN_WINDOWS);
-    if (daysLeft < 0 || daysLeft > max) {
+    // BE-12 (F-06): istekli dokumenti ostaju vidljivi (negativan `daysLeft`), do
+    // `EXPIRED_LOOKBACK_DAYS` unazad; budući samo unutar najširnog prozora upozorenja.
+    if (daysLeft < -EXPIRED_LOOKBACK_DAYS || daysLeft > max) {
       return;
     }
     items.push({ entityType, entityId: id, type, daysLeft });
@@ -53,5 +65,7 @@ export async function loadExpiring(
   for (const row of machine) {
     push('machine', row.id, row.type, row.expiresAt);
   }
-  return items.sort((a, b) => a.daysLeft - b.daysLeft);
+  return items
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, EXPIRING_MAX_ITEMS);
 }

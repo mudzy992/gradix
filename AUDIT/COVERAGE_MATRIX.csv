@@ -38,7 +38,8 @@ backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
 backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
 backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,96,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,76,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
-backend/src/common/geo/haversine.ts,BE,common,BE-12,33,nepregledano,,
+backend/src/common/geo/haversine.spec.ts,BE,common,BE-12,77,pregledano,BE-12: 4 testa udaljenosti i granice geofence-a,2026-11-03
+backend/src/common/geo/haversine.ts,BE,common,BE-12,33,pregledano,"BE-12: haversine ispravan (testovi: Sarajevo-Mostar, antimeridijan, polovi); geofence inkluzivan na granici",2026-11-03
 backend/src/common/guards/jwt-auth.guard.ts,BE,common,BE-01,30,pregledano,BE-01: pregledano — /api/docs izuzet od auth; @Public preko reflektora; dublja analiza u BE-02,2026-11-02
 backend/src/common/guards/optional-throttler.guard.ts,BE,common,BE-01,13,pregledano,BE-01: pregledano — throttling isključen samo kad je NODE_ENV=test,2026-11-02
 backend/src/common/guards/password-change.guard.ts,BE,common,BE-01,37,pregledano,"BE-01: pregledano — allowlist GET /api/me, change-password, logout, logout-all",2026-11-02
@@ -136,11 +137,14 @@ backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,203,pregledano,"BE-07
 backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,99,pregledano,BE-08: PROJECT_ASSIGNED / PROJECT_UNASSIGNED u audit (B8),2026-11-03
 backend/src/modules/ops/catalog.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — materijali/depoi pod canReadCatalog/canWriteCatalog,2026-11-03
 backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,281,pregledano,"BE-10: koordinate depoa kroz parseOptionalLatLng (F-03), qrToken prazan 400 / duplikat 409 (F-05), soft-delete materijala i depoa",2026-11-03
-backend/src/modules/ops/dashboard-expiring.ts,BE,ops,BE-12,58,nepregledano,,
-backend/src/modules/ops/dashboard-presence.ts,BE,ops,BE-12,98,nepregledano,,
-backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,nepregledano,,
-backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,17,nepregledano,,
-backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,167,nepregledano,,
+backend/src/modules/ops/dashboard-expiring.ts,BE,ops,BE-12,72,pregledano,"BE-12 (F-06/07): istekli dokumenti ostaju do 90 dana unazad, cap 100, `max` izvan petlje",2026-11-03
+backend/src/modules/ops/dashboard-presence.spec.ts,BE,ops,BE-12,136,pregledano,BE-12: 8 testova prisustva/geofence granica/`spend`/`avgProgress`,2026-11-03
+backend/src/modules/ops/dashboard-presence.ts,BE,ops,BE-12,129,pregledano,BE-12 (F-03/04): čisto mapiranje prisustva (testirano) + `loadPresence` preko `latestLocations` (DISTINCT ON),2026-11-03
+backend/src/modules/ops/dashboard-role.spec.ts,BE,ops,BE-12,65,pregledano,BE-12: 5 testova prioriteta rola (više rola = širi dashboard),2026-11-03
+backend/src/modules/ops/dashboard-role.ts,BE,ops,BE-12,35,pregledano,BE-12 (novo): prioritet rola za dashboard (firma → PM/SS → DRIVER → WORKER → MECHANIC),2026-11-03
+backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,pregledano,BE-12: tipovi kartica/prisustva/isteka; `presence` može biti `null` (terenske role),2026-11-03
+backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,17,pregledano,BE-12: `GET /api/dashboard` bez posebne permisije — verzija zavisi od rola (D-034),2026-11-03
+backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,159,pregledano,"BE-12 (F-01/02): grananje po `resolveDashboardView` (najširi scope prvi), uklonjen mrtav `spend: null`",2026-11-03
 backend/src/modules/ops/depots.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — depoi kroz isti CatalogService,2026-11-03
 backend/src/modules/ops/diary-access.ts,BE,ops,BE-11,112,pregledano,"BE-11 (F-03): `parseDiaryTemp` (−100…100, `400`); scope pravila dnevnika",2026-11-03
 backend/src/modules/ops/diary-conflict.service.ts,BE,ops,BE-11,87,pregledano,BE-11: resolve A/B/MERGE traži `diary.write` + scoped write; merge čuva oba teksta,2026-11-03
@@ -155,7 +159,7 @@ backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregl
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
 backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,97,pregledano,BE-10: pregledano — liters/unitPrice stringovi; projectId opcion,2026-11-03
 backend/src/modules/ops/fuel.service.ts,BE,ops,BE-10,245,pregledano,"BE-10: gorivo + recalcSpend u transakciji (F-01), projectId kroz resolveProjectId (F-02), identitet u create (F-06)",2026-11-03
-backend/src/modules/ops/geofence-notify.ts,BE,ops,BE-12,58,nepregledano,,
+backend/src/modules/ops/geofence-notify.ts,BE,ops,BE-12,58,pregledano,BE-12: enter/exit notifikacija samo na prelaz; sinhrono u GPS ping (F-BE-12-09),2026-11-03
 backend/src/modules/ops/gps-devices.dto.ts,BE,ops,BE-09,27,pregledano,BE-09: pregledano — name/isActive,2026-11-03
 backend/src/modules/ops/gps-devices.service.ts,BE,ops,BE-09,143,pregledano,BE-09: pregledano — ključ se vraća samo pri kreiranju/rotaciji; P2002 → 409 IOT_DEVICE_EXISTS,2026-11-03
 backend/src/modules/ops/incidents.controller.ts,BE,ops,BE-11,44,pregledano,BE-11: list/create/patch; vidljivost HSE (D-033) odlučuje servis,2026-11-03
@@ -165,9 +169,10 @@ backend/src/modules/ops/iot-key.ts,BE,ops,BE-09,15,pregledano,BE-09: pregledano 
 backend/src/modules/ops/iot.controller.ts,BE,ops,BE-09,19,pregledano,BE-09: pregledano — @Public + x-device-key (jedini javni ulaz osim health/auth),2026-11-03
 backend/src/modules/ops/iot.dto.ts,BE,ops,BE-09,10,pregledano,"BE-09: pregledano — lat/lng su stringovi, validiraju se u geo.ts",2026-11-03
 backend/src/modules/ops/iot.service.ts,BE,ops,BE-09,76,pregledano,"BE-09: koordinate kroz parseLatLng (F-04); ključ uređaja 401, dekomisionirana mašina 403",2026-11-03
+backend/src/modules/ops/latest-locations.ts,BE,ops,BE-05,47,pregledano,BE-12 (novo): `DISTINCT ON (userId)` — zadnja lokacija po korisniku jednim upitom,2026-11-03
 backend/src/modules/ops/locations.controller.ts,BE,ops,BE-09,29,nepregledano,,
 backend/src/modules/ops/locations.dto.ts,BE,ops,BE-09,26,nepregledano,,
-backend/src/modules/ops/locations.service.ts,BE,ops,BE-09,216,pregledano,BE-09: koordinate kroz parseLatLng na tri mjesta (me/location/nearby) (F-04); prisutnost  koordinata,2026-11-03
+backend/src/modules/ops/locations.service.ts,BE,ops,BE-09,199,pregledano,BE-12 (F-05): prisustvo projekta = samo dodijeljeni korisnici; ping validira koordinate,2026-11-03
 backend/src/modules/ops/machine-devices.controller.ts,BE,ops,BE-09,46,pregledano,BE-09: pregledano — 4 rute za GPS uređaje pod fleet.read/write,2026-11-03
 backend/src/modules/ops/machine-hours.ts,BE,ops,BE-09,20,pregledano,"BE-09: pregledano — Decimal sati, increment u transakciji pozivaoca",2026-11-03
 backend/src/modules/ops/machine-status.ts,BE,ops,BE-09,18,pregledano,BE-09: pregledano — parseMachineStatus odbija nepoznat status (400),2026-11-03
@@ -288,15 +293,15 @@ backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03:
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,192,nepregledano,,
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
-backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,434,pregledano,"BE-09: pregledano — IoT 401, GPS/presence, dodjela mašine, decommission 409 na timer/gorivo",2026-11-03
-backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,nepregledano,,
+backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
+backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,pregledano,BE-12: `/api/health` (process+postgres) i `/api/docs` dostupni u e2e env-u,2026-11-03
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,293,nepregledano,"BE-11: dnevnik (konflikt, PDF sa bh. slovima, validacije) + HSE opcija A (vlastite prijave, tuđa 404)",
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,293,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02

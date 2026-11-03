@@ -2,11 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Project } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../../common/types/auth-user';
-import {
-  hasRole,
-  hidesBudget,
-  isCompanyWide,
-} from '../../common/scope/ops-roles';
 import { projectListWhere } from '../../common/scope/scope-by-project';
 import {
   calendarDateInTz,
@@ -17,6 +12,7 @@ import { requireCompany } from '../users/users-helpers';
 import { computeElapsedMinutes } from './timer-math';
 import { avgProgress, loadPresence, spendCard } from './dashboard-presence';
 import { loadExpiring } from './dashboard-expiring';
+import { resolveDashboardView } from './dashboard-role';
 import type { DashboardCard, DashboardPayload } from './dashboard-types';
 
 @Injectable()
@@ -28,20 +24,16 @@ export class DashboardService {
     const unread = await this.prisma.notification.count({
       where: { userId: actor.id, isRead: false },
     });
-    if (hasRole(actor, 'WORKER', 'MACHINE_OPERATOR')) {
+    // BE-12 (F-01): redoslijed rola je eksplicitan (najširi scope prvi) — vidi
+    // `dashboard-role.ts`. Prije je korisnik sa više rola dobijao pogrešan dashboard.
+    const view = resolveDashboardView(actor);
+    if (view === 'fieldWorker') {
       return this.fieldWorker(actor, companyId, unread);
     }
-    if (
-      hasRole(actor, 'DRIVER') &&
-      !hasRole(actor, 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN')
-    ) {
+    if (view === 'driver') {
       return this.driver(actor, companyId, unread);
     }
-    if (
-      hasRole(actor, 'MECHANIC') &&
-      !isCompanyWide(actor) &&
-      !hasRole(actor, 'PROJECT_MANAGER')
-    ) {
+    if (view === 'mechanic') {
       return this.mechanic(companyId, unread);
     }
     const projects = await this.prisma.project.findMany({
@@ -51,7 +43,7 @@ export class DashboardService {
       (project) =>
         project.status === 'PLANNING' || project.status === 'IN_PROGRESS',
     );
-    if (isCompanyWide(actor)) {
+    if (view === 'admin') {
       return this.admin(companyId, active, unread);
     }
     return this.pmSs(companyId, projects, unread);
@@ -111,14 +103,14 @@ export class DashboardService {
       where: { userId: actor.id, closedAt: null },
     });
     const elapsed = session ? computeElapsedMinutes(session, new Date()) : null;
+    // BE-12 (F-02): ovdje je bio `if (!hidesBudget(actor))` koji je dodavao karticu
+    // `spend` sa **null** vrijednošću. Uslov je za WORKER/MACHINE_OPERATOR uvijek
+    // netačan (`hidesBudget` za njih vraća `true`), pa je kod bio mrtav.
     const cards: DashboardCard[] = [
       { key: 'myTasks', value: myTasks },
       { key: 'myTimer', value: elapsed },
       { key: 'unread', value: unread },
     ];
-    if (!hidesBudget(actor)) {
-      cards.push({ key: 'spend', value: null });
-    }
     return { cards, presence: null };
   }
 

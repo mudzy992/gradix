@@ -296,6 +296,34 @@ describe('Fleet logistics (e2e)', () => {
     expect(five).toBeDefined();
     expect(five).not.toHaveProperty('lat');
     expect(five).not.toHaveProperty('lng');
+    // BE-12 (F-05): lista projekta prikazuje samo **dodijeljene** ljude. Admin nije
+    // dodijeljen, pa ga nema tu — ali ga dashboard (prisustvo firme) mora vidjeti.
+    const adminId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(admin))
+    ).body.data.id as string;
+    await request(app.getHttpServer())
+      .post('/api/locations/me')
+      .set(auth(admin))
+      .send({ lat: '43.8563000', lng: '18.4131000' });
+    const presentAssigned = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}/presence`)
+      .set(auth(ss));
+    const assignedIds = (presentAssigned.body.data as { userId: string }[]).map(
+      (row) => row.userId,
+    );
+    expect(assignedIds).toContain(workerId);
+    expect(assignedIds).not.toContain(adminId);
+    // BE-12 (F-03): dashboard koristi `DISTINCT ON` upit — ovdje se provjerava da
+    // stvarno vraća prisutne (i radnika i admina).
+    const dash = await request(app.getHttpServer())
+      .get('/api/dashboard')
+      .set(auth(admin));
+    expect(dash.status).toBe(200);
+    const dashPresence = (
+      dash.body.data.presence as { userId: string; projectId: string }[]
+    ).map((row) => row.userId);
+    expect(dashPresence).toContain(workerId);
+    expect(dashPresence).toContain(adminId);
     await prisma.userLocation.updateMany({
       where: {
         userId: workerId,

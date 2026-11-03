@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-11` — dnevnik/HSE/fajlovi: PDF ne pada na bh. slovima i ne siječe tekst, idempotentan offline dnevnik, validacija temperature/koordinata/`taskId`/`status`, sigurni headeri za download — `done`, green 41636860530 |
-| CI | ✅ [run 41639119312](https://github.com/mudzy992/gradix/actions/runs/41639119312) — **6/6** zelen (`feat(hse) … opcija A [BE-11]`) |
-| Zadnji potvrđeno zelen run | [41639119312](https://github.com/mudzy992/gradix/actions/runs/41639119312) ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-12` — dashboard/prisustvo: verzija dashboarda po najširoj roli, prisustvo jednim `DISTINCT ON` upitom, lista projekta samo za dodijeljene, istekli dokumenti ostaju vidljivi |
+| CI | ✅ [run 41639532076](https://github.com/mudzy992/gradix/actions/runs/41639532076) — **6/6** zelen (STATE za HSE opciju A); BE-12 run se upisuje poslije push-a |
+| Zadnji potvrđeno zelen run | [41639532076](https://github.com/mudzy992/gradix/actions/runs/41639532076) ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -331,7 +331,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   - **E2E dokaz:** novi test u `fleet.e2e-spec.ts` prolazi kroz mašinu, GPS uređaj, materijal, depo,
     turu i gorivo pa čita `AuditEvent` direktno iz baze (API za audit još ne postoji).
 - **Testovi:** **133/133**. Matrica **499 fajlova / 206 pregledano (41,3 %)**; `check:all` 9/9 (bez e2e).
-- **Stanje segmenata:** `done` **19/59**; sljedeći **BE-12** (dashboard i prisustvo).
+- **Stanje segmenata:** `done` **20/59**; sljedeći **BE-13** (payroll).
 
 ### 2026-11-03 — BE-11 (dnevnik, HSE, fajlovi)
 - **Nalaz (visoko):** PDF dnevnika je padao (`500`) na svakom tekstu sa `č`/`ć`/`đ` — WinAnsi font
@@ -359,6 +359,22 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `POST /api/incidents` vraćao `404` (vidljivost projekta) — u testu je dodana dodjela radnika
   („WORKER“) na projekat; kod nije mijenjan.
 - **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6) i **41639119312** (6/6, opcija A); 19/59 segmenata `done`.
+
+### 2026-11-03 — BE-12 (dashboard i prisustvo)
+- **Nalaz (srednje):** korisnik sa **više rola** dobijao je pogrešan dashboard (grane „prva koja
+  upali“: `WORKER` prije `DRIVER`/`PM`). Sada `resolveDashboardView`: firma → PM/SS → DRIVER →
+  WORKER/MACHINE_OPERATOR → MECHANIC; 5 unit testova (**D‑034**).
+- **Nalaz (srednje):** prisustvo je vuklo **sve** GPS zapise firme u 30 min (100 ljudi × ping 15 s ≈
+  12.000 redova) i dedupiralo u JS-u. Sada `DISTINCT ON (userId)` (`latest-locations.ts`) na indeksu
+  `(companyId, userId, recordedAt)`; e2e provjerava da dashboard vraća prisutne.
+- **Nalaz (srednje):** `GET /projects/:id/presence` je prikazivao bilo koga iz firme unutar geofence-a
+  (i skenirao cijelu firmu). Sada samo **dodijeljeni** projektu; e2e: admin nije na listi projekta,
+  ali jeste na dashboardu.
+- **Nalaz (srednje):** **istekli** dokumenti su nestajali sa dashboarda (`daysLeft < 0` → filtriran);
+  sada ostaju do 90 dana unazad (negativan `daysLeft`), uz cap 100 i `max` izvan petlje.
+- **Nalaz (nisko):** mrtav kod — kartica `spend: null` koja se nikad nije dodala.
+- **Testovi:** **158/158** unit (+17). Matrica **506 fajlova / 238 pregledano (47,0 %)**.
+- **Otvoreno:** geofence notifikacija ide samom korisniku i piše se sinhrono u GPS ping (BE-16).
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
   `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
@@ -368,8 +384,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **BE-12** (dashboard i prisustvo) — sljedeći segment po planu; B11 (audit dnevnika/HSE) ulazi u
-   sljedeću migraciju (BE-12 ili BE-13).
+1. Push + provjera CI za BE-12 (mora biti zelen) — run se upisuje u ovu tabelu.
+2. **BE-13** (payroll) — sljedeći segment; **B11** (audit dnevnika/HSE/fajlova) ide u njegovu
+   migraciju, zajedno sa eventualnim payroll audit akcijama.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

@@ -236,6 +236,16 @@ Tuđa prijava vraća `404`, ne `403` — da se ne otkriva postojanje. **Odbačen
 (prijavljivač ne vidi šta je prijavio — nerealno za HSE obrazac); (C) dati `hse.read` svim radnicima
 (otvara sve HSE zapise firme). **Revidirati** ako se traži anonimno prijavljivanje.
 
+### D-034 — Dashboard po najširoj roli; prisustvo po dodjeli
+**Datum:** 2026-11-03 · **Status:** na snazi
+Odgovor na F-BE-12-01/F-05. (1) Verzija dashboarda se bira po **najširoj** roli (firma → PM/SS →
+DRIVER → WORKER/MACHINE_OPERATOR → MECHANIC); korisnik sa više rola više ne „upada“ u terenski
+dashboard. (2) `GET /projects/:id/presence` prikazuje samo korisnike **dodijeljene** projektu —
+prije je lista bila „bilo ko iz firme ko prođe kroz geofence“. Dashboard i dalje prikazuje prisustvo
+na nivou firme, jer je to pitanje „ko je na terenu danas“. **Odbačeno:** filtriranje po dodjeli i na
+dashboardu (PM bi izgubio pregled ljudi koji rade na tuđim projektima), zadržavanje stare liste
+projekta (dostavljač u prolazu se brojao kao radnik na gradilištu).
+
 ---
 
 ## Zamijenjene / povučene odluke

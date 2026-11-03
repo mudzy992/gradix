@@ -7,7 +7,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { PRESENCE_MAX_MS } from '../../common/constants';
 import { parseDecimal } from '../../common/utils/decimal-input';
-import { distanceMeters, isInsideGeofence } from '../../common/geo/haversine';
+import { distanceMeters } from '../../common/geo/haversine';
 import { canListProjects } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
@@ -16,6 +16,8 @@ import { GeofenceCheckQueryDto, PingLocationDto } from './locations.dto';
 import { MachineLocationDto } from './machines.dto';
 import { parseLatLng } from '../../common/utils/geo';
 import { writeMachineGps } from './write-machine-gps';
+import { latestLocations } from './latest-locations';
+import { presenceForProject } from './dashboard-presence';
 
 @Injectable()
 export class LocationsService {
@@ -75,38 +77,19 @@ export class LocationsService {
     if (project.lat == null || project.lng == null) {
       return [];
     }
-    const since = new Date(Date.now() - PRESENCE_MAX_MS);
-    const rows = await this.prisma.userLocation.findMany({
-      where: { companyId: project.companyId, recordedAt: { gte: since } },
-      orderBy: { recordedAt: 'desc' },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true } },
-      },
+    // BE-12 (F-05): prisustvo na projektu = samo ljudi **dodijeljeni** tom projektu.
+    // Prije se skenirala cijela firma (svi GPS zapisi u zadnjih 30 min), pa je na listi
+    // mogao biti bilo ko iz firme ko slučajno prođe kroz geofence (npr. dostavljač).
+    const assignments = await this.prisma.projectAssignment.findMany({
+      where: { projectId: project.id },
+      select: { userId: true },
     });
-    const latest = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      if (!latest.has(row.userId)) {
-        latest.set(row.userId, row);
-      }
-    }
-    const centerLat = Number(project.lat);
-    const centerLng = Number(project.lng);
-    return [...latest.values()]
-      .filter((row) =>
-        isInsideGeofence({
-          lat: Number(row.lat),
-          lng: Number(row.lng),
-          centerLat,
-          centerLng,
-          radiusM: project.geofenceRadius,
-        }),
-      )
-      .map((row) => ({
-        userId: row.user.id,
-        firstName: row.user.firstName,
-        lastName: row.user.lastName,
-        lastSeenAt: row.recordedAt,
-      }));
+    const rows = await latestLocations(this.prisma, {
+      companyId: project.companyId,
+      since: new Date(Date.now() - PRESENCE_MAX_MS),
+      userIds: assignments.map((row) => row.userId),
+    });
+    return presenceForProject(rows, project);
   }
 
   async geofenceCheck(actor: AuthUser, query: GeofenceCheckQueryDto) {

@@ -187,7 +187,18 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - `POST /api/iot/gps` sa `X-Device-Key`; nevažeći ključ `401`, deaktiviran uređaj `403`.
 - GPS telefona ostaje `source=PHONE`, IoT je `source=IOT`.
 
-### 4.9 Javni sajt
+### 4.9 Dashboard i prisustvo
+- Jedan `GET /api/dashboard`; ko ga dobija zavisi **samo od rola**, po redu najširi → najuži:
+  firma (`admin`) → PM/SS → DRIVER → WORKER/MACHINE_OPERATOR → MECHANIC (D-034).
+  Korisnik sa više rola dobija dashboard **šire** role (prije je prva grana „upadala“).
+- Prisustvo (`presence`) je „zadnja lokacija po korisniku“ u zadnjih **30 min** (`PRESENCE_MAX_MS`),
+  jednim `DISTINCT ON` upitom (indeks `(companyId, userId, recordedAt)`); bez koordinata u odgovoru.
+- **Dashboard** prikazuje svakoga iz firme ko je u geofence-u aktivnog projekta;
+  **`GET /projects/:id/presence`** prikazuje samo **dodijeljene** tom projektu.
+- `expiring`: dokumenti unutar `DOC_WARN_WINDOWS` (30/15/5 dana) **i istekli do 90 dana unazad**
+  (negativan `daysLeft`), najviše 100 stavki, sortirano po hitnosti.
+
+### 4.10 Javni sajt
 - Whitelisted DTO: naziv, grad, adresa, telefon, logo, tagline, javni projekti.
   **Bez** `taxId`, budžeta i GPS-a.
 - Isti `404` za tuđi i nepostojeći slug (bez enumeracije).

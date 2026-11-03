@@ -3,65 +3,96 @@ import { PRESENCE_MAX_MS } from '../../common/constants';
 import { isInsideGeofence } from '../../common/geo/haversine';
 import { PrismaService } from '../prisma/prisma.service';
 import type { PresencePerson } from './dashboard-types';
+import { latestLocations, type LatestLocationRow } from './latest-locations';
 
-type LocationRow = {
-  userId: string;
-  lat: { toString(): string };
-  lng: { toString(): string };
-  recordedAt: Date;
-  user: { id: string; firstName: string; lastName: string };
-};
+type GeoProject = Pick<Project, 'id' | 'lat' | 'lng' | 'geofenceRadius'>;
 
-export async function loadPresence(
-  prisma: PrismaService,
-  companyId: string,
-  projects: Pick<Project, 'id' | 'lat' | 'lng' | 'geofenceRadius'>[],
-): Promise<PresencePerson[]> {
-  const geo = projects.filter(
-    (project) => project.lat != null && project.lng != null,
-  );
+function hasGeo(project: GeoProject): boolean {
+  return project.lat != null && project.lng != null;
+}
+
+/**
+ * BE-12 (F-04): čisto mapiranje „ko je na gradilištu“ — bez baze, pa se može testirati.
+ * Korisnik se prijavljuje **jednom** (prvi projekat u koji upada) da se ne duplira u listi.
+ */
+export function presenceForProjects(
+  rows: Pick<
+    LatestLocationRow,
+    'userId' | 'lat' | 'lng' | 'recordedAt' | 'firstName' | 'lastName'
+  >[],
+  projects: GeoProject[],
+): PresencePerson[] {
+  const geo = projects.filter(hasGeo);
   if (geo.length === 0) {
     return [];
   }
-  const since = new Date(Date.now() - PRESENCE_MAX_MS);
-  const rows = await prisma.userLocation.findMany({
-    where: { companyId, recordedAt: { gte: since } },
-    orderBy: { recordedAt: 'desc' },
-    include: {
-      user: { select: { id: true, firstName: true, lastName: true } },
-    },
-  });
-  const latest = new Map<string, LocationRow>();
-  for (const row of rows) {
-    if (!latest.has(row.userId)) {
-      latest.set(row.userId, row);
-    }
-  }
-  const seen = new Set<string>();
   const people: PresencePerson[] = [];
-  for (const row of latest.values()) {
-    for (const project of geo) {
-      const inside = isInsideGeofence({
+  for (const row of rows) {
+    const project = geo.find((candidate) =>
+      isInsideGeofence({
+        lat: Number(row.lat),
+        lng: Number(row.lng),
+        centerLat: Number(candidate.lat),
+        centerLng: Number(candidate.lng),
+        radiusM: candidate.geofenceRadius,
+      }),
+    );
+    if (!project) {
+      continue;
+    }
+    people.push({
+      userId: row.userId,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      lastSeenAt: row.recordedAt,
+      projectId: project.id,
+    });
+  }
+  return people;
+}
+
+/** BE-12 (F-05): prisustvo na **jednom** projektu (bez koordinata u odgovoru). */
+export function presenceForProject(
+  rows: Pick<
+    LatestLocationRow,
+    'userId' | 'lat' | 'lng' | 'recordedAt' | 'firstName' | 'lastName'
+  >[],
+  project: GeoProject,
+): { userId: string; firstName: string; lastName: string; lastSeenAt: Date }[] {
+  if (!hasGeo(project)) {
+    return [];
+  }
+  return rows
+    .filter((row) =>
+      isInsideGeofence({
         lat: Number(row.lat),
         lng: Number(row.lng),
         centerLat: Number(project.lat),
         centerLng: Number(project.lng),
         radiusM: project.geofenceRadius,
-      });
-      if (!inside || seen.has(row.userId)) {
-        continue;
-      }
-      seen.add(row.userId);
-      people.push({
-        userId: row.user.id,
-        firstName: row.user.firstName,
-        lastName: row.user.lastName,
-        lastSeenAt: row.recordedAt,
-        projectId: project.id,
-      });
-    }
+      }),
+    )
+    .map((row) => ({
+      userId: row.userId,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      lastSeenAt: row.recordedAt,
+    }));
+}
+
+export async function loadPresence(
+  prisma: PrismaService,
+  companyId: string,
+  projects: GeoProject[],
+): Promise<PresencePerson[]> {
+  if (projects.filter(hasGeo).length === 0) {
+    return [];
   }
-  return people;
+  const rows = await latestLocations(prisma, {
+    companyId,
+    since: new Date(Date.now() - PRESENCE_MAX_MS),
+  });
+  return presenceForProjects(rows, projects);
 }
 
 export function spendCard(
