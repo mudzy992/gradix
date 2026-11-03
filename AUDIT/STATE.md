@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-13` — payroll: atomska odluka (409 umjesto prepisivanja), strog kalendarski datum, period ≤ 366 dana, ime exporta sa periodom + **B11** audit dnevnika i HSE (6 akcija, migracija) |
-| CI | ✅ [run 41640979940](https://github.com/mudzy992/gradix/actions/runs/41640979940) — **6/6** zelen (STATE za BE-12); BE-13 run se upisuje poslije push-a |
-| Zadnji potvrđeno zelen run | [41640979940](https://github.com/mudzy992/gradix/actions/runs/41640979940) ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-13` — payroll: atomska odluka (409 umjesto prepisivanja), strog kalendarski datum, period ≤ 366 dana, ime exporta sa periodom + **B11** audit dnevnika i HSE (6 akcija, migracija) — `done`, green 41644091684 |
+| CI | ✅ [run 41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) — **6/6** zelen (`fix(payroll) … [BE-13]`) |
+| Zadnji potvrđeno zelen run | [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -397,6 +397,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Svjesno ostaje:** PM/SS mogu odobravati ali ne i `summary`/`export` (`payroll.read` je odvojen);
   sesija bez trajanja ulazi kao 0 min.
 - **Testovi:** **165/165** unit (+7). Matrica **508 fajlova / 252 pregledano (49,6 %)**.
+- **Zatvoreno:** `BE-13` — zelen CI **41644091684** (6/6), prvi pokušaj; 21/59 segmenata `done`.
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
   `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
@@ -406,8 +407,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. Push + provjera CI za BE-13 (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-14** — sljedeći segment; **B12** (istorijska satnica) traži odluku vlasnika i ulazi u
+1. **BE-14** — sljedeći segment; **B12** (istorijska satnica) traži odluku vlasnika i ulazi u
    njegovu migraciju.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
