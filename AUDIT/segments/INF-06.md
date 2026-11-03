@@ -132,5 +132,5 @@ dokumentovan ručni korak (§7.4) dok ne bude poseban segment.
 | Datum | 2026-11-03 |
 | Commit(ovi) | `feat(ops): INF-06 …` (skripte + workflow + runbook), `ci(ops): INF-06 …` (registracija workflow-a), `fix(ops): INF-06 …` ×3 (libpq `schema`, quoted imena tabela, brojanje foldera), `ci(ops): INF-06 …` (anotacije za dijagnostiku) |
 | Drill runovi | ❌ `41661838563` (`?schema=public`) · ❌ `41662099664` (`users` tabela) · ❌ `41662365671` (poređenje bez izlaza) · ❌ `41662656725` (`7 od 8` migracija) · ✅ **`41662900597`** |
-| CI run | vidi `AUDIT/STATE.md` (main CI za završni commit) |
+| CI run | ✅ **`41663240359`** — **6/6** zelen (main CI za završni commit) · drill **`41662900597`** ✅ |
 | Status | `done` |
