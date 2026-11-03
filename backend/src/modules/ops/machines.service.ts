@@ -97,13 +97,17 @@ export class MachinesService {
       );
     }
     const machine = await this.loadWritable(actor, id);
-    const row = await this.prisma.machine.update({
-      where: { id: machine.id },
-      data: { status: 'DECOMMISSIONED' },
-    });
-    await this.prisma.gpsDevice.updateMany({
-      where: { machineId: machine.id },
-      data: { isActive: false },
+    // BE-09 (F-02): mašina i njeni GPS uređaji se gase u jednoj transakciji.
+    const row = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.machine.update({
+        where: { id: machine.id },
+        data: { status: 'DECOMMISSIONED' },
+      });
+      await tx.gpsDevice.updateMany({
+        where: { machineId: machine.id },
+        data: { isActive: false },
+      });
+      return row;
     });
     return serializeMachine(row);
   }
@@ -117,20 +121,41 @@ export class MachinesService {
         409,
       );
     }
+    if (machine.status === 'IN_SERVICE') {
+      throw new AppError(
+        ERROR_CODES.MACHINE_IN_SERVICE,
+        'Machine is in service',
+        409,
+      );
+    }
     const project = await this.access.getVisibleProject(actor, dto.projectId);
     await this.access.assertScopedWrite(actor, project);
+    // BE-09 (F-03): `MachineAssignment` nema unique ograničenje, pa je mašina mogla biti
+    // na dva projekta istovremeno (P2002 grana ispod je bila mrtva). Invarijanta: jedna
+    // otvorena dodjela po mašini — provjera ovdje + parcijalni unique indeks u migraciji.
+    const open = await this.prisma.machineAssignment.findFirst({
+      where: { machineId: machine.id, endedAt: null },
+      select: { id: true, projectId: true },
+    });
+    if (open) {
+      throw new AppError(ERROR_CODES.CONFLICT, 'Machine already assigned', 409);
+    }
     try {
-      const assignment = await this.prisma.machineAssignment.create({
-        data: {
-          companyId: machine.companyId,
-          machineId: machine.id,
-          projectId: project.id,
-          userId: dto.userId ?? null,
-        },
-      });
-      await this.prisma.machine.update({
-        where: { id: machine.id },
-        data: { status: 'ACTIVE' },
+      // BE-09 (F-02): dodjela i status mašine su jedna transakcija.
+      const assignment = await this.prisma.$transaction(async (tx) => {
+        const assignment = await tx.machineAssignment.create({
+          data: {
+            companyId: machine.companyId,
+            machineId: machine.id,
+            projectId: project.id,
+            userId: dto.userId ?? null,
+          },
+        });
+        await tx.machine.update({
+          where: { id: machine.id },
+          data: { status: 'ACTIVE' },
+        });
+        return assignment;
       });
       return assignment;
     } catch (error) {
@@ -156,13 +181,17 @@ export class MachinesService {
     if (!active) {
       throw new AppError(ERROR_CODES.CONFLICT, 'No active assignment', 409);
     }
-    await this.prisma.machineAssignment.update({
-      where: { id: active.id },
-      data: { endedAt: new Date() },
-    });
-    const row = await this.prisma.machine.update({
-      where: { id: machine.id },
-      data: { status: 'IDLE' },
+    // BE-09 (F-02): zatvaranje dodjele i status mašine su jedna transakcija.
+    // BE-09: ranije je status uvijek postajao IDLE — mašina „u servisu“ gubila je to stanje.
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.machineAssignment.update({
+        where: { id: active.id },
+        data: { endedAt: new Date() },
+      });
+      return await tx.machine.update({
+        where: { id: machine.id },
+        data: { status: machine.status === 'ACTIVE' ? 'IDLE' : machine.status },
+      });
     });
     return serializeMachine(row);
   }

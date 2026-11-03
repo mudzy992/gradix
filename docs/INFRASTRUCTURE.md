@@ -144,10 +144,12 @@ pa se Aktivacija/uklanjanje zatvara u INF-07).
 ## 6. Migracije i seed
 
 - **Migracije**: automatski pri startu (`prisma migrate deploy`). Dvije migracije:
-  `20261102130000_init_postgres` (inicijalna šema) i `20261103120000_be08_indexes_audit`
+  `20261102130000_init_postgres` (inicijalna šema), `20261103120000_be08_indexes_audit`
   (51 indeks na stranim ključevima, 19 novih `AuditAction` vrijednosti, 2 parcijalna unique
-  indeksa za otvorene timere). Stariji MySQL set je uklonjen (odluka D-010).
-- **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`)
+  indeksa za otvorene timere) i `20261103140000_be09_machine_open_assignment` (parcijalni unique
+  indeks: mašina na najviše jednom projektu). Stariji MySQL set je uklonjen (odluka D-010).
+- **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`,
+  `MachineAssignment_open_machine_key`)
   postoje **samo u SQL-u migracije** — Prisma šema ih ne može izraziti. Ako se jednog dana radi
   `prisma migrate dev`, Prisma će ih vidjeti kao „višak“; ne brisati ih.
 - **Seed**: dio slike (`dist/prisma/seed.js`). Pokreće se **ručno**:

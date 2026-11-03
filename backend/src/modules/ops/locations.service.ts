@@ -14,6 +14,7 @@ import { ProjectAccessService } from './project-access.service';
 import { notifyGeofenceTransitions } from './geofence-notify';
 import { GeofenceCheckQueryDto, PingLocationDto } from './locations.dto';
 import { MachineLocationDto } from './machines.dto';
+import { parseLatLng } from '../../common/utils/geo';
 import { writeMachineGps } from './write-machine-gps';
 
 @Injectable()
@@ -27,8 +28,7 @@ export class LocationsService {
 
   async pingMe(actor: AuthUser, dto: PingLocationDto) {
     const companyId = requireCompany(actor);
-    const lat = parseDecimal(dto.lat, 'lat');
-    const lng = parseDecimal(dto.lng, 'lng');
+    const { lat, lng } = parseLatLng(dto.lat, dto.lng);
     const previous = await this.prisma.userLocation.findFirst({
       where: { userId: actor.id },
       orderBy: { recordedAt: 'desc' },
@@ -110,8 +110,9 @@ export class LocationsService {
   }
 
   async geofenceCheck(actor: AuthUser, query: GeofenceCheckQueryDto) {
-    const lat = Number(parseDecimal(query.lat, 'lat'));
-    const lng = Number(parseDecimal(query.lng, 'lng'));
+    const point = parseLatLng(query.lat, query.lng);
+    const lat = Number(point.lat);
+    const lng = Number(point.lng);
     const companyId = requireCompany(actor);
     const projects = query.projectId
       ? [await this.access.getVisibleProject(actor, query.projectId)]
@@ -160,8 +161,7 @@ export class LocationsService {
       );
     }
     await this.assertCanPingMachine(actor, machine.id);
-    const lat = parseDecimal(dto.lat, 'lat');
-    const lng = parseDecimal(dto.lng, 'lng');
+    const { lat, lng } = parseLatLng(dto.lat, dto.lng);
     const now = await writeMachineGps({
       prisma: this.prisma,
       realtime: this.realtime,

@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-08` (migracija: 51 FK indeks, 19 audit akcija, parcijalni unique timer indeksi; seed: prod vs demo) — `done`, green 41586347283 |
-| CI | ✅ [run 41586347283](https://github.com/mudzy992/gradix/actions/runs/41586347283) — **6/6** zelen (`chore(audit): regenerisana matrica…`) |
+| Zadnji commit | `BE-09` (flota: validacija koordinata, jedna otvorena dodjela po mašini, transakcije) |
+| CI | ✅ [run 41586623394](https://github.com/mudzy992/gradix/actions/runs/41586623394) — **6/6** zelen (`chore(audit): BE-08 zatvoren…`) |
 | Zadnji potvrđeno zelen run | [41586347283](https://github.com/mudzy992/gradix/actions/runs/41586347283) ✅ 6/6 · prije: 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -277,10 +277,25 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - ⚠️ **Za vlasnika prije produkcijske migracije:** provjeriti duple otvorene timere (SQL u `AUDIT/segments/BE-08.md` §8)
   i odlučiti koje zatvoriti — to je izmjena stvarnih podataka.
 
+### 2026-11-03 — BE-09 (flota i IoT) → segment `done`
+- **Nalaz (visoko):** `MachineAssignment` nije imao unique → mašina je mogla biti **istovremeno na dva
+  projekta** (P2002 grana u `assign` bila mrtva). Sada pre-provjera → `409` + parcijalni unique indeks
+  u migraciji `20261103140000_be09_machine_open_assignment`.
+- **Nalaz (visoko):** koordinate se **nisu** provjeravale po opsegu — `lat: "999"` je prolazio iz IoT
+  uređaja, telefona i u „nearby“ upitu. `common/utils/geo.ts` (`parseLatLng`) + 6 testova.
+- **Nalaz (srednje):** GPS tačka i pozicija mašine nisu atomične → jedna `$transaction`; isto za
+  `assign`/`unassign`/`decommission` (dva reda bez transakcije).
+- **Nalaz (nisko):** mašina `IN_SERVICE` se mogla dodijeliti projektu (status se tiho mijenjao u ACTIVE)
+  → `409 MACHINE_IN_SERVICE`; `unassign` više ne pregazi status „u servisu“.
+- **Testovi:** **130/130** (+6). Matrica **498 fajlova / 190 pregledano (38,2 %)**.
+- **B-stavka:** `AuditAction` za flotu i GPS uređaje → sljedeća migracija.
+- ⚠️ **Za vlasnika prije produkcijske migracije:** provjeriti dvostruke otvorene dodjele mašina (SQL u
+  `AUDIT/segments/BE-09.md` §8). Demo seed ne pravi dodjele → na svježoj bazi nema rizika.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-09** (flota i IoT) — sljedeći segment po planu.
+2. **BE-10** (logistika: ture, gorivo, šifarnici) — sljedeći segment po planu.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

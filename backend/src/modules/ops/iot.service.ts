@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
-import { parseDecimal } from '../../common/utils/decimal-input';
+import { parseLatLng } from '../../common/utils/geo';
 import { verifyPassword } from '../../common/utils/password';
 import { deviceKeyLookup } from './iot-key';
 import { writeMachineGps } from './write-machine-gps';
@@ -25,8 +25,8 @@ export class IotService {
         403,
       );
     }
-    const lat = parseDecimal(dto.lat, 'lat');
-    const lng = parseDecimal(dto.lng, 'lng');
+    // BE-09 (F-04): koordinate iz uređaja moraju biti u stvarnim granicama.
+    const { lat, lng } = parseLatLng(dto.lat, dto.lng);
     const now = await writeMachineGps({
       prisma: this.prisma,
       realtime: this.realtime,
