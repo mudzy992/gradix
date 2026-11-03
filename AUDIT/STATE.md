@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-06` (zadaci: status filter iz liste, duplikati 409, nextTaskStatus + testovi) |
-| CI | ❌ [run 41583755392](https://github.com/mudzy992/gradix/actions/runs/41583755392) — 3/6 (build: **TS1484** type-only import) → ispravka u toku |
+| Zadnji commit | `BE-06` (zadaci: status filter iz liste, duplikati 409, nextTaskStatus + testovi) — `done`, green 41583988902 |
+| CI | ✅ [run 41583988902](https://github.com/mudzy992/gradix/actions/runs/41583988902) — **6/6** zelen (`fix(tasks): type-only import…`) |
 | Zadnji potvrđeno zelen run | [41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) ✅ 6/6 · prije: 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
