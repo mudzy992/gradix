@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -15,6 +16,7 @@ export class PhasesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, projectId: string) {
@@ -35,7 +37,7 @@ export class PhasesService {
       where: { projectId },
       orderBy: { sortOrder: 'desc' },
     });
-    return this.prisma.projectPhase.create({
+    const phase = await this.prisma.projectPhase.create({
       data: {
         companyId: project.companyId,
         projectId,
@@ -45,6 +47,15 @@ export class PhasesService {
         plannedEnd,
       },
     });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_PHASE_CREATED',
+      entityType: 'ProjectPhase',
+      entityId: phase.id,
+      payload: { projectId, name: phase.name },
+    });
+    return phase;
   }
 
   async patch(
@@ -65,7 +76,7 @@ export class PhasesService {
         ? (parseOptionalDate(dto.plannedEnd) ?? null)
         : phase.plannedEnd;
     assertPlannedRange(plannedStart, plannedEnd);
-    return this.prisma.projectPhase.update({
+    const updated = await this.prisma.projectPhase.update({
       where: { id },
       data: {
         name: dto.name,
@@ -74,6 +85,15 @@ export class PhasesService {
         plannedEnd: dto.plannedEnd !== undefined ? plannedEnd : undefined,
       },
     });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_PHASE_UPDATED',
+      entityType: 'ProjectPhase',
+      entityId: id,
+      payload: { fields: Object.keys(dto) },
+    });
+    return updated;
   }
 
   async remove(actor: AuthUser, projectId: string, id: string): Promise<void> {

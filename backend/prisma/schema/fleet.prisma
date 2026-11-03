@@ -78,6 +78,7 @@ model MachineAssignment {
   @@index([machineId])
   @@index([projectId])
   @@index([userId])
+  @@index([companyId])
 }
 
 model Material {
@@ -146,6 +147,11 @@ model Trip {
   @@index([driverId])
   @@index([machineId])
   @@unique([companyId, driverId, deviceId, localId])
+  @@index([projectId])
+  @@index([materialId])
+  @@index([destDepotId])
+  @@index([localId])
+  @@index([deviceId])
 }
 
 model FuelEntry {
@@ -173,6 +179,10 @@ model FuelEntry {
   @@index([companyId, projectId])
   @@index([machineId])
   @@unique([companyId, userId, deviceId, localId])
+  @@index([userId])
+  @@index([projectId])
+  @@index([localId])
+  @@index([deviceId])
 }
 
 model UserLocation {
@@ -189,6 +199,7 @@ model UserLocation {
   user       User     @relation(fields: [userId], references: [id])
 
   @@index([companyId, userId, recordedAt])
+  @@index([userId])
 }
 
 model GpsRecord {
@@ -223,4 +234,5 @@ model GpsDevice {
   machine    Machine   @relation(fields: [machineId], references: [id])
 
   @@index([companyId])
+  @@index([machineId])
 }

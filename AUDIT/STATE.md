@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-07` (timer: transakcije, suženi odgovori, cron keš; ispravke atomske) — `done`, green 41584897234 |
-| CI | ✅ [run 41584897234](https://github.com/mudzy992/gradix/actions/runs/41584897234) — **6/6** zelen (`fix(timer) … [BE-07]`) |
-| Zadnji potvrđeno zelen run | [41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) ✅ 6/6 · prije: 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-08` (migracija: 51 FK indeks, 19 audit akcija, parcijalni unique timer indeksi; seed: prod vs demo) |
+| CI | ✅ [run 41585201977](https://github.com/mudzy992/gradix/actions/runs/41585201977) — **6/6** zelen (`chore(audit): BE-07 zatvoren…`) |
+| Zadnji potvrđeno zelen run | [41585201977](https://github.com/mudzy992/gradix/actions/runs/41585201977) ✅ 6/6 · prije: 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -261,10 +261,23 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Testovi:** **122/122** (+9). Matrica **494 fajla / 165 pregledano (33,4 %)**.
 - **B-stavka:** parcijalni unique indeks za otvorene timere (korisnik, mašina) → **BE-08**.
 
+### 2026-11-03 — BE-08 (seed, migracije, demo podaci) → segment `done`
+- **Nalaz (visoko):** 51 strani ključ bez vodećeg indeksa (Postgres ih ne indeksira sam) → `@@index` u šemi
+  + `CREATE INDEX` u novoj migraciji `20261103120000_be08_indexes_audit`; baseline ispražnjen.
+- **Nalaz (visoko, B8):** `AuditAction` je bio zatvoren enum → izmjene projekta, dodjele, faze, dokumenta,
+  količine, zadatka, priloga i zavisnosti **nisu audituju**. Sada 19 novih akcija + pozivi u 8 servisa.
+- **Nalaz (srednje, F-BE-07-09):** dva otvorena timera ista osoba/mašina moguća pri trci → parcijalni
+  unique indeksi (`WHERE "closedAt" IS NULL`); aplikacija već mapira P2002 na 409.
+- **Nalaz (visoko, P9):** seed je u produkciji punio demo firmu i poznate lozinke → `SEED_DEMO` prekidač
+  (default `false` = samo `platform@gradix.local`); CI e2e i Playwright postavljaju `true`.
+- **Testovi:** **124/124** (+2 env). Matrica **495 fajlova / 170 pregledano (34,3 %)**.
+- ⚠️ **Za vlasnika prije produkcijske migracije:** provjeriti duple otvorene timere (SQL u `AUDIT/segments/BE-08.md` §8)
+  i odlučiti koje zatvoriti — to je izmjena stvarnih podataka.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-08** (seed, migracije, demo podaci) — uključuje B8 (`AuditAction` akcije za zadatke) i F-BE-07-09 (parcijalni unique indeks).
+2. **BE-09** (flota i IoT) — sljedeći segment po planu.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

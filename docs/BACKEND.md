@@ -237,7 +237,7 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B5 | `common/scope/*` ponašanje nije pokriveno testovima | BE-04 |
 | B6 | Swagger šeme nisu provjerene u CI-ju (nema „contract“ testa) | BE-05 |
 | B7 | Nema `audit` UI-a u v1 (svjesno), ali `AuditEvent` se piše | — |
-| B8 | `AuditAction` je zatvoren enum i nema akcije za izmjenu/arhiviranje projekta, dodjele, faze, dokumenta ni količine → te izmjene se **ne** audituju | BE-08 (migracija), pa BE-05 dopuna |
+| B8 | ~~`AuditAction` bez akcija za projekat/dodjelu/fazu/dokument/količinu/zadatak~~ — ✅ riješeno (BE-08: 19 novih akcija + pozivi u `projects`, `assignments`, `phases`, `documents`, `quantities`, `tasks`, `task-assignees`, `task-dependencies`) | BE-08 |
 
 ---
 

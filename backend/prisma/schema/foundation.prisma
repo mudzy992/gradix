@@ -68,6 +68,27 @@ enum AuditAction {
   PAYROLL_REJECTED
   COST_ENTRY_CREATED
   STOCK_MOVEMENT
+  // BE-08 (B8): akcije koje su ranije nedostajale — projekti, dodjele, faze, dokumenti,
+  // količine, zadaci, dodjele izvršilaca, prilozi i zavisnosti.
+  PROJECT_UPDATED
+  PROJECT_ARCHIVED
+  PROJECT_ASSIGNED
+  PROJECT_UNASSIGNED
+  PROJECT_PHASE_CREATED
+  PROJECT_PHASE_UPDATED
+  PROJECT_DOCUMENT_ADDED
+  PROJECT_DOCUMENT_REMOVED
+  PROJECT_QUANTITY_CREATED
+  PROJECT_QUANTITY_UPDATED
+  PROJECT_QUANTITY_DELETED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_ASSIGNED
+  TASK_UNASSIGNED
+  TASK_ATTACHMENT_ADDED
+  TASK_ATTACHMENT_REMOVED
+  TASK_DEPENDENCY_ADDED
+  TASK_DEPENDENCY_REMOVED
 }
 
 enum Locale {
@@ -133,6 +154,8 @@ model Company {
   stockMovements     StockMovement[]
   gpsDevices         GpsDevice[]
   logoAsset          PublicAsset?        @relation("CompanyLogo", fields: [logoAssetId], references: [id], onDelete: SetNull)
+  @@index([taxId])
+  @@index([logoAssetId])
 }
 
 model User {
@@ -209,6 +232,7 @@ model Device {
 
   @@unique([userId, deviceId])
   @@index([userId])
+  @@index([deviceId])
 }
 
 model Setting {
@@ -259,4 +283,5 @@ model AuditEvent {
 
   @@index([companyId])
   @@index([actorId])
+  @@index([entityId])
 }

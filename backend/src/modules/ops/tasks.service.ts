@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AuthUser } from '../../common/types/auth-user';
@@ -24,6 +25,7 @@ export class TasksService {
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, query: TaskListQueryDto) {
@@ -114,6 +116,15 @@ export class TasksService {
       projectId: dto.projectId,
       taskId: task.id,
     });
+    // BE-08 (B8): kreiranje i izmjena zadatka nisu ostavljali trag u auditu.
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_CREATED',
+      entityType: 'Task',
+      entityId: task.id,
+      payload: { projectId: dto.projectId, assigneeIds },
+    });
     return serializeTask(task);
   }
 
@@ -161,6 +172,14 @@ export class TasksService {
       id,
       projectId: task.projectId,
       taskId: id,
+    });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_UPDATED',
+      entityType: 'Task',
+      entityId: id,
+      payload: { fields: Object.keys(dto) },
     });
     return serializeTask(updated);
   }

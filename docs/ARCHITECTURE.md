@@ -104,8 +104,10 @@ Detalji i pravila: [`BACKEND.md`](./BACKEND.md).
 ## 5. Model podataka (pregled)
 
 Šema je podijeljena u 6 Prisma fajlova (`backend/prisma/schema/`): `foundation`, `ops`,
-`fleet`, `polish`, `erp`, `public` — 1.115 linija. Jedna aktivna migracija:
-`20261102130000_init_postgres` (1.333 linija SQL-a).
+`fleet`, `polish`, `erp`, `public` — 1.115 linija. Dvije migracije:
+`20261102130000_init_postgres` (1.333 linije — inicijalna šema) i
+`20261103120000_be08_indexes_audit` (~90 linija — FK indeksi, nove audit akcije,
+parcijalni unique indeksi za otvorene timere).
 
 | Grupa | Entiteti |
 |---|---|

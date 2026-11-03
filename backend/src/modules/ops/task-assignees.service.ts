@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -20,6 +21,7 @@ export class TaskAssigneesService {
     private readonly tasks: TasksService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   async add(actor: AuthUser, taskId: string, dto: AssigneeDto) {
@@ -65,6 +67,14 @@ export class TaskAssigneesService {
       projectId: task.projectId,
       taskId,
     });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_ASSIGNED',
+      entityType: 'Task',
+      entityId: taskId,
+      payload: { userId: dto.userId },
+    });
     return serializeTask(await this.tasks.loadVisibleTask(actor, taskId));
   }
 
@@ -90,6 +100,14 @@ export class TaskAssigneesService {
     }
     await this.prisma.taskAssignment.delete({ where: { id: existing.id } });
     await syncTaskStatus(this.prisma, taskId);
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_UNASSIGNED',
+      entityType: 'Task',
+      entityId: taskId,
+      payload: { userId },
+    });
   }
 
   async addAttachment(actor: AuthUser, taskId: string, dto: AttachmentDto) {
@@ -97,7 +115,7 @@ export class TaskAssigneesService {
     const project = await this.access.getVisibleProject(actor, task.projectId);
     await this.access.assertScopedWrite(actor, project);
     assertStoragePath(dto.path, project.companyId);
-    return this.prisma.taskAttachment.create({
+    const row = await this.prisma.taskAttachment.create({
       data: {
         companyId: project.companyId,
         taskId,
@@ -105,6 +123,15 @@ export class TaskAssigneesService {
         fileName: dto.fileName,
       },
     });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_ATTACHMENT_ADDED',
+      entityType: 'TaskAttachment',
+      entityId: row.id,
+      payload: { taskId, fileName: row.fileName },
+    });
+    return row;
   }
 
   async removeAttachment(
@@ -122,5 +149,13 @@ export class TaskAssigneesService {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Attachment not found', 404);
     }
     await this.prisma.taskAttachment.delete({ where: { id } });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_ATTACHMENT_REMOVED',
+      entityType: 'TaskAttachment',
+      entityId: id,
+      payload: { taskId, fileName: row.fileName },
+    });
   }
 }

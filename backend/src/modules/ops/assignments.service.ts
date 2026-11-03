@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
@@ -13,6 +14,7 @@ export class AssignmentsService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly realtime: RealtimeService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, projectId: string) {
@@ -47,6 +49,14 @@ export class AssignmentsService {
       },
     });
     this.realtime.joinProject(dto.userId, projectId);
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_ASSIGNED',
+      entityType: 'Project',
+      entityId: projectId,
+      payload: { userId: dto.userId, role: dto.role },
+    });
     return row;
   }
 
@@ -76,5 +86,13 @@ export class AssignmentsService {
     if (!wide) {
       this.realtime.leaveProject(userId, projectId);
     }
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_UNASSIGNED',
+      entityType: 'Project',
+      entityId: projectId,
+      payload: { userId },
+    });
   }
 }

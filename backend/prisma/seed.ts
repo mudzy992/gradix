@@ -23,18 +23,9 @@ async function seed(): Promise<void> {
   }
   const prisma = createPrisma();
   const passwordHash = await hashPassword(password);
-  const company = await prisma.company.upsert({
-    where: { slug: 'demo' },
-    update: { name: 'Demo Gradnja', city: 'Sarajevo' },
-    create: {
-      name: 'Demo Gradnja',
-      slug: 'demo',
-      city: 'Sarajevo',
-      country: 'BA',
-    },
-  });
-  await prisma.setting.deleteMany({ where: { companyId: company.id } });
-  await prisma.setting.createMany({ data: defaultSettingRows(company.id) });
+  // BE-08 (P9): produkcijski seed upisuje SAMO platform administratora. Demo firma, korisnici,
+  // projekti, vozila i javni sadržaj se pune isključivo uz `SEED_DEMO=true` (razvoj, e2e, demo).
+  const demo = process.env.SEED_DEMO === 'true';
   const platform = await prisma.user.upsert({
     where: { email: 'platform@gradix.local' },
     update: {
@@ -54,10 +45,29 @@ async function seed(): Promise<void> {
       companyId: null,
     },
   });
-  await prisma.userRoleAssignment.deleteMany({ where: { userId: platform.id } });
+  await prisma.userRoleAssignment.deleteMany({
+    where: { userId: platform.id },
+  });
   await prisma.userRoleAssignment.create({
     data: { userId: platform.id, role: 'PLATFORM_ADMIN' },
   });
+  if (!demo) {
+    console.log('Seed: samo platform administrator (SEED_DEMO nije "true").');
+    await prisma.$disconnect();
+    return;
+  }
+  const company = await prisma.company.upsert({
+    where: { slug: 'demo' },
+    update: { name: 'Demo Gradnja', city: 'Sarajevo' },
+    create: {
+      name: 'Demo Gradnja',
+      slug: 'demo',
+      city: 'Sarajevo',
+      country: 'BA',
+    },
+  });
+  await prisma.setting.deleteMany({ where: { companyId: company.id } });
+  await prisma.setting.createMany({ data: defaultSettingRows(company.id) });
   const admin = await prisma.user.upsert({
     where: { email: 'admin@gradix.local' },
     update: {
@@ -83,7 +93,9 @@ async function seed(): Promise<void> {
   });
   await seedDemoOps(prisma, { companyId: company.id, passwordHash });
   await prisma.setting.update({
-    where: { companyId_key: { companyId: company.id, key: 'public.companyName' } },
+    where: {
+      companyId_key: { companyId: company.id, key: 'public.companyName' },
+    },
     data: { value: 'Demo Gradnja' },
   });
   await prisma.setting.update({
@@ -94,15 +106,22 @@ async function seed(): Promise<void> {
     where: { companyId_key: { companyId: company.id, key: 'public.contact' } },
     data: { value: 'info@demo.local' },
   });
-  const demo = await prisma.project.findFirst({ where: { companyId: company.id, code: 'DEMO-1' } });
-  if (demo) {
-    await prisma.project.update({ where: { id: demo.id }, data: { isPublic: true } });
+  const demoProject = await prisma.project.findFirst({
+    where: { companyId: company.id, code: 'DEMO-1' },
+  });
+  if (demoProject) {
+    await prisma.project.update({
+      where: { id: demoProject.id },
+      data: { isPublic: true },
+    });
   }
-  const driver = await prisma.user.findUnique({ where: { email: 'driver@gradix.local' } });
-  if (demo && driver) {
+  const driver = await prisma.user.findUnique({
+    where: { email: 'driver@gradix.local' },
+  });
+  if (demoProject && driver) {
     await seedDemoFleet(prisma, {
       companyId: company.id,
-      projectId: demo.id,
+      projectId: demoProject.id,
       driverId: driver.id,
     });
   }

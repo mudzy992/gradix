@@ -38,6 +38,7 @@ model Partner {
   projects  Project[]
 
   @@index([companyId, type])
+  @@index([taxId])
 }
 
 model CostEntry {
@@ -57,6 +58,8 @@ model CostEntry {
 
   @@unique([companyId, source, sourceId])
   @@index([companyId, projectId])
+  @@index([sourceId])
+  @@index([projectId])
 }
 
 model Warehouse {
@@ -72,6 +75,7 @@ model Warehouse {
   movements StockMovement[]
 
   @@index([companyId, type])
+  @@index([projectId])
 }
 
 model StockMovement {
@@ -91,4 +95,8 @@ model StockMovement {
   fuelEntry   FuelEntry? @relation(fields: [fuelEntryId], references: [id])
 
   @@index([companyId, warehouseId, materialId])
+  @@index([warehouseId])
+  @@index([materialId])
+  @@index([projectId])
+  @@index([fuelEntryId])
 }

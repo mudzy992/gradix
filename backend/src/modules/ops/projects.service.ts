@@ -211,6 +211,15 @@ export class ProjectsService {
         plannedEnd: dto.plannedEnd !== undefined ? plannedEnd : undefined,
       },
     });
+    // BE-08 (B8): izmjena projekta je ranije prolazila bez traga u auditu.
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_UPDATED',
+      entityType: 'Project',
+      entityId: id,
+      payload: { fields: Object.keys(dto) },
+    });
     return this.access.serialize(updated, actor);
   }
 
@@ -239,6 +248,14 @@ export class ProjectsService {
     await this.prisma.project.update({
       where: { id },
       data: { archivedAt: new Date() },
+    });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_ARCHIVED',
+      entityType: 'Project',
+      entityId: id,
+      payload: {},
     });
   }
 

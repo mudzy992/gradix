@@ -83,6 +83,14 @@ describe('validateEnv', () => {
     );
   });
 
+  it('SEED_DEMO je podrazumijevano "false" (produkcijski seed = platform admin, P9)', () => {
+    expect(validateEnv({ ...BASE }).SEED_DEMO).toBe('false');
+  });
+
+  it('SEED_DEMO="true" uključuje demo seed', () => {
+    expect(validateEnv({ ...BASE, SEED_DEMO: 'true' }).SEED_DEMO).toBe('true');
+  });
+
   it('ne prihvata neispravan PORT', () => {
     expect(() => validateEnv({ ...BASE, PORT: 'sedam' })).toThrow(
       /PORT mora biti cijeli broj/,

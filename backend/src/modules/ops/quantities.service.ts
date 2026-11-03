@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -17,6 +18,7 @@ export class QuantitiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(actor: AuthUser, projectId: string) {
@@ -56,6 +58,14 @@ export class QuantitiesService {
         executedQty,
         note: dto.note,
       },
+    });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_QUANTITY_CREATED',
+      entityType: 'QuantityItem',
+      entityId: row.id,
+      payload: { projectId, name: row.name },
     });
     return this.serialize(row);
   }
@@ -110,6 +120,15 @@ export class QuantitiesService {
             : parseDecimal(dto.executedQty, 'executedQty'),
         note: dto.note,
       },
+    });
+    // BE-08 (B8): izvedene količine su bile jedina promjena na projektu bez traga u auditu.
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'PROJECT_QUANTITY_UPDATED',
+      entityType: 'QuantityItem',
+      entityId: id,
+      payload: { fields: Object.keys(dto) },
     });
     return this.serialize(row);
   }

@@ -147,6 +147,8 @@ jobs:
       MINIO_SKIP: 'true'
       CORS_ORIGIN: http://127.0.0.1:4173
       SEED_PASSWORD: GradixSeed1
+      # BE-08: e2e traži demo podatke; produkcijski seed upisuje samo platform admina.
+      SEED_DEMO: 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -266,6 +268,8 @@ jobs:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:4173
       E2E_LOGIN_EMAIL: admin@gradix.local
       E2E_LOGIN_PASSWORD: GradixSeed1
+      # BE-08: Playwright se prijavljuje kao demo admin → seed mora napuniti demo podatke.
+      SEED_DEMO: 'true'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

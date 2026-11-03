@@ -109,6 +109,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `MINIO_USE_SSL` | `false` | TLS prema MinIO |
 | `MINIO_SKIP` | — | **samo testovi**: preskače `ensureBucket` |
 | `SEED_PASSWORD` | — | lozinka seed korisnika (min 10), koristi se samo pri seedu |
+| `SEED_DEMO` | `false` | `true` = seed puni demo firmu i demo podatke; `false` = samo platform administrator (P9) |
 | `BACKEND_URL` | `http://backend:3000` | nginx proxy target (frontend kontejner) |
 | `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx |
 | `ENABLE_API_DOCS` | `false` | `true` izlaže Swagger na `/api/docs` — u produkciji isključeno |
@@ -142,14 +143,20 @@ pa se Aktivacija/uklanjanje zatvara u INF-07).
 
 ## 6. Migracije i seed
 
-- **Migracije**: automatski pri startu (`prisma migrate deploy`). Jedna migracija
-  (`init_postgres`); stariji MySQL set je uklonjen (odluka D-010, vraćanje: `git show
-  5679a4b:backup/migrations/...`).
+- **Migracije**: automatski pri startu (`prisma migrate deploy`). Dvije migracije:
+  `20261102130000_init_postgres` (inicijalna šema) i `20261103120000_be08_indexes_audit`
+  (51 indeks na stranim ključevima, 19 novih `AuditAction` vrijednosti, 2 parcijalna unique
+  indeksa za otvorene timere). Stariji MySQL set je uklonjen (odluka D-010).
+- **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`)
+  postoje **samo u SQL-u migracije** — Prisma šema ih ne može izraziti. Ako se jednog dana radi
+  `prisma migrate dev`, Prisma će ih vidjeti kao „višak“; ne brisati ih.
 - **Seed**: dio slike (`dist/prisma/seed.js`). Pokreće se **ručno**:
   - Coolify terminal nad `backend` kontejnerom: `node dist/prisma/seed.js`, ili
   - `docker compose run --rm backend node dist/prisma/seed.js`.
 - Seed pravilo (D-009): **produkcijski seed = 1 platform admin**; demo skup je za razvoj.
 - `SEED_PASSWORD` mora imati **≥ 10 znakova**; seed resetuje `Setting` redove kompanije `demo`.
+- `SEED_DEMO=true` je obavezan za demo podatke (razvoj, e2e). Bez njega seed upisuje samo
+  `platform@gradix.local` sa rolom `PLATFORM_ADMIN` — to je i propisani produkcijski seed (P9).
 
 ---
 

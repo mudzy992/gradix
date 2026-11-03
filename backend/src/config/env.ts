@@ -29,6 +29,7 @@ export interface AppEnv {
   MINIO_BUCKET?: string;
   MINIO_SKIP: boolean;
   SEED_PASSWORD?: string;
+  SEED_DEMO: string;
   ENABLE_API_DOCS: boolean;
 }
 
@@ -156,6 +157,8 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   if (minioBucket) out.MINIO_BUCKET = minioBucket;
   out.MINIO_SKIP = String(minioSkip);
   if (seedPassword) out.SEED_PASSWORD = seedPassword;
+  // BE-08: `true` = seed puni demo firmu/korisnike (razvoj, e2e). Produkcija: prazno/false.
+  out.SEED_DEMO = String(asBool('SEED_DEMO', raw.SEED_DEMO, false, errors));
   out.ENABLE_API_DOCS = String(
     asBool('ENABLE_API_DOCS', raw.ENABLE_API_DOCS, false, errors),
   );

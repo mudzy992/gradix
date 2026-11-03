@@ -98,6 +98,8 @@ model Project {
 
   @@unique([companyId, code])
   @@index([companyId, status])
+  @@index([partnerId])
+  @@index([coverAssetId])
 }
 
 model ProjectPhase {
@@ -117,6 +119,7 @@ model ProjectPhase {
   quantities      QuantityItem[]
 
   @@index([projectId])
+  @@index([companyId])
 }
 
 model ProjectAssignment {
@@ -133,6 +136,7 @@ model ProjectAssignment {
 
   @@unique([projectId, userId])
   @@index([userId])
+  @@index([companyId])
 }
 
 model ProjectDocument {
@@ -147,6 +151,7 @@ model ProjectDocument {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([companyId])
 }
 
 model Task {
@@ -175,6 +180,7 @@ model Task {
 
   @@index([projectId, status])
   @@index([companyId])
+  @@index([phaseId])
 }
 
 model TaskAssignment {
@@ -190,6 +196,7 @@ model TaskAssignment {
 
   @@unique([taskId, userId])
   @@index([userId])
+  @@index([companyId])
 }
 
 model TaskAttachment {
@@ -204,6 +211,7 @@ model TaskAttachment {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+  @@index([companyId])
 }
 
 model TaskDependency {
@@ -219,6 +227,8 @@ model TaskDependency {
   to        Task               @relation("DepTo", fields: [toId], references: [id], onDelete: Cascade)
 
   @@unique([fromId, toId])
+  @@index([companyId])
+  @@index([toId])
 }
 
 model TimerSession {
@@ -249,6 +259,9 @@ model TimerSession {
   @@index([taskId])
   @@index([machineId])
   @@unique([companyId, userId, deviceId, localId])
+  @@index([userId])
+  @@index([localId])
+  @@index([deviceId])
 }
 
 model QuantityItem {
@@ -268,6 +281,8 @@ model QuantityItem {
   phase       ProjectPhase? @relation(fields: [phaseId], references: [id])
 
   @@index([projectId])
+  @@index([companyId])
+  @@index([phaseId])
 }
 
 model Amendment {
@@ -286,6 +301,8 @@ model Amendment {
   actor      User                 @relation(fields: [actorId], references: [id])
 
   @@index([companyId, entityType, entityId])
+  @@index([entityId])
+  @@index([actorId])
 }
 
 enum IncidentSeverity {
@@ -325,6 +342,8 @@ model DiaryEntry {
   @@unique([companyId, projectId, date])
   @@unique([companyId, deviceId, localId])
   @@index([projectId])
+  @@index([localId])
+  @@index([deviceId])
 }
 
 model DiaryPhoto {
@@ -341,6 +360,7 @@ model DiaryPhoto {
   diaryEntry   DiaryEntry @relation(fields: [diaryEntryId], references: [id], onDelete: Cascade)
 
   @@index([diaryEntryId])
+  @@index([companyId])
 }
 
 model Incident {
@@ -364,6 +384,8 @@ model Incident {
 
   @@index([companyId, status])
   @@index([projectId])
+  @@index([taskId])
+  @@index([userId])
 }
 
 model IncidentPhoto {
@@ -377,4 +399,5 @@ model IncidentPhoto {
   incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
+  @@index([companyId])
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -13,6 +14,7 @@ export class TaskDependenciesService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly tasks: TasksService,
+    private readonly audit: AuditService,
   ) {}
 
   async add(actor: AuthUser, taskId: string, dto: DependencyDto) {
@@ -52,9 +54,18 @@ export class TaskDependenciesService {
         400,
       );
     }
-    return this.prisma.taskDependency.create({
+    const row = await this.prisma.taskDependency.create({
       data: { companyId: project.companyId, fromId, toId, type: 'FS' },
     });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_DEPENDENCY_ADDED',
+      entityType: 'TaskDependency',
+      entityId: row.id,
+      payload: { fromId, toId },
+    });
+    return row;
   }
 
   async remove(actor: AuthUser, taskId: string, id: string): Promise<void> {
@@ -68,6 +79,14 @@ export class TaskDependenciesService {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Dependency not found', 404);
     }
     await this.prisma.taskDependency.delete({ where: { id } });
+    await this.audit.write({
+      companyId: project.companyId,
+      actorId: actor.id,
+      action: 'TASK_DEPENDENCY_REMOVED',
+      entityType: 'TaskDependency',
+      entityId: id,
+      payload: { fromId: row.fromId, toId: row.toId },
+    });
   }
 
   private async wouldCycle(fromId: string, toId: string): Promise<boolean> {
