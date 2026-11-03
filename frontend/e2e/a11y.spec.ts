@@ -24,11 +24,19 @@ test.describe('a11y (FE-03)', () => {
   test('fokus je vidljiv pri kretanju tastaturom', async ({ page }) => {
     await page.goto('/login')
     await page.keyboard.press('Tab')
-    const outline = await page.evaluate(() => {
-      const element = document.activeElement as HTMLElement | null
-      return element ? getComputedStyle(element).outlineStyle : ''
+    const focused = await page.evaluate(() => {
+      const element = document.querySelector<HTMLElement>(':focus-visible')
+      if (!element) return { found: false, outlineStyle: '', outlineWidth: '' }
+      const style = getComputedStyle(element)
+      return {
+        found: true,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      }
     })
-    expect(outline).not.toBe('none')
+    expect(focused.found).toBe(true)
+    expect(focused.outlineStyle).not.toBe('none')
+    expect(focused.outlineWidth).not.toBe('0px')
   })
 
   test('nema horizontalnog skrola na 320 px (WCAG 1.4.10 reflow)', async ({ page }) => {
