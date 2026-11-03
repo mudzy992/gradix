@@ -19,7 +19,7 @@ export default defineConfig({
   projects: [
     {
       name: 'guest',
-      testMatch: [/login\.spec\.ts/, /a11y\.spec\.ts/, /guards\.spec\.ts/],
+      testMatch: [/login\.spec\.ts/, /a11y\.spec\.ts/, /guards\.spec\.ts/, /auth-pages\.spec\.ts/],
       use: { ...devices['Desktop Chrome'] },
     },
     { name: 'admin', testMatch: /flows\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },

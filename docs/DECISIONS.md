@@ -503,6 +503,30 @@ garantovao; svaki sljedeći FE segment dodaje svoj fajl u listu, prag ostaje vis
 **Posljedica:** CI job `frontend` sada ima korak `npm run test:cov` (i artefakt `frontend-coverage`);
 `tsconfig.app.json` uključuje `test/` (setup fajl donosi jest-dom matchere i tipove).
 
+### D-045 — Auth ekrani: jedan okvir, greška uz polje, pošten `/reset`
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+`login` je poslije FE-03 imao `h1`, ali `forgot`, `reset` i `change-password` su naslov renderovali
+kao `div` (`CardTitle`) — ekran bez naslova nije čitljiv čitaču ekrana (WCAG 1.3.1/2.4.6). Uz to:
+greške validacije se **nisu prikazivale** (`Field` prima `error`, ali ga `forgot`/`change-password`
+nisu prosljeđivali), `min(10)` je bacao engleski Zod tekst, a greške servera su išle u toast koji
+nestane.
+
+**Odluka:** svi auth ekrani koriste **jedan okvir** (`AuthCard`) koji garantuje jedno `h1` i isti
+raspored. Pravila: poruka o grešci ide **uz polje** (`role="alert"`, `aria-invalid`,
+`aria-describedby` preko `Field`-a), greška servera (pogrešna lozinka, **429 zbog previše pokušaja**,
+mreža) ostaje na ekranu sa dugmetom/stanjem koje korisnik vidi, a uspjeh je **stanje ekrana**, ne
+toast.
+
+**`/reset` ostaje pošten:** backend vraća `501 AUTH_RESET_NOT_AVAILABLE` (nema reset tokena ni
+dostave emaila). Ekran zato **ne nudi** formu koja bi glumila uspjeh, nego kaže šta korisnik sada
+može (admin resetuje lozinku u `/users`) — lažni „poslano“ bio bi gori od poruke „nije dostupno“.
+
+**Posljedica:** novo `PasswordInput` polje sa prekidačem vidljivosti (`aria-pressed` + tekstualno
+ime) jer se duge lozinke na telefonu ne mogu unijeti bez greške; `autoComplete`
+`current-password`/`new-password` za menadžere lozinki; `change-password` dobija svoje dugme
+„Promijeni lozinku“ umjesto generičkog „Sačuvaj“.
+
 ---
 
 ## Zamijenjene / povučene odluke

@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: FE-06).
+kratak izvještaj poslije svakog. Trenutno: **37/59 segmenata `done`** (zadnji: FE-07).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -672,13 +672,29 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
   sa svih 16 testova (admin 5, radnik 3, guest 8).
 - **Ukupno 16 E2E testova** u 5 fajlova (`guest`/`admin`/`worker`).
 
-## Šta je sljedeće (tačan sljedeći korak)
+### 2026-11-03 — FE-07 (auth stranice) → segment `done`
+- **Nalaz (visoko):** `forgot`, `reset` i `change-password` **nisu imali `h1`** (naslov je bio `div`),
+  a `forgot`/`change-password` **nisu prikazivali greške validacije** — forma je „ništa ne radi“.
+  `min(10)` je bacao engleski Zod tekst; greške servera (uključujući **429** zbog 5 prijava/min) su
+  bile toast poruke koje nestanu.
+- **Riješeno:** `AuthCard` (jedan okvir → tačno jedno `h1`) za sva četiri ekrana; `Field error` sa
+  `aria-invalid`/`aria-describedby`; trajni `role="alert"` za greške servera; uspjeh slanja upute je
+  **stanje ekrana** (`role="status"`, email + „Pošalji na drugu adresu“); `/reset` ostaje pošten
+  (BE vraća 501) i kaže šta korisnik sada može.
+- **Novo:** `PasswordInput` sa prekidačem vidljivosti (`aria-pressed` + tekstualno ime) i
+  `autoComplete` (`current-password`/`new-password`); dugme „Promijeni lozinku“ umjesto „Sačuvaj“.
+- **Testovi:** 14 unit (`auth-pages.spec.tsx`) → ukupno **42**; 3 E2E (`auth-pages.spec.ts`) → ukupno
+  **19**; `a11y.spec` ažuriran (prekidač lozinke je sada između polja i „zapamti me“).
+- **Coverage ratchet proširen** na auth ekrane: linije **96,9 %**, grane 91,1 %.
 
-1. **FE-07 — Auth stranice** (`login`, `forgot`, `reset`, `change-password`): IA redizajn na tokenima
-   (D-040) uz FE-03 pravila, poruke grešaka po polju, stanja slanja; pa **FE-08** (projekti/zadaci).
-2. Zatim **FE-08…FE-14** (ekrani po domenima, svaki dodaje svoje unit testove u `coverage.include`
-   i, gdje ima smisla, E2E tok), pa **MOB-01…MOB-07**.
-3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu.
+## Šta je sljedeći korak
+
+1. **FE-08 — Operacije (projekti, zadaci)**: liste, detalji, tabla zadataka, dispatch — tokeni + stanja
+   (skeleton/greška/prazno), pa testovi; zatim **FE-09** (flota/logistika) itd. do **FE-14**.
+2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
+   smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
+3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija
+   refresh tokena gasi sve sesije) čeka BE-02 dopunu.
 3. **Vlasnik (Coolify, D-041)** — obavezno prije produkcijske provjere: ① backend
    `CORS_ORIGIN=https://gradix.ba101.top`, ② frontend `CSP_API_ORIGIN=https://api.gradix.ba101.top`,
    ③ frontend `VITE_API_URL=https://api.gradix.ba101.top` → **rebuild**; `TRUST_PROXY` ostaviti `1`.

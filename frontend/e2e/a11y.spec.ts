@@ -40,8 +40,22 @@ test.describe('a11y (FE-03)', () => {
     expect(textField.outlineStyle).not.toBe('none')
     expect(textField.outlineWidth).not.toBe('0px')
 
-    // Redoslijed u DOM-u: lozinka → „zapamti me“; fokus mora biti vidljiv i na čekboksu.
+    // Redoslijed u DOM-u (FE-07): lozinka → prekidač vidljivosti → „zapamti me“.
     await page.locator('#password').focus()
+    await page.keyboard.press('Tab')
+    const toggle = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null
+      return element
+        ? {
+            role: element.getAttribute('role') ?? element.tagName.toLowerCase(),
+            label: element.getAttribute('aria-label') ?? '',
+            outlineStyle: getComputedStyle(element).outlineStyle,
+          }
+        : { role: '', label: '', outlineStyle: 'none' }
+    })
+    expect(toggle.label).toMatch(/prikaži lozinku|show password/i)
+    expect(toggle.outlineStyle).not.toBe('none')
+
     await page.keyboard.press('Tab')
     const next = await page.evaluate(() => {
       const element = document.activeElement as HTMLElement | null

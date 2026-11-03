@@ -33,6 +33,13 @@ export default defineConfig({
         'src/lib/payroll-access.ts',
         'src/components/layout/navigation.ts',
         'src/pages/dashboard-page.tsx',
+        // FE-07 — auth ekrani i njihovi dijelovi
+        'src/pages/login-page.tsx',
+        'src/pages/forgot-page.tsx',
+        'src/pages/reset-page.tsx',
+        'src/pages/change-password-page.tsx',
+        'src/components/auth/auth-card.tsx',
+        'src/components/auth/password-input.tsx',
       ],
       thresholds: { lines: 85, functions: 85, statements: 85, branches: 75 },
     },
