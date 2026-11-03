@@ -20,6 +20,14 @@ export const en = {
     companies: 'Companies',
     menu: 'Menu',
     openMenu: 'Open menu',
+    skipToContent: 'Skip to content',
+    groups: {
+      overview: 'Overview',
+      work: 'Work',
+      field: 'Field',
+      office: 'Office',
+      admin: 'Administration',
+    },
   },
   auth: {
     login: 'Sign in',

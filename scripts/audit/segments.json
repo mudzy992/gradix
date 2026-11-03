@@ -262,8 +262,9 @@
       "id": "FE-02",
       "layer": "FE",
       "title": "Shell, navigacija, layout",
-      "status": "planned",
-      "scope": "files"
+      "status": "done",
+      "scope": "files",
+      "scopeReason": "Grupisana navigacija (components/layout/navigation.ts), a11y shell (skip-link, fokus, naslov taba, <html lang>) i lazy rute; odluka D-041."
     },
     {
       "id": "FE-03",

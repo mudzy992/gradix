@@ -381,6 +381,32 @@ par 5.02:1, prag AA je 4.5:1). Nijedna komponenta ne hardkodira boju (provjereno
 **Posljedica:** `.dark` blok postoji ali je **inertan** (nigdje se ne dodaje klasa `dark`) — tamna
 tema nije u obimu v1; tokeni su tu da je kasnije uključivanje jedno pravilo, a ne redizajn.
 
+### D-041 — Shell i navigacija: grupisana navigacija, lazy rute, naslov i fokus
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Sidebar je bio ravna lista od 17 stavki bez grupa i ikona, sve stranice su bile u jednom JS
+chunk-u (292.6 kB gzip, iznad budžeta D-015), `document.title` se nije mijenjao po ruti, nije bilo
+„preskoči na sadržaj“ linka, a `<main>` nije primao fokus — pa je poslije navigacije fokus ostajao
+na linku, a skrol na staroj poziciji.
+
+**Odluka:**
+1. **Jedan spisak navigacije** (`components/layout/navigation.ts`) sa grupama *Pregled · Posao ·
+   Teren · Ured · Administracija*; vidljivost po permisijama je funkcija (`isNavItemVisible`), ne
+   `if` u JSX-u; aktivna stavka je **najduži** prefiks putanje (`/fleet/map` ne boji i `/fleet`).
+2. **Lazy rute** za `fleet/map` (Leaflet), javni sajt, obračun i ERP, sa `Suspense` fallbackom koji
+   je isti statusni prikaz kao pri boot-u → početni JS **207.7 kB gzip** (budžet 250 kB).
+3. **Shell a11y:** skip-link, `<main id="main" tabIndex={-1}>`, fokus na sadržaj poslije promjene
+   rute, `<title>` = „<ekran> · Gradix“, reset skrola.
+
+**Odbačeno:** (A) ikone bez teksta na skupim ekranima — štedi prostor, ali ruši razumijevanje i
+a11y; (B) `react-router` `ScrollRestoration` — traži data-router API i mijenja bootstrap; običan
+efekat radi isto za ovaj broj ruta; (C) ručni `manualChunks` u Vite config-u — dijeljenje po
+biblioteci ne pomaže jer se Leaflet ionako koristi samo na jednoj ruti; lazy po ruti je preciznije.
+
+**Posljedica:** novi ekran se dodaje u `NAV_SECTIONS` (jedno mjesto); zaboravljen unos znači da
+ekran postoji ali se ne vidi u meniju — FE-05 dobija test koji provlači sve rute iz `appRoutes` i
+traži da svaka ima stavku (ili je svjesno bez nje: `/change-password`).
+
 ---
 
 ## Zamijenjene / povučene odluke

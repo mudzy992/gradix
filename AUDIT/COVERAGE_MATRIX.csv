@@ -342,24 +342,26 @@ backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — 
 backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
 docker-compose.yml,INF,compose,INF-01,184,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
-frontend/.oxlintrc.json,FE,config,FE-02,9,nepregledano,,
+frontend/.oxlintrc.json,FE,config,FE-02,9,pregledano,FE-02: react/only-export-components (warn) + rules-of-hooks (error); nema a11y plugina (FE-03),2026-11-03
 frontend/Dockerfile,INF,frontend-image,INF-03,66,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
-frontend/components.json,FE,config,FE-02,22,nepregledano,,
+frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
-frontend/index.html,FE,config,FE-02,14,nepregledano,,
+frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,89,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
 frontend/package.json,FE,config,FE-02,51,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
 frontend/playwright.config.ts,FE,e2e,FE-06,13,nepregledano,,
-frontend/src/App.tsx,FE,app-shell,FE-02,17,nepregledano,,
+frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
 frontend/src/components/companies/company-sheet.tsx,FE,ops-ui,FE-08,105,nepregledano,,
 frontend/src/components/erp/erp-costs-tab.tsx,FE,ops-ui,FE-08,80,nepregledano,,
 frontend/src/components/erp/erp-partners-tab.tsx,FE,ops-ui,FE-08,53,nepregledano,,
 frontend/src/components/erp/erp-stock-tab.tsx,FE,ops-ui,FE-08,89,nepregledano,,
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,20,nepregledano,,
-frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,60,nepregledano,,
-frontend/src/components/layout/company-switcher.tsx,FE,layout,FE-02,54,nepregledano,,
-frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,83,nepregledano,,
-frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,81,nepregledano,,
+frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
+frontend/src/components/layout/company-switcher.tsx,FE,layout,FE-02,54,pregledano,FE-02: vidljiv samo platform adminu; poslije promjene firme ponovo učita /me (permisije se mijenjaju po firmi),2026-11-03
+frontend/src/components/layout/navigation.ts,FE,layout,FE-02,143,pregledano,"FE-02: jedan spisak navigacije (5 grupa, ikone uz tekst), isNavItemVisible (permission/anyPermission/payroll/tenant), activeNavPath = najduži prefiks",2026-11-03
+frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
+frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,80,pregledano,"FE-02: grupisana navigacija sa aria-current=""page"", focus-visible ring, disabled stavke dok firma nije izabrana",2026-11-03
+frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,81,pregledano,"FE-02: jezik (bs/en) preko PATCH /me + i18n, promjena lozinke, logout i logout-all; nema potvrde za logout-all (FE-13)",2026-11-03
 frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,112,nepregledano,,
 frontend/src/components/ops/diary-conflict-sheet.tsx,FE,ops-ui,FE-08,68,nepregledano,,
 frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,81,nepregledano,,
@@ -399,8 +401,8 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,171,nepregledano,,
-frontend/src/i18n/en.ts,FE,shared,FE-15,171,nepregledano,,
+frontend/src/i18n/bs.ts,FE,shared,FE-15,179,nepregledano,,
+frontend/src/i18n/en.ts,FE,shared,FE-15,179,nepregledano,,
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
@@ -434,7 +436,7 @@ frontend/src/lib/query-client.ts,FE,shared,FE-15,11,nepregledano,,
 frontend/src/lib/roles.ts,FE,shared,FE-15,16,nepregledano,,
 frontend/src/lib/storage.ts,FE,shared,FE-15,47,nepregledano,,
 frontend/src/lib/utils.ts,FE,shared,FE-15,7,nepregledano,,
-frontend/src/main.tsx,FE,app-shell,FE-02,12,nepregledano,,
+frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
 frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,83,nepregledano,,
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,123,nepregledano,,
 frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,72,nepregledano,,
@@ -459,15 +461,16 @@ frontend/src/pages/task-detail-page.tsx,FE,ops-pages,FE-08,82,nepregledano,,
 frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,66,nepregledano,,
 frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,108,nepregledano,,
 frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,185,nepregledano,,
-frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,236,nepregledano,,
-frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,nepregledano,,
+frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,241,pregledano,"FE-02: rute + guardovi (RequireAuth/PublicOnly/RequirePermission/RequirePayroll), BootGate sa ScreenLoader-om, teške rute kroz lazy-pages",2026-11-03
+frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi vraćaju Navigate (bez bijelog ekrana), jednokratni toast na 403; odlazak na /dashboard kao fallback",2026-11-03
+frontend/src/routes/lazy-pages.tsx,FE,app-shell,FE-02,53,pregledano,"FE-02: lazy fleet/map (Leaflet), javni sajt, obračun i ERP; Suspense fallback = ScreenLoader (D-015/D-041)",2026-11-03
 frontend/src/stores/auth-store.ts,FE,shared,FE-15,23,nepregledano,,
 frontend/src/stores/company-store.ts,FE,shared,FE-15,18,nepregledano,,
-frontend/src/vite-env.d.ts,FE,app-shell,FE-02,10,nepregledano,,
-frontend/tsconfig.app.json,FE,config,FE-02,29,nepregledano,,
-frontend/tsconfig.json,FE,config,FE-02,14,nepregledano,,
-frontend/tsconfig.node.json,FE,config,FE-02,24,nepregledano,,
-frontend/vite.config.ts,FE,config,FE-02,31,nepregledano,,
+frontend/src/vite-env.d.ts,FE,app-shell,FE-02,10,pregledano,FE-02: Vite client tipovi; nema deklarisanih env varijabli (VITE_* se čita kroz import.meta.env),2026-11-03
+frontend/tsconfig.app.json,FE,config,FE-02,29,pregledano,"FE-02: strict, noUnusedLocals/Parameters, bundler resolution, alias @/*",2026-11-03
+frontend/tsconfig.json,FE,config,FE-02,14,pregledano,FE-02: project references (app + node) — tsc -b je jedina komanda u CI-ju,2026-11-03
+frontend/tsconfig.node.json,FE,config,FE-02,24,pregledano,FE-02: config za vite.config.ts (node tipovi),2026-11-03
+frontend/vite.config.ts,FE,config,FE-02,31,pregledano,"FE-02: alias @, proxy /api i /socket.io na VITE_API_TARGET (dev i preview), server.host=true (preview u sandboxu)",2026-11-03
 mobile/app.json,MOB,app,MOB-01,56,nepregledano,,
 mobile/app/(tabs)/_layout.tsx,MOB,app,MOB-01,35,nepregledano,,
 mobile/app/(tabs)/diary.tsx,MOB,app,MOB-01,65,nepregledano,,
@@ -521,7 +524,7 @@ scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,258,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
-scripts/audit/segments.json,STD,audit-tools,STD-01,437,nepregledano,,
+scripts/audit/segments.json,STD,audit-tools,STD-01,438,nepregledano,,
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,39,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
 scripts/ops/restore.sh,INF,ops-scripts,INF-06,105,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03

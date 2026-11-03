@@ -5,6 +5,13 @@ import { useLogoutSync } from '@/hooks/use-logout-sync'
 import { useSocket } from '@/hooks/use-socket'
 import { useAuthStore } from '@/stores/auth-store'
 import { AppShell } from '@/components/layout/app-shell'
+import { ScreenLoader } from '@/components/layout/screen-loader'
+import {
+  LazyErpPage,
+  LazyFleetMapPage,
+  LazyPayrollPage,
+  LazyPublicSitePage,
+} from '@/routes/lazy-pages'
 import { ChangePasswordPage } from '@/pages/change-password-page'
 import {
   CatchAllRedirect,
@@ -26,7 +33,6 @@ import { ProjectDetailPage } from '@/pages/project-detail-page'
 import { TasksPage } from '@/pages/tasks-page'
 import { TaskDetailPage } from '@/pages/task-detail-page'
 import { FleetPage } from '@/pages/fleet-page'
-import { FleetMapPage } from '@/pages/fleet-map-page'
 import { LogisticsPage } from '@/pages/logistics-page'
 import { DiaryPage } from '@/pages/diary-page'
 import { HsePage } from '@/pages/hse-page'
@@ -34,9 +40,8 @@ import { TendersPage } from '@/pages/tenders-page'
 import { ServicesPage } from '@/pages/services-page'
 import { DocumentsPage } from '@/pages/documents-page'
 import { ReportsPage } from '@/pages/reports-page'
-import { PublicSitePage } from '@/pages/public-site-page'
-import { PayrollPage } from '@/pages/payroll-page'
-import { ErpPage } from '@/pages/erp-page'
+
+
 
 function AuthedLayout() {
   useLogoutSync()
@@ -52,17 +57,17 @@ function BootGate({ children }: { children: ReactNode }) {
   useAuthBootstrap()
   const bootReady = useAuthStore((state) => state.ready)
   if (!bootReady) {
-    return (
-      <div className="flex min-h-svh items-center justify-center text-sm text-muted-foreground">
-        …
-      </div>
-    )
+    // FE-02: umjesto „…“ — statusna regija koju čitač ekrana objavi (i spinner za vidljiv signal).
+    return <ScreenLoader className="min-h-svh" />
   }
   return children
 }
 
 export const appRoutes = [
-  { path: '/p/:slug', element: <PublicSitePage /> },
+  {
+    path: '/p/:slug',
+    element: <LazyPublicSitePage />,
+  },
   {
     element: (
       <BootGate>
@@ -126,7 +131,7 @@ export const appRoutes = [
             path: '/fleet/map',
             element: (
               <RequirePermission permission="fleet.map">
-                <FleetMapPage />
+                <LazyFleetMapPage />
               </RequirePermission>
             ),
           },
@@ -190,7 +195,7 @@ export const appRoutes = [
             path: '/payroll',
             element: (
               <RequirePayroll>
-                <PayrollPage />
+                <LazyPayrollPage />
               </RequirePayroll>
             ),
           },
@@ -198,7 +203,7 @@ export const appRoutes = [
             path: '/erp',
             element: (
               <RequirePermission permission="erp.read">
-                <ErpPage />
+                <LazyErpPage />
               </RequirePermission>
             ),
           },

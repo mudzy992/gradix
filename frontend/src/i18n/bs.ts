@@ -20,6 +20,14 @@ export const bs = {
     companies: 'Firme',
     menu: 'Meni',
     openMenu: 'Otvori meni',
+    skipToContent: 'Preskoči na sadržaj',
+    groups: {
+      overview: 'Pregled',
+      work: 'Posao',
+      field: 'Teren',
+      office: 'Ured',
+      admin: 'Administracija',
+    },
   },
   auth: {
     login: 'Prijava',

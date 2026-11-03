@@ -58,6 +58,23 @@ frontend/src/
 | `/settings`, `/users`, `/companies` | administracija | `settings.write` / `users.*` / platform |
 | `/change-password` | obavezna promjena | fullscreen kad `mustChangePassword` |
 
+### 2.1 Shell i navigacija (FE-02, D-041)
+
+- **Jedan spisak navigacije:** `src/components/layout/navigation.ts` (`NAV_SECTIONS`) — koriste ga
+  sidebar, `<AppShell>` (naslov taba) i vidljivost po permisijama. Grupe: *Pregled · Posao · Teren ·
+  Ured · Administracija*; ikona je uvijek uz tekst (nikad jedini nosilac značenja).
+- **Aktivna stavka = najduži prefiks** (`activeNavPath`): `/fleet/map` gasi `/fleet`,
+  a `/projects/:id` drži `/projects` aktivnim. `aria-current="page"` ide na aktivni link.
+- **Vidljivost:** `isNavItemVisible` — `permission`, `anyPermission` (zadaci: `tasks.read` ili
+  `tasks.dispatch`), `payroll` (uloge koje vide obračun) i `tenant` (stavke vezane za firmu su
+  onemogućene dok firma nije izabrana). Guardovi na rutama ostaju mjerodavni — nav je samo UI.
+- **Pristupačnost shella:** „Preskoči na sadržaj“ je prvi tabulator; `<main id="main">` prima fokus
+  poslije navigacije; `document.title` je `<label> · Gradix`; skrol se resetuje na promjenu rute.
+  Mobilni meni je `Sheet` sa `sr-only` naslovom i zatvara se klikom na stavku.
+- **Lazy rute (D-015):** `fleet/map` (Leaflet), javni sajt, obračun i ERP se učitavaju tek kad se
+  otvore, sa istim statusnim prikazom kao pri boot-u. Početni JS: **292.6 kB → 207.7 kB gzip**
+  (budžet je 250 kB, D-015).
+
 ---
 
 ## 3. State i podaci
@@ -123,7 +140,7 @@ vlasnika** → tek onda kod.
 | F1 | Samo 1 E2E spec (login); nema testova za timer/ture/payroll/settings | FE-06 |
 | F2 | Nema unit/component testova (npr. `planned-gantt`, `quantity-tab`, forme) | FE-05 |
 | F3 | Nema design token guard-a; sirove boje u nekim komponentama (`❓` mjeri se u FE-01) | FE-01 |
-| F4 | Dark varijanta u CSS-u je mrtva | FE-01 |
+| F4 | ~~Dark varijanta u CSS-u je mrtva~~ **riješeno** u FE-01 (`.dark` tokeni; klasa se još ne dodaje) | FE-01 |
 | F5 | Nema a11y provjere (fokus, labele, kontrast, tastatura) | FE-03 |
 | F6 | Admin dashboard nije redizajniran (informaciona arhitektura čeka odobrenje) | FE-04 |
 | F7 | Nema `prettier`/format provjere; lint je samo oxlint | FE-02 |
