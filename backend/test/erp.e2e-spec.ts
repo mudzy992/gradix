@@ -3,9 +3,11 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 describe('Phase 10 erp-lite (e2e)', () => {
   let app: INestApplication<App>;
+  let prisma: PrismaService;
   let admin: string;
   let worker: string;
   let accountant: string;
@@ -14,6 +16,7 @@ describe('Phase 10 erp-lite (e2e)', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
+    prisma = app.get(PrismaService);
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
     accountant = (await login(app, 'accountant@gradix.local')).body.data
@@ -187,5 +190,126 @@ describe('Phase 10 erp-lite (e2e)', () => {
       .set(auth(admin))
       .send({ warehouseId: empty.body.data.id, materialId, qty: '-1' });
     expect(allowed.status).toBe(201);
+  });
+
+  it('F-03: brisanje troška ostavlja COST_ENTRY_REMOVED trag i vraća spend', async () => {
+    const before = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}`)
+      .set(auth(admin));
+    const spendBefore = Number(before.body.data.currentSpend);
+    const created = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({
+        amount: '40.00',
+        category: 'MATERIAL',
+        date: '2024-04-01',
+        projectId,
+      });
+    expect(created.status).toBe(201);
+    const costId = created.body.data.id as string;
+    const afterCreate = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}`)
+      .set(auth(admin));
+    expect(Number(afterCreate.body.data.currentSpend)).toBe(spendBefore + 40);
+    const removed = await request(app.getHttpServer())
+      .delete(`/api/cost-entries/${costId}`)
+      .set(auth(admin));
+    expect(removed.status).toBe(204);
+    const audit = await prisma.auditEvent.findFirst({
+      where: {
+        companyId,
+        action: 'COST_ENTRY_REMOVED',
+        entityId: costId,
+      },
+    });
+    expect(audit).not.toBeNull();
+    expect(audit?.payload).toMatchObject({
+      amount: '40.00',
+      category: 'MATERIAL',
+      projectId,
+    });
+    const afterRemove = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}`)
+      .set(auth(admin));
+    expect(Number(afterRemove.body.data.currentSpend)).toBe(spendBefore);
+  });
+
+  it('F-04: partneri i skladišta ostavljaju audit trag', async () => {
+    const partner = await request(app.getHttpServer())
+      .post('/api/partners')
+      .set(auth(admin))
+      .send({ type: 'SUPPLIER', name: 'Dobavljač audit' });
+    expect(partner.status).toBe(201);
+    await request(app.getHttpServer())
+      .patch(`/api/partners/${partner.body.data.id as string}`)
+      .set(auth(admin))
+      .send({ note: 'izmijenjeno' });
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Magacin audit', type: 'CENTRAL' });
+    expect(warehouse.status).toBe(201);
+    const partnerAudit = await prisma.auditEvent.findMany({
+      where: {
+        companyId,
+        entityType: 'Partner',
+        entityId: partner.body.data.id as string,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(partnerAudit.map((row) => row.action)).toEqual([
+      'PARTNER_CREATED',
+      'PARTNER_UPDATED',
+    ]);
+    const warehouseAudit = await prisma.auditEvent.findFirst({
+      where: {
+        companyId,
+        action: 'WAREHOUSE_CREATED',
+        entityId: warehouse.body.data.id as string,
+      },
+    });
+    expect(warehouseAudit).not.toBeNull();
+  });
+
+  it('F-02: paralelni apply-stock ne pada na unique i ne duplira pokret', async () => {
+    const cistern = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Cistern race', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Dizel race', unit: 'L' });
+    const warehouseId = cistern.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    await request(app.getHttpServer())
+      .post('/api/stock-movements')
+      .set(auth(admin))
+      .send({ warehouseId, materialId, qty: '100' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Race cistern', type: 'TRUCK' });
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '7',
+        unitPrice: '1.00',
+      });
+    const apply = () =>
+      request(app.getHttpServer())
+        .post(`/api/fuel/${fuel.body.data.id}/apply-stock`)
+        .set(auth(admin))
+        .send({ warehouseId, materialId });
+    const results = await Promise.all([apply(), apply(), apply()]);
+    expect(results.map((row) => row.status).sort()).toEqual([200, 200, 201]);
+    const movements = await prisma.stockMovement.count({
+      where: { companyId, fuelEntryId: fuel.body.data.id as string },
+    });
+    expect(movements).toBe(1);
   });
 });

@@ -248,6 +248,80 @@ describe('Phase 9 payroll (e2e)', () => {
     expect(row?.durationMinutes).toBe(75);
   });
 
+  it('B12: satnica je zamrznuta u trenutku zatvaranja sesije', async () => {
+    // Stvarni put: `POST /api/timer/stop` mora upisati snapshot satnice.
+    await request(app.getHttpServer())
+      .patch(`/api/users/${workerId}`)
+      .set(auth(admin))
+      .send({ hourlyRate: '20.00' });
+    const started = await request(app.getHttpServer())
+      .post('/api/timer/start')
+      .set(auth(worker))
+      .send({ taskId });
+    expect(started.status).toBe(201);
+    const stopped = await request(app.getHttpServer())
+      .post('/api/timer/stop')
+      .set(auth(worker));
+    expect(stopped.status).toBe(201);
+    const closed = await prisma.timerSession.findUniqueOrThrow({
+      where: { id: started.body.data.id as string },
+    });
+    expect(closed.hourlyRateSnapshot?.toFixed(2)).toBe('20.00');
+
+    // B12 (opcija A): povišica nakon obračuna ne mijenja već obračunate sate.
+    const snapshotted = await insertSession({
+      approvalStatus: 'APPROVED',
+      startedAt: new Date('2024-05-02T08:00:00.000Z'),
+      closedAt: new Date('2024-05-02T09:00:00.000Z'),
+      durationMinutes: 60,
+      hourlyRateSnapshot: '10.00',
+    });
+    const before = await request(app.getHttpServer())
+      .get('/api/payroll/summary')
+      .query({ year: 2024, month: 5 })
+      .set(auth(admin));
+    expect(before.status).toBe(200);
+    expect(before.body.data.approvedAmount).toBe('10.00');
+    await request(app.getHttpServer())
+      .patch(`/api/users/${workerId}`)
+      .set(auth(admin))
+      .send({ hourlyRate: '99.00' });
+    const after = await request(app.getHttpServer())
+      .get('/api/payroll/summary')
+      .query({ year: 2024, month: 5 })
+      .set(auth(admin));
+    expect(after.body.data.approvedAmount).toBe('10.00');
+    expect(after.body.data.approvedMinutes).toBe(
+      before.body.data.approvedMinutes,
+    );
+    // Iznos iz sesije bez snapshota (stari redovi) prati trenutnu satnicu.
+    await insertSession({
+      approvalStatus: 'APPROVED',
+      startedAt: new Date('2024-05-03T08:00:00.000Z'),
+      closedAt: new Date('2024-05-03T09:00:00.000Z'),
+      durationMinutes: 60,
+    });
+    const legacy = await request(app.getHttpServer())
+      .get('/api/payroll/summary')
+      .query({ year: 2024, month: 5 })
+      .set(auth(admin));
+    expect(legacy.body.data.approvedAmount).toBe('109.00');
+    // Vrati satnicu da kasniji testovi (ako ih bude) vide stabilno stanje.
+    await request(app.getHttpServer())
+      .patch(`/api/users/${workerId}`)
+      .set(auth(admin))
+      .send({ hourlyRate: '20.00' });
+    expect(snapshotted.id).toBeTruthy();
+
+    // ERP: izvoz plata u troškove koristi isti snapshot, ne trenutnu satnicu.
+    const cost = await request(app.getHttpServer())
+      .post('/api/cost-entries/from-payroll')
+      .set(auth(admin))
+      .send({ year: 2024, month: 5 });
+    expect(cost.status).toBe(201);
+    expect(cost.body.data.amount).toBe('109.00');
+  });
+
   async function insertSession(input: {
     userId?: string;
     startedAt: Date;
@@ -255,6 +329,7 @@ describe('Phase 9 payroll (e2e)', () => {
     durationMinutes: number;
     pauseAccumMinutes?: number;
     approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    hourlyRateSnapshot?: string;
   }) {
     return prisma.timerSession.create({
       data: {
@@ -266,6 +341,7 @@ describe('Phase 9 payroll (e2e)', () => {
         durationMinutes: input.durationMinutes,
         pauseAccumMinutes: input.pauseAccumMinutes ?? 0,
         approvalStatus: input.approvalStatus ?? 'PENDING',
+        hourlyRateSnapshot: input.hourlyRateSnapshot ?? null,
       },
     });
   }

@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-13` — payroll: atomska odluka (409 umjesto prepisivanja), strog kalendarski datum, period ≤ 366 dana, ime exporta sa periodom + **B11** audit dnevnika i HSE (6 akcija, migracija) — `done`, green 41644091684 |
-| CI | ✅ [run 41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) — **6/6** zelen (`fix(payroll) … [BE-13]`) |
-| Zadnji potvrđeno zelen run | [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-14` — ERP-lite: zatvoren **B12** (`hourlyRateSnapshot`, D‑035), atomične zalihe (SERIALIZABLE), idempotentan `apply-stock` pod paralelizmom, audit brisanja troška i ERP šifrarnika — `done` |
+| CI | ⏳ upisuje se poslije `gh run watch` (BE-14) — prethodni: ✅ [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) **6/6** (BE-13 STATE) |
+| Zadnji potvrđeno zelen run | [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -405,11 +405,37 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **CI ispravka (run 41636435039 ❌ samo Audit):** matrica je bila zastarjela poslije zadnjih
   izmjena (`loc` se promijenio) → `inventory.mjs` ponovo pokrenut; kod i e2e su bili zeleni.
 
+### 2026-11-03 — BE-14 (ERP-lite) + B12 (istorijska satnica, D‑035)
+- **Odluka vlasnika (B12 → opcija A):** mjerodavna je satnica iz trenutka **rada/zatvaranja** sesije;
+  plate se ne mijenjaju unazad. Zapisano kao **D‑035** (odbačene alternative: satnica na mjesečnom
+  nalogu; retroaktivni preračun uz audit).
+- **B12 zatvoren:** `TimerSession.hourlyRateSnapshot Decimal?(10,2)`; upis u **jedinoj** tački
+  zatvaranja (`TimerForceCloseService.closeSession`) unutar postojeće transakcije → pokriva stop,
+  force, auto-close i offline replay. Svi putevi iznosa koriste `payrollRate()` =
+  `snapshot ?? user.hourlyRate` (`payroll-summary`, `serialize-payroll`, `erp/from-payroll`);
+  `null` (stari redovi) pada na trenutnu satnicu, bez backfilla.
+- **Nalaz (visoko):** zalihe su bile **check-then-insert** (`stockBalance` → `create`) — dva paralelna
+  izlaza oba prođu provjeru i stanje ode u minus. Sada provjera + upis u jednoj SERIALIZABLE
+  transakciji; `stock-balance.ts` prima `TransactionClient`.
+- **Nalaz (srednje):** `apply-stock` je pod paralelizmom padao na unique `fuelEntryId` (`P2002` → 500).
+  Sada se `P2002` prevodi u pobjednika trke (`200`, postojeći pokret); e2e: 3 paralelna zahtjeva →
+  `[200, 200, 201]` i tačno 1 pokret.
+- **Nalaz (visoko):** `DELETE /api/cost-entries/:id` — jedina destruktivna ERP operacija **bez audita**,
+  a mijenja `Project.currentSpend`; `delete` + `recalcSpend` nisu bili atomični. Sada transakcija +
+  `COST_ENTRY_REMOVED` sa `amount/category/date/source/sourceId/projectId` u `payload`.
+- **Nalaz (srednje):** partneri i skladišta nisu imali **nikakav** audit → `PARTNER_CREATED`,
+  `PARTNER_UPDATED`, `WAREHOUSE_CREATED`.
+- **Migracija** `20261103190000_be14_payroll_snapshot_erp_audit` (kolona + 4 `ALTER TYPE … ADD VALUE`;
+  aditivno, bez backfilla) — **šesta** migracija.
+- **Svjesno ostaje:** liste troškova bez filtera perioda (`from`/`to`) — F‑BE‑14‑06, kandidat za FE.
+- **Testovi:** **170/170** unit (+5, novi `payroll-amount.spec.ts`); e2e +3 (`erp`) +1 (`payroll`).
+  Matrica **510 fajlova / 268 pregledano (52,5 %)**.
+- **Zatvoreno:** `BE-14` — CI run u tabeli iznad; **22/59** segmenata `done`.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **BE-14** — sljedeći segment; **B12** (istorijska satnica) traži odluku vlasnika i ulazi u
-   njegovu migraciju.
-3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
+1. **BE-15** — Ured: tenderi, servis, dokumenti, reporti (sljedeći segment).
+2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).
 4. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.

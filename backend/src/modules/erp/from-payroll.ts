@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { parseDateOnly } from '../../common/scope/company-tz';
-import { payrollAmount } from '../payroll/payroll-amount';
+import { payrollAmount, payrollRate } from '../payroll/payroll-amount';
 import {
   calendarMonthRange,
   resolvePayrollPeriod,
@@ -40,7 +40,7 @@ export async function buildPayrollCost(input: {
   let amount = new Prisma.Decimal(0);
   for (const row of rows) {
     amount = amount.add(
-      payrollAmount(row.durationMinutes ?? 0, row.user.hourlyRate),
+      payrollAmount(row.durationMinutes ?? 0, payrollRate(row)),
     );
   }
   const sourceId = input.dto.projectId

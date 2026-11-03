@@ -104,13 +104,15 @@ Detalji i pravila: [`BACKEND.md`](./BACKEND.md).
 ## 5. Model podataka (pregled)
 
 Šema je podijeljena u 6 Prisma fajlova (`backend/prisma/schema/`): `foundation`, `ops`,
-`fleet`, `polish`, `erp`, `public` — 1.115 linija. Tri migracije:
-`20261102130000_init_postgres` (1.333 linije — inicijalna šema),
-`20261103120000_be08_indexes_audit` (~90 linija — FK indeksi, nove audit akcije,
+`fleet`, `polish`, `erp`, `public`. Šest migracija:
+`20261102130000_init_postgres` (inicijalna šema),
+`20261103120000_be08_indexes_audit` (FK indeksi, nove audit akcije,
 parcijalni unique indeksi za otvorene timere), `20261103140000_be09_machine_open_assignment`
-(parcijalni unique indeks: mašina na najviše jednom projektu) i
-`20261103160000_be10_fleet_audit_actions` (17 audit akcija za flotu i logistiku) i
-`20261103180000_be13_diary_hse_audit_actions` (6 audit akcija za dnevnik i HSE).
+(parcijalni unique indeks: mašina na najviše jednom projektu),
+`20261103160000_be10_fleet_audit_actions` (17 audit akcija za flotu i logistiku),
+`20261103180000_be13_diary_hse_audit_actions` (6 audit akcija za dnevnik i HSE) i
+`20261103190000_be14_payroll_snapshot_erp_audit` (`TimerSession.hourlyRateSnapshot` — istorijska
+satnica za payroll, D-035; 4 audit akcije za ERP šifrarnike i brisanje troška).
 
 | Grupa | Entiteti |
 |---|---|

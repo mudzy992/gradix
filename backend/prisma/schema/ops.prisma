@@ -241,6 +241,9 @@ model TimerSession {
   pausedAt           DateTime?
   pauseAccumMinutes  Int                  @default(0)
   durationMinutes    Int?
+  /// BE-14 (B12): satnica koja je važila **kada je sesija zatvorena** — payroll koristi
+  /// ovu vrijednost, da povišica ne mijenja unazad već obračunate mjesece.
+  hourlyRateSnapshot Decimal?             @db.Decimal(10, 2)
   lat                Decimal?             @db.Decimal(10, 7)
   lng                Decimal?             @db.Decimal(10, 7)
   machineId          String?

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -15,7 +16,10 @@ import { serializePartner } from './serialize-erp';
 
 @Injectable()
 export class PartnersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(actor: AuthUser, query: PartnerQueryDto) {
     const companyId = requireCompany(actor);
@@ -38,14 +42,23 @@ export class PartnersService {
   }
 
   async create(actor: AuthUser, dto: CreatePartnerDto) {
+    const companyId = requireCompany(actor);
     const row = await this.prisma.partner.create({
       data: {
-        companyId: requireCompany(actor),
+        companyId,
         type: dto.type,
         name: dto.name,
         taxId: dto.taxId,
         note: dto.note,
       },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'PARTNER_CREATED',
+      entityType: 'Partner',
+      entityId: row.id,
+      payload: { type: row.type, name: row.name },
     });
     return serializePartner(row);
   }
@@ -55,6 +68,7 @@ export class PartnersService {
   }
 
   async patch(actor: AuthUser, id: string, dto: PatchPartnerDto) {
+    const companyId = requireCompany(actor);
     await this.load(actor, id);
     const row = await this.prisma.partner.update({
       where: { id },
@@ -65,6 +79,14 @@ export class PartnersService {
         note: dto.note,
         isActive: dto.isActive,
       },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'PARTNER_UPDATED',
+      entityType: 'Partner',
+      entityId: row.id,
+      payload: { type: row.type, name: row.name, isActive: row.isActive },
     });
     return serializePartner(row);
   }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -11,7 +12,10 @@ import { serializeWarehouse } from './serialize-erp';
 
 @Injectable()
 export class WarehousesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(actor: AuthUser, query: WarehouseQueryDto) {
     const companyId = requireCompany(actor);
@@ -56,6 +60,14 @@ export class WarehousesService {
         type: dto.type,
         projectId: dto.projectId ?? null,
       },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'WAREHOUSE_CREATED',
+      entityType: 'Warehouse',
+      entityId: row.id,
+      payload: { type: row.type, name: row.name, projectId: row.projectId },
     });
     return serializeWarehouse(row);
   }

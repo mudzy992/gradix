@@ -246,6 +246,21 @@ na nivou firme, jer je to pitanje „ko je na terenu danas“. **Odbačeno:** fi
 dashboardu (PM bi izgubio pregled ljudi koji rade na tuđim projektima), zadržavanje stare liste
 projekta (dostavljač u prolazu se brojao kao radnik na gradilištu).
 
+### D-035 — Payroll: mjerodavna je satnica iz trenutka rada (snapshot)
+**Datum:** 2026-11-03 · **Status:** na snazi (odluka vlasnika, opcija A)
+Do BE-14 iznos se računao `user.hourlyRate` **u trenutku čitanja**, pa je povišica retroaktivno
+mijenjala i već odobrene mjesece (a `from-payroll` je knjižio trošak po današnjoj satnici za rad od
+prije godinu dana). Sada `TimerSession.hourlyRateSnapshot` pamti satnicu **u trenutku zatvaranja
+sesije**; svi putevi iznosa (`payroll-summary`, `serialize-payroll`, `erp/from-payroll`) koriste
+`payrollRate()` = `snapshot ?? user.hourlyRate`. Snapshot piše jedina tačka zatvaranja
+(`TimerForceCloseService.closeSession`), pa ga dobijaju i stop, force, auto-close i offline replay.
+`null` snapshot (sesije zatvorene prije migracije) pada na trenutnu satnicu — bez backfilla, jer se
+istorijska satnica za te redove ne može pouzdano rekonstruisati. **Odbačeno:** (B) satnica na
+`PayrollPeriod`/mjesečnom nalogu (povišica usred mjeseca i dalje bi bila nemoguća, a nalog se
+zaključuje tek na kraju); (C) retroaktivni preračun uz audit (mijenja već isplaćene iznose).
+**Posljedica:** izmjena satnice više nije „popravka“ starih mjeseci; ako je satnica bila pogrešna u
+trenutku rada, ispravka ide kroz `/amendments` + ručni `CostEntry`, ne kroz `PATCH /users/:id`.
+
 ---
 
 ## Zamijenjene / povučene odluke

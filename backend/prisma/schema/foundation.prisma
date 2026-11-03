@@ -114,6 +114,12 @@ enum AuditAction {
   DIARY_PDF_GENERATED
   INCIDENT_CREATED
   INCIDENT_STATUS_CHANGED
+  // BE-14: brisanje troška mijenja `currentSpend` projekta — mora ostati trag.
+  COST_ENTRY_REMOVED
+  // BE-14: ERP šifrarnici (partneri, skladišta) dosad nisu imali nikakav audit.
+  PARTNER_CREATED
+  PARTNER_UPDATED
+  WAREHOUSE_CREATED
 }
 
 enum Locale {

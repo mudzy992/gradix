@@ -143,13 +143,15 @@ pa se Aktivacija/uklanjanje zatvara u INF-07).
 
 ## 6. Migracije i seed
 
-- **Migracije**: automatski pri startu (`prisma migrate deploy`). Dvije migracije:
+- **Migracije**: automatski pri startu (`prisma migrate deploy`). Šest migracija:
   `20261102130000_init_postgres` (inicijalna šema), `20261103120000_be08_indexes_audit`
   (51 indeks na stranim ključevima, 19 novih `AuditAction` vrijednosti, 2 parcijalna unique
-  indeksa za otvorene timere) i `20261103140000_be09_machine_open_assignment` (parcijalni unique
-  indeks: mašina na najviše jednom projektu) i `20261103160000_be10_fleet_audit_actions`
-  (17 novih `AuditAction` vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike) i
-  `20261103180000_be13_diary_hse_audit_actions` (6 akcija za dnevnik i HSE).
+  indeksa za otvorene timere), `20261103140000_be09_machine_open_assignment` (parcijalni unique
+  indeks: mašina na najviše jednom projektu), `20261103160000_be10_fleet_audit_actions`
+  (17 novih `AuditAction` vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike),
+  `20261103180000_be13_diary_hse_audit_actions` (6 akcija za dnevnik i HSE) i
+  `20261103190000_be14_payroll_snapshot_erp_audit` (`TimerSession.hourlyRateSnapshot` + 4 akcije:
+  `COST_ENTRY_REMOVED`, `PARTNER_CREATED/UPDATED`, `WAREHOUSE_CREATED`).
   Stariji MySQL set je uklonjen (odluka D-010).
 - **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`,
   `MachineAssignment_open_machine_key`)

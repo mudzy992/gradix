@@ -183,8 +183,12 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - U satima **nema** pauze. Export `.xlsx` (ExcelJS), ime nosi period
   (`payroll-2026-11-01_2026-11-30.xlsx`); u tabeli su **samo** odobrene sesije, a `TOTAL` je
   suma odobrenih sati i iznosa.
-- **Dug (B12):** iznos se računa **trenutnom** satnicom korisnika, ne satnicom koja je važila kada
-  je posao rađen — poslije povišice mijenjaju se i stari mjeseci.
+- **Satnica je istorijska (B12, odluka D-035 = opcija A):** pri **zatvaranju** sesije
+  `TimerSession.hourlyRateSnapshot` pamti tada važeću satnicu korisnika; iznos se od tada
+  računa **isključivo** snapshotom (`payrollRate()`), pa povišica više ne mijenja starije mjesece.
+  Snapshot piše jedina tačka zatvaranja (`TimerForceCloseService.closeSession` — stop, force,
+  auto, sync replay). `null` (sesije iz perioda prije migracije) pada na trenutnu satnicu.
+  Snapshot vrijedi i za `POST /cost-entries/from-payroll`.
 
 ### 4.7 Sync (mobile)
 - Unique `(companyId, userId, deviceId, localId)` — idempotentnost push-a.
@@ -264,7 +268,7 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B9 | ~~`PATCH/DELETE /trips/:id` i `PATCH/DELETE /fuel/:id` su mrtve rute~~ — ✅ riješeno (BE-10, odluka vlasnika: **opcija A**) — rute, servisne metode i `Patch*Dto` uklonjeni; zapis je nepromjenjiv, ispravke idu kroz `/amendments` | BE-10 |
 | B10 | ~~Flota, GPS uređaji, ture, gorivo i šifarnici nisu u auditu~~ — ✅ riješeno (BE-10: 17 novih akcija u migraciji `20261103160000_be10_fleet_audit_actions` + pozivi u `machines`, `gps-devices`, `trips`, `fuel`, `catalog`) | BE-10 |
 | B11 | ~~Dnevnik, HSE i fajlovi nisu u auditu~~ — ✅ riješeno (BE-13: `DIARY_CREATED/UPDATED/PHOTO_ADDED/PDF_GENERATED`, `INCIDENT_CREATED/STATUS_CHANGED` u migraciji `20261103180000_be13_diary_hse_audit_actions`) | BE-13 |
-| B12 | **Satnica u payrollu nije istorijska**: iznos se računa `user.hourlyRate` u trenutku čitanja, pa povišica retroaktivno mijenja starije mjesece. Preporuka: `hourlyRateSnapshot` na `TimerSession` (upis pri zatvaranju sesije), payroll koristi snapshot uz fallback na trenutnu satnicu. Traži odluku (koji trenutak je mjerodavan) + migraciju | BE-14 |
+| B12 | ~~Satnica u payrollu nije istorijska~~ — ✅ riješeno (BE-14, odluka vlasnika **D-035 = opcija A**: mjerodavan je trenutak rada/zatvaranja). `TimerSession.hourlyRateSnapshot` u migraciji `20261103190000_be14_payroll_snapshot_erp_audit`; `payrollRate()` = `snapshot ?? user.hourlyRate` | BE-14 |
 
 ---
 

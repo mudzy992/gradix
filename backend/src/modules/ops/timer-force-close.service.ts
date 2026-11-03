@@ -38,6 +38,12 @@ export class TimerForceCloseService {
     // `addTaskMinutes`) ostavljao zatvoren timer bez minuta na zadatku (izgubljene zarade).
     const { updated, projectId } = await this.prisma.$transaction(
       async (tx) => {
+        // BE-14 (B12): satnica se „zaključava“ u trenutku zatvaranja sesije. Payroll
+        // od tada koristi ovu vrijednost, pa povišica više ne mijenja stare mjesece.
+        const user = await tx.user.findUniqueOrThrow({
+          where: { id: session.userId },
+          select: { hourlyRate: true },
+        });
         const updated = await tx.timerSession.update({
           where: { id: session.id },
           data: {
@@ -45,6 +51,7 @@ export class TimerForceCloseService {
             pausedAt: null,
             pauseAccumMinutes: paused.pauseAccumMinutes,
             durationMinutes,
+            hourlyRateSnapshot: user.hourlyRate ?? null,
           },
         });
         await addTaskMinutes(tx, session.taskId, durationMinutes);

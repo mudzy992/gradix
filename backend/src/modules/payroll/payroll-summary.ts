@@ -1,5 +1,5 @@
 import { Prisma } from '../../../generated/client';
-import { payrollAmount } from './payroll-amount';
+import { payrollAmount, payrollRate } from './payroll-amount';
 import { PAYROLL_INCLUDE } from './payroll-query';
 
 type ClosedRow = Prisma.TimerSessionGetPayload<{
@@ -33,7 +33,7 @@ export function buildPayrollSummary(
     if (row.approvalStatus === 'APPROVED') {
       approvedMinutes += minutes;
       approvedAmount = approvedAmount.add(
-        payrollAmount(minutes, row.user.hourlyRate),
+        payrollAmount(minutes, payrollRate(row)),
       );
     } else if (row.approvalStatus === 'PENDING') {
       pendingMinutes += minutes;

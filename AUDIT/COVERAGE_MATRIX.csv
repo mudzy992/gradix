@@ -17,10 +17,11 @@ backend/prisma/migrations/20261103120000_be08_indexes_audit/migration.sql,BE,mig
 backend/prisma/migrations/20261103140000_be09_machine_open_assignment/migration.sql,BE,migrations,BE-08,9,pregledano,BE-09: parcijalni unique indeks — mašina na najviše jednom projektu (F-03),2026-11-03
 backend/prisma/migrations/20261103160000_be10_fleet_audit_actions/migration.sql,BE,migrations,BE-08,22,pregledano,"BE-10 (B10): 17 novih AuditAction vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike",2026-11-03
 backend/prisma/migrations/20261103180000_be13_diary_hse_audit_actions/migration.sql,BE,migrations,BE-08,11,pregledano,"BE-13 (B11): 6 novih AuditAction vrijednosti (dnevnik, HSE)",2026-11-03
+backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,nepregledano,,
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,313,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
-backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,404,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,319,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
+backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,407,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
 backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,pregledano,BE-08: pregledano — demo vozila/ture/gorivo vezani na DEMO-1,2026-11-03
@@ -101,22 +102,22 @@ backend/src/modules/companies/companies.module.ts,BE,companies,BE-04,15,pregleda
 backend/src/modules/companies/companies.service.ts,BE,companies,BE-04,222,pregledano,"BE-04: requireTenantCompany + readUniqueTarget iz common (F-06, F-07); deaktivacija gasi sesije",2026-11-02
 backend/src/modules/companies/default-settings.ts,BE,companies,BE-04,14,pregledano,BE-04: default redovi iz registra — jedan izvor defaulta,2026-11-02
 backend/src/modules/companies/tenant-company.controller.ts,BE,companies,BE-04,27,pregledano,"BE-04: GET /company traži settings.read (F-01), PATCH settings.write",2026-11-02
-backend/src/modules/erp/costs.controller.ts,BE,erp,BE-14,57,nepregledano,,
-backend/src/modules/erp/costs.dto.ts,BE,erp,BE-14,72,nepregledano,,
-backend/src/modules/erp/costs.service.ts,BE,erp,BE-14,168,nepregledano,,
-backend/src/modules/erp/erp.module.ts,BE,erp,BE-14,23,nepregledano,,
-backend/src/modules/erp/from-payroll.ts,BE,erp,BE-14,66,nepregledano,,
-backend/src/modules/erp/fuel-stock.controller.ts,BE,erp,BE-14,29,nepregledano,,
-backend/src/modules/erp/partners.controller.ts,BE,erp,BE-14,55,nepregledano,,
-backend/src/modules/erp/partners.dto.ts,BE,erp,BE-14,64,nepregledano,,
-backend/src/modules/erp/partners.service.ts,BE,erp,BE-14,82,nepregledano,,
-backend/src/modules/erp/serialize-erp.ts,BE,erp,BE-14,82,nepregledano,,
-backend/src/modules/erp/stock-balance.ts,BE,erp,BE-14,25,nepregledano,,
-backend/src/modules/erp/stock.controller.ts,BE,erp,BE-14,27,nepregledano,,
-backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,159,nepregledano,,
-backend/src/modules/erp/warehouses.controller.ts,BE,erp,BE-14,33,nepregledano,,
-backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,54,nepregledano,,
-backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,73,nepregledano,,
+backend/src/modules/erp/costs.controller.ts,BE,erp,BE-14,57,pregledano,F-03: DELETE troška sada auditan (COST_ENTRY_REMOVED),2026-11-03
+backend/src/modules/erp/costs.dto.ts,BE,erp,BE-14,72,pregledano,BE-14: validacija amount/category/date preko parseNonNegativeDecimal/parseDateOnly,2026-11-03
+backend/src/modules/erp/costs.service.ts,BE,erp,BE-14,189,pregledano,"F-03: brisanje + recalcSpend u transakciji, audit payload",2026-11-03
+backend/src/modules/erp/erp.module.ts,BE,erp,BE-14,23,pregledano,BE-14: modul koristi globalni AuditModule,2026-11-03
+backend/src/modules/erp/from-payroll.ts,BE,erp,BE-14,66,pregledano,"F-05/B12: iznos po snapshotu (payrollRate), ne trenutnoj satnici",2026-11-03
+backend/src/modules/erp/fuel-stock.controller.ts,BE,erp,BE-14,29,pregledano,"BE-14: apply-stock ruta (CISTERN, idempotentna po fuelEntryId)",2026-11-03
+backend/src/modules/erp/partners.controller.ts,BE,erp,BE-14,55,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
+backend/src/modules/erp/partners.dto.ts,BE,erp,BE-14,64,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
+backend/src/modules/erp/partners.service.ts,BE,erp,BE-14,104,pregledano,F-04: PARTNER_CREATED/PARTNER_UPDATED audit,2026-11-03
+backend/src/modules/erp/serialize-erp.ts,BE,erp,BE-14,82,pregledano,"BE-14: Decimal → string sa 2 decimale, bez curenja internih polja",2026-11-03
+backend/src/modules/erp/stock-balance.ts,BE,erp,BE-14,30,pregledano,F-01: prima TransactionClient (provjera+upis atomični),2026-11-03
+backend/src/modules/erp/stock.controller.ts,BE,erp,BE-14,27,pregledano,BE-14: pokreti zaliha pod erp.read/erp.write + tenant scope,2026-11-03
+backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,211,pregledano,"F-01/F-02: SERIALIZABLE transakcija, P2002 idempotentan",2026-11-03
+backend/src/modules/erp/warehouses.controller.ts,BE,erp,BE-14,33,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
+backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,54,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
+backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,85,pregledano,F-04: WAREHOUSE_CREATED audit,2026-11-03
 backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,pregledano,"BE-11: MIME iz magic bytes (jpeg/png/webp/pdf/docx/xlsx), ne iz imena fajla",2026-11-03
 backend/src/modules/files/files.controller.ts,BE,files,BE-11,72,pregledano,"BE-11 (F-12): download šalje `Content-Type`/`Content-Length`/`nosniff`/`CSP sandbox`/`no-store`, greška streama uništi odgovor",2026-11-03
 backend/src/modules/files/files.module.ts,BE,files,BE-11,12,pregledano,BE-11: modul izvozi `FilesService` za dnevnik (PDF) i javne assete,2026-11-03
@@ -221,7 +222,7 @@ backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,pregledano,"BE-07: online
 backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,pregledano,BE-07: vidljiv zadatak + zapisiv projekat + dodjela/SS + mašina; P2002 mapiran na TIMER_ALREADY_OPEN/MACHINE_IN_USE,2026-11-03
 backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,39,pregledano,BE-07: timer.maxOpenHours se čita jednom po firmi (F-03),2026-11-03
 backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,79,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours",2026-11-03
-backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,130,pregledano,BE-07: zatvaranje timera u jednoj $transaction (F-01); audit/notifikacije/realtime poslije,2026-11-03
+backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,137,pregledano,BE-07: zatvaranje timera u jednoj $transaction (F-01); audit/notifikacije/realtime poslije,2026-11-03
 backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,pregledano,"BE-07: mašina iz firme, DECOMMISSIONED/IN_SERVICE 409, ACTIVE samo na svom projektu",2026-11-03
 backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,pregledano,BE-07: pregledano — pauze i trajanje,2026-11-03
 backend/src/modules/ops/timer-math.ts,BE,ops,BE-07,41,pregledano,BE-07: čiste funkcije; floor po pauzi dokumentovan kao F-10 (cijelobrojni minuti),2026-11-03
@@ -235,7 +236,8 @@ backend/src/modules/ops/trips.dto.ts,BE,ops,BE-10,70,pregledano,"BE-10: pregleda
 backend/src/modules/ops/trips.service.ts,BE,ops,BE-10,258,pregledano,"BE-10: koordinate origin/dest kroz parseOptionalLatLng (F-03), assertProjectWritable u patch (F-04), offline identitet u create (F-06)",2026-11-03
 backend/src/modules/ops/write-machine-gps.ts,BE,ops,BE-09,57,pregledano,BE-09: GPS tačka + pozicija mašine u jednoj transakciji (F-01),2026-11-03
 backend/src/modules/payroll/payroll-access.ts,BE,payroll,BE-13,79,pregledano,"BE-13: pristup (payroll.read/approver/admin), self-approve zaštita, scope po dodijeljenim projektima",2026-11-03
-backend/src/modules/payroll/payroll-amount.ts,BE,payroll,BE-13,12,pregledano,"BE-13 (F-07/B12): iznos = satnica × minuti / 60; satnica je **trenutna**, ne istorijska — dug B12",2026-11-03
+backend/src/modules/payroll/payroll-amount.spec.ts,BE,payroll,BE-13,61,nepregledano,,
+backend/src/modules/payroll/payroll-amount.ts,BE,payroll,BE-13,26,pregledano,"BE-13 (F-07/B12): iznos = satnica × minuti / 60; satnica je **trenutna**, ne istorijska — dug B12",2026-11-03
 backend/src/modules/payroll/payroll-export.ts,BE,payroll,BE-13,35,pregledano,BE-13: `.xlsx` (ExcelJS) — samo odobrene sesije; `TOTAL` = suma odobrenih sati/iznosa,2026-11-03
 backend/src/modules/payroll/payroll-period.spec.ts,BE,payroll,BE-13,72,pregledano,"BE-13: 6 testova (mjesec, prestupna, granice, period ≤ 366 dana, nepostojeći datum)",2026-11-03
 backend/src/modules/payroll/payroll-period.ts,BE,payroll,BE-13,134,pregledano,"BE-13 (F-03/05): granice godine 1970–2999, period ≤ 366 dana; mjesec po TZ firme",2026-11-03
@@ -245,7 +247,7 @@ backend/src/modules/payroll/payroll.controller.ts,BE,payroll,BE-13,74,pregledano
 backend/src/modules/payroll/payroll.dto.ts,BE,payroll,BE-13,50,pregledano,"BE-13: query (year+month ili from+to, status) i razlog odbijanja (≤500)",2026-11-03
 backend/src/modules/payroll/payroll.module.ts,BE,payroll,BE-13,12,pregledano,BE-13: modul (servis + kontroler); audit/email dolaze iz globalnih modula,2026-11-03
 backend/src/modules/payroll/payroll.service.ts,BE,payroll,BE-13,203,pregledano,"BE-13 (F-01/02): atomska odluka (`updateMany` + `PENDING`), best-effort notifikacija/e-mail, audit odluke",2026-11-03
-backend/src/modules/payroll/serialize-payroll.ts,BE,payroll,BE-13,61,pregledano,"BE-13: DTO sesije — trajanje, satnica, iznos, status",2026-11-03
+backend/src/modules/payroll/serialize-payroll.ts,BE,payroll,BE-13,63,pregledano,"BE-13: DTO sesije — trajanje, satnica, iznos, status",2026-11-03
 backend/src/modules/polish/docs-cron.service.ts,BE,polish,BE-15,144,nepregledano,,
 backend/src/modules/polish/docs.controller.ts,BE,polish,BE-15,90,nepregledano,,
 backend/src/modules/polish/docs.dto.ts,BE,polish,BE-15,55,nepregledano,,
@@ -293,7 +295,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,192,nepregledano,,
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,nepregledano,,
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,30,pregledano,BE-12: `/api/health` (process+postgres) i `/api/docs` dostupni u e2e env-u,2026-11-03
@@ -304,7 +306,7 @@ backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
-backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,273,pregledano,"BE-13: self-approve 403, ADMIN self 200, druga odluka 409, TZ mjesec, pauza van exporta, ime exporta",2026-11-03
+backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,349,pregledano,"BE-13: self-approve 403, ADMIN self 200, druga odluka 409, TZ mjesec, pauza van exporta, ime exporta",2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,

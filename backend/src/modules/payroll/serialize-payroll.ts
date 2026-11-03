@@ -1,5 +1,5 @@
 import { Prisma } from '../../../generated/client';
-import { payrollAmount } from './payroll-amount';
+import { payrollAmount, payrollRate } from './payroll-amount';
 
 export type PayrollSessionSource = {
   id: string;
@@ -8,6 +8,7 @@ export type PayrollSessionSource = {
   closedAt: Date | null;
   durationMinutes: number | null;
   pauseAccumMinutes: number;
+  hourlyRateSnapshot: Prisma.Decimal | null;
   approvalStatus: string;
   user: {
     firstName: string;
@@ -53,8 +54,9 @@ export function serializePayrollSession(
     startedAt: row.startedAt,
     closedAt: row.closedAt,
     durationMinutes,
-    hourlyRate: row.user.hourlyRate?.toFixed(2) ?? null,
-    amount: payrollAmount(durationMinutes, row.user.hourlyRate).toFixed(2),
+    // BE-14 (B12): prikazana satnica je ona po kojoj je iznos izračunat.
+    hourlyRate: payrollRate(row)?.toFixed(2) ?? null,
+    amount: payrollAmount(durationMinutes, payrollRate(row)).toFixed(2),
     approvalStatus: row.approvalStatus,
   };
 }

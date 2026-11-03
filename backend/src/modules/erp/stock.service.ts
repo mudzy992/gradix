@@ -52,16 +52,30 @@ export class StockService {
     const qty = parseNonZeroDecimal(dto.qty, 'qty');
     const warehouse = await this.loadWarehouse(companyId, dto.warehouseId);
     await this.loadMaterial(companyId, dto.materialId);
-    await this.assertNotNegative(companyId, warehouse.id, dto.materialId, qty);
-    const row = await this.prisma.stockMovement.create({
-      data: {
-        companyId,
-        warehouseId: warehouse.id,
-        materialId: dto.materialId,
-        qty,
-        projectId: dto.projectId ?? warehouse.projectId,
+    // BE-14 F-01: provjera stanja i upis pokreta su ranije bili odvojeni (check-then-insert),
+    // pa su dva paralelna izlaza mogla oba proći provjeru i stanje bi otišlo u minus.
+    // Sada su u jednoj SERIALIZABLE transakciji.
+    const row = await this.prisma.$transaction(
+      async (tx) => {
+        await this.assertNotNegative(
+          tx,
+          companyId,
+          warehouse.id,
+          dto.materialId,
+          qty,
+        );
+        return tx.stockMovement.create({
+          data: {
+            companyId,
+            warehouseId: warehouse.id,
+            materialId: dto.materialId,
+            qty,
+            projectId: dto.projectId ?? warehouse.projectId,
+          },
+        });
       },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     await this.audit.write({
       companyId,
       actorId: actor.id,
@@ -97,17 +111,41 @@ export class StockService {
     }
     await this.loadMaterial(companyId, dto.materialId);
     const qty = fuel.liters.neg();
-    await this.assertNotNegative(companyId, warehouse.id, dto.materialId, qty);
-    const row = await this.prisma.stockMovement.create({
-      data: {
-        companyId,
-        warehouseId: warehouse.id,
-        materialId: dto.materialId,
-        qty,
-        projectId: fuel.projectId,
-        fuelEntryId: fuel.id,
-      },
-    });
+    // BE-14 F-02: `findFirst` pa `create` nije atomski — dva paralelna zahtjeva su mogla
+    // oba proći `existing` provjeru i drugi bi pao na unique `fuelEntryId` uz 500.
+    // Sada se P2002 prevodi u idempotentan odgovor (created: false), a provjera stanja
+    // i upis su u SERIALIZABLE transakciji.
+    let row;
+    try {
+      row = await this.prisma.$transaction(
+        async (tx) => {
+          await this.assertNotNegative(
+            tx,
+            companyId,
+            warehouse.id,
+            dto.materialId,
+            qty,
+          );
+          return tx.stockMovement.create({
+            data: {
+              companyId,
+              warehouseId: warehouse.id,
+              materialId: dto.materialId,
+              qty,
+              projectId: fuel.projectId,
+              fuelEntryId: fuel.id,
+            },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      const raced = await this.raceWinner(companyId, fuelId, error);
+      if (raced) {
+        return { created: false, row: serializeMovement(raced) };
+      }
+      throw error;
+    }
     await this.audit.write({
       companyId,
       actorId: actor.id,
@@ -119,18 +157,32 @@ export class StockService {
     return { created: true, row: serializeMovement(row) };
   }
 
+  /** BE-14 F-02: paralelni `apply-stock` je već upisao pokret → vrati postojeći red. */
+  private raceWinner(companyId: string, fuelId: string, error: unknown) {
+    const isUnique =
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002';
+    if (!isUnique) {
+      return null;
+    }
+    return this.prisma.stockMovement.findFirst({
+      where: { companyId, fuelEntryId: fuelId },
+    });
+  }
+
   private async assertNotNegative(
+    tx: Prisma.TransactionClient,
     companyId: string,
     warehouseId: string,
     materialId: string,
     qty: Prisma.Decimal,
   ): Promise<void> {
-    const current = await stockBalance(this.prisma, warehouseId, materialId);
+    const current = await stockBalance(tx, warehouseId, materialId);
     const next = current.plus(qty);
     if (next.gte(0)) {
       return;
     }
-    if (await allowNegativeStock(this.prisma, companyId)) {
+    if (await allowNegativeStock(tx, companyId)) {
       return;
     }
     throw new AppError(ERROR_CODES.CONFLICT, 'Stock cannot go negative', 409);

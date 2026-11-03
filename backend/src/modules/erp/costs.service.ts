@@ -141,16 +141,37 @@ export class CostsService {
   }
 
   async remove(actor: AuthUser, id: string) {
+    const companyId = requireCompany(actor);
     const row = await this.prisma.costEntry.findFirst({
-      where: { id, companyId: requireCompany(actor) },
+      where: { id, companyId },
     });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Cost entry not found', 404);
     }
-    await this.prisma.costEntry.delete({ where: { id } });
-    if (row.projectId) {
-      await recalcSpend(this.prisma, row.projectId);
-    }
+    // BE-14 F-03: brisanje troška je ranije prolazilo **bez audit zapisa** — jedina
+    // destruktivna ERP operacija koja nije ostavljala trag. Sada se briše i preračunava
+    // u transakciji, a `COST_ENTRY_REMOVED` nosi dovoljno podataka za rekonstrukciju.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.costEntry.delete({ where: { id } });
+      if (row.projectId) {
+        await recalcSpend(tx, row.projectId);
+      }
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'COST_ENTRY_REMOVED',
+      entityType: 'CostEntry',
+      entityId: id,
+      payload: {
+        amount: row.amount.toFixed(2),
+        category: row.category,
+        date: row.date.toISOString().slice(0, 10),
+        source: row.source,
+        sourceId: row.sourceId,
+        projectId: row.projectId,
+      },
+    });
   }
 
   private async assertProject(

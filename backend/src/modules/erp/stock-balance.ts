@@ -1,8 +1,13 @@
 import { Prisma } from '../../../generated/client';
-import { PrismaService } from '../prisma/prisma.service';
+
+/**
+ * BE-14: funkcije rade i unutar transakcije (`$transaction` daje `TransactionClient`),
+ * jer se provjera stanja i upis pokreta moraju izvršiti zajedno.
+ */
+type Db = Pick<Prisma.TransactionClient, 'setting' | 'stockMovement'>;
 
 export async function allowNegativeStock(
-  prisma: PrismaService,
+  prisma: Db,
   companyId: string,
 ): Promise<boolean> {
   const row = await prisma.setting.findUnique({
@@ -12,7 +17,7 @@ export async function allowNegativeStock(
 }
 
 export async function stockBalance(
-  prisma: PrismaService,
+  prisma: Db,
   warehouseId: string,
   materialId: string,
 ): Promise<Prisma.Decimal> {
