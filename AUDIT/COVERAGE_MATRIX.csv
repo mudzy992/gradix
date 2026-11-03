@@ -347,7 +347,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,nepregledano,,
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,119,pregledano,"FE-06: admin tok (sesija iz storageState) — dashboard sa prevedenim karticama, prečica → projekti → detalj (Faze), zadatak iz seeda, aria-current, reflow 320 px + jedno h1",2026-11-03
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,120,pregledano,"FE-06: admin tok (sesija iz storageState) — dashboard sa prevedenim karticama, prečica → projekti → detalj (Faze), zadatak iz seeda, aria-current, reflow 320 px + jedno h1",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03

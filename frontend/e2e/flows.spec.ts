@@ -82,9 +82,10 @@ test.describe('FE-06 — admin tok', () => {
     await page.goto('/projects')
     const row = page.getByRole('row').filter({ hasText: 'Sarajevo obilaznica' })
     await expect(row).toBeVisible({ timeout: 15_000 })
-    await expect(row.getByText('U toku')).toBeVisible()
-    // Sirov enum iz baze se ne smije prikazati korisniku.
-    await expect(page.getByText('IN_PROGRESS')).toHaveCount(0)
+    // Seedov projekat nema eksplicitan status → šema daje `PLANNING` ⇒ prikaz je „U planu“.
+    await expect(row).toContainText('U planu')
+    // Nijedan sirov enum se ne smije prikazati korisniku.
+    await expect(page.getByText(/^(PLANNING|IN_PROGRESS|ON_HOLD|COMPLETED|CANCELLED)$/)).toHaveCount(0)
   })
 
   test('tabla zadataka ima prevedene kolone i broj po koloni', async () => {
