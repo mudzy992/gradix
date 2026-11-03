@@ -7,20 +7,22 @@ import {
 import { currentRequestId } from './request-context';
 import { JsonLogger } from './json-logger';
 
+interface MockResponse extends EventEmitter {
+  statusCode: number;
+  headers: Record<string, string>;
+  setHeader(name: string, value: string): void;
+  emitFinish(): void;
+}
+
 function fakeResponse(): Response & { emitFinish: () => void } {
-  const emitter = new EventEmitter();
-  const res = emitter as unknown as Response & { emitFinish: () => void };
-  Object.assign(res, {
-    statusCode: 200,
-    headers: {} as Record<string, string>,
-    setHeader(name: string, value: string) {
-      (this.headers as Record<string, string>)[name] = value;
-    },
-    emitFinish() {
-      emitter.emit('finish');
-    },
-  });
-  return res;
+  const res = new EventEmitter() as MockResponse;
+  res.statusCode = 200;
+  res.headers = {};
+  res.setHeader = function (this: MockResponse, name, value) {
+    this.headers[name] = value;
+  };
+  res.emitFinish = () => res.emit('finish');
+  return res as unknown as Response & { emitFinish: () => void };
 }
 
 describe('requestLogMiddleware (INF-04)', () => {
@@ -72,7 +74,14 @@ describe('requestLogMiddleware (INF-04)', () => {
     );
     res.emitFinish();
     expect(lines).toHaveLength(1);
-    const record = JSON.parse(lines[0].trim());
+    const record = JSON.parse(lines[0].trim()) as {
+      level: string;
+      msg: string;
+      method: string;
+      path: string;
+      status: number;
+      durationMs: number;
+    };
     expect(record.msg).toBe('http_request');
     expect(record.method).toBe('POST');
     expect(record.path).toBe('/api/auth/login');
@@ -98,6 +107,7 @@ describe('requestLogMiddleware (INF-04)', () => {
       (() => undefined) as NextFunction,
     );
     res.emitFinish();
-    expect(JSON.parse(lines[0].trim()).level).toBe('error');
+    const record = JSON.parse(lines[0].trim()) as { level: string };
+    expect(record.level).toBe('error');
   });
 });

@@ -90,7 +90,10 @@ describe('AppExceptionFilter', () => {
       hostWith(response),
     );
     expect(errorLog).toHaveBeenCalled();
-    const logged = JSON.parse(written.join(''));
+    const logged = JSON.parse(written.join('')) as {
+      level: string;
+      msg: string;
+    };
     expect(logged.level).toBe('error');
     expect(logged.msg).toBe('Neočekivana greška');
     expect(response.status).toHaveBeenCalledWith(500);

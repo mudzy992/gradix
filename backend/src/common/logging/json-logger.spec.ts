@@ -3,10 +3,22 @@ import { runWithRequestContext } from './request-context';
 import { redact, REDACTED } from './redact';
 import { resolveLogLevel } from './log-level';
 
+/** Oblik zapisa koji testovi čitaju (bez `any` — guardrail zabranjuje `no-unsafe-*`). */
+interface ParsedLog {
+  ts: string;
+  level: string;
+  context: string;
+  msg: string;
+  requestId?: string;
+  stack?: string;
+  [key: string]: unknown;
+}
+
 function capture(threshold: 'error' | 'warn' | 'info' | 'debug' = 'debug') {
   const lines: string[] = [];
   const logger = new JsonLogger((line) => lines.push(line), threshold);
-  const parse = () => lines.map((line) => JSON.parse(line.trim()));
+  const parse = (): ParsedLog[] =>
+    lines.map((line) => JSON.parse(line.trim()) as ParsedLog);
   return { logger, lines, parse };
 }
 

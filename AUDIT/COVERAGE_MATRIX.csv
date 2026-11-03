@@ -39,7 +39,7 @@ backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregle
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
 backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
 backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
-backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,107,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
+backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,110,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,80,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
 backend/src/common/geo/haversine.spec.ts,BE,common,BE-12,77,pregledano,BE-12: 4 testa udaljenosti i granice geofence-a,2026-11-03
 backend/src/common/geo/haversine.ts,BE,common,BE-12,33,pregledano,"BE-12: haversine ispravan (testovi: Sarajevo-Mostar, antimeridijan, polovi); geofence inkluzivan na granici",2026-11-03
@@ -50,12 +50,12 @@ backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,nepregledano,,
 backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
 backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
-backend/src/common/logging/json-logger.spec.ts,BE,logging,INF-04,92,pregledano,"INF-04: +7 testova — JSON red, filter nivoa, requestId, redakcija tajni/PII, cirkularna meta, redact, resolveLogLevel",2026-11-03
+backend/src/common/logging/json-logger.spec.ts,BE,logging,INF-04,104,pregledano,"INF-04: +7 testova — JSON red, filter nivoa, requestId, redakcija tajni/PII, cirkularna meta, redact, resolveLogLevel",2026-11-03
 backend/src/common/logging/json-logger.ts,BE,logging,INF-04,106,pregledano,INF-04: Nest LoggerService koji piše jedan JSON red (ts/level/context/msg/requestId/meta); serijalizacija nikad ne baca; nivo iz LOG_LEVEL (D-038),2026-11-03
 backend/src/common/logging/log-level.ts,BE,logging,INF-04,38,pregledano,INF-04: error|warn|info|debug sa fiksnim poretkom; default info (prod) / debug (dev) / error (test),2026-11-03
 backend/src/common/logging/redact.ts,BE,logging,INF-04,42,pregledano,INF-04: tajne i PII po imenu ključa (ugniježđeno do dubine 4) → [redacted]; stringovi skraćeni na 2000; ulaz se ne mijenja,2026-11-03
 backend/src/common/logging/request-context.ts,BE,logging,INF-04,23,pregledano,INF-04: AsyncLocalStorage za requestId kroz async lanac (bez zavisnosti),2026-11-03
-backend/src/common/logging/request-log.middleware.spec.ts,BE,logging,INF-04,104,pregledano,"INF-04: +4 testa — validan ID se vraća, neispravan se zamjenjuje UUID, log bez query-ja (email/token), 5xx = error",2026-11-03
+backend/src/common/logging/request-log.middleware.spec.ts,BE,logging,INF-04,114,pregledano,"INF-04: +4 testa — validan ID se vraća, neispravan se zamjenjuje UUID, log bez query-ja (email/token), 5xx = error",2026-11-03
 backend/src/common/logging/request-log.middleware.ts,BE,logging,INF-04,56,pregledano,"INF-04: x-request-id (regex 8–64, inače UUID) + header u odgovoru + jedna http_request linija (method/path bez query-ja/status/durationMs), 5xx = error",2026-11-03
 backend/src/common/notify/notify-roles.ts,BE,common,BE-16,45,pregledano,F-05: createManyAndReturn umjesto N inserta,2026-11-03
 backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,pregledano,BE-03: 39 permisija; PLATFORM_COMPANIES odvojeno od firmi-skih,2026-11-02
