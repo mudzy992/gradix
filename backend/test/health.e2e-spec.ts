@@ -14,12 +14,24 @@ describe('Health (e2e)', () => {
     await app.close();
   });
 
-  it('GET /api/health', async () => {
+  it('GET /api/health — liveness bez envelope-a i bez baze', async () => {
     const response = await request(app.getHttpServer()).get('/api/health');
     expect(response.status).toBe(200);
-    expect(response.body.success).toBe(true);
-    expect(response.body.data.process).toBe('ok');
-    expect(response.body.data.postgres).toBe('ok');
+    // BE-18: infrastrukturni ugovor je ravan JSON (`status`), ne `{ data: ... }`.
+    expect(response.body.success).toBeUndefined();
+    expect(response.body.data).toBeUndefined();
+    expect(response.body.status).toBe('ok');
+    expect(typeof response.body.uptimeSeconds).toBe('number');
+  });
+
+  it('GET /api/health/ready — readiness provjerava Postgres', async () => {
+    const response = await request(app.getHttpServer()).get(
+      '/api/health/ready',
+    );
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
+    expect(response.body.checks.postgres.status).toBe('ok');
+    expect(typeof response.body.checks.postgres.latencyMs).toBe('number');
   });
 
   it('Swagger /api/docs', async () => {

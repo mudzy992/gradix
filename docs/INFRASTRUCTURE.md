@@ -39,7 +39,7 @@
 
 | Servis | Image / build | Portovi | Volumeni | Healthcheck |
 |---|---|---|---|---|
-| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` (30 s, start 60 s, 5 retry) |
+| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` = **liveness** (30 s, start 60 s, 5 retry); `GET /api/health/ready` = readiness (baza, `503`) za external monitoring |
 | `frontend` | `build: ./frontend` | `expose 80` | — | `wget --spider http://127.0.0.1/` |
 | `minio` | `${MINIO_IMAGE:-ghcr.io/coollabsio/minio:latest}` | `expose 9000`, `9001` | host bind `${MINIO_DATA_DIR:-/mnt/shared-app-files/gradix/minio}:/data` | `mc ready local` |
 

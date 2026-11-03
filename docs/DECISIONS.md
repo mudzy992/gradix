@@ -283,6 +283,24 @@ granici se šalje ponovo, a klijent je idempotentan po `localId`/`serverId`); (B
 kolekcija nije puna, pa je pravilo jedno za sve slučajeve.
 **Posljedica:** red na granici može doći dvaput; klijent mora upsertovati (radi po `id`).
 
+### D-037 — Health: liveness i readiness su dvije rute, ravan JSON
+**Datum:** 2026-11-03 · **Status:** na snazi
+`GET /api/health` je bio i liveness i readiness: javna ruta bez tokena koja na svaki poziv radi
+`SELECT 1` i vraća `{ process, postgres }` u standardnom envelope-u. Isti endpoint je vezan na
+Docker/Coolify `HEALTHCHECK`, pa je **pad baze** činio kontejner „unhealthy“ i izazivao restart-loop
+aplikacije koja je živa i oporavlja se sama kad baza vrati. Sada: `GET /api/health` = liveness
+(bez baze, `{ status, uptimeSeconds }`), `GET /api/health/ready` = readiness (baza sa limitom 2 s;
+`503` + `postgres.status='error'`, bez detalja greške). Obje rute su `@Public` i **bez envelope-a**
+— to je infrastrukturni ugovor, ne API resurs, i monitor/orchestrator čita `status` direktno.
+**Odbačeno:** (A) zadržati bazu u `/api/health` i dodati samo `/health/ready` — restart-loop na pad
+baze ostaje; (B) vratiti envelope na health rute — `{data:{status}}` je nezgodan za probe, a ništa
+u aplikaciji ne čita te rute (jedini potrošači su `curl`/`HEALTHCHECK`, koji gledaju status kod);
+(C) izuzeti rute iz globalnog throttle-a — healthcheck je 2 zahtjeva/min, pa nema potrebe da javna
+ruta ostane bez ikakvog ograničenja.
+**Posljedica:** `HEALTHCHECK` ostaje na `/api/health` (liveness) i ne mijenja se; readiness je
+opciono dostupan monitoringu (`/api/health/ready`). Stari `{process, postgres}` oblik nestaje —
+nijedan klijent ga nije čitao (provjereno grep-om po `frontend/`, `mobile/`, `scripts/`, CI-ju).
+
 ---
 
 ## Zamijenjene / povučene odluke

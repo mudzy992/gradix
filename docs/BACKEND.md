@@ -120,7 +120,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `public` | `/api/public` | javni one-page (whitelisted DTO, keš 60 s) |
 | `audit` | — | `AuditEvent` (zatvoren skup akcija); **best-effort**: pad upisa se loguje i ne ruši zahtjev (D-031) |
 | `realtime` | `/socket.io` | JWT handshake; sobe `user:{id}`, `company:{id}`, `companywide:{id}`, `project:{id}` (server-side) |
-| `health` | `/api/health` | `SELECT 1` → `{ process, postgres }` |
+| `health` | `/api/health`, `/api/health/ready` | liveness (bez baze) vs readiness (`SELECT 1`, `503` kad baza nije dostupna); ravan JSON bez envelope-a, detalj greške se ne vraća (§4.14) |
 | `mail` | — | **stub** (vidi §7) |
 
 ---
@@ -281,6 +281,18 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - Pravi email tok (SMTP kredencijali + reset token model) je zaseban posao, ne „popravka“ ovog.
 
 ---
+
+### 4.14 Health (infrastrukturni ugovor)
+- `GET /api/health` — **liveness**: `{ status: 'ok', uptimeSeconds }`, **ne** dira bazu. Na ovo je
+  vezan Docker/Coolify `HEALTHCHECK`; pad baze zato ne pravi restart-loop žive aplikacije.
+- `GET /api/health/ready` — **readiness**: `SELECT 1` sa tvrdim limitom **2 s**
+  (`HEALTH_PROBE_TIMEOUT_MS`) → `200 { status:'ok', uptimeSeconds, checks:{ postgres:{ status,
+  latencyMs } } }`, a kad baza nije dostupna `503` sa `postgres.status='error'` i
+  `error:'unreachable'` (bez hosta/kredencijala u odgovoru).
+- Obje rute su `@Public` (bez tokena) i **bez envelope-a** (`{status}` a ne `{data:{status}}`) —
+  orchestration/monitor čita ravan JSON; greška se ne baca kao izuzetak nego kao status.
+- Rute nisu izuzete iz globalnog throttle-a (120 zahtjeva/min po IP): healthcheck svakih 30 s je
+  2/min, pa dozvola ostaje na snazi i za javne pozivaoce.
 
 ## 5. Validacija, greške i logging
 
