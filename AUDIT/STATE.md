@@ -16,8 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `INF-06` — Backup/restore runbook: `scripts/ops/backup.sh` + `restore.sh` i noćni drill workflow — `in-progress` (čeka zelen drill) |
-| CI | ⏳ upisuje se poslije `gh run watch` (main CI za `feat(ops): INF-06 …`) |
+| Zadnji commit | `INF-06` — Backup/restore: `scripts/ops/backup.sh` + `restore.sh` (sha256, retencija, zaštite) i noćni drill workflow — `done` |
+| CI | ⏳ upisuje se poslije `gh run watch` (završni commit `docs(audit): INF-06 …`) |
+| Drill (backup → restore) | ✅ [run 41662900597](https://github.com/mudzy992/gradix/actions/runs/41662900597) — 8 tabela identično izvoru, migracije `7/7`; prije njega 4 pala runa (libpq `?schema=public`, quoted imena tabela, prazan izlaz poređenja, `migration_lock.toml`) |
 | Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
 | Zadnji potvrđeno zelen run (INF-05) | ✅ [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) — **6/6** · prije: [41659369533](https://github.com/mudzy992/gradix/actions/runs/41659369533) ✅ 6/6 (INF-04) · [41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) ✅ 6/6 (BE-18) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
@@ -558,11 +559,27 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - Runbook u `docs/INFRASTRUCTURE.md` §7 (RPO ≤ 24 h, RTO ≤ 1 h, šta skripte **ne** pokrivaju:
   MinIO objekti, env izvoz, PITR). Dugovi I2 (readiness) i I3 (backup drill) zatvoreni.
 - **Otvoreno:** drill mora proći prvi put (ručno pokretanje) prije nego segment ide u `done`.
+### 2026-11-03 — INF-06 (backup/restore) — završeno
+- **Nalaz (visoko):** backup je bio pretpostavka (nije bilo skripte, retencije, provjere integriteta
+  ni testa restore-a; dug I3). Sada `scripts/ops/backup.sh` (custom-format dump + `sha256` +
+  retencija 7) i `scripts/ops/restore.sh` (traži `RESTORE_DATABASE_URL`, odbija isti URL i ime sa
+  `prod`, provjerava `sha256`, `--exit-on-error`, pa brojevi redova ključnih tabela).
+- **Dokaz:** noćni workflow `.github/workflows/backup-restore.yml` (03:30 UTC + ručno + push na
+  aktivnu granu kad se mijenja `scripts/ops/**`): Postgres 16 → migracije + seed → backup →
+  restore u `gradix_restore` → poređenje 8 tabela i broja migracija. Zelen drill **41662900597**
+  (`User 9, Company 1, Project 1, Task 3`, migracije `7/7`).
+- **Nalazi iz drill-a (svi popravljeni):** libpq ne prima Prisma `?schema=public` (`pg_conn()`);
+  tabele su quoted Prisma imena (`"User"`, ne `users`); `migration_lock.toml` nije migracija
+  (`find -type d`); schedule-only workflow se nije registrovao → `push` + `paths` (CI‑01 pravilo);
+  job logovi nedostupni iz sandboka → dijagnostika kroz `::error::` anotacije.
+- **Svjesno van obima:** MinIO objekti (`mc mirror` ručni korak), izvoz Coolify env-a, PITR/WAL.
+  Runbook: `docs/INFRASTRUCTURE.md` §7 (RPO ≤ 24 h, RTO ≤ 1 h).
+- **Zatvoreno:** `INF-06` — **29/59** segmenata `done` (CI upisan u tabeli iznad).
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **INF-06** (backup/restore runbook + skripte) — zatim **INF-07** (Redis: odluka vlasnika) i
-   FE/MOB segmenti (vidi `scripts/audit/segments.json`).
+1. **INF-07** (Redis: aktivirati ili ukloniti — **odluka vlasnika**, Q3) — pa FE/MOB segmenti
+   (vidi `scripts/audit/segments.json`).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).
