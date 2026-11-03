@@ -46,8 +46,15 @@ jobs:
           --health-retries 10
     env:
       NODE_VERSION: '22'
+      # Prisma URL-ovi (`?schema=public` razumije samo Prisma).
       DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       RESTORE_DATABASE_URL: postgresql://root:root@localhost:5432/gradix_restore?schema=public
+      # Isti server bez Prisma parametra — za `psql` u workflow koracima (libpq ga odbija).
+      PG_SOURCE: postgresql://root:root@localhost:5432/gradix
+      PG_TARGET: postgresql://root:root@localhost:5432/gradix_restore
+      PGHOST: localhost
+      PGUSER: root
+      PGPASSWORD: root
       BACKUP_DIR: ${{ github.workspace }}/backups
       MINIO_SKIP: 'true'
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
@@ -81,7 +88,7 @@ jobs:
 
       - name: Ciljna baza za restore
         run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE gradix_restore'
+          psql "$PG_SOURCE" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE gradix_restore'
 
       - name: Restore (restore.sh)
         run: ./scripts/ops/restore.sh "$BACKUP_DIR"/gradix-*.dump
@@ -91,8 +98,8 @@ jobs:
           set -euo pipefail
           failed=0
           for table in users companies projects tasks timer_sessions audit_logs cost_entries diary_entries; do
-            src=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
-            dst=$(psql "$RESTORE_DATABASE_URL" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
+            src=$(psql "$PG_SOURCE" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
+            dst=$(psql "$PG_TARGET" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
             if [ "$src" != "$dst" ]; then
               echo "✗ $table: izvor=$src restore=$dst"
               failed=1
@@ -101,7 +108,7 @@ jobs:
             fi
           done
           # Restore mora nositi i Prisma istoriju migracija, inače je baza „nepoznatog“ stanja.
-          applied=$(psql "$RESTORE_DATABASE_URL" -tAc \
+          applied=$(psql "$PG_TARGET" -tAc \
             "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" | tr -d ' ')
           expected=$(ls -1 backend/prisma/migrations | wc -l | tr -d ' ')
           echo "✓ migracije u restore-u: $applied / $expected"

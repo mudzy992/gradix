@@ -41,6 +41,34 @@ if [ -f "$DUMP.sha256" ] && command -v sha256sum >/dev/null 2>&1; then
   (cd "$(dirname "$DUMP")" && sha256sum --check "$(basename "$DUMP").sha256" > /dev/null)
 fi
 
+# Prisma dodaje `?schema=public` na URL; libpq (pg_dump/pg_restore/psql) ne poznaje taj parametar
+# i pada sa "invalid URI query parameter: schema". Zato se samo taj parametar uklanja, a ostali
+# (npr. `sslmode`) ostaju netaknuti.
+pg_conn() {
+  local url="$1"
+  case "$url" in
+    *\?*) ;;
+    *) printf '%s' "$url"; return ;;
+  esac
+  local base="${url%%\?*}"
+  local query="${url#*\?}"
+  local kept=""
+  local pair
+  local IFS='&'
+  for pair in $query; do
+    [ -z "$pair" ] && continue
+    case "$pair" in
+      schema=*) continue ;;
+    esac
+    kept="${kept:+$kept&}$pair"
+  done
+  if [ -n "$kept" ]; then
+    printf '%s?%s' "$base" "$kept"
+  else
+    printf '%s' "$base"
+  fi
+}
+
 if ! command -v pg_restore >/dev/null 2>&1; then
   echo "GREŠKA: pg_restore nije u PATH-u (instaliraj postgresql-client)." >&2
   exit 2
@@ -53,14 +81,14 @@ pg_restore \
   --no-owner \
   --no-privileges \
   --exit-on-error \
-  --dbname "$RESTORE_DATABASE_URL" \
+  --dbname "$(pg_conn "$RESTORE_DATABASE_URL")" \
   "$DUMP"
 
 echo "→ provjera restore-a"
 TABLES="${RESTORE_VERIFY_TABLES:-users,projects,tasks,timer_sessions,audit_logs,cost_entries}"
 FAILED=0
 for table in ${TABLES//,/ }; do
-  COUNT="$(psql "$RESTORE_DATABASE_URL" -tAc "SELECT count(*) FROM \"$table\"" 2>/dev/null || echo "ERR")"
+  COUNT="$(psql "$(pg_conn "$RESTORE_DATABASE_URL")" -tAc "SELECT count(*) FROM \"$table\"" 2>/dev/null || echo "ERR")"
   if [ "$COUNT" = "ERR" ]; then
     echo "  ✗ $table: tabela ne postoji u restore-u"
     FAILED=1
