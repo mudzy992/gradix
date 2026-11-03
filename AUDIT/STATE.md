@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **38/59 segmenata `done`** (zadnji: FE-08).
+kratak izvještaj poslije svakog. Trenutno: **39/59 segmenata `done`** (zadnji: FE-09).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -687,6 +687,18 @@ kratak izvještaj poslije svakog. Trenutno: **38/59 segmenata `done`** (zadnji: 
   **19**; `a11y.spec` ažuriran (prekidač lozinke je sada između polja i „zapamti me“).
 - **Coverage ratchet proširen** na auth ekrane: linije **96,9 %**, grane 91,1 %.
 
+### 2026-11-03 — FE-09 (flota i logistika) → segment `done`
+- **Nalaz (visoko):** tip i status mašine su bili **sirovi enumi** (`EXCAVATOR`, `IN_SERVICE`) sa istim
+  tonom badge-a; sati rada kao `Decimal` string (`1234.500`); status ture kao `LOADED`/`UNLOADED` pod
+  zaglavljem „Status“; jedinica materijala `M3`; **mapa je bila nepristupačna** (platno bez tekstualnog
+  ekvivalenta) i sa bojama odbačene palate; `select` za dodjelu i polja za dodavanje nisu imali labele.
+- **Riješeno:** `lib/labels.ts` proširen na `machineStatus/machineType/gpsSource/materialUnit/tripStatus`
+  + `formatHours` („1.234,5 h“); sve tri tabele dobile `caption`, skeleton, trajnu grešku sa
+  „Pokušaj ponovo“ i prazno stanje; mapa dobila prevedene balončiće, paletu C i **tekstualnu listu**
+  ispod platna; polja dobila `<label>`, a jedinica se bira iz šeme. **D-047**.
+- **Testovi:** 22 nova (ukupno **90**), coverage ratchet proširen na tri ekrana flote/logistike:
+  linije **94,0 %**; E2E +1 (flota: „Kiper 1 · Kamion · Slobodna“) → **22**.
+
 ### 2026-11-03 — FE-08 (projekti, zadaci) → segment `done`
 - **Nalaz (visoko):** liste su prikazivale **sirove enume** (`IN_PROGRESS`, `PENDING`, `URGENT`), svi
   badge-ovi istog tona, bez stanja učitavanja/greške/praznog stanja; detalj zadatka je na grešku
@@ -705,8 +717,9 @@ kratak izvještaj poslije svakog. Trenutno: **38/59 segmenata `done`** (zadnji: 
 
 ## Šta je sljedeći korak
 
-1. **FE-09 — Flota i logistika**: liste vozila i tura, statusi preko `lib/labels.ts` (D-046), stanja
-   (skeleton/greška/prazno), pa testovi; zatim **FE-10** (dnevnik/HSE/dokumenti) do **FE-14**.
+1. **FE-10 — Dnevnik, HSE, dokumenti**: foto-upload i konflikt dnevnika, labele i stanja; uz to
+   riješiti nosivi nalaz **F-FE-06-01** (`WORKER` ima `hse.write` bez `hse.read`); zatim **FE-11**
+   (tenderi/servis/izvještaji) do **FE-14**.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija

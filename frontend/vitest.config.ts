@@ -45,6 +45,10 @@ export default defineConfig({
         'src/pages/projects-page.tsx',
         'src/pages/tasks-page.tsx',
         'src/pages/task-detail-page.tsx',
+        // FE-09 — flota i logistika
+        'src/pages/fleet-page.tsx',
+        'src/pages/fleet-map-page.tsx',
+        'src/pages/logistics-page.tsx',
       ],
       thresholds: { lines: 85, functions: 85, statements: 85, branches: 85 },
     },

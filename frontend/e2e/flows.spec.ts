@@ -99,6 +99,16 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByRole('heading', { name: 'IN_PROGRESS' })).toHaveCount(0)
   })
 
+  test('flota prikazuje preveden tip i status mašine (FE-09)', async () => {
+    await page.goto('/fleet')
+    const row = page.getByRole('row').filter({ hasText: 'Kiper 1' })
+    await expect(row).toBeVisible({ timeout: 15_000 })
+    // Seed: `Kiper 1` je `TRUCK`, status iz šeme je `IDLE` ⇒ „Kamion“ i „Slobodna“.
+    await expect(row).toContainText('Kamion')
+    await expect(row).toContainText('Slobodna')
+    await expect(page.getByText(/^(TRUCK|EXCAVATOR|IDLE|IN_SERVICE|DECOMMISSIONED)$/)).toHaveCount(0)
+  })
+
   test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).

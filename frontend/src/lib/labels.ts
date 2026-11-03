@@ -43,6 +43,48 @@ const TASK_PRIORITY: Record<string, Entry> = {
   URGENT: { tone: 'destructive' },
 }
 
+const MACHINE_STATUS: Record<string, Entry> = {
+  IDLE: { tone: 'outline' },
+  ACTIVE: { tone: 'default' },
+  IN_SERVICE: { tone: 'secondary' },
+  DECOMMISSIONED: { tone: 'destructive' },
+}
+
+/** Tip mašine nije stanje — sve vrijednosti nose isti, neutralan ton. */
+const MACHINE_TYPE: Record<string, Entry> = {
+  TRUCK: { tone: 'outline' },
+  EXCAVATOR: { tone: 'outline' },
+  LOADER: { tone: 'outline' },
+  GRADER: { tone: 'outline' },
+  ROLLER: { tone: 'outline' },
+  PAVER: { tone: 'outline' },
+  DUMPER: { tone: 'outline' },
+  COMPRESSOR: { tone: 'outline' },
+  OTHER: { tone: 'outline' },
+}
+
+const GPS_SOURCE: Record<string, Entry> = {
+  PHONE: { tone: 'secondary' },
+  IOT: { tone: 'default' },
+}
+
+/** Jedinica mjere iz šeme (`MaterialUnit`); `M3`/`M2` se prikazuju kao m³/m². */
+const MATERIAL_UNIT: Record<string, Entry> = {
+  M3: { tone: 'outline' },
+  T: { tone: 'outline' },
+  M: { tone: 'outline' },
+  M2: { tone: 'outline' },
+  PCS: { tone: 'outline' },
+  H: { tone: 'outline' },
+  L: { tone: 'outline' },
+}
+
+/** Tura nije status u bazi: izvodi se iz `unloadedAt` (FE-09). */
+const TRIP_STATUS: Record<string, Entry> = {
+  LOADED: { tone: 'secondary' },
+  UNLOADED: { tone: 'default' },
+}
+
 const ASSIGNMENT_ROLE: Record<string, Entry> = {
   PM: { tone: 'default' },
   SS: { tone: 'default' },
@@ -64,6 +106,15 @@ export const projectStatus = (value: string): StatusMeta => meta(PROJECT_STATUS,
 export const taskStatus = (value: string): StatusMeta => meta(TASK_STATUS, 'task', value)
 export const taskPriority = (value: string): StatusMeta => meta(TASK_PRIORITY, 'priority', value)
 export const assignmentRole = (value: string): StatusMeta => meta(ASSIGNMENT_ROLE, 'role', value)
+export const machineStatus = (value: string): StatusMeta => meta(MACHINE_STATUS, 'machine', value)
+export const machineType = (value: string): StatusMeta => meta(MACHINE_TYPE, 'machineType', value)
+export const gpsSource = (value: string): StatusMeta => meta(GPS_SOURCE, 'gps', value)
+export const materialUnit = (value: string): StatusMeta => meta(MATERIAL_UNIT, 'unit', value)
+export const tripStatus = (value: string): StatusMeta => meta(TRIP_STATUS, 'trip', value)
+
+/** Tura je „istovarena“ kad ima `unloadedAt`; jedino mjesto gdje se to pravilo zna. */
+export const tripStatusOf = (row: { unloadedAt: string | null }): StatusMeta =>
+  tripStatus(row.unloadedAt ? 'UNLOADED' : 'LOADED')
 
 /** Vrijednosti koje backend šalje — izloženo za testove (mapa i šema ne smiju se razići). */
 export const KNOWN_STATUSES = {
@@ -71,6 +122,11 @@ export const KNOWN_STATUSES = {
   task: Object.keys(TASK_STATUS),
   priority: Object.keys(TASK_PRIORITY),
   role: Object.keys(ASSIGNMENT_ROLE),
+  machine: Object.keys(MACHINE_STATUS),
+  machineType: Object.keys(MACHINE_TYPE),
+  gps: Object.keys(GPS_SOURCE),
+  unit: Object.keys(MATERIAL_UNIT),
+  trip: Object.keys(TRIP_STATUS),
 }
 
 /**
@@ -91,4 +147,23 @@ export function formatDuration(minutes: number | null | undefined): string {
     return `${hours} h`
   }
   return `${hours} h ${rest} min`
+}
+
+/**
+ * Sati rada mašine (`Decimal(12,3)`, stiže kao string) → „1.234,5 h“.
+ *
+ * Zašto ne `Number(...).toLocaleString('bs-BA')`: ICU u CI image-u i na vlasnikovom računaru ne mora
+ * dati isti separator, a test bi postao zavisan od okruženja. Zato je formatiranje ručno i
+ * deterministički: hiljade tačkom, decimale zarezom, maksimalno jedna decimala, bez „,0“.
+ */
+export function formatHours(value: string | number | null | undefined): string {
+  const raw = typeof value === 'string' ? Number(value.replace(',', '.')) : value
+  if (raw === null || raw === undefined || !Number.isFinite(Number(raw))) {
+    return '—'
+  }
+  const hours = Math.max(0, Number(raw))
+  const rounded = Math.round(hours * 10) / 10
+  const [whole, decimal] = rounded.toFixed(1).split('.')
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return decimal && decimal !== '0' ? `${grouped},${decimal} h` : `${grouped} h`
 }

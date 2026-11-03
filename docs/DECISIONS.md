@@ -549,6 +549,32 @@ obračunu (FE-09/FE-12); pet kopija bi se razišlo pri prvom novom statusu.
 status u bazi obara test dok se ne prevede. Tabele dobile `caption` (ukupan broj / prazno stanje) i
 označena polja pretrage; detalj projekta koristi `dt`/`dd` umjesto `div`-ova sa dvotačkom u tekstu.
 
+### D-047 — Flota i logistika koriste isti ugovor iz D-046; mapa dobija tekstualni ekvivalent
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Ekrani flote i logistike imali su iste bolesti kao projekti/zadaci prije FE-08, plus dvije svoje:
+mapa flote je bila **nepristupačna** (SVG platno bez ikakvog tekstualnog ekvivalenta), a `select` za
+dodjelu mašine nije imao ime (čitač ekrana je čitao „kombi bez labele“). Uz to su sate rada prikazivali
+kao `Decimal` string (`1234.500`), balončić na mapi je miješao preveden naziv sa sirovim `PHONE`/`IOT`,
+a jedinica materijala je bila `M3`.
+
+**Odluka:**
+1. `lib/labels.ts` (D-046) proširen je na flotu i logistiku: `machineStatus`, `machineType`,
+   `gpsSource`, `materialUnit`, `tripStatus` + `tripStatusOf` (tura nije status u bazi — izvodi se iz
+   `unloadedAt`). Ništa se ne prevodi u komponentama.
+2. `formatHours()` je u istom modulu: `Decimal(12,3)` → `1.234,5 h`, ručno formatirano (hiljade
+   tačkom, decimale zarezom) da rezultat ne zavisi od ICU podataka u CI image-u.
+3. Svaka tabela ima `caption`, skeleton (`aria-busy`), trajnu grešku sa „Pokušaj ponovo“ i prazno
+   stanje sa uputom (D-046).
+4. Mapa **mora** imati tekstualni ekvivalent: lista mašina sa GPS pozicijom (naziv · status · vrijeme)
+   ispod platna, a platno je `aria-hidden` kad nema pinova. Boje pinova su iz palete C (D-040).
+5. Polja za dodavanje materijala/deponije imaju `<label>` (placeholder nije labela, WCAG 3.3.2), a
+   jedinica se bira iz šeme (`MaterialUnit`) umjesto da se hardkodira `T`.
+
+**Odbačeno:** (a) `toLocaleString('bs-BA')` za sate — zavisi od ICU-a, test bi bio okruženjski;
+(b) „samo CSS“ rješenje za pristupačnost mape — platno nema šta izložiti čitaču; (c) zadržati stare
+boje pinova — to su boje odbačene palate (D-040).
+
 ---
 
 ## Zamijenjene / povučene odluke
