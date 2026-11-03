@@ -6,6 +6,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parsePositiveDecimal } from '../../common/utils/decimal-input';
+import { parseOptionalLatLng } from '../../common/utils/geo';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
 import {
@@ -55,7 +56,11 @@ export class TripsService {
     return serializeTrip(await this.loadVisible(actor, id));
   }
 
-  async create(actor: AuthUser, dto: CreateTripDto) {
+  async create(
+    actor: AuthUser,
+    dto: CreateTripDto,
+    identity?: { localId?: string; deviceId?: string },
+  ) {
     this.assertTripsWrite(actor);
     const project = await this.access.getVisibleProject(actor, dto.projectId);
     assertProjectWritable(project);
@@ -88,6 +93,8 @@ export class TripsService {
     if (dto.weighTicketPath) {
       assertStoragePath(dto.weighTicketPath, project.companyId);
     }
+    // BE-10 (F-03): koordinate ture su išle u bazu bez provjere opsega (ista klasa kao F-BE-09-04).
+    const origin = parseOptionalLatLng(dto.originLat, dto.originLng);
     const dest = await this.resolveDest(
       project.companyId,
       dto.destDepotId,
@@ -103,8 +110,8 @@ export class TripsService {
         materialId: material.id,
         quantity: parsePositiveDecimal(dto.quantity, 'quantity'),
         originText: dto.originText,
-        originLat: dto.originLat,
-        originLng: dto.originLng,
+        originLat: origin.lat,
+        originLng: origin.lng,
         destDepotId: dest.destDepotId,
         destLat: dest.destLat,
         destLng: dest.destLng,
@@ -113,6 +120,11 @@ export class TripsService {
           ? parsePositiveDecimal(dto.weighQty, 'weighQty')
           : undefined,
         notes: dto.notes,
+        // BE-10 (F-06): offline identitet se upisuje u istom `create` — ranije je
+        // `SyncPushFleetService` radio `create` pa `update`, a pad između je pravio duplikat
+        // pri ponovnom slanju (idempotencija po `localId` nije radila).
+        localId: identity?.localId,
+        deviceId: identity?.deviceId,
       },
     });
     return serializeTrip(row);
@@ -122,6 +134,10 @@ export class TripsService {
     const trip = await this.loadVisible(actor, id);
     this.assertOwnerWrite(actor, trip.driverId);
     assertSyncedImmutable(trip.isSynced);
+    // BE-10 (F-04): izmjena ture u arhiviranom/terminalnom projektu je bila moguća.
+    assertProjectWritable(
+      await this.access.getVisibleProject(actor, trip.projectId),
+    );
     const dest =
       dto.destDepotId !== undefined || dto.destLat !== undefined
         ? await this.resolveDest(
@@ -156,8 +172,9 @@ export class TripsService {
     if (trip.unloadedAt) {
       throw new AppError(ERROR_CODES.CONFLICT, 'Trip already completed', 409);
     }
-    let destLat = dto.destLat ?? trip.destLat?.toString() ?? null;
-    let destLng = dto.destLng ?? trip.destLng?.toString() ?? null;
+    const provided = parseOptionalLatLng(dto.destLat, dto.destLng);
+    let destLat = provided.lat?.toString() ?? trip.destLat?.toString() ?? null;
+    let destLng = provided.lng?.toString() ?? trip.destLng?.toString() ?? null;
     if ((!destLat || !destLng) && trip.destDepotId) {
       const depot = await this.prisma.depot.findFirst({
         where: { id: trip.destDepotId },
@@ -219,11 +236,12 @@ export class TripsService {
     destLat?: string,
     destLng?: string,
   ) {
+    const coords = parseOptionalLatLng(destLat, destLng);
     if (!destDepotId) {
       return {
         destDepotId: null,
-        destLat: destLat ?? null,
-        destLng: destLng ?? null,
+        destLat: coords.lat,
+        destLng: coords.lng,
       };
     }
     const depot = await this.prisma.depot.findFirst({
@@ -238,8 +256,8 @@ export class TripsService {
     }
     return {
       destDepotId: depot.id,
-      destLat: destLat ?? depot.lat?.toString() ?? null,
-      destLng: destLng ?? depot.lng?.toString() ?? null,
+      destLat: coords.lat ?? depot.lat,
+      destLng: coords.lng ?? depot.lng,
     };
   }
 

@@ -35,14 +35,12 @@ export class SyncPushFleetService {
     if (existing) {
       return syncOk(item.localId, 'TRIP', existing.id);
     }
+    // BE-10 (F-06): jedan upis, bez `create` + `update` (pad između = duplikat pri retry-u).
     const created = await this.trips.create(
       actor,
       this.toTripDto(item.payload),
+      { localId: item.localId, deviceId: item.deviceId },
     );
-    await this.prisma.trip.update({
-      where: { id: created.id },
-      data: { localId: item.localId, deviceId: item.deviceId, isSynced: true },
-    });
     return syncOk(item.localId, 'TRIP', created.id);
   }
 
@@ -61,11 +59,14 @@ export class SyncPushFleetService {
     if (existing) {
       return syncOk(item.localId, 'FUEL', existing.id);
     }
-    const created = await this.fuel.create(actor, this.toFuelDto(item.payload));
-    await this.prisma.fuelEntry.update({
-      where: { id: created.id },
-      data: { localId: item.localId, deviceId: item.deviceId, isSynced: true },
-    });
+    const created = await this.fuel.create(
+      actor,
+      this.toFuelDto(item.payload),
+      {
+        localId: item.localId,
+        deviceId: item.deviceId,
+      },
+    );
     return syncOk(item.localId, 'FUEL', created.id);
   }
 

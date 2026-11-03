@@ -35,7 +35,7 @@ jest.mock(
 );
 
 import { AppError } from '../errors/app-error';
-import { assertLatLng, parseLatLng } from './geo';
+import { assertLatLng, parseLatLng, parseOptionalLatLng } from './geo';
 
 function codeOf(fn: () => unknown): string | undefined {
   try {
@@ -72,6 +72,31 @@ describe('parseLatLng', () => {
   it('odbija smeće umjesto broja', () => {
     expect(codeOf(() => parseLatLng('abc', '18'))).toBe('VALIDATION_FAILED');
     expect(codeOf(() => parseLatLng('43', 'NaN'))).toBe('VALIDATION_FAILED');
+  });
+});
+
+describe('parseOptionalLatLng', () => {
+  it('bez koordinata vraća null par', () => {
+    expect(parseOptionalLatLng()).toEqual({ lat: null, lng: null });
+    expect(parseOptionalLatLng('', '')).toEqual({ lat: null, lng: null });
+  });
+
+  it('prihvata oba i validira opseg', () => {
+    const { lat, lng } = parseOptionalLatLng('44.2', '17.9');
+    expect(lat?.toString()).toBe('44.2');
+    expect(lng?.toString()).toBe('17.9');
+    expect(codeOf(() => parseOptionalLatLng('91', '17.9'))).toBe(
+      'VALIDATION_FAILED',
+    );
+  });
+
+  it('odbija samo jednu koordinatu', () => {
+    expect(codeOf(() => parseOptionalLatLng('44.2', undefined))).toBe(
+      'VALIDATION_FAILED',
+    );
+    expect(codeOf(() => parseOptionalLatLng(undefined, '17.9'))).toBe(
+      'VALIDATION_FAILED',
+    );
   });
 });
 

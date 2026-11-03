@@ -36,3 +36,26 @@ export function parseLatLng(
   assertLatLng(lat, lng);
   return { lat, lng };
 }
+
+/**
+ * BE-10 — par koordinata koji je **opcion** (tura, depo). Dozvoljeno je dati oba ili nijedan;
+ * jedan bez drugog je greška klijenta (tačka bez širine ili dužine nema smisla).
+ */
+export function parseOptionalLatLng(
+  latRaw?: string,
+  lngRaw?: string,
+): { lat: Prisma.Decimal | null; lng: Prisma.Decimal | null } {
+  const hasLat = latRaw !== undefined && latRaw !== '';
+  const hasLng = lngRaw !== undefined && lngRaw !== '';
+  if (!hasLat && !hasLng) {
+    return { lat: null, lng: null };
+  }
+  if (hasLat !== hasLng) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'lat and lng must be provided together',
+      400,
+    );
+  }
+  return parseLatLng(latRaw as string, lngRaw as string);
+}

@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../../generated/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { canReadCatalog, canWriteCatalog } from '../../common/scope/ops-roles';
+import { parseOptionalLatLng } from '../../common/utils/geo';
 import { requireCompany } from '../users/users-helpers';
 import {
   CreateDepotDto,
@@ -76,13 +78,15 @@ export class CatalogService {
 
   async createDepot(actor: AuthUser, dto: CreateDepotDto) {
     this.assertWrite(actor);
+    // BE-10 (F-03): koordinate depoa se validiraju kao i svaka druga vanjska koordinata.
+    const coords = parseOptionalLatLng(dto.lat, dto.lng);
     const row = await this.prisma.depot.create({
       data: {
         companyId: requireCompany(actor),
         name: dto.name,
         qrToken: dto.qrToken?.trim() || randomUUID(),
-        lat: dto.lat,
-        lng: dto.lng,
+        lat: coords.lat,
+        lng: coords.lng,
       },
     });
     return this.serializeDepot(row);
@@ -91,16 +95,43 @@ export class CatalogService {
   async patchDepot(actor: AuthUser, id: string, dto: PatchDepotDto) {
     this.assertWrite(actor);
     await this.loadDepot(actor, id);
-    const row = await this.prisma.depot.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        qrToken: dto.qrToken,
-        lat: dto.lat,
-        lng: dto.lng,
-      },
-    });
-    return this.serializeDepot(row);
+    const qrToken = dto.qrToken === undefined ? undefined : dto.qrToken.trim();
+    if (qrToken === '') {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'qrToken must not be empty',
+        400,
+      );
+    }
+    const coords =
+      dto.lat !== undefined || dto.lng !== undefined
+        ? parseOptionalLatLng(dto.lat, dto.lng)
+        : { lat: undefined, lng: undefined };
+    try {
+      const row = await this.prisma.depot.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          qrToken,
+          lat: coords.lat,
+          lng: coords.lng,
+        },
+      });
+      return this.serializeDepot(row);
+    } catch (error) {
+      // BE-10 (F-05): `qrToken` je @unique — duplikat je ranije bio 500 (P2002).
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppError(
+          ERROR_CODES.CONFLICT,
+          'QR token already in use',
+          409,
+        );
+      }
+      throw error;
+    }
   }
 
   async removeDepot(actor: AuthUser, id: string) {

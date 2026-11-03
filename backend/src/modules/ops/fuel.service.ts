@@ -57,7 +57,11 @@ export class FuelService {
     return serializeFuel(await this.loadVisible(actor, id));
   }
 
-  async create(actor: AuthUser, dto: CreateFuelDto) {
+  async create(
+    actor: AuthUser,
+    dto: CreateFuelDto,
+    identity?: { localId?: string; deviceId?: string },
+  ) {
     this.assertFuelWrite(actor);
     const companyId = requireCompany(actor);
     const machine = await this.requireMachine(companyId, dto.machineId);
@@ -72,22 +76,29 @@ export class FuelService {
     }
     const liters = parsePositiveDecimal(dto.liters, 'liters');
     const unitPrice = parseNonNegativeDecimal(dto.unitPrice, 'unitPrice');
-    const row = await this.prisma.fuelEntry.create({
-      data: {
-        companyId,
-        machineId: machine.id,
-        userId: actor.id,
-        projectId,
-        liters,
-        unitPrice,
-        totalCost: fuelTotalCost(liters, unitPrice),
-        notes: dto.notes,
-        receiptPath: dto.receiptPath,
-      },
+    // BE-10 (F-01): upis goriva i ponovni obračun potrošnje projekta su jedna transakcija.
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.fuelEntry.create({
+        data: {
+          companyId,
+          machineId: machine.id,
+          userId: actor.id,
+          projectId,
+          liters,
+          unitPrice,
+          totalCost: fuelTotalCost(liters, unitPrice),
+          notes: dto.notes,
+          receiptPath: dto.receiptPath,
+          // BE-10 (F-06): isto kao kod tura — identitet uređaja u istom upisu.
+          localId: identity?.localId,
+          deviceId: identity?.deviceId,
+        },
+      });
+      if (projectId) {
+        await recalcSpend(tx, projectId);
+      }
+      return created;
     });
-    if (projectId) {
-      await recalcSpend(this.prisma, projectId);
-    }
     await maybeNotifyFuelAnomaly({
       prisma: this.prisma,
       notifications: this.notifications,
@@ -115,16 +126,34 @@ export class FuelService {
     const unitPrice = dto.unitPrice
       ? parseNonNegativeDecimal(dto.unitPrice, 'unitPrice')
       : row.unitPrice;
-    const updated = await this.prisma.fuelEntry.update({
-      where: { id: row.id },
-      data: {
-        liters,
-        unitPrice,
-        totalCost: fuelTotalCost(liters, unitPrice),
-        notes: dto.notes,
-        projectId: dto.projectId,
-        receiptPath: dto.receiptPath,
-      },
+    // BE-10 (F-02): novi projekat mora proći ista pravila kao pri kreiranju (vidljivost,
+    // zapisivost, „nije na čekanju“, poklapanje sa dodjelom mašine). Ranije je `projectId`
+    // išao pravo u bazu — i `currentSpend` se **nije** ponovo računao nakon izmjene.
+    const nextProjectId =
+      dto.projectId === undefined
+        ? row.projectId
+        : dto.projectId === ''
+          ? null
+          : await this.resolveProjectId(actor, row.machineId, dto.projectId);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.fuelEntry.update({
+        where: { id: row.id },
+        data: {
+          liters,
+          unitPrice,
+          totalCost: fuelTotalCost(liters, unitPrice),
+          notes: dto.notes,
+          projectId: nextProjectId,
+          receiptPath: dto.receiptPath,
+        },
+      });
+      if (row.projectId) {
+        await recalcSpend(tx, row.projectId);
+      }
+      if (nextProjectId && nextProjectId !== row.projectId) {
+        await recalcSpend(tx, nextProjectId);
+      }
+      return saved;
     });
     return serializeFuel(updated);
   }
@@ -139,10 +168,12 @@ export class FuelService {
         409,
       );
     }
-    await this.prisma.fuelEntry.delete({ where: { id: row.id } });
-    if (row.projectId) {
-      await recalcSpend(this.prisma, row.projectId);
-    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.fuelEntry.delete({ where: { id: row.id } });
+      if (row.projectId) {
+        await recalcSpend(tx, row.projectId);
+      }
+    });
   }
 
   private async resolveProjectId(

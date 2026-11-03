@@ -113,7 +113,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `settings` | `/api/settings` | registry podešavanja firme (`PUT` je atomski: validacija svih ključeva pa jedna transakcija); javni `GET /settings/public` maskira `SECRET` |
 | `notifications` | `/api/notifications` | in-app lista, read; emisija preko Socket.IO |
 | `files` | `/api/files` | upload/download (MinIO), path guard `{companyId}/`, MIME/veličina |
-| `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu; zadaci: `?status=` iz zatvorene liste (`400` na nepoznat), duplikat dodjele/zavisnosti je `409`; timer: zatvaranje/pauza/nastavak su transakcije (sesija + minuti + status zadatka), `/timer/me` i `GET /timer` ne vraćaju `deviceId`/`localId`, `GET /timer` daje `elapsedMinutes`; ispravke (`/amendments`): `entityType` iz zatvorene liste, primjena + zapis ispravke su jedna transakcija; flota: koordinate se validiraju (`-90..90`/`-180..180`), jedna otvorena dodjela po mašini (`409`), GPS tačka + pozicija mašine su jedna transakcija |
+| `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu; zadaci: `?status=` iz zatvorene liste (`400` na nepoznat), duplikat dodjele/zavisnosti je `409`; timer: zatvaranje/pauza/nastavak su transakcije (sesija + minuti + status zadatka), `/timer/me` i `GET /timer` ne vraćaju `deviceId`/`localId`, `GET /timer` daje `elapsedMinutes`; ispravke (`/amendments`): `entityType` iz zatvorene liste, primjena + zapis ispravke su jedna transakcija; flota: koordinate se validiraju (`-90..90`/`-180..180`), jedna otvorena dodjela po mašini (`409`), GPS tačka + pozicija mašine su jedna transakcija; logistika: ture/gorivo/šifarnici — koordinate ture i depoa se validiraju, gorivo + `currentSpend` su jedna transakcija, offline identitet se upisuje u istom `create` |
 | `payroll` | `/api/payroll` | obračun po mjesecu, approve/reject, export `.xlsx` |
 | `polish` | `/api/tenders`, `/services`, `/documents`, `/reports` | tenderi, servis mašina, istek dokumenata, fiksni izvještaji |
 | `erp` | `/api/partners`, `/costs`, `/warehouses`, `/stock` | partneri, troškovi, lager |
@@ -238,6 +238,8 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 | B6 | Swagger šeme nisu provjerene u CI-ju (nema „contract“ testa) | BE-05 |
 | B7 | Nema `audit` UI-a u v1 (svjesno), ali `AuditEvent` se piše | — |
 | B8 | ~~`AuditAction` bez akcija za projekat/dodjelu/fazu/dokument/količinu/zadatak~~ — ✅ riješeno (BE-08: 19 novih akcija + pozivi u `projects`, `assignments`, `phases`, `documents`, `quantities`, `tasks`, `task-assignees`, `task-dependencies`) | BE-08 |
+| B9 | `isSynced` je `true` po defaultu i **niko ga ne postavlja na `false`** → `PATCH/DELETE /trips/:id` uvijek vraćaju `403 TRIP_IMMUTABLE`, a `PATCH/DELETE /fuel/:id` uvijek `409`. Rute su mrtve; odluka (ukloniti ih ili dozvoliti izmjenu do prve sinhronizacije) je na vlasniku — vidi [`AUDIT/segments/BE-10.md`](../AUDIT/segments/BE-10.md) §5 F‑BE‑10‑07 | odluka vlasnika |
+| B10 | Flota, GPS uređaji, ture, gorivo i šifarnici **nisu u auditu** — `AuditAction` nema `MACHINE_*`, `IOT_DEVICE_*`, `TRIP_CREATED`, `FUEL_CREATED`, `CATALOG_*` | sljedeća migracija |
 
 ---
 
