@@ -127,6 +127,6 @@ odlučiti); (C) „uvijek 200 sa `degraded`“ — orchestrator ne bi imao signa
 | | |
 |---|---|
 | Datum | 2026-11-03 |
-| Commit(ovi) | kod + testovi + docs + matrica (hash u `AUDIT/STATE.md`), zatim zapis runa |
-| CI run | vidi `AUDIT/STATE.md` (upisuje se poslije `gh run watch`) |
+| Commit(ovi) | `feat(health): INF-05 …` (kod + testovi + docs + matrica), `fix(health): INF-05 …` (test nezavisan od `MINIO_SKIP`) |
+| CI run | ⚠️ `41660146614` — 5/6 (pao samo `Unit testovi`: test zavisan od `MINIO_SKIP=true` iz CI env-a — F‑INF‑05‑07) · ✅ **`41660957706`** — **6/6** zelen |
 | Status | `done` |
