@@ -112,7 +112,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | `SEED_PASSWORD` | — | lozinka seed korisnika (min 10), koristi se samo pri seedu |
 | `SEED_DEMO` | `false` | `true` = seed puni demo firmu i demo podatke; `false` = samo platform administrator (P9) |
 | `BACKEND_URL` | `http://backend:3000` | nginx proxy target (frontend kontejner) |
-| `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx |
+| `VITE_API_URL` | prazno | **build-time**: prazno ⇒ relativni `/api` kroz nginx; ako nije prazno, mora biti u CSP `connect-src` (§10.1) |
 | `ENABLE_API_DOCS` | `false` | `true` izlaže Swagger na `/api/docs` — u produkciji isključeno |
 | `REDIS_*` | vidi §5.4 | throttle storage u Redisu; bez `REDIS_HOST` sve ostaje u memoriji (INF-07) |
 
@@ -282,6 +282,25 @@ object-src 'none'; base-uri 'self'; frame-ancestors 'self'
 
 `'unsafe-inline'` je samo za stilove (React/Tailwind inline `style`); skripte su strogo `'self'`.
 Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
+
+### 10.1 CSP i `VITE_API_URL` — najčešća greška pri deployu
+
+`VITE_API_URL` je **build-time** varijabla: ako nije prazna, apsolutni URL ulazi u bundle i browser
+šalje zahtjeve na **drugi origin**. Pošto je CSP `connect-src 'self' ws: wss:`, takav zahtjev biva
+blokiran:
+
+```
+Connecting to 'https://api.<domen>/api/auth/login' violates the following Content Security Policy
+directive: "connect-src 'self' ws: wss:". The action has been blocked.
+```
+
+| Situacija | Šta uraditi |
+|---|---|
+| **Preporučeno** (jedan domen) | `VITE_API_URL` **prazno** → bundle zove relativni `/api/...` → nginx proksira na `BACKEND_URL`. Poslije promjene obavezan **rebuild** frontenda (vrijednost je ugrađena u bundle) |
+| Namjerno dva domena | dodaj origin u `connect-src` (`frontend/nginx/default.conf.template`, sva tri bloka) **i** postavi `CORS_ORIGIN=https://<frontend-domen>` na backendu — CSP je time širi, pa to mora biti svjesna odluka |
+
+`Dockerfile.frontend` u build logu ispisuje upozorenje kad `VITE_API_URL` nije prazan (vidi
+`⚠` linije) — to je signal da će CSP blokirati pozive ako nginx nije prilagođen.
 
 ---
 

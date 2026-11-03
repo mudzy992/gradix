@@ -38,9 +38,11 @@ ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN if [ -n "$VITE_API_URL" ]; then \
-      echo "[gradix] VITE_API_URL='$VITE_API_URL' se ugrađuje u bundle."; \
-      echo "[gradix] Napomena: interni Docker hostovi (npr. http://backend:3000)"; \
-      echo "[gradix] ne rade u browseru — ostavi prazno za relativni /api."; \
+      echo "[gradix] ⚠ VITE_API_URL='$VITE_API_URL' se ugrađuje u bundle (apsolutni API URL)."; \
+      echo "[gradix] ⚠ nginx CSP je connect-src 'self' ws: wss: — pozivi na DRUGI origin biće"; \
+      echo "[gradix] ⚠ blokirani u browseru ('Refused to connect because it violates CSP')."; \
+      echo "[gradix] ⚠ Ako baš želiš drugi origin: dodaj ga u connect-src (frontend/nginx) i u"; \
+      echo "[gradix] ⚠ CORS_ORIGIN na backendu. Preporučeno: ostavi prazno = relativni /api."; \
     fi
 
 RUN npm run build

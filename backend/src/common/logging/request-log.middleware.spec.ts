@@ -110,4 +110,35 @@ describe('requestLogMiddleware (INF-04)', () => {
     const record = JSON.parse(lines[0].trim()) as { level: string };
     expect(record.level).toBe('error');
   });
+
+  it('uspješna probe ruta ide na `debug`, obična ruta ostaje `info`', () => {
+    const lines: string[] = [];
+    const logger = new JsonLogger((line: string) => lines.push(line), 'error');
+    const debugLines: string[] = [];
+    const debugLogger = new JsonLogger((line: string) => debugLines.push(line), 'debug');
+
+    const probe = fakeResponse();
+    requestLogMiddleware(debugLogger)(
+      { headers: {}, method: 'GET', originalUrl: '/api/health' } as unknown as Request,
+      probe,
+      (() => undefined) as NextFunction,
+    );
+    probe.emitFinish();
+    expect(debugLines).toHaveLength(1);
+    expect(JSON.parse(debugLines[0])).toMatchObject({
+      level: 'debug',
+      msg: 'http_request',
+      path: '/api/health',
+    });
+
+    // Na `info` nivou probe se ne pišu (zato log nije zatrpan healthcheck-om).
+    const quiet = fakeResponse();
+    requestLogMiddleware(logger)(
+      { headers: {}, method: 'GET', originalUrl: '/api/health' } as unknown as Request,
+      quiet,
+      (() => undefined) as NextFunction,
+    );
+    quiet.emitFinish();
+    expect(lines).toHaveLength(0);
+  });
 });

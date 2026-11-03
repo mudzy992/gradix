@@ -329,6 +329,9 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije (INF-07: brojač je
   (i ugniježđeno), a dugački stringovi se skraćuju.
 - **Nivo:** `LOG_LEVEL` (`error|warn|info|debug`); prazno = `info` u produkciji, `debug` u
   razvoju, `error` u testovima. Neispravna vrijednost je greška pri startu (validacija env-a).
+- **Probe rute** (`/api/health`, `/api/ready`) se na uspjeh loguju kao **`debug`** — Docker/Coolify
+  ih pogađa svakih 30 s, pa bi na `info` nivou proizvele ~2.900 identičnih linija dnevno; greška
+  (5xx) ostaje `error`.
 - Nest `Logger` u cijeloj aplikaciji piše kroz isti logger (`app.useLogger(new JsonLogger())`), pa
   nema „drugog“ formata; `console.log/debug` je i dalje zabranjen guardrail-om.
 - **Zašto bez `pino`:** isti izlaz (JSON red + nivo) uz ~150 linija koda i **nula** novih
