@@ -355,6 +355,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   (firma/dodijeljeni projekti), `hse.write` bez `hse.read` = samo vlastite prijave (+ ACK/CLOSE);
   tuđa prijava `404`. Zapisano kao **D‑033**; e2e test „WORKER list 403“ zamijenjen testom koji
   dokazuje scopiranje.
+- **CI ispravka (run 41638725137 ❌):** e2e je padao jer radnik nije bio dodijeljen projektu, pa je
+  `POST /api/incidents` vraćao `404` (vidljivost projekta) — u testu je dodana dodjela radnika
+  („WORKER“) na projekat; kod nije mijenjan.
 - **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6); 19/59 segmenata `done`.
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao

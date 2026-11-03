@@ -32,6 +32,14 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       .post(`/api/projects/${projectId}/assignments`)
       .set(auth(admin))
       .send({ userId: ssId, role: 'SS' });
+    // BE-11 (opcija A): radnik mora biti na projektu da bi tamo mogao prijaviti incident.
+    const workerId = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(worker))
+    ).body.data.id as string;
+    await request(app.getHttpServer())
+      .post(`/api/projects/${projectId}/assignments`)
+      .set(auth(admin))
+      .send({ userId: workerId, role: 'WORKER' });
     date = new Date().toISOString().slice(0, 10);
   });
 

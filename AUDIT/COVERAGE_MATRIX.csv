@@ -296,7 +296,7 @@ backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,285,nepregledano,"BE-11: dnevnik (konflikt, PDF sa bh. slovima, validacije) + HSE opcija A (vlastite prijave, tuđa 404)",
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,293,nepregledano,"BE-11: dnevnik (konflikt, PDF sa bh. slovima, validacije) + HSE opcija A (vlastite prijave, tuđa 404)",
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
