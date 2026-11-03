@@ -289,7 +289,8 @@ kolekcija nije puna, pa je pravilo jedno za sve slučajeve.
 `SELECT 1` i vraća `{ process, postgres }` u standardnom envelope-u. Isti endpoint je vezan na
 Docker/Coolify `HEALTHCHECK`, pa je **pad baze** činio kontejner „unhealthy“ i izazivao restart-loop
 aplikacije koja je živa i oporavlja se sama kad baza vrati. Sada: `GET /api/health` = liveness
-(bez baze, `{ status, uptimeSeconds }`), `GET /api/health/ready` = readiness (baza sa limitom 2 s;
+(bez baze, `{ status, uptimeSeconds }`), `GET /api/ready` = readiness (baza — od INF-05 i MinIO i
+migracije — sa limitom 2 s;
 `503` + `postgres.status='error'`, bez detalja greške). Obje rute su `@Public` i **bez envelope-a**
 — to je infrastrukturni ugovor, ne API resurs, i monitor/orchestrator čita `status` direktno.
 **Odbačeno:** (A) zadržati bazu u `/api/health` i dodati samo `/health/ready` — restart-loop na pad
@@ -298,7 +299,8 @@ u aplikaciji ne čita te rute (jedini potrošači su `curl`/`HEALTHCHECK`, koji 
 (C) izuzeti rute iz globalnog throttle-a — healthcheck je 2 zahtjeva/min, pa nema potrebe da javna
 ruta ostane bez ikakvog ograničenja.
 **Posljedica:** `HEALTHCHECK` ostaje na `/api/health` (liveness) i ne mijenja se; readiness je
-opciono dostupan monitoringu (`/api/health/ready`). Stari `{process, postgres}` oblik nestaje —
+opciono dostupan monitoringu na `/api/ready` (INF-05: Postgres + MinIO + stanje migracija; putanja
+je imenovana po planu §4.3, a ne kao podruta health-a). Stari `{process, postgres}` oblik nestaje —
 nijedan klijent ga nije čitao (provjereno grep-om po `frontend/`, `mobile/`, `scripts/`, CI-ju).
 
 ### D-038 — Logovanje: JSON red na stdout + korelacioni ID, bez `pino` zavisnosti

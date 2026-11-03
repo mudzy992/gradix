@@ -132,11 +132,13 @@ backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,pregledano,"BE-11: MI
 backend/src/modules/files/files.controller.ts,BE,files,BE-11,72,pregledano,"BE-11 (F-12): download šalje `Content-Type`/`Content-Length`/`nosniff`/`CSP sandbox`/`no-store`, greška streama uništi odgovor",2026-11-03
 backend/src/modules/files/files.module.ts,BE,files,BE-11,12,pregledano,BE-11: modul izvozi `FilesService` za dnevnik (PDF) i javne assete,2026-11-03
 backend/src/modules/files/files.service.ts,BE,files,BE-11,129,pregledano,BE-11 (F-12): `streamPublic` čita `statObject` (tip/veličina); upload sniffing + limit veličine,2026-11-03
-backend/src/modules/files/minio.service.ts,BE,files,BE-11,51,pregledano,BE-11: bucket se osigurava sa 10 pokušaja (MinIO starta paralelno),2026-11-03
-backend/src/modules/health/health.controller.ts,BE,health,BE-18,33,pregledano,"BE-18: liveness (bez baze) i readiness (@Get ready, 200/503) su odvojene rute; @Public + @SkipEnvelope (ravan JSON); throttle nije izuzet (D-037)",2026-11-03
-backend/src/modules/health/health.module.ts,BE,health,BE-18,10,pregledano,BE-18: modul bez stanja (samo kontroler + servis); Prisma dolazi iz globalnog PrismaModule,2026-11-03
-backend/src/modules/health/health.service.spec.ts,BE,health,BE-18,60,pregledano,"BE-18: +4 testa — liveness bez upita, ok put sa latencijom, greška bez hosta/kredencijala, timeout sa fake timerima",2026-11-03
-backend/src/modules/health/health.service.ts,BE,health,BE-18,83,pregledano,"BE-18: getLiveness bez baze; getReadiness SELECT 1 sa limitom 2 s, nikad ne baca — {status, latencyMs, error:unreachable} bez detalja konekcije",2026-11-03
+backend/src/modules/files/minio.service.ts,BE,files,BE-11,56,pregledano,INF-05: healthCheck() = bucketExists bez retry-ja (readiness ima vlastiti 2 s limit),2026-11-03
+backend/src/modules/health/health.controller.ts,BE,health,BE-18,22,pregledano,"BE-18/INF-05: samo liveness (GET /api/health), @Public + @SkipEnvelope; readiness je premješten na /api/ready",2026-11-03
+backend/src/modules/health/health.module.ts,BE,health,BE-18,13,pregledano,INF-05: imports [FilesModule] (MinioService) + HealthController i ReadyController,2026-11-03
+backend/src/modules/health/health.service.spec.ts,BE,health,BE-18,119,pregledano,"INF-05: 7 testova — liveness bez baze, sve ok, Postgres pao, MinIO pao, migracije pending, timeout, MINIO_SKIP=skipped",2026-11-03
+backend/src/modules/health/health.service.ts,BE,health,BE-18,170,pregledano,"INF-05: readiness = postgres (SELECT 1), storage (MinIO bucketExists), migrations (_prisma_migrations vs folderi, pending/unknown); svaka provjera limit 2 s, greške bez detalja konekcije",2026-11-03
+backend/src/modules/health/migration-count.ts,BE,health,BE-18,22,pregledano,INF-05: expectedMigrationCount() broji foldere prisma/migrations; null kad folder ne postoji (provjera tada ne obara readiness),2026-11-03
+backend/src/modules/health/ready.controller.ts,BE,health,BE-18,25,pregledano,"INF-05: GET /api/ready (plan §4.3) — @Public + @SkipEnvelope, 200/503; liveness ostaje /api/health",2026-11-03
 backend/src/modules/mail/email.service.spec.ts,BE,public-notify,BE-16,49,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
 backend/src/modules/mail/email.service.ts,BE,public-notify,BE-16,51,pregledano,F-01/B1/D-013: trySend nikad ne tvrdi uspjeh (nema transporta),2026-11-03
 backend/src/modules/mail/mail.module.ts,BE,public-notify,BE-16,10,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
@@ -314,10 +316,10 @@ backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
-backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,56,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
+backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
-backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,62,nepregledano,,
+backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03

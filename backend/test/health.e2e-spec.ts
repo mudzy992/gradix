@@ -24,14 +24,18 @@ describe('Health (e2e)', () => {
     expect(typeof response.body.uptimeSeconds).toBe('number');
   });
 
-  it('GET /api/health/ready — readiness provjerava Postgres', async () => {
-    const response = await request(app.getHttpServer()).get(
-      '/api/health/ready',
-    );
+  it('GET /api/ready — readiness: Postgres, MinIO i migracije (INF-05)', async () => {
+    const response = await request(app.getHttpServer()).get('/api/ready');
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('ok');
     expect(response.body.checks.postgres.status).toBe('ok');
     expect(typeof response.body.checks.postgres.latencyMs).toBe('number');
+    // MinIO je u testovima in-memory (`MemoryMinioService`) — provjera i dalje prolazi.
+    expect(response.body.checks.storage.status).toBe('ok');
+    expect(response.body.checks.migrations.status).toBe('ok');
+    expect(response.body.checks.migrations.applied).toBeGreaterThanOrEqual(
+      response.body.checks.migrations.expected,
+    );
   });
 
   it('INF-04: korelacioni ID — validan se vraća, neispravan se zamjenjuje', async () => {

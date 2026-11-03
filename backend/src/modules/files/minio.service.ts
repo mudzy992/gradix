@@ -18,6 +18,11 @@ export class MinioService implements OnModuleInit {
     });
   }
 
+  /** INF-05: readiness provjera — postoji li bucket (i je li MinIO uopšte dostupan). */
+  async healthCheck(): Promise<boolean> {
+    return this.client.bucketExists(this.bucket);
+  }
+
   async onModuleInit(): Promise<void> {
     if (process.env.MINIO_SKIP === 'true') {
       return;

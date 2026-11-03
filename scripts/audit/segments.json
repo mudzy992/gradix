@@ -104,7 +104,7 @@
       "id": "INF-05",
       "layer": "INF",
       "title": "Health / readiness",
-      "status": "planned",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Healthcheck definicije su u docker-compose*.yml (vlasništvo INF-01), a endpoint u backend/src/modules/health (vlasništvo BE-18); ovdje se provjerava ugovor kraj-do-kraja."
     },

@@ -1,5 +1,4 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
 import { SkipEnvelope } from '../../common/decorators/skip-envelope.decorator';
 import { HealthService } from './health.service';
@@ -18,15 +17,5 @@ export class HealthController {
   @Get()
   getHealth() {
     return this.healthService.getLiveness();
-  }
-
-  /** Readiness: zavisnosti (Postgres) dostupne; `503` kad nisu. */
-  @Public()
-  @SkipEnvelope()
-  @Get('ready')
-  async getReady(@Res({ passthrough: true }) res: Response) {
-    const result = await this.healthService.getReadiness();
-    res.status(result.status === 'ok' ? 200 : 503);
-    return result;
   }
 }

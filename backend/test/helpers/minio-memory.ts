@@ -58,4 +58,9 @@ export class MemoryMinioService {
   async onModuleInit(): Promise<void> {
     return;
   }
+
+  /** INF-05: in-memory zamjena uvijek „ima“ bucket. */
+  async healthCheck(): Promise<boolean> {
+    return true;
+  }
 }

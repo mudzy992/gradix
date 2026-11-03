@@ -18,7 +18,7 @@
 | Cache/queue | **Redis** u mreži `redis_net` — kod ga ne koristi | ⚪ rezervisano |
 | Reverse proxy | Coolify proxy (Traefik) → kontejneri po domenama | ✅ |
 | Secrets | Coolify Environment Variables (ne u repou) | ✅ |
-| Observability | **JSON logovi** (jedan red = jedan zapis, `level`/`context`/`requestId`) + Docker healthcheckovi (`/api/health` liveness, `/api/health/ready` readiness) | ⚠️ bez metrika/tracinga (INF-05) |
+| Observability | **JSON logovi** (jedan red = jedan zapis, `level`/`context`/`requestId`) + `/api/health` (liveness) + `/api/ready` (Postgres/MinIO/migracije) | ⚠️ bez metrika/tracinga (van obima v1) |
 | Backup | nije automatizovan (vidi §7) | ⚠️ dug |
 | Okruženja | lokalno (dev) + produkcija (Coolify); **nema staginga** (odluka D-007) | ✅ |
 
@@ -39,7 +39,7 @@
 
 | Servis | Image / build | Portovi | Volumeni | Healthcheck |
 |---|---|---|---|---|
-| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` = **liveness** (30 s, start 60 s, 5 retry); `GET /api/health/ready` = readiness (baza, `503`) za external monitoring |
+| `backend` | `build: ./backend` | `expose 3000` | CA za bazu i Redis (`ro`), `create_host_path: false` | `GET /api/health` = **liveness** (30 s, start 60 s, 5 retry); `GET /api/ready` = readiness (Postgres + MinIO + migracije, `503`) za external monitoring/blue-green gate |
 | `frontend` | `build: ./frontend` | `expose 80` | — | `wget --spider http://127.0.0.1/` |
 | `minio` | `${MINIO_IMAGE:-ghcr.io/coollabsio/minio:latest}` | `expose 9000`, `9001` | host bind `${MINIO_DATA_DIR:-/mnt/shared-app-files/gradix/minio}:/data` | `mc ready local` |
 
