@@ -116,7 +116,8 @@ jobs:
           done
           applied=$(psql "$PG_TARGET" -tAc \
             "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" 2>&1 | tr -d ' ')
-          expected=$(ls -1 backend/prisma/migrations | wc -l | tr -d ' ')
+          # Samo folderi — u `migrations/` je i `migration_lock.toml` (nije migracija).
+          expected=$(find backend/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
           echo "✓ migracije u restore-u: $applied / $expected"
           if [ "$applied" -lt "$expected" ] 2>/dev/null; then
             echo "::error title=migrations::u restore-u $applied od $expected migracija"
