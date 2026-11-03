@@ -12,6 +12,7 @@ import {
   stopTimer,
 } from '@/lib/api-ops'
 import { errorMessage } from '@/lib/error-message'
+import { formatDuration, taskPriority, taskStatus } from '@/lib/labels'
 import { useHasPermission } from '@/hooks/use-me'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,9 +33,31 @@ export function TaskDetailPage() {
     queryFn: async () => (await getTimerMe()).data,
   })
   const row = task.data
-  if (!row) {
-    return <p className="text-muted-foreground">{t('common.loading')}</p>
+  if (task.isError) {
+    return (
+      <div
+        role="alert"
+        className="flex max-w-xl flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+      >
+        <span>{t('tasks.loadError')}</span>
+        <Button size="sm" variant="outline" onClick={() => void task.refetch()}>
+          {t('dashboard.retry')}
+        </Button>
+      </div>
+    )
   }
+  if (!row) {
+    return (
+      <div className="grid max-w-xl gap-3" aria-busy="true">
+        <div className="h-8 w-64 animate-pulse rounded bg-muted" />
+        <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+        <div className="h-16 w-full animate-pulse rounded bg-muted" />
+        <span className="sr-only">{t('common.loading')}</span>
+      </div>
+    )
+  }
+  const status = taskStatus(row.status)
+  const priority = taskPriority(row.priority)
   const mine = timer.data?.session?.taskId === id
   const paused = Boolean(timer.data?.session?.pausedAt)
   const run = async (fn: () => Promise<unknown>) => {
@@ -51,13 +74,13 @@ export function TaskDetailPage() {
     <div className="grid max-w-xl gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">{row.title}</h1>
       <div className="flex gap-2">
-        <Badge variant="secondary">{row.status}</Badge>
-        <Badge variant="outline">{row.priority}</Badge>
+        <Badge variant={status.tone}>{t(status.labelKey, { defaultValue: row.status })}</Badge>
+        <Badge variant={priority.tone}>{t(priority.labelKey, { defaultValue: row.priority })}</Badge>
       </div>
       {row.description ? <p className="text-sm">{row.description}</p> : null}
       <p className="text-sm text-muted-foreground">
-        {t('tasks.elapsed')}: {row.totalTimeSpentMinutes}
-        {mine ? ` · ${timer.data?.elapsedMinutes ?? 0}` : ''}
+        {t('tasks.elapsed')}: {formatDuration(row.totalTimeSpentMinutes)}
+        {mine ? ` · ${t('tasks.running', { duration: formatDuration(timer.data?.elapsedMinutes ?? 0) })}` : ''}
       </p>
       {canTimer ? (
         <div className="flex flex-wrap gap-2">

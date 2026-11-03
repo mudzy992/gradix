@@ -347,7 +347,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,nepregledano,,
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,99,pregledano,"FE-06: admin tok (sesija iz storageState) — dashboard sa prevedenim karticama, prečica → projekti → detalj (Faze), zadatak iz seeda, aria-current, reflow 320 px + jedno h1",2026-11-03
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,113,pregledano,"FE-06: admin tok (sesija iz storageState) — dashboard sa prevedenim karticama, prečica → projekti → detalj (Faze), zadatak iz seeda, aria-current, reflow 320 px + jedno h1",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
@@ -410,14 +410,14 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,209,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
-frontend/src/i18n/en.ts,FE,shared,FE-15,209,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
+frontend/src/i18n/bs.ts,FE,shared,FE-15,241,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
+frontend/src/i18n/en.ts,FE,shared,FE-15,241,pregledano,"FE-04: dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); FE-05: duplikat `dash` uklonjen + selectCompany/noCards",2026-11-03
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,107,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,107,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,118,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,118,pregledano,"FE-05: `dash` sekcija je jedino mjesto prijevoda kartica (index.ts spreaduje ops-* poslije bs/en) — labele normalizovane (Potrošeno / budžet, Otvoreni timer-i, Nepročitane obavijesti, Vozila)",2026-11-03
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,53,nepregledano,,
@@ -440,8 +440,11 @@ frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() �
 frontend/src/lib/dash.ts,FE,shared,FE-15,7,nepregledano,,
 frontend/src/lib/error-message.ts,FE,shared,FE-15,17,nepregledano,,
 frontend/src/lib/format-date.ts,FE,shared,FE-15,25,nepregledano,,
+frontend/src/lib/labels.spec.ts,TEST,fe-unit,FE-05,72,nepregledano,,
+frontend/src/lib/labels.ts,FE,shared,FE-15,95,nepregledano,,
 frontend/src/lib/notify-link.ts,FE,shared,FE-15,32,nepregledano,,
 frontend/src/lib/ops-types.ts,FE,shared,FE-15,145,nepregledano,,
+frontend/src/lib/payroll-access.spec.ts,TEST,fe-unit,FE-05,52,nepregledano,,
 frontend/src/lib/payroll-access.ts,FE,shared,FE-15,22,nepregledano,,
 frontend/src/lib/query-client.ts,FE,shared,FE-15,11,nepregledano,,
 frontend/src/lib/roles.ts,FE,shared,FE-15,16,nepregledano,,
@@ -463,15 +466,17 @@ frontend/src/pages/hse-page.tsx,FE,site-pages,FE-10,110,nepregledano,,
 frontend/src/pages/login-page.tsx,FE,auth-pages,FE-07,97,pregledano,"FE-07: AuthCard (jedno h1), PasswordInput, trajna greška servera role=alert umjesto toasta, noValidate; identifikator bez @ ide kao telefon",2026-11-03
 frontend/src/pages/logistics-page.tsx,FE,fleet-pages,FE-09,120,nepregledano,,
 frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,167,nepregledano,,
-frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,92,nepregledano,,
-frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,85,nepregledano,,
+frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,128,pregledano,"FE-08: skeleton, greška + retry, preveden status sa tonom, pregled kao dt/dd parovi (WCAG 1.3.1)",2026-11-03
+frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,nepregledano,,
+frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage",2026-11-03
 frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,136,nepregledano,,
 frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,90,nepregledano,,
 frontend/src/pages/reset-page.tsx,FE,auth-pages,FE-07,28,pregledano,FE-07: h1 + objašnjenje šta korisnik sada može (admin reset u /users); nema forme jer BE vraća 501 (pošteno stanje),2026-11-03
 frontend/src/pages/services-page.tsx,FE,office-pages,FE-11,96,nepregledano,,
 frontend/src/pages/settings-page.tsx,FE,admin-pages,FE-13,27,nepregledano,,
-frontend/src/pages/task-detail-page.tsx,FE,ops-pages,FE-08,82,nepregledano,,
-frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,66,nepregledano,,
+frontend/src/pages/task-detail-page.tsx,FE,ops-pages,FE-08,105,pregledano,"FE-08: skeleton umjesto večnog „Učitavanje…“, greška + retry, preveden status/prioritet, formatDuration (1 h 35 min), „u toku {{duration}}“",2026-11-03
+frontend/src/pages/tasks-page.spec.tsx,TEST,fe-unit,FE-05,216,nepregledano,,
+frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,118,pregledano,"FE-08: prevedene kolone sa brojem, skeleton po koloni, prazna kolona porukom, preveden prioritet sa tonom, role=region za horizontalni skrol, greška + retry",2026-11-03
 frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,108,nepregledano,,
 frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,185,nepregledano,,
 frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,241,pregledano,"FE-02: rute + guardovi (RequireAuth/PublicOnly/RequirePermission/RequirePayroll), BootGate sa ScreenLoader-om, teške rute kroz lazy-pages",2026-11-03

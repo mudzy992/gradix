@@ -161,6 +161,38 @@ export const bs = {
     next: 'Dalje',
     prev: 'Nazad',
     page: 'Stranica {{page}}',
+    pageOf: 'Stranica {{page}} od {{pages}}',
+    pagination: 'Stranice',
+  },
+  status: {
+    project: {
+      PLANNING: 'U planu',
+      IN_PROGRESS: 'U toku',
+      ON_HOLD: 'Pauzirano',
+      COMPLETED: 'Završeno',
+      CANCELLED: 'Otkazano',
+    },
+    task: {
+      PENDING: 'Nedodijeljeno',
+      ASSIGNED: 'Dodijeljeno',
+      IN_PROGRESS: 'U toku',
+      PAUSED: 'Pauza',
+      COMPLETED: 'Završeno',
+      CANCELLED: 'Otkazano',
+    },
+    priority: {
+      LOW: 'Nizak',
+      MEDIUM: 'Srednji',
+      HIGH: 'Visok',
+      URGENT: 'Hitno',
+    },
+    role: {
+      PM: 'Projekt menadžer',
+      SS: 'Nadzornik',
+      WORKER: 'Radnik',
+      DRIVER: 'Vozač',
+      OP: 'Operater',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',

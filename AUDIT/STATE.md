@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **37/59 segmenata `done`** (zadnji: FE-07).
+kratak izvještaj poslije svakog. Trenutno: **38/59 segmenata `done`** (zadnji: FE-08).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -687,18 +687,28 @@ kratak izvještaj poslije svakog. Trenutno: **37/59 segmenata `done`** (zadnji: 
   **19**; `a11y.spec` ažuriran (prekidač lozinke je sada između polja i „zapamti me“).
 - **Coverage ratchet proširen** na auth ekrane: linije **96,9 %**, grane 91,1 %.
 
+### 2026-11-03 — FE-08 (projekti, zadaci) → segment `done`
+- **Nalaz (visoko):** liste su prikazivale **sirove enume** (`IN_PROGRESS`, `PENDING`, `URGENT`), svi
+  badge-ovi istog tona, bez stanja učitavanja/greške/praznog stanja; detalj zadatka je na grešku
+  zauvijek pisao „Učitavanje…“; paginacija je nudila „Dalje“ i kad nema strana.
+- **Riješeno:** `lib/labels.ts` (D-046) — jedno mjesto za prevod **i** ton enuma (`URGENT`/`CANCELLED`
+  crveno, `IN_PROGRESS` primarno) + `formatDuration` („1 h 35 min“); liste dobile skeleton
+  (`aria-busy`), trajnu grešku sa „Pokušaj ponovo“, prazno vs. „nema rezultata“, `caption` sa ukupnim
+  brojem i paginaciju sa granicama („Stranica X od Y“); pregled projekta je `dt`/`dd`, pretraga ima labelu.
+- **Testovi:** 26 novih (ukupno **68**), coverage ratchet proširen (`labels`, projekti, zadaci):
+  linije **96,5 %**, grane 93,2 %; E2E +1 (prevod kolona na tabli) → **20**.
+- **Vlasnik potvrdio (2026-11-03):** Coolify env + frontend rebuild za D-041 su urađeni i testirani —
+  taj korak se više ne vodi kao otvoren.
+
 ## Šta je sljedeći korak
 
-1. **FE-08 — Operacije (projekti, zadaci)**: liste, detalji, tabla zadataka, dispatch — tokeni + stanja
-   (skeleton/greška/prazno), pa testovi; zatim **FE-09** (flota/logistika) itd. do **FE-14**.
+1. **FE-09 — Flota i logistika**: liste vozila i tura, statusi preko `lib/labels.ts` (D-046), stanja
+   (skeleton/greška/prazno), pa testovi; zatim **FE-10** (dnevnik/HSE/dokumenti) do **FE-14**.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija
    refresh tokena gasi sve sesije) čeka BE-02 dopunu.
-3. **Vlasnik (Coolify, D-041)** — obavezno prije produkcijske provjere: ① backend
-   `CORS_ORIGIN=https://gradix.ba101.top`, ② frontend `CSP_API_ORIGIN=https://api.gradix.ba101.top`,
-   ③ frontend `VITE_API_URL=https://api.gradix.ba101.top` → **rebuild**; `TRUST_PROXY` ostaviti `1`.
-4. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
+3. Nakon svakog segmenta: kratak izvještaj u chatu; bez PR-ova.
 
 ## Otvorena pitanja / blokatori
 
@@ -706,8 +716,7 @@ kratak izvještaj poslije svakog. Trenutno: **37/59 segmenata `done`** (zadnji: 
 i `AUDIT/02_MASTER_AUDIT_PLAN.md` §8); D-041 (dva domena) je obavezan uslov za produkciju.
 
 **Otvoreno za vlasnika (ne blokira kod):**
-- **Coolify env + rebuild frontenda** (D-041, koraci u §3 iznad) — bez toga prijava na produkciji pada
-  (CORS/CSP) iako je kod ispravan.
+- ~~Coolify env + rebuild frontenda (D-041)~~ — **vlasnik potvrdio da je urađeno i testirano** (2026-11-03).
 - Redis `ACL SETUSER gradix …` (D-014) ako još nije izvršen; `REDIS_PORT=6380`, TLS CA mount.
 - `GET /api/files` traži `Authorization`, pa `<img src>` ne može učitati logo — kandidat za budući
   backend segment (potpisani URL-ovi ili javni logo).

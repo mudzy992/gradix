@@ -40,8 +40,13 @@ export default defineConfig({
         'src/pages/change-password-page.tsx',
         'src/components/auth/auth-card.tsx',
         'src/components/auth/password-input.tsx',
+        // FE-08 — operacije (projekti, zadaci) i mape enuma
+        'src/lib/labels.ts',
+        'src/pages/projects-page.tsx',
+        'src/pages/tasks-page.tsx',
+        'src/pages/task-detail-page.tsx',
       ],
-      thresholds: { lines: 85, functions: 85, statements: 85, branches: 75 },
+      thresholds: { lines: 85, functions: 85, statements: 85, branches: 85 },
     },
   },
 })

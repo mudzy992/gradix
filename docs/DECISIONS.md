@@ -527,6 +527,28 @@ ime) jer se duge lozinke na telefonu ne mogu unijeti bez greške; `autoComplete`
 `current-password`/`new-password` za menadžere lozinki; `change-password` dobija svoje dugme
 „Promijeni lozinku“ umjesto generičkog „Sačuvaj“.
 
+### D-046 — Enumi se prevode na jednom mjestu, a stanja lista su obavezna
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Liste projekata i zadataka prikazivale su **sirove enume** iz baze: `IN_PROGRESS`, `PENDING`,
+`URGENT` — interfejs je bio polovično preveden, a badge nije nosio značenje (sve isto sivo). Uz to
+nije bilo stanja učitavanja (prazna tabela izgleda kao „nema podataka“), greške (pad je bio tih),
+prazne liste (prazna tabela bez poruke) ni paginacije (dugme „Dalje“ je uvijek bilo aktivno).
+
+**Odluka:** `src/lib/labels.ts` je **jedino** mjesto koje zna kako se enum zove korisniku i koji ton
+badge-a nosi (`projectStatus`, `taskStatus`, `taskPriority`, `assignmentRole`, `formatDuration`).
+Vraća `{ labelKey, tone, known }`; nepoznat enum ne puca — prikaže se sirova vrijednost (`defaultValue`),
+ali `known: false` ostaje signal za test. Liste imaju **obavezna** stanja: skeleton (`aria-busy`),
+trajna greška sa „Pokušaj ponovo“, prazno stanje („nema“ vs. „nema rezultata za upit“) i paginaciju
+koja se prikazuje **samo** kad ima više strana.
+
+**Zašto ne enum → tekst u svakoj komponenti:** isti enumi se pojavljuju i u floti, logistici i
+obračunu (FE-09/FE-12); pet kopija bi se razišlo pri prvom novom statusu.
+
+**Posljedica:** test `labels.spec.ts` poredi mape sa **Prisma šemom** (`KNOWN_STATUSES`), pa novi
+status u bazi obara test dok se ne prevede. Tabele dobile `caption` (ukupan broj / prazno stanje) i
+označena polja pretrage; detalj projekta koristi `dt`/`dd` umjesto `div`-ova sa dvotačkom u tekstu.
+
 ---
 
 ## Zamijenjene / povučene odluke

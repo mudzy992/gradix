@@ -161,6 +161,38 @@ export const en = {
     next: 'Next',
     prev: 'Previous',
     page: 'Page {{page}}',
+    pageOf: 'Page {{page}} of {{pages}}',
+    pagination: 'Pagination',
+  },
+  status: {
+    project: {
+      PLANNING: 'Planning',
+      IN_PROGRESS: 'In progress',
+      ON_HOLD: 'On hold',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled',
+    },
+    task: {
+      PENDING: 'Unassigned',
+      ASSIGNED: 'Assigned',
+      IN_PROGRESS: 'In progress',
+      PAUSED: 'Paused',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled',
+    },
+    priority: {
+      LOW: 'Low',
+      MEDIUM: 'Medium',
+      HIGH: 'High',
+      URGENT: 'Urgent',
+    },
+    role: {
+      PM: 'Project manager',
+      SS: 'Site supervisor',
+      WORKER: 'Worker',
+      DRIVER: 'Driver',
+      OP: 'Operator',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',
