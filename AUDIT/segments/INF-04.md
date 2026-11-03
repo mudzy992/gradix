@@ -132,6 +132,6 @@ obrazloženje; vidi D‑038). Zadržano: `console.error/warn` dozvoljen guardrai
 | | |
 |---|---|
 | Datum | 2026-11-03 |
-| Commit(ovi) | kod + testovi + docs + matrica (hash u `AUDIT/STATE.md`), zatim zapis runa |
-| CI run | vidi `AUDIT/STATE.md` (upisuje se poslije `gh run watch`) |
+| Commit(ovi) | `b526334` (kod + testovi + docs + matrica), `fix(logging)` (tipiziran `JSON.parse` u specovima) |
+| CI run | ⚠️ `41658795448` — 5/6: `Backend (lint)` pao na 11 `no-unsafe-*` (JSON.parse → `any`) · ✅ **`41659369533`** — **6/6** zelen |
 | Status | `done` |
