@@ -11,3 +11,4 @@ backend/dist/
 coverage/
 .idea/
 upload-tmp/
+backups/

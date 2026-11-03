@@ -1,6 +1,7 @@
 file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,83,pregledano,"BE-08: SEED_DEMO=""false"" (produkcija = samo platform admin, P9)",2026-11-03
 .env.example,INF,compose,INF-01,86,pregledano,"BE-08: SEED_DEMO=""true"" (razvoj) uz objašnjenje",2026-11-03
+.github/workflows/backup-restore.yml,CI,ci,CI-01,112,nepregledano,,
 .github/workflows/ci.yml,CI,ci,CI-01,628,pregledano,BE-08: SEED_DEMO=true u backend-e2e i web-e2e (demo podaci za testove),2026-11-03
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,66,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
@@ -513,9 +514,11 @@ mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,252,nepregledano,,
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,254,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
 scripts/audit/segments.json,STD,audit-tools,STD-01,436,nepregledano,,
+scripts/ops/backup.sh,INF,ops-scripts,INF-06,54,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
+scripts/ops/restore.sh,INF,ops-scripts,INF-06,77,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
 scripts/standards/check-all.mjs,STD,standards,STD-01,171,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
 scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02

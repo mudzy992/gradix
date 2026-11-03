@@ -29,6 +29,9 @@ mobile health (FE/MOB segmenti).
 
 **Fajlovi:** `modules/health/{ready.controller.ts,migration-count.ts,health.service.ts,
 health.service.spec.ts,health.controller.ts,health.module.ts}` + `test/health.e2e-spec.ts`.
+> Napomena: matrica cijeli `modules/health/**` vodi pod **BE-18** (health modul), pa INF-05 nema
+> vlastitih redova u matrici — pregledani su i zapisani u BE-18 redovima. `MinioService.healthCheck()`
+> je u BE-11 redu (`modules/files/`), a workflow iz INF-06 u CI-01 redu.
 Dotaknuto: `modules/files/minio.service.ts` (`healthCheck()`), `test/helpers/minio-memory.ts`.
 
 **Pretpostavke:** `prisma/migrations` postoji u produkcijskoj slici (`backend/Dockerfile` kopira

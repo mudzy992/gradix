@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `INF-05` — Readiness ugovor: `GET /api/ready` (Postgres + MinIO + migracije, `503` kad nije spremno) — `done` |
-| CI | ✅ [run 41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) — **6/6** zelen (`feat(health): INF-05 …` + popravka zavsnosti testa od `MINIO_SKIP`; prvi pokušaj `41660146614` pao samo na `Unit testovi`) |
+| Zadnji commit | `INF-06` — Backup/restore runbook: `scripts/ops/backup.sh` + `restore.sh` i noćni drill workflow — `in-progress` (čeka zelen drill) |
+| CI | ⏳ upisuje se poslije `gh run watch` (main CI za `feat(ops): INF-06 …`) |
 | Prethodni pokušaj | ⚠️ [41655804188](https://github.com/mudzy992/gradix/actions/runs/41655804188) — 5/6: `Backend e2e` ✅, pao **samo** Audit (drift `loc` u matrici: `mobile/sync/engine.ts` 111 vs 104 poslije vraćanja formatiranja) |
 | Zadnji potvrđeno zelen run (INF-05) | ✅ [41660957706](https://github.com/mudzy992/gradix/actions/runs/41660957706) — **6/6** · prije: [41659369533](https://github.com/mudzy992/gradix/actions/runs/41659369533) ✅ 6/6 (INF-04) · [41657489717](https://github.com/mudzy992/gradix/actions/runs/41657489717) ✅ 6/6 (BE-18) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
@@ -548,7 +548,16 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   `{status:'ok', detail:'skipped'}` (iskreno, ne lažni uspjeh).
 - **Testovi:** **209/209** unit (+3); e2e `health`: `/api/ready` sa tri provjere.
 - **Matrica:** vidi tabelu gore; `check:all` 15 koraka / 0 palo.
-- **Zatvoreno:** `INF-05` — **28/59** segmenata `done` (CI upisan u tabeli iznad).
+- **Zatvoreno:** `INF-05` — **28/59** segmenata `done` (CI upisan u tabeli iznad).### 2026-11-03 — INF-06 (backup/restore) — u toku
+- Dodate operativne skripte `scripts/ops/backup.sh` (custom-format `pg_dump` + `sha256` + retencija)
+  i `scripts/ops/restore.sh` (traži `RESTORE_DATABASE_URL`, odbija isti URL i ime sa `prod`,
+  provjerava `sha256`, `pg_restore --exit-on-error`, pa brojevi redova ključnih tabela).
+- Novi workflow `.github/workflows/backup-restore.yml` (noćni `schedule` 03:30 UTC + ručni
+  `workflow_dispatch`): migracije + seed → backup → restore u `gradix_restore` → poređenje brojeva
+  redova i migracija; dump kao artefakt 7 dana.
+- Runbook u `docs/INFRASTRUCTURE.md` §7 (RPO ≤ 24 h, RTO ≤ 1 h, šta skripte **ne** pokrivaju:
+  MinIO objekti, env izvoz, PITR). Dugovi I2 (readiness) i I3 (backup drill) zatvoreni.
+- **Otvoreno:** drill mora proći prvi put (ručno pokretanje) prije nego segment ide u `done`.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 

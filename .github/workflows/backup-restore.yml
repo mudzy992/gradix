@@ -1,0 +1,111 @@
+# INF-06 — noćni test backup/restore lanca.
+#
+# Okida se **samo** po rasporedu i ručno (`workflow_dispatch`); nema `pull_request` trigger-a
+# (pravilo iz CI-01). Dokaz koji ovaj workflow daje: dump napravljen `backup.sh`-om može se
+# vratiti `restore.sh`-om u **drugu** bazu i brojevi redova se poklapaju sa izvorom.
+name: Backup/restore drill
+
+on:
+  schedule:
+    # 03:30 UTC (05:30 u BiH ljeti) — van radnog vremena, prije jutarnjih deploya.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: backup-restore
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Backup → restore → provjera
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: gradix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U root -d gradix"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_VERSION: '22'
+      DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
+      RESTORE_DATABASE_URL: postgresql://root:root@localhost:5432/gradix_restore?schema=public
+      BACKUP_DIR: ${{ github.workspace }}/backups
+      MINIO_SKIP: 'true'
+      JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+      CORS_ORIGIN: http://127.0.0.1:4173
+      SEED_PASSWORD: GradixSeed1
+      SEED_DEMO: 'true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Klijentski alati (pg_dump/pg_restore/psql)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalacija + Prisma client + migracije + seed
+        working-directory: backend
+        run: |
+          npm ci --no-audit --no-fund
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run db:seed
+
+      - name: Backup (backup.sh)
+        run: ./scripts/ops/backup.sh
+
+      - name: Ciljna baza za restore
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE gradix_restore'
+
+      - name: Restore (restore.sh)
+        run: ./scripts/ops/restore.sh "$BACKUP_DIR"/gradix-*.dump
+
+      - name: Uporedi brojeve redova izvor ↔ restore
+        run: |
+          set -euo pipefail
+          failed=0
+          for table in users companies projects tasks timer_sessions audit_logs cost_entries diary_entries; do
+            src=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
+            dst=$(psql "$RESTORE_DATABASE_URL" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
+            if [ "$src" != "$dst" ]; then
+              echo "✗ $table: izvor=$src restore=$dst"
+              failed=1
+            else
+              echo "✓ $table: $src"
+            fi
+          done
+          # Restore mora nositi i Prisma istoriju migracija, inače je baza „nepoznatog“ stanja.
+          applied=$(psql "$RESTORE_DATABASE_URL" -tAc \
+            "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" | tr -d ' ')
+          expected=$(ls -1 backend/prisma/migrations | wc -l | tr -d ' ')
+          echo "✓ migracije u restore-u: $applied / $expected"
+          if [ "$applied" -lt "$expected" ]; then failed=1; echo "✗ nedostaju migracije u restore-u"; fi
+          exit $failed
+
+      - name: Sačuvaj dump kao artefakt (7 dana)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backup-drill-dump
+          path: backups/
+          retention-days: 7
+          if-no-files-found: warn

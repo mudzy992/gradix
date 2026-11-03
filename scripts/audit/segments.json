@@ -112,7 +112,7 @@
       "id": "INF-06",
       "layer": "INF",
       "title": "Backup / restore runbook + skripte",
-      "status": "planned",
+      "status": "in-progress",
       "scope": "process",
       "scopeReason": "Backup/restore skripte još ne postoje; nastaju u ovom segmentu (scripts/ops/backup*, runbook u docs/INFRASTRUCTURE.md)."
     },

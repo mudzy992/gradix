@@ -169,13 +169,58 @@ pa se Aktivacija/uklanjanje zatvara u INF-07).
 
 ---
 
-## 7. Backup / restore (dug)
+## 7. Backup / restore (INF-06)
 
-| Šta | Trenutno | Preporuka (u planu) |
+**Skripte:** [`scripts/ops/backup.sh`](../scripts/ops/backup.sh) i
+[`scripts/ops/restore.sh`](../scripts/ops/restore.sh). Isti alati rade na hostu, u kontejneru i u
+CI-ju (`pg_dump`/`pg_restore`/`psql` iz `postgresql-client`).
+
+### 7.1 Rutinski backup (dnevno)
+
+```bash
+DATABASE_URL="postgresql://…/gradix?schema=public" \
+BACKUP_DIR=/var/backups/gradix BACKUP_RETENTION=14 \
+./scripts/ops/backup.sh
+```
+
+- `pg_dump --format=custom --compress=9 --no-owner --no-privileges` → jedan `.dump` + `.sha256`.
+- Retencija: zadržava se `BACKUP_RETENTION` (default **7**) najnovijih dumpova.
+- **Gdje držati:** van hosta na kojem radi baza (Coolify „Scheduled Tasks“ ili cron na DB hostu);
+  dump **nije** u git-u (`backups/` je u `.gitignore`).
+- **RPO / RTO (dogovor):** RPO ≤ 24 h (dnevni dump), RTO ≤ 1 h (restore u drugu bazu + preusmjeranje
+  aplikacije). Ako treba manji RPO, uključiti PITR (WAL arhiv) na DB servisu — van obima v1.
+
+### 7.2 Restore (vježba ili stvarni oporavak)
+
+```bash
+# 1) napravi praznu ciljnu bazu (nikad ne restauriraj preko aktivne!)
+psql "$ADMIN_URL" -c 'CREATE DATABASE gradix_restore'
+# 2) vrati dump u cilj (provjerava sha256 i odbija DATABASE_URL / ime sa "prod")
+RESTORE_DATABASE_URL="postgresql://…/gradix_restore" \
+./scripts/ops/restore.sh /var/backups/gradix/gradix-20261103T033000Z.dump
+# 3) provjeri pa tek onda preusmjeri aplikaciju (Coolify: DATABASE_URL na novu bazu)
+```
+
+`restore.sh` namjerno traži **`RESTORE_DATABASE_URL`** (nikad `DATABASE_URL`), odbija cilj koji je
+identičan izvoru i cilj čije ime sadrži `prod` (osim uz `ALLOW_PRODUCTION_RESTORE=yes`), te provjeri
+`sha256` prije nego što dira bazu. Na kraju ispiše broj redova za `users, projects, tasks,
+timer_sessions, audit_logs, cost_entries` — prazna tabela je signal da restore nije potpun.
+
+### 7.3 Dokaz da restore radi (noćni drill)
+
+Workflow [`.github/workflows/backup-restore.yml`](../.github/workflows/backup-restore.yml) svaku
+noć u **03:30 UTC** (i ručno, `workflow_dispatch`) podigne Postgres, pusti migracije + seed,
+napravi backup, vrati ga u `gradix_restore` i **uporedi brojeve redova** izvor ↔ restore
+(`users, companies, projects, tasks, timer_sessions, audit_logs, cost_entries, diary_entries`) plus
+broj primijenjenih migracija. Dump se čuva kao artefakt 7 dana.
+
+### 7.4 Šta skripte ne pokrivaju
+
+| Šta | Trenutno | Preporuka |
 |---|---|---|
-| PostgreSQL | prepušteno Coolify/DB servisu | dnevni `pg_dump` + test restore u CI-ju (noćni) |
-| MinIO | fajlovi na hostu (`/mnt/shared-app-files/...`) | `mc mirror` na sekundarni bucket/disk |
+| MinIO objekti | fajlovi na hostu (`/mnt/shared-app-files/...`) | `mc mirror` na sekundarni bucket/disk (ručni korak u runbook-u, **ne** tvrdi se da je automatizovan) |
 | Konfiguracija | Coolify env | izvoz env-a u šifrovani backup van hosta |
+| PITR (WAL) | nije uključeno | na DB servisu, ako RPO od 24 h nije dovoljan |
 
 ---
 
@@ -237,8 +282,8 @@ Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
 | # | Dug | Segment |
 |---|---|---|
 | I1 | ~~Nema strukturisanog logovanja ni korelacionog ID-a~~ **riješeno** u INF-04 (JSON logger + `x-request-id`) | INF-04 |
-| I2 | Nema metrika/readiness endpointa (samo `SELECT 1`) | INF-05 |
-| I3 | Nema automatskog backup/restore testa | INF-06 |
+| I2 | ~~Nema metrika/readiness endpointa (samo `SELECT 1`)~~ **riješeno** u INF-05 (`/api/ready`: Postgres + MinIO + migracije) | INF-05 |
+| I3 | ~~Nema automatskog backup/restore testa~~ **riješeno** u INF-06 (skripte + noćni drill u CI-ju) | INF-06 |
 | I4 | Nema SBOM/skeniranja slika ni pinovanja po digestu | CI-04 |
 | I5 | Kontejneri rade kao `root` (backend/frontend) | INF-03 |
 | I6 | Nema resource limita (`cpus`, `mem_limit`) u compose-u | INF-03 |
