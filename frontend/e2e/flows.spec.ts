@@ -12,7 +12,8 @@ import { expect, test } from '@playwright/test'
 test.describe('FE-06 — admin tok', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard')
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20_000 })
+    // Sesija iz `storageState`: ako padne, test mora reći „nismo prijavljeni“, ne „nema kartica“.
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
   })
 
   test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async ({ page }) => {

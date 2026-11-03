@@ -352,6 +352,17 @@ jobs:
           set -o pipefail
           npx playwright test 2>&1 | tee /tmp/playwright.log
 
+      - name: Playwright artefakti (na grešku)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Logovi (na grešku)
         if: failure()
         run: |

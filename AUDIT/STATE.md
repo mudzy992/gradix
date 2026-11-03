@@ -658,6 +658,10 @@ kratak izvještaj poslije svakog. Trenutno: **36/59 segmenata `done`** (zadnji: 
 - **Rate-limit je oborio prvi run** (41727820440): 16 testova × prijava > 5/min po IP-u (D-042 daje
   pravi IP) → polovina padne na `/login`. Riješeno: `auth.setup.ts` pravi **jednu prijavu po roli** i
   čuva `storageState`; `guest` projekti (`login`, `a11y`, `guards`) rade bez sesije — **3 prijave po runu**.
+- **Drugi pad (41728489546):** `storageState` je bio prazan iako je prijava prošla — bez „zapamti me“
+  refresh token ide u **sessionStorage**, a `storageState` čuva samo localStorage. Setup sada čekira
+  `#remember`, provjerava da stanje nije prazno, a `beforeEach` tvrdi `toHaveURL(/dashboard/)`.
+  Na pad se objavljuje artefakt `playwright-artifacts` (html + trace).
 - **Ukupno 18 E2E testova** u 6 fajlova (`setup`/`guest`/`admin`/`worker` projekti).
 
 ## Šta je sljedeće (tačan sljedeći korak)

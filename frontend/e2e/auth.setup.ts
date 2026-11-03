@@ -24,7 +24,14 @@ const AUTH_DIR = path.join(import.meta.dirname, '.auth')
 
 async function saveState(page: Page, file: string) {
   fs.mkdirSync(AUTH_DIR, { recursive: true })
-  await page.context().storageState({ path: path.join(AUTH_DIR, file) })
+  const target = path.join(AUTH_DIR, file)
+  await page.context().storageState({ path: target })
+  // Sanity: ako token nije u localStorage, sesija neće preživjeti `page.goto` u drugom testu.
+  const saved = JSON.parse(fs.readFileSync(target, 'utf8')) as { origins?: { localStorage?: unknown[] }[] }
+  const keys = saved.origins?.flatMap((origin) => origin.localStorage ?? []) ?? []
+  if (keys.length === 0) {
+    throw new Error(`storageState za ${file} je prazan — „zapamti me“ nije primijenjen`)
+  }
 }
 
 /** Prazno stanje — da zavisni projekti ne padnu lokalno kad kredencijala nema. */
@@ -40,6 +47,9 @@ async function login(page: Page, email: string, password: string) {
   await page.goto('/login')
   await page.locator('#identifier').fill(email)
   await page.locator('#password').fill(password)
+  // „Zapamti me“ MORA biti čekirano: bez njega `writeRefreshToken` ide u **sessionStorage**,
+  // a `storageState` čuva samo cookies + localStorage — sesija bi bila prazna (F-FE-06-05).
+  await page.locator('#remember').click()
   await page.getByRole('button', { name: /prijavi|sign in/i }).click()
   await expect(page).toHaveURL(/dashboard/, { timeout: 20_000 })
 }
