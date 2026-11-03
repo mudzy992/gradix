@@ -353,6 +353,10 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **B-stavke:** **B11** — dnevnik/HSE/fajlovi nisu u auditu (sljedeća migracija).
 - **Otvoreno pitanje (vlasnik):** radnici ne vide vlastite HSE prijave (`hse.read` je uslov za listu);
   postojeći e2e to zaključava, pa nije mijenjano bez odluke — vidi `AUDIT/segments/BE-11.md` §5.
+- **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
+  pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
+  `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
+  strukturu). Oba popravljena u istom danu; novi run se upisuje ispod.
 
 ## Šta je sljedeće (tačan sljedeći korak)
 

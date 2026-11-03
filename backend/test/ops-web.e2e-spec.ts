@@ -170,7 +170,7 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     expect(ok.status).toBe(201);
     const entryId = ok.body.data.id as string;
     const me = await request(app.getHttpServer()).get('/api/me').set(auth(ss));
-    const companyId = me.body.data.user.company.id as string;
+    const companyId = me.body.data.company.id as string;
     const path = `${companyId}/2026/11/photo-${Date.now()}.png`;
     const halfCoords = await request(app.getHttpServer())
       .post(`/api/diary/${entryId}/photos`)

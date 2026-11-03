@@ -94,8 +94,13 @@ export class FilesService {
         this.minio.bucket,
         objectPath,
       );
-      const contentType =
-        stat.metaData?.['content-type'] ?? stat.metaData?.['Content-Type'];
+      // `minio` tipizira `metaData` kao `any` — svodimo ga na mapu odmah, da lint
+      // (`no-unsafe-assignment`) ostane čist.
+      const metaData = (stat.metaData ?? {}) as Record<
+        string,
+        string | undefined
+      >;
+      const contentType = metaData['content-type'] ?? metaData['Content-Type'];
       return {
         stream,
         path: objectPath,
