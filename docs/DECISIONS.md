@@ -354,6 +354,28 @@ obavezan (prazan `REDIS_HOST` = staro ponašanje).
 **Posljedica:** deploy bez `REDIS_PASSWORD` uz zadat `REDIS_HOST` **ne starta** (validacija u
 `env.ts`) — namjerno, jer bi tiho pao na `default` korisnika ili na neautentifikovanu vezu.
 
+### D-040 — Paleta: kombinacija A + B („Gradix Green + teal signal“)
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+P8 je tražila novu paletu i WCAG 2.2 AA, ali nije rekla kakav identitet. Pripremljena su dva
+predloga — A „Gradix Green“ (duboka zelena + amber, topla podloga) i B „Slate / Teal“ (neutralni
+slate + teal). Vlasnik je odabrao **kombinaciju**: zadržava se A podloga i brend zelena (topao,
+prepoznatljiv „alat za teren“), teal iz B preuzima **akcenat** (informacija, isticanje), a amber iz
+A postaje **zaseban `--warning`** token.
+
+**Zašto amber nije ostao akcenat:** u aplikaciji gdje se amber koristi za HSE upozorenja, istekao
+liječnički i registraciju vozila, „akcenat = amber“ bi značio da obična akcija izgleda kao
+upozorenje. Zato su signali razdvojeni: zelena = brend/akcija, teal = informacija, amber =
+upozorenje, crvena = greška/opasnost.
+
+**Odluka:** tokeni su u `frontend/src/index.css` (`:root` + `.dark` + `--warning` u `@theme
+inline`); vrijednosti i dokazi kontrasta u `docs/design/FE-01-palette-proposals.md` §5 (najmanji
+par 5.02:1, prag AA je 4.5:1). Nijedna komponenta ne hardkodira boju (provjereno grep-om: nema
+`bg-[#…]` ni `text-green-600` obrazaca), pa je povratak na A ili B izmjena ~20 vrijednosti.
+
+**Posljedica:** `.dark` blok postoji ali je **inertan** (nigdje se ne dodaje klasa `dark`) — tamna
+tema nije u obimu v1; tokeni su tu da je kasnije uključivanje jedno pravilo, a ne redizajn.
+
 ---
 
 ## Zamijenjene / povučene odluke

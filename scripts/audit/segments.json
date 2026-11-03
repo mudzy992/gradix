@@ -253,10 +253,10 @@
     {
       "id": "FE-01",
       "layer": "FE",
-      "title": "Design tokeni + paleta",
-      "status": "in-progress",
+      "title": "Design tokeni + paleta (kombinacija A+B)",
+      "status": "done",
       "scope": "files",
-      "scopeReason": "Dva predloga tokena u docs/design (A „Gradix Green“ / B „Slate / Teal“); primjena u frontend/src/index.css čeka odluku vlasnika."
+      "scopeReason": "Tokeni u frontend/src/index.css (C = zelena brend + teal akcenat + --warning); predlozi A/B i pregled u docs/design (D-040)."
     },
     {
       "id": "FE-02",

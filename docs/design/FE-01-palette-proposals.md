@@ -1,11 +1,12 @@
 # FE-01 — dva predloga palete (odluka vlasnika)
 
-> **Status:** predlog, **nije primijenjeno**. Vlasnik bira jedan od dva seta tokena; tek poslije
-> odluke se mijenja `frontend/src/index.css` i paleta ulazi u stranice (FE-02…).
+> **Status:** **primijenjen predlog C (kombinacija A + B)** — vlasnik je 2026-11-03. odabrao
+> „kombinacija“; tokeni su u `frontend/src/index.css`, odluka **D-040**. A i B ostaju u ovom
+> dokumentu kao alternative (zamjena = izmjena ~20 vrijednosti tokena, bez diranja komponenti).
 >
-> Pregled: [`palette-preview.html`](./palette-preview.html) (otvori u browseru — oba predloga jedan
-> pored drugog, iste komponente) · statične slike [`palette-A.png`](./palette-A.png),
-> [`palette-B.png`](./palette-B.png), [`palette-comparison.png`](./palette-comparison.png).
+> Pregled: [`palette-preview.html`](./palette-preview.html) (A / B / C jedan pored drugog, iste
+> komponente) · statične slike [`palette-A.png`](./palette-A.png), [`palette-B.png`](./palette-B.png),
+> [`palette-comparison.png`](./palette-comparison.png).
 
 ## 1. Zašto dva predloga
 
@@ -122,7 +123,73 @@ Svi parovi prolaze AA za normalan tekst; `destructive`/`success` se koriste i ka
 pa su namjerno tamniji od „tailwind 500“ nijansi. Fokus prsten (`--ring`) ima ≥ 3:1 prema susjednim
 bojama (AA za ne-tekst), a fokus je uvijek i **vidljiv oblik**, ne samo boja.
 
-## 5. Šta se mijenja pri primjeni (obim)
+## 5. Predlog C — „Gradix Green + teal signal“ (kombinacija, **primijenjeno**)
+
+Spaja A i B: **podloga, neutrali i brend zelena iz A** (topao, „terenski“ karakter, prepoznatljivost)
++ **teal iz B kao akcenat/informacija**, dok amber iz A postaje **zaseban `--warning` token** — tako
+se upozorenje (HSE, istekao liječnički, registracija vozila) nikad ne čita kao „akcija“.
+
+### 5.1 Svjetla tema (`:root`)
+
+| Token | Vrijednost | Porijeklo / namjena |
+|---|---|---|
+| `--background` | `#F7F8F6` | A — topla off-white podloga |
+| `--foreground` | `#14201A` | A — glavni tekst |
+| `--card` / `--popover` | `#FFFFFF` | A/B |
+| `--primary` | `#0F5132` | **A** — brend zelena (dugmad, aktivna navigacija, link) |
+| `--primary-foreground` | `#FFFFFF` | A |
+| `--secondary` | `#E7EFE9` | A |
+| `--secondary-foreground` | `#0F5132` | A |
+| `--muted` | `#EFF2EE` | A — zaglavlja tabela, zebra |
+| `--muted-foreground` | `#5A6B60` | A |
+| `--accent` | `#0F766E` | **B** — teal: akcenat, informacija, „u toku“ isticanje |
+| `--accent-foreground` | `#FFFFFF` | B |
+| `--warning` | `#B45309` | **A** (amber) — upozorenja/HSE, odvojeno od akcenta |
+| `--warning-foreground` | `#FFFFFF` | — |
+| `--destructive` | `#B42318` | A/B |
+| `--success` | `#15803D` | A/B |
+| `--border` / `--input` | `#D8E0D9` | A |
+| `--ring` | `#0F5132` | A — fokus prsten |
+| `--radius` | `0.75rem` | A |
+
+### 5.2 Tamna tema (`.dark`, inertna dok se ne uključi)
+
+| Token | Vrijednost |
+|---|---|
+| `--background` | `#0B120E` |
+| `--foreground` | `#E8EFE9` |
+| `--card` / `--popover` | `#121A15` |
+| `--primary` | `#34D399` |
+| `--primary-foreground` | `#062A1E` |
+| `--secondary` | `#17211B` |
+| `--secondary-foreground` | `#CFE3D6` |
+| `--muted` | `#17211B` |
+| `--muted-foreground` | `#9AAF9F` |
+| `--accent` | `#2DD4BF` |
+| `--accent-foreground` | `#062A1E` |
+| `--warning` | `#F5A524` |
+| `--warning-foreground` | `#1A1206` |
+| `--destructive` | `#F97066` |
+| `--success` | `#34D399` |
+| `--border` / `--input` | `#22302A` |
+| `--ring` | `#34D399` |
+
+### 5.3 Kontrast (WCAG 2.2 AA — prag 4.5:1 za tekst)
+
+| Par | C svjetla | C tamna |
+|---|---|---|
+| `foreground` na `background` | **15.75:1** | **16.22:1** |
+| `muted-foreground` na `background` | 5.32:1 | 8.14:1 |
+| `primary-foreground` na `primary` | 9.36:1 | 8.05:1 |
+| `accent-foreground` na `accent` | 5.47:1 | 8.31:1 |
+| `warning-foreground` na `warning` | 5.02:1 | 9.08:1 |
+| `destructive` na `card` | 6.57:1 | — |
+| `success` na `card` | 5.02:1 | — |
+
+Svi parovi prolaze AA. Statusi se **nikad** ne razlikuju samo bojom — uvijek i tekstom/ikonom
+(zeleno „U toku“ vs teal „Planirano“ vs amber „Kasni“ nisu dovoljni sami po sebi).
+
+## 6. Šta se mijenja pri primjeni (obim)
 
 | Fajl | Promjena |
 |---|---|
@@ -132,7 +199,7 @@ bojama (AA za ne-tekst), a fokus je uvijek i **vidljiv oblik**, ne samo boja.
 
 Zato je odluka jeftina sada, a skupa poslije (kad se na paletu nasloni desetine ekrana).
 
-## 6. Preporuka
+## 7. Preporuka (prije odluke)
 
 **Predlog A („Gradix Green“)** — građevinski kontekst, prepoznatljivost i topla podloga daju
 ozbiljniji „alat za teren“ utisak; amber akcenat prirodno pokriva HSE/upozorenja. Uslov: statusi
@@ -140,11 +207,13 @@ ozbiljniji „alat za teren“ utisak; amber akcenat prirodno pokriva HSE/upozor
 (već je tako u tabelama). Ako vlasnik želi neutralniji, korporativni ton, **B** je jednako
 ispravan po pristupačnosti i jeftin za primjenu.
 
-## 7. Odluka vlasnika
+## 8. Odluka vlasnika
 
 - [ ] **A — „Gradix Green“**
 - [ ] **B — „Slate / Teal“**
-- [ ] kombinacija (npr. B podloga + A primary) — javiti koje tokene mijenjati
+- [x] **kombinacija → predlog C** (zelena brend + teal signal + amber za upozorenja) — *vlasnik,
+  2026-11-03: „Kombinacija, nastavi dalje“*
 
-Poslije izbora: tokeni se upisuju u `index.css`, `AUDIT/segments/FE-01.md` dobija zapis, matrica i
-`STATE.md` se ažuriraju, pa se prelazi na primjenu kroz ekrane (FE-02…).
+**Primijenjeno:** tokeni su u `frontend/src/index.css` (`:root` + `.dark`), `--warning` je dodat u
+`@theme inline`. Ako vlasnik ipak izabere A ili B, mijenja se samo tabela vrijednosti u `:root` —
+komponente, testovi i ekrani ostaju netaknuti. Zapis: `AUDIT/segments/FE-01.md`, D-040.

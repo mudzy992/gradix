@@ -3,27 +3,62 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * FE-01 (D-040) — paleta „Gradix Green + teal signal" (kombinacija predloga A i B):
+ * topla neutralna podloga i duboka zelena kao brend (A) + teal kao akcenat/signal (B),
+ * a amber je izdvojen u `--warning` da se upozorenje ne miješa sa akcentom.
+ * Kontrasti (WCAG 2.2 AA, ≥ 4.5:1 za tekst) su u docs/design/FE-01-palette-proposals.md §5.
+ * Mijenjaju se SAMO vrijednosti tokena — nijedna komponenta ne hardkodira boju.
+ */
 :root {
-  --background: #f4f1ea;
-  --foreground: #1a1a1a;
+  --background: #f7f8f6;
+  --foreground: #14201a;
   --card: #ffffff;
-  --card-foreground: #1a1a1a;
+  --card-foreground: #14201a;
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #1b365d;
-  --primary-foreground: #f4f1ea;
-  --secondary: #e8e3d8;
-  --secondary-foreground: #1b365d;
-  --muted: #ebe6db;
-  --muted-foreground: #5c5852;
-  --accent: #c45c26;
-  --accent-foreground: #f4f1ea;
+  --popover-foreground: #14201a;
+  --primary: #0f5132;
+  --primary-foreground: #ffffff;
+  --secondary: #e7efe9;
+  --secondary-foreground: #0f5132;
+  --muted: #eff2ee;
+  --muted-foreground: #5a6b60;
+  --accent: #0f766e;
+  --accent-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
   --destructive: #b42318;
-  --success: #2f6f4e;
-  --border: #d9d3c6;
-  --input: #d9d3c6;
-  --ring: #1b365d;
+  --success: #15803d;
+  --border: #d8e0d9;
+  --input: #d8e0d9;
+  --ring: #0f5132;
   --radius: 0.75rem;
+}
+
+/* Tamna tema: tokeni postoje da `.dark` (kad se uključi) ne padne na svjetle vrijednosti.
+   Do tada je inertna — nigdje se ne dodaje klasa `dark` na <html>. */
+.dark {
+  --background: #0b120e;
+  --foreground: #e8efe9;
+  --card: #121a15;
+  --card-foreground: #e8efe9;
+  --popover: #121a15;
+  --popover-foreground: #e8efe9;
+  --primary: #34d399;
+  --primary-foreground: #062a1e;
+  --secondary: #17211b;
+  --secondary-foreground: #cfe3d6;
+  --muted: #17211b;
+  --muted-foreground: #9aaf9f;
+  --accent: #2dd4bf;
+  --accent-foreground: #062a1e;
+  --warning: #f5a524;
+  --warning-foreground: #1a1206;
+  --destructive: #f97066;
+  --success: #34d399;
+  --border: #22302a;
+  --input: #22302a;
+  --ring: #34d399;
 }
 
 @theme inline {
@@ -42,6 +77,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-success: var(--success);
   --color-border: var(--border);
   --color-input: var(--input);

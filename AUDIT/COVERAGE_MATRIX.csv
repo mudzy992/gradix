@@ -412,7 +412,7 @@ frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/polish-en.ts,FE,shared,FE-15,53,nepregledano,,
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,25,nepregledano,,
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,25,nepregledano,,
-frontend/src/index.css,FE,design,FE-01,69,nepregledano,,
+frontend/src/index.css,FE,design,FE-01,106,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.ts,FE,shared,FE-15,156,nepregledano,,
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,nepregledano,,
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,nepregledano,,
