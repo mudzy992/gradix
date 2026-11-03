@@ -58,9 +58,6 @@ test.describe('FE-06 — admin tok', () => {
 
     const project = page.getByRole('link', { name: 'Sarajevo obilaznica' })
     await expect(project).toBeVisible({ timeout: 15_000 })
-    // FE-08: status je preveden (prije je pisalo `IN_PROGRESS`).
-    await expect(page.getByRole('row', { name: /Sarajevo obilaznica/ }).getByText('U toku')).toBeVisible()
-    await expect(page.getByText('IN_PROGRESS')).toHaveCount(0)
     await project.click()
 
     await expect(page).toHaveURL(/\/projects\/[0-9a-z]{20,}$/i) // CUID, ne UUID
@@ -79,6 +76,15 @@ test.describe('FE-06 — admin tok', () => {
 
     await expect(page).toHaveURL(/\/tasks\/[0-9a-z]{20,}$/i) // CUID, ne UUID
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/iskop kanala/i)
+  })
+
+  test('lista projekata prikazuje preveden status (FE-08)', async () => {
+    await page.goto('/projects')
+    const row = page.getByRole('row').filter({ hasText: 'Sarajevo obilaznica' })
+    await expect(row).toBeVisible({ timeout: 15_000 })
+    await expect(row.getByText('U toku')).toBeVisible()
+    // Sirov enum iz baze se ne smije prikazati korisniku.
+    await expect(page.getByText('IN_PROGRESS')).toHaveCount(0)
   })
 
   test('tabla zadataka ima prevedene kolone i broj po koloni', async () => {
