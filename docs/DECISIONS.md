@@ -456,6 +456,29 @@ rad bez proxy-ja. Vrijednost se validira (0–10), a smeće pada na 1.
 namjerno ne pišu) ostaju bez PII. Ako se ispred Coolify-ja ikad doda CDN, `TRUST_PROXY` se povećava
 na broj hopova — inače bi klijentski IP bio CDN-ov.
 
+### D-043 — Dashboard: tri pitanja po roli, bez novih podataka na backendu
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Dashboard je prije bio lista kartica sa sirovim ključevima (`dash.activeProjects` se **nije
+prevodio** — u i18n-u nije postojala `dash` sekcija), bez stanja učitavanja/greške i bez prečica.
+Plan (§4.3) traži da se prvo zapiše informaciona arhitektura, pa kod — zapis je
+`docs/design/FE-04-dashboard-ia.md`.
+
+**Odluka:** dashboard odgovara na **tri pitanja** i to različito po roli (backend već bira kartice u
+`dashboard-role.ts`): šta ističe, ko je na terenu, koliko trošimo. Zone su: zaglavlje (pozdrav +
+datum), brze akcije (do 4, filtrirane **istim** pravilom kao sidebar), KPI traka (kartice → link na
+ekran gdje se problem rješava), rokovi/dokumenti (sortirano po hitnosti, istekli ostaju vidljivi),
+prisustvo (avatar-inicijali + broj).
+
+**Zašto bez novih backend polja:** „moji zadaci sa rokovima“, trendovi i realtime brojači traže nova
+agregiranja (i po jedan novi upit po ekranu). Dashboard time ne postaje mjesto gdje se podaci
+„popravljaju“ — on pokazuje postojeće stanje i vodi dalje. Ako se pokaže potreba, to je BE segment.
+
+**Posljedica:** hitnost (`daysLeft`) je izražena **bojem i tekstom** („isteklo prije 3 d“, „još 5 d“),
+pa je čitljiva i bez razlikovanja boja (WCAG 1.4.1); greška je `role="alert"` sa dugmetom
+„Pokušaj ponovo“ umjesto toasta koji nestane; skeleton ima `aria-busy`. Dodati su svi `dash.*` i
+`dashboard.*` ključevi u **bs** i **en**.
+
 ---
 
 ## Zamijenjene / povučene odluke

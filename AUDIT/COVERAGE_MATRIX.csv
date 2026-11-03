@@ -402,8 +402,8 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,180,pregledano,FE-03: dodan auth.required (poruka greške obrasca),2026-11-03
-frontend/src/i18n/en.ts,FE,shared,FE-15,180,pregledano,FE-03: dodan auth.required (poruka greške obrasca),2026-11-03
+frontend/src/i18n/bs.ts,FE,shared,FE-15,210,pregledano,"FE-04: dash.* (11 ključeva) i dashboard.* (prečice, rokovi, hitnost, prazna stanja, tipovi entiteta); ranije su se prikazivali sirovi ključevi",2026-11-03
+frontend/src/i18n/en.ts,FE,shared,FE-15,210,pregledano,FE-04: engleski parnjaci dash.* i dashboard.* (isti skup ključeva kao bs),2026-11-03
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
@@ -440,7 +440,7 @@ frontend/src/lib/utils.ts,FE,shared,FE-15,7,nepregledano,,
 frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
 frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,83,nepregledano,,
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,123,nepregledano,,
-frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,72,nepregledano,,
+frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,271,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); bez novih backend upita (D-043)",2026-11-03
 frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,79,nepregledano,,
 frontend/src/pages/documents-page.tsx,FE,site-pages,FE-10,135,nepregledano,,
 frontend/src/pages/erp-page.tsx,FE,money-pages,FE-12,79,nepregledano,,
