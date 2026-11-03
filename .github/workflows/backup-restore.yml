@@ -102,33 +102,34 @@ jobs:
       - name: Uporedi brojeve redova izvor ↔ restore
         shell: bash
         run: |
-          exec > >(tee compare.log) 2>&1
-          set -euo pipefail
+          set -uo pipefail
           failed=0
           # Imena tabela su Prisma modeli (bez @@map) — u Postgresu su quoted: "User", "Project"...
           for table in User Company Project Task TimerSession AuditEvent CostEntry DiaryEntry; do
-            src=$(psql "$PG_SOURCE" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
-            dst=$(psql "$PG_TARGET" -tAc "SELECT count(*) FROM \"$table\"" | tr -d ' ')
+            src=$(psql "$PG_SOURCE" -tAc "SELECT count(*) FROM \"$table\"" 2>&1 | tr -d ' ')
+            dst=$(psql "$PG_TARGET" -tAc "SELECT count(*) FROM \"$table\"" 2>&1 | tr -d ' ')
             if [ "$src" != "$dst" ]; then
-              echo "✗ $table: izvor=$src restore=$dst"
+              echo "::error title=row-count::$table izvor=$src restore=$dst"
               failed=1
-            else
-              echo "✓ $table: $src"
             fi
+            echo "✓ $table: izvor=$src restore=$dst"
           done
-          # Restore mora nositi i Prisma istoriju migracija, inače je baza „nepoznatog“ stanja.
           applied=$(psql "$PG_TARGET" -tAc \
-            "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" | tr -d ' ')
+            "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" 2>&1 | tr -d ' ')
           expected=$(ls -1 backend/prisma/migrations | wc -l | tr -d ' ')
           echo "✓ migracije u restore-u: $applied / $expected"
-          if [ "$applied" -lt "$expected" ]; then failed=1; echo "✗ nedostaju migracije u restore-u"; fi
+          if [ "$applied" -lt "$expected" ] 2>/dev/null; then
+            echo "::error title=migrations::u restore-u $applied od $expected migracija"
+            failed=1
+          fi
+          echo "rezultat: failed=$failed"
           exit $failed
 
       - name: Dijagnostika na pad (anotacije)
         if: failure()
         shell: bash
         run: |
-          for f in restore.log backup.log compare.log; do
+          for f in restore.log backup.log; do
             [ -f "$f" ] || continue
             while IFS= read -r line; do
               echo "::error title=$f::$line"
