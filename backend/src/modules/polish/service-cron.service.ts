@@ -76,16 +76,26 @@ export class ServiceCronService {
         note: template.title,
       },
     });
-    await notifyRoles({
-      prisma: this.prisma,
-      notifications: this.notifications,
-      companyId: template.companyId,
-      roles: ['ADMIN', 'SUPER_ADMIN', 'MECHANIC'],
-      type: 'SERVICE_DUE',
-      title: 'Service due',
-      message: template.title,
-      data: { serviceId: created.id, machineId: machine.id },
-    });
+    // BE-15 (F-07): pad notifikacije je prekidao cijeli cron (ostale mašine se nisu
+    // ni pregledale). Servis je već upisan, pa je notifikacija best-effort (D-031).
+    try {
+      await notifyRoles({
+        prisma: this.prisma,
+        notifications: this.notifications,
+        companyId: template.companyId,
+        roles: ['ADMIN', 'SUPER_ADMIN', 'MECHANIC'],
+        type: 'SERVICE_DUE',
+        title: 'Service due',
+        message: template.title,
+        data: { serviceId: created.id, machineId: machine.id },
+      });
+    } catch (error) {
+      this.logger.warn(
+        `SERVICE_DUE notifikacija nije poslana (${created.id}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     this.logger.log(`scheduled service ${created.id}`);
   }
 

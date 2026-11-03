@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { TimerForceCloseService } from '../ops/timer-force-close.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
@@ -18,13 +19,14 @@ import {
   TemplateListQueryDto,
 } from './services.dto';
 import { serializeService, serializeTemplate } from './serialize-service';
-import { startServiceRecord } from './service-start';
+import { restoreMachine, startServiceRecord } from './service-start';
 
 @Injectable()
 export class ServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly closer: TimerForceCloseService,
+    private readonly audit: AuditService,
   ) {}
 
   async listTemplates(actor: AuthUser, query: TemplateListQueryDto) {
@@ -44,16 +46,39 @@ export class ServicesService {
 
   async createTemplate(actor: AuthUser, dto: CreateTemplateDto) {
     const companyId = requireCompany(actor);
-    return serializeTemplate(
-      await this.prisma.serviceTemplate.create({ data: { companyId, ...dto } }),
-    );
+    const row = await this.prisma.serviceTemplate.create({
+      data: { companyId, ...dto },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'SERVICE_TEMPLATE_CREATED',
+      entityType: 'ServiceTemplate',
+      entityId: row.id,
+      payload: {
+        machineType: row.machineType,
+        intervalHours: row.intervalHours,
+      },
+    });
+    return serializeTemplate(row);
   }
 
   async patchTemplate(actor: AuthUser, id: string, dto: PatchTemplateDto) {
-    await this.loadTemplate(requireCompany(actor), id);
-    return serializeTemplate(
-      await this.prisma.serviceTemplate.update({ where: { id }, data: dto }),
-    );
+    const companyId = requireCompany(actor);
+    await this.loadTemplate(companyId, id);
+    const row = await this.prisma.serviceTemplate.update({
+      where: { id },
+      data: dto,
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'SERVICE_TEMPLATE_UPDATED',
+      entityType: 'ServiceTemplate',
+      entityId: row.id,
+      payload: { intervalHours: row.intervalHours, title: row.title },
+    });
+    return serializeTemplate(row);
   }
 
   async list(actor: AuthUser, query: ServiceListQueryDto) {
@@ -84,6 +109,14 @@ export class ServicesService {
     if (!machine) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Machine not found', 404);
     }
+    // BE-15 (F-03): `projectId`/`templateId` su se upisivali bez provjere firme —
+    // servis je mogao biti „zakačen“ na tuđi projekat (cross-tenant referenca).
+    if (dto.projectId) {
+      await this.assertProject(companyId, dto.projectId);
+    }
+    if (dto.templateId) {
+      await this.loadTemplate(companyId, dto.templateId);
+    }
     const row = await this.prisma.serviceRecord.create({
       data: {
         companyId,
@@ -93,21 +126,39 @@ export class ServicesService {
         note: dto.note,
       },
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'SERVICE_CREATED',
+      entityType: 'ServiceRecord',
+      entityId: row.id,
+      payload: { machineId: row.machineId, templateId: row.templateId },
+    });
     return serializeService(row);
   }
 
   async start(actor: AuthUser, id: string) {
-    const { record, machine } = await this.loadWithMachine(
-      requireCompany(actor),
-      id,
-    );
-    return startServiceRecord({
+    const companyId = requireCompany(actor);
+    const { record, machine } = await this.loadWithMachine(companyId, id);
+    const row = await startServiceRecord({
       prisma: this.prisma,
       closer: this.closer,
       record,
       machine,
       actorId: actor.id,
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'SERVICE_STARTED',
+      entityType: 'ServiceRecord',
+      entityId: row.id,
+      payload: {
+        machineId: machine.id,
+        previousMachineStatus: row.previousMachineStatus,
+      },
+    });
+    return row;
   }
 
   async complete(actor: AuthUser, id: string, dto: CompleteServiceDto) {
@@ -125,19 +176,40 @@ export class ServicesService {
     const totalCost = dto.totalCost
       ? parseNonNegativeDecimal(dto.totalCost, 'totalCost')
       : record.totalCost;
-    const updated = await this.prisma.serviceRecord.update({
-      where: { id },
-      data: {
-        status: 'COMPLETED',
-        completedAt: new Date(),
-        totalCost,
-        note: dto.note ?? record.note,
-      },
+    // BE-15 (F-01): završetak je bio „provjeri pa upiši“ kroz tri upisa; dupli klik
+    // je dva puta vraćao status mašine, a pad između upisa ostavljao mašinu u servisu.
+    // Sada je jedan atomski claim + restore mašine + `recalcSpend` u istoj transakciji.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.serviceRecord.updateMany({
+        where: { id, companyId: record.companyId, status: 'IN_PROGRESS' },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          totalCost,
+          note: dto.note ?? record.note,
+        },
+      });
+      if (claimed.count === 0) {
+        throw new AppError(
+          ERROR_CODES.CONFLICT,
+          'Service is not in progress',
+          409,
+        );
+      }
+      await restoreMachine(tx, machine.id);
+      if (record.projectId) {
+        await recalcSpend(tx, record.projectId);
+      }
+      return tx.serviceRecord.findUniqueOrThrow({ where: { id } });
     });
-    await this.restoreMachine(machine.id);
-    if (updated.projectId) {
-      await recalcSpend(this.prisma, updated.projectId);
-    }
+    await this.audit.write({
+      companyId: record.companyId,
+      actorId: actor.id,
+      action: 'SERVICE_COMPLETED',
+      entityType: 'ServiceRecord',
+      entityId: updated.id,
+      payload: { totalCost: updated.totalCost?.toString() ?? null },
+    });
     return serializeService(updated);
   }
 
@@ -154,24 +226,48 @@ export class ServicesService {
       );
     }
     const wasOpen = record.status === 'IN_PROGRESS';
-    const updated = await this.prisma.serviceRecord.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.serviceRecord.updateMany({
+        where: {
+          id,
+          companyId: record.companyId,
+          status: { in: ['PLANNED', 'SCHEDULED', 'IN_PROGRESS'] },
+        },
+        data: { status: 'CANCELLED' },
+      });
+      if (claimed.count === 0) {
+        throw new AppError(ERROR_CODES.CONFLICT, 'Service is terminal', 409);
+      }
+      if (wasOpen) {
+        await restoreMachine(tx, machine.id);
+      }
+      return tx.serviceRecord.findUniqueOrThrow({ where: { id } });
     });
-    if (wasOpen) {
-      await this.restoreMachine(machine.id);
-    }
+    await this.audit.write({
+      companyId: record.companyId,
+      actorId: actor.id,
+      action: 'SERVICE_CANCELLED',
+      entityType: 'ServiceRecord',
+      entityId: updated.id,
+      payload: { wasInProgress: wasOpen },
+    });
     return serializeService(updated);
   }
 
-  private async restoreMachine(machineId: string): Promise<void> {
-    const active = await this.prisma.machineAssignment.findFirst({
-      where: { machineId, endedAt: null },
+  private async assertProject(
+    companyId: string,
+    projectId: string,
+  ): Promise<void> {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, companyId },
     });
-    await this.prisma.machine.update({
-      where: { id: machineId },
-      data: { status: active ? 'ACTIVE' : 'IDLE' },
-    });
+    if (!project) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Invalid projectId',
+        400,
+      );
+    }
   }
 
   private async loadTemplate(companyId: string, id: string) {

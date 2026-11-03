@@ -1,3 +1,5 @@
+import { parseIsoDateTime } from '../../common/utils/date-input';
+
 export function serializeDoc(row: {
   id: string;
   companyId: string;
@@ -24,10 +26,14 @@ export function serializeDoc(row: {
   };
 }
 
+/**
+ * BE-15 (F-06): neispravan `expiresAt` je ranije **tiho** postao `undefined`, pa je
+ * dokument bez roka izgledao kao dokument bez isteka (compliance prikaz je lagao).
+ * Sada je `400`.
+ */
 export function parseExpires(value?: string): Date | undefined {
   if (!value) {
     return undefined;
   }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  return parseIsoDateTime(value, 'expiresAt');
 }

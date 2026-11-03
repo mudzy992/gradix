@@ -8,6 +8,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
+import { parseIsoDateTime } from '../../common/utils/date-input';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
@@ -34,7 +35,10 @@ export class TendersService {
     const where: Prisma.TenderWhereInput = {
       companyId,
       ...(query.status ? { status: query.status } : {}),
-      ...(query.q ? { title: { contains: query.q } } : {}),
+      // BE-15 (F-10): pretraga je bila case-sensitive (`Bridge` nije nalazio `bridge`).
+      ...(query.q
+        ? { title: { contains: query.q, mode: 'insensitive' as const } }
+        : {}),
     };
     const avg = await this.avgCompletedSpend(companyId);
     const [rows, total] = await this.prisma.$transaction([
@@ -71,10 +75,22 @@ export class TendersService {
         submittedValue: dto.submittedValue
           ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue')
           : undefined,
-        submittedAt: dto.submittedAt ? new Date(dto.submittedAt) : undefined,
+        // BE-15 (F-06): `new Date('nije-datum')` je ranije pravio `Invalid Date`
+        // koji Prisma pretvori u 500; sada je 400.
+        submittedAt: dto.submittedAt
+          ? parseIsoDateTime(dto.submittedAt, 'submittedAt')
+          : undefined,
         notes: dto.notes,
       },
       include: { attachments: true },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'TENDER_CREATED',
+      entityType: 'Tender',
+      entityId: row.id,
+      payload: { title: row.title, client: row.client, status: row.status },
     });
     return serializeTender(row, await this.avgCompletedSpend(companyId));
   }
@@ -102,6 +118,18 @@ export class TendersService {
       },
       include: { attachments: true },
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'TENDER_UPDATED',
+      entityType: 'Tender',
+      entityId: updated.id,
+      payload: {
+        fromStatus: row.status,
+        toStatus: updated.status,
+        ...(dto.title ? { title: updated.title } : {}),
+      },
+    });
     return serializeTender(updated, await this.avgCompletedSpend(companyId));
   }
 
@@ -109,8 +137,16 @@ export class TendersService {
     const companyId = requireCompany(actor);
     await this.load(companyId, id);
     assertStoragePath(dto.path, companyId);
-    await this.prisma.tenderAttachment.create({
+    const attachment = await this.prisma.tenderAttachment.create({
       data: { companyId, tenderId: id, path: dto.path, fileName: dto.fileName },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'TENDER_ATTACHMENT_ADDED',
+      entityType: 'TenderAttachment',
+      entityId: attachment.id,
+      payload: { tenderId: id, fileName: attachment.fileName },
     });
     return this.getById(actor, id);
   }
@@ -126,33 +162,49 @@ export class TendersService {
       );
     }
     const radius = await this.defaultRadius(companyId);
-    const project = await this.prisma.project.create({
-      data: {
-        companyId,
-        name: tender.title,
-        client: tender.client,
-        plannedBudget: tender.submittedValue,
-        status: 'PLANNING',
-        isPublic: false,
-        geofenceRadius: radius,
-      },
-    });
-    if (hasRole(actor, 'PROJECT_MANAGER')) {
-      await this.prisma.projectAssignment.create({
+    // BE-15 (F-02): konverzija je bila „provjeri pa upiši“ kroz tri odvojena upisa —
+    // dva paralelna klika su pravila **dva** projekta iz jednog tendera, a pad na
+    // pola je ostavljao projekat bez veze na tender. Sada je sve u transakciji, a
+    // tender se „zaključava“ atomski (`convertedProjectId` je i unique u šemi).
+    const project = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
         data: {
           companyId,
-          projectId: project.id,
-          userId: actor.id,
-          role: 'PM',
+          name: tender.title,
+          client: tender.client,
+          plannedBudget: tender.submittedValue,
+          status: 'PLANNING',
+          isPublic: false,
+          geofenceRadius: radius,
         },
       });
+      if (hasRole(actor, 'PROJECT_MANAGER')) {
+        await tx.projectAssignment.create({
+          data: {
+            companyId,
+            projectId: created.id,
+            userId: actor.id,
+            role: 'PM',
+          },
+        });
+      }
+      const claimed = await tx.tender.updateMany({
+        where: { id, companyId, status: 'WON', convertedProjectId: null },
+        data: { convertedProjectId: created.id },
+      });
+      if (claimed.count === 0) {
+        throw new AppError(
+          ERROR_CODES.TENDER_INVALID_STATUS,
+          'Tender is already converted',
+          409,
+        );
+      }
+      return created;
+    });
+    if (hasRole(actor, 'PROJECT_MANAGER')) {
       this.realtime.joinProject(actor.id, project.id);
     }
     this.realtime.joinCompanyWideToProject(companyId, project.id);
-    await this.prisma.tender.update({
-      where: { id },
-      data: { convertedProjectId: project.id },
-    });
     await this.audit.write({
       companyId,
       actorId: actor.id,
@@ -160,6 +212,14 @@ export class TendersService {
       entityType: 'Project',
       entityId: project.id,
       payload: { fromTenderId: id },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'TENDER_CONVERTED',
+      entityType: 'Tender',
+      entityId: id,
+      payload: { projectId: project.id },
     });
     return this.getById(actor, id);
   }

@@ -17,7 +17,7 @@ export async function runReport(
     return projectSpend(prisma, companyId, scoped);
   }
   if (slug === 'machine-hours') {
-    return machineHours(prisma, companyId, range);
+    return machineHours(prisma, companyId, range, scoped);
   }
   if (slug === 'fuel-summary') {
     return fuelSummary(prisma, companyId, range, scoped);
@@ -58,6 +58,7 @@ async function machineHours(
   prisma: PrismaService,
   companyId: string,
   range: { start: Date; end: Date },
+  projectIds: string[] | null,
 ) {
   const sessions = await prisma.timerSession.groupBy({
     by: ['machineId'],
@@ -65,6 +66,9 @@ async function machineHours(
       companyId,
       machineId: { not: null },
       closedAt: { gte: range.start, lt: range.end },
+      // BE-15 (F-04): izvještaj je ignorisao scope korisnika — PM/SS bez
+      // company-wide pristupa je vidio sate mašina sa **svih** projekata firme.
+      ...(projectIds ? { task: { projectId: { in: projectIds } } } : {}),
     },
     _sum: { durationMinutes: true },
   });

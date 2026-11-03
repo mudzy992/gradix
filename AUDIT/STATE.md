@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-14` — ERP-lite: zatvoren **B12** (`hourlyRateSnapshot`, D‑035), atomične zalihe (SERIALIZABLE), idempotentan `apply-stock` pod paralelizmom, audit brisanja troška i ERP šifrarnika — `done` |
-| CI | ✅ [run 41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) — **6/6** zelen (`fix(erp): BE-14 e2e ispravke`) |
+| Zadnji commit | `BE-15` — Ured: atomski životni ciklus servisa i konverzija tendera, tenant provjera `projectId`/`templateId`, 12 audit akcija, scope izvještaja, striktni datumi — `done` |
+| CI | ⏳ upisuje se poslije `gh run watch` (BE-15) — prethodni: ✅ [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) **6/6** (BE-14) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
 | Zadnji potvrđeno zelen run | [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
@@ -433,9 +433,38 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   Matrica **510 fajlova / 268 pregledano (52,5 %)**.
 - **Zatvoreno:** `BE-14` — zelen CI **41648114505** (6/6); **22/59** segmenata `done`.
 
+### 2026-11-03 — BE-15 (Ured: tenderi, servis, dokumenti, izvještaji)
+- **Nalaz (visoko):** životni ciklus servisa nije bio atomski — start i complete/cancel su bili
+  „provjeri pa upiši“ kroz 2–3 upisa; dva paralelna klika daju dvije dodjele, a pad između upisa
+  ostavlja mašinu u `IN_SERVICE` bez zapisa. Sada je svaki prelaz **atomski claim**
+  (`updateMany` + uslov) u transakciji sa promjenom statusa mašine i `recalcSpend`; gubitnik trke
+  dobija `409`.
+- **Nalaz (visoko):** konverzija tendera je pravila **dva projekta** iz jednog tendera pri duplom
+  kliku. Sada transakcija + `updateMany({ status: 'WON', convertedProjectId: null })` claim;
+  e2e: tri paralelna klika → `[201, 409, 409]`, tačno 1 projekat i 1 `TENDER_CONVERTED`.
+- **Nalaz (srednje):** ured nije imao **nikakav** audit (tenderi, šabloni servisa, dokumenti) →
+  12 novih akcija + migracija `20261103210000_be15_office_audit_actions` (**sedma**).
+- **Nalaz (srednje):** `ServicesService.create` je primao `projectId`/`templateId` bez provjere
+  firme (cross-tenant referenca) → `400 Invalid projectId`.
+- **Nalaz (srednje):** `machine-hours` izvještaj **nije bio scopiran** — PM je vidio sate mašina sa
+  svih projekata firme; sada `task.projectId in (scope)`. Ostali izvještaji su bili scopirani.
+- **Nalaz (srednje):** period izvještaja bez granica (`from > to` tiho prazno, `2024→2026` u
+  memoriju) → `400` preko `assertPeriodSpan` (366 dana); export više nije `{slug}.xlsx` nego
+  `report-<slug>-<from>_<to>.xlsx`.
+- **Nalaz (srednje):** `expiresAt` je neispravan datum **tiho** pretvarao u `null` (dokument bez
+  roka izgleda kao trajan), a `submittedAt` je davao `500` → `common/utils/date-input.ts`
+  (`parseIsoDateTime`, striktno, `400`) + 5 unit testova.
+- **Nalaz (srednje):** pad notifikacije u servis cronu prekidao je cijeli prolaz → best-effort
+  (D‑031). Trka dva procesa na `SCHEDULED` ostaje dokumentovana (1 replika).
+- **Nalaz (nisko):** docs cron je za svaki dokument učitavao sve notifikacije firme → jedan upit po
+  firmi; GPS cleanup briše u serijama po 10.000.
+- **Testovi:** **180/180** unit (+10: `date-input.spec.ts`, `tender-status.spec.ts`);
+  e2e `polish` +5. Matrica **514 fajlova / 292 pregledano (56,8 %)**.
+- **Zatvoreno:** `BE-15` — CI run u tabeli iznad; **23/59** segmenata `done`.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **BE-15** — Ured: tenderi, servis, dokumenti, reporti (sljedeći segment).
+1. **BE-16** — Javni sajt, notifikacije, email, realtime (sljedeći segment).
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

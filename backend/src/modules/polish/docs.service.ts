@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -17,7 +18,10 @@ import { parseExpires, serializeDoc } from './serialize-doc';
 
 @Injectable()
 export class DocsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async listCompany(actor: AuthUser, query: DocsListQueryDto) {
     const companyId = requireCompany(actor);
@@ -46,6 +50,17 @@ export class DocsService {
         note: dto.note,
       },
     });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'DOCUMENT_CREATED',
+      entityType: 'CompanyDocument',
+      entityId: row.id,
+      payload: {
+        type: row.type,
+        expiresAt: row.expiresAt?.toISOString() ?? null,
+      },
+    });
     return serializeDoc(row);
   }
 
@@ -60,20 +75,31 @@ export class DocsService {
     if (dto.filePath) {
       assertStoragePath(dto.filePath, companyId);
     }
-    return serializeDoc(
-      await this.prisma.companyDocument.update({
-        where: { id },
-        data: {
-          type: dto.type,
-          filePath: dto.filePath,
-          expiresAt:
-            dto.expiresAt !== undefined
-              ? (parseExpires(dto.expiresAt) ?? null)
-              : undefined,
-          note: dto.note,
-        },
-      }),
-    );
+    const row = await this.prisma.companyDocument.update({
+      where: { id },
+      data: {
+        type: dto.type,
+        filePath: dto.filePath,
+        expiresAt:
+          dto.expiresAt !== undefined
+            ? (parseExpires(dto.expiresAt) ?? null)
+            : undefined,
+        note: dto.note,
+      },
+    });
+    // BE-15 (F-03): dokumenti su compliance zapisi — izmjena roka mora ostati u auditu.
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'DOCUMENT_UPDATED',
+      entityType: 'CompanyDocument',
+      entityId: row.id,
+      payload: {
+        type: row.type,
+        expiresAt: row.expiresAt?.toISOString() ?? null,
+      },
+    });
+    return serializeDoc(row);
   }
 
   async listWorker(actor: AuthUser, query: DocsListQueryDto) {
@@ -100,18 +126,29 @@ export class DocsService {
     if (!user) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid userId', 400);
     }
-    return serializeDoc(
-      await this.prisma.workerDocument.create({
-        data: {
-          companyId,
-          userId: dto.userId,
-          type: dto.type,
-          filePath: dto.filePath,
-          expiresAt: parseExpires(dto.expiresAt),
-          note: dto.note,
-        },
-      }),
-    );
+    const row = await this.prisma.workerDocument.create({
+      data: {
+        companyId,
+        userId: dto.userId,
+        type: dto.type,
+        filePath: dto.filePath,
+        expiresAt: parseExpires(dto.expiresAt),
+        note: dto.note,
+      },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'DOCUMENT_CREATED',
+      entityType: 'WorkerDocument',
+      entityId: row.id,
+      payload: {
+        userId: row.userId,
+        type: row.type,
+        expiresAt: row.expiresAt?.toISOString() ?? null,
+      },
+    });
+    return serializeDoc(row);
   }
 
   async listMachine(actor: AuthUser, query: DocsListQueryDto) {
@@ -142,17 +179,28 @@ export class DocsService {
         400,
       );
     }
-    return serializeDoc(
-      await this.prisma.machineDocument.create({
-        data: {
-          companyId,
-          machineId: dto.machineId,
-          type: dto.type,
-          filePath: dto.filePath,
-          expiresAt: parseExpires(dto.expiresAt),
-          note: dto.note,
-        },
-      }),
-    );
+    const row = await this.prisma.machineDocument.create({
+      data: {
+        companyId,
+        machineId: dto.machineId,
+        type: dto.type,
+        filePath: dto.filePath,
+        expiresAt: parseExpires(dto.expiresAt),
+        note: dto.note,
+      },
+    });
+    await this.audit.write({
+      companyId,
+      actorId: actor.id,
+      action: 'DOCUMENT_CREATED',
+      entityType: 'MachineDocument',
+      entityId: row.id,
+      payload: {
+        machineId: row.machineId,
+        type: row.type,
+        expiresAt: row.expiresAt?.toISOString() ?? null,
+      },
+    });
+    return serializeDoc(row);
   }
 }

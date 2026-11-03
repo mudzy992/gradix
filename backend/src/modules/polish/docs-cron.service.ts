@@ -47,6 +47,26 @@ export class DocsCronService {
 
   private async scanCompany(companyId: string, tz: string): Promise<void> {
     const today = calendarDateInTz(new Date(), tz);
+    // BE-15 (F-08): ranije je za **svaki** dokument firma učitavala **sve** svoje
+    // `DOCUMENT_EXPIRING` notifikacije i skenirala ih u memoriji (O(dokumenti ×
+    // notifikacije)). Sada se postojeći ključevi učitaju jednom po firmi.
+    const existing = await this.prisma.notification.findMany({
+      where: { companyId, type: 'DOCUMENT_EXPIRING' },
+      select: { data: true },
+    });
+    const notified = new Set<string>();
+    for (const item of existing) {
+      if (!item.data || typeof item.data !== 'object') {
+        continue;
+      }
+      const data = item.data as Record<string, unknown>;
+      if (
+        typeof data.entityId === 'string' &&
+        typeof data.daysLeft === 'number'
+      ) {
+        notified.add(`${data.entityId}:${data.daysLeft}`);
+      }
+    }
     const [company, worker, machine] = await Promise.all([
       this.prisma.companyDocument.findMany({
         where: { companyId, expiresAt: { not: null } },
@@ -59,7 +79,14 @@ export class DocsCronService {
       }),
     ]);
     for (const row of company) {
-      await this.maybeNotify(row, 'company', today, ['ADMIN', 'SUPER_ADMIN']);
+      await this.maybeNotify(
+        row,
+        'company',
+        today,
+        ['ADMIN', 'SUPER_ADMIN'],
+        [],
+        notified,
+      );
     }
     for (const row of worker) {
       await this.maybeNotify(
@@ -68,14 +95,18 @@ export class DocsCronService {
         today,
         ['ADMIN', 'SUPER_ADMIN'],
         row.userId ? [row.userId] : [],
+        notified,
       );
     }
     for (const row of machine) {
-      await this.maybeNotify(row, 'machine', today, [
-        'ADMIN',
-        'SUPER_ADMIN',
-        'MECHANIC',
-      ]);
+      await this.maybeNotify(
+        row,
+        'machine',
+        today,
+        ['ADMIN', 'SUPER_ADMIN', 'MECHANIC'],
+        [],
+        notified,
+      );
     }
   }
 
@@ -85,6 +116,7 @@ export class DocsCronService {
     today: string,
     roles: Role[],
     extraUserIds: string[] = [],
+    notified: Set<string>,
   ): Promise<void> {
     if (!row.expiresAt) {
       return;
@@ -95,20 +127,11 @@ export class DocsCronService {
     if (!window) {
       return;
     }
-    const existing = await this.prisma.notification.findMany({
-      where: { companyId: row.companyId, type: 'DOCUMENT_EXPIRING' },
-      select: { data: true },
-    });
-    const already = existing.some((item) => {
-      if (!item.data || typeof item.data !== 'object') {
-        return false;
-      }
-      const data = item.data as Record<string, unknown>;
-      return data.entityId === row.id && data.daysLeft === window;
-    });
-    if (already) {
+    const key = `${row.id}:${window}`;
+    if (notified.has(key)) {
       return;
     }
+    notified.add(key);
     await notifyRoles({
       prisma: this.prisma,
       notifications: this.notifications,

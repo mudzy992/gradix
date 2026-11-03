@@ -12,6 +12,7 @@ import {
 } from '../../common/scope/company-tz';
 import { isCompanyWide } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
+import { assertPeriodSpan } from '../payroll/payroll-period';
 import { REPORT_SLUGS, ReportQueryDto, ReportSlug } from './reports.dto';
 import { runReport } from './report-queries';
 
@@ -29,6 +30,17 @@ export class ReportsService {
     const to = query.to ?? month.to;
     parseDateOnly(from);
     parseDateOnly(to);
+    // BE-15 (F-05): `from`/`to` su bili bez granica i bez provjere reda — izvještaj
+    // „od 2000. do 2030.“ je vukao sve redove u memoriju (pa i u Excel), a obrnut
+    // period je tiho vraćao praznu tabelu. Sada `400`, isto pravilo kao payroll (BE-13).
+    if (from > to) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'from must be <= to',
+        400,
+      );
+    }
+    assertPeriodSpan(from, to);
     const start = tzDayUtcRange(from, tz).start;
     const end = tzDayUtcRange(to, tz).end;
     const projectIds = await this.scopedProjectIds(
@@ -47,11 +59,16 @@ export class ReportsService {
     return { slug: resolved, from, to, ...table };
   }
 
+  /** BE-15 (F-05): ime exporta nosi period (prije je svaki bio `{slug}.xlsx`). */
+  reportFilename(payload: { slug: string; from: string; to: string }): string {
+    return `report-${payload.slug}-${payload.from}_${payload.to}.xlsx`;
+  }
+
   async exportXlsx(
     actor: AuthUser,
     slug: string,
     query: ReportQueryDto,
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer; filename: string }> {
     const payload = await this.get(actor, slug, query);
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(payload.slug);
@@ -60,7 +77,10 @@ export class ReportsService {
       sheet.addRow(payload.columns.map((col) => row[col] ?? ''));
     }
     const buffer = await workbook.xlsx.writeBuffer();
-    return Buffer.from(buffer);
+    return {
+      buffer: Buffer.from(buffer),
+      filename: this.reportFilename(payload),
+    };
   }
 
   private assertSlug(slug: string): ReportSlug {

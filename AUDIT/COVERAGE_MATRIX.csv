@@ -18,9 +18,10 @@ backend/prisma/migrations/20261103140000_be09_machine_open_assignment/migration.
 backend/prisma/migrations/20261103160000_be10_fleet_audit_actions/migration.sql,BE,migrations,BE-08,22,pregledano,"BE-10 (B10): 17 novih AuditAction vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike",2026-11-03
 backend/prisma/migrations/20261103180000_be13_diary_hse_audit_actions/migration.sql,BE,migrations,BE-08,11,pregledano,"BE-13 (B11): 6 novih AuditAction vrijednosti (dnevnik, HSE)",2026-11-03
 backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,nepregledano,,
+backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,nepregledano,,
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,319,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,332,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,407,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
@@ -29,7 +30,7 @@ backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,134,pregledano,BE-08: pregledano �
 backend/prisma/seed.ts,BE,seed,BE-08,135,pregledano,"BE-08: SEED_DEMO prekidač — produkcija = samo platform admin (P9), demo = firma + ops + flota",2026-11-03
 backend/src/app.module.ts,BE,bootstrap,BE-01,62,pregledano,BE-01: ConfigModule.forRoot({ validate: validateEnv }) — fail-fast prije podizanja modula,2026-11-02
 backend/src/app.setup.ts,BE,bootstrap,BE-01,65,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
-backend/src/common/constants.ts,BE,common,BE-01,39,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
+backend/src/common/constants.ts,BE,common,BE-01,41,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
 backend/src/common/decorators/current-user.decorator.ts,BE,common,BE-01,10,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/public.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/require-permissions.decorator.ts,BE,common,BE-01,8,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
@@ -70,6 +71,8 @@ backend/src/common/scope/tenant.ts,BE,common,BE-03,22,pregledano,"BE-04: novo �
 backend/src/common/settings/registry.spec.ts,BE,common,BE-04,70,pregledano,"BE-04: ključevi jedinstveni, defaulti u granicama, koercija bool/broj/string",2026-11-02
 backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +findSetting/coerceSettingValue (Number.isFinite, min/max); 12 testova (F-08)",2026-11-02
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
+backend/src/common/utils/date-input.spec.ts,BE,common,BE-01,33,nepregledano,,
+backend/src/common/utils/date-input.ts,BE,common,BE-01,30,nepregledano,,
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02),2026-11-02
 backend/src/common/utils/geo.spec.ts,BE,common,BE-01,109,pregledano,"BE-09/10: 9 testova — granice, smeće, par koordinata",2026-11-03
 backend/src/common/utils/geo.ts,BE,common,BE-01,62,pregledano,"BE-09/10: parseLatLng + parseOptionalLatLng (oba ili nijedan, opseg) (F-03)",2026-11-03
@@ -248,29 +251,30 @@ backend/src/modules/payroll/payroll.dto.ts,BE,payroll,BE-13,50,pregledano,"BE-13
 backend/src/modules/payroll/payroll.module.ts,BE,payroll,BE-13,12,pregledano,BE-13: modul (servis + kontroler); audit/email dolaze iz globalnih modula,2026-11-03
 backend/src/modules/payroll/payroll.service.ts,BE,payroll,BE-13,203,pregledano,"BE-13 (F-01/02): atomska odluka (`updateMany` + `PENDING`), best-effort notifikacija/e-mail, audit odluke",2026-11-03
 backend/src/modules/payroll/serialize-payroll.ts,BE,payroll,BE-13,63,pregledano,"BE-13: DTO sesije — trajanje, satnica, iznos, status",2026-11-03
-backend/src/modules/polish/docs-cron.service.ts,BE,polish,BE-15,144,nepregledano,,
-backend/src/modules/polish/docs.controller.ts,BE,polish,BE-15,90,nepregledano,,
-backend/src/modules/polish/docs.dto.ts,BE,polish,BE-15,55,nepregledano,,
-backend/src/modules/polish/docs.service.ts,BE,polish,BE-15,159,nepregledano,,
-backend/src/modules/polish/gps-cleanup.cron.ts,BE,polish,BE-15,20,nepregledano,,
-backend/src/modules/polish/polish.module.ts,BE,polish,BE-15,38,nepregledano,,
-backend/src/modules/polish/report-queries.ts,BE,polish,BE-15,190,nepregledano,,
-backend/src/modules/polish/reports.controller.ts,BE,polish,BE-15,48,nepregledano,,
-backend/src/modules/polish/reports.dto.ts,BE,polish,BE-15,27,nepregledano,,
-backend/src/modules/polish/reports.service.ts,BE,polish,BE-15,126,nepregledano,,
-backend/src/modules/polish/serialize-doc.ts,BE,polish,BE-15,34,nepregledano,,
-backend/src/modules/polish/serialize-service.ts,BE,polish,BE-15,33,nepregledano,,
-backend/src/modules/polish/serialize-tender.ts,BE,polish,BE-15,27,nepregledano,,
-backend/src/modules/polish/service-cron.service.ts,BE,polish,BE-15,103,nepregledano,,
-backend/src/modules/polish/service-start.ts,BE,polish,BE-15,56,nepregledano,,
-backend/src/modules/polish/service-templates.controller.ts,BE,polish,BE-15,49,nepregledano,,
-backend/src/modules/polish/services.controller.ts,BE,polish,BE-15,53,nepregledano,,
-backend/src/modules/polish/services.dto.ts,BE,polish,BE-15,88,nepregledano,,
-backend/src/modules/polish/services.service.ts,BE,polish,BE-15,200,nepregledano,,
-backend/src/modules/polish/tender-status.ts,BE,polish,BE-15,28,nepregledano,,
-backend/src/modules/polish/tenders.controller.ts,BE,polish,BE-15,72,nepregledano,,
-backend/src/modules/polish/tenders.dto.ts,BE,polish,BE-15,85,nepregledano,,
-backend/src/modules/polish/tenders.service.ts,BE,polish,BE-15,197,nepregledano,,
+backend/src/modules/polish/docs-cron.service.ts,BE,polish,BE-15,167,pregledano,F-08: bez N+1 (notifikacije jednom po firmi),2026-11-03
+backend/src/modules/polish/docs.controller.ts,BE,polish,BE-15,90,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/docs.dto.ts,BE,polish,BE-15,55,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/docs.service.ts,BE,polish,BE-15,207,pregledano,"F-03/F-06: audit dokumenata, strogi expiresAt",2026-11-03
+backend/src/modules/polish/gps-cleanup.cron.ts,BE,polish,BE-15,39,pregledano,F-11: brisanje u serijama (10k),2026-11-03
+backend/src/modules/polish/polish.module.ts,BE,polish,BE-15,38,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/report-queries.ts,BE,polish,BE-15,194,pregledano,F-04: machine-hours scopiran po projektima,2026-11-03
+backend/src/modules/polish/reports.controller.ts,BE,polish,BE-15,52,pregledano,F-05: Content-Disposition sa periodom,2026-11-03
+backend/src/modules/polish/reports.dto.ts,BE,polish,BE-15,27,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/reports.service.ts,BE,polish,BE-15,146,pregledano,"F-05: period ≤366 dana, ime exporta",2026-11-03
+backend/src/modules/polish/serialize-doc.ts,BE,polish,BE-15,40,pregledano,F-06: parseExpires 400 umjesto tihog undefined,2026-11-03
+backend/src/modules/polish/serialize-service.ts,BE,polish,BE-15,33,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/serialize-tender.ts,BE,polish,BE-15,27,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/service-cron.service.ts,BE,polish,BE-15,113,pregledano,F-07: best-effort notifikacija,2026-11-03
+backend/src/modules/polish/service-start.ts,BE,polish,BE-15,108,pregledano,F-01: atomski claim mašine i servisa,2026-11-03
+backend/src/modules/polish/service-templates.controller.ts,BE,polish,BE-15,49,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/services.controller.ts,BE,polish,BE-15,53,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/services.dto.ts,BE,polish,BE-15,88,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/services.service.ts,BE,polish,BE-15,296,pregledano,"F-01/F-03: transakcije, tenant provjera, audit",2026-11-03
+backend/src/modules/polish/tender-status.spec.ts,BE,polish,BE-15,42,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/tender-status.ts,BE,polish,BE-15,28,pregledano,BE-15: matrica prelaza + 5 unit testova,2026-11-03
+backend/src/modules/polish/tenders.controller.ts,BE,polish,BE-15,72,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/tenders.dto.ts,BE,polish,BE-15,85,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
+backend/src/modules/polish/tenders.service.ts,BE,polish,BE-15,257,pregledano,"F-02: atomska konverzija, audit, striktni datum, q insensitive",2026-11-03
 backend/src/modules/prisma/prisma.module.ts,BE,prisma,BE-01,10,nepregledano,,
 backend/src/modules/prisma/prisma.service.ts,BE,prisma,BE-01,28,pregledano,"BE-01: pregledano — PrismaPg adapter, $connect u onModuleInit, $disconnect u onModuleDestroy (sada stvarno pozvan kroz shutdown hooks)",2026-11-02
 backend/src/modules/public/public-write.controller.ts,BE,public-notify,BE-16,49,nepregledano,,
@@ -307,7 +311,7 @@ backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,"BE-13: self-approve 403, ADMIN self 200, druga odluka 409, TZ mjesec, pauza van exporta, ime exporta",2026-11-03
-backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
+backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,351,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,pregledano,BE-06: pregledano — dodjela izvršioca pa push timera (dual role),2026-11-03

@@ -32,6 +32,8 @@ export const SERVICE_CRON = '0 */6 * * *';
 export const DOCS_CRON = '0 * * * *';
 export const GPS_CLEANUP_CRON = '15 3 * * *';
 export const GPS_RETENTION_DAYS = 90;
+/** BE-15: GPS pingovi se čiste u serijama (10k po upitu), ne u jednom DELETE-u. */
+export const GPS_CLEANUP_BATCH = 10_000;
 export const FUEL_ANOMALY_PCT = 25;
 export const DOC_WARN_WINDOWS = [30, 15, 5] as const;
 export const PUBLIC_GET_LIMIT = 60;

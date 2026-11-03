@@ -211,7 +211,33 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 - `expiring`: dokumenti unutar `DOC_WARN_WINDOWS` (30/15/5 dana) **i istekli do 90 dana unazad**
   (negativan `daysLeft`), najviše 100 stavki, sortirano po hitnosti.
 
-### 4.10 Javni sajt
+### 4.10 Ured (tenderi, servis, dokumenti, izvještaji)
+- **Tender:** `DRAFT → SUBMITTED → WON|LOST`, `DRAFT|SUBMITTED → WITHDRAWN`; terminalni statusi i
+  „preskakanje koraka“ su `409 TENDER_INVALID_STATUS`. Ime `submittedAt` mora biti ISO datum
+  (`YYYY-MM-DD` ili puni ISO-8601) — neispravan je `400`, ne `500`.
+- **Konverzija tendera** je atomska: projekat + (PM dodjela) + `convertedProjectId` idu u jednoj
+  transakciji, a tender se zaključava `updateMany`-em (`status WON`, `convertedProjectId null`).
+  Dva paralelna klika ⇒ **jedan** projekat, drugi dobija `409` (prije su nastajala dva).
+- **Servis mašine:** životni ciklus je `PLANNED|SCHEDULED → IN_PROGRESS → COMPLETED|CANCELLED`;
+  svaki prelaz je atomski claim (`updateMany` sa uslovom) u transakciji sa promjenom statusa mašine
+  (`IN_SERVICE`, pa nazad `ACTIVE`/`IDLE` prema otvorenoj dodjeli) i `recalcSpend`. Dupli
+  `complete`/`cancel` je `409`, mašina ne ostaje zaglavljena u `IN_SERVICE`.
+- `projectId`/`templateId` servisa moraju pripadati **istoj firmi** (`400` inače) — prije je bila
+  moguća cross-tenant referenca.
+- **Dokumenti (compliance):** `expiresAt` je strogi ISO datum; neispravan je `400` (prije se tiho
+  pretvarao u `null`, pa je dokument bez roka izgledao kao trajan). Kreiranje/izmjena idu u audit
+  (`DOCUMENT_CREATED`/`DOCUMENT_UPDATED`). Cron šalje `DOCUMENT_EXPIRING` u 08:00 lokalno, jednom
+  po prozoru (30/15/5) i dokumentu — bez ponavljanja istog prozora.
+- **Izvještaji:** fiksni slugovi (`project-spend`, `machine-hours`, `fuel-summary`, `trips-summary`,
+  `tender-comparison`, `phase-quantities`); nepoznat slug je `404 REPORT_UNKNOWN`.
+  `from`/`to` su kalendarski (TZ firme), default je **tekući mjesec**; obrnut period i period duži
+  od **366 dana** su `400`. Export je `.xlsx` sa periodom u imenu
+  (`report-<slug>-<from>_<to>.xlsx`). Svi izvještaji poštuju scope korisnika (`machine-hours` se
+  filtrira preko projekta zadatka) — prije je PM vidio sate mašina sa svih projekata firme.
+- Audit: `TENDER_CREATED/UPDATED/ATTACHMENT_ADDED/CONVERTED`, `SERVICE_CREATED/STARTED/COMPLETED/CANCELLED`,
+  `SERVICE_TEMPLATE_CREATED/UPDATED`, `DOCUMENT_CREATED/UPDATED`.
+
+### 4.11 Javni sajt
 - Whitelisted DTO: naziv, grad, adresa, telefon, logo, tagline, javni projekti.
   **Bez** `taxId`, budžeta i GPS-a.
 - Isti `404` za tuđi i nepostojeći slug (bez enumeracije).

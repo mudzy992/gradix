@@ -23,14 +23,18 @@ export class ReportsController {
     @Query() query: ReportQueryDto,
     @Res() response: Response,
   ) {
-    const buffer = await this.reports.exportXlsx(actor, slug, query);
+    const { buffer, filename } = await this.reports.exportXlsx(
+      actor,
+      slug,
+      query,
+    );
     response.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="${slug}.xlsx"`,
+      `attachment; filename="${filename}"`,
     );
     response.send(buffer);
   }
