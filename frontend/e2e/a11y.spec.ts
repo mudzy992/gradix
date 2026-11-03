@@ -21,22 +21,36 @@ test.describe('a11y (FE-03)', () => {
     await expect(page.locator('#password')).toHaveAttribute('aria-invalid', 'true')
   })
 
-  test('fokus je vidljiv pri kretanju tastaturom', async ({ page }) => {
+  test('fokus je vidljiv i tastatura prolazi kroz polja', async ({ page }) => {
     await page.goto('/login')
-    await page.keyboard.press('Tab')
-    const focused = await page.evaluate(() => {
-      const element = document.querySelector<HTMLElement>(':focus-visible')
-      if (!element) return { found: false, outlineStyle: '', outlineWidth: '' }
+
+    // Tekstualna polja uvijek matchuju `:focus-visible` (spec), pa je provjera deterministička
+    // i ne zavisi od toga gdje se nalazi fokus headless browsera prije prvog Tab-a.
+    const identifier = page.locator('#identifier')
+    await identifier.focus()
+    const textField = await identifier.evaluate((element) => {
       const style = getComputedStyle(element)
       return {
-        found: true,
+        focusVisible: element.matches(':focus-visible'),
         outlineStyle: style.outlineStyle,
         outlineWidth: style.outlineWidth,
       }
     })
-    expect(focused.found).toBe(true)
-    expect(focused.outlineStyle).not.toBe('none')
-    expect(focused.outlineWidth).not.toBe('0px')
+    expect(textField.focusVisible).toBe(true)
+    expect(textField.outlineStyle).not.toBe('none')
+    expect(textField.outlineWidth).not.toBe('0px')
+
+    // Redoslijed u DOM-u: lozinka → „zapamti me“; fokus mora biti vidljiv i na čekboksu.
+    await page.locator('#password').focus()
+    await page.keyboard.press('Tab')
+    const next = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null
+      return element
+        ? { id: element.id, outlineStyle: getComputedStyle(element).outlineStyle }
+        : { id: '', outlineStyle: 'none' }
+    })
+    expect(next.id).toBe('remember')
+    expect(next.outlineStyle).not.toBe('none')
   })
 
   test('nema horizontalnog skrola na 320 px (WCAG 1.4.10 reflow)', async ({ page }) => {
