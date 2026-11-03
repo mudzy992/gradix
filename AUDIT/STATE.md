@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-05` (projekti: scope pisanja za količine, decimalna validacija, progres u 2 upita) |
-| CI | ✅ [run 41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) — **6/6** zelen (`chore(audit): tačni brojevi matrice…`) |
+| Zadnji commit | `BE-06` (zadaci: status filter iz liste, duplikati 409, nextTaskStatus + testovi) |
+| CI | ⏳ `fix(tasks) … [BE-06]` — run se upisuje nakon `gh run watch` |
 | Zadnji potvrđeno zelen run | [41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) ✅ 6/6 · prije: 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -232,10 +232,21 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   identifikatore iako Prisma tipovi nisu dostupni).
 - **Zeleno:** `106cca5` → **`41536108972` ✅ 6/6**.
 
+### 2026-11-03 — BE-06 (zadaci i dispečing) → segment `done`
+- **Nalaz (srednje):** `?status=` je bio slobodan string castan u Prisma enum → `?status=GOTOVO`
+  rušilo je upit (500). Sada `@IsIn(TASK_STATUSES)` → 400; cast u servisu uklonjen.
+- **Nalaz (srednje):** duplikat dodjele, duplikat zavisnosti i duplikat u `assigneeIds` vraćali su
+  **500** (unique constraint). Sada `409` (dodjela/zavisnost) i deduplikacija niza.
+- **Nalaz (srednje):** odluka o statusu zadatka bila je ugrađena u `syncTaskStatus` bez testa →
+  čista `nextTaskStatus()` + 6 testova (terminalni statusi, IN_PROGRESS/PAUSED/ASSIGNED/PENDING).
+- Provjera izvršilaca: jedan `findMany` umjesto N upita.
+- **Testovi:** **113/113**. Matrica **492 fajlova / 147 pregledano (29,9 %)**.
+- **Otvoreno:** B8 (audit akcije za zadatke) → BE-08; best-effort notifikacije → BE-16.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
 1. Push + provjera CI (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-06** (zadaci i dispečing) — sljedeći segment po planu.
+2. **BE-07** (timer i ispravke) — sljedeći segment po planu.
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

@@ -34,6 +34,17 @@ export class TaskDependenciesService {
         400,
       );
     }
+    // BE-06: unique [fromId, toId] je ranije vraćao 500 (P2002).
+    const duplicate = await this.prisma.taskDependency.findFirst({
+      where: { fromId, toId },
+    });
+    if (duplicate) {
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Dependency already exists',
+        409,
+      );
+    }
     if (await this.wouldCycle(fromId, toId)) {
       throw new AppError(
         ERROR_CODES.VALIDATION_FAILED,

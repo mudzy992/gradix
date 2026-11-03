@@ -113,7 +113,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `settings` | `/api/settings` | registry podešavanja firme (`PUT` je atomski: validacija svih ključeva pa jedna transakcija); javni `GET /settings/public` maskira `SECRET` |
 | `notifications` | `/api/notifications` | in-app lista, read; emisija preko Socket.IO |
 | `files` | `/api/files` | upload/download (MinIO), path guard `{companyId}/`, MIME/veličina |
-| `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu |
+| `ops` | `/api/projects`, `/tasks`, `/timer`, `/trips`, `/fuel`, `/machines`, `/diary`, `/hse`, `/catalog`, `/sync`, `/dashboard`, `/iot` … | jezgro operacija na terenu; zadaci: `?status=` iz zatvorene liste (`400` na nepoznat), duplikat dodjele/zavisnosti je `409` |
 | `payroll` | `/api/payroll` | obračun po mjesecu, approve/reject, export `.xlsx` |
 | `polish` | `/api/tenders`, `/services`, `/documents`, `/reports` | tenderi, servis mašina, istek dokumenata, fiksni izvještaji |
 | `erp` | `/api/partners`, `/costs`, `/warehouses`, `/stock` | partneri, troškovi, lager |

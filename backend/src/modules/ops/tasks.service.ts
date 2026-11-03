@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TaskStatus } from '../../../generated/client';
+import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -31,7 +31,7 @@ export class TasksService {
     const { page, limit, skip } = parsePagination(query.page, query.limit);
     const where: Prisma.TaskWhereInput = { companyId };
     if (query.projectId) where.projectId = query.projectId;
-    if (query.status) where.status = query.status as TaskStatus;
+    if (query.status) where.status = query.status;
     if (query.assigneeId)
       where.assignees = { some: { userId: query.assigneeId } };
     if (
@@ -78,7 +78,8 @@ export class TasksService {
         );
       }
     }
-    const assigneeIds = dto.assigneeIds ?? [];
+    // BE-06: duplikat u nizu je pravio P2002 (500) — sada se tiho svodi na jednu dodjelu.
+    const assigneeIds = [...new Set(dto.assigneeIds ?? [])];
     await this.assertAssignees(project.companyId, assigneeIds);
     const task = await this.prisma.task.create({
       data: {
@@ -190,17 +191,20 @@ export class TasksService {
     companyId: string,
     userIds: string[],
   ): Promise<void> {
-    for (const userId of userIds) {
-      const user = await this.prisma.user.findFirst({
-        where: { id: userId, companyId },
-      });
-      if (!user || !user.isActive) {
-        throw new AppError(
-          ERROR_CODES.VALIDATION_FAILED,
-          'Inactive user cannot be assigned',
-          400,
-        );
-      }
+    if (userIds.length === 0) {
+      return;
+    }
+    // BE-06: jedan upit umjesto N (ranije: findFirst po svakom izvršiocu).
+    const found = await this.prisma.user.findMany({
+      where: { id: { in: userIds }, companyId, isActive: true },
+      select: { id: true },
+    });
+    if (found.length !== userIds.length) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'Inactive user cannot be assigned',
+        400,
+      );
     }
   }
 

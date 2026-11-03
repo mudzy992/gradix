@@ -183,7 +183,7 @@ backend/src/modules/ops/serialize-diary.ts,BE,ops,BE-11,63,nepregledano,,
 backend/src/modules/ops/serialize-fleet.ts,BE,ops,BE-09,55,nepregledano,,
 backend/src/modules/ops/serialize-gps-device.ts,BE,ops,BE-09,14,nepregledano,,
 backend/src/modules/ops/serialize-machine.ts,BE,ops,BE-09,20,nepregledano,,
-backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,nepregledano,,
+backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,pregledano,BE-06: serijalizacija bez tajni; assigneeIds samo kad su uključeni,2026-11-03
 backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,25,nepregledano,,
 backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,pregledano,BE-05: potrošnja bez dvostrukog brojanja (costEntry source/sourceId),2026-11-02
 backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,71,nepregledano,,
@@ -194,13 +194,15 @@ backend/src/modules/ops/sync-result.ts,BE,ops,BE-17,42,nepregledano,,
 backend/src/modules/ops/sync.controller.ts,BE,ops,BE-17,45,nepregledano,,
 backend/src/modules/ops/sync.dto.ts,BE,ops,BE-17,76,nepregledano,,
 backend/src/modules/ops/sync.service.ts,BE,ops,BE-17,126,nepregledano,,
-backend/src/modules/ops/task-assignees.service.ts,BE,ops,BE-06,116,nepregledano,,
-backend/src/modules/ops/task-dependencies.service.ts,BE,ops,BE-06,84,nepregledano,,
-backend/src/modules/ops/task-lifecycle.service.ts,BE,ops,BE-06,104,nepregledano,,
-backend/src/modules/ops/task-status.ts,BE,ops,BE-06,45,nepregledano,,
-backend/src/modules/ops/tasks.controller.ts,BE,ops,BE-06,147,nepregledano,,
-backend/src/modules/ops/tasks.dto.ts,BE,ops,BE-06,109,nepregledano,,
-backend/src/modules/ops/tasks.service.ts,BE,ops,BE-06,230,nepregledano,,
+backend/src/modules/ops/task-assignees.service.ts,BE,ops,BE-06,127,pregledano,"BE-06: duplikat dodjele 409 (F-02), storage path guard za priloge",2026-11-03
+backend/src/modules/ops/task-dependencies.service.ts,BE,ops,BE-06,95,pregledano,"BE-06: duplikat zavisnosti 409 (F-03), DFS provjera ciklusa i isti projekat",2026-11-03
+backend/src/modules/ops/task-lifecycle.service.ts,BE,ops,BE-06,104,pregledano,"BE-06: complete/cancel gase timere, audit + notifikacije; bez assertProjectWritable (F-09, namjerno)",2026-11-03
+backend/src/modules/ops/task-status.spec.ts,BE,ops,BE-06,42,pregledano,BE-06: 6 testova nextTaskStatus (IN_PROGRESS/PAUSED/ASSIGNED/terminalni),2026-11-03
+backend/src/modules/ops/task-status.ts,BE,ops,BE-06,60,pregledano,BE-06: nextTaskStatus izvučen u čistu funkciju (F-06); syncTaskStatus samo primjenjuje odluku,2026-11-03
+backend/src/modules/ops/task-statuses.ts,BE,ops,BE-06,18,pregledano,BE-06: novo — zatvorena lista TASK_STATUSES za DTO (F-01),2026-11-03
+backend/src/modules/ops/tasks.controller.ts,BE,ops,BE-06,147,pregledano,BE-06: pregledano — sve rute @TenantRoute + tasks.read/write,2026-11-03
+backend/src/modules/ops/tasks.dto.ts,BE,ops,BE-06,110,pregledano,BE-06: ?status= kroz IsIn(TASK_STATUSES) (F-01); ostali DTO-i nepromijenjeni,2026-11-03
+backend/src/modules/ops/tasks.service.ts,BE,ops,BE-06,234,pregledano,"BE-06: status filter bez casta (F-01), dedupe assigneeIds (F-04), jedan upit za izvršioce (F-05)",2026-11-03
 backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,nepregledano,,
 backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,nepregledano,,
 backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,32,nepregledano,,
@@ -284,13 +286,13 @@ backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,42,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,nepregledano,,
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
-backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,BE-05: pregledano — timer/task/quantities tok; SS dodijeljen na projekat (patch količina 200),2026-11-02
+backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,124,nepregledano,,
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,261,nepregledano,,
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,180,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
-backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,nepregledano,,
+backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,pregledano,BE-06: pregledano — dodjela izvršioca pa push timera (dual role),2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02

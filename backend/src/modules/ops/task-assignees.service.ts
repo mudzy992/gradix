@@ -37,6 +37,17 @@ export class TaskAssigneesService {
         400,
       );
     }
+    // BE-06: unique [taskId, userId] je ranije vraćao 500 (P2002) — sada jasan 409.
+    const already = await this.prisma.taskAssignment.findFirst({
+      where: { taskId, userId: dto.userId },
+    });
+    if (already) {
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'User is already assigned to this task',
+        409,
+      );
+    }
     await this.prisma.taskAssignment.create({
       data: { companyId: project.companyId, taskId, userId: dto.userId },
     });
