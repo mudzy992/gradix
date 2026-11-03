@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { TASK_STATUSES, TaskStatusValue } from './task-statuses';
+import { TASK_STATUSES, type TaskStatusValue } from './task-statuses';
 
 export class TaskListQueryDto extends PaginationQueryDto {
   @IsOptional()

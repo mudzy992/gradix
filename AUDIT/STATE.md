@@ -17,7 +17,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 | | |
 |---|---|
 | Zadnji commit | `BE-06` (zadaci: status filter iz liste, duplikati 409, nextTaskStatus + testovi) |
-| CI | ⏳ `fix(tasks) … [BE-06]` — run se upisuje nakon `gh run watch` |
+| CI | ❌ [run 41583755392](https://github.com/mudzy992/gradix/actions/runs/41583755392) — 3/6 (build: **TS1484** type-only import) → ispravka u toku |
 | Zadnji potvrđeno zelen run | [41536971465](https://github.com/mudzy992/gradix/actions/runs/41536971465) ✅ 6/6 · prije: 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -240,6 +240,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **Nalaz (srednje):** odluka o statusu zadatka bila je ugrađena u `syncTaskStatus` bez testa →
   čista `nextTaskStatus()` + 6 testova (terminalni statusi, IN_PROGRESS/PAUSED/ASSIGNED/PENDING).
 - Provjera izvršilaca: jedan `findMany` umjesto N upita.
+- **Incident:** run `41583755392` crven — `tasks.dto.ts` uvezao tip kroz value import (`isolatedModules`)
+  → **TS1484**; popravljeno `type` modifikatorom. Lokalni `tsc` filter je promašio zbog `head -10`
+  (ispred su `TS2307` artefakti); sada se skenira bez ograničenja i uz `TS1484`.
 - **Testovi:** **113/113**. Matrica **492 fajlova / 147 pregledano (29,9 %)**.
 - **Otvoreno:** B8 (audit akcije za zadatke) → BE-08; best-effort notifikacije → BE-16.
 
