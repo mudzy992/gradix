@@ -16,9 +16,9 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-11` — dnevnik/HSE/fajlovi: PDF ne pada na bh. slovima i ne siječe tekst, idempotentan offline dnevnik, validacija temperature/koordinata/`taskId`/`status`, sigurni headeri za download |
-| CI | ✅ [run 41635238201](https://github.com/mudzy992/gradix/actions/runs/41635238201) — **6/6** zelen (STATE za BE-10 dopunu); BE-11 run se upisuje nakon push-a |
-| Zadnji potvrđeno zelen run | [41635238201](https://github.com/mudzy992/gradix/actions/runs/41635238201) ✅ 6/6 · prije: 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
+| Zadnji commit | `BE-11` — dnevnik/HSE/fajlovi: PDF ne pada na bh. slovima i ne siječe tekst, idempotentan offline dnevnik, validacija temperature/koordinata/`taskId`/`status`, sigurni headeri za download — `done`, green 41636860530 |
+| CI | ✅ [run 41636860530](https://github.com/mudzy992/gradix/actions/runs/41636860530) — **6/6** zelen (`fix(diary) … [BE-11]`) |
+| Zadnji potvrđeno zelen run | [41636860530](https://github.com/mudzy992/gradix/actions/runs/41636860530) ✅ 6/6 · prije: 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -331,7 +331,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   - **E2E dokaz:** novi test u `fleet.e2e-spec.ts` prolazi kroz mašinu, GPS uređaj, materijal, depo,
     turu i gorivo pa čita `AuditEvent` direktno iz baze (API za audit još ne postoji).
 - **Testovi:** **133/133**. Matrica **499 fajlova / 206 pregledano (41,3 %)**; `check:all` 9/9 (bez e2e).
-- **Stanje segmenata:** `done` **18/59**.
+- **Stanje segmenata:** `done` **19/59**; sljedeći **BE-12** (dashboard i prisustvo).
 
 ### 2026-11-03 — BE-11 (dnevnik, HSE, fajlovi)
 - **Nalaz (visoko):** PDF dnevnika je padao (`500`) na svakom tekstu sa `č`/`ć`/`đ` — WinAnsi font
@@ -353,6 +353,7 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 - **B-stavke:** **B11** — dnevnik/HSE/fajlovi nisu u auditu (sljedeća migracija).
 - **Otvoreno pitanje (vlasnik):** radnici ne vide vlastite HSE prijave (`hse.read` je uslov za listu);
   postojeći e2e to zaključava, pa nije mijenjano bez odluke — vidi `AUDIT/segments/BE-11.md` §5.
+- **Zatvoreno:** `BE-11` — zelen CI **41636860530** (6/6); 19/59 segmenata `done`.
 - **CI ispravke (run 41635959404 ❌):** (1) `files.service.ts` — `minio` tipizira `metaData` kao `any`,
   pa je lint tražio eksplicitno svodjenje na `Record<string, string | undefined>`; (2) e2e je čitao
   `data.user.company.id` sa `/api/me`, a taj endpoint vraća `data.company.id` (login vraća drugu
@@ -362,9 +363,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. Push + provjera CI za BE-11 (mora biti zelen) — run se upisuje u ovu tabelu.
-2. **BE-12** (dashboard i prisustvo) — sljedeći segment po planu; B11 (audit dnevnika/HSE) ulazi u
-   sljedeću migraciju.
+1. **BE-12** (dashboard i prisustvo) — sljedeći segment po planu; B11 (audit dnevnika/HSE) ulazi u
+   sljedeću migraciju (BE-12 ili BE-13).
 3. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).
