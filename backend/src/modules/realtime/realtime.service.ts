@@ -25,18 +25,15 @@ export class RealtimeService {
     this.server?.in(`user:${userId}`).socketsLeave(`project:${projectId}`);
   }
 
+  /**
+   * BE-16 (F-03): prije je svaki novi projekat prolazio kroz **sve** socket-e procesa
+   * (`fetchSockets`) da nađe firma-wide korisnike. Sada se to radi jednim `socketsJoin`
+   * nad sobom `companywide:<companyId>` (O(1) u odnosu na broj korisnika).
+   */
   joinCompanyWideToProject(companyId: string, projectId: string): void {
-    void this.server?.fetchSockets().then((sockets) => {
-      for (const socket of sockets) {
-        const data = socket.data as {
-          companyId?: string;
-          companyWide?: boolean;
-        };
-        if (data.companyId === companyId && data.companyWide) {
-          void socket.join(`project:${projectId}`);
-        }
-      }
-    });
+    this.server
+      ?.in(`companywide:${companyId}`)
+      .socketsJoin(`project:${projectId}`);
   }
 
   emitProject(

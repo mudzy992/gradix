@@ -50,7 +50,7 @@ backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,nepregledano,,
 backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
 backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
-backend/src/common/notify/notify-roles.ts,BE,common,BE-16,46,nepregledano,,
+backend/src/common/notify/notify-roles.ts,BE,common,BE-16,45,pregledano,F-05: createManyAndReturn umjesto N inserta,2026-11-03
 backend/src/common/rbac/permission.constants.ts,BE,common,BE-03,45,pregledano,BE-03: 39 permisija; PLATFORM_COMPANIES odvojeno od firmi-skih,2026-11-02
 backend/src/common/rbac/role-hierarchy.spec.ts,BE,common,BE-03,39,pregledano,"BE-03: 9 testova hijerarhije (ADMIN vs SUPER_ADMIN, PLATFORM_ADMIN)",2026-11-02
 backend/src/common/rbac/role-hierarchy.ts,BE,common,BE-03,41,pregledano,"BE-03: novo — canManageRoles/canAssignRoles, osnova D-030",2026-11-02
@@ -129,12 +129,13 @@ backend/src/modules/files/minio.service.ts,BE,files,BE-11,51,pregledano,BE-11: b
 backend/src/modules/health/health.controller.ts,BE,health,BE-18,15,nepregledano,,
 backend/src/modules/health/health.module.ts,BE,health,BE-18,10,nepregledano,,
 backend/src/modules/health/health.service.ts,BE,health,BE-18,13,nepregledano,,
-backend/src/modules/mail/email.service.ts,BE,public-notify,BE-16,33,nepregledano,,
-backend/src/modules/mail/mail.module.ts,BE,public-notify,BE-16,10,nepregledano,,
-backend/src/modules/notifications/notifications.controller.ts,BE,public-notify,BE-16,33,nepregledano,,
-backend/src/modules/notifications/notifications.dto.ts,BE,public-notify,BE-16,9,nepregledano,,
-backend/src/modules/notifications/notifications.module.ts,BE,public-notify,BE-16,11,nepregledano,,
-backend/src/modules/notifications/notifications.service.ts,BE,public-notify,BE-16,79,nepregledano,,
+backend/src/modules/mail/email.service.spec.ts,BE,public-notify,BE-16,49,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/mail/email.service.ts,BE,public-notify,BE-16,51,pregledano,F-01/B1/D-013: trySend nikad ne tvrdi uspjeh (nema transporta),2026-11-03
+backend/src/modules/mail/mail.module.ts,BE,public-notify,BE-16,10,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/notifications/notifications.controller.ts,BE,public-notify,BE-16,33,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/notifications/notifications.dto.ts,BE,public-notify,BE-16,9,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/notifications/notifications.module.ts,BE,public-notify,BE-16,11,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/notifications/notifications.service.ts,BE,public-notify,BE-16,113,pregledano,F-05: createForUsers (bulk) + emit po korisniku,2026-11-03
 backend/src/modules/ops/amendment-fleet.ts,BE,ops,BE-07,165,pregledano,"BE-07: apply*Amendment primaju TransactionClient; dozvoljena polja, depot iz firme, recalcSpend",2026-11-03
 backend/src/modules/ops/amendments.controller.ts,BE,ops,BE-07,23,pregledano,BE-07: @TenantRoute; writer provjera (canAmend) u servisu,2026-11-03
 backend/src/modules/ops/amendments.dto.ts,BE,ops,BE-07,36,pregledano,BE-07: AMENDMENT_ENTITIES + IsIn u create i list (F-08),2026-11-03
@@ -277,16 +278,17 @@ backend/src/modules/polish/tenders.dto.ts,BE,polish,BE-15,85,pregledano,"BE-15: 
 backend/src/modules/polish/tenders.service.ts,BE,polish,BE-15,257,pregledano,"F-02: atomska konverzija, audit, striktni datum, q insensitive",2026-11-03
 backend/src/modules/prisma/prisma.module.ts,BE,prisma,BE-01,10,nepregledano,,
 backend/src/modules/prisma/prisma.service.ts,BE,prisma,BE-01,28,pregledano,"BE-01: pregledano — PrismaPg adapter, $connect u onModuleInit, $disconnect u onModuleDestroy (sada stvarno pozvan kroz shutdown hooks)",2026-11-02
-backend/src/modules/public/public-write.controller.ts,BE,public-notify,BE-16,49,nepregledano,,
-backend/src/modules/public/public.controller.ts,BE,public-notify,BE-16,41,nepregledano,,
-backend/src/modules/public/public.dto.ts,BE,public-notify,BE-16,23,nepregledano,,
-backend/src/modules/public/public.module.ts,BE,public-notify,BE-16,13,nepregledano,,
-backend/src/modules/public/public.service.ts,BE,public-notify,BE-16,201,nepregledano,,
-backend/src/modules/public/serialize-public.ts,BE,public-notify,BE-16,48,nepregledano,,
-backend/src/modules/realtime/app.gateway.ts,BE,public-notify,BE-16,72,nepregledano,,
-backend/src/modules/realtime/join-project-rooms.ts,BE,public-notify,BE-16,54,nepregledano,,
-backend/src/modules/realtime/realtime.module.ts,BE,public-notify,BE-16,23,nepregledano,,
-backend/src/modules/realtime/realtime.service.ts,BE,public-notify,BE-16,54,nepregledano,,
+backend/src/modules/public/public-write.controller.ts,BE,public-notify,BE-16,49,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/public.controller.ts,BE,public-notify,BE-16,41,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/public.dto.ts,BE,public-notify,BE-16,23,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/public.module.ts,BE,public-notify,BE-16,13,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/public.service.ts,BE,public-notify,BE-16,218,pregledano,"F-04/F-06: validacija prije uploada, stream headeri + error",2026-11-03
+backend/src/modules/public/serialize-public.spec.ts,BE,public-notify,BE-16,87,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/serialize-public.ts,BE,public-notify,BE-16,48,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/realtime/app.gateway.ts,BE,public-notify,BE-16,83,pregledano,"F-02/F-07/F-08: CORS iz env, aktivna firma, bez mrtvog handlera",2026-11-03
+backend/src/modules/realtime/join-project-rooms.ts,BE,public-notify,BE-16,57,pregledano,F-03: soba companywide:{id},2026-11-03
+backend/src/modules/realtime/realtime.module.ts,BE,public-notify,BE-16,23,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/realtime/realtime.service.ts,BE,public-notify,BE-16,51,pregledano,F-03: socketsJoin nad sobom umjesto fetchSockets,2026-11-03
 backend/src/modules/settings/settings.controller.ts,BE,settings,BE-04,37,pregledano,BE-04: list(actor) bez canWrite; javni /settings/public 60/min (F-05),2026-11-02
 backend/src/modules/settings/settings.dto.ts,BE,settings,BE-04,7,pregledano,BE-04: samo slug za javni upit,2026-11-02
 backend/src/modules/settings/settings.module.ts,BE,settings,BE-04,10,pregledano,BE-04: bez promjena; servis koristi globalni audit + realtime,2026-11-02
@@ -311,9 +313,9 @@ backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,"BE-13: self-approve 403, ADMIN self 200, druga odluka 409, TZ mjesec, pauza van exporta, ime exporta",2026-11-03
-backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,351,nepregledano,,
+backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,nepregledano,,
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
-backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,127,nepregledano,,
+backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,nepregledano,,
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,265,pregledano,BE-06: pregledano — dodjela izvršioca pa push timera (dual role),2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02

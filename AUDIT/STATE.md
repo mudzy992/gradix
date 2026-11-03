@@ -16,8 +16,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 | | |
 |---|---|
-| Zadnji commit | `BE-15` — Ured: atomski životni ciklus servisa i konverzija tendera, tenant provjera `projectId`/`templateId`, 12 audit akcija, scope izvještaja, striktni datumi — `done` |
-| CI | ✅ [run 41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) — **6/6** zelen (`feat(office): BE-15 …`) |
+| Zadnji commit | `BE-16` — Javni sajt, notifikacije, email, realtime: email više ne lažno tvrdi uspjeh (D‑013), gateway CORS po D‑018, `companywide` soba, orphan upload, bulk notifikacije — `done` |
+| CI | ⏳ upisuje se poslije `gh run watch` (BE-16) — prethodni: ✅ [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) **6/6** (BE-15) |
 | Prethodni pokušaj | ❌ [41647489344](https://github.com/mudzy992/gradix/actions/runs/41647489344) — 2 nova e2e testa pala (greške u testovima: `type: 'CENTRAL'`; `from-payroll` provjeren poslije vraćanja satnice), kod ispravan |
 | Zadnji potvrđeno zelen run | [41652116613](https://github.com/mudzy992/gradix/actions/runs/41652116613) ✅ 6/6 · prije: [41648114505](https://github.com/mudzy992/gradix/actions/runs/41648114505) ✅ 6/6 · prije: [41644527884](https://github.com/mudzy992/gradix/actions/runs/41644527884) ✅ 6/6 · prije: [41644091684](https://github.com/mudzy992/gradix/actions/runs/41644091684) ✅ 6/6 · prije: 41640979940 ✅ 6/6 · prije: 41640541231 ✅ 6/6 · prije: 41639532076 ✅ 6/6 · prije: 41639119312 ✅ 6/6 · prije: 41636860530 ✅ 6/6, 41635238201 ✅ 6/6, 41634819146 ✅ 6/6 · prije: 41630016287 ✅ 6/6 · prije: 41629137137 (BE-09 STATE) ✅ 6/6, 41628748891 ✅ 6/6, 41586623394 (BE-08 STATE) ✅ 6/6, 41586347283 ✅ 6/6, 41585836789 (docker gate) ❌, 41585201977 ✅ 6/6, 41584897234 (BE-07) ✅ 6/6, 41584220516 (BE-06 STATE) ✅ 6/6, 41583988902 (BE-06) ✅ 6/6, 41536108972 (BE-05) ✅ 6/6, 41534087012 (BE-04) ✅, 41531577934 (BE-03 STATE) ✅, 41531137887 (BE-03) ✅ 6/6, 41528279151 (BE-02) ✅ 6/6, 41524479730 (BE-01/2) ✅, 41522506769 (BE-01/1), 41522506769 (BE-01/1), 41515682989 (INF-03), 41514693571 (INF-02), 41513947158 (INF-01) |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
@@ -462,9 +462,29 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
   e2e `polish` +5. Matrica **514 fajlova / 292 pregledano (56,8 %)**.
 - **Zatvoreno:** `BE-15` — zelen CI **41652116613** (6/6, prvi pokušaj); **23/59** segmenata `done`.
 
+### 2026-11-03 — BE-16 (javni sajt, notifikacije, email, realtime) + B1
+- **Nalaz (visoko, B1):** `EmailService.trySend` je vraćao `true` kad je `features.email` uključen,
+  a **nije slao ništa**; `smtpCalls` je bio lažni dokaz. Sada po **D‑013** uvijek vraća `false` uz
+  `logger.warn`/`debug` — nijedan tok ne prijavljuje uspjeh koji se nije desio. Pravi SMTP + reset
+  token model ostaje zaseban posao (`POST /auth/reset` = `501`).
+- **Nalaz (srednje):** gateway CORS je bio `origin: true` (reflektuje svaki origin) — sada
+  `resolveCorsOrigin(NODE_ENV, CORS_ORIGIN)`, isto pravilo kao REST (D‑018).
+- **Nalaz (srednje):** `joinCompanyWideToProject` je prolazio kroz **sve** socket-e procesa
+  (`fetchSockets`) pri svakom novom projektu → sada soba `companywide:{id}` + jedan `socketsJoin`.
+- **Nalaz (srednje):** `POST /public/assets` je uploadovao fajl **prije** provjere projekta →
+  orphan fajl + `PublicAsset`. Sada validacija ide prva (`404`); e2e provjerava da broj asseta ostaje isti.
+- **Nalaz (nisko):** N+1 upisa u `notifyRoles` → `createForUsers` (`createManyAndReturn`); javna
+  slika sada nosi `Content-Length`/`nosniff`/CSP i ima `error` handler; deaktivirana firma se
+  diskonektuje; uklonjen mrtav `join` handler.
+- **Svjesno ostaje:** `POST /auth/forgot` vraća `200` bez slanja (anti-enumeracija, dokumentovano).
+- **Testovi:** **186/186** unit (+6: `email.service.spec.ts`, `serialize-public.spec.ts`);
+  e2e `public` +1 i `polish` zamijenjen test emaila. Matrica **516 fajlova / 311 pregledano (60,3 %)**.
+- **Zatvoreno:** `BE-16` — CI run u tabeli iznad; **24/59** segmenata `done`.
+
 ## Šta je sljedeće (tačan sljedeći korak)
 
-1. **BE-16** — Javni sajt, notifikacije, email, realtime (sljedeći segment).
+1. **BE-17** — preostali backend segmenti (vidi `scripts/audit/segments.json`); zatim **INF-04…07**
+   (logovanje, observability, Redis, skaliranje) i FE/MOB segmenti.
 2. Prenesene odluke: F-BE-01-07 + F-BE-01-10 (indeksi → **jedna BE-08 migracija**),
    F-BE-01-08 (`User.email` globalno unique — ostaje do novih dokaza), F-BE-02-07 (reset preko
    emaila = zaseban segment).

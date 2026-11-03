@@ -3,6 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -11,6 +12,7 @@ const PNG = Buffer.from(
 
 describe('Phase 8 public site (e2e)', () => {
   let app: INestApplication<App>;
+  let prisma: PrismaService;
   let admin: string;
   let worker: string;
   let projectId: string;
@@ -18,6 +20,7 @@ describe('Phase 8 public site (e2e)', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
+    prisma = app.get(PrismaService);
     admin = (await login(app, 'admin@gradix.local')).body.data.accessToken;
     worker = (await login(app, 'worker@gradix.local')).body.data.accessToken;
     const created = await request(app.getHttpServer())
@@ -114,6 +117,9 @@ describe('Phase 8 public site (e2e)', () => {
     );
     expect(stream.status).toBe(200);
     expect(stream.headers['content-type']).toMatch(/image\/png/);
+    // BE-16 (F-06): eksplicitna veličina + `nosniff` (browser ne sniffa sadržaj).
+    expect(Number(stream.headers['content-length'])).toBe(PNG.length);
+    expect(stream.headers['x-content-type-options']).toBe('nosniff');
     expect(stream.body.length).toBeGreaterThan(0);
     const leaked = JSON.stringify(stream.body);
     expect(leaked).not.toContain('minio');
@@ -122,5 +128,18 @@ describe('Phase 8 public site (e2e)', () => {
     );
     expect(missingAsset.status).toBe(404);
     expect(missingAsset.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('BE-16: nepostojeći projekat ne ostavlja orphan asset', async () => {
+    const before = await prisma.publicAsset.count();
+    const rejected = await request(app.getHttpServer())
+      .post('/api/public/assets')
+      .set(auth(admin))
+      .field('kind', 'COVER')
+      .field('projectId', 'cnot-a-real-project')
+      .attach('file', PNG, { filename: 'cover.png', contentType: 'image/png' });
+    expect(rejected.status).toBe(404);
+    // Validacija ide **prije** uploada — nema zapisa u bazi.
+    expect(await prisma.publicAsset.count()).toBe(before);
   });
 });

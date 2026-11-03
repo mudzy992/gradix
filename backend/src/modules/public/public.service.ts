@@ -59,12 +59,24 @@ export class PublicService {
     if (!asset || !asset.company.isActive) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Not found', 404);
     }
-    const { stream } = await this.files.streamPublic(
+    const { stream, size, contentType } = await this.files.streamPublic(
       asset.companyId,
       asset.path,
     );
-    response.setHeader('Content-Type', asset.mime);
+    // BE-16 (F-06): bez eksplicitne veličine/tipa i bez `nosniff` browser je morao
+    // sniffati sadržaj; greška streama je ostavljala odgovor da visi (isti obrazac
+    // kao BE-11 F-12 za privatne fajlove).
+    response.setHeader('Content-Type', contentType || asset.mime);
+    response.setHeader('Content-Length', String(size));
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader(
+      'Content-Security-Policy',
+      "sandbox; default-src 'none'",
+    );
     response.setHeader('Cache-Control', 'public, max-age=3600');
+    stream.on('error', () => {
+      response.destroy();
+    });
     stream.pipe(response);
   }
 
@@ -82,6 +94,12 @@ export class PublicService {
         400,
       );
     }
+    // BE-16 (F-04): projekat se provjeravao **poslije** uploada — nepostojeći/đi
+    // projekat je ostavljao fajl u MinIO-u i `PublicAsset` bez veze (smeće koje
+    // niko ne čisti). Sada se validira prije nego što se bilo šta upiše.
+    if (dto.kind === 'COVER' && dto.projectId) {
+      await this.assertProject(companyId, dto.projectId);
+    }
     const uploaded = await this.files.upload(actor, file);
     const asset = await this.prisma.publicAsset.create({
       data: {
@@ -97,7 +115,10 @@ export class PublicService {
         data: { logoAssetId: asset.id },
       });
     } else if (dto.projectId) {
-      await this.linkCover(companyId, dto.projectId, asset.id);
+      await this.prisma.project.update({
+        where: { id: dto.projectId },
+        data: { coverAssetId: asset.id },
+      });
     }
     return { id: asset.id, kind: asset.kind, mime: asset.mime };
   }
@@ -151,21 +172,17 @@ export class PublicService {
     return result;
   }
 
-  private async linkCover(
+  private async assertProject(
     companyId: string,
     projectId: string,
-    assetId: string,
   ): Promise<void> {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, companyId },
+      select: { id: true },
     });
     if (!project) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Not found', 404);
     }
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { coverAssetId: assetId },
-    });
   }
 
   private async assertCoverAsset(

@@ -1,9 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+/**
+ * BE-16 (F-01, B1, D-013): ranije je `trySend` vraćao `true` čim je firma uključila
+ * `features.email` — iako **ništa nije slao**. Pozivaoci su na osnovu toga govorili
+ * korisniku „poslano“, a `smtpCalls` je bio samo brojač za testove. Do uvođenja pravog
+ * SMTP transporta (nova zavisnost + kredencijali) servis mora biti **iskren**: vraća
+ * `false` i loguje zašto. Nijedan tok ne smije prijaviti uspjeh koji se nije desio.
+ */
 @Injectable()
 export class EmailService {
-  smtpCalls = 0;
+  private readonly logger = new Logger(EmailService.name);
+  private warned = false;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -14,19 +22,29 @@ export class EmailService {
     return row?.value === true;
   }
 
+  /**
+   * @returns `true` samo ako je poruka **stvarno** predata transportu. Bez SMTP-a je
+   * uvijek `false`, bez obzira na `features.email` (flag ostaje za budući transport).
+   */
   async trySend(input: {
     companyId: string;
     to: string;
     subject: string;
     text: string;
   }): Promise<boolean> {
-    if (!(await this.isEnabled(input.companyId))) {
+    const enabled = await this.isEnabled(input.companyId);
+    if (!enabled) {
       return false;
     }
-    this.smtpCalls += 1;
-    void input.to;
-    void input.subject;
-    void input.text;
-    return true;
+    if (!this.warned) {
+      this.warned = true;
+      this.logger.warn(
+        'features.email je uključen, ali SMTP transport nije implementiran (B1) — poruke se ne šalju.',
+      );
+    }
+    this.logger.debug(
+      `Email nije poslan (nema transporta): to=${input.to} subject=${input.subject} len=${input.text.length}`,
+    );
+    return false;
   }
 }

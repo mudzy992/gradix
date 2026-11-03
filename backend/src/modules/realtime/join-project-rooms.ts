@@ -26,6 +26,9 @@ export async function joinScopedProjectRooms(
     return;
   }
   if (companyWide) {
+    // BE-16 (F-03): firma-wide korisnici ulaze u jednu sobu, da dodjela nove sobe
+    // projekta ne mora prolaziti kroz sve socket-e procesa.
+    await client.join(`companywide:${user.companyId}`);
     const projects = await prisma.project.findMany({
       where: { companyId: user.companyId },
       select: { id: true },

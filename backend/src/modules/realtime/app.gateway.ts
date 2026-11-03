@@ -9,10 +9,21 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveCorsOrigin } from '../../config/env';
 import { RealtimeService } from './realtime.service';
 import { joinScopedProjectRooms } from './join-project-rooms';
 
-@WebSocketGateway({ cors: { origin: true } })
+/**
+ * BE-16 (F-02): gateway je dozvoljavao **svaki** origin (`origin: true`) — nezavisno od
+ * `CORS_ORIGIN` koji važi za HTTP. Auth je token u handshake-u (ne kolačić), ali politika
+ * mora biti ista kao za REST (D-018): produkcija bez liste = samo same-origin.
+ */
+@WebSocketGateway({
+  cors: {
+    origin: resolveCorsOrigin(process.env.NODE_ENV, process.env.CORS_ORIGIN),
+    credentials: true,
+  },
+})
 @Injectable()
 export class AppGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
@@ -39,9 +50,10 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection {
       });
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
-        include: { roles: true },
+        include: { roles: true, company: { select: { isActive: true } } },
       });
-      if (!user || !user.isActive) {
+      // BE-16 (F-09): deaktivirana firma ne smije držati otvoren realtime kanal.
+      if (!user || !user.isActive || user.company?.isActive === false) {
         client.disconnect();
         return;
       }
@@ -50,7 +62,6 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection {
         await client.join(`company:${user.companyId}`);
       }
       await joinScopedProjectRooms(client, this.prisma, user);
-      client.on('join', () => undefined);
     } catch {
       this.logger.debug('socket auth failed');
       client.disconnect();

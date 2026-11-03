@@ -144,6 +144,9 @@ alternativa; zamjena palete je izmjena tokena, ne arhitekture.
 **Datum:** 2026-11-02 · **Status:** na snazi
 Odgovor na Q2. `email.service.ts` danas vraća uspjeh bez slanja. Do uvođenja SMTP-a (ili odluke da
 se email ukloni) API vraća jasnu grešku/„not configured“, nikad lažni uspjeh.
+**Implementirano (BE-16):** `trySend` više ne vraća `true` bez transporta — uvijek `false` uz
+`logger.warn` (jednom) i `debug` po poruci; brojač `smtpCalls` (lažni dokaz) je uklonjen.
+`POST /auth/forgot` ostaje `200` radi anti-enumeracije, `POST /auth/reset` je `501`.
 
 ### D-014 — Redis ostaje
 **Datum:** 2026-11-02 · **Status:** na snazi

@@ -32,14 +32,13 @@ export async function notifyRoles(input: {
   for (const extra of input.extraUserIds ?? []) {
     ids.add(extra);
   }
-  for (const userId of ids) {
-    await input.notifications.createForUser({
-      companyId: input.companyId,
-      userId,
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      data: input.data,
-    });
-  }
+  // BE-16 (F-05): jedan `createMany` umjesto N `INSERT`-ova u nizu.
+  await input.notifications.createForUsers({
+    companyId: input.companyId,
+    userIds: [...ids],
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    data: input.data,
+  });
 }

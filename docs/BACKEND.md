@@ -119,7 +119,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 | `erp` | `/api/partners`, `/costs`, `/warehouses`, `/stock` | partneri, troškovi, lager |
 | `public` | `/api/public` | javni one-page (whitelisted DTO, keš 60 s) |
 | `audit` | — | `AuditEvent` (zatvoren skup akcija); **best-effort**: pad upisa se loguje i ne ruši zahtjev (D-031) |
-| `realtime` | `/socket.io` | JWT handshake, sobe `project:{id}` (server-side) |
+| `realtime` | `/socket.io` | JWT handshake; sobe `user:{id}`, `company:{id}`, `companywide:{id}`, `project:{id}` (server-side) |
 | `health` | `/api/health` | `SELECT 1` → `{ process, postgres }` |
 | `mail` | — | **stub** (vidi §7) |
 
@@ -239,8 +239,34 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije:
 
 ### 4.11 Javni sajt
 - Whitelisted DTO: naziv, grad, adresa, telefon, logo, tagline, javni projekti.
-  **Bez** `taxId`, budžeta i GPS-a.
-- Isti `404` za tuđi i nepostojeći slug (bez enumeracije).
+  **Bez** `taxId`, budžeta, potrošnje, koordinata i internih id-eva (unit test čuva listu polja).
+- Isti `404` za tuđi i nepostojeći slug (bez enumeracije); neaktivna firma je takođe `404`.
+- Javne slike (`LOGO`/`COVER`) idu kroz `GET /api/public/assets/:id` (ne kroz `?path=`):
+  `Content-Type`/`Content-Length` iz MinIO-a, `X-Content-Type-Options: nosniff`,
+  `CSP sandbox`, `Cache-Control: public, max-age=3600`; greška streama ruši odgovor umjesto da visi.
+- `POST /api/public/assets` validira projekat **prije** uploada — nepostojeći projekat ne ostavlja
+  orphan fajl/zapis. Dozvoljeni tipovi: `image/jpeg|png|webp` (provjera po potpisu, ne po imenu).
+- Javni GET-ovi su ograničeni throttlerom (`PUBLIC_GET_LIMIT`/`PUBLIC_GET_TTL_MS`).
+
+### 4.12 Notifikacije i realtime
+- Notifikacije su in-app (`GET /api/notifications`, `PATCH /:id/read`, `POST /read-all`) i uvijek
+  su **vlasništvo korisnika** (`userId` iz tokena, ne iz URL-a).
+- `notifyRoles` za N korisnika radi jedan `createManyAndReturn` (nije više N `INSERT`-ova u nizu),
+  pa po jedan `notification:new` emit po korisniku.
+- Socket.IO (`/socket.io`) traži JWT u handshake-u (`auth.token` ili `Authorization: Bearer`);
+  nevažeći/istekli token ili deaktivirana firma ⇒ odmah `disconnect`.
+- Sobe: `user:{id}`, `company:{id}`, `companywide:{id}` (firma-wide role) i `project:{id}`.
+  CORS gateway-a se ravna po **istom** pravilu kao REST (D-018) — prije je `origin: true`
+  dozvoljavao svaki origin.
+- Novi projekat dodaje firma-wide korisnike jednim `socketsJoin` nad sobom `companywide:{id}`
+  (prije je iterirao **sve** socket-e procesa).
+
+### 4.13 Email (B1, D-013)
+- **SMTP transport ne postoji.** `features.email` je samo pripremljen flag; `EmailService.trySend`
+  uvijek vraća `false` i loguje (debug) da poruka nije poslana — nijedan tok ne prijavljuje lažni
+  uspjeh. `POST /auth/forgot` i dalje vraća `200 {"ok":true}` radi **anti-enumeracije**, ali je u
+  dokumentaciji jasno da email nije poslan; `POST /auth/reset` je `501 AUTH_RESET_NOT_AVAILABLE`.
+- Pravi email tok (SMTP kredencijali + reset token model) je zaseban posao, ne „popravka“ ovog.
 
 ---
 
@@ -283,7 +309,7 @@ infrastruktura). `JWT_REFRESH_SECRET` više ne postoji kao varijabla (D-029).
 
 | # | Dug | Segment |
 |---|---|---|
-| B1 | Email je stub (`trySend` samo inkrementira brojač); zato je `POST /auth/reset` 501 | BE-02 (ostaje; pravi tok = novi segment) |
+| B1 | ~~Email je lažni uspjeh~~ — ✅ djelimično (D-013, BE-16): `trySend` je sada iskren (`false` uz log, bez obzira na `features.email`), pa nijedan tok ne tvrdi da je poslano; `POST /auth/reset` ostaje `501`. **Prava dostava** (SMTP transport + reset token model) je zaseban posao | BE-16 / novi segment |
 | B2 | Nema centralnog mapiranja Prisma grešaka | BE-03 |
 | B3 | ~~Nema env validacije pri startu~~ — ✅ riješeno (BE-01, `config/env.ts` + 17 testova) | BE-01 |
 | B4 | Samo 1 unit test (`timer-math.spec.ts`); nema coverage praga | TEST-01 |

@@ -75,4 +75,38 @@ export class NotificationsService {
     this.realtime.emitNotification(input.userId, row);
     return row;
   }
+
+  /**
+   * BE-16 (F-05): notifikacija za N korisnika (cronovi, odbijanje plate, HSE) radila je
+   * N pojedinačnih `INSERT`-ova u nizu. Sada je jedan `createMany`, pa jedan realtime
+   * emit po korisniku — bez N round-tripova do baze.
+   */
+  async createForUsers(input: {
+    companyId: string;
+    userIds: string[];
+    type: Prisma.NotificationCreateInput['type'];
+    title: string;
+    message: string;
+    data?: Prisma.InputJsonValue;
+  }): Promise<number> {
+    const unique = [...new Set(input.userIds)];
+    if (unique.length === 0) {
+      return 0;
+    }
+    const data = input.data ?? {};
+    const created = await this.prisma.notification.createManyAndReturn({
+      data: unique.map((userId) => ({
+        companyId: input.companyId,
+        userId,
+        type: input.type,
+        title: input.title,
+        message: input.message,
+        data,
+      })),
+    });
+    for (const row of created) {
+      this.realtime.emitNotification(row.userId, row);
+    }
+    return created.length;
+  }
 }

@@ -59,14 +59,24 @@ describe('Phase 7 polish (e2e)', () => {
     await app?.close();
   });
 
-  it('features.email=false keeps SMTP at 0', async () => {
+  it('B1/D-013: email nikad ne prijavljuje lažni uspjeh', async () => {
     const email = app.get(EmailService);
-    const before = email.smtpCalls;
+    const me = await request(app.getHttpServer())
+      .get('/api/me')
+      .set(auth(admin));
+    // Bez SMTP transporta `trySend` je iskren: `false`, i kad je flag uključen.
+    expect(
+      await email.trySend({
+        companyId: me.body.data.company.id as string,
+        to: 'nobody@gradix.local',
+        subject: 'test',
+        text: 'test',
+      }),
+    ).toBe(false);
     const response = await request(app.getHttpServer())
       .post('/api/auth/forgot')
       .send({ email: 'admin@gradix.local' });
     expect(response.status).toBe(200);
-    expect(email.smtpCalls).toBe(before);
   });
 
   it('convert WON same company; attachments stay on tender; not WON is 409', async () => {
