@@ -41,7 +41,7 @@ describe('RedisService (INF-07)', () => {
     const service = new RedisService(
       config({
         REDIS_HOST: 'redis-core',
-        REDIS_PORT: '6379',
+        REDIS_PORT: '6380',
         REDIS_PASSWORD: 'tajna',
         REDIS_PREFIX: 'gradix:',
         REDIS_TLS_CA_FILE: '/nonexistent/ca.crt',
@@ -51,7 +51,7 @@ describe('RedisService (INF-07)', () => {
     expect(RedisMock).toHaveBeenCalledWith(
       expect.objectContaining({
         host: 'redis-core',
-        port: 6379,
+        port: 6380,
         username: 'gradix',
         password: 'tajna',
         lazyConnect: true,

@@ -187,7 +187,7 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   // (throttle ostaje u memoriji). Ako je host zadat, ostalo mora biti konzistentno:
   // bez lozinke bi ACL korisnik tiho pao na `default` korisnika, pa je to greška, ne warning.
   const redisHost = optional(raw.REDIS_HOST);
-  out.REDIS_PORT = String(asInt('REDIS_PORT', raw.REDIS_PORT, 6379, errors));
+  out.REDIS_PORT = String(asInt('REDIS_PORT', raw.REDIS_PORT, 6380, errors));
   out.REDIS_PREFIX = optional(raw.REDIS_PREFIX) ?? 'gradix:';
   if (redisHost) {
     out.REDIS_HOST = redisHost;

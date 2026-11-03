@@ -41,7 +41,7 @@ export class RedisService implements OnApplicationShutdown {
     }
     this.client = new Redis({
       host,
-      port: Number(config.get('REDIS_PORT') ?? 6379),
+      port: Number(config.get('REDIS_PORT') ?? 6380),
       username: config.get<string>('REDIS_USER') ?? 'gradix',
       password: config.get<string>('REDIS_PASSWORD') ?? undefined,
       tls,

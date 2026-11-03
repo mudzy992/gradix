@@ -31,7 +31,7 @@ describe('validateEnv', () => {
     const off = validateEnv({ ...BASE });
     expect(off.REDIS_HOST).toBeUndefined();
     expect(off.REDIS_PREFIX).toBe('gradix:');
-    expect(off.REDIS_PORT).toBe('6379');
+    expect(off.REDIS_PORT).toBe('6380');
 
     const on = validateEnv({
       ...BASE,

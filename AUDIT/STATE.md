@@ -579,7 +579,8 @@ preko KAPIJE 1 („Nastavi dalje“), pa se radi do **KAPIJE 2** bez zaustavljan
 
 
 ### 2026-11-03 — INF-07 (Redis aktiviran) — završeno
-- **Odluka vlasnika:** Redis se aktivira (`redis-core`, mreža `redis_net`, TLS sa postojećim CA);
+- **Odluka vlasnika:** Redis se aktivira (`redis-core:6380` — TLS port, mreža `redis_net`, TLS sa
+  postojećim CA);
   ACL korisnika dodaje vlasnik lično kroz `redis-cli`, lozinku generiše on, prefiks također.
 - **Nalaz (visoko):** `REDIS_*` je bila mrtva konfiguracija (I7) — throttle je bio memorijski po
   procesu, pa limit nije važio između replika i resetovao se restartom. Sada

@@ -17,7 +17,7 @@ USER_NAME="${REDIS_USER:-gradix}"
 PREFIX="${REDIS_PREFIX:-gradix:}"
 CA_FILE="${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}"
 HOST="${REDIS_HOST:-redis-core}"
-PORT="${REDIS_PORT:-6379}"
+PORT="${REDIS_PORT:-6380}"
 
 # `reset` čini liniju idempotentnom: ponovno pokretanje zamjenjuje sva prava, ne dodaje ih.
 COMMANDS="+ping +multi +exec +incr +pexpire +pttl +get +set +del +exists +ttl"

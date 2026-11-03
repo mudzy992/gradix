@@ -130,7 +130,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 | Varijabla | Default | Efekat |
 |---|---|---|
 | `REDIS_HOST` | prazno | prazno = **Redis se ne koristi** (throttle u memoriji, kao prije INF-07); postavi `redis-core` |
-| `REDIS_PORT` | `6379` | port |
+| `REDIS_PORT` | `6380` | port (**TLS port** — na `redis-core` TLS sluša na 6380, ne 6379) |
 | `REDIS_USER` | `gradix` | ACL korisnik (linija za `redis-cli`: `scripts/ops/redis-acl.sh`) |
 | `REDIS_PASSWORD` | — | **obavezan kad je `REDIS_HOST` zadat** (env validacija ne pušta app bez njega) |
 | `REDIS_PREFIX` | `gradix:` | prefiks svih ključeva; mora odgovarati ACL obrascu `~<prefix>*` |
@@ -302,7 +302,8 @@ Regresiju hvataju Web E2E (Playwright) i smoke test frontend kontejnera u CI-ju.
 
 ## 11. Redis (INF-07) — throttle i ACL
 
-Redis (`redis-core`, eksterna mreža `redis_net`) koristi se za **jedan** posao u v1: brojač
+Redis (`redis-core:6380` — **TLS port**, ne 6379; eksterna mreža `redis_net`) koristi se za
+**jedan** posao u v1: brojač
 throttlea (`120 zahtjeva / 60 s`, isti limit kao prije). Time limit važi **između replika** i
 preživljava restart; memorijski `ThrottlerStorage` je i dalje tu kao fallback.
 
@@ -337,10 +338,12 @@ REDIS_USER=gradix REDIS_PREFIX='gradix:' ./scripts/ops/redis-acl.sh
 ```bash
 # 1) ACL je tačan (očekivano: on, ~gradix:*, bez @admin)
 ACL GETUSER gradix
+#    (ACL komande izvršavaj na TLS portu: redis-cli -h redis-core -p 6380 --tls --cacert <CA> …)
 # 2) backend vidi Redis
 curl -s https://<api-domen>/api/ready | jq '.checks.redis'   # {"status":"ok","latencyMs":1}
 # 3) throttle zaista broji u Redisu (ključ postoji i ima TTL)
-redis-cli --user gradix --pass '<LOZINKA>' --tls --cacert <CA> KEYS '<prefix>throttle:*'
+redis-cli -h redis-core -p 6380 --user gradix --pass '<LOZINKA>' --tls --cacert <CA> \
+  KEYS '<prefix>throttle:*'
 ```
 
 ### 11.4 Fail-open pravilo (D-014, D-039)

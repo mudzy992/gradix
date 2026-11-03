@@ -4,6 +4,7 @@
 |---|---|
 | Sloj | `INF` |
 | Obim | `proces` (kod: `backend/src/common/redis/`, `scripts/ops/redis-acl.sh`) |
+| Ispravka | 2026-11-03: vlasnik javio da Redis TLS sluša na **`6380`** (ne 6379) — defaulti (`env.ts`, `redis.service.ts`, compose, env šabloni, ACL skripta, docs §5.4/§11) usklađeni na 6380 |
 | Status | `done` |
 | Plan | [`AUDIT/02_MASTER_AUDIT_PLAN.md`](../02_MASTER_AUDIT_PLAN.md) |
 | Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) (filter `segment=INF-07`) |
@@ -30,7 +31,7 @@ validacija, `ThrottlerModule`), BE-18/INF-05 (`/api/ready`), CI-01 (workflow pra
 + 2 spec fajla, `scripts/ops/redis-acl.sh`, `backend/src/app.module.ts`, `backend/src/config/env.ts`,
 `backend/src/modules/health/health.service.ts`, `docker-compose.yml`, `.env.example`, `.env.coolify`.
 
-**Pretpostavke:** Redis radi na `redis-core:6379` u eksternoj mreži `redis_net`, sa TLS-om i CA
+**Pretpostavke:** Redis radi na `redis-core:6380` (TLS port) u eksternoj mreži `redis_net`, sa TLS-om i CA
 fajlom koji Coolify već mapira (`/etc/ssl/redis/redis-ca.crt`); vlasnik generiše lozinku i dodaje
 ACL korisnika kroz `redis-cli`, pa backend nikad ne poznaje administratorske kredencijale.
 
@@ -145,4 +146,5 @@ problema u v1, a uvodi invalidaciju i „hladni“ podatke bez vlasnika.
 | Datum | 2026-11-03 |
 | Commit(ovi) | `f20d1db` — `feat(infra): INF-07 …` (klijent + storage + env + readiness + ACL skripta + docs) |
 | CI run | ✅ **`41666523698`** — **6/6** zelen · drill **`41666523647`** ✅ |
+| Ispravka | 2026-11-03: vlasnik javio da Redis TLS sluša na **`6380`** (ne 6379) — defaulti (`env.ts`, `redis.service.ts`, compose, env šabloni, ACL skripta, docs §5.4/§11) usklađeni na 6380 |
 | Status | `done` |

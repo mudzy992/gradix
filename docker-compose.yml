@@ -94,7 +94,7 @@ services:
       # EKSTERNI Redis (mreža `redis_net`, INF-07) — opciono; prazno = throttle u memoriji.
       # Ako je REDIS_HOST zadat, REDIS_PASSWORD je obavezan (env validacija neće pustiti app).
       REDIS_HOST: ${REDIS_HOST:-}
-      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PORT: ${REDIS_PORT:-6380}
       REDIS_USER: ${REDIS_USER:-gradix}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PREFIX: ${REDIS_PREFIX:-gradix:}
