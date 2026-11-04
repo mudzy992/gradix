@@ -24,7 +24,6 @@ const LOGIN_LIMIT = Number(process.env.AUTH_LOGIN_LIMIT ?? 5);
 const REFRESH_LIMIT = Number(process.env.AUTH_REFRESH_LIMIT ?? 20);
 
 @Controller('auth')
-
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
