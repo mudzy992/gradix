@@ -378,7 +378,8 @@ frontend/src/components/notifications/bell.spec.tsx,TEST,fe-unit,FE-05,56,pregle
 frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,119,pregledano,CI-05: loading i greška nisu više lažno prazna lista; retry i role status/alert; regresija bell.spec.tsx.,2026-11-04
 frontend/src/components/ops/diary-conflict-sheet.spec.tsx,FE,ops-ui,FE-08,133,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, MERGE/A/B izbor, onemogućene odluke bez projekta/datuma, „Otkaži“",2026-11-03
 frontend/src/components/ops/diary-conflict-sheet.tsx,FE,ops-ui,FE-08,99,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, objašnjenje konflikta, onemogućene odluke + role=alert kad detalji nemaju projekat/datum, dugme „Otkaži“",2026-11-03
-frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,81,nepregledano,,
+frontend/src/components/ops/dispatch-sheet.spec.tsx,FE,ops-ui,FE-08,89,pregledano,"CI-05: četiri testa validacije, retry-ja, ispravnog snimanja i greške korisnika.",2026-11-04
+frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,95,pregledano,"CI-05: obavezna polja imaju povezane greške; učitavanje i retry, onemogućavanje duplog snimanja; opciona dodjela.",2026-11-04
 frontend/src/components/ops/planned-gantt.spec.tsx,FE,ops-ui,FE-08,30,pregledano,"CI-05: test semantičkih datuma i traka, neispravnih i obrnutih raspona, granične jednodnevne stavke.",2026-11-04
 frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-05: pregled grafika; validacija datuma i raspona, vidljiv tekst perioda i dekorativne trake, granice grafika.",2026-11-04
 frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,91,nepregledano,,

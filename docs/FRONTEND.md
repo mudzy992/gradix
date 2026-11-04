@@ -198,3 +198,7 @@ Gantt prikazuje početak i kraj i kao tekstualne datume; stavke bez valjanog per
 ### Količine projekta
 
 Pri kreiranju se bira jedinica iz podržane šeme (m³, t, m, m², kom ili h). Neuspjela izmjena izvedene količine vraća prethodno prikazanu spremljenu vrijednost; greška učitavanja ima ponovni pokušaj.
+
+### Kreiranje zadatka
+
+Dispatch prikazuje greške obaveznih polja i greške učitavanja sa ponovnim pokušajem. Bez učitanih projekata nije moguće snimiti; dodjela korisnika je opciona i njeno neuspjelo učitavanje vidljivo je korisniku.
