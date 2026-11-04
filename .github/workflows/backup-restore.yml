@@ -102,29 +102,38 @@ jobs:
       - name: Uporedi brojeve redova izvor ↔ restore
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           failed=0
-          # Imena tabela su Prisma modeli (bez @@map) — u Postgresu su quoted: "User", "Project"...
+          # Postgres tabela sa Prisma nazivom: svaka greška upita mora oboriti drill.
           for table in User Company Project Task TimerSession AuditEvent CostEntry DiaryEntry; do
-            src=$(psql "$PG_SOURCE" -tAc "SELECT count(*) FROM \"$table\"" 2>&1 | tr -d ' ')
-            dst=$(psql "$PG_TARGET" -tAc "SELECT count(*) FROM \"$table\"" 2>&1 | tr -d ' ')
+            src=$(psql "$PG_SOURCE" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM \"$table\"" | tr -d '[:space:]')
+            dst=$(psql "$PG_TARGET" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM \"$table\"" | tr -d '[:space:]')
+            if [[ ! "$src" =~ ^[0-9]+$ || ! "$dst" =~ ^[0-9]+$ ]]; then
+              echo "::error title=row-count::Nevažeći broj redova za $table"
+              exit 1
+            fi
             if [ "$src" != "$dst" ]; then
               echo "::error title=row-count::$table izvor=$src restore=$dst"
               failed=1
+            else
+              echo "✓ $table: izvor=$src restore=$dst"
             fi
-            echo "✓ $table: izvor=$src restore=$dst"
           done
-          applied=$(psql "$PG_TARGET" -tAc \
-            "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" 2>&1 | tr -d ' ')
+          applied=$(psql "$PG_TARGET" -v ON_ERROR_STOP=1 -tAc \
+            "SELECT count(*) FROM \"_prisma_migrations\" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL" | tr -d '[:space:]')
           # Samo folderi — u `migrations/` je i `migration_lock.toml` (nije migracija).
-          expected=$(find backend/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          echo "✓ migracije u restore-u: $applied / $expected"
-          if [ "$applied" -lt "$expected" ] 2>/dev/null; then
+          expected=$(find backend/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d '[:space:]')
+          if [[ ! "$applied" =~ ^[0-9]+$ || ! "$expected" =~ ^[0-9]+$ ]]; then
+            echo "::error title=migrations::Nevažeći broj migracija"
+            exit 1
+          fi
+          echo "migracije u restore-u: $applied / $expected"
+          if [ "$applied" -ne "$expected" ]; then
             echo "::error title=migrations::u restore-u $applied od $expected migracija"
             failed=1
           fi
           echo "rezultat: failed=$failed"
-          exit $failed
+          exit "$failed"
 
       - name: Dijagnostika na pad (anotacije)
         if: failure()

@@ -74,14 +74,14 @@ on:
 Job `drill` (limit 20 min): Postgres 16 servis → `migrate deploy` + seed → `scripts/ops/backup.sh`
 → restore u `gradix_restore` (`scripts/ops/restore.sh`) → poređenje broja redova
 (`users, companies, projects, tasks, timer_sessions, audit_logs, cost_entries, diary_entries`) i
-broja primijenjenih migracija → dump kao artefakt 7 dana. Runbook:
+broja primijenjenih migracija → dump kao artefakt 7 dana. SQL/pipeline greška, nebrojčan rezultat ili različit broj migracija obara drill; testovi stubuju stvarni shell korak, a nisu zamjena za Postgres drill. Runbook:
 [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md) §7.
 
 ### Jobovi
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
-| `audit` | `node --test scripts/audit/check-coverage.test.mjs` (regresije duplikata i drift-a), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
+| `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` (Frontend lint + typecheck + test + build) | `npm ci` → `oxlint` → `tsc -b` → **`npm run test:cov`** (Vitest + Testing Library, jsdom) → `vite build` → artefakt `frontend-coverage` | ~45 s |

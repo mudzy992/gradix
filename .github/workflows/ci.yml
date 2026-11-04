@@ -62,7 +62,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit gate regresijski testovi
-        run: node --test scripts/audit/check-coverage.test.mjs
+        run: node --test scripts/audit/check-coverage.test.mjs scripts/ops/backup-restore-workflow.test.mjs
 
       - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
         run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose
