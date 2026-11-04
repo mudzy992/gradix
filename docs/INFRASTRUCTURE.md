@@ -154,7 +154,7 @@ Detalji (ACL, fail-open, provjera): §11.
 
 ## 6. Migracije i seed
 
-- **Migracije**: automatski pri startu (`prisma migrate deploy`). Sedam migracija:
+- **Migracije**: automatski pri startu (`prisma migrate deploy`). Osam migracija:
   `20261102130000_init_postgres` (inicijalna šema), `20261103120000_be08_indexes_audit`
   (51 indeks na stranim ključevima, 19 novih `AuditAction` vrijednosti, 2 parcijalna unique
   indeksa za otvorene timere), `20261103140000_be09_machine_open_assignment` (parcijalni unique
@@ -163,7 +163,8 @@ Detalji (ACL, fail-open, provjera): §11.
   `20261103180000_be13_diary_hse_audit_actions` (6 akcija za dnevnik i HSE) i
   `20261103190000_be14_payroll_snapshot_erp_audit` (`TimerSession.hourlyRateSnapshot` + 4 akcije:
   `COST_ENTRY_REMOVED`, `PARTNER_CREATED/UPDATED`, `WAREHOUSE_CREATED`) i
-  `20261103210000_be15_office_audit_actions` (12 akcija za tendere, servis i dokumente).
+  `20261103210000_be15_office_audit_actions` (12 akcija za tendere, servis i dokumente) i
+  `20261104120000_project_document_idempotency` (opciono idempotentno povezivanje dokumenata, bez izmjene postojećih redova).
   Stariji MySQL set je uklonjen (odluka D-010).
 - **Parcijalni unique indeksi** (`TimerSession_open_user_key`, `TimerSession_open_machine_key`,
   `MachineAssignment_open_machine_key`)

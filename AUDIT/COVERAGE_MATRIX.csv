@@ -594,7 +594,7 @@ scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,C
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,119,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,275,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
-scripts/audit/segments.json,STD,audit-tools,STD-01,439,nepregledano,,
+scripts/audit/segments.json,STD,audit-tools,STD-01,439,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 dug statusa done ostaje otvoren,2026-11-04
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
