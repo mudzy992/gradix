@@ -153,10 +153,11 @@ export const appRoutes = [
           },
           {
             path: '/hse',
+            // F-FE-06-01 (D-033): `hse.write` bez `hse.read` vidi samo svoje prijave.
             element: (
-              <RequirePermission permission="hse.read">
+              <RequireAnyPermission permissions={['hse.read', 'hse.write']}>
                 <HsePage />
-              </RequirePermission>
+              </RequireAnyPermission>
             ),
           },
           {

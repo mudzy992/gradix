@@ -42,3 +42,18 @@ if (!globalThis.ResizeObserver) {
     disconnect() {}
   } as unknown as typeof ResizeObserver
 }
+
+/**
+ * FE-10: Radix `Select` (i druge portalu komponente) traže `hasPointerCapture`/`releasePointerCapture`
+ * i `scrollIntoView`, koje jsdom ne implementira — bez ovoga se meni ne može ni otvoriti u testu.
+ * Stubovi su samo za jsdom; u browseru ih obezbjeđuje sam browser.
+ */
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = (() => false) as typeof Element.prototype.hasPointerCapture
+  Element.prototype.releasePointerCapture = (() => {}) as typeof Element.prototype.releasePointerCapture
+  Element.prototype.setPointerCapture = (() => {}) as typeof Element.prototype.setPointerCapture
+}
+
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = (() => {}) as typeof Element.prototype.scrollIntoView
+}

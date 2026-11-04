@@ -100,3 +100,21 @@ describe('NAV_SECTIONS', () => {
     }
   })
 })
+
+/**
+ * F-FE-06-01 (D-033) — prijavljivač HSE ima `hse.write` bez `hse.read`; backend mu vraća **samo
+ * njegove** prijave, pa mu stavka mora biti vidljiva. Prije je bila vezana isključivo za `hse.read`.
+ */
+describe('HSE stavka (F-FE-06-01)', () => {
+  it('vidljiva je i sa `hse.write` bez `hse.read`', () => {
+    expect(isNavItemVisible(item('/hse'), user({ roles: ['WORKER'], permissions: ['hse.write'] }))).toBe(true)
+  })
+
+  it('vidljiva je i sa `hse.read`', () => {
+    expect(isNavItemVisible(item('/hse'), user({ permissions: ['hse.read'] }))).toBe(true)
+  })
+
+  it('nije vidljiva bez ijednog HSE prava', () => {
+    expect(isNavItemVisible(item('/hse'), user({ permissions: ['tasks.read'] }))).toBe(false)
+  })
+})

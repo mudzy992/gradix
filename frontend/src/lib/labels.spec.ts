@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  EXPIRY_WARN_DAYS,
   KNOWN_STATUSES,
   assignmentRole,
+  daysUntil,
+  documentState,
   formatDuration,
   formatHours,
   gpsSource,
+  hseSeverity,
+  hseStatus,
   machineStatus,
   machineType,
   materialUnit,
@@ -140,5 +145,43 @@ describe('formatHours()', () => {
     expect(formatHours(null)).toBe('—')
     expect(formatHours(undefined)).toBe('—')
     expect(formatHours('nije broj')).toBe('—')
+  })
+})
+
+/**
+ * FE-10 — HSE i rokovi dokumenata. Status `ACK` je prije bio i dugme („Potvrdi“) i podatak; sada je
+ * prevod „Potvrđena“. Rok dokumenta se izvodi iz datuma, pa korisnik ne mora računati dane.
+ */
+describe('HSE i rokovi dokumenata', () => {
+  it('pokrivaju sve vrijednosti iz šeme incidenata', () => {
+    expect(KNOWN_STATUSES.hseSeverity).toEqual(['LOW', 'MEDIUM', 'HIGH'])
+    expect(KNOWN_STATUSES.hseStatus).toEqual(['OPEN', 'ACK', 'CLOSED'])
+  })
+
+  it('visoka ozbiljnost je crvena, zatvorena prijava neutralna', () => {
+    expect(hseSeverity('HIGH').tone).toBe('destructive')
+    expect(hseSeverity('LOW').tone).toBe('outline')
+    expect(hseStatus('OPEN').tone).toBe('default')
+    expect(hseStatus('CLOSED').tone).toBe('outline')
+    expect(hseStatus('ACK')).toEqual({ labelKey: 'status.hseStatus.ACK', tone: 'secondary', known: true })
+  })
+
+  it('broji dane do datuma (UTC, bez vremenske zone korisnika)', () => {
+    const now = new Date('2026-11-03T22:30:00.000Z')
+    expect(daysUntil('2026-11-03T00:00:00.000Z', now)).toBe(0)
+    expect(daysUntil('2026-11-13T00:00:00.000Z', now)).toBe(10)
+    expect(daysUntil('2026-10-30T00:00:00.000Z', now)).toBe(-4)
+    expect(daysUntil(null, now)).toBeNull()
+    expect(daysUntil('nije datum', now)).toBeNull()
+  })
+
+  it('stanje dokumenta prati pragove 30 / 15 / 5 dana iz D-013', () => {
+    const now = new Date('2026-11-03T12:00:00.000Z')
+    expect(EXPIRY_WARN_DAYS).toEqual([30, 15, 5])
+    expect(documentState('2026-10-01T00:00:00.000Z', now).labelKey).toBe('status.doc.expired')
+    expect(documentState('2026-10-01T00:00:00.000Z', now).tone).toBe('destructive')
+    expect(documentState('2026-11-20T00:00:00.000Z', now).labelKey).toBe('status.doc.expiring')
+    expect(documentState('2027-06-01T00:00:00.000Z', now).labelKey).toBe('status.doc.valid')
+    expect(documentState(null, now).labelKey).toBe('status.doc.none')
   })
 })

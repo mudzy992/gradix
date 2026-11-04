@@ -77,7 +77,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/fleet', labelKey: 'nav.fleet', icon: Truck, permission: 'fleet.read', tenant: true },
       { to: '/fleet/map', labelKey: 'nav.map', icon: Map, permission: 'fleet.map', tenant: true },
       { to: '/logistics', labelKey: 'nav.logistics', icon: Route, permission: 'trips.read', tenant: true },
-      { to: '/hse', labelKey: 'nav.hse', icon: ShieldCheck, permission: 'hse.read', tenant: true },
+      // F-FE-06-01 (D-033): prijavljivač ima `hse.write` bez `hse.read`; backend mu daje **samo
+      // njegove** prijave, pa mu ekran mora biti dostupan — inače ne vidi ni ono što je prijavio.
+      { to: '/hse', labelKey: 'nav.hse', icon: ShieldCheck, anyPermission: ['hse.read', 'hse.write'], tenant: true },
     ],
   },
   {

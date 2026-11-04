@@ -109,6 +109,14 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/^(TRUCK|EXCAVATOR|IDLE|IN_SERVICE|DECOMMISSIONED)$/)).toHaveCount(0)
   })
 
+  test('HSE ekran ima prevedeno prazno stanje, bez sirovih enuma (FE-10)', async () => {
+    await page.goto('/hse')
+    // U seed-u nema incidenata → prazno stanje mora biti jasno rečeno, ne prazna lista.
+    await expect(page.getByText('Nema HSE prijava.')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/Prijavite incident ili opasnost/)).toBeVisible()
+    await expect(page.getByText(/^(LOW|MEDIUM|HIGH|OPEN|ACK|CLOSED)$/)).toHaveCount(0)
+  })
+
   test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).

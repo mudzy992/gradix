@@ -575,6 +575,37 @@ a jedinica materijala je bila `M3`.
 (b) „samo CSS“ rješenje za pristupačnost mape — platno nema šta izložiti čitaču; (c) zadržati stare
 boje pinova — to su boje odbačene palate (D-040).
 
+### D-048 — HSE i rokovi dokumenata imaju prevod i stanje; dnevnik je čitljiv i bez vida
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Ekrani dnevnika, HSE-a i dokumenata imali su iste propuste kao prethodni segmenti (sirovi enumi,
+nema stanja liste), plus tri svoja: (1) **HSE akcije su bile vidljive svima** koji vide listu, iako
+mijenjaju zapis; (2) ekran dokumenata je pisao „Upozorenja 30 / 15 / 5 dana“, a uz dokument je stajao
+samo datum — korisnik je morao sam računati da li je istekao; (3) u dnevniku su dani bili **dugmad
+koja ništa ne rade** i zvala su se „01“, „02“…, filter projekta se nije mogao poništiti, a sheet
+konflikta je na nepotpune detalje **tiho** odustajao.
+
+**Odluka:**
+1. `lib/labels.ts` (D-046/D-047) proširen: `hseSeverity` (HIGH crveno), `hseStatus` (OPEN primarno,
+   ACK/ZATVORENO neutralno) i `documentState`/`daysUntil` sa pragovima **30 / 15 / 5** dana (D-013).
+2. Akcije koje mijenjaju zapis prikazuju se **samo** uz odgovarajuće pravo (`hse.write`); prije su
+   „Potvrdi“/„Zatvori“ stajali i onima koji ih ne smiju izvršiti.
+3. Rok dokumenta se prikazuje kao stanje („Istekao“, „Ističe“, „Vrijedi“, „Bez roka“) **plus**
+   relativni pomak („ističe za 6 d“), uz datum.
+4. F-FE-06-01 (frontend dio): `/hse` više nije vezan isključivo za `hse.read` — stavka navigacije i
+   ruta traže **bilo koje** od `hse.read`/`hse.write`. Backend (D-033) već daje prijavljivaču samo
+   njegove prijave i `404` za tuđe, pa je ekran siguran i bez `hse.read`.
+5. Kalendar dnevnika: prazne ćelije do prvog dana mjeseca (ponedjeljak kao prva kolona), dan je
+   **ćelija sa punim imenom** („2026-11-03 — ima unos“/„— nema unosa“), opcija „Svi projekti“ vraća
+   filter na cijelu firmu. Sheet konflikta pokazuje datum i **onemogući** odluku uz objašnjenje kad
+   detalji nemaju projekat/datum.
+6. Radix `Select` u jsdom-u traži `hasPointerCapture`/`scrollIntoView`; stubovi su dodati u
+   `test/setup.ts` da se meni može testirati (nema uticaja na produkcijski kod).
+
+**Odbačeno:** (a) dati `hse.read` svim radnicima — otvara sve HSE zapise firme (D-033 opcija C);
+(b) boja kao jedini nosilac značenja roka — uz nju ide i tekst; (c) „popravi“ dan klikom na
+`setParams({ projectId })` (isto stanje) — prikaz je sada informativan, a unos ide kroz tab projekta.
+
 ---
 
 ## Zamijenjene / povučene odluke

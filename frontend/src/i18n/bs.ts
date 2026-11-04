@@ -163,6 +163,7 @@ export const bs = {
     page: 'Stranica {{page}}',
     pageOf: 'Stranica {{page}} od {{pages}}',
     pagination: 'Stranice',
+    required: 'Obavezno polje.',
   },
   status: {
     project: {
@@ -226,6 +227,22 @@ export const bs = {
     trip: {
       LOADED: 'Utovareno',
       UNLOADED: 'Istovareno',
+    },
+    hseSeverity: {
+      LOW: 'Niska',
+      MEDIUM: 'Srednja',
+      HIGH: 'Visoka',
+    },
+    hseStatus: {
+      OPEN: 'Otvorena',
+      ACK: 'Potvrđena',
+      CLOSED: 'Zatvorena',
+    },
+    doc: {
+      valid: 'Vrijedi',
+      expiring: 'Ističe',
+      expired: 'Istekao',
+      none: 'Bez roka',
     },
   },
   roles: {

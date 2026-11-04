@@ -163,6 +163,7 @@ export const en = {
     page: 'Page {{page}}',
     pageOf: 'Page {{page}} of {{pages}}',
     pagination: 'Pagination',
+    required: 'Required field.',
   },
   status: {
     project: {
@@ -226,6 +227,22 @@ export const en = {
     trip: {
       LOADED: 'Loaded',
       UNLOADED: 'Unloaded',
+    },
+    hseSeverity: {
+      LOW: 'Low',
+      MEDIUM: 'Medium',
+      HIGH: 'High',
+    },
+    hseStatus: {
+      OPEN: 'Open',
+      ACK: 'Acknowledged',
+      CLOSED: 'Closed',
+    },
+    doc: {
+      valid: 'Valid',
+      expiring: 'Expiring',
+      expired: 'Expired',
+      none: 'No expiry',
     },
   },
   roles: {

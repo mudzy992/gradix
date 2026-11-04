@@ -50,9 +50,9 @@ test.describe('FE-06 — radnik', () => {
     // `WORKER` ima `tasks.read`, ali nema `projects.read` ni `fleet.read`.
     await expect(quick.getByRole('link', { name: 'Projekti' })).toHaveCount(0)
     await expect(quick.getByRole('link', { name: 'Flota' })).toHaveCount(0)
-    // Napomena (F-FE-06-01): radnik ima `hse.write` ali **ne** `hse.read`, pa mu se HSE ekran
-    // namjerno ne nudi — promjena tog pravila je BE odluka, ne stvar ovog testa.
-    await expect(quick.getByRole('link', { name: 'HSE' })).toHaveCount(0)
+    // F-FE-06-01 (D-033): radnik ima `hse.write` bez `hse.read`, a backend mu vraća **samo njegove**
+    // prijave — ekran mu zato mora biti dostupan (prije je bio skriven i pored prava da prijavi).
+    await expect(quick.getByRole('link', { name: 'HSE' })).toBeVisible()
   })
 
   test('timer: start → pauza → stop na dodijeljenom zadatku', async () => {

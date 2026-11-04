@@ -49,6 +49,11 @@ export default defineConfig({
         'src/pages/fleet-page.tsx',
         'src/pages/fleet-map-page.tsx',
         'src/pages/logistics-page.tsx',
+        // FE-10 — dnevnik, HSE, dokumenti
+        'src/pages/diary-page.tsx',
+        'src/pages/hse-page.tsx',
+        'src/pages/documents-page.tsx',
+        'src/components/ops/diary-conflict-sheet.tsx',
       ],
       thresholds: { lines: 85, functions: 85, statements: 85, branches: 85 },
     },

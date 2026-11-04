@@ -85,6 +85,18 @@ const TRIP_STATUS: Record<string, Entry> = {
   UNLOADED: { tone: 'default' },
 }
 
+const HSE_SEVERITY: Record<string, Entry> = {
+  LOW: { tone: 'outline' },
+  MEDIUM: { tone: 'secondary' },
+  HIGH: { tone: 'destructive' },
+}
+
+const HSE_STATUS: Record<string, Entry> = {
+  OPEN: { tone: 'default' },
+  ACK: { tone: 'secondary' },
+  CLOSED: { tone: 'outline' },
+}
+
 const ASSIGNMENT_ROLE: Record<string, Entry> = {
   PM: { tone: 'default' },
   SS: { tone: 'default' },
@@ -111,6 +123,8 @@ export const machineType = (value: string): StatusMeta => meta(MACHINE_TYPE, 'ma
 export const gpsSource = (value: string): StatusMeta => meta(GPS_SOURCE, 'gps', value)
 export const materialUnit = (value: string): StatusMeta => meta(MATERIAL_UNIT, 'unit', value)
 export const tripStatus = (value: string): StatusMeta => meta(TRIP_STATUS, 'trip', value)
+export const hseSeverity = (value: string): StatusMeta => meta(HSE_SEVERITY, 'hseSeverity', value)
+export const hseStatus = (value: string): StatusMeta => meta(HSE_STATUS, 'hseStatus', value)
 
 /** Tura je „istovarena“ kad ima `unloadedAt`; jedino mjesto gdje se to pravilo zna. */
 export const tripStatusOf = (row: { unloadedAt: string | null }): StatusMeta =>
@@ -127,6 +141,8 @@ export const KNOWN_STATUSES = {
   gps: Object.keys(GPS_SOURCE),
   unit: Object.keys(MATERIAL_UNIT),
   trip: Object.keys(TRIP_STATUS),
+  hseSeverity: Object.keys(HSE_SEVERITY),
+  hseStatus: Object.keys(HSE_STATUS),
 }
 
 /**
@@ -166,4 +182,40 @@ export function formatHours(value: string | number | null | undefined): string {
   const [whole, decimal] = rounded.toFixed(1).split('.')
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return decimal && decimal !== '0' ? `${grouped},${decimal} h` : `${grouped} h`
+}
+
+/** Pragovi iz `docs/` (D-013): upozorenja na 30 / 15 / 5 dana prije isteka dokumenta. */
+export const EXPIRY_WARN_DAYS = [30, 15, 5] as const
+
+/** Broj dana do datuma (negativno = prošlo); `null` kad datuma nema ili nije ispravan. */
+export function daysUntil(date: string | null | undefined, now: Date = new Date()): number | null {
+  if (!date) {
+    return null
+  }
+  const target = new Date(date)
+  if (Number.isNaN(target.getTime())) {
+    return null
+  }
+  const day = 24 * 60 * 60 * 1000
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const end = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())
+  return Math.round((end - start) / day)
+}
+
+/**
+ * Stanje dokumenta za prikaz. Prije ovoga je ekran dokumenata prikazivao samo datum, iako sam
+ * tekst kaže „Upozorenja 30 / 15 / 5 dana“ — korisnik je morao sam računati da li je nešto isteklo.
+ */
+export function documentState(expiresAt: string | null | undefined, now: Date = new Date()): StatusMeta {
+  const days = daysUntil(expiresAt, now)
+  if (days === null) {
+    return { labelKey: 'status.doc.none', tone: 'outline', known: true }
+  }
+  if (days < 0) {
+    return { labelKey: 'status.doc.expired', tone: 'destructive', known: true }
+  }
+  if (days <= EXPIRY_WARN_DAYS[0]) {
+    return { labelKey: 'status.doc.expiring', tone: 'default', known: true }
+  }
+  return { labelKey: 'status.doc.valid', tone: 'secondary', known: true }
 }
