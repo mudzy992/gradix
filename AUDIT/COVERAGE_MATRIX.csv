@@ -384,7 +384,8 @@ frontend/src/components/ops/planned-gantt.spec.tsx,FE,ops-ui,FE-08,30,pregledano
 frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-05: pregled grafika; validacija datuma i raspona, vidljiv tekst perioda i dekorativne trake, granice grafika.",2026-11-04
 frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,90,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
 frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
-frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,71,nepregledano,,
+frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
+frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,

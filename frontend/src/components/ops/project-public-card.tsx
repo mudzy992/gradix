@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -18,6 +19,8 @@ type Props = {
 export function ProjectPublicCard({ projectId, isPublic, coverAssetId }: Props) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const uploadingRef = useRef(false)
+  const [uploading, setUploading] = useState(false)
   const toggle = useMutation({
     mutationFn: (next: boolean) => patchProjectPublic(projectId, { isPublic: next }),
     onSuccess: async () => {
@@ -26,19 +29,24 @@ export function ProjectPublicCard({ projectId, isPublic, coverAssetId }: Props) 
     onError: (error) => toast.error(errorMessage(error)),
   })
   const onCover = async (file: File | undefined): Promise<void> => {
-    if (!file) {
+    if (!file || uploadingRef.current) {
       return
     }
+    uploadingRef.current = true
+    setUploading(true)
     try {
       await uploadPublicAsset(file, 'COVER', projectId)
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] })
       toast.success(t('settings.saved'))
     } catch (error) {
       toast.error(errorMessage(error))
+    } finally {
+      uploadingRef.current = false
+      setUploading(false)
     }
   }
   return (
-    <Card>
+    <Card role="region" aria-label={t('projectsPublic.title')}>
       <CardHeader>
         <CardTitle>{t('projectsPublic.title')}</CardTitle>
       </CardHeader>
@@ -58,8 +66,14 @@ export function ProjectPublicCard({ projectId, isPublic, coverAssetId }: Props) 
             id="cover"
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => void onCover(event.target.files?.[0])}
+            disabled={uploading}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = '' // Allow retrying the same file after failure.
+              void onCover(file)
+            }}
           />
+          {uploading ? <p role="status" className="text-xs text-muted-foreground">{t('common.loading')}</p> : null}
           {coverAssetId ? (
             <img src={publicAssetUrl(coverAssetId)} alt="" className="h-24 w-40 rounded object-cover" />
           ) : null}

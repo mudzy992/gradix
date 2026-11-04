@@ -214,3 +214,7 @@ Brisanje planiranog početka ili kraja u obrascu projekta šalje praznu vrijedno
 ### Opciono uređivanje projekta
 
 Pri izmjeni se kod, lokacija, naručilac i budžet šalju samo ako su promijenjeni; brisanje šalje praznu vrijednost. To ujedno štiti podatke koje API nije uključio u odgovor.
+
+### Javna fotografija projekta
+
+Upload cover fotografije blokiran je dok prethodni traje, uz prikaz statusa; nakon greške moguće je ponovo izabrati isti fajl.
