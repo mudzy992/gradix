@@ -194,11 +194,11 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       }
       try {
         if ('pending' in input) {
-          // Reconcile a response lost after creation before retrying the link.
-          const existing = await listDocuments(input.projectId)
+          // Check visibility first, then let the server resolve this exact key.
+          // A path/name match could belong to a different, newer operation.
+          await listDocuments(input.projectId)
           ensureOperation()
-          const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
-          if (!found) await createDocument(input.projectId, input.pending)
+          await createDocument(input.projectId, input.pending)
         } else {
           const uploaded = await uploadFile(input.file)
           ensureOperation()
@@ -210,7 +210,8 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       } catch (error) {
         const state = current()
         if (state?.idempotencyKey === idempotencyKey) {
-          client.setQueryData(key, state.reference ? { ...state, inFlight: false } : null)
+          const removed = error instanceof ApiError && error.code === 'PROJECT_DOCUMENT_REMOVED'
+          client.setQueryData(key, state.reference && !removed ? { ...state, inFlight: false } : null)
         }
         throw error
       }

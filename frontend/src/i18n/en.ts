@@ -388,6 +388,7 @@ export const en = {
     NOT_FOUND: 'Not found.',
     CONFLICT: 'Data conflict.',
     PROJECT_ON_HOLD: 'Project is on hold.',
+    PROJECT_DOCUMENT_REMOVED: 'This document link was removed and cannot be restored using the same attempt.',
     PROJECT_TERMINAL: 'Project is closed.',
     TIMER_ALREADY_OPEN: 'A timer is already open.',
     MACHINE_IN_USE: 'Machine is in use.',

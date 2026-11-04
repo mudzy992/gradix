@@ -435,6 +435,10 @@ Za `code`, `locality`, `client` i `plannedBudget` izostavljeno polje ostavlja po
 
 ### Projektni dokumenti — sigurniji retry povezivanja
 
-`POST /api/projects/:id/documents` prihvata opcioni `idempotencyKey` (UUID v4). Ista kombinacija projekta i ključa s istom putanjom i nazivom vraća postojeći dokument i pod paralelnim zahtjevima; promjena putanje ili naziva za isti ključ vraća `409 CONFLICT`. Ključ nije dio odgovora ni liste. Stari klijenti bez ključa zadržavaju postojeće ponašanje. Migracija dodaje nullable kolonu i jedinstveni indeks bez izmjene starih redova. Prava, zaključavanje projekta i provjera company prefiksa izvršavaju se i pri retryju.
+`POST /api/projects/:id/documents` prihvata opcioni `idempotencyKey` (UUID v4). Ista kombinacija projekta i ključa s istom putanjom i nazivom vraća postojeći dokument i pod paralelnim zahtjevima; promjena putanje ili naziva za isti ključ vraća `409 CONFLICT`. Ključ i `deletedAt` nisu dio odgovora ni liste. Prava, zaključavanje projekta i provjera company prefiksa izvršavaju se i pri retryju.
 
-Ovo štiti **povezivanje**, ne atomarnost MinIO uploada i baze: nepoznat ishod uploada, gubitak ključa pri reloadu i replay nakon brisanja još nisu riješeni (F-CI-05-15).
+`DELETE` zadržava vezu kao tombstone s vremenom brisanja, a lista prikazuje samo aktivne veze. Isti ključ poslije brisanja vraća `409 PROJECT_DOCUMENT_REMOVED`; ponovljeno brisanje vraća 404. Novi namjerni pokušaj s novim ključem može ponovo povezati isti objekat; stari klijent bez ključa i dalje kreira novu vezu. Konkurentni retry može dobiti prethodnu vezu ako se obradi prije brisanja, ali je ne kreira ponovo nakon brisanja. Audit je best-effort poslije promjene; MinIO objekat se ovim ne briše.
+
+Aditivna migracija čuva postojeće redove i dodaje indeks. **Kompatibilnost deploya:** stare backend verzije ne filtriraju tombstone i mogu ga trajno ukloniti, zato miješani stari/novi serveri i rollback na staru aplikaciju nisu sigurni za ovu garanciju. Uskladiti sve backend instance prije oslanjanja na pravilo; ne rollbackovati na stari server bez plana za tombstone. Prethodno fizički obrisane veze se ne mogu rekonstruisati, a direktno brisanje u DB ili cascade projekta može ukloniti zaštitu. Tombstone se zadržava bez automatskog čišćenja.
+
+Ovo štiti **povezivanje**, ne atomarnost MinIO uploada i baze: nepoznat ishod uploada i gubitak ključa pri reloadu ostaju otvoreni (F-CI-05-15).

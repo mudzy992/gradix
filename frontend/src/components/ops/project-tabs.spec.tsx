@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProjectRow } from '@/lib/ops-types'
-import type { MeUser } from '@/lib/api-types'
+import { ApiError, type MeUser } from '@/lib/api-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { clearRefreshToken, writeRefreshToken } from '@/lib/storage'
 import { useCompanyStore } from '@/stores/company-store'
@@ -240,17 +240,18 @@ describe('ProjectTabs', () => {
     expect(api.uploadFile).toHaveBeenCalledOnce()
   })
 
-  it('prije ponavljanja prepoznaje već povezani dokument nakon izgubljenog odgovora', async () => {
+  it('listu sa istom putanjom ne smatra dokazom identiteta: retry šalje isti ključ serveru', async () => {
     api.permissions.add('projects.write')
     api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
-    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: { id: 'd1' } })
     api.listDocuments.mockResolvedValueOnce({ data: [] }).mockResolvedValue({ data: [{ id: 'd1', path: 'c1/plan.pdf', fileName: 'plan.pdf' }] })
     renderTab('documents')
     await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
     expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Ponovi povezivanje' }))
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
-    expect(api.createDocument).toHaveBeenCalledOnce()
+    expect(api.createDocument).toHaveBeenCalledTimes(2)
+    expect(api.createDocument.mock.calls[1][1]).toEqual(api.createDocument.mock.calls[0][1])
     expect(api.uploadFile).toHaveBeenCalledOnce()
   })
 
@@ -267,6 +268,37 @@ describe('ProjectTabs', () => {
     expect(retry).toBeEnabled()
     expect(api.createDocument).toHaveBeenCalledOnce()
     expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('obrisani pokušaj ne vraća vezu ni kad drugi zapis ima istu putanju; oslobađa kontrolu', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new ApiError('PROJECT_DOCUMENT_REMOVED', 'removed', 409))
+    api.listDocuments.mockResolvedValueOnce({ data: [] }).mockResolvedValue({ data: [{ id: 'other', path: 'c1/plan.pdf', fileName: 'plan.pdf' }] })
+    renderTab('documents')
+    const input = screen.getByLabelText('Dodaj dokument')
+    await userEvent.upload(input, new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith(expect.stringContaining('veza dokumenta je obrisana')))
+    await waitFor(() => expect(input).toBeEnabled())
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+    expect(api.createDocument).toHaveBeenCalledTimes(2)
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('drugi konflikt ne odbacuje referencu za oporavak', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new ApiError('CONFLICT', 'conflict', 409))
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    const retry = await screen.findByRole('button', { name: 'Ponovi povezivanje' })
+    await userEvent.click(retry)
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith('Konflikt podataka.'))
+    expect(retry).toBeEnabled()
+    expect(screen.getByLabelText('Dodaj dokument')).toBeDisabled()
   })
 
   it('zadržava zakašnjeli neuspjeli upload uz izvorni projekat nakon navigacije', async () => {

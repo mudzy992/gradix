@@ -32,7 +32,7 @@ export class DocumentsService {
   async list(actor: AuthUser, projectId: string) {
     await this.access.getVisibleProject(actor, projectId);
     return this.prisma.projectDocument.findMany({
-      where: { projectId },
+      where: { projectId, deletedAt: null },
       select: documentFields,
     });
   }
@@ -74,7 +74,7 @@ export class DocumentsService {
       // never be mistaken for the original operation, including after a race.
       const existing = await this.prisma.projectDocument.findFirst({
         where: { projectId, idempotencyKey },
-        select: documentFields,
+        select: { ...documentFields, deletedAt: true },
       });
       if (!existing) throw error;
       if (existing.path !== dto.path || existing.fileName !== dto.fileName) {
@@ -84,7 +84,15 @@ export class DocumentsService {
           409,
         );
       }
-      return existing;
+      if (existing.deletedAt) {
+        throw new AppError(
+          ERROR_CODES.PROJECT_DOCUMENT_REMOVED,
+          'Document link was removed',
+          409,
+        );
+      }
+      const { deletedAt: _deletedAt, ...visibleDocument } = existing;
+      return visibleDocument;
     }
     await this.audit.write({
       companyId: project.companyId,
@@ -102,12 +110,19 @@ export class DocumentsService {
     await this.access.assertScopedWrite(actor, project);
     assertProjectWritable(project);
     const row = await this.prisma.projectDocument.findFirst({
-      where: { id, projectId },
+      where: { id, projectId, deletedAt: null },
     });
     if (!row) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Document not found', 404);
     }
-    await this.prisma.projectDocument.delete({ where: { id } });
+    // Keep the idempotency key as a tombstone; concurrent removals have one winner.
+    const result = await this.prisma.projectDocument.updateMany({
+      where: { id, projectId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (result.count !== 1) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'Document not found', 404);
+    }
     await this.audit.write({
       companyId: project.companyId,
       actorId: actor.id,

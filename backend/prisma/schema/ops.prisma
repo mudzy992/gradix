@@ -146,12 +146,14 @@ model ProjectDocument {
   path           String
   fileName       String
   idempotencyKey String?
+  deletedAt      DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   company        Company  @relation(fields: [companyId], references: [id])
   project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, idempotencyKey])
+  @@index([projectId, deletedAt])
   @@index([projectId])
   @@index([companyId])
 }

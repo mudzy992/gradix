@@ -259,6 +259,118 @@ describe('Projects (e2e)', () => {
     expect(other.body.data.id).not.toBe(replies[0].body.data.id);
   });
 
+  it('removed document keeps its retry key and cannot be resurrected, including concurrent deletes and retries', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(adminToken))
+      .send({ name: 'Removed document idempotency' });
+    expect(created.status).toBe(201);
+    const projectId = created.body.data.id as string;
+    const companyId = created.body.data.companyId as string;
+    const body = {
+      path: `${companyId}/test/retired.pdf`,
+      fileName: 'retired.pdf',
+      idempotencyKey: randomUUID(),
+    };
+    const link = (input: object) =>
+      request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/documents`)
+        .set(auth(adminToken))
+        .send(input);
+    const first = await link(body);
+    expect(first.status).toBe(201);
+    expect(first.body.data.deletedAt).toBeUndefined();
+    const docId = first.body.data.id as string;
+    const remove = () =>
+      request(app.getHttpServer())
+        .delete(`/api/projects/${projectId}/documents/${docId}`)
+        .set(auth(adminToken));
+    const outcomes = await Promise.all([
+      remove(),
+      remove(),
+      ...Array.from({ length: 5 }, () => link(body)),
+    ]);
+    expect(
+      outcomes
+        .slice(0, 2)
+        .map((r) => r.status)
+        .sort(),
+    ).toEqual([204, 404]);
+    for (const response of outcomes.slice(2)) {
+      expect([201, 409]).toContain(response.status);
+      if (response.status === 201) expect(response.body.data.id).toBe(docId);
+      else expect(response.body.error.code).toBe('PROJECT_DOCUMENT_REMOVED');
+    }
+    const after = await link(body);
+    expect(after.status).toBe(409);
+    expect(after.body.error.code).toBe('PROJECT_DOCUMENT_REMOVED');
+    const mismatched = await link({ ...body, fileName: 'different.pdf' });
+    expect(mismatched.status).toBe(409);
+    expect(mismatched.body.error.code).toBe('CONFLICT');
+    const list = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}/documents`)
+      .set(auth(adminToken));
+    expect(list.status).toBe(200);
+    expect(list.body.data).toHaveLength(0);
+    const prisma = app.get(PrismaService);
+    const tombstones = await prisma.projectDocument.findMany({
+      where: { projectId, idempotencyKey: body.idempotencyKey },
+    });
+    expect(tombstones).toHaveLength(1);
+    expect(tombstones[0].id).toBe(docId);
+    expect(tombstones[0].deletedAt).not.toBeNull();
+    const removalAudits = await prisma.auditEvent.count({
+      where: {
+        entityType: 'ProjectDocument',
+        entityId: docId,
+        action: 'PROJECT_DOCUMENT_REMOVED',
+      },
+    });
+    expect(removalAudits).toBe(1);
+    // A new, deliberate operation can still use the same object path.
+    const newLink = await link({ ...body, idempotencyKey: randomUUID() });
+    expect(newLink.status).toBe(201);
+    expect(newLink.body.data.id).not.toBe(docId);
+    expect((await link(body)).body.error.code).toBe('PROJECT_DOCUMENT_REMOVED');
+    const legacy = await link({
+      path: `${companyId}/test/legacy-retired.pdf`,
+      fileName: 'legacy-retired.pdf',
+    });
+    expect(legacy.status).toBe(201);
+    const legacyDelete = await request(app.getHttpServer())
+      .delete(`/api/projects/${projectId}/documents/${legacy.body.data.id}`)
+      .set(auth(adminToken));
+    expect(legacyDelete.status).toBe(204);
+    const afterLegacy = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}/documents`)
+      .set(auth(adminToken));
+    expect(afterLegacy.body.data).toHaveLength(1);
+    expect(afterLegacy.body.data[0].id).toBe(newLink.body.data.id);
+    const legacyRetry = await link({
+      path: `${companyId}/test/legacy-retired.pdf`,
+      fileName: 'legacy-retired.pdf',
+    });
+    expect(legacyRetry.status).toBe(201);
+    expect(legacyRetry.body.data.id).not.toBe(legacy.body.data.id);
+    const otherProject = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(adminToken))
+      .send({ name: 'Tombstone isolation' });
+    expect(otherProject.status).toBe(201);
+    const wrongProjectDelete = await request(app.getHttpServer())
+      .delete(
+        `/api/projects/${otherProject.body.data.id}/documents/${newLink.body.data.id}`,
+      )
+      .set(auth(adminToken));
+    expect(wrongProjectDelete.status).toBe(404);
+    const sameKeyOtherProject = await request(app.getHttpServer())
+      .post(`/api/projects/${otherProject.body.data.id}/documents`)
+      .set(auth(adminToken))
+      .send(body);
+    expect(sameKeyOtherProject.status).toBe(201);
+    expect(sameKeyOtherProject.body.data.id).not.toBe(docId);
+  });
+
   it('PLANNING to ON_HOLD 400; PM auto-assign; ACC 403; archive then start terminal', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/projects')

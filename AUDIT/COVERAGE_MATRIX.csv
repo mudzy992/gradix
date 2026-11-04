@@ -22,10 +22,11 @@ backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migrati
 backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,pregledano,CI-05: pregled dodavanja office audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
 backend/prisma/migrations/20261104120000_project_document_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-15: nullable ključ i unikatan indeks bez izmjene starih redova; E2E u CI,2026-11-04
 backend/prisma/migrations/20261104150000_refresh_token_family/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-35: nullable kolona i indeks bez izmjene postojećih redova,2026-11-04
+backend/prisma/migrations/20261104220000_project_document_tombstone/migration.sql,BE,migrations,BE-08,5,pregledano,CI-05 F-49: aditivna nullable kolona i indeks; PostgreSQL E2E čeka CI.,2026-11-04
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
 backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,334,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene; F-CI-05-35: nullable porodica refresh tokena i indeks po vlasniku",2026-11-04
-backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,409,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
+backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,411,pregledano,CI-05 F-49: tombstone projektnih dokumenata i indeks; ostali BE-08 FK indeksi zadržani.,2026-11-04
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
 backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,pregledano,BE-08: pregledano — demo vozila/ture/gorivo vezani na DEMO-1,2026-11-03
@@ -41,7 +42,7 @@ backend/src/common/decorators/skip-envelope.decorator.ts,BE,common,BE-01,6,pregl
 backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
 backend/src/common/errors/app-error.ts,BE,common,BE-01,14,pregledano,"CI-05: pregledan domenski Error; filter test pokriva status, kod i detalje.",2026-11-04
-backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
+backend/src/common/errors/error-codes.ts,BE,common,BE-01,40,pregledano,CI-05 F-49: PROJECT_DOCUMENT_REMOVED; zatvoren katalog grešaka.,2026-11-04
 backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,110,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,80,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
 backend/src/common/geo/haversine.spec.ts,BE,common,BE-12,77,pregledano,BE-12: 4 testa udaljenosti i granice geofence-a,2026-11-03
@@ -179,7 +180,7 @@ backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,128,pregledano,BE-11 (
 backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,pregledano,"BE-11: rute dnevnika (lista, create, patch, fotografija, PDF) — sve kroz servisne provjere",2026-11-03
 backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,141,pregledano,BE-11 (F-04): `localId`/`deviceId` validirani (`@MaxLength(120)`),2026-11-03
 backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,270,pregledano,"BE-11 (F-04/05/06/11): idempotentan offline create, koordinate fotografije, dedupe po putanji, best-effort notifikacija",2026-11-03
-backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,121,pregledano,BE-08: PROJECT_DOCUMENT_ADDED / PROJECT_DOCUMENT_REMOVED u audit (B8),2026-11-03
+backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,136,pregledano,CI-05 F-49: soft-delete tombstone; siguran keyed retry i uslovni konkurentni delete.,2026-11-04
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregledano — 30-dnevni prosjek po mašini, prag FUEL_ANOMALY_PCT, notifikacija rolama",2026-11-03
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
 backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,97,pregledano,BE-10: pregledano — liters/unitPrice stringovi; projectId opcion,2026-11-03
@@ -335,7 +336,7 @@ backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregleda
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
-backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,300,pregledano,CI-05: PATCH clear/omitted/null/zero i negativan budžet; prethodni BE-05 testovi.,2026-11-04
+backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,568,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401; F-CI-05-38: greške opoziva i timera; ponovljena deaktivacija; F-CI-05-39: rollback i DB utrke firma/rotacija/izdavanje/insert; F-CI-05-41: konkurentna democija i deaktivacija; posljednji/neaktivni super",2026-11-04
@@ -392,8 +393,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,577,pregledano,CI-05: 34 testa kartica i oporavka; F-48 ABA utrke firme u uploadu i retryju.,2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,396,u-toku,CI-05 F-45/46/48: kontekst i revizija firme; memorijski oporavak kroz remount; trajni oporavak i završni pregled otvoreni.,2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,609,pregledano,CI-05: 36 testova; F-49 isti ključ protiv različite veze i obrisani retry.,2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,397,u-toku,CI-05 F-49: server odlučuje po ključu; memorijski oporavak i završni pregled ostaju otvoreni.,2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -434,8 +435,8 @@ frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,412,pregledano,"FE-15: dodati `errors.{NETWORK_ERROR,RATE_LIMITED,SERVICE_UNAVAILABLE,AUTH_RESET_NOT_AVAILABLE,MACHINE_IN_SERVICE,REPORT_UNKNOWN,TENDER_INVALID_STATUS,HTTP_ERROR}`; paritet 660 ključeva",2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,412,pregledano,FE-15: isti ključevi kao bs (parity test),2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,413,pregledano,CI-05 F-49: prevod PROJECT_DOCUMENT_REMOVED; paritet ključeva.,2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,413,pregledano,CI-05 F-49: prevod PROJECT_DOCUMENT_REMOVED; paritet ključeva.,2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03

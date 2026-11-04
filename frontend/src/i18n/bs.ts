@@ -388,6 +388,7 @@ export const bs = {
     NOT_FOUND: 'Nije pronađeno.',
     CONFLICT: 'Konflikt podataka.',
     PROJECT_ON_HOLD: 'Projekat je na čekanju.',
+    PROJECT_DOCUMENT_REMOVED: 'Ova veza dokumenta je obrisana i ne može se ponovo povezati istim pokušajem.',
     PROJECT_TERMINAL: 'Projekat je zatvoren.',
     TIMER_ALREADY_OPEN: 'Timer je već otvoren.',
     MACHINE_IN_USE: 'Mašina je zauzeta.',
