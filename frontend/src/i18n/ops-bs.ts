@@ -107,6 +107,8 @@ export const opsBs = {
     weather: 'Vrijeme',
     work: 'Opis rada',
     problems: 'Problemi',
+    problemsForDate: 'Problemi: {{date}}',
+    noProjectEntries: 'Nema unosa za ovaj projekat.',
     workers: 'Broj radnika',
     conflict: 'Konflikt dnevnika',
     keepA: 'Zadrži postojeće (A)',

@@ -382,7 +382,8 @@ frontend/src/components/ops/dispatch-sheet.spec.tsx,FE,ops-ui,FE-08,89,pregledan
 frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,95,pregledano,"CI-05: obavezna polja imaju povezane greške; učitavanje i retry, onemogućavanje duplog snimanja; opciona dodjela.",2026-11-04
 frontend/src/components/ops/planned-gantt.spec.tsx,FE,ops-ui,FE-08,30,pregledano,"CI-05: test semantičkih datuma i traka, neispravnih i obrnutih raspona, granične jednodnevne stavke.",2026-11-04
 frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-05: pregled grafika; validacija datuma i raspona, vidljiv tekst perioda i dekorativne trake, granice grafika.",2026-11-04
-frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,91,nepregledano,,
+frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,90,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
+frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,71,nepregledano,,
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,100,nepregledano,,
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,
@@ -432,8 +433,8 @@ frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en p
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,162,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine.",2026-11-04
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,162,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine.",2026-11-04
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,164,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine. | CI-05: oznake za projektni dnevnik.",2026-11-04
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,164,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine. | CI-05: oznake za projektni dnevnik.",2026-11-04
 frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
@@ -483,8 +484,8 @@ frontend/src/pages/companies-page.spec.tsx,TEST,fe-unit,FE-05,160,pregledano,"FE
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,210,pregledano,"FE-13: zaglavlje kolone statusa (prije prazno `<th />`), reaktivacija firme, caption/broj, skeleton, greška + retry, prazno stanje, toast na ishod | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme",2026-11-03
 frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,279,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); FE-05: stanje „izaberite firmu“/„nema pokazatelja“, dash() sa defaultValue",2026-11-03
-frontend/src/pages/diary-page.spec.tsx,TEST,fe-unit,FE-05,162,pregledano,"FE-10: labela mjeseca, opcija „Svi projekti“, dan sa/bez unosa (puno ime), prazan mjesec, greška + retry, opseg upita pri promjeni mjeseca, tab projekta i link",2026-11-03
-frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,184,pregledano,"FE-10: označen mjesec, izbor projekta sa labelom i opcijom „Svi projekti“, kalendar sa zaglavljem dana i offsetom, dan kao ćelija sa punim imenom (bez lažnih dugmadi), broj/prazno/greška + retry, lista unosa i link na projekat",2026-11-03
+frontend/src/pages/diary-page.spec.tsx,TEST,fe-unit,FE-05,173,pregledano,"FE-10: labela mjeseca, opcija „Svi projekti“, dan sa/bez unosa (puno ime), prazan mjesec, greška + retry, opseg upita pri promjeni mjeseca, tab projekta i link | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
+frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,186,pregledano,"FE-10: označen mjesec, izbor projekta sa labelom i opcijom „Svi projekti“, kalendar sa zaglavljem dana i offsetom, dan kao ćelija sa punim imenom (bez lažnih dugmadi), broj/prazno/greška + retry, lista unosa i link na projekat | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
 frontend/src/pages/documents-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-10: istekao/ističe/vrijedi/bez roka, relativni pomak, broj, skeleton, prazno, greška + retry, upload + kreiranje po kategoriji (radnik/mašina)",2026-11-03
 frontend/src/pages/documents-page.tsx,FE,site-pages,FE-10,226,pregledano,"FE-10: stanje roka (Istekao/Ističe/Vrijedi/Bez roka) + „ističe za N d“ kroz documentState/daysUntil (30/15/5), broj/prazno/greška + retry, skeleton, hint uz fajl, poruka kad fajl nedostaje",2026-11-03
 frontend/src/pages/erp-page.spec.tsx,TEST,fe-unit,FE-05,306,pregledano,"FE-12: 7 testova — prevedene oznake, iznosi, labele, prazna stanja, greška + retry, lager bez skladišta, kreiranje partnera",2026-11-04

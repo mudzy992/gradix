@@ -202,3 +202,7 @@ Pri kreiranju se bira jedinica iz podržane šeme (m³, t, m, m², kom ili h). N
 ### Kreiranje zadatka
 
 Dispatch prikazuje greške obaveznih polja i greške učitavanja sa ponovnim pokušajem. Bez učitanih projekata nije moguće snimiti; dodjela korisnika je opciona i njeno neuspjelo učitavanje vidljivo je korisniku.
+
+### Projektni dnevnik
+
+Početni dan i mjesec prate vremensku zonu firme; ručni izbor se zadržava. Polja su označena, greška učitavanja nudi ponovni pokušaj, a neuspjela izmjena problema vraća ranije spremljeni tekst.

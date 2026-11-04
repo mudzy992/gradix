@@ -149,6 +149,17 @@ describe('DiaryPage', () => {
     expect(await screen.findByRole('heading', { name: 'Sarajevo obilaznica' })).toBeInTheDocument()
   })
 
+  it('početni mjesec prati kalendarski dan u zoni firme', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-01-31T23:30:00Z'))
+      renderPage()
+      expect(screen.getByLabelText('Mjesec')).toHaveValue('2026-02')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('promjena mjeseca mijenja opseg upita (od 1. do zadnjeg dana)', async () => {
     renderPage()
     const month = await screen.findByLabelText('Mjesec')

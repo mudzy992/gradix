@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { listDiary, listProjects } from '@/lib/api-ops'
 import { useTenantReady } from '@/hooks/use-tenant-ready'
 import { useDisplayPrefs } from '@/hooks/use-public-settings'
+import { formatDateTime } from '@/lib/format-date'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ProjectDiaryTab } from '@/components/ops/project-diary-tab'
@@ -21,7 +22,8 @@ export function DiaryPage() {
   const tenantReady = useTenantReady()
   const prefs = useDisplayPrefs()
   const [params, setParams] = useSearchParams()
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [chosenMonth, setMonth] = useState<string | null>(null)
+  const month = chosenMonth ?? formatDateTime(new Date().toISOString(), prefs.timeZone, 'yyyy-MM-dd').slice(0, 7)
   const projectId = params.get('projectId') ?? ''
   const projects = useQuery({
     queryKey: ['projects', { limit: 100 }],

@@ -107,6 +107,8 @@ export const opsEn = {
     weather: 'Weather',
     work: 'Work description',
     problems: 'Problems',
+    problemsForDate: 'Problems: {{date}}',
+    noProjectEntries: 'No entries for this project.',
     workers: 'Workers count',
     conflict: 'Diary conflict',
     keepA: 'Keep existing (A)',
