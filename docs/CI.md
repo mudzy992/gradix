@@ -207,3 +207,11 @@ on:
 ### Env guard — granice statičke provjere
 
 `scripts/standards/check-env.mjs` zahtijeva oba env predloška i validator, provjerava statičke pristupe (uključujući navodnike i bracket literale) i eksplicitni `raw.NAME` u `validateEnv`. Ovo su tekstualne heuristike, ne TypeScript parser ni dokaz da je vrijednost ispravno validirana; dinamički ključevi i semantika zahtijevaju pregled. Izolovane regresije `scripts/standards/check-env.test.mjs` izvršavaju se u audit poslu.
+
+### Pouzdanost backend E2E izvještaja (CI-05)
+
+Jest izlazni status i JSON pregledaju se zajedno kroz `scripts/audit/report-e2e.mjs`. Pad procesa,
+prazan/neispravan izvještaj, pad suitea (uključujući setup/teardown) ili testa ruši posao.
+Reporter ne kopira proizvoljne testne poruke u anotacije; kompletan testni izlaz ostaje u logu.
+Izolovane regresije reportera pokreću se u audit poslu. Historijski zeleni runovi prije ove
+popravke nisu sami po sebi dokaz da je svaki backend E2E suite uspio.

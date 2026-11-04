@@ -61,7 +61,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit gate regresijski testovi
-        run: node --test scripts/audit/check-coverage.test.mjs scripts/audit/check-audit-gate.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs scripts/standards/check-env.test.mjs
+        run: node --test scripts/audit/report-e2e.test.mjs scripts/audit/check-coverage.test.mjs scripts/audit/check-audit-gate.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs scripts/standards/check-env.test.mjs
 
       - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
         run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose
@@ -200,36 +200,14 @@ jobs:
 
       - name: E2E testovi
         run: |
-          cat > /tmp/report-e2e.cjs <<'REPORT'
-          const fs = require('fs');
-          const path = '/tmp/e2e-report.json';
-          if (!fs.existsSync(path)) {
-            console.log('::error::Jest nije proizveo JSON izvještaj — provjeri prethodni korak.');
-            process.exit(1);
-          }
-          const report = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const failed = [];
-          for (const file of report.testResults) {
-            for (const test of file.assertionResults) {
-              if (test.status === 'failed') {
-                failed.push({
-                  file: file.name.replace(`${process.cwd()}/`, ''),
-                  title: test.fullName,
-                  message: (test.failureMessages || []).join(' ').replace(/\s+/g, ' ').slice(0, 900),
-                });
-              }
-            }
-          }
-          console.log(`Ukupno testova: ${report.numTotalTests}, palo: ${failed.length}`);
-          for (const item of failed.slice(0, 10)) {
-            console.log(`::error file=${item.file}::${item.title} :: ${item.message}`);
-          }
-          process.exit(failed.length > 0 ? 1 : 0);
-          REPORT
-          node --experimental-vm-modules ./node_modules/jest/bin/jest.js \
+          if node --experimental-vm-modules ./node_modules/jest/bin/jest.js \
             --config ./test/jest-e2e.json \
-            --json --outputFile=/tmp/e2e-report.json --forceExit || true
-          node /tmp/report-e2e.cjs
+            --json --outputFile=/tmp/e2e-report.json --forceExit; then
+            jest_status=0
+          else
+            jest_status=$?
+          fi
+          node ../scripts/audit/report-e2e.mjs /tmp/e2e-report.json "$jest_status"
 
   # ---------------------------------------------------------------------------
   # Frontend: lint, typecheck, build

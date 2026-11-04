@@ -4,6 +4,7 @@ Bez zavisnosti (samo Node 22 builtin). Ne treba `npm install`.
 
 | Skripta | Šta radi | Kada se pokreće |
 |---|---|---|
+| `report-e2e.mjs`, `report-e2e.test.mjs` | Fail-closed backend Jest proces/JSON reporter i izolovane regresije; bez novih zavisnosti | backend E2E / audit CI |
 | `inventory.mjs` | Skenira repo, klasifikuje svaki izvorni fajl u `layer/module/segment`, upisuje `AUDIT/COVERAGE_MATRIX.csv` | ručno kad se doda/pomjeri fajl |
 | `inventory.mjs --stats` | Isto, ali samo ispiše statistiku (ništa ne piše) | orijentacija |
 | `check-coverage.mjs` | CI gate: matrica vs. kod vs. `segments.json` | CI job `audit`, lokalno prije commita |

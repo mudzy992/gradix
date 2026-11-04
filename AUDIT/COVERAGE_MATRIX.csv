@@ -2,7 +2,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,97,pregledano,FE-11/D-050: throttle limiti na produkcijskim defaultima,2026-11-03
 .env.example,INF,compose,INF-01,105,pregledano,FE-11/D-050: dokumentovani throttle limiti sa defaultima,2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,157,pregledano,"CI-05: pregled drill-a; SQL greška i nevalidni brojevi ne mogu proći, broj migracija mora odgovarati.",2026-11-04
-.github/workflows/ci.yml,CI,ci,CI-01,730,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda.",2026-11-04
+.github/workflows/ci.yml,CI,ci,CI-01,708,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda.",2026-11-04
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,73,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -594,6 +594,8 @@ scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,91,pregledano,"CI-0
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,113,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,296,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
+scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,52,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
+scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,67,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,439,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 dug statusa done ostaje otvoren,2026-11-04
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
