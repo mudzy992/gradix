@@ -108,13 +108,33 @@ const ci = read(CI_PATH);
 if (ci === null) {
   fail('nema .github/workflows/ci.yml');
 } else {
-  if (/^\s{2}pull_request:/m.test(ci)) fail('ci.yml: vraćen `pull_request` trigger (CI-01 ga zabranjuje)');
-
+  // Fail closed for the documented block-style trigger format. Checking for the
+  // branch anywhere in the workflow can be fooled by comments or other jobs.
   const branchLine = state?.match(/^`([^`]+)` \(remote: `([^`]+)`\)/m);
   const activeBranch = branchLine?.[1];
-  if (!activeBranch) warn('AUDIT/STATE.md: ne mogu pročitati aktivnu granu (red „`grana` (remote: …)“)');
-  else if (!ci.includes(`'${activeBranch}'`) && !ci.includes(`"${activeBranch}"`)) {
-    fail(`ci.yml: \`push\` filter ne sadrži aktivnu granu \`${activeBranch}\` iz STATE.md (CI-01)`);
+  if (!activeBranch) fail('AUDIT/STATE.md: ne mogu pročitati aktivnu granu');
+  const onBlocks = [...ci.matchAll(/^on:\s*(?:#.*)?\n([\s\S]*?)(?=^[^\s#][^\n]*:|$(?![\s\S]))/gm)];
+  if (onBlocks.length !== 1) fail('ci.yml: očekuje se jedan blok okidača `on:`');
+  else {
+    const onBlock = onBlocks[0][1];
+    const eventNames = [...onBlock.matchAll(/^ {2}([\w-]+):/gm)].map((m) => m[1]);
+    if (eventNames.length !== 2 || !eventNames.includes('push') || !eventNames.includes('workflow_dispatch')) {
+      fail('ci.yml: dozvoljeni okidači su samo `push` i `workflow_dispatch`');
+    }
+    const pushes = [...onBlock.matchAll(/^ {2}push:\s*(?:#.*)?\n([\s\S]*?)(?=^ {2}[\w-]+:|$(?![\s\S]))/gm)];
+    if (pushes.length !== 1) fail('ci.yml: očekuje se jedan push blok');
+    else {
+      const lines = pushes[0][1].split('\n').map((line) => line.replace(/\s+#.*$/, '')).filter((line) => line.trim());
+      if (lines[0] !== '    branches:' || lines.slice(1).some((line) => !/^ {6}- (?:[A-Za-z0-9_./-]+|'[A-Za-z0-9_./-]+'|"[A-Za-z0-9_./-]+")$/.test(line))) {
+        fail('ci.yml: očekuje se jednostavna push branches lista bez globova ili dodatnih filtera');
+      } else {
+        const branches = lines.slice(1).map((line) => line.slice(8).replace(/^['"]|['"]$/g, ''));
+        const expected = new Set(['main', activeBranch].filter(Boolean));
+        if (!activeBranch || branches.length !== expected.size || branches.some((b) => !expected.has(b))) {
+          fail('ci.yml: push branches moraju biti main i tačno aktivna grana iz STATE.md');
+        }
+      }
+    }
   }
 
   const body = ci.slice(ci.search(/^jobs:/m));

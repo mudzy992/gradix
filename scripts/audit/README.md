@@ -8,6 +8,7 @@ Bez zavisnosti (samo Node 22 builtin). Ne treba `npm install`.
 | `inventory.mjs --stats` | Isto, ali samo ispiše statistiku (ništa ne piše) | orijentacija |
 | `check-coverage.mjs` | CI gate: matrica vs. kod vs. `segments.json` | CI job `audit`, lokalno prije commita |
 | `inventory-scaffold.test.mjs` | Regresije sigurnog inventara i zabrane prepisivanja izvještaja | CI audit i lokalno |
+| `check-audit-gate.test.mjs` | Izolovane regresije prototipa strogog gatea; sam prototip još nije obavezan u CI | CI audit i lokalno |
 | `check-coverage.test.mjs` | Izolovani testovi ispravne i oštećene matrice | `node --test scripts/audit/check-coverage.test.mjs` i CI job `audit` |
 | `lib.mjs` | zajednička logika: `collectFiles`, `classify`, CSV parser, `readSegments` | — |
 
@@ -69,3 +70,5 @@ auditiraju. Sve ostalo **mora** biti u matrici.
 17 segmenata je poprečno (npr. CI-02…CI-07 dijele jedan `ci.yml`, FE-03 je a11y kroz sve ekrane,
 MOB-07 je EAS profil koji još ne postoji). Oni u `segments.json` imaju `scope: "process"` i
 `scopeReason`; gate za njih ne traži redove u matrici, ali traži razlog.
+
+Prototip `check-audit-gate.mjs` ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Njegova provjera CI okidača namjerno prihvata samo trenutni jednostavni YAML block-format, ne parsira proizvoljan YAML; testovi prototipa pokreću se u izolovanom repou.
