@@ -6,13 +6,13 @@
 //
 // `check-coverage.mjs` gleda fajlove ↔ matricu. Ovaj gate gleda **dosije o auditu**:
 //   1. AUDIT/STATE.md tvrdi isti broj `done` segmenata koji stvarno stoji u segments.json
-//   2. svaki `done` segment ima svoj izvještaj AUDIT/segments/<ID>.md (i obratno: nema izvještaja za
-//      segment koji ne postoji / nije `done`, osim ako je eksplicitno `planned`+izvještaj)
+//   2. svaki segment ima izvještaj AUDIT/segments/<ID>.md s usklađenim statusom u zaglavlju
+//      i zapisu izvršavanja; nema izvještaja za nepostojeći segment
 //   3. svaki fajl u `done` segmentu mora biti pregledan; bez izuzetaka
 //   4. svaki segment iz segments.json postoji u master planu (i plan ne obećava segmente kojih nema)
 //   5. CI invarijante koje su segmenti već uveli (CI-01/CI-02/CI-03) ne smiju tiho nestati:
 //      nema `pull_request` trigera, `push` ide na granu iz STATE.md, svaki job ima `if:` za `suite`
-//      i `timeout-minutes`, svaki `uses:` je pinovan na 40-znakovni SHA
+//      i `timeout-minutes`, prepoznate vanjske `uses:` akcije su pinovane na 40-znakovni SHA
 //   6. svaki job iz `ci.yml` je dokumentovan u `docs/CI.md` (tabela poslova)
 //
 // Prototip samo čita; još nije uključen u `check:all` ni CI. Prvo treba dovršiti pregled duga i testove.
@@ -82,8 +82,24 @@ const reports = fs.existsSync(SEG_DIR)
   ? fs.readdirSync(SEG_DIR).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3))
   : [];
 const segIds = new Set(segments.map((s) => s.id));
-for (const s of done) {
-  if (!reports.includes(s.id)) fail(`segment ${s.id} je \`done\` ali nema izvještaj AUDIT/segments/${s.id}.md`);
+for (const s of segments) {
+  if (!reports.includes(s.id)) {
+    fail(`segment ${s.id} nema izvještaj AUDIT/segments/${s.id}.md`);
+    continue;
+  }
+  const report = read(path.join(SEG_DIR, `${s.id}.md`));
+  if (!report.startsWith(`# ${s.id} `)) fail(`izvještaj ${s.id}: zaglavlje ne označava odgovarajući segment`);
+  const header = report.split(/^## 1\. /m)[0];
+  const log = report.split(/^## \d+\. Zapis izvršavanja[^\n]*$/m);
+  const statusRows = (text) => [...text.matchAll(/^\|\s*Status\s*\|\s*`([^`]+)`[^\n]*\|\s*$/gm)].map((m) => m[1]);
+  const headerStatuses = statusRows(header);
+  const logStatuses = log.length === 2 ? statusRows(log[1]) : [];
+  if (headerStatuses.length !== 1 || logStatuses.length === 0) {
+    fail(`izvještaj ${s.id}: obavezni su status u zaglavlju i zapisu izvršavanja`);
+  }
+  if ([...headerStatuses, ...logStatuses].some((status) => status !== s.status)) {
+    fail(`izvještaj ${s.id}: status nije usklađen sa segments.json (očekivano \`${s.status}\`)`);
+  }
 }
 for (const id of reports) {
   if (!segIds.has(id)) fail(`AUDIT/segments/${id}.md postoji, ali segment ${id} nije u segments.json`);
@@ -178,12 +194,17 @@ if (ci === null) {
   });
   if (verbose) console.log(`Jobovi: ${jobNames.join(', ')}`);
 
+  // Refuse common alternate YAML spellings that would otherwise evade the line-based scan.
+  // This is still not a YAML parser and cannot prove arbitrary workflow syntax safe.
+  if (/^\s*(?:-\s+)?(?:uses\s+:|['"]uses['"]\s*:)/m.test(ci) || /^\s*-\s*\{/m.test(ci)) {
+    fail('ci.yml: nepodržan format uses ključa ili inline koraka; ažuriraj provjeru');
+  }
   const uses = [...ci.matchAll(/^\s*(?:- )?uses:\s*(\S+)/gm)].map((m) => m[1]);
   for (const u of uses) {
     if (u.startsWith('./')) continue;
     if (!/@[0-9a-f]{40}$/.test(u)) fail(`ci.yml: akcija nije pinovana na SHA — ${u}`);
   }
-  if (verbose) console.log(`Akcije: ${uses.length} (sve pinovane)`);
+  if (verbose) console.log(`Akcije: ${uses.length} (prepoznate vanjske pinovane)`);
 
   // --- 6. dokumentacija poslova ---
   const ciDoc = read(CI_DOC_PATH);

@@ -88,3 +88,21 @@ test('CSV citiranje je validno čak i kad oštećeni red ima tačno osam kolona'
     assert.match(result.stdout, /neispravno CSV citiranje/);
   }
 });
+
+
+test('pregledani red zahtijeva stvaran kalendarski datum uključujući prestupnu godinu', async (t) => {
+  const f = await fixture(t);
+  const original = readFileSync(f.matrix, 'utf8');
+  const first = f.lines[0];
+  for (const date of ['2024-02-29', '2026-11-04']) {
+    writeFileSync(f.matrix, original.replace(first, first.replace(',nepregledano,,', `,pregledano,test,${date}`)));
+    const result = f.run();
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+  }
+  for (const date of ['2023-02-29', '2026-02-30', '2026-04-31', '2026-00-01', '2026-13-01', '2026-1-01']) {
+    writeFileSync(f.matrix, original.replace(first, first.replace(',nepregledano,,', `,pregledano,test,${date}`)));
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /ispravnog kalendarskog ISO datuma/);
+  }
+});

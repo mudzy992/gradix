@@ -55,7 +55,7 @@ smije ručno „popravljati“, samo generisati.
 1. Matrica postoji, header tačan; duplikati, neispravno CSV citiranje, nedostajuće putanje i pogrešan broj kolona ruše gate. Polje matrice mora biti u jednom fizičkom redu; višelinijski CSV nije podržan.
 2. Svaki fajl iz `collectFiles()` ima red; nema redova za nepostojeće fajlove.
 3. `layer/module/segment` se poklapaju sa klasifikacijom (drift = pad).
-4. Status je iz liste; pregledani statusi imaju `findings` i ISO `date`.
+4. Status je iz liste; pregledani statusi imaju `findings` i stvaran kalendarski ISO `date` (YYYY-MM-DD).
 5. Svaki segment sa `scope: "files"` ima ≥1 fajl; nepoznat segment u matrici = pad.
 6. `segments.json` validan (unikatni ID-evi, sloj odgovara ID-u, poznat status).
 
@@ -70,6 +70,6 @@ auditiraju. Sve ostalo **mora** biti u matrici.
 
 17 segmenata je poprečno (npr. CI-02…CI-07 dijele jedan `ci.yml`, FE-03 je a11y kroz sve ekrane,
 MOB-07 je EAS profil koji još ne postoji). Oni u `segments.json` imaju `scope: "process"` i
-`scopeReason`; gate za njih ne traži redove u matrici, ali traži razlog.
+`scopeReason`; gate za njih ne traži redove u matrici; nedostajući razlog je upozorenje, ne greška.
 
-Prototip `check-audit-gate.mjs` najprije izvršava `check-coverage.mjs` i pada ako matrica/inventar nisu usklađeni. Ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Njegova provjera CI okidača namjerno prihvata samo trenutni jednostavni YAML block-format, ne parsira proizvoljan YAML; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.
+Prototip `check-audit-gate.mjs` najprije izvršava `check-coverage.mjs` i pada ako matrica/inventar nisu usklađeni. Ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Provjerava i prisustvo izvještaja svih segmenata te status u zaglavlju i zapisu izvršavanja prema registru; format izvještaja je ograničen na postojeći obrazac. Njegova CI provjera je tekstualna, ne parsira proizvoljan YAML: neke alternativne `uses` ključeve i inline korake odbija, ali ne dokazuje sigurnost drugih oblika, aliasa ni lokalnih akcija; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.

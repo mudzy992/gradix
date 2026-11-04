@@ -23,7 +23,9 @@ function fixture(t) {
   ] }));
   write('AUDIT/STATE.md', '`arena/work` (remote: `example/repo`)\nTrenutno: **1/2 segmenata `done`**\n## Zadnji commit i CI\n');
   write('AUDIT/02_MASTER_AUDIT_PLAN.md', '**STD-01**\n**CI-01**\n');
-  write('AUDIT/segments/STD-01.md', 'report\n');
+  const report = (id, status) => `# ${id} — fixture\n\n| Status | \`${status}\` |\n\n## 1. Svrha i obim\n\n## 10. Zapis izvršavanja\n\n| Status | \`${status}\` |\n`;
+  write('AUDIT/segments/STD-01.md', report('STD-01', 'done'));
+  write('AUDIT/segments/CI-01.md', report('CI-01', 'planned'));
   write('docs/CI.md', jobNames.map((name) => `\`${name}\``).join(' '));
   const trigger = "on:\n  push:\n    branches:\n      - 'arena/work'\n  workflow_dispatch:\n";
   const jobs = 'jobs:\n' + jobNames.map((name) => `  ${name}:\n    if: \${{ !inputs.suite || inputs.suite == 'all'${jobSuites[name].map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@${sha}\n`).join('');
@@ -40,7 +42,7 @@ function fixture(t) {
   const matrix = `file,layer,module,segment,loc,status,findings,date\n${rows.join('\n')}\n`;
   write('AUDIT/COVERAGE_MATRIX.csv', matrix);
   const run = () => spawnSync(process.execPath, [path.join(root, 'scripts/audit/check-audit-gate.mjs')], { cwd: root, encoding: 'utf8' });
-  return { root, write, run, trigger, jobs, matrix };
+  return { root, write, run, trigger, jobs, matrix, report };
 }
 
 test('validno minijaturno stanje prolazi', (t) => {
@@ -155,4 +157,40 @@ test('neispravan segments.json ne može rezultirati zelenim gateom', (t) => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, /segments mora biti niz/);
   assert.match(result.stdout, /GATE: FAIL/);
+});
+
+
+test('izvještaji moraju postojati i odražavati status registra u zaglavlju i završnom zapisu', (t) => {
+  const f = fixture(t);
+  const cases = [
+    ['STD-01', f.report('STD-01', 'done').replace('| Status | `done` |', '| Status | `planned` |')],
+    ['STD-01', f.report('STD-01', 'done').replace(/\| Status \| `done` \|\n$/, '| Status | `in-progress` |\n')],
+    ['STD-01', f.report('STD-01', 'done').replace('| Status | `done` |\n', '')],
+    ['STD-01', f.report('STD-01', 'done').replace('## 10. Zapis izvršavanja', '## 10. Bez zapisa')],
+    ['STD-01', f.report('CI-01', 'done')],
+    ['CI-01', f.report('CI-01', 'done')],
+  ];
+  for (const [id, report] of cases) {
+    f.write('AUDIT/segments/STD-01.md', f.report('STD-01', 'done'));
+    f.write('AUDIT/segments/CI-01.md', f.report('CI-01', 'planned'));
+    f.write(`AUDIT/segments/${id}.md`, report);
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, new RegExp(`izvještaj ${id}:`));
+  }
+  rmSync(path.join(f.root, 'AUDIT/segments/CI-01.md'));
+  const missing = f.run();
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /segment CI-01 nema izvještaj/);
+});
+
+
+test('alternativni uses ključ i inline korak se odbijaju umjesto da zaobiđu pinning', (t) => {
+  const f = fixture(t);
+  for (const step of ['- uses : action@v4', "- 'uses': action@v4", '- "uses": action@v4', '- { uses: action@v4 }']) {
+    f.write('.github/workflows/ci.yml', f.trigger + f.jobs.replace(`- uses: actions/checkout@${sha}`, step));
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /nepodržan format uses/);
+  }
 });

@@ -26,6 +26,13 @@ const warnings = [];
 const fail = (m) => errors.push(m);
 const warn = (m) => warnings.push(m);
 
+// Date.parse can normalize nonexistent days; the round trip must match.
+function isCalendarDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 // --- 7. segments.json ---
 let segments = [];
 try {
@@ -96,7 +103,7 @@ for (const [file, row] of rows) {
   else byStatus.set(row.status, (byStatus.get(row.status) || 0) + 1);
   if (REVIEWED.has(row.status)) {
     if (!row.findings || !row.findings.trim()) fail(`${file}: status "${row.status}" bez zapisa u findings`);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) fail(`${file}: status "${row.status}" bez ISO datuma (date)`);
+    if (!isCalendarDate(row.date)) fail(`${file}: status "${row.status}" bez ispravnog kalendarskog ISO datuma (date)`);
   }
   bySegment.set(row.segment, (bySegment.get(row.segment) || 0) + 1);
   byLayer.set(row.layer, (byLayer.get(row.layer) || 0) + 1);
