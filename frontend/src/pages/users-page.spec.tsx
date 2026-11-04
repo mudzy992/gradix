@@ -217,6 +217,53 @@ describe('UsersPage', () => {
     expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
   })
 
+  it('kreiranje korisnika ne zatvara obrazac niti šalje duplikat dok odgovor čeka', async () => {
+    let resolve!: (value: { data: { temporaryPassword: string } }) => void
+    createUser.mockReturnValue(new Promise((done) => { resolve = done }))
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Novi korisnik' }))
+    const sheet = await screen.findByRole('dialog')
+    await userEvent.type(within(sheet).getByLabelText('Ime'), 'Amar')
+    await userEvent.type(within(sheet).getByLabelText('Prezime'), 'Selimović')
+    await userEvent.type(within(sheet).getByLabelText('Email'), 'amar@gradix.local')
+    await userEvent.click(within(sheet).getByRole('checkbox', { name: 'Radnik' }))
+    const form = within(sheet).getByRole('button', { name: 'Sačuvaj' }).closest('form')!
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    await waitFor(() => expect(createUser).toHaveBeenCalledTimes(1))
+    expect(within(sheet).getByRole('status')).toHaveTextContent('Spremanje je u toku')
+    expect(within(sheet).getByLabelText('Ime')).toBeDisabled()
+    expect(within(sheet).getByRole('button', { name: 'Sačuvaj' })).toBeDisabled()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Zatvori' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await act(async () => { resolve({ data: { temporaryPassword: 'Temp-1234' } }) })
+    expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Potvrdi' }))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('ne ponavlja neuspješno kreiranje korisnika bez izričitog potvrđivanja rizika', async () => {
+    createUser.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: { temporaryPassword: 'Temp-5678' } })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Novi korisnik' }))
+    const sheet = await screen.findByRole('dialog')
+    await userEvent.type(within(sheet).getByLabelText('Ime'), 'Amar')
+    await userEvent.type(within(sheet).getByLabelText('Prezime'), 'Selimović')
+    await userEvent.type(within(sheet).getByLabelText('Email'), 'amar@gradix.local')
+    await userEvent.click(within(sheet).getByRole('checkbox', { name: 'Radnik' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Sačuvaj' }))
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('možda su već kreirani')
+    expect(within(sheet).getByLabelText('Ime')).toHaveValue('Amar')
+    expect(within(sheet).getByRole('button', { name: 'Sačuvaj' })).toBeDisabled()
+    expect(createUser).toHaveBeenCalledTimes(1)
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Sačuvaj' }))
+    expect(await screen.findByText('Temp-5678')).toBeInTheDocument()
+    expect(createUser).toHaveBeenCalledTimes(2)
+  })
+
   it('obrazac traži ulogu i provjerava satnicu uz polje', async () => {
     renderPage()
 

@@ -225,6 +225,9 @@ export const bs = {
     markAll: 'Označi sve pročitane',
   },
   common: {
+    createUnknown: 'Kreiranje nije potvrđeno. Zapis i privremena lozinka možda su već kreirani; provjerite ishod prije novog pokušaja.',
+    enableRetry: 'Razumijem, omogući novi pokušaj',
+    savingWait: 'Spremanje je u toku. Sačekajte odgovor i ne zatvarajte stranicu.',
     discardDraft: 'Odbaci nacrt',
     save: 'Sačuvaj',
     cancel: 'Otkaži',

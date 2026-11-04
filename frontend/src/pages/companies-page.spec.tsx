@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CompanyRow } from '@/lib/api-types'
 import { CompaniesPage } from '@/pages/companies-page'
+import { useCompanyStore } from '@/stores/company-store'
 
 /**
  * FE-13 — firme. Drži: zaglavlje kolone statusa (prije prazno `<th />`), reaktivaciju (prije je
@@ -53,6 +54,7 @@ function renderPage() {
 beforeEach(() => {
   listCompanies.mockReset().mockResolvedValue({ data: [company()], meta: { total: 1 } })
   patchCompanyPlatform.mockReset().mockResolvedValue({})
+  useCompanyStore.setState({ selectedId: 'c1' })
   createCompany.mockReset().mockResolvedValue({ data: { temporaryPassword: 'Temp-1234' } })
 })
 
@@ -134,6 +136,54 @@ describe('CompaniesPage', () => {
       admin: { firstName: 'Amar', lastName: 'Selimović', email: 'amar@nova.ba' },
     })
     expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+  })
+
+  it('čuva otvoren obrazac firme i sprečava duplo kreiranje dok se čeka odgovor', async () => {
+    let resolve!: (value: { data: { temporaryPassword: string } }) => void
+    createCompany.mockReturnValue(new Promise((done) => { resolve = done }))
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova firma' }))
+    const sheet = await screen.findByRole('dialog')
+    await userEvent.type(within(sheet).getByLabelText('Naziv'), 'Nova gradnja')
+    await userEvent.type(within(sheet).getByLabelText('Slug'), 'nova-gradnja')
+    await userEvent.type(within(sheet).getByLabelText('Ime'), 'Amar')
+    await userEvent.type(within(sheet).getByLabelText('Prezime'), 'Selimović')
+    await userEvent.type(within(sheet).getByLabelText('Email'), 'amar@nova.ba')
+    const form = within(sheet).getByRole('button', { name: 'Sačuvaj' }).closest('form')!
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    await waitFor(() => expect(createCompany).toHaveBeenCalledTimes(1))
+    expect(within(sheet).getByRole('status')).toHaveTextContent('Spremanje je u toku')
+    expect(within(sheet).getByLabelText('Naziv')).toBeDisabled()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Zatvori' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await act(async () => { resolve({ data: { temporaryPassword: 'Temp-1234' } }) })
+    expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Potvrdi' }))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('čuva podatke nakon nepotvrđenog kreiranja firme i traži izričitu potvrdu za novi pokušaj', async () => {
+    createCompany.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: { temporaryPassword: 'Temp-5678' } })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Nova firma' }))
+    const sheet = await screen.findByRole('dialog')
+    await userEvent.type(within(sheet).getByLabelText('Naziv'), 'Nova gradnja')
+    await userEvent.type(within(sheet).getByLabelText('Slug'), 'nova-gradnja')
+    await userEvent.type(within(sheet).getByLabelText('Ime'), 'Amar')
+    await userEvent.type(within(sheet).getByLabelText('Prezime'), 'Selimović')
+    await userEvent.type(within(sheet).getByLabelText('Email'), 'amar@nova.ba')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Sačuvaj' }))
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent('možda su već kreirani')
+    expect(within(sheet).getByLabelText('Naziv')).toHaveValue('Nova gradnja')
+    expect(within(sheet).getByRole('button', { name: 'Sačuvaj' })).toBeDisabled()
+    expect(createCompany).toHaveBeenCalledTimes(1)
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Sačuvaj' }))
+    expect(await screen.findByText('Temp-5678')).toBeInTheDocument()
+    expect(createCompany).toHaveBeenCalledTimes(2)
   })
 
   it('uređivanje firme mijenja samo naziv (ne šalje skriveni legalName)', async () => {

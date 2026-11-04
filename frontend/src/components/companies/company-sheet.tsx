@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -34,6 +35,11 @@ const SLUG = /^[a-z0-9-]{3,40}$/
  */
 export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }: Props) {
   const { t } = useTranslation()
+  const [saving, setSaving] = useState(false)
+  const [uncertain, setUncertain] = useState(false)
+  const savingRef = useRef(false)
+  const uncertainRef = useRef(false)
+  useEffect(() => { if (!open) { uncertainRef.current = false; setUncertain(false) } }, [open])
   const form = useForm<Values>({
     // FE-13: polja prvog admina postoje samo pri kreiranju — `shouldUnregister` sklanja njihova
     // pravila kad se odmontiraju (inače `required` pada u uređivanju, gdje polja nema u DOM-u).
@@ -81,9 +87,12 @@ export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }
     return valid
   }
   const onSubmit = form.handleSubmit(async (values) => {
+    if (savingRef.current || (!company && uncertainRef.current)) return
     if (!validate(values)) {
       return
     }
+    savingRef.current = true
+    setSaving(true)
     try {
       if (company) {
         // Samo ono što je u obrascu; prije se slao i `legalName` sa backenda.
@@ -103,54 +112,67 @@ export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }
       }
       onOpenChange(false)
     } catch (error) {
+      if (!company) { uncertainRef.current = true; setUncertain(true) }
       toast.error(errorMessage(error))
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
   })
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(next) => { if (next || !savingRef.current) onOpenChange(next) }}>
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{company ? t('companies.edit') : t('companies.create')}</SheetTitle>
         </SheetHeader>
-        <form className="grid gap-4 px-4" onSubmit={onSubmit}>
-          <Field label={t('settings.name')} htmlFor="name" error={errors.name?.message}>
-            <Input id="name" {...form.register('name')} />
-          </Field>
-          <Field
-            label={t('settings.slug')}
-            htmlFor="slug"
-            hint={company ? t('settings.slugLocked') : t('companies.slugHint')}
-            error={errors.slug?.message}
-          >
-            <Input id="slug" disabled={Boolean(company)} {...form.register('slug')} />
-          </Field>
-          {!company ? (
-            <>
-              <p className="text-sm font-medium">{t('companies.admin')}</p>
-              <Field label={t('users.firstName')} htmlFor="adminFirst" error={errors.firstName?.message}>
-                <Input
-                  id="adminFirst"
-                  {...form.register('firstName')}
-                />
-              </Field>
-              <Field label={t('users.lastName')} htmlFor="adminLast" error={errors.lastName?.message}>
-                <Input
-                  id="adminLast"
-                  {...form.register('lastName')}
-                />
-              </Field>
-              <Field label={t('auth.email')} htmlFor="adminEmail" error={errors.email?.message}>
-                <Input
-                  id="adminEmail"
-                  type="email"
-                  {...form.register('email')}
-                />
-              </Field>
-            </>
-          ) : null}
-          <SheetFooter>
-            <Button type="submit">{t('common.save')}</Button>
-          </SheetFooter>
+        <form className="grid gap-4 px-4" onSubmit={onSubmit} aria-busy={saving}>
+          {saving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
+          <fieldset disabled={saving} className="grid gap-4">
+            <Field label={t('settings.name')} htmlFor="name" error={errors.name?.message}>
+              <Input id="name" {...form.register('name')} />
+            </Field>
+            <Field
+              label={t('settings.slug')}
+              htmlFor="slug"
+              hint={company ? t('settings.slugLocked') : t('companies.slugHint')}
+              error={errors.slug?.message}
+            >
+              <Input id="slug" disabled={Boolean(company)} {...form.register('slug')} />
+            </Field>
+            {!company ? (
+              <>
+                <p className="text-sm font-medium">{t('companies.admin')}</p>
+                <Field label={t('users.firstName')} htmlFor="adminFirst" error={errors.firstName?.message}>
+                  <Input
+                    id="adminFirst"
+                    {...form.register('firstName')}
+                  />
+                </Field>
+                <Field label={t('users.lastName')} htmlFor="adminLast" error={errors.lastName?.message}>
+                  <Input
+                    id="adminLast"
+                    {...form.register('lastName')}
+                  />
+                </Field>
+                <Field label={t('auth.email')} htmlFor="adminEmail" error={errors.email?.message}>
+                  <Input
+                    id="adminEmail"
+                    type="email"
+                    {...form.register('email')}
+                  />
+                </Field>
+              </>
+            ) : null}
+            {uncertain ? (
+              <div className="grid gap-2">
+                <p role="alert" className="text-sm text-destructive">{t('common.createUnknown')}</p>
+                <Button type="button" variant="outline" onClick={() => { uncertainRef.current = false; setUncertain(false) }}>{t('common.enableRetry')}</Button>
+              </div>
+            ) : null}
+            <SheetFooter>
+              <Button type="submit" disabled={uncertain}>{t('common.save')}</Button>
+            </SheetFooter>
+          </fieldset>
         </form>
       </SheetContent>
     </Sheet>

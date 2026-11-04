@@ -234,3 +234,54 @@ test('password reset keeps its confirmation open until the one-time result arriv
     await page.unroute('**/api/users**')
   }
 })
+
+test('creating a user keeps the form open until the one-time result arrives', async ({ page }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let createCount = 0
+  await page.route('**/api/users**', async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path === '/api/users' && request.method() === 'POST') {
+      createCount += 1
+      await gate
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { temporaryPassword: 'Temporary-example-456' } }) })
+    }
+    if (path === '/api/users' && request.method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [], meta: { page: 1, limit: 20, total: 0 } }) })
+    }
+    return route.abort()
+  })
+  try {
+    await page.goto('/login')
+    await page.locator('#identifier').fill(email!)
+    await page.locator('#password').fill(password!)
+    await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+    await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+    await page.goto('/users')
+    await page.getByRole('button', { name: 'Novi korisnik' }).click()
+    const sheet = page.getByRole('dialog')
+    await sheet.getByLabel('Ime', { exact: true }).fill('Test')
+    await sheet.getByLabel('Prezime', { exact: true }).fill('User')
+    await sheet.getByLabel('Email', { exact: true }).fill('user@example.test')
+    await sheet.getByRole('checkbox', { name: 'Radnik' }).check()
+    await sheet.getByRole('button', { name: 'Sačuvaj' }).click()
+    await expect(sheet.getByRole('status')).toContainText('Spremanje je u toku')
+    await expect(sheet.getByRole('button', { name: 'Sačuvaj' })).toBeDisabled()
+    await expect(sheet.getByLabel('Ime', { exact: true })).toBeDisabled()
+    await sheet.getByRole('button', { name: 'Zatvori' }).click()
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeVisible()
+    expect(createCount).toBe(1)
+    release()
+    await expect(page.getByText('Temporary-example-456')).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Potvrdi' }).click()
+    await expect(page.getByText('Temporary-example-456')).toHaveCount(0)
+  } finally {
+    release()
+    await page.unroute('**/api/users**')
+  }
+})
