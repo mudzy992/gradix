@@ -159,7 +159,7 @@ if (ci === null) {
     if (!suites) return;
     const conditions = [...block.matchAll(/^ {4}if:\s*([^\n]+)$/gm)];
     const expected = `\${{ !inputs.suite || inputs.suite == 'all'${suites.map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}`;
-    if (conditions.length !== 1 || conditions[0][1].replace(/\s+/g, '') !== expected.replace(/\s+/g, '')) {
+    if (conditions.length !== 1 || conditions[0][1].trim() !== expected) {
       fail(`ci.yml: job \`${name}\` nema tačnu suite selekciju (CI-02)`);
     }
   });

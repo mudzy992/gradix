@@ -586,7 +586,7 @@ mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,200,u-toku,CI-05 prototip: stroga provjera stanja; nije još testiran ni uključen u CI.,2026-11-04
-scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,109,pokriveno-testom,F-CI-05-21: izolovane regresije prototipa,2026-11-04
+scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,110,pokriveno-testom,F-CI-05-21: izolovane regresije prototipa,2026-11-04
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,136,pregledano,"CI-05: stale zapisi traže pregled i arhiviranje, ne automatsko odbacivanje.",2026-11-04
 scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,72,pregledano,"CI-05: izolovani node:test slučajevi: duplikat, neispravan red, nedostajući i zastarjeli fajl, LOC drift.",2026-11-04
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04

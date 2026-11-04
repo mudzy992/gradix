@@ -91,6 +91,7 @@ test('pogrešan suite, bezuslovni OR i nulti timeout ne prolaze', (t) => {
   for (const jobs of [
     f.jobs.replace("inputs.suite == 'audit'", "inputs.suite == 'frontend'"),
     f.jobs.replace("inputs.suite == 'audit'", "inputs.suite == 'audit' || true"),
+    f.jobs.replace("inputs.suite == 'audit'", "inputs.suite == 'a u d i t'"),
     f.jobs.replace('timeout-minutes: 5', 'timeout-minutes: 0'),
   ]) {
     f.write('.github/workflows/ci.yml', f.trigger + jobs);
