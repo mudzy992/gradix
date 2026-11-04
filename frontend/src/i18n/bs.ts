@@ -398,7 +398,7 @@ export const bs = {
     PAYROLL_SELF_APPROVE: 'Ne možete odobriti vlastite sate.',
     IOT_DEVICE_EXISTS: 'Mašina već ima GPS uređaj.',
     INTERNAL_ERROR: 'Interna greška.',
-    SESSION_CHANGED: 'Sesija ili firma je promijenjena. Ponovite radnju.',
+    SESSION_CHANGED: 'Sesija ili firma je promijenjena. Provjerite nalog, osvježite stranicu i ponovite radnju.',
     NETWORK_ERROR: 'Nema veze sa serverom. Provjerite internet i pokušajte ponovo.',
     RATE_LIMITED: 'Previše zahtjeva u kratkom roku. Sačekajte pa pokušajte ponovo.',
     SERVICE_UNAVAILABLE: 'Servis je privremeno nedostupan.',

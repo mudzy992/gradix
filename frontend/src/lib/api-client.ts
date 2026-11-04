@@ -3,6 +3,7 @@ import { useCompanyStore } from '@/stores/company-store'
 import { ApiError, type Envelope, type EnvelopeError } from '@/lib/api-types'
 import { queryClient } from '@/lib/query-client'
 import {
+  bindRefreshToken,
   broadcastLogout,
   clearRefreshToken,
   getSessionGeneration,
@@ -132,11 +133,24 @@ async function rotateRefresh(refreshToken: string, generation: number): Promise<
 
 export function refreshSession(): Promise<boolean> {
   const token = readRefreshToken()
+  if (!bindRefreshToken(token)) {
+    return Promise.reject(new ApiError('SESSION_CHANGED', 'Session changed in another tab', 409))
+  }
   if (!token) return Promise.resolve(false)
   const generation = getSessionGeneration()
   if (refreshInFlight?.generation === generation && refreshInFlight.token === token) return refreshInFlight.promise
   const flight: RefreshFlight = { generation, token, promise: Promise.resolve(false) }
-  flight.promise = rotateRefresh(token, generation).finally(() => {
+  // A lock serializes remembered-token refreshes across cooperative tabs. A
+  // changed token is not automatically adopted: it might be another login.
+  const rotate = async () => {
+    ensureRefreshCurrent(generation, token)
+    return rotateRefresh(token, generation)
+  }
+  const lockManager = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  const attempt = isRemembered() && lockManager
+    ? lockManager.request('gradix:remembered-refresh', rotate)
+    : rotate()
+  flight.promise = attempt.finally(() => {
     if (refreshInFlight === flight) refreshInFlight = null
   })
   refreshInFlight = flight

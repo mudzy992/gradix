@@ -291,6 +291,42 @@ describe('session and company changes during requests', () => {
     expect(useAuthStore.getState().accessToken).toBe('token-1')
   })
 
+  it('does not adopt a different account token written by another tab before refresh', async () => {
+    writeRefreshToken('refresh-a', true)
+    localStorage.setItem(REFRESH_KEY, 'refresh-other-login')
+    fetchMock.mockResolvedValueOnce(json({ success: false }, 401))
+    await expect(api('/api/projects')).rejects.toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(readRefreshToken()).toBe('refresh-other-login')
+    expect(useAuthStore.getState().accessToken).toBe('token-1')
+    expect(useAuthStore.getState().user?.id).toBe('u1')
+  })
+
+  it('waiting for a shared refresh lock never sends a token already rotated in another tab', async () => {
+    writeRefreshToken('refresh-a', true)
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const request = vi.fn((_name: string, callback: () => Promise<boolean>) => gate.then(callback))
+    vi.stubGlobal('navigator', { locks: { request } })
+    const result = refreshSession().catch((error: unknown) => error)
+    expect(request).toHaveBeenCalledOnce()
+    localStorage.setItem(REFRESH_KEY, 'rotated-elsewhere')
+    release()
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(readRefreshToken()).toBe('rotated-elsewhere')
+  })
+
+  it('refreshes the bound remembered token after acquiring the shared lock', async () => {
+    writeRefreshToken('refresh-a', true)
+    const request = vi.fn((_name: string, callback: () => Promise<boolean>) => callback())
+    vi.stubGlobal('navigator', { locks: { request } })
+    fetchMock.mockResolvedValueOnce(ok({ accessToken: 'new-access', refreshToken: 'new-refresh' }))
+    await expect(refreshSession()).resolves.toBe(true)
+    expect(request).toHaveBeenCalledOnce()
+    expect(readRefreshToken()).toBe('new-refresh')
+  })
+
   it('changing company during refresh prevents retrying the old write in the new company', async () => {
     useAuthStore.setState({ user: me(['PLATFORM_ADMIN']) })
     useCompanyStore.setState({ selectedId: 'c1' })

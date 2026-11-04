@@ -77,6 +77,34 @@ describe('refresh token', () => {
     expect(readRefreshToken()).toBeNull()
   })
 
+  it('ne vraća stari memorisani token kad ga drugi tab obriše', () => {
+    writeRefreshToken('t-old', true)
+    localStorage.removeItem(REFRESH_KEY)
+    expect(readRefreshToken()).toBeNull()
+  })
+
+  it('ne vraća zapamćeni token kad drugi tab obriše oznaku pamćenja', () => {
+    writeRefreshToken('t-old', true)
+    localStorage.removeItem('gradix:remember')
+    expect(isRemembered()).toBe(false)
+    expect(readRefreshToken()).toBeNull()
+  })
+
+  it('ne oživljava token kada brisanje iz skladišta ne uspije', () => {
+    writeRefreshToken('t-old', true)
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('SecurityError') })
+    clearRefreshToken()
+    expect(readRefreshToken()).toBeNull()
+    expect(isRemembered()).toBe(false)
+  })
+
+  it('čuva novi token u memoriji i kad pisanje ne uspije ali čitanje radi', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('QuotaExceeded') })
+    writeRefreshToken('t-new', true)
+    expect(isRemembered()).toBe(true)
+    expect(readRefreshToken()).toBe('t-new')
+  })
+
   it('blokirana pohrana ne ruši pozivaoce — memorijski fallback drži sesiju', () => {
     const spy = blockStorage()
 
@@ -84,7 +112,7 @@ describe('refresh token', () => {
     expect(readRefreshToken()).toBe('t4')
     expect(() => clearRefreshToken()).not.toThrow()
     expect(readRefreshToken()).toBeNull()
-    expect(spy.get).toHaveBeenCalled()
+    expect(spy.set).toHaveBeenCalled()
   })
 })
 

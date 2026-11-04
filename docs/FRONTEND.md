@@ -77,6 +77,15 @@ frontend/src/
 
 ---
 
+### Napomena o refresh-u u više tabova (CI-05)
+
+Zapamćeni token osvježavaju kooperativne kartice kroz Web Locks kada su dostupni. Kartica ne
+preuzima promijenjeni token automatski: druga prijava može pripadati drugom nalogu. Pri konfliktu
+provjeriti nalog i osvježiti stranicu; ako se to desi pri početnom učitavanju, kartica ostaje na
+prijavi. Ova zaštita ne obuhvata stare tabove, preglednike bez Web Locks, kopirane sessionStorage
+tokene, blokiranu pohranu ni izgubljen odgovor nakon serverske rotacije. Logout broadcast nije
+vezan za identitet konkretne sesije. Serverska detekcija ponovne upotrebe ostaje uključena.
+
 ## 3. State i podaci
 
 | Sloj | Alat | Pravilo |

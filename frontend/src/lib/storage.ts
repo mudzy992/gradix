@@ -8,6 +8,17 @@ import { COMPANY_KEY, LOGOUT_KEY, REFRESH_KEY, REMEMBER_KEY } from '@/lib/consta
  * da sesija radi i kad pohrana nije dostupna (do prvog reloada).
  */
 const memory = new Map<string, string>()
+// Only failed writes/removals override an accessible storage area. Otherwise
+// another tab's deletion must not resurrect an old value from our cache.
+const pending = new Map<string, string | null>()
+let boundRefreshToken: string | null | undefined
+
+/** Bind this tab to the token it adopted; a different shared token is not
+ * necessarily the same session (another account may have logged in). */
+export function bindRefreshToken(token: string | null): boolean {
+  if (boundRefreshToken === undefined) boundRefreshToken = token
+  return boundRefreshToken === token
+}
 // Advances on login/logout, not on rotation within the same session.
 let sessionGeneration = 0
 
@@ -24,37 +35,43 @@ function resolve(area: 'local' | 'session'): Storage | null {
 }
 
 function read(area: 'local' | 'session', key: string): string | null {
+  const cacheKey = `${area}:${key}`
+  if (pending.has(cacheKey)) return pending.get(cacheKey) ?? null
   const storage = resolve(area)
   if (storage) {
     try {
-      const value = storage.getItem(key)
-      if (value !== null) {
-        return value
-      }
+      return storage.getItem(key)
     } catch {
       // blokirana pohrana — koristi memoriju ispod
     }
   }
-  return memory.get(`${area}:${key}`) ?? null
+  return memory.get(cacheKey) ?? null
 }
 
 function write(area: 'local' | 'session', key: string, value: string): void {
-  memory.set(`${area}:${key}`, value)
+  const cacheKey = `${area}:${key}`
+  memory.set(cacheKey, value)
   const storage = resolve(area)
   try {
-    storage?.setItem(key, value)
+    if (!storage) throw new Error('Storage unavailable')
+    storage.setItem(key, value)
+    pending.delete(cacheKey)
   } catch {
-    // nema trajne pohrane — memorijski fallback drži sesiju do reloada
+    pending.set(cacheKey, value)
   }
 }
 
 function remove(area: 'local' | 'session', key: string): void {
-  memory.delete(`${area}:${key}`)
+  const cacheKey = `${area}:${key}`
+  memory.delete(cacheKey)
   const storage = resolve(area)
   try {
-    storage?.removeItem(key)
+    if (!storage) throw new Error('Storage unavailable')
+    storage.removeItem(key)
+    pending.delete(cacheKey)
   } catch {
-    // nema šta da se briše
+    // A failed removal must not resurrect the old persisted value.
+    pending.set(cacheKey, null)
   }
 }
 
@@ -68,11 +85,13 @@ export function readRefreshToken(): string | null {
 
 export function writeRefreshToken(token: string, remember: boolean): void {
   sessionGeneration += 1
+  boundRefreshToken = token
   storeRefreshToken(token, remember)
 }
 
 /** Called only after verifying that the refresh belongs to the current session. */
 export function writeRotatedRefreshToken(token: string, remember: boolean): void {
+  boundRefreshToken = token
   storeRefreshToken(token, remember)
 }
 
@@ -90,6 +109,7 @@ function storeRefreshToken(token: string, remember: boolean): void {
 
 export function clearRefreshToken(): void {
   sessionGeneration += 1
+  boundRefreshToken = undefined
   remove('local', REFRESH_KEY)
   remove('session', REFRESH_KEY)
   remove('local', REMEMBER_KEY)
