@@ -389,8 +389,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,227,pregledano,"CI-05: 16 testova kartica, izbora tima, paginacije i oporavka.",2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,306,u-toku,"CI-05: paginacija kartica, prava, stanja i odabir tima; otvoren F-CI-05-15 upload.",2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,273,pregledano,"CI-05: 19 testova kartica, paginacije, dodjele i djelimičnog oporavka uploada.",2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,327,u-toku,"CI-05: paginacija, prava, tim i djelimičan oporavak uploada; F-CI-05-15 ostaje otvoren.",2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -437,8 +437,8 @@ frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en p
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,187,pregledano,CI-05: prijevodi kartica projekta; paritet sa engleskim.,2026-11-04
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,187,pregledano,CI-05: prijevodi kartica projekta; paritet sa bosanskim.,2026-11-04
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,189,pregledano,CI-05: prijevodi kartica projekta; paritet sa engleskim.,2026-11-04
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,189,pregledano,CI-05: prijevodi kartica projekta; paritet sa bosanskim.,2026-11-04
 frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04

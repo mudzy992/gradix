@@ -222,3 +222,7 @@ Upload cover fotografije blokiran je dok prethodni traje, uz prikaz statusa; nak
 ### Kartice projekta
 
 Podaci se učitavaju po aktivnoj kartici, uz stanja učitavanja, greške i ponovnog pokušaja. Odgovarajuća prava provjeravaju se prije učitavanja i prikaza podataka; izostanak prava na zadatke naznačen je u Gantt pregledu. Uklanjanje člana i upload dokumenta prijavljuju grešku. Dodavanje članova ima pretragu i stranice te izbor projektne uloge, uz filtriranje neaktivnih i već dodijeljenih. Zadaci, vozila, ture i gorivo koriste stranice; Gantt prikazuje sve faze i samo zadatke odabrane stranice, što je naznačeno uz navigaciju. Povratak na prethodnu stranicu moguć je i kada naredna ne uspije. Dvokoraki upload prati se u CI-05 (F-CI-05-15).
+
+### Ponovno povezivanje projektnih dokumenata
+
+Ako je upload odgovorio putanjom, ali povezivanje s projektom nije potvrđeno, kartica čuva referencu u memoriji i nudi ponovno povezivanje bez ponovnog uploada. Prije novog pokušaja provjerava postoji li veza; ako provjera ne uspije, novi upis se ne šalje. Ovo nije potpuno pouzdana idempotentnost: referenca se gubi napuštanjem/refreshom stranice, nepoznat ishod prvog uploada se ne oporavlja i prethodni upis može još biti u toku. Praćenje F-CI-05-15 ostaje otvoreno.

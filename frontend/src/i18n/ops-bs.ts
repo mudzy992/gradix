@@ -39,6 +39,8 @@ export const opsBs = {
     noAccess: 'Nemate pravo pristupa ovim podacima.',
     usersNoAccess: 'Za dodavanje člana potrebno je pravo pregleda korisnika.',
     removeMember: 'Ukloni člana {{name}}',
+    documentLinkPending: 'Fajl „{{name}}“ je učitan, ali povezivanje nije potvrđeno. Ponovite povezivanje prije napuštanja stranice.',
+    retryDocumentLink: 'Ponovi povezivanje',
     uploadDocument: 'Dodaj dokument',
     ganttTasksNoAccess: 'Zadaci nisu prikazani jer nemate pravo pregleda zadataka.',
     noAvailableMembers: 'Na ovoj stranici nema dostupnih članova.',

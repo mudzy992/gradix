@@ -207,6 +207,52 @@ describe('ProjectTabs', () => {
     await waitFor(() => expect(button).toBeEnabled())
   })
 
+  it('nakon neuspjelog povezivanja ponavlja povezivanje bez ponovnog uploada', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    renderTab('documents')
+    const file = new File(['dokument'], 'plan.pdf', { type: 'application/pdf' })
+    const input = screen.getByLabelText('Dodaj dokument')
+    await userEvent.upload(input, file)
+    expect(await screen.findByText(/Fajl „plan.pdf“ je učitan/)).toBeInTheDocument()
+    expect(input).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
+    expect(api.createDocument).toHaveBeenLastCalledWith('p1', { path: 'c1/plan.pdf', fileName: 'plan.pdf' })
+    await waitFor(() => expect(input).toBeEnabled())
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('prije ponavljanja prepoznaje već povezani dokument nakon izgubljenog odgovora', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    api.listDocuments.mockResolvedValueOnce({ data: [] }).mockResolvedValue({ data: [{ id: 'd1', path: 'c1/plan.pdf', fileName: 'plan.pdf' }] })
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
+    expect(api.createDocument).toHaveBeenCalledOnce()
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('ako provjera povezivanja ne uspije zadržava referencu i ne šalje novi upis', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValue({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    api.listDocuments.mockResolvedValueOnce({ data: [] }).mockRejectedValue(new Error('offline again'))
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    const retry = await screen.findByRole('button', { name: 'Ponovi povezivanje' })
+    await userEvent.click(retry)
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith('offline again'))
+    expect(retry).toBeEnabled()
+    expect(api.createDocument).toHaveBeenCalledOnce()
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
   it('upload dokumenta je blokiran dok traje i isti fajl se može ponovo izabrati nakon greške', async () => {
     api.permissions.add('projects.write')
     let reject!: (error: Error) => void

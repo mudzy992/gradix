@@ -77,6 +77,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const [machinePage, setMachinePage] = useState(1)
   const [tripPage, setTripPage] = useState(1)
   const [fuelPage, setFuelPage] = useState(1)
+  const [pendingDocument, setPendingDocument] = useState<{ path: string; fileName: string } | null>(null)
   useEffect(() => {
     setMemberSearchInput('')
     setMemberSearch('')
@@ -87,6 +88,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     setMachinePage(1)
     setTripPage(1)
     setFuelPage(1)
+    setPendingDocument(null)
   }, [projectId])
   const phases = useQuery({ queryKey: ['phases', projectId], queryFn: async () => (await listPhases(projectId)).data, enabled: activeTab === 'phases' })
   const team = useQuery({ queryKey: ['assignments', projectId], queryFn: async () => (await listAssignments(projectId)).data, enabled: activeTab === 'team' })
@@ -137,11 +139,22 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     onError: (error) => toast.error(errorMessage(error)),
   })
   const documentUpload = useMutation({
-    mutationFn: async (file: File) => {
-      const uploaded = await uploadFile(file)
-      return createDocument(projectId, { path: uploaded.data.path, fileName: file.name })
+    mutationFn: async (input: { file: File } | { pending: { path: string; fileName: string } }) => {
+      if ('pending' in input) {
+        // Reconcile a response lost after creation before retrying the link.
+        const existing = await listDocuments(projectId)
+        const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
+        return found ?? createDocument(projectId, input.pending)
+      }
+      const uploaded = await uploadFile(input.file)
+      const reference = { path: uploaded.data.path, fileName: input.file.name }
+      setPendingDocument(reference)
+      return createDocument(projectId, reference)
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: ['documents', projectId] }),
+    onSuccess: () => {
+      setPendingDocument(null)
+      return client.invalidateQueries({ queryKey: ['documents', projectId] })
+    },
     onError: (error) => toast.error(errorMessage(error)),
   })
   const status = useMutation({
@@ -272,16 +285,24 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
           <div key={row.id} className="text-sm">{row.fileName}</div>
         ))}
         {canWrite ? (
-          <Input
-            type="file"
-            aria-label={t('projects.uploadDocument')}
-            disabled={documentUpload.isPending}
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              event.target.value = ''
-              if (file && !documentUpload.isPending) documentUpload.mutate(file)
-            }}
-          />
+          <>
+            {pendingDocument ? (
+              <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+                <span>{t('projects.documentLinkPending', { name: pendingDocument.fileName })}</span>
+                <Button size="sm" variant="outline" disabled={documentUpload.isPending} onClick={() => documentUpload.mutate({ pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
+              </div>
+            ) : null}
+            <Input
+              type="file"
+              aria-label={t('projects.uploadDocument')}
+              disabled={documentUpload.isPending || Boolean(pendingDocument)}
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                event.target.value = ''
+                if (file && !documentUpload.isPending && !pendingDocument) documentUpload.mutate({ file })
+              }}
+            />
+          </>
         ) : null}
       </TabsContent>
       <TabsContent value="costs" className="grid gap-2 pt-4 text-sm">
