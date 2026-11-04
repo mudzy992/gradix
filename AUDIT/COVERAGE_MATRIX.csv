@@ -20,10 +20,11 @@ backend/prisma/migrations/20261103160000_be10_fleet_audit_actions/migration.sql,
 backend/prisma/migrations/20261103180000_be13_diary_hse_audit_actions/migration.sql,BE,migrations,BE-08,11,pregledano,"BE-13 (B11): 6 novih AuditAction vrijednosti (dnevnik, HSE)",2026-11-03
 backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,pregledano,CI-05: pregled SQL migracije snapshota satnice i audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
 backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,pregledano,CI-05: pregled dodavanja office audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
+backend/prisma/migrations/20261104120000_project_document_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-15: nullable ključ i unikatan indeks bez izmjene starih redova; E2E u CI,2026-11-04
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
 backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,332,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
-backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,407,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
+backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,409,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
 backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,pregledano,BE-08: pregledano — demo vozila/ture/gorivo vezani na DEMO-1,2026-11-03
@@ -177,7 +178,7 @@ backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,128,pregledano,BE-11 (
 backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,pregledano,"BE-11: rute dnevnika (lista, create, patch, fotografija, PDF) — sve kroz servisne provjere",2026-11-03
 backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,141,pregledano,BE-11 (F-04): `localId`/`deviceId` validirani (`@MaxLength(120)`),2026-11-03
 backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,270,pregledano,"BE-11 (F-04/05/06/11): idempotentan offline create, koordinate fotografije, dedupe po putanji, best-effort notifikacija",2026-11-03
-backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,70,pregledano,BE-08: PROJECT_DOCUMENT_ADDED / PROJECT_DOCUMENT_REMOVED u audit (B8),2026-11-03
+backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,121,pregledano,BE-08: PROJECT_DOCUMENT_ADDED / PROJECT_DOCUMENT_REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregledano — 30-dnevni prosjek po mašini, prag FUEL_ANOMALY_PCT, notifikacija rolama",2026-11-03
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
 backend/src/modules/ops/fuel.dto.ts,BE,ops,BE-10,97,pregledano,BE-10: pregledano — liters/unitPrice stringovi; projectId opcion,2026-11-03
@@ -209,7 +210,7 @@ backend/src/modules/ops/progress.ts,BE,ops,BE-05,80,pregledano,BE-05: dva upita 
 backend/src/modules/ops/project-access.service.ts,BE,ops,BE-05,141,pregledano,"BE-05: vidljivost vs pisanje (getVisibleProject/assertScopedWrite), budget maskiran hidesBudget",2026-11-02
 backend/src/modules/ops/project-nested.controller.ts,BE,ops,BE-05,138,pregledano,"BE-05: faze/dodjele/dokumenti/količine pod /projects/:id, sve tenant rute",2026-11-02
 backend/src/modules/ops/projects.controller.ts,BE,ops,BE-05,81,pregledano,BE-05: projects.read/write + tenant ruta; arhiviranje bez posebne permisije,2026-11-02
-backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,pregledano,CI-05: PATCH opciona polja prihvataju null za brisanje.,2026-11-04
+backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,178,pregledano,CI-05: PATCH opciona polja prihvataju null za brisanje.,2026-11-04
 backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,274,pregledano,CI-05: opciona PATCH polja razlikuju izostavljeno i brisanje; audit zadržan.,2026-11-04
 backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,pregledano,BE-05: quantities.read/write permisije; bez DELETE rute (količine se ne brišu),2026-11-02
 backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,pregledano,"BE-05: količine kao string (decimal helper u servisu), unit iz zatvorene liste",2026-11-02
@@ -333,7 +334,7 @@ backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregleda
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
-backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,217,pregledano,CI-05: PATCH clear/omitted/null/zero i negativan budžet; prethodni BE-05 testovi.,2026-11-04
+backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,300,pregledano,CI-05: PATCH clear/omitted/null/zero i negativan budžet; prethodni BE-05 testovi.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
@@ -389,8 +390,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,273,pregledano,"CI-05: 19 testova kartica, paginacije, dodjele i djelimičnog oporavka uploada.",2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,327,u-toku,"CI-05: paginacija, prava, tim i djelimičan oporavak uploada; F-CI-05-15 ostaje otvoren.",2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,289,pregledano,"CI-05: 19 testova kartica, paginacije, dodjele i djelimičnog oporavka uploada.",2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,330,u-toku,"CI-05: paginacija, prava, tim i djelimičan oporavak uploada; F-CI-05-15 ostaje otvoren.",2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04

@@ -219,7 +219,9 @@ describe('ProjectTabs', () => {
     expect(input).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Ponovi povezivanje' }))
     await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
-    expect(api.createDocument).toHaveBeenLastCalledWith('p1', { path: 'c1/plan.pdf', fileName: 'plan.pdf' })
+    const firstBody = api.createDocument.mock.calls[0][1]
+    expect(firstBody).toEqual({ path: 'c1/plan.pdf', fileName: 'plan.pdf', idempotencyKey: expect.any(String) })
+    expect(api.createDocument).toHaveBeenLastCalledWith('p1', firstBody)
     await waitFor(() => expect(input).toBeEnabled())
     expect(api.uploadFile).toHaveBeenCalledOnce()
   })
@@ -253,6 +255,20 @@ describe('ProjectTabs', () => {
     expect(api.uploadFile).toHaveBeenCalledOnce()
   })
 
+  it('ne šalje upload ako nije moguće generisati sigurni ključ', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset()
+    const randomUUID = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => { throw new Error('secure UUID unavailable') })
+    try {
+      renderTab('documents')
+      await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+      await waitFor(() => expect(api.toastError).toHaveBeenCalledWith('secure UUID unavailable'))
+      expect(api.uploadFile).not.toHaveBeenCalled()
+    } finally {
+      randomUUID.mockRestore()
+    }
+  })
+
   it('upload dokumenta je blokiran dok traje i isti fajl se može ponovo izabrati nakon greške', async () => {
     api.permissions.add('projects.write')
     let reject!: (error: Error) => void
@@ -267,6 +283,6 @@ describe('ProjectTabs', () => {
     await waitFor(() => expect(api.toastError).toHaveBeenCalledWith('offline'))
     await waitFor(() => expect(input).toBeEnabled())
     await userEvent.upload(input, file)
-    await waitFor(() => expect(api.createDocument).toHaveBeenCalledWith('p1', { path: 'p/f', fileName: 'plan.pdf' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledWith('p1', { path: 'p/f', fileName: 'plan.pdf', idempotencyKey: expect.any(String) }))
   })
 })

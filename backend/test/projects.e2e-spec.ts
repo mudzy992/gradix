@@ -1,8 +1,10 @@
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 describe('Projects (e2e)', () => {
   let app: INestApplication<App>;
@@ -174,6 +176,87 @@ describe('Projects (e2e)', () => {
       client: null,
       plannedBudget: null,
     });
+  });
+
+  it('document linking idempotency survives concurrent retries and rejects key reuse', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(adminToken))
+      .send({ name: 'Idempotent documents' });
+    expect(created.status).toBe(201);
+    const projectId = created.body.data.id as string;
+    const companyId = created.body.data.companyId as string;
+    const key = randomUUID();
+    const body = {
+      path: `${companyId}/test/plan.pdf`,
+      fileName: 'plan.pdf',
+      idempotencyKey: key,
+    };
+    const link = (input: object) =>
+      request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/documents`)
+        .set(auth(adminToken))
+        .send(input);
+    const replies = await Promise.all(
+      Array.from({ length: 8 }, () => link(body)),
+    );
+    for (const response of replies) {
+      expect(response.status).toBe(201);
+      expect(response.body.data.id).toBe(replies[0].body.data.id);
+      expect(response.body.data.idempotencyKey).toBeUndefined();
+    }
+    const retry = await link({ ...body, idempotencyKey: key.toUpperCase() });
+    expect(retry.status).toBe(201);
+    expect(retry.body.data.id).toBe(replies[0].body.data.id);
+    const differentPayload = await link({ ...body, fileName: 'other.pdf' });
+    expect(differentPayload.status).toBe(409);
+    const badKey = await link({ ...body, idempotencyKey: 'not-a-uuid' });
+    expect(badKey.status).toBe(400);
+    const otherTenantPath = await link({
+      ...body,
+      path: 'other-company/file.pdf',
+    });
+    expect(otherTenantPath.status).toBe(403);
+    const list = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}/documents`)
+      .set(auth(adminToken));
+    expect(list.status).toBe(200);
+    expect(list.body.data).toHaveLength(1);
+    expect(list.body.data[0].idempotencyKey).toBeUndefined();
+    const auditCount = await app.get(PrismaService).auditEvent.count({
+      where: {
+        entityType: 'ProjectDocument',
+        entityId: replies[0].body.data.id as string,
+        action: 'PROJECT_DOCUMENT_ADDED',
+      },
+    });
+    expect(auditCount).toBe(1);
+    const raceKey = randomUUID();
+    const competing = await Promise.all([
+      link({ ...body, idempotencyKey: raceKey, fileName: 'a.pdf' }),
+      link({ ...body, idempotencyKey: raceKey, fileName: 'b.pdf' }),
+    ]);
+    expect(competing.map((response) => response.status).sort()).toEqual([
+      201, 409,
+    ]);
+    // Existing clients without a key keep their original create behavior.
+    const legacy = {
+      path: `${companyId}/test/legacy.pdf`,
+      fileName: 'legacy.pdf',
+    };
+    expect((await link(legacy)).status).toBe(201);
+    expect((await link(legacy)).status).toBe(201);
+    const otherProject = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(adminToken))
+      .send({ name: 'Idempotency scoped to project' });
+    expect(otherProject.status).toBe(201);
+    const other = await request(app.getHttpServer())
+      .post(`/api/projects/${otherProject.body.data.id}/documents`)
+      .set(auth(adminToken))
+      .send(body);
+    expect(other.status).toBe(201);
+    expect(other.body.data.id).not.toBe(replies[0].body.data.id);
   });
 
   it('PLANNING to ON_HOLD 400; PM auto-assign; ACC 403; archive then start terminal', async () => {

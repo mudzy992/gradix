@@ -30,6 +30,7 @@ import { ProjectPagination } from '@/components/ops/project-pagination'
 
 const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
 type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
+type PendingDocument = { path: string; fileName: string; idempotencyKey: string }
 
 const STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const
 
@@ -77,7 +78,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const [machinePage, setMachinePage] = useState(1)
   const [tripPage, setTripPage] = useState(1)
   const [fuelPage, setFuelPage] = useState(1)
-  const [pendingDocument, setPendingDocument] = useState<{ path: string; fileName: string } | null>(null)
+  const [pendingDocument, setPendingDocument] = useState<PendingDocument | null>(null)
   useEffect(() => {
     setMemberSearchInput('')
     setMemberSearch('')
@@ -139,15 +140,17 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     onError: (error) => toast.error(errorMessage(error)),
   })
   const documentUpload = useMutation({
-    mutationFn: async (input: { file: File } | { pending: { path: string; fileName: string } }) => {
+    mutationFn: async (input: { file: File } | { pending: PendingDocument }) => {
       if ('pending' in input) {
         // Reconcile a response lost after creation before retrying the link.
         const existing = await listDocuments(projectId)
         const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
         return found ?? createDocument(projectId, input.pending)
       }
+      // Generate before upload so an unavailable secure UUID cannot orphan a file.
+      const idempotencyKey = crypto.randomUUID()
       const uploaded = await uploadFile(input.file)
-      const reference = { path: uploaded.data.path, fileName: input.file.name }
+      const reference = { path: uploaded.data.path, fileName: input.file.name, idempotencyKey }
       setPendingDocument(reference)
       return createDocument(projectId, reference)
     },

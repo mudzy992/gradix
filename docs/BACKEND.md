@@ -408,3 +408,9 @@ više ne postoji kao varijabla (D-029).
 ### PATCH opcionih polja projekta
 
 Za `code`, `locality`, `client` i `plannedBudget` izostavljeno polje ostavlja postojeću vrijednost; `null`, prazan string ili samo razmaci brišu je u bazu kao `null`. Budžet `0` je valjan; negativne i nevažeće decimalne vrijednosti nisu. Kod se normalizuje postojećim pravilima.
+
+### Projektni dokumenti — sigurniji retry povezivanja
+
+`POST /api/projects/:id/documents` prihvata opcioni `idempotencyKey` (UUID v4). Ista kombinacija projekta i ključa s istom putanjom i nazivom vraća postojeći dokument i pod paralelnim zahtjevima; promjena putanje ili naziva za isti ključ vraća `409 CONFLICT`. Ključ nije dio odgovora ni liste. Stari klijenti bez ključa zadržavaju postojeće ponašanje. Migracija dodaje nullable kolonu i jedinstveni indeks bez izmjene starih redova. Prava, zaključavanje projekta i provjera company prefiksa izvršavaju se i pri retryju.
+
+Ovo štiti **povezivanje**, ne atomarnost MinIO uploada i baze: nepoznat ishod uploada, gubitak ključa pri reloadu i replay nakon brisanja još nisu riješeni (F-CI-05-15).

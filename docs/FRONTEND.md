@@ -225,4 +225,4 @@ Podaci se učitavaju po aktivnoj kartici, uz stanja učitavanja, greške i ponov
 
 ### Ponovno povezivanje projektnih dokumenata
 
-Ako je upload odgovorio putanjom, ali povezivanje s projektom nije potvrđeno, kartica čuva referencu u memoriji i nudi ponovno povezivanje bez ponovnog uploada. Prije novog pokušaja provjerava postoji li veza; ako provjera ne uspije, novi upis se ne šalje. Ovo nije potpuno pouzdana idempotentnost: referenca se gubi napuštanjem/refreshom stranice, nepoznat ishod prvog uploada se ne oporavlja i prethodni upis može još biti u toku. Praćenje F-CI-05-15 ostaje otvoreno.
+Ako je upload odgovorio putanjom, ali povezivanje s projektom nije potvrđeno, kartica čuva referencu i UUID ključ u memoriji i nudi ponovno povezivanje bez ponovnog uploada. Prije novog pokušaja provjerava postoji li veza; ako provjera ne uspije, novi upis se ne šalje. Backend čuva ključ i sprečava duplikate ako je prethodni upis još u toku. Ovo nije potpuno pouzdana idempotentnost: referenca i ključ se gube napuštanjem/refreshom stranice, nepoznat ishod prvog uploada se ne oporavlja, a replay nakon brisanja nije zaštićen. Praćenje F-CI-05-15 ostaje otvoreno.

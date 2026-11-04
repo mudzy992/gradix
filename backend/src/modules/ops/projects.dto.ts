@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -163,6 +164,10 @@ export class CreateAssignmentDto {
 }
 
 export class CreateDocumentDto {
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
+
   @IsString()
   path!: string;
 

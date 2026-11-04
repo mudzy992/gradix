@@ -77,7 +77,7 @@ export function listDocuments(projectId: string) {
   return api<DocumentRow[]>(`/api/projects/${projectId}/documents`)
 }
 
-export function createDocument(projectId: string, body: { path: string; fileName: string }) {
+export function createDocument(projectId: string, body: { path: string; fileName: string; idempotencyKey?: string }) {
   return api<DocumentRow>(`/api/projects/${projectId}/documents`, { method: 'POST', body })
 }
 
