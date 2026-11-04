@@ -51,6 +51,32 @@ describe('ProjectSheet', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it('brisanje opcionih polja šalje prazne vrijednosti, a neizbrisana izostavlja', async () => {
+    patchProject.mockResolvedValue({})
+    renderSheet(existing)
+    for (const label of ['Šifra', 'Lokacija', 'Budžet', 'Naručilac']) {
+      await userEvent.clear(screen.getByLabelText(label))
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Sačuvaj' }))
+    await waitFor(() => expect(patchProject).toHaveBeenCalledOnce())
+    expect(patchProject).toHaveBeenCalledWith('p1', expect.objectContaining({ code: '', locality: '', plannedBudget: '', client: '' }))
+  })
+
+  it('ne šalje skrivena ni neizmijenjena opciona polja', async () => {
+    patchProject.mockResolvedValue({})
+    const hidden = { ...existing, plannedBudget: undefined, client: undefined }
+    renderSheet(hidden)
+    await userEvent.clear(screen.getByLabelText('Naziv'))
+    await userEvent.type(screen.getByLabelText('Naziv'), 'Novi naziv')
+    await userEvent.click(screen.getByRole('button', { name: 'Sačuvaj' }))
+    await waitFor(() => expect(patchProject).toHaveBeenCalledOnce())
+    const body = patchProject.mock.calls[0][1]
+    expect(JSON.parse(JSON.stringify(body))).not.toHaveProperty('plannedBudget')
+    expect(JSON.parse(JSON.stringify(body))).not.toHaveProperty('client')
+    expect(JSON.parse(JSON.stringify(body))).not.toHaveProperty('code')
+    expect(JSON.parse(JSON.stringify(body))).not.toHaveProperty('locality')
+  })
+
   it('pri kreiranju izostavlja prazne datume i blokira dupli submit', async () => {
     let resolve!: () => void
     createProject.mockReturnValue(new Promise<void>((done) => { resolve = done }))

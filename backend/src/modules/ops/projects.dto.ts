@@ -66,7 +66,7 @@ export class CreateProjectDto {
 export class PatchProjectDto {
   @IsOptional()
   @IsString()
-  code?: string;
+  code?: string | null;
 
   @IsOptional()
   @IsString()
@@ -76,7 +76,7 @@ export class PatchProjectDto {
 
   @IsOptional()
   @IsString()
-  locality?: string;
+  locality?: string | null;
 
   @IsOptional()
   @IsString()
@@ -93,11 +93,11 @@ export class PatchProjectDto {
 
   @IsOptional()
   @IsString()
-  plannedBudget?: string;
+  plannedBudget?: string | null;
 
   @IsOptional()
   @IsString()
-  client?: string;
+  client?: string | null;
 
   @IsOptional()
   @IsString()

@@ -39,13 +39,15 @@ export function ProjectSheet({ project, open, onOpenChange, onSaved }: Props) {
       plannedEnd: project?.plannedEnd?.slice(0, 10) ?? '',
     },
   })
+  const { dirtyFields } = form.formState
   const onSubmit = form.handleSubmit(async (values) => {
     const body: Record<string, unknown> = {
       name: values.name.trim(),
-      code: values.code || undefined,
-      locality: values.locality || undefined,
-      plannedBudget: values.plannedBudget || undefined,
-      client: values.client || undefined,
+      // PATCH only changed optional fields: fields hidden by the API must not be erased.
+      code: project ? (dirtyFields.code ? values.code : undefined) : values.code || undefined,
+      locality: project ? (dirtyFields.locality ? values.locality : undefined) : values.locality || undefined,
+      plannedBudget: project ? (dirtyFields.plannedBudget ? values.plannedBudget : undefined) : values.plannedBudget || undefined,
+      client: project ? (dirtyFields.client ? values.client : undefined) : values.client || undefined,
       // On PATCH an empty string means clear the optional date. On create it is omitted.
       plannedStart: project ? values.plannedStart : values.plannedStart || undefined,
       plannedEnd: project ? values.plannedEnd : values.plannedEnd || undefined,

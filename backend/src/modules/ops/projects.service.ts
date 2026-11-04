@@ -198,15 +198,19 @@ export class ProjectsService {
         code:
           dto.code !== undefined ? normalizeProjectCode(dto.code) : undefined,
         name: dto.name,
-        locality: dto.locality,
+        locality:
+          dto.locality === undefined ? undefined : dto.locality?.trim() || null,
         lat: dto.lat,
         lng: dto.lng,
         geofenceRadius: dto.geofenceRadius,
         plannedBudget:
           dto.plannedBudget === undefined
             ? undefined
-            : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
-        client: dto.client,
+            : dto.plannedBudget == null || dto.plannedBudget.trim() === ''
+              ? null
+              : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
+        client:
+          dto.client === undefined ? undefined : dto.client?.trim() || null,
         plannedStart: dto.plannedStart !== undefined ? plannedStart : undefined,
         plannedEnd: dto.plannedEnd !== undefined ? plannedEnd : undefined,
       },

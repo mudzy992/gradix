@@ -404,3 +404,7 @@ više ne postoji kao varijabla (D-029).
 4. Novi error kod u katalog (ako treba) — i u ovom dokumentu.
 5. e2e test (sretan put + 1 negativan) u `backend/test/`.
 6. Ažurirati `docs/BACKEND.md` §3 (tabela modula) u istom commitu.
+
+### PATCH opcionih polja projekta
+
+Za `code`, `locality`, `client` i `plannedBudget` izostavljeno polje ostavlja postojeću vrijednost; `null`, prazan string ili samo razmaci brišu je u bazu kao `null`. Budžet `0` je valjan; negativne i nevažeće decimalne vrijednosti nisu. Kod se normalizuje postojećim pravilima.

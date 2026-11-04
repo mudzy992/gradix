@@ -210,3 +210,7 @@ Početni dan i mjesec prate vremensku zonu firme; ručni izbor se zadržava. Pol
 ### Datumi projekta
 
 Brisanje planiranog početka ili kraja u obrascu projekta šalje praznu vrijednost u PATCH, koju backend tretira kao brisanje datuma.
+
+### Opciono uređivanje projekta
+
+Pri izmjeni se kod, lokacija, naručilac i budžet šalju samo ako su promijenjeni; brisanje šalje praznu vrijednost. To ujedno štiti podatke koje API nije uključio u odgovor.

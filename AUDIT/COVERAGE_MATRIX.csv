@@ -209,8 +209,8 @@ backend/src/modules/ops/progress.ts,BE,ops,BE-05,80,pregledano,BE-05: dva upita 
 backend/src/modules/ops/project-access.service.ts,BE,ops,BE-05,141,pregledano,"BE-05: vidljivost vs pisanje (getVisibleProject/assertScopedWrite), budget maskiran hidesBudget",2026-11-02
 backend/src/modules/ops/project-nested.controller.ts,BE,ops,BE-05,138,pregledano,"BE-05: faze/dodjele/dokumenti/količine pod /projects/:id, sve tenant rute",2026-11-02
 backend/src/modules/ops/projects.controller.ts,BE,ops,BE-05,81,pregledano,BE-05: projects.read/write + tenant ruta; arhiviranje bez posebne permisije,2026-11-02
-backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,pregledano,"BE-05: plannedBudget se validira u servisu (decimal helper), ostalo nepromijenjeno",2026-11-02
-backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,270,pregledano,BE-08: PROJECT_UPDATED / PROJECT_ARCHIVED u audit (B8),2026-11-03
+backend/src/modules/ops/projects.dto.ts,BE,ops,BE-05,173,pregledano,CI-05: PATCH opciona polja prihvataju null za brisanje.,2026-11-04
+backend/src/modules/ops/projects.service.ts,BE,ops,BE-05,274,pregledano,CI-05: opciona PATCH polja razlikuju izostavljeno i brisanje; audit zadržan.,2026-11-04
 backend/src/modules/ops/quantities.controller.ts,BE,ops,BE-05,42,pregledano,BE-05: quantities.read/write permisije; bez DELETE rute (količine se ne brišu),2026-11-02
 backend/src/modules/ops/quantities.dto.ts,BE,ops,BE-05,61,pregledano,"BE-05: količine kao string (decimal helper u servisu), unit iz zatvorene liste",2026-11-02
 backend/src/modules/ops/quantities.service.ts,BE,ops,BE-05,167,pregledano,BE-08: PROJECT_QUANTITY_CREATED / PROJECT_QUANTITY_UPDATED u audit (B8),2026-11-03
@@ -333,7 +333,7 @@ backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregleda
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,314,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije",2026-11-03
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
-backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,132,pregledano,BE-05: pregledano — kreiranje/dodjele/status/limit; koristi se kao regresija,2026-11-02
+backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,217,pregledano,CI-05: PATCH clear/omitted/null/zero i negativan budžet; prethodni BE-05 testovi.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
@@ -385,8 +385,8 @@ frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-
 frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,90,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
 frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,71,nepregledano,,
-frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,68,pregledano,"CI-05: tri testa praznog naziva, brisanja datuma i snimanja bez duplikata.",2026-11-04
-frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,101,pregledano,"CI-05: pregled obrasca; naziv sa validacijom, brisanje planiranih datuma šalje prazno za backend clear; ostala opciona polja imaju neriješeno brisanje.",2026-11-04
+frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
+frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04

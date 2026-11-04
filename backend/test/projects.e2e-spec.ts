@@ -91,6 +91,91 @@ describe('Projects (e2e)', () => {
     expect(badFence.status).toBe(400);
   });
 
+  it('PATCH preserves omitted fields and clears optional fields without losing zero', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(adminToken))
+      .send({
+        name: 'Clear optional',
+        code: `CLR-${Date.now()}`,
+        locality: 'Sarajevo',
+        client: 'Grad',
+        plannedBudget: '125',
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    const omitted = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({ name: 'Renamed' });
+    expect(omitted.status).toBe(200);
+    expect(omitted.body.data).toMatchObject({
+      locality: 'Sarajevo',
+      client: 'Grad',
+      plannedBudget: '125',
+    });
+    expect(omitted.body.data.code).toBe(created.body.data.code);
+    const zero = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({ plannedBudget: '0' });
+    expect(zero.status).toBe(200);
+    expect(zero.body.data.plannedBudget).toBe('0');
+    const invalid = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({ plannedBudget: '-1' });
+    expect(invalid.status).toBe(400);
+    const cleared = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({ code: '', locality: ' ', client: '', plannedBudget: '' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data).toMatchObject({
+      code: null,
+      locality: null,
+      client: null,
+      plannedBudget: null,
+    });
+    const read = await request(app.getHttpServer())
+      .get(`/api/projects/${id}`)
+      .set(auth(adminToken));
+    expect(read.status).toBe(200);
+    expect(read.body.data).toMatchObject({
+      code: null,
+      locality: null,
+      client: null,
+      plannedBudget: null,
+    });
+    const restored = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({
+        code: 'RESTORED',
+        locality: 'Mostar',
+        client: 'Firma',
+        plannedBudget: '42',
+      });
+    expect(restored.status).toBe(200);
+    expect(restored.body.data).toMatchObject({
+      code: 'RESTORED',
+      locality: 'Mostar',
+      client: 'Firma',
+      plannedBudget: '42',
+    });
+    const nullClear = await request(app.getHttpServer())
+      .patch(`/api/projects/${id}`)
+      .set(auth(adminToken))
+      .send({ code: null, locality: null, client: null, plannedBudget: null });
+    expect(nullClear.status).toBe(200);
+    expect(nullClear.body.data).toMatchObject({
+      code: null,
+      locality: null,
+      client: null,
+      plannedBudget: null,
+    });
+  });
+
   it('PLANNING to ON_HOLD 400; PM auto-assign; ACC 403; archive then start terminal', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/projects')
