@@ -190,3 +190,7 @@ vlasnika** → tek onda kod.
 ### Obavijesti — stanja liste
 
 Panel obavijesti razlikuje učitavanje, grešku sa ponovnim pokušajem i zaista praznu listu; mrežna greška ne smije izgledati kao „Nema obavijesti“.
+
+### Planirani periodi
+
+Gantt prikazuje početak i kraj i kao tekstualne datume; stavke bez valjanog perioda ne crtaju se, a grafičke trake su dekorativne.

@@ -1,43 +1,47 @@
 import type { PhaseRow, TaskRow } from '@/lib/ops-types'
 
-type Item = { id: string; name: string; start: string | null; end: string | null }
+type Item = { id: string; name: string; start: string; end: string; startTime: number; endTime: number }
 
-function toTime(value: string | null): number | null {
-  if (!value) {
-    return null
-  }
-  const time = new Date(value).getTime()
-  return Number.isNaN(time) ? null : time
+function toTime(value: string): number | null {
+  const prefix = value.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(prefix)) return null
+  const calendar = new Date(`${prefix}T00:00:00.000Z`)
+  if (Number.isNaN(calendar.getTime()) || calendar.toISOString().slice(0, 10) !== prefix) return null
+  const time = Date.parse(value)
+  return Number.isFinite(time) ? time : null
+}
+
+function toItem(id: string, name: string, start: string | null, end: string | null): Item | null {
+  if (!start || !end) return null
+  const startTime = toTime(start)
+  const endTime = toTime(end)
+  if (startTime === null || endTime === null || endTime < startTime) return null
+  return { id, name, start, end, startTime, endTime }
 }
 
 export function PlannedGantt({ phases, tasks }: { phases: PhaseRow[]; tasks: TaskRow[] }) {
-  const items: Item[] = [
-    ...phases.map((phase) => ({ id: phase.id, name: phase.name, start: phase.plannedStart, end: phase.plannedEnd })),
-    ...tasks.map((task) => ({ id: task.id, name: task.title, start: task.plannedStart, end: task.plannedEnd })),
-  ].filter((item) => item.start && item.end)
-  if (items.length === 0) {
-    return null
-  }
-  const starts = items.map((item) => toTime(item.start) as number)
-  const ends = items.map((item) => toTime(item.end) as number)
-  const min = Math.min(...starts)
-  const max = Math.max(...ends)
+  const items = [
+    ...phases.map((phase) => toItem(`phase-${phase.id}`, phase.name, phase.plannedStart, phase.plannedEnd)),
+    ...tasks.map((task) => toItem(`task-${task.id}`, task.title, task.plannedStart, task.plannedEnd)),
+  ].filter((item): item is Item => item !== null)
+  if (items.length === 0) return null
+
+  const min = Math.min(...items.map((item) => item.startTime))
+  const max = Math.max(...items.map((item) => item.endTime))
   const span = Math.max(max - min, 1)
   return (
     <div className="grid gap-2">
       {items.map((item) => {
-        const start = toTime(item.start) as number
-        const end = toTime(item.end) as number
-        const left = ((start - min) / span) * 100
-        const width = Math.max(((end - start) / span) * 100, 2)
+        const left = Math.min(((item.startTime - min) / span) * 100, 98)
+        const width = Math.min(Math.max(((item.endTime - item.startTime) / span) * 100, 2), 100 - left)
         return (
           <div key={item.id} className="grid gap-1">
-            <p className="text-xs text-muted-foreground">{item.name}</p>
-            <div className="relative h-6 rounded-md bg-secondary">
-              <div
-                className="absolute inset-y-0 rounded-md bg-primary/80"
-                style={{ left: `${left}%`, width: `${width}%` }}
-              />
+            <p className="text-xs text-muted-foreground">
+              {item.name}: <time dateTime={item.start}>{item.start.slice(0, 10)}</time> –{' '}
+              <time dateTime={item.end}>{item.end.slice(0, 10)}</time>
+            </p>
+            <div className="relative h-6 rounded-md bg-secondary" aria-hidden="true">
+              <div className="absolute inset-y-0 rounded-md bg-primary/80" style={{ left: `${left}%`, width: `${width}%` }} />
             </div>
           </div>
         )
