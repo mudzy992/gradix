@@ -104,7 +104,7 @@ Detalji i pravila: [`BACKEND.md`](./BACKEND.md).
 ## 5. Model podataka (pregled)
 
 Šema je podijeljena u 6 Prisma fajlova (`backend/prisma/schema/`): `foundation`, `ops`,
-`fleet`, `polish`, `erp`, `public`. Osam migracija:
+`fleet`, `polish`, `erp`, `public`. Devet migracija:
 `20261102130000_init_postgres` (inicijalna šema),
 `20261103120000_be08_indexes_audit` (FK indeksi, nove audit akcije,
 parcijalni unique indeksi za otvorene timere), `20261103140000_be09_machine_open_assignment`
@@ -114,7 +114,8 @@ parcijalni unique indeksi za otvorene timere), `20261103140000_be09_machine_open
 `20261103190000_be14_payroll_snapshot_erp_audit` (`TimerSession.hourlyRateSnapshot` — istorijska
 satnica za payroll, D-035; 4 audit akcije za ERP šifrarnike i brisanje troška) i
 `20261103210000_be15_office_audit_actions` (12 audit akcija za tendere, servis mašina i dokumente) i
-`20261104120000_project_document_idempotency` (opciono idempotentno povezivanje projektnih dokumenata).
+`20261104120000_project_document_idempotency` (opciono idempotentno povezivanje projektnih dokumenata) i
+`20261104150000_refresh_token_family` (nullable identitet porodice refresh tokena i indeks).
 
 | Grupa | Entiteti |
 |---|---|

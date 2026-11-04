@@ -21,9 +21,10 @@ backend/prisma/migrations/20261103180000_be13_diary_hse_audit_actions/migration.
 backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,pregledano,CI-05: pregled SQL migracije snapshota satnice i audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
 backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,pregledano,CI-05: pregled dodavanja office audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
 backend/prisma/migrations/20261104120000_project_document_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-15: nullable ključ i unikatan indeks bez izmjene starih redova; E2E u CI,2026-11-04
+backend/prisma/migrations/20261104150000_refresh_token_family/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-35: nullable kolona i indeks bez izmjene postojećih redova,2026-11-04
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,332,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,334,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene; F-CI-05-35: nullable porodica refresh tokena i indeks po vlasniku",2026-11-04
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,409,pregledano,"BE-08: +23 FK indeksa (projekti, zadaci, timer, količine, dnevnik, incidenti)",2026-11-03
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
@@ -106,7 +107,7 @@ backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
-backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,226,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
+backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,243,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06); F-CI-05-33/35: lock po korisniku i opoziv porodice refresh tokena; legacy ograničenja dokumentovana",2026-11-04
 backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,91,pregledano,FE-11/D-050: login/refresh limiti iz okruženja (default 5/20 po minuti) — E2E posao ih podiže,2026-11-03
 backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
 backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
@@ -320,7 +321,7 @@ backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
-backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,250,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.,2026-11-04
+backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,369,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka,2026-11-04
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { JwtService } from '@nestjs/jwt';
@@ -76,7 +77,12 @@ export class AuthTokensService {
         );
       }
       await tx.refreshToken.create({
-        data: { userId, tokenHash: hashRefreshToken(refreshToken), expiresAt },
+        data: {
+          userId,
+          tokenHash: hashRefreshToken(refreshToken),
+          lineageKey: randomUUID(),
+          expiresAt,
+        },
       });
     });
     return { accessToken, refreshToken };
@@ -120,9 +126,12 @@ export class AuthTokensService {
       const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
+      // Old rows have no family yet. Establish one on their first rotation
+      // without changing legacy rows or relying on another process to migrate.
+      const lineageKey = existing!.lineageKey ?? existing!.id;
       const consumed = await tx.refreshToken.updateMany({
         where: { id: existing!.id, revokedAt: null, expiresAt: { gt: now } },
-        data: { revokedAt: now },
+        data: { revokedAt: now, lineageKey },
       });
       if (consumed.count !== 1) {
         const current = await tx.refreshToken.findUnique({
@@ -139,6 +148,7 @@ export class AuthTokensService {
         data: {
           userId: initial.userId,
           tokenHash: hashRefreshToken(nextRefreshToken),
+          lineageKey,
           expiresAt,
         },
       });
@@ -205,11 +215,18 @@ export class AuthTokensService {
   async logout(userId: string, refreshToken: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.lockUser(tx, userId);
+      const token = await tx.refreshToken.findUnique({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { id: true, userId: true, lineageKey: true },
+      });
+      if (!token || token.userId !== userId) return;
       await tx.refreshToken.updateMany({
         where: {
           userId,
-          tokenHash: hashRefreshToken(refreshToken),
           revokedAt: null,
+          OR: token.lineageKey
+            ? [{ id: token.id }, { lineageKey: token.lineageKey }]
+            : [{ id: token.id }],
         },
         data: { revokedAt: new Date() },
       });

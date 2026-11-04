@@ -197,6 +197,125 @@ describe('Auth (e2e)', () => {
     },
   );
 
+  it('single logout of an older token revokes its rotated family but not another login', async () => {
+    const first = await login(app, 'admin@gradix.local');
+    const other = await login(app, 'admin@gradix.local');
+    const userId = first.body.data.user.id as string;
+    const firstToken = first.body.data.refreshToken as string;
+    const otherToken = other.body.data.refreshToken as string;
+    const tokens = app.get(AuthTokensService);
+    const prisma = app.get(PrismaService);
+    const child = await tokens.rotate(firstToken);
+    const grandchild = await tokens.rotate(child.refreshToken);
+    const loggedOut = await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .set(auth(first.body.data.accessToken as string))
+      .send({ refreshToken: firstToken });
+    expect(loggedOut.status).toBe(200);
+    const row = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(grandchild.refreshToken) },
+      select: { revokedAt: true },
+    });
+    expect(row.revokedAt).not.toBeNull();
+    // Inspect/rotate the other family before trying the revoked one: reuse of
+    // any revoked token intentionally still triggers the global theft policy.
+    const untouched = await tokens.rotate(otherToken);
+    expect(untouched.refreshToken).toEqual(expect.any(String));
+    await tokens.logout(userId, firstToken); // idempotent repeated logout
+  });
+
+  it('legacy token gets a family on rotation and can later log out its child', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const token = logged.body.data.refreshToken as string;
+    const userId = logged.body.data.user.id as string;
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const legacy = await prisma.refreshToken.update({
+      where: { tokenHash: hashRefreshToken(token) },
+      data: { lineageKey: null },
+      select: { id: true },
+    });
+    const child = await tokens.rotate(token);
+    const parent = await prisma.refreshToken.findUniqueOrThrow({
+      where: { id: legacy.id },
+      select: { lineageKey: true },
+    });
+    const childRow = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(child.refreshToken) },
+      select: { lineageKey: true },
+    });
+    expect(parent.lineageKey).toBe(legacy.id);
+    expect(childRow.lineageKey).toBe(legacy.id);
+    await tokens.logout(userId, token);
+    const after = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(child.refreshToken) },
+      select: { revokedAt: true },
+    });
+    expect(after.revokedAt).not.toBeNull();
+  });
+
+  it('single logout cannot revoke a token belonging to another user', async () => {
+    const admin = await login(app, 'admin@gradix.local');
+    const worker = await login(app, 'worker@gradix.local');
+    const adminToken = admin.body.data.refreshToken as string;
+    const tokens = app.get(AuthTokensService);
+    await tokens.logout(worker.body.data.user.id as string, adminToken);
+    const stillActive = await tokens.rotate(adminToken);
+    expect(stillActive.refreshToken).toEqual(expect.any(String));
+  });
+
+  it('single logout waits for a concurrent rotation and revokes its child', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const independent = await login(app, 'admin@gradix.local');
+    const token = logged.body.data.refreshToken as string;
+    const userId = logged.body.data.user.id as string;
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(token);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let rotation: ReturnType<AuthTokensService['rotate']> | undefined;
+    let logout: Promise<void> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      rotation = tokens.rotate(token);
+      void rotation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%UPDATE%RefreshToken%');
+      logout = tokens.logout(userId, token);
+      void logout.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      release();
+      const child = await rotation;
+      await logout;
+      const row = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(child.refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(row.revokedAt).not.toBeNull();
+      const other = await tokens.rotate(
+        independent.body.data.refreshToken as string,
+      );
+      expect(other.refreshToken).toEqual(expect.any(String));
+    } finally {
+      release();
+      await Promise.allSettled([holder, rotation, logout]);
+    }
+  });
+
   it('logout is not logout-all', async () => {
     const a = await login(app, 'admin@gradix.local');
     const b = await login(app, 'admin@gradix.local');

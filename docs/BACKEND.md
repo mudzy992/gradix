@@ -72,8 +72,13 @@ backend/src/
   Uslovni opoziv i kreiranje zamjene su jedna transakcija, pa isti token ne može izdati dva
   nasljednika. Izdavanje, rotacija i opoziv koriste zajednički PostgreSQL row lock korisnika;
   reuse i opoziv su u istoj transakciji. Nova ispravna prijava poslije opoziva je dozvoljena.
-  Promjena naloga i naknadni opoziv još nisu jedna transakcija, pojedinačna odjava starog tokena
-  ne opoziva već rotiranog nasljednika, a već izdati access JWT traje do isteka.
+  Pojedinačni logout opoziva porodicu tokena iste prijave, uključujući potomke nakon rotacije,
+  bez odjave drugih prijava. Postojećim aktivnim tokenima porodica se dodjeljuje pri prvoj
+  rotaciji; stari već rotirani tokeni bez veze s potomkom ne mogu se retroaktivno povezati.
+  Čišćenje starih redova uklanja mogućnost odjave preko obrisanog pretka; stari serveri
+  u miješanom deploymentu ne prate porodicu ni zajednički lock. Ponovna upotreba opozvanog
+  tokena i dalje opoziva sve sesije. Promjena naloga i naknadni opoziv još nisu jedna
+  transakcija, a već izdati access JWT traje do isteka.
 - Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
   (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
   opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).

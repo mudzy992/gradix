@@ -252,16 +252,18 @@ model UserRoleAssignment {
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  lineageKey String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, lineageKey])
 }
 
 model Device {
