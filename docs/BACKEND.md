@@ -70,8 +70,10 @@ backend/src/
 - **Rotacija na svaki refresh:** stari token se opoziva, izdaje se novi par. Ponovna upotreba već
   opozvanog tokena gasi **sve** sesije korisnika (`401 AUTH_REFRESH_REUSE`) — znak krađe.
   Uslovni opoziv i kreiranje zamjene su jedna transakcija, pa isti token ne može izdati dva
-  nasljednika. Konkurentni reuse i dalje gasi sesije; logout-all/reuse nije serijalizovan sa
-  paralelnom prijavom ili rotacijom drugog tokena. Već izdati access JWT traje do isteka.
+  nasljednika. Izdavanje, rotacija i opoziv koriste zajednički PostgreSQL row lock korisnika;
+  reuse i opoziv su u istoj transakciji. Nova ispravna prijava poslije opoziva je dozvoljena.
+  Promjena naloga i naknadni opoziv još nisu jedna transakcija, pojedinačna odjava starog tokena
+  ne opoziva već rotiranog nasljednika, a već izdati access JWT traje do isteka.
 - Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
   (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
   opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).

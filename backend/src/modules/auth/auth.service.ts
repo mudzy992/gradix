@@ -52,7 +52,7 @@ export class AuthService {
         401,
       );
     }
-    const pair = await this.tokens.issuePair(user.id);
+    const pair = await this.tokens.issuePair(user.id, user.passwordHash);
     return { ...pair, user: toMeDto(mapAuthUser(user, user.companyId)) };
   }
 

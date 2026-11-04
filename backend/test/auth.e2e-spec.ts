@@ -1,8 +1,12 @@
+import { randomUUID } from 'crypto';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, decodeJwt, login } from './helpers/auth';
+import { AuthTokensService } from '../src/modules/auth/auth-tokens.service';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { hashRefreshToken } from '../src/common/utils/password';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
@@ -88,6 +92,111 @@ describe('Auth (e2e)', () => {
     expect(after.status).toBe(401);
   });
 
+  it('logout-all waits for an in-progress rotation and revokes the new token', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const token = logged.body.data.refreshToken as string;
+    const userId = logged.body.data.user.id as string;
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    // Block the old token row so rotation holds the user lock before creating
+    // the child. Revoke-all must wait for that lock, then see the new row.
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(token);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let rotation: ReturnType<AuthTokensService['rotate']> | undefined;
+    let revocation: Promise<void> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      rotation = tokens.rotate(token);
+      void rotation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%UPDATE%RefreshToken%');
+      revocation = tokens.revokeAll(userId);
+      void revocation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      release();
+      const rotated = await rotation;
+      await revocation;
+      await expect(tokens.rotate(rotated.refreshToken)).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_REUSE',
+      });
+    } finally {
+      release();
+      await Promise.allSettled([holder, rotation, revocation]);
+    }
+  });
+
+  it.each([
+    { change: 'password', expected: 'AUTH_INVALID_CREDENTIALS' },
+    { change: 'active', expected: 'AUTH_ACCOUNT_INACTIVE' },
+  ])(
+    'rechecks $change after waiting to issue a login token',
+    async ({ change, expected }) => {
+      const prisma = app.get(PrismaService);
+      const tokens = app.get(AuthTokensService);
+      const oldHash = 'test-hash-before-change';
+      const user = await prisma.user.create({
+        data: {
+          firstName: 'Race',
+          lastName: 'Test',
+          email: `auth-race-${change}-${randomUUID()}@example.test`,
+          passwordHash: oldHash,
+          roles: { create: { role: 'WORKER' } },
+        },
+      });
+      let release!: () => void;
+      let ready!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const locked = new Promise<void>((resolve) => {
+        ready = resolve;
+      });
+      const holder = prisma.$transaction(
+        async (tx) => {
+          await tx.user.update({
+            where: { id: user.id },
+            data:
+              change === 'password'
+                ? { passwordHash: 'test-hash-after-change' }
+                : { isActive: false },
+          });
+          ready();
+          await gate;
+        },
+        { timeout: 15000 },
+      );
+      let issuing: ReturnType<AuthTokensService['issuePair']> | undefined;
+      try {
+        await Promise.race([locked, holder]);
+        issuing = tokens.issuePair(user.id, oldHash);
+        void issuing.catch(() => undefined);
+        await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+        release();
+        await expect(issuing).rejects.toMatchObject({ code: expected });
+        expect(
+          await prisma.refreshToken.count({ where: { userId: user.id } }),
+        ).toBe(0);
+      } finally {
+        release();
+        await Promise.allSettled([holder, issuing]);
+      }
+    },
+  );
+
   it('logout is not logout-all', async () => {
     const a = await login(app, 'admin@gradix.local');
     const b = await login(app, 'admin@gradix.local');
@@ -122,3 +231,19 @@ describe('Auth (e2e)', () => {
     expect(response.body.error.code).toBe('AUTH_PASSWORD_TOO_SHORT');
   });
 });
+
+/** Observe the actual PostgreSQL lock wait; no token or SQL parameters are logged. */
+async function waitForBlockedQuery(
+  prisma: PrismaService,
+  pattern: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
+      SELECT count(*)::integer AS waiting FROM pg_stat_activity
+      WHERE datname = current_database() AND pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock' AND query LIKE ${pattern}`;
+    if (rows[0].waiting > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('Expected database lock wait did not occur');
+}

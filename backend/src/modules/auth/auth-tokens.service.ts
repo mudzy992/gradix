@@ -10,6 +10,7 @@ import { REFRESH_DAYS, REFRESH_RETENTION_DAYS } from '../../common/constants';
 import { AppError } from '../../common/errors/app-error';
 import { evaluateRefreshToken } from './auth-token-rules';
 import { ERROR_CODES } from '../../common/errors/error-codes';
+import type { Prisma } from '../../../generated/client';
 
 @Injectable()
 export class AuthTokensService {
@@ -20,7 +21,27 @@ export class AuthTokensService {
     private readonly jwt: JwtService,
   ) {}
 
-  async issuePair(userId: string): Promise<{
+  // Issuance, rotation and revocation for one user take the same row lock.
+  // Keep the order User -> RefreshToken to avoid issuing a child after a
+  // concurrently started revokeAll has taken its statement snapshot.
+  private async lockUser(tx: Prisma.TransactionClient, userId: string) {
+    await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  }
+
+  private async revokeAllInTransaction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ) {
+    await tx.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async issuePair(
+    userId: string,
+    verifiedPasswordHash: string,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
@@ -28,75 +49,77 @@ export class AuthTokensService {
     const refreshToken = createRefreshToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
-    await this.prisma.refreshToken.create({
-      data: {
-        userId,
-        tokenHash: hashRefreshToken(refreshToken),
-        expiresAt,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUser(tx, userId);
+      // Password verification happened before the lock. Do not issue a token
+      // if a reset or account change committed in the meantime.
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { roles: true, company: true },
+      });
+      if (!user || user.passwordHash !== verifiedPasswordHash) {
+        throw this.invalid();
+      }
+      if (!user.isActive) {
+        throw new AppError(
+          ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
+          'Account inactive',
+          401,
+        );
+      }
+      if (!user.roles.length) throw this.invalid();
+      if (user.company && !user.company.isActive) {
+        throw new AppError(
+          ERROR_CODES.AUTH_COMPANY_INACTIVE,
+          'Company inactive',
+          401,
+        );
+      }
+      await tx.refreshToken.create({
+        data: { userId, tokenHash: hashRefreshToken(refreshToken), expiresAt },
+      });
     });
     return { accessToken, refreshToken };
   }
 
   async rotate(refreshToken: string) {
     const tokenHash = hashRefreshToken(refreshToken);
-    const existing = await this.prisma.refreshToken.findUnique({
+    // This preliminary lookup identifies the lock only; all security checks
+    // are repeated after acquiring it inside the transaction.
+    const initial = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
-      include: { user: { include: { roles: true, company: true } } },
+      select: { userId: true },
     });
+    if (!initial) throw this.invalid();
 
-    const verdict = evaluateRefreshToken(
-      existing,
-      existing?.user
-        ? {
-            isActive: existing.user.isActive,
-            roles: existing.user.roles.map((item) => item.role),
-            company: existing.user.company,
-          }
-        : null,
-    );
-
-    if (verdict === 'reuse') {
-      // Ponovna upotreba već rotiranog tokena = znak krađe → gasimo sve sesije.
-      await this.revokeAll(existing!.userId);
-      throw new AppError(
-        ERROR_CODES.AUTH_REFRESH_REUSE,
-        'Refresh token reuse detected',
-        401,
-      );
-    }
-    if (verdict === 'inactive') {
-      await this.revokeAll(existing!.userId);
-      throw new AppError(
-        ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
-        'Account inactive',
-        401,
-      );
-    }
-    if (verdict === 'company-inactive') {
-      await this.revokeAll(existing!.userId);
-      throw new AppError(
-        ERROR_CODES.AUTH_COMPANY_INACTIVE,
-        'Company inactive',
-        401,
-      );
-    }
-    if (verdict === 'no-roles') {
-      await this.revokeAll(existing!.userId);
-      throw this.invalid();
-    }
-    if (verdict !== 'ok') {
-      throw this.invalid();
-    }
-
-    // Consume the old token and persist its replacement atomically. A plain
-    // find-then-update allowed two concurrent requests to mint two valid pairs.
     const nextRefreshToken = createRefreshToken();
-    const accessToken = this.jwt.sign({ sub: existing!.userId });
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
+    const accessToken = this.jwt.sign({ sub: initial.userId });
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockUser(tx, initial.userId);
+      const existing = await tx.refreshToken.findUnique({
+        where: { tokenHash },
+        include: { user: { include: { roles: true, company: true } } },
+      });
+      if (existing && existing.userId !== initial.userId) return 'invalid';
+      const verdict = evaluateRefreshToken(
+        existing,
+        existing?.user
+          ? {
+              isActive: existing.user.isActive,
+              roles: existing.user.roles.map((item) => item.role),
+              company: existing.user.company,
+            }
+          : null,
+      );
+      if (verdict !== 'ok') {
+        if (verdict !== 'invalid') {
+          await this.revokeAllInTransaction(tx, initial.userId);
+        }
+        return verdict;
+      }
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
       const consumed = await tx.refreshToken.updateMany({
         where: { id: existing!.id, revokedAt: null, expiresAt: { gt: now } },
         data: { revokedAt: now },
@@ -106,22 +129,40 @@ export class AuthTokensService {
           where: { id: existing!.id },
           select: { revokedAt: true },
         });
-        return current?.revokedAt ? 'reuse' : 'invalid';
+        if (current?.revokedAt) {
+          await this.revokeAllInTransaction(tx, initial.userId);
+          return 'reuse';
+        }
+        return 'invalid';
       }
       await tx.refreshToken.create({
         data: {
-          userId: existing!.userId,
+          userId: initial.userId,
           tokenHash: hashRefreshToken(nextRefreshToken),
           expiresAt,
         },
       });
       return 'ok';
     });
+    // Throw only after commit: reuse/inactive verdicts must keep the revocation.
     if (result === 'reuse') {
-      await this.revokeAll(existing!.userId);
       throw new AppError(
         ERROR_CODES.AUTH_REFRESH_REUSE,
         'Refresh token reuse detected',
+        401,
+      );
+    }
+    if (result === 'inactive') {
+      throw new AppError(
+        ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
+        'Account inactive',
+        401,
+      );
+    }
+    if (result === 'company-inactive') {
+      throw new AppError(
+        ERROR_CODES.AUTH_COMPANY_INACTIVE,
+        'Company inactive',
         401,
       );
     }
@@ -162,20 +203,23 @@ export class AuthTokensService {
   }
 
   async logout(userId: string, refreshToken: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: {
-        userId,
-        tokenHash: hashRefreshToken(refreshToken),
-        revokedAt: null,
-      },
-      data: { revokedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUser(tx, userId);
+      await tx.refreshToken.updateMany({
+        where: {
+          userId,
+          tokenHash: hashRefreshToken(refreshToken),
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
     });
   }
 
   async revokeAll(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockUser(tx, userId);
+      await this.revokeAllInTransaction(tx, userId);
     });
   }
 }
