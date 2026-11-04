@@ -352,6 +352,20 @@ jobs:
           set -o pipefail
           npx playwright test 2>&1 | tee /tmp/playwright.log
 
+      # Run 41780990334 je pao, a artefakti i puni log nisu dostupni iz sandboxa — jedini kanal su
+      # anotacije, a `list` reporter tamo stigne samo kao rep liste. Zato padove eksplicitno
+      # pretvaramo u `::error::` anotacije (jedna po testu) da se uzrok vidi bez skidanja artefakata.
+      - name: Playwright sažetak padova
+        if: failure()
+        run: |
+          if [ ! -f /tmp/playwright.log ]; then exit 0; fi
+          echo "--- naslovi padova ---"
+          grep -E '✘|^\s+[0-9]+\) ' /tmp/playwright.log | head -20 | while IFS= read -r line; do
+            echo "::error::${line# }"
+          done
+          echo "--- detalji ---"
+          sed -n '/Failed Tests/,$p' /tmp/playwright.log | head -60
+
       - name: Playwright artefakti (na grešku)
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
