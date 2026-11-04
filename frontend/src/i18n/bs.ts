@@ -214,6 +214,7 @@ export const bs = {
   bell: {
     title: 'Obavijesti',
     empty: 'Nema obavijesti',
+    loadError: 'Obavijesti nije moguće učitati.',
     markAll: 'Označi sve pročitane',
   },
   common: {

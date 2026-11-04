@@ -72,7 +72,14 @@ export function Bell() {
             </Button>
           </SheetHeader>
           <ScrollArea className="mt-4 flex-1">
-            {(list.data ?? []).length === 0 ? (
+            {list.isLoading ? (
+              <p role="status" className="px-1 text-sm text-muted-foreground">{t('common.loading')}</p>
+            ) : list.isError ? (
+              <div role="alert" className="grid gap-2 px-1 text-sm text-destructive">
+                <p>{t('bell.loadError')}</p>
+                <Button size="sm" variant="outline" onClick={() => void list.refetch()}>{t('dashboard.retry')}</Button>
+              </div>
+            ) : (list.data ?? []).length === 0 ? (
               <p className="px-1 text-sm text-muted-foreground">{t('bell.empty')}</p>
             ) : (
               <ul className="grid gap-1">

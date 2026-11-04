@@ -214,6 +214,7 @@ export const en = {
   bell: {
     title: 'Notifications',
     empty: 'No notifications',
+    loadError: 'Notifications could not be loaded.',
     markAll: 'Mark all read',
   },
   common: {

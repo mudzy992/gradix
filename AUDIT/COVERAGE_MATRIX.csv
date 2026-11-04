@@ -359,8 +359,8 @@ frontend/nginx/default.conf.template,INF,frontend-image,INF-03,91,pregledano,"IN
 frontend/package.json,FE,config,FE-02,60,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
 frontend/playwright.config.ts,FE,e2e,FE-06,41,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
 frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
-frontend/src/components/auth/auth-card.tsx,FE,ops-ui,FE-08,36,nepregledano,,
-frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,nepregledano,,
+frontend/src/components/auth/auth-card.tsx,FE,ops-ui,FE-08,36,pregledano,CI-05: pregled auth okvira i semantičkog h1; auth-pages.spec.tsx pokriva različite ekrane.,2026-11-04
+frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI-05: pregled prekidača vidljivosti i aria-pressed; auth-pages.spec.tsx testira prikaz/skrivanje.,2026-11-04
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,159,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
 frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,163,pregledano,"FE-12: prevedene kategorije i izvori, formatAmount, odvojena forma „Iz obračuna“, labela datuma, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,98,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
@@ -374,7 +374,8 @@ frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-1
 frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
 frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,80,pregledano,"FE-02: grupisana navigacija sa aria-current=""page"", focus-visible ring, disabled stavke dok firma nije izabrana",2026-11-03
 frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,82,pregledano,FE-15: odjava ide kroz `clearSession()` (store + token + keš upita),2026-11-04
-frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,112,nepregledano,,
+frontend/src/components/notifications/bell.spec.tsx,TEST,fe-unit,FE-05,56,pregledano,"CI-05: testovi učitavanja, greške i ponovnog pokušaja sa izolovanim QueryClientom.",2026-11-04
+frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,119,pregledano,CI-05: loading i greška nisu više lažno prazna lista; retry i role status/alert; regresija bell.spec.tsx.,2026-11-04
 frontend/src/components/ops/diary-conflict-sheet.spec.tsx,FE,ops-ui,FE-08,133,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, MERGE/A/B izbor, onemogućene odluke bez projekta/datuma, „Otkaži“",2026-11-03
 frontend/src/components/ops/diary-conflict-sheet.tsx,FE,ops-ui,FE-08,99,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, objašnjenje konflikta, onemogućene odluke + role=alert kad detalji nemaju projekat/datum, dugme „Otkaži“",2026-11-03
 frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,81,nepregledano,,
@@ -422,8 +423,8 @@ frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,410,pregledano,"FE-15: dodati `errors.{NETWORK_ERROR,RATE_LIMITED,SERVICE_UNAVAILABLE,AUTH_RESET_NOT_AVAILABLE,MACHINE_IN_SERVICE,REPORT_UNKNOWN,TENDER_INVALID_STATUS,HTTP_ERROR}`; paritet 660 ključeva",2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,410,pregledano,FE-15: isti ključevi kao bs (parity test),2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,411,pregledano,"FE-15: dodati `errors.{NETWORK_ERROR,RATE_LIMITED,SERVICE_UNAVAILABLE,AUTH_RESET_NOT_AVAILABLE,MACHINE_IN_SERVICE,REPORT_UNKNOWN,TENDER_INVALID_STATUS,HTTP_ERROR}`; paritet 660 ključeva",2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,411,pregledano,FE-15: isti ključevi kao bs (parity test),2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
@@ -473,7 +474,7 @@ frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,122,pregledano,"FE-15: 9 tes
 frontend/src/lib/storage.ts,FE,shared,FE-15,96,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
 frontend/src/lib/utils.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `cn` (clsx + tailwind-merge); bez nalaza,2026-11-04
 frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
-frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,223,nepregledano,,
+frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,223,pregledano,"CI-05: pregledani i pokrenuti testovi prijave, resetovanja, grešaka i odjave.",2026-11-04
 frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,100,pregledano,FE-15: odjava poslije promjene lozinke ide kroz `clearSession()`,2026-11-04
 frontend/src/pages/companies-page.spec.tsx,TEST,fe-unit,FE-05,160,pregledano,"FE-13: 8 testova — zaglavlje statusa, reaktivacija, deaktivacija, greška + retry, slug validacija, kreiranje sa adminom, izmjena samo naziva, prazno",2026-11-04
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,210,pregledano,"FE-13: zaglavlje kolone statusa (prije prazno `<th />`), reaktivacija firme, caption/broj, skeleton, greška + retry, prazno stanje, toast na ishod | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04

@@ -186,3 +186,7 @@ vlasnika** → tek onda kod.
 | F5 | ~~Nema a11y provjere~~ **riješeno** u FE-03 (globalni `focus-visible`, `prefers-reduced-motion`, `Field` veže grešku uz polje, `TableHead` `scope="col"`, 4 E2E provjere) | FE-03 |
 | F6 | Admin dashboard nije redizajniran (informaciona arhitektura čeka odobrenje) | FE-04 |
 | F7 | Nema `prettier`/format provjere; lint je samo oxlint | FE-02 |
+
+### Obavijesti — stanja liste
+
+Panel obavijesti razlikuje učitavanje, grešku sa ponovnim pokušajem i zaista praznu listu; mrežna greška ne smije izgledati kao „Nema obavijesti“.
