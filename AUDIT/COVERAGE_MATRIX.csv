@@ -106,7 +106,7 @@ backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
-backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,149,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
+backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,182,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
 backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,91,pregledano,FE-11/D-050: login/refresh limiti iz okruženja (default 5/20 po minuti) — E2E posao ih podiže,2026-11-03
 backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
 backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
@@ -320,7 +320,7 @@ backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
-backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,102,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.,2026-11-04
+backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,125,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.,2026-11-04
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03

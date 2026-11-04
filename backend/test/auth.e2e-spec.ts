@@ -65,6 +65,29 @@ describe('Auth (e2e)', () => {
     expect(revokedRotation.status).toBe(401);
   });
 
+  it('concurrent use of one refresh token yields one rotation and detects reuse', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const token = logged.body.data.refreshToken as string;
+    const [first, second] = await Promise.all([
+      request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: token }),
+      request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: token }),
+    ]);
+    expect([first.status, second.status].sort()).toEqual([200, 401]);
+    const winner = first.status === 200 ? first : second;
+    const loser = first.status === 401 ? first : second;
+    expect(loser.body.error.code).toBe('AUTH_REFRESH_REUSE');
+    // Reuse revokes even the winning rotation; neither concurrent caller may
+    // keep a second live refresh credential after the response pair completes.
+    const after = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken: winner.body.data.refreshToken });
+    expect(after.status).toBe(401);
+  });
+
   it('logout is not logout-all', async () => {
     const a = await login(app, 'admin@gradix.local');
     const b = await login(app, 'admin@gradix.local');

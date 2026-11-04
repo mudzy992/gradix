@@ -89,11 +89,44 @@ export class AuthTokensService {
       throw this.invalid();
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: existing!.id },
-      data: { revokedAt: new Date() },
+    // Consume the old token and persist its replacement atomically. A plain
+    // find-then-update allowed two concurrent requests to mint two valid pairs.
+    const nextRefreshToken = createRefreshToken();
+    const accessToken = this.jwt.sign({ sub: existing!.userId });
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
+    const result = await this.prisma.$transaction(async (tx) => {
+      const consumed = await tx.refreshToken.updateMany({
+        where: { id: existing!.id, revokedAt: null, expiresAt: { gt: now } },
+        data: { revokedAt: now },
+      });
+      if (consumed.count !== 1) {
+        const current = await tx.refreshToken.findUnique({
+          where: { id: existing!.id },
+          select: { revokedAt: true },
+        });
+        return current?.revokedAt ? 'reuse' : 'invalid';
+      }
+      await tx.refreshToken.create({
+        data: {
+          userId: existing!.userId,
+          tokenHash: hashRefreshToken(nextRefreshToken),
+          expiresAt,
+        },
+      });
+      return 'ok';
     });
-    return this.issuePair(existing!.userId);
+    if (result === 'reuse') {
+      await this.revokeAll(existing!.userId);
+      throw new AppError(
+        ERROR_CODES.AUTH_REFRESH_REUSE,
+        'Refresh token reuse detected',
+        401,
+      );
+    }
+    if (result !== 'ok') throw this.invalid();
+    return { accessToken, refreshToken: nextRefreshToken };
   }
 
   /**
