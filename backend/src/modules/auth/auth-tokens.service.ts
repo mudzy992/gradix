@@ -22,11 +22,31 @@ export class AuthTokensService {
     private readonly jwt: JwtService,
   ) {}
 
-  // Issuance, rotation and revocation for one user take the same row lock.
-  // Keep the order User -> RefreshToken to avoid issuing a child after a
-  // concurrently started revokeAll has taken its statement snapshot.
+  // Issuance/rotation lock Company (SHARE) -> User -> RefreshToken.
+  // Per-user revocations start at User; company deactivation locks Company
+  // exclusively and then tokens, never User, to avoid a lock-order cycle.
   async lockUser(tx: Prisma.TransactionClient, userId: string) {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  }
+
+  private async lockCompanyForIssuance(
+    tx: Prisma.TransactionClient,
+    companyId: string | null,
+  ) {
+    if (companyId) {
+      await tx.$queryRaw`SELECT "id" FROM "Company" WHERE "id" = ${companyId} FOR SHARE`;
+    }
+  }
+
+  // Caller must hold the company row FOR UPDATE until commit.
+  async revokeCompanyInTransaction(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+  ) {
+    await tx.refreshToken.updateMany({
+      where: { user: { companyId }, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   // Caller must hold this user's row lock for the lifetime of the transaction.
@@ -44,11 +64,17 @@ export class AuthTokensService {
     accessToken: string;
     refreshToken: string;
   }> {
+    const initial = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { companyId: true },
+    });
+    if (!initial) throw this.invalid();
     const accessToken = this.jwt.sign({ sub: userId });
     const refreshToken = createRefreshToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
     await this.prisma.$transaction(async (tx) => {
+      await this.lockCompanyForIssuance(tx, initial.companyId);
       await this.lockUser(tx, userId);
       // Password verification happened before the lock. Do not issue a token
       // if a reset or account change committed in the meantime.
@@ -56,7 +82,11 @@ export class AuthTokensService {
         where: { id: userId },
         include: { roles: true, company: true },
       });
-      if (!user || user.passwordHash !== verifiedPasswordHash) {
+      if (
+        !user ||
+        user.companyId !== initial.companyId ||
+        user.passwordHash !== verifiedPasswordHash
+      ) {
         throw this.invalid();
       }
       if (!user.isActive) {
@@ -92,19 +122,25 @@ export class AuthTokensService {
     // are repeated after acquiring it inside the transaction.
     const initial = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
-      select: { userId: true },
+      select: { userId: true, user: { select: { companyId: true } } },
     });
     if (!initial) throw this.invalid();
 
     const nextRefreshToken = createRefreshToken();
     const accessToken = this.jwt.sign({ sub: initial.userId });
     const result = await this.prisma.$transaction(async (tx) => {
+      await this.lockCompanyForIssuance(tx, initial.user.companyId);
       await this.lockUser(tx, initial.userId);
       const existing = await tx.refreshToken.findUnique({
         where: { tokenHash },
         include: { user: { include: { roles: true, company: true } } },
       });
-      if (existing && existing.userId !== initial.userId) return 'invalid';
+      if (
+        existing &&
+        (existing.userId !== initial.userId ||
+          existing.user.companyId !== initial.user.companyId)
+      )
+        return 'invalid';
       const verdict = evaluateRefreshToken(
         existing,
         existing?.user

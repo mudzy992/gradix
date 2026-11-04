@@ -161,13 +161,13 @@ describe('Tenant (e2e)', () => {
     }
   });
 
-  it('company retries session revocation after an earlier failure', async () => {
+  it('company deactivation rolls back status if revocation fails', async () => {
     const { companyId, platformToken, refreshToken } =
       await companyWithSession(app);
     const prisma = app.get(PrismaService);
     const tokens = app.get(AuthTokensService);
     const failure = jest
-      .spyOn(tokens, 'revokeAll')
+      .spyOn(tokens, 'revokeCompanyInTransaction')
       .mockRejectedValueOnce(new Error('test revoke failure'));
     try {
       const first = await request(app.getHttpServer())
@@ -182,8 +182,8 @@ describe('Tenant (e2e)', () => {
         where: { tokenHash: hashRefreshToken(refreshToken) },
         select: { revokedAt: true },
       });
-      expect(company.isActive).toBe(false);
-      expect(token.revokedAt).toBeNull(); // no false claim of atomicity
+      expect(company.isActive).toBe(true);
+      expect(token.revokedAt).toBeNull();
       const retry = await request(app.getHttpServer())
         .patch(`/api/companies/${companyId}`)
         .set(auth(platformToken))
@@ -196,6 +196,164 @@ describe('Tenant (e2e)', () => {
       expect(after.revokedAt).not.toBeNull();
     } finally {
       failure.mockRestore();
+    }
+  });
+
+  it('company deactivation waits for in-progress rotation and revokes its child', async () => {
+    const { companyId, platformToken, refreshToken } =
+      await companyWithSession(app);
+    const other = await companyWithSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(refreshToken);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let rotation: ReturnType<AuthTokensService['rotate']> | undefined;
+    let deactivation: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      rotation = tokens.rotate(refreshToken);
+      void rotation.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%UPDATE%RefreshToken%');
+      deactivation = request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false })
+        .then((response) => response);
+      void deactivation.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%FROM "Company"%FOR UPDATE%');
+      release();
+      const child = await rotation;
+      expect((await deactivation).status).toBe(200);
+      const row = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(child.refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(row.revokedAt).not.toBeNull();
+      const unrelated = await tokens.rotate(other.refreshToken);
+      expect(unrelated.refreshToken).toEqual(expect.any(String));
+    } finally {
+      release();
+      await Promise.allSettled([holder, rotation, deactivation]);
+    }
+  });
+
+  it('token issuance waiting for company deactivation rechecks company state', async () => {
+    const { companyId, platformToken, refreshToken, userId } =
+      await companyWithSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(refreshToken);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let deactivation: Promise<request.Response> | undefined;
+    let issuance: ReturnType<AuthTokensService['issuePair']> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      deactivation = request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false })
+        .then((response) => response);
+      void deactivation.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%UPDATE%RefreshToken%');
+      issuance = tokens.issuePair(userId, user.passwordHash);
+      void issuance.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%FROM "Company"%FOR SHARE%');
+      release();
+      expect((await deactivation).status).toBe(200);
+      await expect(issuance).rejects.toMatchObject({
+        code: 'AUTH_COMPANY_INACTIVE',
+      });
+    } finally {
+      release();
+      await Promise.allSettled([holder, deactivation, issuance]);
+    }
+  });
+
+  it('a user inserted during deactivation cannot receive a token for the inactive company', async () => {
+    const { companyId, platformToken, refreshToken } =
+      await companyWithSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(refreshToken);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let deactivation: Promise<request.Response> | undefined;
+    let created: ReturnType<PrismaService['user']['create']> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      deactivation = request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false })
+        .then((response) => response);
+      void deactivation.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%UPDATE%RefreshToken%');
+      created = prisma.user.create({
+        data: {
+          email: `during-company-${randomUUID()}@example.test`,
+          firstName: 'New',
+          lastName: 'User',
+          companyId,
+          passwordHash: 'test-hash',
+          roles: { create: { role: 'WORKER' } },
+        },
+      });
+      void created.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%INSERT INTO%User%');
+      release();
+      expect((await deactivation).status).toBe(200);
+      const user = await created;
+      await expect(
+        tokens.issuePair(user.id, user.passwordHash),
+      ).rejects.toMatchObject({ code: 'AUTH_COMPANY_INACTIVE' });
+    } finally {
+      release();
+      await Promise.allSettled([holder, deactivation, created]);
     }
   });
 
@@ -267,5 +425,22 @@ async function companyWithSession(app: INestApplication<App>) {
     companyId: created.body.data.id as string,
     platformToken,
     refreshToken: logged.body.data.refreshToken as string,
+    userId: logged.body.data.user.id as string,
   };
+}
+
+/** Observe lock interleavings without recording SQL arguments or tokens. */
+async function waitForCompanyQuery(
+  prisma: PrismaService,
+  pattern: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
+      SELECT count(*)::integer AS waiting FROM pg_stat_activity
+      WHERE datname = current_database() AND pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock' AND query LIKE ${pattern}`;
+    if (rows[0].waiting > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('Expected company lock wait did not occur');
 }

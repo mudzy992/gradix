@@ -82,10 +82,12 @@ backend/src/
   prethodno potvrđeni hash nije promijenjen dok se čekao lock. Deaktivacija korisnika i
   opoziv njegovih refresh tokena također su jedna transakcija; naknadno zatvaranje timera
   i audit nisu dio te transakcije. Ponovljeni zahtjev za deaktivaciju ponovo pokušava
-  zatvoriti timere. Deaktivacija firme i opoziv još nisu atomski: nakon upisa statusa
-  opoziv se pokušava prije zatvaranja timera i ponavlja se pri ponovljenoj deaktivaciji.
-  Pad između upisa statusa i opoziva, djelimičan opoziv ili konkurentna reaktivacija
-  mogu ostaviti neusklađene sesije. Access JWT traje do isteka.
+  zatvoriti timere. Deaktivacija firme i opoziv njenih refresh sesija su u jednoj
+  transakciji s ekskluzivnim lockom firme; izdavanje i rotacija uzimaju dijeljeni lock
+  firme prije korisnika. Status firme se provjerava nakon locka. Ovaj protokol traži
+  kooperativne servere iste verzije; audit i zatvaranje timera ostaju izvan transakcije,
+  a access JWT traje do isteka. Postojeće pravilo dozvoljava PLATFORM_ADMIN-u refresh
+  i kada mu je povezana firma deaktivirana.
 - Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
   (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
   opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).

@@ -152,27 +152,42 @@ export class CompaniesService {
         403,
       );
     }
-    const existing = await this.prisma.company.findUnique({ where: { id } });
-    if (!existing) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'Company not found', 404);
-    }
-    const company = await this.prisma.company.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        legalName: dto.legalName,
-        address: dto.address,
-        city: dto.city,
-        country: dto.country,
-        taxId: dto.taxId,
-        phone: dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
-        email: dto.email?.toLowerCase(),
-        logoPath: dto.logoPath,
-        isActive: allowActive ? dto.isActive : undefined,
-      },
-    });
     const deactivateRequested = allowActive && dto.isActive === false;
-    if (deactivateRequested && existing.isActive) {
+    const { company, deactivated } = await this.prisma.$transaction(
+      async (tx) => {
+        // Excludes issuance/rotation and waits for FK-backed user inserts. This
+        // transaction does not lock User rows, avoiding a Company/User cycle.
+        await tx.$queryRaw`SELECT "id" FROM "Company" WHERE "id" = ${id} FOR UPDATE`;
+        const existing = await tx.company.findUnique({ where: { id } });
+        if (!existing) {
+          throw new AppError(ERROR_CODES.NOT_FOUND, 'Company not found', 404);
+        }
+        const company = await tx.company.update({
+          where: { id },
+          data: {
+            name: dto.name,
+            legalName: dto.legalName,
+            address: dto.address,
+            city: dto.city,
+            country: dto.country,
+            taxId: dto.taxId,
+            phone:
+              dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
+            email: dto.email?.toLowerCase(),
+            logoPath: dto.logoPath,
+            isActive: allowActive ? dto.isActive : undefined,
+          },
+        });
+        if (deactivateRequested) {
+          await this.tokens.revokeCompanyInTransaction(tx, id);
+        }
+        return {
+          company,
+          deactivated: deactivateRequested && existing.isActive,
+        };
+      },
+    );
+    if (deactivated) {
       await this.audit.write({
         companyId: id,
         actorId: actor.id,
@@ -191,14 +206,8 @@ export class CompaniesService {
         payload: { fields: Object.keys(dto) },
       });
     }
-    // Revocation must not depend on timer cleanup succeeding. Repeat it even
-    // for an already-inactive company after an earlier partial failure.
+    // External timer effects remain post-commit and may be retried.
     if (deactivateRequested) {
-      const users = await this.prisma.user.findMany({
-        where: { companyId: id },
-        select: { id: true },
-      });
-      await Promise.all(users.map((user) => this.tokens.revokeAll(user.id)));
       await this.timers.closeOpenForCompany(id, actor.id);
     }
     return company;
