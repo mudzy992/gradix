@@ -30,10 +30,13 @@ export function CompanySwitcher() {
     <div className="grid gap-1">
       <span className="px-1 text-xs text-muted-foreground">{t('companies.switcher')}</span>
       <Select
-        value={selectedId ?? undefined}
+        value={selectedId ?? ''}
         disabled={query.isLoading || query.isError}
         onValueChange={(value) => {
-          setSelectedId(value || null)
+          if (!setSelectedId(value || null)) {
+            toast.error(t('companies.switchBlocked'))
+            return
+          }
           void getMe()
             .then((result) => useAuthStore.getState().setUser(result.data))
             .catch(() => toast.error(t('companies.switchError')))

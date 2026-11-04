@@ -6,12 +6,16 @@ import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useCompanySwitchBlock } from "@/hooks/use-company-switch-block"
 import { Button } from "@/components/ui/button"
 
-function Dialog({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+function Dialog({ open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false)
+  useCompanySwitchBlock(open ?? internalOpen)
+  return <DialogPrimitive.Root data-slot="dialog" {...props} open={open} defaultOpen={defaultOpen} onOpenChange={(next) => {
+    if (open === undefined) setInternalOpen(next)
+    onOpenChange?.(next)
+  }} />
 }
 
 function DialogTrigger({

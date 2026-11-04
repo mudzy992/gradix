@@ -4,12 +4,16 @@ import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useCompanySwitchBlock } from "@/hooks/use-company-switch-block"
 import { Button } from "@/components/ui/button"
 
-function AlertDialog({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
+function AlertDialog({ open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false)
+  useCompanySwitchBlock(open ?? internalOpen)
+  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} open={open} defaultOpen={defaultOpen} onOpenChange={(next) => {
+    if (open === undefined) setInternalOpen(next)
+    onOpenChange?.(next)
+  }} />
 }
 
 function AlertDialogTrigger({

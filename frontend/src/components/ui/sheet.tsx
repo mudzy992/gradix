@@ -4,9 +4,15 @@ import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useCompanySwitchBlock } from "@/hooks/use-company-switch-block"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({ allowCompanySwitch = false, open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root> & { allowCompanySwitch?: boolean }) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false)
+  useCompanySwitchBlock(!allowCompanySwitch && (open ?? internalOpen))
+  return <SheetPrimitive.Root data-slot="sheet" {...props} open={open} defaultOpen={defaultOpen} onOpenChange={(next) => {
+    if (open === undefined) setInternalOpen(next)
+    onOpenChange?.(next)
+  }} />
 }
 
 function SheetTrigger({

@@ -374,8 +374,8 @@ frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,98,pregledano,"
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,167,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
-frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,133,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
-frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,61,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
+frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,156,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
+frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,64,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
 frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano,"FE-10: HSE stavka vidljiva uz hse.write bez hse.read, uz hse.read, i skrivena bez ijednog prava",2026-11-03
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-10/F-FE-06-01 (D-033): /hse vidljiv uz hse.read ILI hse.write (prijavljivač vidi svoj ekran),2026-11-03
 frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
@@ -405,13 +405,13 @@ frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregle
 frontend/src/components/settings/public-brand-fields.spec.tsx,TEST,fe-unit,FE-05,90,pregledano,"FE-14: 3 testa — upload sa vrstom LOGO (polje onemogućeno dok GET traje), postavljen logo + link na /p/:slug, kartica skrivena kad podaci firme padnu",2026-11-04
 frontend/src/components/settings/public-brand-fields.tsx,FE,admin-ui,FE-13,87,pregledano,"FE-14: kartica se skriva kad podaci firme padnu (bez duplog alerta), polje onemogućeno dok upload traje, „Logo je postavljen.“ + link na /p/:slug",2026-11-04
 frontend/src/components/settings/registry-fields.tsx,FE,admin-ui,FE-13,189,pregledano,"FE-13: `Field` labele + prevedeni opisi po ključu (D-052), brojevi kao tekst i validacija (prazno se ne upisuje kao 0), skeleton/greška/prazno, „Sačuvaj“ samo uz izmjene",2026-11-04
-frontend/src/components/ui/alert-dialog.tsx,FE,ui,FE-16,197,pregledano,FE-16: pregledano — `alertdialog` sa imenom/opisom; potvrde u FE-13 koriste obje akcije; pokriveno testom,2026-11-04
+frontend/src/components/ui/alert-dialog.tsx,FE,ui,FE-16,201,pregledano,FE-16: pregledano — `alertdialog` sa imenom/opisom; potvrde u FE-13 koriste obje akcije; pokriveno testom,2026-11-04
 frontend/src/components/ui/avatar.tsx,FE,ui,FE-16,108,pregledano,FE-16: pregledano — fallback tekst i `AvatarGroupCount`; pokriveno testom,2026-11-04
 frontend/src/components/ui/badge.tsx,FE,ui,FE-16,49,pregledano,FE-16: pregledano — varijante + `asChild`; tokeni (bez sirovih boja); pokriveno testom,2026-11-04
 frontend/src/components/ui/button.tsx,FE,ui,FE-16,65,pregledano,"FE-16: pregledano — varijante/veličine, `asChild`, fokus vidljiv, onemogućen ne prima klik; pokriveno testom",2026-11-04
 frontend/src/components/ui/card.tsx,FE,ui,FE-16,93,pregledano,"FE-16: pregledano — `CardTitle` je `div` (odluka D-056: kartice su imenovani regioni, ne naslovi); `data-slot` pokriven testom",2026-11-04
 frontend/src/components/ui/checkbox.tsx,FE,ui,FE-16,33,pregledano,FE-16: pregledano — `aria-checked` se mijenja; pokriveno testom,2026-11-04
-frontend/src/components/ui/dialog.tsx,FE,ui,FE-16,163,pregledano,FE-16: oznaka zatvaranja bila hardkodirana na engleskom („Close“) → `common.close`; ime/opis dijaloga provjereni testom,2026-11-04
+frontend/src/components/ui/dialog.tsx,FE,ui,FE-16,167,pregledano,FE-16: oznaka zatvaranja bila hardkodirana na engleskom („Close“) → `common.close`; ime/opis dijaloga provjereni testom,2026-11-04
 frontend/src/components/ui/dropdown-menu.tsx,FE,ui,FE-16,256,pregledano,"FE-16: pregledano — meni, radio grupa i podmeni (tastatura) pokriveni testom",2026-11-04
 frontend/src/components/ui/input.tsx,FE,ui,FE-16,22,pregledano,FE-16: pregledano — `aria-invalid`/`disabled` stanja; povezan sa `Label` kroz `htmlFor` (test),2026-11-04
 frontend/src/components/ui/label.tsx,FE,ui,FE-16,23,pregledano,FE-16: pregledano — labela povezana sa poljem (`htmlFor`),2026-11-04
@@ -420,17 +420,18 @@ frontend/src/components/ui/primitives.spec.tsx,FE,ui,FE-16,304,pregledano,"FE-16
 frontend/src/components/ui/scroll-area.tsx,FE,ui,FE-16,61,pregledano,FE-16: viewport nije bio fokusabilan (tastatura nije mogla skrolovati) → `tabIndex=0`; pokriveno testom,2026-11-04
 frontend/src/components/ui/select.tsx,FE,ui,FE-16,189,pregledano,"FE-16: pregledano — placeholder, grupa/oznaka i izbor pokriveni testom",2026-11-04
 frontend/src/components/ui/separator.tsx,FE,ui,FE-16,27,pregledano,"FE-16: pregledano — dekorativni nije u stablu pristupačnosti, nedekorativni jeste (test)",2026-11-04
-frontend/src/components/ui/sheet.tsx,FE,ui,FE-16,145,pregledano,FE-16: oznaka zatvaranja prevedena (`common.close`); naslov/opis provjereni testom,2026-11-04
+frontend/src/components/ui/sheet.tsx,FE,ui,FE-16,151,pregledano,FE-16: oznaka zatvaranja prevedena (`common.close`); naslov/opis provjereni testom,2026-11-04
 frontend/src/components/ui/sonner.tsx,FE,ui,FE-16,37,pregledano,"FE-16: pregledano — `theme=""light""`, tokeni za boje toastova; toast se prikazuje (test)",2026-11-04
 frontend/src/components/ui/switch.tsx,FE,ui,FE-16,36,pregledano,"FE-16: pregledano — `role=""switch""`, `aria-checked`, onemogućen ne mijenja stanje (test)",2026-11-04
 frontend/src/components/ui/table.tsx,FE,ui,FE-16,132,pregledano,"FE-03: TableHead default scope=""col"" (WCAG 1.3.1); ostatak komponenti nepromijenjen | FE-16: kontejner za skrol nije bio fokusabilan → `region` + `tabIndex=0` + opciona `label`; `scope=""col""` i `caption` provjereni",2026-11-04
 frontend/src/components/ui/tabs.tsx,FE,ui,FE-16,95,pregledano,"FE-16: neaktivni tab `text-foreground/60` = 4,26:1 (ispod AA) → `text-muted-foreground` = 5,02:1; test čuva klasu",2026-11-04
 frontend/src/components/ui/textarea.tsx,FE,ui,FE-16,21,pregledano,FE-16: dodata `aria-invalid`/`disabled` stanja kao u `Input` (neispravno polje se nije videlo); pokriveno testom,2026-11-04
-frontend/src/components/users/temp-password-dialog.spec.tsx,TEST,fe-unit,FE-05,56,pregledano,"FE-13: 3 testa — kopiranje, fallback bez clipboarda, zatvaranje",2026-11-04
+frontend/src/components/users/temp-password-dialog.spec.tsx,TEST,fe-unit,FE-05,67,pregledano,"FE-13: 3 testa — kopiranje, fallback bez clipboarda, zatvaranje",2026-11-04
 frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,77,pregledano,FE-13: kopiranje bez neuhvaćene greške — fallback označavanje teksta + poruka,2026-11-04
 frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,180,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,197,pregledano,"CI-05 F-50: 14 testova uključujući retry, profil, unmount i promjenu sesije.",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,91,pregledano,"CI-05 F-50: vidljiv retry, ponovno čitanje profila bez dodatne rotacije i zaštita generacije.",2026-11-04
+frontend/src/hooks/use-company-switch-block.ts,FE,shared,FE-15,11,popravljeno,F-CI-05-52: layout lifecycle za više istovremenih modalnih blokada,2026-11-04
 frontend/src/hooks/use-logout-sync.spec.tsx,TEST,fe-unit,FE-05,84,pregledano,FE-15: 2 testa — odjava iz drugog taba zove clearSession i vodi na prijavu; ostale promjene se ignorišu,2026-11-04
 frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,25,pregledano,"FE-15: odjava u drugom tabu sada čisti i keš upita (`clearSession`), ne samo store/token",2026-11-04
 frontend/src/hooks/use-me.spec.tsx,TEST,fe-unit,FE-05,99,pregledano,"FE-15: 8 testova — prava/role bez nizova, platform rola, tenant-ready, useMeQuery (enabled false / upis u store)",2026-11-04
@@ -439,8 +440,8 @@ frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,417,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,417,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,418,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,418,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
@@ -466,6 +467,8 @@ frontend/src/lib/api-public.spec.ts,TEST,fe-unit,FE-05,78,pregledano,"FE-14: 6 t
 frontend/src/lib/api-public.ts,FE,shared,FE-15,75,pregledano,FE-14: ne-JSON tijelo (proxy 502) i 429 bez envelope-a daju ApiError sa statusom (prije SyntaxError / TypeError na body.error),2026-11-04
 frontend/src/lib/api-types.ts,FE,shared,FE-15,103,pregledano,FE-15: pregledano — tipovi ugovora (MeUser/AuthPayload/ApiError); bez nalaza,2026-11-04
 frontend/src/lib/api.ts,FE,shared,FE-15,115,pregledano,FE-15: pregledano — tanke funkcije nad `api()`; login/forgot/reset idu sa `skipRefresh` (bez nalaza),2026-11-04
+frontend/src/lib/company-switch-block.spec.tsx,TEST,fe-unit,FE-05,60,pokriveno-testom,"F-CI-05-52: nacrt, cache, storage, modalni lockovi i navigacija",2026-11-04
+frontend/src/lib/company-switch-block.ts,FE,shared,FE-15,14,popravljeno,F-CI-05-52: nezavisni in-memory lockovi za promjenu firme,2026-11-04
 frontend/src/lib/constants.ts,FE,shared,FE-15,38,pregledano,CI-05 F-51: zajednički korijen ključa za keš oporavka dokumenta.,2026-11-04
 frontend/src/lib/csv.spec.ts,TEST,fe-unit,FE-05,74,pregledano,"FE-15: 4 testa — BOM (bajtovi), CRLF + eskepovanje, CSV injection, link u dokumentu",2026-11-04
 frontend/src/lib/csv.ts,FE,shared,FE-15,28,pregledano,"FE-15: UTF-8 BOM (č/ć/ž u Excelu), CRLF, zaštita od CSV injection (=,+,−,@), link u dokumentu (Safari)",2026-11-04
@@ -539,7 +542,7 @@ frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi
 frontend/src/routes/lazy-pages.tsx,FE,app-shell,FE-02,53,pregledano,"FE-02: lazy fleet/map (Leaflet), javni sajt, obračun i ERP; Suspense fallback = ScreenLoader (D-015/D-041)",2026-11-03
 frontend/src/stores/auth-store.ts,FE,shared,FE-15,23,pregledano,FE-15: pregledano — access token samo u memoriji; `clear()` vraća sesiju na početno stanje (keš briše `clearSession`),2026-11-04
 frontend/src/stores/company-cache.spec.tsx,TEST,fe-unit,FE-05,76,pregledano,"CI-05 F-51: aktivni/neaktivni keš, greška B, zakašnjeli A, povratak i isti izbor.",2026-11-04
-frontend/src/stores/company-store.ts,FE,shared,FE-15,27,pregledano,CI-05 F-51: reset cachea pri promjeni firme uz izuzetak scopeovanog recoveryja.,2026-11-04
+frontend/src/stores/company-store.ts,FE,shared,FE-15,30,pregledano,CI-05 F-51: reset cachea pri promjeni firme uz izuzetak scopeovanog recoveryja.,2026-11-04
 frontend/src/vite-env.d.ts,FE,app-shell,FE-02,10,pregledano,FE-02: Vite client tipovi; nema deklarisanih env varijabli (VITE_* se čita kroz import.meta.env),2026-11-03
 frontend/tsconfig.app.json,FE,config,FE-02,29,pregledano,"FE-02: strict, noUnusedLocals/Parameters, bundler resolution, alias @/*",2026-11-03
 frontend/tsconfig.json,FE,config,FE-02,14,pregledano,FE-02: project references (app + node) — tsc -b je jedina komanda u CI-ju,2026-11-03

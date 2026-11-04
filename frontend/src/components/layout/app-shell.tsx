@@ -108,7 +108,7 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={setOpen} allowCompanySwitch>
         <SheetContent side="left" className="w-72 overflow-y-auto p-4">
           <SheetTitle className="sr-only">{t('nav.menu')}</SheetTitle>
           <BrandNav onNavigate={() => setOpen(false)} />

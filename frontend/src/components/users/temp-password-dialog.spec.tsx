@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TempPasswordDialog } from '@/components/users/temp-password-dialog'
+import { useCompanyStore } from '@/stores/company-store'
 
 /**
  * FE-13 — privremena lozinka. Drži da kopiranje ne baca neuhvaćenu grešku kad `navigator.clipboard`
@@ -43,6 +44,16 @@ describe('TempPasswordDialog', () => {
     )
     expect(window.getSelection()?.toString()).toContain('Temp-1234')
     expect(code).toHaveClass('select-all')
+  })
+
+  it('dok je jednokratna lozinka prikazana ne dozvoljava promjenu firme', () => {
+    useCompanyStore.setState({ selectedId: 'a' })
+    const { rerender } = render(<TempPasswordDialog password="Temp-1234" onClose={() => {}} />)
+    expect(useCompanyStore.getState().setSelectedId('b')).toBe(false)
+    expect(screen.getByText('Temp-1234')).toBeInTheDocument()
+    expect(useCompanyStore.getState().selectedId).toBe('a')
+    rerender(<TempPasswordDialog password={null} onClose={() => {}} />)
+    expect(useCompanyStore.getState().setSelectedId('b')).toBe(true)
   })
 
   it('„Potvrdi“ zatvara dijalog', async () => {

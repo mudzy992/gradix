@@ -210,6 +210,7 @@ export const en = {
     activate: 'Activate',
     activateConfirm: 'Activate {{name}}? Users of the company can sign in again.',
     switcherLoadError: 'Company list could not be loaded.',
+    switchBlocked: 'Finish or close the open form or dialog and wait for the operation to finish before switching companies.',
     switchError: 'The company is selected but data was not refreshed. Try again.',
     slugInvalid: 'Slug: 3–40 lowercase letters, digits and hyphens.',
     deactivated: 'Company deactivated.',

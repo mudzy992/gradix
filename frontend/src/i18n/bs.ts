@@ -210,6 +210,7 @@ export const bs = {
     activate: 'Aktiviraj',
     activateConfirm: 'Aktivirati firmu {{name}}? Login korisnika firme ponovo radi.',
     switcherLoadError: 'Lista firmi se nije učitala.',
+    switchBlocked: 'Završite ili zatvorite otvoreni obrazac ili dijalog i sačekajte završetak radnje prije promjene firme.',
     switchError: 'Firma je izabrana, ali podaci nisu osvježeni. Pokušajte ponovo.',
     slugInvalid: 'Slug: 3–40 malih slova, brojeva i crtica.',
     deactivated: 'Firma je deaktivirana.',

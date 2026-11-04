@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
+import { holdCompanySwitch } from '@/lib/company-switch-block'
 import { useAuthStore } from '@/stores/auth-store'
 import { queryClient } from '@/lib/query-client'
 import { useCompanyStore } from '@/stores/company-store'
@@ -119,6 +121,27 @@ describe('CompanySwitcher', () => {
     useCompanyStore.getState().setSelectedId('c2')
     useCompanyStore.getState().setSelectedId('c1')
     expect(useCompanyStore.getState().revision).toBe(initial + 2)
+  })
+
+  it('prikazuje razlog i zadržava izbor kad je promjena blokirana', async () => {
+    signIn(['PLATFORM_ADMIN'])
+    useCompanyStore.setState({ selectedId: 'c1' })
+    const release = holdCompanySwitch()
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    try {
+      renderSwitcher()
+      const trigger = await screen.findByRole('combobox', { name: 'Izaberite firmu' })
+      await waitFor(() => expect(trigger).toBeEnabled())
+      await userEvent.click(trigger)
+      await userEvent.click(await screen.findByRole('option', { name: 'Test gradnja' }))
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('prije promjene firme'))
+      expect(useCompanyStore.getState().selectedId).toBe('c1')
+      expect(trigger).toHaveTextContent('Gradix d.o.o.')
+      expect(getMe).not.toHaveBeenCalled()
+    } finally {
+      release()
+      error.mockRestore()
+    }
   })
 
   it('pad liste firmi je vidljiv i blokira izbor', async () => {
