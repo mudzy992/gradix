@@ -1,5 +1,6 @@
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
+import { assertValidCalendarDate } from '../utils/date-input';
 import {
   GEOFENCE_RADIUS_MAX,
   GEOFENCE_RADIUS_MIN,
@@ -62,6 +63,12 @@ export function normalizeMachineCode(code?: string | null): string | null {
 export function parseOptionalDate(value?: string): Date | undefined {
   if (!value) {
     return undefined;
+  }
+  // Preserve accepted input formats, but reject invalid ISO calendar dates before
+  // Date can silently normalize them into a different month.
+  const text = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}(?:$|[T ])/i.test(text)) {
+    assertValidCalendarDate(text);
   }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {

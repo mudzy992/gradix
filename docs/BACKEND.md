@@ -224,10 +224,14 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije (INF-07: brojač je
 - `expiring`: dokumenti unutar `DOC_WARN_WINDOWS` (30/15/5 dana) **i istekli do 90 dana unazad**
   (negativan `daysLeft`), najviše 100 stavki, sortirano po hitnosti.
 
+Napomena o planiranim datumima projekata, zadataka i faza: nepostojeći ISO kalendarski
+datum (npr. `2026-02-31`, uključujući ISO datum s vremenom) vraća `400`, umjesto
+JavaScript normalizacije u drugi mjesec. Ostali ranije prihvaćeni formati nisu mijenjani.
+
 ### 4.10 Ured (tenderi, servis, dokumenti, izvještaji)
 - **Tender:** `DRAFT → SUBMITTED → WON|LOST`, `DRAFT|SUBMITTED → WITHDRAWN`; terminalni statusi i
   „preskakanje koraka“ su `409 TENDER_INVALID_STATUS`. Ime `submittedAt` mora biti ISO datum
-  (`YYYY-MM-DD` ili puni ISO-8601) — neispravan je `400`, ne `500`.
+  (`YYYY-MM-DD` ili datum i vrijeme) — neispravan kalendarski datum, i unutar vremenske oznake, je `400`, ne `500`.
 - **Konverzija tendera** je atomska: projekat + (PM dodjela) + `convertedProjectId` idu u jednoj
   transakciji, a tender se zaključava `updateMany`-em (`status WON`, `convertedProjectId null`).
   Dva paralelna klika ⇒ **jedan** projekat, drugi dobija `409` (prije su nastajala dva).
@@ -237,7 +241,7 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije (INF-07: brojač je
   `complete`/`cancel` je `409`, mašina ne ostaje zaglavljena u `IN_SERVICE`.
 - `projectId`/`templateId` servisa moraju pripadati **istoj firmi** (`400` inače) — prije je bila
   moguća cross-tenant referenca.
-- **Dokumenti (compliance):** `expiresAt` je strogi ISO datum; neispravan je `400` (prije se tiho
+- **Dokumenti (compliance):** `expiresAt` prima datum `YYYY-MM-DD` ili datum i vrijeme; nepostojeći kalendarski datum, uključujući u vremenskoj oznaci, je `400` (prije se tiho
   pretvarao u `null`, pa je dokument bez roka izgledao kao trajan). Kreiranje/izmjena idu u audit
   (`DOCUMENT_CREATED`/`DOCUMENT_UPDATED`). Cron šalje `DOCUMENT_EXPIRING` u 08:00 lokalno, jednom
   po prozoru (30/15/5) i dokumentu — bez ponavljanja istog prozora.

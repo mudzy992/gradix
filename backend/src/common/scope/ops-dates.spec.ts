@@ -62,4 +62,13 @@ describe('parseOptionalDate', () => {
     );
     expect(() => parseOptionalDate('nije datum')).toThrow(/Invalid date/);
   });
+
+  it('odbija normalizaciju nepostojećeg ISO datuma i prihvata prijestupni dan', () => {
+    for (const value of ['2026-02-31', '2026-02-31T10:30:00Z']) {
+      expect(() => parseOptionalDate(value)).toThrow(/Invalid date/);
+    }
+    expect(parseOptionalDate('2024-02-29T10:30:00Z')?.toISOString()).toBe(
+      '2024-02-29T10:30:00.000Z',
+    );
+  });
 });

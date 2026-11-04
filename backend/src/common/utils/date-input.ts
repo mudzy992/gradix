@@ -18,12 +18,22 @@ export function parseIsoDateTime(value: string, field: string): Date {
       400,
     );
   }
+  assertValidCalendarDate(text);
   const parsed = new Date(dateOnly ? `${text}T00:00:00.000Z` : text);
   if (Number.isNaN(parsed.getTime())) {
     throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid date', 400);
   }
-  if (dateOnly && parsed.toISOString().slice(0, 10) !== text) {
+  return parsed;
+}
+
+/** Reject an invalid YYYY-MM-DD prefix instead of letting Date normalize it. */
+export function assertValidCalendarDate(text: string): void {
+  const calendarDate = text.slice(0, 10);
+  const midnight = new Date(`${calendarDate}T00:00:00.000Z`);
+  if (
+    Number.isNaN(midnight.getTime()) ||
+    midnight.toISOString().slice(0, 10) !== calendarDate
+  ) {
     throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Invalid date', 400);
   }
-  return parsed;
 }

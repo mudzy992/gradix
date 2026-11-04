@@ -38,7 +38,7 @@ backend/src/common/decorators/require-permissions.decorator.ts,BE,common,BE-01,8
 backend/src/common/decorators/skip-envelope.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/decorators/tenant-route.decorator.ts,BE,common,BE-01,6,pregledano,"BE-01: pregledano — tanki SetMetadata/createParamDecorator omotači, bez logike",2026-11-02
 backend/src/common/dto/pagination-query.dto.ts,BE,common,BE-01,34,pregledano,"BE-01: pregledano — transform string→int, limit se provjerava u parsePagination (1–100)",2026-11-02
-backend/src/common/errors/app-error.ts,BE,common,BE-01,14,nepregledano,,
+backend/src/common/errors/app-error.ts,BE,common,BE-01,14,pregledano,"CI-05: pregledan domenski Error; filter test pokriva status, kod i detalje.",2026-11-04
 backend/src/common/errors/error-codes.ts,BE,common,BE-01,39,pregledano,BE-02: + AUTH_RESET_NOT_AVAILABLE (501),2026-11-02
 backend/src/common/filters/app-exception.filter.spec.ts,BE,common,BE-01,110,pregledano,"BE-01: 4 testa — 429 mapiranje, spajanje poruka, nema curenja detalja u 500",2026-11-02
 backend/src/common/filters/app-exception.filter.ts,BE,common,BE-01,80,pregledano,"BE-01: neočekivane greške se loguju (stack ostaje na serveru), klijent dobija generički 500; mapirani 429/503",2026-11-02
@@ -72,8 +72,8 @@ backend/src/common/redis/redis.service.spec.ts,INF,redis,INF-07,88,pregledano,"I
 backend/src/common/redis/redis.service.ts,INF,redis,INF-07,91,pregledano,"INF-07: jedan ioredis klijent (TLS sa CA, ACL REDIS_USER, lazyConnect, quit na shutdown); ping() za /api/ready (D-039)",2026-11-03
 backend/src/common/scope/company-tz.spec.ts,BE,common,BE-03,99,pregledano,"BE-13: +1 test za nepostojeće datume (31.02., 29.02. nep(r)estupna)",2026-11-03
 backend/src/common/scope/company-tz.ts,BE,common,BE-03,116,pregledano,BE-13 (F-04): `parseDateOnly` odbija nepostojeće datume (prije tiho prebacivanje),2026-11-03
-backend/src/common/scope/ops-dates.spec.ts,BE,common,BE-03,66,pregledano,"BE-03: 7 testova datuma, geofence granica, normalizacije kodova",2026-11-02
-backend/src/common/scope/ops-dates.ts,BE,common,BE-03,72,nepregledano,,
+backend/src/common/scope/ops-dates.spec.ts,BE,common,BE-03,75,pregledano,"BE-03: 7 testova datuma, geofence granica, normalizacije kodova | CI-05: regresija za nepostojeće ISO datume i prijestupni dan.",2026-11-04
+backend/src/common/scope/ops-dates.ts,BE,common,BE-03,79,pregledano,"CI-05: pregledana validacija opsega, radijusa, kodova; ISO datumi provjeravaju kalendarski overflow prije parsiranja.",2026-11-04
 backend/src/common/scope/ops-roles.spec.ts,BE,common,BE-03,97,pregledano,BE-03: 7 testova opsega rola (uključivo trenutno hidesBudget ponašanje),2026-11-02
 backend/src/common/scope/ops-roles.ts,BE,common,BE-03,87,pregledano,BE-03: hidesBudget je allow-by-default (F-06) — ponašanje zaključano testovima,2026-11-02
 backend/src/common/scope/project-lock.spec.ts,BE,common,BE-03,75,pregledano,BE-03: 9 testova tranzicija/terminalnih statusa,2026-11-02
@@ -84,8 +84,8 @@ backend/src/common/scope/tenant.ts,BE,common,BE-03,22,pregledano,"BE-04: novo �
 backend/src/common/settings/registry.spec.ts,BE,common,BE-04,70,pregledano,"BE-04: ključevi jedinstveni, defaulti u granicama, koercija bool/broj/string",2026-11-02
 backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +findSetting/coerceSettingValue (Number.isFinite, min/max); 12 testova (F-08)",2026-11-02
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
-backend/src/common/utils/date-input.spec.ts,BE,common,BE-01,33,nepregledano,,
-backend/src/common/utils/date-input.ts,BE,common,BE-01,30,nepregledano,,
+backend/src/common/utils/date-input.spec.ts,BE,common,BE-01,48,pregledano,CI-05: dodan regresijski test za nepostojeći datum u timestampu i prijestupnu godinu sa offsetom.,2026-11-04
+backend/src/common/utils/date-input.ts,BE,common,BE-01,40,pregledano,"CI-05: timestamp sa nepostojećim datumom se normalizovao; provjera kalendara prije parsiranja, regresijski test.",2026-11-04
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02),2026-11-02
 backend/src/common/utils/geo.spec.ts,BE,common,BE-01,109,pregledano,"BE-09/10: 9 testova — granice, smeće, par koordinata",2026-11-03
 backend/src/common/utils/geo.ts,BE,common,BE-01,62,pregledano,"BE-09/10: parseLatLng + parseOptionalLatLng (oba ili nijedan, opseg) (F-03)",2026-11-03
@@ -248,7 +248,7 @@ backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,137,pregledano
 backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,pregledano,"BE-07: mašina iz firme, DECOMMISSIONED/IN_SERVICE 409, ACTIVE samo na svom projektu",2026-11-03
 backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,pregledano,BE-07: pregledano — pauze i trajanje,2026-11-03
 backend/src/modules/ops/timer-math.ts,BE,ops,BE-07,41,pregledano,BE-07: čiste funkcije; floor po pauzi dokumentovan kao F-10 (cijelobrojni minuti),2026-11-03
-backend/src/modules/ops/timer-settings.ts,BE,ops,BE-07,12,nepregledano,,
+backend/src/modules/ops/timer-settings.ts,BE,ops,BE-07,12,pregledano,CI-05: čitanje postavke po firmi i default 12h; cron test provjerava keš po firmi i zatvaranje.,2026-11-04
 backend/src/modules/ops/timer.controller.ts,BE,ops,BE-07,49,pregledano,BE-07: sve rute @TenantRoute + tasks.timer; list zahtijeva projectId,2026-11-03
 backend/src/modules/ops/timer.dto.ts,BE,ops,BE-07,30,pregledano,BE-07: StartTimerDto namjerno propušta startedAt/durationMinutes da ih servis odbije sa 400,2026-11-03
 backend/src/modules/ops/timer.service.ts,BE,ops,BE-07,225,pregledano,"BE-07: pauseSession/resumeSession (transakcija) dijeljene sa sync-om; me/list kroz serializere (F-02,F-04); findByLocalId requireCompany (F-05)",2026-11-03
@@ -258,7 +258,7 @@ backend/src/modules/ops/trips.dto.ts,BE,ops,BE-10,70,pregledano,"BE-10: pregleda
 backend/src/modules/ops/trips.service.ts,BE,ops,BE-10,258,pregledano,"BE-10: koordinate origin/dest kroz parseOptionalLatLng (F-03), assertProjectWritable u patch (F-04), offline identitet u create (F-06)",2026-11-03
 backend/src/modules/ops/write-machine-gps.ts,BE,ops,BE-09,57,pregledano,BE-09: GPS tačka + pozicija mašine u jednoj transakciji (F-01),2026-11-03
 backend/src/modules/payroll/payroll-access.ts,BE,payroll,BE-13,79,pregledano,"BE-13: pristup (payroll.read/approver/admin), self-approve zaštita, scope po dodijeljenim projektima",2026-11-03
-backend/src/modules/payroll/payroll-amount.spec.ts,BE,payroll,BE-13,61,nepregledano,,
+backend/src/modules/payroll/payroll-amount.spec.ts,BE,payroll,BE-13,61,pregledano,"CI-05: pregledani testovi prioriteta snapshota, nule i naslijeđenih sesija; pokrenut Jest.",2026-11-04
 backend/src/modules/payroll/payroll-amount.ts,BE,payroll,BE-13,26,pregledano,"BE-13 (F-07/B12): iznos = satnica × minuti / 60; satnica je **trenutna**, ne istorijska — dug B12",2026-11-03
 backend/src/modules/payroll/payroll-export.ts,BE,payroll,BE-13,35,pregledano,BE-13: `.xlsx` (ExcelJS) — samo odobrene sesije; `TOTAL` = suma odobrenih sati/iznosa,2026-11-03
 backend/src/modules/payroll/payroll-period.spec.ts,BE,payroll,BE-13,72,pregledano,"BE-13: 6 testova (mjesec, prestupna, granice, period ≤ 366 dana, nepostojeći datum)",2026-11-03
@@ -294,7 +294,7 @@ backend/src/modules/polish/tender-status.ts,BE,polish,BE-15,28,pregledano,BE-15:
 backend/src/modules/polish/tenders.controller.ts,BE,polish,BE-15,72,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
 backend/src/modules/polish/tenders.dto.ts,BE,polish,BE-15,85,pregledano,"BE-15: pregledano, nema nalaza (RBAC/scope/DTO u redu)",2026-11-03
 backend/src/modules/polish/tenders.service.ts,BE,polish,BE-15,257,pregledano,"F-02: atomska konverzija, audit, striktni datum, q insensitive",2026-11-03
-backend/src/modules/prisma/prisma.module.ts,BE,prisma,BE-01,10,nepregledano,,
+backend/src/modules/prisma/prisma.module.ts,BE,prisma,BE-01,10,pregledano,CI-05: globalni Nest modul izlaže PrismaService; nema dodatne logike.,2026-11-04
 backend/src/modules/prisma/prisma.service.ts,BE,prisma,BE-01,28,pregledano,"BE-01: pregledano — PrismaPg adapter, $connect u onModuleInit, $disconnect u onModuleDestroy (sada stvarno pozvan kroz shutdown hooks)",2026-11-02
 backend/src/modules/public/public-write.controller.ts,BE,public-notify,BE-16,49,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
 backend/src/modules/public/public.controller.ts,BE,public-notify,BE-16,41,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
