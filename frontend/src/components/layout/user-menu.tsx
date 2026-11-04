@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { i18n } from '@/i18n'
 import { logout, logoutAll, patchMe } from '@/lib/api'
 import { clearSession } from '@/lib/api-client'
-import { broadcastLogout, readRefreshToken } from '@/lib/storage'
+import { broadcastLogout, getSessionGeneration, readBoundRefreshToken } from '@/lib/storage'
 import { errorMessage } from '@/lib/error-message'
 import { displayName } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
@@ -34,7 +34,9 @@ export function UserMenu() {
     }
   }
   const handleLogout = async (): Promise<void> => {
-    const refresh = readRefreshToken()
+    const generation = getSessionGeneration()
+    const userId = user.id
+    const refresh = readBoundRefreshToken()
     try {
       if (refresh) {
         await logout(refresh)
@@ -42,17 +44,21 @@ export function UserMenu() {
     } catch {
       /* still leave */
     }
+    if (getSessionGeneration() !== generation || useAuthStore.getState().user?.id !== userId) return
     // FE-15: `clearSession()` briše i keš upita — tuđi podaci ne smiju ostati u pregledniku.
     clearSession()
     navigate('/login', { replace: true })
   }
   const handleLogoutAll = async (): Promise<void> => {
+    const generation = getSessionGeneration()
+    const userId = user.id
     try {
       await logoutAll()
     } catch {
       /* still leave */
     }
-    broadcastLogout()
+    if (getSessionGeneration() !== generation || useAuthStore.getState().user?.id !== userId) return
+    broadcastLogout(userId)
     // FE-15: `clearSession()` briše i keš upita — tuđi podaci ne smiju ostati u pregledniku.
     clearSession()
     navigate('/login', { replace: true })

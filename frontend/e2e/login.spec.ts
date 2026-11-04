@@ -60,3 +60,35 @@ test('remembered refresh is serialized across tabs without adopting an unknown s
     await context.unroute('**/api/auth/refresh')
   }
 })
+
+test('logout-all reaches only the same account and preserves another remembered login', async ({ page, context }) => {
+  const adminEmail = process.env.E2E_LOGIN_EMAIL
+  const adminPassword = process.env.E2E_LOGIN_PASSWORD
+  const workerEmail = process.env.E2E_WORKER_EMAIL
+  const workerPassword = process.env.E2E_WORKER_PASSWORD
+  test.skip(!adminEmail || !adminPassword || !workerEmail || !workerPassword, 'E2E credentials not set')
+
+  const login = async (tab: typeof page, email: string, password: string, remember = false) => {
+    await tab.goto('/login')
+    await tab.locator('#identifier').fill(email)
+    await tab.locator('#password').fill(password)
+    if (remember) await tab.getByRole('checkbox', { name: /zapamti|remember/i }).check()
+    await tab.getByRole('button', { name: /prijavi|sign in/i }).click()
+    await expect(tab).toHaveURL(/dashboard/, { timeout: 15_000 })
+    await expect(tab.getByRole('navigation').first()).toBeVisible()
+  }
+  await login(page, adminEmail!, adminPassword!)
+  const otherAdmin = await context.newPage()
+  await login(otherAdmin, adminEmail!, adminPassword!)
+  const worker = await context.newPage()
+  await login(worker, workerEmail!, workerPassword!, true)
+
+  await page.getByRole('button', { name: 'Demo Admin' }).click()
+  await page.getByRole('menuitem', { name: /odjavi sve uređaje/i }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(otherAdmin).toHaveURL(/\/login$/)
+  await expect(worker.getByRole('navigation').first()).toBeVisible()
+  await worker.reload()
+  await expect(worker).toHaveURL(/dashboard/)
+  await expect(worker.getByRole('navigation').first()).toBeVisible()
+})

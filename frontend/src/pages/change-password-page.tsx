@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { changePassword, logout } from '@/lib/api'
 import { clearSession } from '@/lib/api-client'
-import { readRefreshToken } from '@/lib/storage'
+import { getSessionGeneration, readBoundRefreshToken } from '@/lib/storage'
+import { useAuthStore } from '@/stores/auth-store'
 import { errorMessage } from '@/lib/error-message'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/field'
@@ -35,7 +36,9 @@ export function ChangePasswordPage({ forced = false }: Props) {
   })
   const errors = form.formState.errors
   const leave = async (): Promise<void> => {
-    const refresh = readRefreshToken()
+    const generation = getSessionGeneration()
+    const userId = useAuthStore.getState().user?.id
+    const refresh = readBoundRefreshToken()
     try {
       if (refresh) {
         await logout(refresh)
@@ -43,6 +46,7 @@ export function ChangePasswordPage({ forced = false }: Props) {
     } catch {
       /* ignore */
     }
+    if (getSessionGeneration() !== generation || useAuthStore.getState().user?.id !== userId) return
     clearSession()
     navigate('/login', { replace: true })
   }

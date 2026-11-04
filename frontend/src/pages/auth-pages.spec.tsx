@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -191,6 +191,23 @@ describe('ChangePasswordPage', () => {
     await waitFor(() => expect(logout).toHaveBeenCalledWith('refresh-token'))
     await waitFor(() => expect(useAuthStore.getState().accessToken).toBeNull())
     clearRefreshToken()
+  })
+
+  it('zakašnjela odjava sa ekrana promjene lozinke ne briše noviju prijavu', async () => {
+    let resolve!: () => void
+    logout.mockReturnValueOnce(new Promise<void>((done) => { resolve = done }))
+    writeRefreshToken('old-refresh', false)
+    useAuthStore.setState({ accessToken: 'old-access', user: { id: 'old' } as never })
+    renderPage(<ChangePasswordPage />)
+    await userEvent.click(screen.getByRole('button', { name: 'Odjava' }))
+    expect(logout).toHaveBeenCalledWith('old-refresh')
+    act(() => {
+      writeRefreshToken('new-refresh', false)
+      useAuthStore.setState({ accessToken: 'new-access', user: { id: 'new' } as never })
+    })
+    await act(async () => { resolve() })
+    expect(useAuthStore.getState().accessToken).toBe('new-access')
+    expect(useAuthStore.getState().user?.id).toBe('new')
   })
 
   it('prinudna promjena objašnjava zašto je ekran obavezan', () => {

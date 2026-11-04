@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   broadcastLogout,
+  isLogoutForCurrentSession,
   clearRefreshToken,
   isRemembered,
   readCompanyId,
@@ -105,6 +106,15 @@ describe('refresh token', () => {
     expect(readRefreshToken()).toBe('t-new')
   })
 
+  it('odjava stare sesije ne briše zajednički token druge prijave', () => {
+    writeRefreshToken('old', true)
+    localStorage.setItem(REFRESH_KEY, 'other-account')
+    clearRefreshToken()
+    expect(localStorage.getItem(REFRESH_KEY)).toBe('other-account')
+    expect(isRemembered()).toBe(true)
+    expect(readRefreshToken()).toBe('other-account')
+  })
+
   it('blokirana pohrana ne ruši pozivaoce — memorijski fallback drži sesiju', () => {
     const spy = blockStorage()
 
@@ -136,14 +146,25 @@ describe('izbor firme', () => {
 
 describe('broadcastLogout', () => {
   it('upisuje oznaku za ostale tabove', () => {
-    broadcastLogout()
+    broadcastLogout('user-1')
 
-    expect(localStorage.getItem(LOGOUT_KEY)).toMatch(/^\d+$/)
+    const payload = JSON.parse(localStorage.getItem(LOGOUT_KEY)!) as { version: number; userId: string; nonce: string }
+    expect(payload).toMatchObject({ version: 1, userId: 'user-1' })
+    expect(payload.nonce).toEqual(expect.any(String))
+  })
+
+  it('ignoriše posljednji događaj koji je već postojao prije nove prijave', () => {
+    broadcastLogout('user-1')
+    const old = localStorage.getItem(LOGOUT_KEY)
+    writeRefreshToken('new', false)
+    expect(isLogoutForCurrentSession(old, 'user-1')).toBe(false)
+    broadcastLogout('user-1')
+    expect(isLogoutForCurrentSession(localStorage.getItem(LOGOUT_KEY), 'user-1')).toBe(true)
   })
 
   it('ne baca kad je pohrana blokirana', () => {
     blockStorage()
 
-    expect(() => broadcastLogout()).not.toThrow()
+    expect(() => broadcastLogout('user-1')).not.toThrow()
   })
 })

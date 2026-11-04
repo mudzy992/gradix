@@ -83,8 +83,11 @@ Zapamćeni token osvježavaju kooperativne kartice kroz Web Locks kada su dostup
 preuzima promijenjeni token automatski: druga prijava može pripadati drugom nalogu. Pri konfliktu
 provjeriti nalog i osvježiti stranicu; ako se to desi pri početnom učitavanju, kartica ostaje na
 prijavi. Ova zaštita ne obuhvata stare tabove, preglednike bez Web Locks, kopirane sessionStorage
-tokene, blokiranu pohranu ni izgubljen odgovor nakon serverske rotacije. Logout broadcast nije
-vezan za identitet konkretne sesije. Serverska detekcija ponovne upotrebe ostaje uključena.
+tokene, blokiranu pohranu ni izgubljen odgovor nakon serverske rotacije. Logout-all/reuse signal sada sadrži ID korisnika, ne refresh token; nepoznati/legacy signali se
+ignorišu. To nije puni session-ID protokol: stari tabovi mogu reagovati globalno, više odgođenih
+signala istog korisnika nije potpuno uređeno, a bootstrap bez poznatog korisnika ne šalje signal.
+Lokalno brisanje čuva očigledno različit zajednički token, ali provjera i brisanje nisu atomski.
+Serverska detekcija ponovne upotrebe ostaje uključena.
 
 ## 3. State i podaci
 

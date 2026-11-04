@@ -351,7 +351,7 @@ frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prij
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
 frontend/e2e/flows.spec.ts,FE,e2e,FE-06,227,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
-frontend/e2e/login.spec.ts,FE,e2e,FE-06,63,pregledano,CI-05: pregled 2 browser testa prijave; CI seed env obezbjeđuje vrijednosti za prijavu.,2026-11-04
+frontend/e2e/login.spec.ts,FE,e2e,FE-06,95,pregledano,CI-05: pregled 2 browser testa prijave; CI seed env obezbjeđuje vrijednosti za prijavu.,2026-11-04
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
 frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: radnik vidi HSE prečicu (prije je test tvrdio suprotno),2026-11-03
@@ -374,7 +374,8 @@ frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-10/F-FE-06-01 (D-033): /hse vidljiv uz hse.read ILI hse.write (prijavljivač vidi svoj ekran),2026-11-03
 frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
 frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,80,pregledano,"FE-02: grupisana navigacija sa aria-current=""page"", focus-visible ring, disabled stavke dok firma nije izabrana",2026-11-03
-frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,82,pregledano,FE-15: odjava ide kroz `clearSession()` (store + token + keš upita),2026-11-04
+frontend/src/components/layout/user-menu.spec.tsx,FE,layout,FE-02,82,pregledano,"CI-05: 4 testa odjave, novije prijave i odvajanja tokena/naloga",2026-11-04
+frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,88,pregledano,FE-15: odjava ide kroz `clearSession()` (store + token + keš upita),2026-11-04
 frontend/src/components/notifications/bell.spec.tsx,TEST,fe-unit,FE-05,56,pregledano,"CI-05: testovi učitavanja, greške i ponovnog pokušaja sa izolovanim QueryClientom.",2026-11-04
 frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,119,pregledano,CI-05: loading i greška nisu više lažno prazna lista; retry i role status/alert; regresija bell.spec.tsx.,2026-11-04
 frontend/src/components/ops/diary-conflict-sheet.spec.tsx,FE,ops-ui,FE-08,133,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, MERGE/A/B izbor, onemogućene odluke bez projekta/datuma, „Otkaži“",2026-11-03
@@ -424,8 +425,8 @@ frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,77,preg
 frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,180,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,110,pregledano,"FE-15: 6 testova — bez tokena, pad mreže pri refreshu (ready, bez odjave), uspjeh + jezik, 401 → odjava, mrežni pad na getMe bez odjave",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,58,pregledano,FE-15: neuhvaćen `rejection` pri padu mreže ostavljao je app zauvijek na „učitavanju“; mrežni pad više ne odjavljuje korisnika,2026-11-04
-frontend/src/hooks/use-logout-sync.spec.tsx,TEST,fe-unit,FE-05,52,pregledano,FE-15: 2 testa — odjava iz drugog taba zove clearSession i vodi na prijavu; ostale promjene se ignorišu,2026-11-04
-frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,21,pregledano,"FE-15: odjava u drugom tabu sada čisti i keš upita (`clearSession`), ne samo store/token",2026-11-04
+frontend/src/hooks/use-logout-sync.spec.tsx,TEST,fe-unit,FE-05,84,pregledano,FE-15: 2 testa — odjava iz drugog taba zove clearSession i vodi na prijavu; ostale promjene se ignorišu,2026-11-04
+frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,25,pregledano,"FE-15: odjava u drugom tabu sada čisti i keš upita (`clearSession`), ne samo store/token",2026-11-04
 frontend/src/hooks/use-me.spec.tsx,TEST,fe-unit,FE-05,99,pregledano,"FE-15: 8 testova — prava/role bez nizova, platform rola, tenant-ready, useMeQuery (enabled false / upis u store)",2026-11-04
 frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,pregledano,FE-15: pregledano — prava/role tolerantne na `me` bez nizova; `useMeQuery` upisuje profil u store; pokriveno testom,2026-11-04
 frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano,"FE-14: 5 testova — ispravne vrijednosti, nevalidna zona → fallback (bez RangeError), prazno/bez dd-MM → default, ne-string vrijednosti, bez slug-a nema poziva",2026-11-04
@@ -449,7 +450,7 @@ frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
 frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,361,pregledano,"FE-15: 15 testova — 401→refresh→retry, neuspješan refresh, mrežni pad (bez brisanja tokena), ne-JSON, 204, envelope greška, X-Company-Id, apiBlob (401/429/mreža), clearSession/forceLogin",2026-11-04
-frontend/src/lib/api-client.ts,FE,shared,FE-15,283,pregledano,FE-15: mrežni prekid → ApiError NETWORK_ERROR (status 0); ne-JSON odgovor bez SyntaxError; apiBlob osvježava token na 401; clearSession() = store+token+keš (jedno mjesto za sve odjave),2026-11-04
+frontend/src/lib/api-client.ts,FE,shared,FE-15,284,pregledano,FE-15: mrežni prekid → ApiError NETWORK_ERROR (status 0); ne-JSON odgovor bez SyntaxError; apiBlob osvježava token na 401; clearSession() = store+token+keš (jedno mjesto za sve odjave),2026-11-04
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,pregledano,FE-15: pregledano — flota/logistika; bez nalaza,2026-11-04
 frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,pregledano,FE-15: pregledano — endpointi operacija odgovaraju backendu; bez nalaza,2026-11-04
@@ -479,12 +480,12 @@ frontend/src/lib/query-client.ts,FE,shared,FE-15,25,pregledano,FE-15: shouldRetr
 frontend/src/lib/roles.spec.ts,TEST,fe-unit,FE-05,50,pregledano,"FE-15: 5 testova — assignableRoles (PLATFORM_ADMIN nikad, SUPER_ADMIN samo za super/platform), nedostajući `roles`, displayName",2026-11-04
 frontend/src/lib/roles.ts,FE,shared,FE-15,18,pregledano,FE-15: assignableRoles tolerantan na `roles` koji nedostaje (FE-13 lekcija),2026-11-04
 frontend/src/lib/settings-keys.ts,FE,admin-ui,FE-13,28,pregledano,FE-13: spisak ključeva registra; test drži da svaki ima bs/en prijevod (D-052),2026-11-04
-frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,150,pregledano,"FE-15: 9 testova — local vs session po „zapamti me“, čišćenje, blokirana pohrana (memorijski fallback)",2026-11-04
-frontend/src/lib/storage.ts,FE,shared,FE-15,133,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
+frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,171,pregledano,"FE-15: 9 testova — local vs session po „zapamti me“, čišćenje, blokirana pohrana (memorijski fallback)",2026-11-04
+frontend/src/lib/storage.ts,FE,shared,FE-15,162,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
 frontend/src/lib/utils.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `cn` (clsx + tailwind-merge); bez nalaza,2026-11-04
 frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
-frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,223,pregledano,"CI-05: pregledani i pokrenuti testovi prijave, resetovanja, grešaka i odjave.",2026-11-04
-frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,100,pregledano,FE-15: odjava poslije promjene lozinke ide kroz `clearSession()`,2026-11-04
+frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,240,pregledano,"CI-05: pregledani i pokrenuti testovi prijave, resetovanja, grešaka i odjave.",2026-11-04
+frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,104,pregledano,FE-15: odjava poslije promjene lozinke ide kroz `clearSession()`,2026-11-04
 frontend/src/pages/companies-page.spec.tsx,TEST,fe-unit,FE-05,160,pregledano,"FE-13: 8 testova — zaglavlje statusa, reaktivacija, deaktivacija, greška + retry, slug validacija, kreiranje sa adminom, izmjena samo naziva, prazno",2026-11-04
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,210,pregledano,"FE-13: zaglavlje kolone statusa (prije prazno `<th />`), reaktivacija firme, caption/broj, skeleton, greška + retry, prazno stanje, toast na ishod | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme",2026-11-03

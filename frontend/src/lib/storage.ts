@@ -12,11 +12,15 @@ const memory = new Map<string, string>()
 // another tab's deletion must not resurrect an old value from our cache.
 const pending = new Map<string, string | null>()
 let boundRefreshToken: string | null | undefined
+let logoutAtSessionStart: string | null = null
 
 /** Bind this tab to the token it adopted; a different shared token is not
  * necessarily the same session (another account may have logged in). */
 export function bindRefreshToken(token: string | null): boolean {
-  if (boundRefreshToken === undefined) boundRefreshToken = token
+  if (boundRefreshToken === undefined) {
+    boundRefreshToken = token
+    logoutAtSessionStart = read('local', LOGOUT_KEY)
+  }
   return boundRefreshToken === token
 }
 // Advances on login/logout, not on rotation within the same session.
@@ -86,6 +90,7 @@ export function readRefreshToken(): string | null {
 export function writeRefreshToken(token: string, remember: boolean): void {
   sessionGeneration += 1
   boundRefreshToken = token
+  logoutAtSessionStart = read('local', LOGOUT_KEY)
   storeRefreshToken(token, remember)
 }
 
@@ -107,12 +112,22 @@ function storeRefreshToken(token: string, remember: boolean): void {
   write('session', REFRESH_KEY, token)
 }
 
+/** The token adopted by this tab, never a different login's shared token. */
+export function readBoundRefreshToken(): string | null {
+  return boundRefreshToken ?? null
+}
+
 export function clearRefreshToken(): void {
   sessionGeneration += 1
+  // Another tab may have logged into a different account. Never knowingly
+  // delete its shared credential when clearing this tab's old session.
+  if (boundRefreshToken && read('local', REFRESH_KEY) === boundRefreshToken) {
+    remove('local', REFRESH_KEY)
+    remove('local', REMEMBER_KEY)
+  }
   boundRefreshToken = undefined
-  remove('local', REFRESH_KEY)
+  logoutAtSessionStart = null
   remove('session', REFRESH_KEY)
-  remove('local', REMEMBER_KEY)
 }
 
 export function readCompanyId(): string | null {
@@ -127,6 +142,20 @@ export function writeCompanyId(id: string | null): void {
   write('session', COMPANY_KEY, id)
 }
 
-export function broadcastLogout(): void {
-  write('local', LOGOUT_KEY, String(Date.now()))
+export function broadcastLogout(userId: string): void {
+  // Nonce makes repeated events observable without exposing a refresh token.
+  write('local', LOGOUT_KEY, JSON.stringify({ version: 1, userId, nonce: `${Date.now()}-${Math.random()}` }))
+}
+
+export function isLogoutForCurrentSession(value: string | null, userId: string): boolean {
+  if (!value || value === logoutAtSessionStart) return false
+  try {
+    const payload: unknown = JSON.parse(value)
+    return typeof payload === 'object' && payload !== null &&
+      'version' in payload && payload.version === 1 &&
+      'userId' in payload && payload.userId === userId &&
+      'nonce' in payload && typeof payload.nonce === 'string' && payload.nonce.length > 0
+  } catch {
+    return false
+  }
 }

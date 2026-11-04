@@ -120,7 +120,8 @@ async function rotateRefresh(refreshToken: string, generation: number): Promise<
   if (!body || !response.ok || !body.success) {
     const code = body && !body.success ? body.error.code : 'AUTH_INVALID_CREDENTIALS'
     if (code === 'AUTH_REFRESH_REUSE') {
-      broadcastLogout()
+      const userId = useAuthStore.getState().user?.id
+      if (userId) broadcastLogout(userId)
     }
     clearRefreshToken()
     useAuthStore.getState().clear()
