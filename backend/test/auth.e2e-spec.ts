@@ -630,6 +630,143 @@ describe('Auth (e2e)', () => {
     }
   });
 
+  it('admin reset rejects a target promoted while waiting for the user lock', async () => {
+    const superAdmin = await login(app, 'admin@gradix.local');
+    const superToken = superAdmin.body.data.accessToken as string;
+    const suffix = randomUUID();
+    const adminEmail = `lower-admin-${suffix}@gradix.local`;
+    const admin = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(auth(superToken))
+      .send({
+        email: adminEmail,
+        firstName: 'Lower',
+        lastName: 'Admin',
+        roles: ['ADMIN'],
+      });
+    expect(admin.status).toBe(201);
+    const firstLogin = await login(
+      app,
+      adminEmail,
+      admin.body.data.temporaryPassword as string,
+    );
+    const changed = await request(app.getHttpServer())
+      .post('/api/auth/change-password')
+      .set(auth(firstLogin.body.data.accessToken as string))
+      .send({
+        currentPassword: admin.body.data.temporaryPassword,
+        newPassword: 'NewAdminPass12',
+      });
+    expect(changed.status).toBe(200);
+    const lowerAdmin = await login(app, adminEmail, 'NewAdminPass12');
+    expect(lowerAdmin.status).toBe(200);
+    const targetEmail = `role-target-${suffix}@gradix.local`;
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(auth(superToken))
+      .send({
+        email: targetEmail,
+        firstName: 'Role',
+        lastName: 'Target',
+        roles: ['WORKER'],
+      });
+    expect(created.status).toBe(201);
+    const logged = await login(
+      app,
+      targetEmail,
+      created.body.data.temporaryPassword as string,
+    );
+    expect(logged.status).toBe(200);
+    const userId = created.body.data.id as string;
+    const prisma = app.get(PrismaService);
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+        ready();
+        await gate;
+        await tx.userRoleAssignment.deleteMany({ where: { userId } });
+        await tx.userRoleAssignment.create({
+          data: { userId, role: 'SUPER_ADMIN' },
+        });
+      },
+      { timeout: 15000 },
+    );
+    let reset: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      reset = request(app.getHttpServer())
+        .post(`/api/users/${userId}/reset-password`)
+        .set(auth(lowerAdmin.body.data.accessToken as string))
+        .then((response) => response);
+      void reset.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      release();
+      expect((await reset).status).toBe(403);
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      const refresh = await prisma.refreshToken.findUniqueOrThrow({
+        where: {
+          tokenHash: hashRefreshToken(logged.body.data.refreshToken as string),
+        },
+        select: { revokedAt: true },
+      });
+      expect(after.passwordHash).toBe(before.passwordHash);
+      expect(refresh.revokedAt).toBeNull();
+    } finally {
+      release();
+      await Promise.allSettled([holder, reset]);
+      // Do not leave an extra SUPER_ADMIN that could affect later suites.
+      await prisma.$transaction(async (tx) => {
+        await tx.userRoleAssignment.deleteMany({ where: { userId } });
+        await tx.userRoleAssignment.create({
+          data: { userId, role: 'WORKER' },
+        });
+      });
+    }
+  });
+
+  it('admin password reset rolls back when revocation fails', async () => {
+    const { adminToken, userId, refreshToken } = await createWorkerSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const before = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    const failure = jest
+      .spyOn(tokens, 'revokeAllInTransaction')
+      .mockRejectedValueOnce(new Error('test revoke failure'));
+    try {
+      const response = await request(app.getHttpServer())
+        .post(`/api/users/${userId}/reset-password`)
+        .set(auth(adminToken));
+      expect(response.status).toBe(500);
+    } finally {
+      failure.mockRestore();
+    }
+    const after = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    const row = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(refreshToken) },
+      select: { revokedAt: true },
+    });
+    expect(after.passwordHash).toBe(before.passwordHash);
+    expect(after.mustChangePassword).toBe(before.mustChangePassword);
+    expect(row.revokedAt).toBeNull();
+  });
+
   it('password 9 chars returns AUTH_PASSWORD_TOO_SHORT', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const response = await request(app.getHttpServer())

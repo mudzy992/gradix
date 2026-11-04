@@ -79,7 +79,9 @@ backend/src/
   u miješanom deploymentu ne prate porodicu ni zajednički lock. Ponovna upotreba opozvanog
   tokena i dalje opoziva sve sesije. Promjena lozinke i administratorski reset atomski
   mijenjaju hash i opozivaju sesije pod user lockom; promjena lozinke provjerava i da
-  prethodno potvrđeni hash nije promijenjen dok se čekao lock. Deaktivacija korisnika i
+  prethodno potvrđeni hash nije promijenjen dok se čekao lock. Admin reset ponovo
+  provjerava tenant i ciljne role nakon user locka; prava samog aktera se i dalje
+  učitavaju na početku zahtjeva. Deaktivacija korisnika i
   opoziv njegovih refresh tokena također su jedna transakcija; naknadno zatvaranje timera
   i audit nisu dio te transakcije. Ponovljeni zahtjev za deaktivaciju ponovo pokušava
   zatvoriti timere. Deaktivacija firme i opoziv njenih refresh sesija su u jednoj

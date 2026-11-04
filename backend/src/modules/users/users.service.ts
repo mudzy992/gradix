@@ -236,10 +236,27 @@ export class UsersService {
     );
     const temporaryPassword = createTemporaryPassword();
     const passwordHash = await hashPassword(temporaryPassword);
-    const changed = await this.tokens.replacePassword(id, passwordHash, true);
-    if (!changed) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'User not found', 404);
-    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.tokens.lockUser(tx, id);
+      // The target may have moved tenant or gained a higher role while the
+      // password was being hashed or this transaction waited for the lock.
+      const current = await tx.user.findFirst({
+        where: { id, companyId: requireCompany(actor) },
+        include: { roles: true },
+      });
+      if (!current) {
+        throw new AppError(ERROR_CODES.NOT_FOUND, 'User not found', 404);
+      }
+      assertCanManageTarget(
+        actor,
+        current.roles.map((item) => item.role),
+      );
+      await tx.user.update({
+        where: { id },
+        data: { passwordHash, mustChangePassword: true },
+      });
+      await this.tokens.revokeAllInTransaction(tx, id);
+    });
     await this.audit.write({
       companyId: actor.tenantCompanyId,
       actorId: actor.id,
