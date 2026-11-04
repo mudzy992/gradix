@@ -206,3 +206,7 @@ Dispatch prikazuje greške obaveznih polja i greške učitavanja sa ponovnim pok
 ### Projektni dnevnik
 
 Početni dan i mjesec prate vremensku zonu firme; ručni izbor se zadržava. Polja su označena, greška učitavanja nudi ponovni pokušaj, a neuspjela izmjena problema vraća ranije spremljeni tekst.
+
+### Datumi projekta
+
+Brisanje planiranog početka ili kraja u obrascu projekta šalje praznu vrijednost u PATCH, koju backend tretira kao brisanje datuma.

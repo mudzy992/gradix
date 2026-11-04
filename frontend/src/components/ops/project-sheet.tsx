@@ -41,13 +41,14 @@ export function ProjectSheet({ project, open, onOpenChange, onSaved }: Props) {
   })
   const onSubmit = form.handleSubmit(async (values) => {
     const body: Record<string, unknown> = {
-      name: values.name,
+      name: values.name.trim(),
       code: values.code || undefined,
       locality: values.locality || undefined,
       plannedBudget: values.plannedBudget || undefined,
       client: values.client || undefined,
-      plannedStart: values.plannedStart || undefined,
-      plannedEnd: values.plannedEnd || undefined,
+      // On PATCH an empty string means clear the optional date. On create it is omitted.
+      plannedStart: project ? values.plannedStart : values.plannedStart || undefined,
+      plannedEnd: project ? values.plannedEnd : values.plannedEnd || undefined,
     }
     try {
       if (project) {
@@ -68,8 +69,8 @@ export function ProjectSheet({ project, open, onOpenChange, onSaved }: Props) {
           <SheetTitle>{project ? t('users.edit') : t('projects.create')}</SheetTitle>
         </SheetHeader>
         <form className="grid gap-3 p-4" onSubmit={onSubmit}>
-          <Field label={t('projects.name')} htmlFor="name">
-            <Input id="name" {...form.register('name', { required: true })} />
+          <Field label={t('projects.name')} htmlFor="name" error={form.formState.errors.name?.message}>
+            <Input id="name" {...form.register('name', { validate: (value) => Boolean(value.trim()) || t('common.required') })} />
           </Field>
           <Field label={t('projects.code')} htmlFor="code">
             <Input id="code" {...form.register('code')} />
@@ -90,7 +91,7 @@ export function ProjectSheet({ project, open, onOpenChange, onSaved }: Props) {
             <Input id="end" type="date" {...form.register('plannedEnd')} />
           </Field>
           <SheetFooter>
-            <Button type="submit">{t('common.save')}</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>{t('common.save')}</Button>
           </SheetFooter>
         </form>
       </SheetContent>

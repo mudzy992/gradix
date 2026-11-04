@@ -385,7 +385,8 @@ frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-
 frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,90,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
 frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,71,nepregledano,,
-frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,100,nepregledano,,
+frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,68,pregledano,"CI-05: tri testa praznog naziva, brisanja datuma i snimanja bez duplikata.",2026-11-04
+frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,101,pregledano,"CI-05: pregled obrasca; naziv sa validacijom, brisanje planiranih datuma šalje prazno za backend clear; ostala opciona polja imaju neriješeno brisanje.",2026-11-04
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
