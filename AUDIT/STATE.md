@@ -10,14 +10,14 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **41/59 segmenata `done`** (zadnji: FE-11).
+kratak izvještaj poslije svakog. Trenutno: **42/59 segmenata `done`** (zadnji: FE-12).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
-| CI | ✅ [41782885474](https://github.com/mudzy992/gradix/actions/runs/41782885474) — **6/6** (`feat(fe): FE-11` + D-050, Web E2E 24 testa) · prije: ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
+| Zadnji commit | `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| CI | ✅ [41783115547](https://github.com/mudzy992/gradix/actions/runs/41783115547) — **6/6** (`docs(audit): FE-11 …`) · prije: ✅ [41782885474](https://github.com/mudzy992/gradix/actions/runs/41782885474) — **6/6** (`feat(fe): FE-11` + D-050, Web E2E 24 testa) · prije: ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
 ## Hronologija (šta je urađeno)
@@ -686,6 +686,24 @@ kratak izvještaj poslije svakog. Trenutno: **41/59 segmenata `done`** (zadnji: 
 - **Testovi:** 14 unit (`auth-pages.spec.tsx`) → ukupno **42**; 3 E2E (`auth-pages.spec.ts`) → ukupno
   **19**; `a11y.spec` ažuriran (prekidač lozinke je sada između polja i „zapamti me“).
 - **Coverage ratchet proširen** na auth ekrane: linije **96,9 %**, grane 91,1 %.
+
+### 2026-11-04 — FE-12 (obračun sati, ERP-lite) → segment `done`
+- **Nalaz (visoko):** obračun je prikazivao **sirove minute** (`480`) i sirove iznose (`120.000000`),
+  `REJECTED` je imao isti ton kao `PENDING`, a tabela nije imala `caption`, skeleton, prazno stanje ni
+  trajnu grešku; export je gasio `objectURL` odmah i nosio fiksno ime; zbir se nije učitao
+  supervizoru (zavisio od `payroll.read`). ERP je slao **sva četiri upita odmah** (i šifarnik
+  materijala bez otvorenog lagera), nije imao nijedno prazno stanje ni grešku, kategorija/izvor
+  (`MATERIAL`, `PAYROLL`) i tipovi partnera/skladišta su bili sirovi, dugme za knjiženje lagera je
+  glasilo **„Količina“**, a polja su imala samo `placeholder`.
+- **Riješeno:** `PAYROLL_STATUS`/`COST_CATEGORY`/`COST_SOURCE`/`PARTNER_TYPE`/`WAREHOUSE_TYPE` u
+  `lib/labels.ts`; sati („8 h“) u koloni i zbiru uz minute u detalju; `formatAmount` svuda; ton po
+  statusu; `caption`, skeleton, prazan mjesec sa uputom, trajni `role="alert"` + retry za listu i
+  zbir; zaglavlje „Akcije“; export `obracun-YYYY-MM.xlsx` sa odgođenim revoke; ERP upiti po tabu
+  (`enabled`), labele kroz `Field`, „Knjiži“ umjesto „Količina“, prazna stanja
+  (`warehousesEmpty`/`materialsEmpty`/`stockEmpty`). **D-051**.
+- **Testovi:** 22 nova (ukupno **173**), coverage ratchet +5 fajlova: linije **92,35 %**, grane 91,18 %,
+  funkcije 88,66 % (`erp-page` 100 %, `payroll-page` 88,6 %, ERP tabovi 91,7–95,8 %); E2E +2 (obračun,
+  ERP) → **26**.
 
 ### 2026-11-03 — FE-11 (tenderi, servis, izvještaji) → segment `done`
 - **Nalaz (visoko):** servisni nalozi su prikazivali **`machineId` (CUID)** umjesto naziva mašine;

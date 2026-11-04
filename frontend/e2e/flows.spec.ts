@@ -144,6 +144,36 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/^(DRAFT|SUBMITTED|WON|LOST|WITHDRAWN)$/)).toHaveCount(0)
   })
 
+  test('obračun prikazuje sate i prevedene statuse, bez sirovih enuma (FE-12)', async () => {
+    await page.goto('/payroll')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/obračun sati/i)
+    await expectNoLoadError(page)
+    // Ili zbroj za izabrani mjesec ili jasna poruka da nema stavki — nikad prazna stranica.
+    await expect(page.getByText(/^(Zbroj za \d+\/\d+|Nema stavki obračuna za ovaj mjesec\.)$/).first()).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(/^(PENDING|APPROVED|REJECTED)$/)).toHaveCount(0)
+  })
+
+  test('ERP otvara tabove i ne prikazuje sirove enume (FE-12)', async () => {
+    await page.goto('/erp')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/erp-lite/i)
+    await expectNoLoadError(page)
+    // Prvi tab (partneri) je jedini koji se učitao — ostali nemaju zahtjev dok se ne otvore.
+    await expect(page.getByRole('tab', { name: 'Partneri' })).toBeVisible({ timeout: 15_000 })
+    // Troškovi: kategorija/izvor moraju biti prevedeni ili jasno prazni.
+    await page.getByRole('tab', { name: 'Troškovi' }).click()
+    await expect(page.getByText(/^(Nema troškova u ovom periodu\.|Troškova: \d+)$/)).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
+    // Lager: bez skladišta forma se ne nudi, nego se kaže šta nedostaje.
+    await page.getByRole('tab', { name: 'Lager' }).click()
+    await expect(
+      page.getByText(/^(Nema skladišta — dodajte prvo skladište\.|Stavki lagera: \d+|Lager je prazan\.)$/),
+    ).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
+    await expect(page.getByText(/^(CLIENT|SUPPLIER|SITE|YARD|CISTERN|MATERIAL|LABOR|PAYROLL|MANUAL)$/)).toHaveCount(0)
+  })
+
   test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).

@@ -181,7 +181,7 @@ const RULES = [
   { re: /^frontend\/src\/.*\.spec\.tsx?$/, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
   { re: /^frontend\/test\//, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
   { re: /^frontend\/vitest\.config\.ts$/, layer: 'TEST', module: 'fe-unit', segment: 'FE-05' },
-  { re: /^frontend\/src\/components\/erp-/, layer: 'FE', module: 'erp-ui', segment: 'FE-12' },
+  { re: /^frontend\/src\/components\/erp[-\/]/, layer: 'FE', module: 'erp-ui', segment: 'FE-12' },
   { re: /^frontend\/src\/components\/diary-/, layer: 'FE', module: 'diary-ui', segment: 'FE-10' },
   { re: /^frontend\/src\/components\/public-/, layer: 'FE', module: 'public-ui', segment: 'FE-14' },
   { re: /^frontend\/src\/components\/(registry-fields|company-switcher)/, layer: 'FE', module: 'admin-ui', segment: 'FE-13' },

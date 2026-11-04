@@ -258,6 +258,33 @@ export const bs = {
       COMPLETED: 'Završen',
       CANCELLED: 'Otkazan',
     },
+    payroll: {
+      PENDING: 'Na čekanju',
+      APPROVED: 'Odobreno',
+      REJECTED: 'Odbijeno',
+    },
+    costCategory: {
+      FUEL: 'Gorivo',
+      SERVICE: 'Servis',
+      MATERIAL: 'Materijal',
+      LABOR: 'Rad',
+      OTHER: 'Ostalo',
+    },
+    costSource: {
+      MANUAL: 'Ručno',
+      FUEL: 'Iz goriva',
+      SERVICE: 'Iz servisa',
+      PAYROLL: 'Iz obračuna',
+    },
+    partnerType: {
+      CLIENT: 'Naručilac',
+      SUPPLIER: 'Dobavljač',
+    },
+    warehouseType: {
+      SITE: 'Gradilište',
+      YARD: 'Depo',
+      CISTERN: 'Cisterna',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',

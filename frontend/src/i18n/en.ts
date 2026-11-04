@@ -258,6 +258,33 @@ export const en = {
       COMPLETED: 'Completed',
       CANCELLED: 'Cancelled',
     },
+    payroll: {
+      PENDING: 'Pending',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+    },
+    costCategory: {
+      FUEL: 'Fuel',
+      SERVICE: 'Service',
+      MATERIAL: 'Material',
+      LABOR: 'Labour',
+      OTHER: 'Other',
+    },
+    costSource: {
+      MANUAL: 'Manual',
+      FUEL: 'From fuel',
+      SERVICE: 'From service',
+      PAYROLL: 'From payroll',
+    },
+    partnerType: {
+      CLIENT: 'Client',
+      SUPPLIER: 'Supplier',
+    },
+    warehouseType: {
+      SITE: 'Site',
+      YARD: 'Yard',
+      CISTERN: 'Cistern',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',

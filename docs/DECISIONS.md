@@ -650,6 +650,42 @@ koji pad pretvara u poruku „Ekran prikazuje grešku umjesto podataka: …“ (
 **Odbačeno:** (a) isključiti throttle u testovima — testirao bi se drugi sistem od produkcijskog;
 (b) `retries: 0` — pravi flake bi maskirao pravi pad; (c) povećati limite svuda — slabi zaštitu.
 
+### D-051 — Novčani ekrani: jedinice i enumi se prevode u UI sloju, upiti po tabu
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+FE-12 je pregledao obračun sati (`/payroll`) i ERP-lite (`/erp`). Nalazi su bili istog oblika kao u
+D-046/D-049, ali sa posljedicom na **razumijevanje brojeva**: trajanje se prikazivalo kao `480`
+(minute), iznos kao `120.000000`, `REJECTED` je imao isti ton kao `PENDING`, a u ERP-u su kategorija
+troška i izvor (`MATERIAL`, `PAYROLL`) i tipovi partnera/skladišta išli **sirovi** u UI; dugme za
+knjiženje lagera je nosilo tekst **„Količina“**, a polja su imala samo `placeholder` (bez labele).
+
+**Odluka:**
+
+1. `lib/labels.ts` ostaje **jedini** izvor prevoda enuma (D-046). Dodate su grupe `payroll`,
+   `costCategory`, `costSource`, `partnerType`, `warehouseType` sa selektorima
+   (`payrollStatus`, `costCategory`, `costSource`, `partnerType`, `warehouseType`) i `known` zaštitom:
+   nepoznata vrijednost se prikazuje **sirova**, ne prazna.
+2. Vremenske jedinice: kolone i zbroj obračuna prikazuju **sate** („8 h“, „8 h 30 min“), a minute
+   ostaju u detalju stavke (`duration` + `minutesUnit`) — nijedan podatak se ne gubi.
+3. Iznosi idu isključivo kroz `formatAmount` (`12000.00` → `12.000,00`); `toLocaleString` se ne
+   koristi (okruženjski zavisno).
+4. Ton statusa je dio značenja: `APPROVED` → uspjeh, `PENDING` → upozorenje, `REJECTED` → greška.
+5. Skriveni tabovi **ne šalju** zahtjeve: `useQuery({ enabled: tenantReady && tab === '…' })`. Pad
+   API-ja je uvijek vidljiv (`role="alert"` + „Pokušaj ponovo“ koji poništava sve upite ekrana), a
+   prazna lista uvijek ima rečenicu šta nedostaje (npr. „Nema skladišta — dodajte prvo skladište.“).
+6. Akcija se imenuje po **posljedici** („Knjiži“, „Novi trošak“), a ne po polju („Količina“); svako
+   polje ima `Field` labelu (`htmlFor` + `id`).
+7. Export nosi ime sa periodom (`obracun-YYYY-MM.xlsx`), link se dodaje u DOM i `objectURL` se gasi
+   sa odgodom (isti obrazac kao D-049).
+
+**Posljedica na prava:** zbir obračuna se učitava uz `canSeePayroll` (supervizor i PM vide sate), ali
+odobravanje/odbijanje i dalje traži `canDecidePayroll`, a export `canExportPayroll` — UI ne proširuje
+prava, samo prestaje da krije podatke koje korisnik smije vidjeti.
+
+**Odbačeno:** (a) mijenjati backend da vraća prevedene nazive — API ugovor se ne dira u FE segmentu;
+(b) `toLocaleString` za sate i iznose — okruženjski zavisno; (c) sakriti nepoznat enum — podatak bi
+tiho nestao; (d) učitavati sve tabove unaprijed — troši kvotu i skriva pravi trošak ekrana.
+
 ---
 
 ## Zamijenjene / povučene odluke

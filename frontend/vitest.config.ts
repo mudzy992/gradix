@@ -58,6 +58,12 @@ export default defineConfig({
         'src/pages/tenders-page.tsx',
         'src/pages/services-page.tsx',
         'src/pages/reports-page.tsx',
+        // FE-12 — obračun i ERP-lite
+        'src/pages/payroll-page.tsx',
+        'src/pages/erp-page.tsx',
+        'src/components/erp/erp-partners-tab.tsx',
+        'src/components/erp/erp-costs-tab.tsx',
+        'src/components/erp/erp-stock-tab.tsx',
       ],
       thresholds: { lines: 85, functions: 85, statements: 85, branches: 85 },
     },

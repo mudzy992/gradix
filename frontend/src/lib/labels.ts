@@ -113,6 +113,38 @@ const SERVICE_STATUS: Record<string, Entry> = {
   CANCELLED: { tone: 'destructive' },
 }
 
+const PAYROLL_STATUS: Record<string, Entry> = {
+  PENDING: { tone: 'outline' },
+  APPROVED: { tone: 'secondary' },
+  REJECTED: { tone: 'destructive' },
+}
+
+const COST_CATEGORY: Record<string, Entry> = {
+  FUEL: { tone: 'secondary' },
+  SERVICE: { tone: 'secondary' },
+  MATERIAL: { tone: 'secondary' },
+  LABOR: { tone: 'secondary' },
+  OTHER: { tone: 'outline' },
+}
+
+const COST_SOURCE: Record<string, Entry> = {
+  MANUAL: { tone: 'outline' },
+  FUEL: { tone: 'secondary' },
+  SERVICE: { tone: 'secondary' },
+  PAYROLL: { tone: 'default' },
+}
+
+const PARTNER_TYPE: Record<string, Entry> = {
+  CLIENT: { tone: 'default' },
+  SUPPLIER: { tone: 'secondary' },
+}
+
+const WAREHOUSE_TYPE: Record<string, Entry> = {
+  SITE: { tone: 'default' },
+  YARD: { tone: 'secondary' },
+  CISTERN: { tone: 'outline' },
+}
+
 const ASSIGNMENT_ROLE: Record<string, Entry> = {
   PM: { tone: 'default' },
   SS: { tone: 'default' },
@@ -143,6 +175,11 @@ export const hseSeverity = (value: string): StatusMeta => meta(HSE_SEVERITY, 'hs
 export const hseStatus = (value: string): StatusMeta => meta(HSE_STATUS, 'hseStatus', value)
 export const tenderStatus = (value: string): StatusMeta => meta(TENDER_STATUS, 'tender', value)
 export const serviceStatus = (value: string): StatusMeta => meta(SERVICE_STATUS, 'service', value)
+export const payrollStatus = (value: string): StatusMeta => meta(PAYROLL_STATUS, 'payroll', value)
+export const costCategory = (value: string): StatusMeta => meta(COST_CATEGORY, 'costCategory', value)
+export const costSource = (value: string): StatusMeta => meta(COST_SOURCE, 'costSource', value)
+export const partnerType = (value: string): StatusMeta => meta(PARTNER_TYPE, 'partnerType', value)
+export const warehouseType = (value: string): StatusMeta => meta(WAREHOUSE_TYPE, 'warehouseType', value)
 
 /** Tura je „istovarena“ kad ima `unloadedAt`; jedino mjesto gdje se to pravilo zna. */
 export const tripStatusOf = (row: { unloadedAt: string | null }): StatusMeta =>
@@ -163,6 +200,11 @@ export const KNOWN_STATUSES = {
   hseStatus: Object.keys(HSE_STATUS),
   tender: Object.keys(TENDER_STATUS),
   service: Object.keys(SERVICE_STATUS),
+  payroll: Object.keys(PAYROLL_STATUS),
+  costCategory: Object.keys(COST_CATEGORY),
+  costSource: Object.keys(COST_SOURCE),
+  partnerType: Object.keys(PARTNER_TYPE),
+  warehouseType: Object.keys(WAREHOUSE_TYPE),
 }
 
 /**
