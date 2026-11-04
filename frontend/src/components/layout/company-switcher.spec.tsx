@@ -56,7 +56,22 @@ beforeEach(() => {
       { id: 'c2', name: 'Test gradnja', slug: 'test-gradnja', isActive: true },
     ],
   })
-  getMe.mockReset().mockResolvedValue({ data: { id: 'u1' } })
+  getMe.mockReset().mockResolvedValue({
+    data: {
+      id: 'u1',
+      firstName: 'A',
+      lastName: 'B',
+      employeeCode: null,
+      email: 'admin@gradix.local',
+      roles: ['PLATFORM_ADMIN'],
+      permissions: [],
+      companyId: 'c2',
+      company: null,
+      hourlyRate: null,
+      mustChangePassword: false,
+      locale: 'bs',
+    },
+  })
   useCompanyStore.setState({ selectedId: null })
 })
 

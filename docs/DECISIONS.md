@@ -726,6 +726,29 @@ interfejs, a prazno numeričko polje se pretvaralo u `0`.
 kroz HTML `required` — poruke nisu na bosanskom i ne vide se uz polje; (d) prevod tehničkih ključeva
 na backendu — API ugovor se ne dira u FE segmentu.
 
+### D-053 — E2E projekti `admin` i `worker` izvršavaju se serijski (dijele isti seed)
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+Prvi run FE-13 (**41792084133**) pao je u „Web E2E“ sa **dva** testa koja su ranije bila zelena:
+`tabla zadataka ima prevedene kolone i broj po koloni` (admin) i
+`timer: start → pauza → stop na dodijeljenom zadatku` (worker). Oba rade nad **istim** seedovanim
+zadatkom `Iskop kanala`: `worker` mu pokreće timer, a `admin` istovremeno čita tablu. Playwright
+podrazumijevano pušta projekte paralelno (broj workera = pola jezgara), pa ishod zavisi od rasporeda —
+testovi su „jedan pa drugi“ padali naizmjence, a retry nije pomagao jer se sudar ponavljao.
+
+**Odluka:** u CI-ju se E2E izvršava **serijski** (`workers: 1` u `playwright.config.ts`); lokalno,
+gdje nema dijeljene baze i gdje je brzina važnija, ostaje paralelno. Uz to su dvije provjere
+učvršćene: `tabla zadataka` sada zove `expectNoLoadError(page)` (pad API-ja se vidi kao poruka, ne kao
+„element nije nađen“) i traži tekst kroz `.first()`, a `korisnici` test traži „Demo Admin“ **unutar
+tabele** (ime postoji i u korisničkom meniju — strict-mode kolizija).
+
+**Cijena:** E2E posao traje ~1–1,5 min duže. **Zašto prihvatljivo:** determinizam je važniji od
+minute; flake u E2E troši mnogo više vremena (dijagnostika bez logova je skupa — vidi D-050).
+
+**Odbačeno:** (a) posebna baza/tenant po projektu — mijenja seed i Coolify konfiguraciju za test-only
+potrebu; (b) `retries: 2` — maskira pravi pad i ne rješava sudar; (c) izbaciti timer iz worker toka —
+to je jedini test koji pokriva start→pauza→stop na stvarnom backendu.
+
 ---
 
 ## Zamijenjene / povučene odluke

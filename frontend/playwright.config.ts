@@ -7,6 +7,11 @@ export default defineConfig({
   // i dalje vidi (drugi pokušaj padne isto). Trace se snima **na pad**, ne na retry
   // (ranije `on-first-retry` nije snimio ništa jer retries nije bilo).
   retries: process.env.CI ? 1 : 0,
+  // FE-13 (D-053): `admin` i `worker` projekti dijele **isti seed** (zadatak `Iskop kanala` i njegov
+  // timer). Kad se izvršavaju paralelno, radnik pokrene timer dok admin čita tablu — testovi su tada
+  // zavisili od rasporeda (run 41792084133: „tabla zadataka“ i „timer“ pali su naizmjence). U CI-ju se
+  // zato izvršavaju serijski; lokalno (bez CI) ostaje paralelno.
+  workers: process.env.CI ? 1 : undefined,
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',

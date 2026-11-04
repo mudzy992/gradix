@@ -347,7 +347,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,nepregledano,,
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,218,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,220,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
@@ -355,7 +355,7 @@ frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: ra
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,91,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
 frontend/package.json,FE,config,FE-02,60,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
-frontend/playwright.config.ts,FE,e2e,FE-06,29,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
+frontend/playwright.config.ts,FE,e2e,FE-06,34,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
 frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
 frontend/src/components/auth/auth-card.tsx,FE,ops-ui,FE-08,36,nepregledano,,
 frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,nepregledano,,
@@ -365,7 +365,7 @@ frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,98,pregledano,"
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,167,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
-frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,92,pregledano,"FE-13: 3 testa — skriven za ne-platformske role, izbor firme + `getMe`, pad liste vidljiv i blokira izbor",2026-11-04
+frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,107,pregledano,"FE-13: 3 testa — skriven za ne-platformske role, izbor firme + `getMe`, pad liste vidljiv i blokira izbor",2026-11-04
 frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,61,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
 frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano,"FE-10: HSE stavka vidljiva uz hse.write bez hse.read, uz hse.read, i skrivena bez ijednog prava",2026-11-03
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-10/F-FE-06-01 (D-033): /hse vidljiv uz hse.read ILI hse.write (prijavljivač vidi svoj ekran),2026-11-03
@@ -409,7 +409,7 @@ frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,77,preg
 frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,180,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,49,nepregledano,,
 frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,22,nepregledano,,
-frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
+frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,

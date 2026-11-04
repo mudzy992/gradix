@@ -104,7 +104,8 @@ test.describe('FE-06 — admin tok', () => {
 
   test('tabla zadataka ima prevedene kolone i broj po koloni', async () => {
     await page.goto('/tasks')
-    await expect(page.getByText('Iskop kanala')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Iskop kanala').first()).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
 
     await expect(page.getByRole('region', { name: /^Dodijeljeno/ })).toBeVisible()
     await expect(page.getByRole('region', { name: /^Nedodijeljeno/ })).toBeVisible()
@@ -181,7 +182,8 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByRole('table')).toBeVisible({ timeout: 15_000 })
     // Zaglavlje statusa je ranije bilo prazno `<th>`; deaktiviran korisnik se nije razlikovao.
     await expect(page.getByRole('columnheader', { name: 'Status' })).toBeVisible()
-    await expect(page.getByText('Demo Admin')).toBeVisible()
+    // „Demo Admin“ postoji i u korisničkom meniju — provjerava se red u tabeli.
+    await expect(page.getByRole('table').getByText('Demo Admin')).toBeVisible()
     await expect(page.getByText('(to ste vi)')).toBeVisible()
     await expect(page.getByText(/^(ACTIVE|INACTIVE)$/)).toHaveCount(0)
   })

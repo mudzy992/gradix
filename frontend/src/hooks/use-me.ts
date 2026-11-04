@@ -15,12 +15,16 @@ export function useMeQuery() {
   })
 }
 
+/**
+ * FE-13: `roles`/`permissions` su nizovi — ako ih korisnik nema (npr. djelimičan odgovor poslije
+ * osvježavanja konteksta firme), ekran bi pao na `undefined.includes`. Umjesto toga: nema prava.
+ */
 export function useHasPermission(permission: string): boolean {
   const user = useAuthStore((state) => state.user)
-  return user?.permissions.includes(permission) ?? false
+  return user?.permissions?.includes(permission) ?? false
 }
 
 export function useIsPlatform(): boolean {
   const user = useAuthStore((state) => state.user)
-  return user?.roles.includes('PLATFORM_ADMIN') ?? false
+  return user?.roles?.includes('PLATFORM_ADMIN') ?? false
 }
