@@ -34,7 +34,7 @@ smije ručno „popravljati“, samo generisati.
 | `segment` | ID segmenta iz `segments.json` (npr. `BE-05`) |
 | `loc` | broj linija (generisano) |
 | `status` | vidi tabelu ispod |
-| `findings` | kratak nalaz; **obavezan** čim status nije `nepregledano` |
+| `findings` | kratak nalaz; **obavezan** za `pregledano`, `popravljeno` i `pokriveno-testom` |
 | `date` | ISO datum zadnje izmjene statusa |
 
 ## Statusi

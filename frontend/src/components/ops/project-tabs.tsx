@@ -17,6 +17,10 @@ import {
 import { listFuel, listMachines, listTrips } from '@/lib/api-fleet'
 import { listUsers, uploadFile } from '@/lib/api'
 import { errorMessage } from '@/lib/error-message'
+import { ApiError, type MeUser } from '@/lib/api-types'
+import { getSessionGeneration } from '@/lib/storage'
+import { useAuthStore } from '@/stores/auth-store'
+import { useCompanyStore } from '@/stores/company-store'
 import { assignmentRole, machineStatus, projectStatus, taskStatus } from '@/lib/labels'
 import { displayName } from '@/lib/roles'
 import type { ProjectRow } from '@/lib/ops-types'
@@ -31,6 +35,16 @@ import { ProjectPagination } from '@/components/ops/project-pagination'
 const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
 type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
 type PendingDocument = { path: string; fileName: string; idempotencyKey: string }
+
+function documentScope(projectId: string, user: MeUser | null, selectedCompany: string | null): string {
+  const company = user?.roles?.includes('PLATFORM_ADMIN') ? selectedCompany : user?.companyId ?? null
+  return JSON.stringify([getSessionGeneration(), user?.id ?? null, company, projectId])
+}
+
+function ensureDocumentScope(projectId: string, expected: string): void {
+  const current = documentScope(projectId, useAuthStore.getState().user, useCompanyStore.getState().selectedId)
+  if (current !== expected) throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
+}
 
 const STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const
 
@@ -69,6 +83,9 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const fuelReports = useHasPermission('fuel.reports')
   const canReadFuel = fuelWrite || fuelReports
   const client = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const selectedCompany = useCompanyStore((state) => state.selectedId)
+  const currentDocumentScope = documentScope(projectId, user, selectedCompany)
   const [memberSearchInput, setMemberSearchInput] = useState('')
   const [memberSearch, setMemberSearch] = useState('')
   const [memberPage, setMemberPage] = useState(1)
@@ -78,7 +95,9 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const [machinePage, setMachinePage] = useState(1)
   const [tripPage, setTripPage] = useState(1)
   const [fuelPage, setFuelPage] = useState(1)
-  const [pendingDocument, setPendingDocument] = useState<PendingDocument | null>(null)
+  // Keep each in-flight upload attached to its original project even if the route changes.
+  const [pendingDocuments, setPendingDocuments] = useState<Record<string, PendingDocument>>({})
+  const pendingDocument = pendingDocuments[currentDocumentScope] ?? null
   useEffect(() => {
     setMemberSearchInput('')
     setMemberSearch('')
@@ -89,7 +108,6 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     setMachinePage(1)
     setTripPage(1)
     setFuelPage(1)
-    setPendingDocument(null)
   }, [projectId])
   const phases = useQuery({ queryKey: ['phases', projectId], queryFn: async () => (await listPhases(projectId)).data, enabled: activeTab === 'phases' })
   const team = useQuery({ queryKey: ['assignments', projectId], queryFn: async () => (await listAssignments(projectId)).data, enabled: activeTab === 'team' })
@@ -140,23 +158,35 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     onError: (error) => toast.error(errorMessage(error)),
   })
   const documentUpload = useMutation({
-    mutationFn: async (input: { file: File } | { pending: PendingDocument }) => {
+    mutationFn: async (input: { projectId: string; scope: string; file: File } | { projectId: string; scope: string; pending: PendingDocument }) => {
+      ensureDocumentScope(input.projectId, input.scope)
       if ('pending' in input) {
         // Reconcile a response lost after creation before retrying the link.
-        const existing = await listDocuments(projectId)
+        const existing = await listDocuments(input.projectId)
+        ensureDocumentScope(input.projectId, input.scope)
         const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
-        return found ?? createDocument(projectId, input.pending)
+        if (!found) await createDocument(input.projectId, input.pending)
+        return { projectId: input.projectId, scope: input.scope, idempotencyKey: input.pending.idempotencyKey }
       }
       // Generate before upload so an unavailable secure UUID cannot orphan a file.
       const idempotencyKey = crypto.randomUUID()
       const uploaded = await uploadFile(input.file)
+      ensureDocumentScope(input.projectId, input.scope)
       const reference = { path: uploaded.data.path, fileName: input.file.name, idempotencyKey }
-      setPendingDocument(reference)
-      return createDocument(projectId, reference)
+      setPendingDocuments((current) => ({ ...current, [input.scope]: reference }))
+      await createDocument(input.projectId, reference)
+      return { projectId: input.projectId, scope: input.scope, idempotencyKey }
     },
-    onSuccess: () => {
-      setPendingDocument(null)
-      return client.invalidateQueries({ queryKey: ['documents', projectId] })
+    onSuccess: ({ projectId: targetId, scope, idempotencyKey }) => {
+      setPendingDocuments((current) => {
+        if (current[scope]?.idempotencyKey !== idempotencyKey) return current
+        const next = { ...current }
+        delete next[scope]
+        return next
+      })
+      if (documentScope(targetId, useAuthStore.getState().user, useCompanyStore.getState().selectedId) === scope) {
+        return client.invalidateQueries({ queryKey: ['documents', targetId] })
+      }
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
@@ -292,7 +322,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
             {pendingDocument ? (
               <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                 <span>{t('projects.documentLinkPending', { name: pendingDocument.fileName })}</span>
-                <Button size="sm" variant="outline" disabled={documentUpload.isPending} onClick={() => documentUpload.mutate({ pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
+                <Button size="sm" variant="outline" disabled={documentUpload.isPending} onClick={() => documentUpload.mutate({ projectId, scope: currentDocumentScope, pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
               </div>
             ) : null}
             <Input
@@ -302,7 +332,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file && !documentUpload.isPending && !pendingDocument) documentUpload.mutate({ file })
+                if (file && !documentUpload.isPending && !pendingDocument) documentUpload.mutate({ projectId, scope: currentDocumentScope, file })
               }}
             />
           </>

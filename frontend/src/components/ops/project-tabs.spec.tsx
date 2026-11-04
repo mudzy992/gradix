@@ -1,9 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProjectRow } from '@/lib/ops-types'
+import type { MeUser } from '@/lib/api-types'
+import { useAuthStore } from '@/stores/auth-store'
+import { clearRefreshToken, writeRefreshToken } from '@/lib/storage'
+import { useCompanyStore } from '@/stores/company-store'
 import { Tabs } from '@/components/ui/tabs'
 import { ProjectTabs } from './project-tabs'
 
@@ -28,18 +32,26 @@ vi.mock('sonner', () => ({ toast: { error: api.toastError } }))
 
 const project = { id: 'p1', name: 'Most', status: 'PLANNING' } as ProjectRow
 function renderTab(tab: string, client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })) {
-  const view = (current: string) => (
-    <QueryClientProvider client={client}><MemoryRouter><Tabs value={current}>
-      <ProjectTabs projectId="p1" project={project} activeTab={current} />
+  let currentTab = tab
+  let currentProject = 'p1'
+  const view = () => (
+    <QueryClientProvider client={client}><MemoryRouter><Tabs value={currentTab}>
+      <ProjectTabs projectId={currentProject} project={{ ...project, id: currentProject }} activeTab={currentTab} />
     </Tabs></MemoryRouter></QueryClientProvider>
   )
-  const rendered = render(view(tab))
-  return { client, changeTab: (next: string) => rendered.rerender(view(next)) }
+  const rendered = render(view())
+  return {
+    client,
+    changeTab: (next: string) => { currentTab = next; rendered.rerender(view()) },
+    changeProject: (next: string) => { currentProject = next; rendered.rerender(view()) },
+  }
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   api.permissions.clear()
+  useAuthStore.setState({ user: null })
+  useCompanyStore.setState({ selectedId: null })
   for (const fn of [api.listPhases, api.listAssignments, api.listUsers, api.listDocuments, api.listMachines, api.listTrips, api.listTasks, api.listFuel]) {
     fn.mockReset().mockResolvedValue({ data: [] })
   }
@@ -253,6 +265,127 @@ describe('ProjectTabs', () => {
     expect(retry).toBeEnabled()
     expect(api.createDocument).toHaveBeenCalledOnce()
     expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('zadržava zakašnjeli neuspjeli upload uz izvorni projekat nakon navigacije', async () => {
+    api.permissions.add('projects.write')
+    let resolveUpload!: (value: { data: { path: string } }) => void
+    api.uploadFile.mockReset().mockReturnValue(new Promise((resolve) => { resolveUpload = resolve }))
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    const { changeProject } = renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    changeProject('p2')
+    resolveUpload({ data: { path: 'c1/plan.pdf' } })
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith('offline'))
+    expect(api.createDocument.mock.calls[0][0]).toBe('p1')
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Dodaj dokument')).toBeEnabled()
+    changeProject('p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
+    expect(api.createDocument.mock.calls[1][0]).toBe('p1')
+    expect(api.createDocument.mock.calls[1][1]).toEqual(api.createDocument.mock.calls[0][1])
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('stari uspjeh ne briše referencu drugog projekta niti osvježava pogrešan projekat', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/a.pdf' } }).mockResolvedValueOnce({ data: { path: 'c1/b.pdf' } })
+    let resolveLink!: (value: object) => void
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline a')).mockRejectedValueOnce(new Error('offline b'))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveLink = resolve }))
+    const { changeProject, client } = renderTab('documents')
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['a'], 'a.pdf', { type: 'application/pdf' }))
+    await screen.findByRole('button', { name: 'Ponovi povezivanje' })
+    changeProject('p2')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['b'], 'b.pdf', { type: 'application/pdf' }))
+    expect(await screen.findByText(/Fajl „b.pdf“ je učitan/)).toBeInTheDocument()
+    changeProject('p1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(3))
+    changeProject('p2')
+    resolveLink({})
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['documents', 'p1'] }))
+    expect(screen.getByText(/Fajl „b.pdf“ je učitan/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ponovi povezivanje' })).toBeEnabled()
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['documents', 'p2'] })
+  })
+
+  it('promjena firme tokom uploada sprečava povezivanje u novom kontekstu', async () => {
+    api.permissions.add('projects.write')
+    useAuthStore.setState({ user: { id: 'u1', roles: ['PLATFORM_ADMIN'], companyId: null } as MeUser })
+    useCompanyStore.setState({ selectedId: 'c1' })
+    let resolveUpload!: (value: { data: { path: string } }) => void
+    api.uploadFile.mockReset().mockReturnValueOnce(new Promise((resolve) => { resolveUpload = resolve }))
+    api.createDocument.mockReset()
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    act(() => useCompanyStore.setState({ selectedId: 'c2' }))
+    resolveUpload({ data: { path: 'c1/plan.pdf' } })
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith(expect.stringContaining('Sesija ili firma')))
+    expect(api.createDocument).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+  })
+
+  it('promjena korisnika tokom provjere ne šalje retry i ne pokazuje tuđu referencu', async () => {
+    api.permissions.add('projects.write')
+    const user = { id: 'u1', roles: ['SUPER_ADMIN'], companyId: 'c1' } as MeUser
+    useAuthStore.setState({ user })
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    let resolveList!: (value: { data: never[] }) => void
+    api.listDocuments.mockResolvedValueOnce({ data: [] }).mockReturnValueOnce(new Promise((resolve) => { resolveList = resolve }))
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledTimes(2))
+    act(() => useAuthStore.setState({ user: { ...user, id: 'u2' } }))
+    resolveList({ data: [] })
+    await waitFor(() => expect(api.toastError).toHaveBeenCalledWith(expect.stringContaining('Sesija ili firma')))
+    expect(api.createDocument).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+    act(() => useAuthStore.setState({ user }))
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeInTheDocument()
+  })
+
+  it('zakašnjeli uspjeh ne osvježava keš u drugoj sesiji', async () => {
+    api.permissions.add('projects.write')
+    const user = { id: 'u1', roles: ['SUPER_ADMIN'], companyId: 'c1' } as MeUser
+    useAuthStore.setState({ user })
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    let resolveLink!: (value: object) => void
+    api.createDocument.mockReset().mockReturnValueOnce(new Promise((resolve) => { resolveLink = resolve }))
+    const { client } = renderTab('documents')
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledOnce())
+    act(() => useAuthStore.setState({ user: { ...user, id: 'u2' } }))
+    resolveLink({})
+    await waitFor(() => expect(screen.getByLabelText('Dodaj dokument')).toBeEnabled())
+    expect(invalidate).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+  })
+
+  it('nova sesija istog korisnika ne preuzima staru referencu', async () => {
+    api.permissions.add('projects.write')
+    const user = { id: 'u1', roles: ['SUPER_ADMIN'], companyId: 'c1' } as MeUser
+    useAuthStore.setState({ user })
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeInTheDocument()
+    try {
+      act(() => {
+        writeRefreshToken('test-session-token', false)
+        useAuthStore.setState({ user: { ...user } })
+      })
+      expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+    } finally {
+      clearRefreshToken()
+    }
   })
 
   it('ne šalje upload ako nije moguće generisati sigurni ključ', async () => {

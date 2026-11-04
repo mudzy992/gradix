@@ -392,8 +392,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,289,pregledano,"CI-05: 19 testova kartica, paginacije, dodjele i djelimičnog oporavka uploada.",2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,330,u-toku,"CI-05: paginacija, prava, tim i djelimičan oporavak uploada; F-CI-05-15 ostaje otvoren.",2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,422,pregledano,"CI-05: 26 testova kartica i oporavka; F-CI-05-45 utrke projekta, korisnika i firme.",2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,360,u-toku,CI-05: F-CI-05-45 izolacija projekta/sesije; trajni oporavak F-CI-05-15 i završni pregled ostaju otvoreni.,2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
