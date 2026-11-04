@@ -212,6 +212,28 @@ export class AuthTokensService {
     }
   }
 
+  /** Atomically replace the password and revoke all existing refresh sessions. */
+  async replacePassword(
+    userId: string,
+    passwordHash: string,
+    mustChangePassword: boolean,
+    expectedHash?: string,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockUser(tx, userId);
+      const updated = await tx.user.updateMany({
+        where: {
+          id: userId,
+          ...(expectedHash !== undefined ? { passwordHash: expectedHash } : {}),
+        },
+        data: { passwordHash, mustChangePassword },
+      });
+      if (updated.count !== 1) return false;
+      await this.revokeAllInTransaction(tx, userId);
+      return true;
+    });
+  }
+
   async logout(userId: string, refreshToken: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.lockUser(tx, userId);

@@ -209,14 +209,11 @@ export class UsersService {
       target.roles.map((item) => item.role),
     );
     const temporaryPassword = createTemporaryPassword();
-    await this.prisma.user.update({
-      where: { id },
-      data: {
-        passwordHash: await hashPassword(temporaryPassword),
-        mustChangePassword: true,
-      },
-    });
-    await this.tokens.revokeAll(id);
+    const passwordHash = await hashPassword(temporaryPassword);
+    const changed = await this.tokens.replacePassword(id, passwordHash, true);
+    if (!changed) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'User not found', 404);
+    }
     await this.audit.write({
       companyId: actor.tenantCompanyId,
       actorId: actor.id,

@@ -107,11 +107,11 @@ backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
-backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,243,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06); F-CI-05-33/35: lock po korisniku i opoziv porodice refresh tokena; legacy ograničenja dokumentovana",2026-11-04
+backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,265,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06); F-CI-05-33/35: lock po korisniku i opoziv porodice refresh tokena; legacy ograničenja dokumentovana; F-CI-05-36: transakcijski hash i opoziv pod user lockom",2026-11-04
 backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,91,pregledano,FE-11/D-050: login/refresh limiti iz okruženja (default 5/20 po minuti) — E2E posao ih podiže,2026-11-03
 backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
 backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
-backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,191,pregledano,BE-02: reset() → 501 AUTH_RESET_NOT_AVAILABLE (F-02); login/changePassword pregledani,2026-11-02
+backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,195,pregledano,BE-02: reset() → 501 AUTH_RESET_NOT_AVAILABLE (F-02); login/changePassword pregledani; F-CI-05-36: potvrđeni hash poredi se pod lockom,2026-11-04
 backend/src/modules/auth/jwt.strategy.ts,BE,auth,BE-02,54,pregledano,"BE-02: baza na svaki zahtjev, PLATFORM_ADMIN izuzet od ugašene firme (F-06)",2026-11-02
 backend/src/modules/auth/map-auth-user.ts,BE,auth,BE-02,65,pregledano,BE-02: mapiranje bez tajni; toMeDto ne izlaže companyId ugovor više nego prije,2026-11-02
 backend/src/modules/auth/me.controller.ts,BE,auth,BE-02,27,pregledano,BE-02: čita samo AuthUser iz guard-a,2026-11-02
@@ -320,8 +320,8 @@ backend/src/modules/users/users-helpers.ts,BE,users,BE-03,86,pregledano,BE-03: t
 backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03: sve rute @TenantRoute + USERS_READ/WRITE (bez DELETE — deaktivacija),2026-11-02
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
-backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
-backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,369,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka,2026-11-04
+backend/src/modules/users/users.service.ts,BE,users,BE-03,228,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom",2026-11-04
+backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,546,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka; F-CI-05-36: DB rollback i kontrolisane utrke promjene lozinke,2026-11-04
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
@@ -339,7 +339,7 @@ backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,300,pregledano,CI-05: PATCH cle
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
-backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,164,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password",2026-11-02
+backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,177,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password; F-CI-05-36: admin reset mijenja lozinku i opoziva refresh",2026-11-04
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
 backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02

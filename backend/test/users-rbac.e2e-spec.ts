@@ -154,10 +154,23 @@ describe('Users RBAC (e2e)', () => {
         lastName: 'User',
         roles: ['WORKER'],
       });
+    const email = `reset-${suffix}@gradix.local`;
+    const oldPassword = created.body.data.temporaryPassword as string;
+    const before = await login(app, email, oldPassword);
+    expect(before.status).toBe(200);
     const reset = await request(app.getHttpServer())
       .post(`/api/users/${created.body.data.id}/reset-password`)
       .set(auth(adminToken));
     expect(reset.status).toBe(201);
     expect(reset.body.data.temporaryPassword).toEqual(expect.any(String));
+    const revoked = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken: before.body.data.refreshToken });
+    expect(revoked.status).toBe(401);
+    expect((await login(app, email, oldPassword)).status).toBe(401);
+    expect(
+      (await login(app, email, reset.body.data.temporaryPassword as string))
+        .status,
+    ).toBe(200);
   });
 });

@@ -65,11 +65,15 @@ export class AuthService {
       throw this.invalid();
     }
     const passwordHash = await hashPassword(dto.newPassword);
-    await this.prisma.user.update({
-      where: { id: actor.id },
-      data: { passwordHash, mustChangePassword: false },
-    });
-    await this.tokens.revokeAll(actor.id);
+    // Verification and hashing occur outside the lock; compare the verified
+    // hash after locking so a concurrent change/reset cannot be overwritten.
+    const changed = await this.tokens.replacePassword(
+      actor.id,
+      passwordHash,
+      false,
+      user.passwordHash,
+    );
+    if (!changed) throw this.invalid();
     await this.audit.write({
       companyId: actor.companyId,
       actorId: actor.id,

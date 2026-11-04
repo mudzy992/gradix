@@ -77,8 +77,10 @@ backend/src/
   rotaciji; stari već rotirani tokeni bez veze s potomkom ne mogu se retroaktivno povezati.
   Čišćenje starih redova uklanja mogućnost odjave preko obrisanog pretka; stari serveri
   u miješanom deploymentu ne prate porodicu ni zajednički lock. Ponovna upotreba opozvanog
-  tokena i dalje opoziva sve sesije. Promjena naloga i naknadni opoziv još nisu jedna
-  transakcija, a već izdati access JWT traje do isteka.
+  tokena i dalje opoziva sve sesije. Promjena lozinke i administratorski reset atomski
+  mijenjaju hash i opozivaju sesije pod user lockom; promjena lozinke provjerava i da
+  prethodno potvrđeni hash nije promijenjen dok se čekao lock. Deaktivacija naloga ili
+  firme i naknadni opoziv još nisu jedna transakcija, a access JWT traje do isteka.
 - Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
   (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
   opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).

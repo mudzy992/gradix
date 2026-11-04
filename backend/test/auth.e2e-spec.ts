@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { jest } from '@jest/globals';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -337,6 +338,181 @@ describe('Auth (e2e)', () => {
     expect(gone.status).toBe(401);
   });
 
+  it('concurrent password changes cannot both use the old verified password', async () => {
+    const admin = await login(app, 'admin@gradix.local');
+    const email = `pw-race-${randomUUID()}@gradix.local`;
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(auth(admin.body.data.accessToken as string))
+      .send({
+        email,
+        firstName: 'Password',
+        lastName: 'Race',
+        roles: ['WORKER'],
+      });
+    expect(created.status).toBe(201);
+    const oldPassword = created.body.data.temporaryPassword as string;
+    const logged = await login(app, email, oldPassword);
+    expect(logged.status).toBe(200);
+    const userId = created.body.data.id as string;
+    const prisma = app.get(PrismaService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let first: Promise<request.Response> | undefined;
+    let second: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      const change = (newPassword: string) =>
+        request(app.getHttpServer())
+          .post('/api/auth/change-password')
+          .set(auth(logged.body.data.accessToken as string))
+          .send({ currentPassword: oldPassword, newPassword })
+          .then((response) => response);
+      first = change('FirstNewPass12');
+      second = change('SecondNewPass12');
+      void first.catch(() => undefined);
+      void second.catch(() => undefined);
+      // Both already verified the old hash and now wait on the same user row.
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%', 2);
+      release();
+      const [a, b] = await Promise.all([first, second]);
+      expect([a.status, b.status].sort()).toEqual([200, 401]);
+      const winningPassword =
+        a.status === 200 ? 'FirstNewPass12' : 'SecondNewPass12';
+      expect((await login(app, email, oldPassword)).status).toBe(401);
+      expect((await login(app, email, winningPassword)).status).toBe(200);
+      const oldRow = await prisma.refreshToken.findUniqueOrThrow({
+        where: {
+          tokenHash: hashRefreshToken(logged.body.data.refreshToken as string),
+        },
+        select: { revokedAt: true },
+      });
+      expect(oldRow.revokedAt).not.toBeNull();
+    } finally {
+      release();
+      await Promise.allSettled([holder, first, second]);
+    }
+  });
+
+  it('password change prevents a waiting rotation from issuing a live token', async () => {
+    const admin = await login(app, 'admin@gradix.local');
+    const email = `pw-rotate-${randomUUID()}@gradix.local`;
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(auth(admin.body.data.accessToken as string))
+      .send({
+        email,
+        firstName: 'Password',
+        lastName: 'Rotate',
+        roles: ['WORKER'],
+      });
+    expect(created.status).toBe(201);
+    const logged = await login(
+      app,
+      email,
+      created.body.data.temporaryPassword as string,
+    );
+    const userId = created.body.data.id as string;
+    const refreshToken = logged.body.data.refreshToken as string;
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(refreshToken);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let change: Promise<boolean> | undefined;
+    let rotation: ReturnType<AuthTokensService['rotate']> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      change = tokens.replacePassword(
+        userId,
+        'test-new-hash',
+        false,
+        user.passwordHash,
+      );
+      void change.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%UPDATE%RefreshToken%');
+      rotation = tokens.rotate(refreshToken);
+      void rotation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      release();
+      expect(await change).toBe(true);
+      await expect(rotation).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_REUSE',
+      });
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      expect(after.passwordHash).toBe('test-new-hash');
+    } finally {
+      release();
+      await Promise.allSettled([holder, change, rotation]);
+    }
+  });
+
+  it('rolls back password replacement when session revocation fails', async () => {
+    const logged = await login(app, 'admin@gradix.local');
+    const userId = logged.body.data.user.id as string;
+    const refreshToken = logged.body.data.refreshToken as string;
+    const prisma = app.get(PrismaService);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const tokens = app.get(AuthTokensService);
+    // Inject a failure at the actual transaction's revocation step; the user
+    // update must roll back in PostgreSQL rather than only failing the response.
+    const internal = tokens as unknown as {
+      revokeAllInTransaction: (...args: never[]) => Promise<void>;
+    };
+    const failure = jest
+      .spyOn(internal, 'revokeAllInTransaction')
+      .mockRejectedValueOnce(new Error('test revocation failure'));
+    try {
+      await expect(
+        tokens.replacePassword(
+          userId,
+          'test-hash-not-committed',
+          false,
+          user.passwordHash,
+        ),
+      ).rejects.toThrow('test revocation failure');
+    } finally {
+      failure.mockRestore();
+    }
+    const after = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    expect(after.passwordHash).toBe(user.passwordHash);
+    const stillActive = await tokens.rotate(refreshToken);
+    expect(stillActive.refreshToken).toEqual(expect.any(String));
+  });
+
   it('password 9 chars returns AUTH_PASSWORD_TOO_SHORT', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const response = await request(app.getHttpServer())
@@ -355,13 +531,14 @@ describe('Auth (e2e)', () => {
 async function waitForBlockedQuery(
   prisma: PrismaService,
   pattern: string,
+  minimum = 1,
 ): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
       SELECT count(*)::integer AS waiting FROM pg_stat_activity
       WHERE datname = current_database() AND pid <> pg_backend_pid()
         AND wait_event_type = 'Lock' AND query LIKE ${pattern}`;
-    if (rows[0].waiting > 0) return;
+    if (rows[0].waiting >= minimum) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error('Expected database lock wait did not occur');
