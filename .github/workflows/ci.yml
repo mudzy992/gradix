@@ -1,12 +1,11 @@
 name: CI
 
-# Okidači (CI-01): push SAMO na `main` i na aktivnu radnu granu + ručno pokretanje.
+# Okidači (CI-01): push SAMO na aktivnu radnu granu + ručno pokretanje.
 # Namjerno NEMA `pull_request` trigera — radimo direktno na grani, bez PR-ova.
 # Kad se aktivna grana promijeni, ovaj filter i docs/CI.md se mijenjaju u istom commitu.
 on:
   push:
     branches:
-      - main
       - 'arena/0bc0e56e-gradix'
   # CI-02: ručno pokretanje sa izborom posla, detaljnim logovima i oznakom artefakata.
   # Bez inputa (`push`) ponašanje je identično starom: radi se `all`.

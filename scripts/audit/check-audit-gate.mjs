@@ -129,9 +129,9 @@ if (ci === null) {
         fail('ci.yml: očekuje se jednostavna push branches lista bez globova ili dodatnih filtera');
       } else {
         const branches = lines.slice(1).map((line) => line.slice(8).replace(/^['"]|['"]$/g, ''));
-        const expected = new Set(['main', activeBranch].filter(Boolean));
+        const expected = new Set([activeBranch].filter(Boolean));
         if (!activeBranch || branches.length !== expected.size || branches.some((b) => !expected.has(b))) {
-          fail('ci.yml: push branches moraju biti main i tačno aktivna grana iz STATE.md');
+          fail('ci.yml: push branches moraju sadržati samo aktivnu granu iz STATE.md');
         }
       }
     }

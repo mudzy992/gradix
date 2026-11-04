@@ -15,11 +15,11 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) · **Nema PR
 ```yaml
 on:
   push:
-    branches: [main, 'arena/0bc0e56e-gradix']   # samo main + aktivna grana
+    branches: ['arena/0bc0e56e-gradix']         # samo aktivna grana
   workflow_dispatch:                            # ručno, sa izborom suite-a (CI-02)
 ```
 
-Nema `pull_request` trigera i nema šablona `arena/**`: grana koja nije aktivna ne troši CI minute.
+Nema `pull_request` trigera i nema šablona `arena/**`: push na bilo koju drugu granu, uključujući `main`, ne pokreće ovaj workflow. Ručno pokretanje i dalje je moguće.
 Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** commitu.
 
 ### Ručno pokretanje — inputi (CI-02)
@@ -141,7 +141,7 @@ on:
 
 | Zahtjev | Kako | Segment |
 |---|---|---|
-| Bez `pull_request` okidača | ✅ uklonjen (CI-01), filter samo `main` + aktivna grana | CI-01 |
+| Bez `pull_request` okidača | ✅ uklonjen (CI-01), filter samo aktivna grana | CI-01 |
 | Ručni run sa izborom suite-a | ✅ `workflow_dispatch` inputi (`suite`/`verbose`/`tag`) + `if:` na svih 6 poslova | CI-02 |
 | Akcije pinovane po SHA | `actions/checkout@<sha> # v4.x` (Dependabot za bump) | CI-03 |
 | Static gate | lint, format check, `tsc`, secret scan (`gitleaks`), `npm audit --omit=dev`, license check | CI-04 |

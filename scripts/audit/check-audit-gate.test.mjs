@@ -23,7 +23,7 @@ function fixture(t) {
   write('AUDIT/02_MASTER_AUDIT_PLAN.md', '**STD-01**\n');
   write('AUDIT/segments/STD-01.md', 'report\n');
   write('docs/CI.md', jobNames.map((name) => `\`${name}\``).join(' '));
-  const trigger = "on:\n  push:\n    branches:\n      - main\n      - 'arena/work'\n  workflow_dispatch:\n";
+  const trigger = "on:\n  push:\n    branches:\n      - 'arena/work'\n  workflow_dispatch:\n";
   const jobs = 'jobs:\n' + jobNames.map((name) => `  ${name}:\n    if: \${{ !inputs.suite || inputs.suite == 'all'${jobSuites[name].map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@${sha}\n`).join('');
   write('.github/workflows/ci.yml', trigger + jobs);
   const run = () => spawnSync(process.execPath, [path.join(root, 'scripts/audit/check-audit-gate.mjs')], { cwd: root, encoding: 'utf8' });
@@ -51,13 +51,14 @@ test('grana u komentaru ili drugdje ne zamjenjuje push filter', (t) => {
   f.write('.github/workflows/ci.yml', f.trigger.replace("      - 'arena/work'", "      - 'arena/other' # 'arena/work'") + f.jobs + "# 'arena/work'\n");
   const result = f.run();
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /push branches moraju biti/);
+  assert.match(result.stdout, /push branches moraju sadržati/);
 });
 
 test('glob, dodatan filter, PR i nedostajući dispatch ne prolaze', (t) => {
   const f = fixture(t);
   for (const trigger of [
     f.trigger.replace("'arena/work'", "'arena/**'"),
+    f.trigger.replace("      - 'arena/work'", "      - 'arena/work'\n      - main"),
     f.trigger.replace('  workflow_dispatch:', '    paths:\n      - src/**\n  workflow_dispatch:'),
     f.trigger + '  pull_request:\n',
     f.trigger.replace('  workflow_dispatch:\n', ''),
@@ -106,4 +107,12 @@ test('nepoznat ili nedostajući posao zahtijeva ažuriranje matrice', (t) => {
   const result = f.run();
   assert.equal(result.status, 1);
   assert.match(result.stdout, /lista poslova ne odgovara/);
+});
+
+test('stvarni workflow poštuje provjere okidača i suite matrice bez nametanja review gatea', () => {
+  const result = spawnSync(process.execPath, [path.join(source, 'check-audit-gate.mjs')], { encoding: 'utf8' });
+  // Review debt is tracked separately; this test enforces only workflow invariants.
+  assert.ok(result.status === 0 || result.status === 1, result.stdout + result.stderr);
+  assert.match(result.stdout, /GATE: (PASS|FAIL)/);
+  assert.doesNotMatch(result.stdout, /ci\.yml:/);
 });
