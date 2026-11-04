@@ -15,7 +15,7 @@
 //      i `timeout-minutes`, svaki `uses:` je pinovan na 40-znakovni SHA
 //   6. svaki job iz `ci.yml` je dokumentovan u `docs/CI.md` (tabela poslova)
 //
-// Skripta ne piše ništa — samo čita. Pokreće se iz `check:all` (korak `audit-gate`) i iz CI joba `audit`.
+// Prototip samo čita; još nije uključen u `check:all` ni CI. Prvo treba dovršiti pregled duga i testove.
 
 import fs from 'node:fs';
 import path from 'node:path';

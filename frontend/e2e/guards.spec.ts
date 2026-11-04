@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 /**
  * FE-06 — guardovi **bez** sesije. Namjerno odvojeno od `flows.spec.ts`: taj fajl koristi
- * `storageState` prijavljenog administratora, a ovdje se provjerava upravo ponašanje bez prijave.
+ * prijavu u toku testa, a ovdje se provjerava upravo ponašanje bez prijave.
  */
 test.describe('FE-06 — guardovi bez prijave', () => {
   test('zaštićena ruta preusmjerava na prijavu', async ({ page }) => {
