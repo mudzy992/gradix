@@ -59,6 +59,10 @@ describe('Auth (e2e)', () => {
       .send({ refreshToken: first });
     expect(reuse.status).toBe(401);
     expect(reuse.body.error.code).toBe('AUTH_REFRESH_REUSE');
+    const revokedRotation = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken: rotated.body.data.refreshToken });
+    expect(revokedRotation.status).toBe(401);
   });
 
   it('logout is not logout-all', async () => {

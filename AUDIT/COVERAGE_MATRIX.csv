@@ -18,8 +18,8 @@ backend/prisma/migrations/20261103120000_be08_indexes_audit/migration.sql,BE,mig
 backend/prisma/migrations/20261103140000_be09_machine_open_assignment/migration.sql,BE,migrations,BE-08,9,pregledano,BE-09: parcijalni unique indeks — mašina na najviše jednom projektu (F-03),2026-11-03
 backend/prisma/migrations/20261103160000_be10_fleet_audit_actions/migration.sql,BE,migrations,BE-08,22,pregledano,"BE-10 (B10): 17 novih AuditAction vrijednosti za flotu, GPS uređaje, ture, gorivo i šifarnike",2026-11-03
 backend/prisma/migrations/20261103180000_be13_diary_hse_audit_actions/migration.sql,BE,migrations,BE-08,11,pregledano,"BE-13 (B11): 6 novih AuditAction vrijednosti (dnevnik, HSE)",2026-11-03
-backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,nepregledano,,
-backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,nepregledano,,
+backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql,BE,migrations,BE-08,13,pregledano,CI-05: pregled SQL migracije snapshota satnice i audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
+backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql,BE,migrations,BE-08,14,pregledano,CI-05: pregled dodavanja office audit enum vrijednosti; odgovara Prisma šemi; migracije potvrđene u CI.,2026-11-04
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
 backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,332,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene",2026-11-03
@@ -47,8 +47,9 @@ backend/src/common/geo/haversine.ts,BE,common,BE-12,33,pregledano,"BE-12: havers
 backend/src/common/guards/jwt-auth.guard.ts,BE,common,BE-01,30,pregledano,BE-01: pregledano — /api/docs izuzet od auth; @Public preko reflektora; dublja analiza u BE-02,2026-11-02
 backend/src/common/guards/optional-throttler.guard.ts,BE,common,BE-01,13,pregledano,BE-01: pregledano — throttling isključen samo kad je NODE_ENV=test,2026-11-02
 backend/src/common/guards/password-change.guard.ts,BE,common,BE-01,37,pregledano,"BE-01: pregledano — allowlist GET /api/me, change-password, logout, logout-all",2026-11-02
-backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,nepregledano,,
-backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,nepregledano,,
+backend/src/common/guards/permissions.guard.ts,BE,common,BE-01,35,pregledano,CI-05: pregled pravila da sve dozvole moraju postojati; unit testovi sa anonimnim i nepotpunim pravima.,2026-11-04
+backend/src/common/guards/tenant-permissions.spec.ts,BE,common,BE-01,202,pregledano,"CI-05: 10 unit testova tenant granica, konteksta i dozvola.",2026-11-04
+backend/src/common/guards/tenant.guard.ts,BE,common,BE-01,90,pregledano,"CI-05: pregled tenant konteksta, zabrane zaglavlja, platform admina i nepostojeće firme; 8 unit testova u tenant-permissions.spec.ts.",2026-11-04
 backend/src/common/interceptors/envelope.interceptor.spec.ts,BE,common,BE-01,53,pregledano,BE-01: 4 testa — envelope ugovor (data/meta/null/skip),2026-11-02
 backend/src/common/interceptors/envelope.interceptor.ts,BE,common,BE-01,47,pregledano,"BE-01: ugovor potvrđen testovima (data nikad izostavljen, meta prolazi)",2026-11-02
 backend/src/common/logging/json-logger.spec.ts,BE,logging,INF-04,104,pregledano,"INF-04: +7 testova — JSON red, filter nivoa, requestId, redakcija tajni/PII, cirkularna meta, redact, resolveLogLevel",2026-11-03
@@ -192,8 +193,8 @@ backend/src/modules/ops/iot.controller.ts,BE,ops,BE-09,19,pregledano,BE-09: preg
 backend/src/modules/ops/iot.dto.ts,BE,ops,BE-09,10,pregledano,"BE-09: pregledano — lat/lng su stringovi, validiraju se u geo.ts",2026-11-03
 backend/src/modules/ops/iot.service.ts,BE,ops,BE-09,76,pregledano,"BE-09: koordinate kroz parseLatLng (F-04); ključ uređaja 401, dekomisionirana mašina 403",2026-11-03
 backend/src/modules/ops/latest-locations.ts,BE,ops,BE-05,47,pregledano,BE-12 (novo): `DISTINCT ON (userId)` — zadnja lokacija po korisniku jednim upitom,2026-11-03
-backend/src/modules/ops/locations.controller.ts,BE,ops,BE-09,29,nepregledano,,
-backend/src/modules/ops/locations.dto.ts,BE,ops,BE-09,26,nepregledano,,
+backend/src/modules/ops/locations.controller.ts,BE,ops,BE-09,29,pregledano,CI-05: pregled tenant rute i throttling GPS pisanja; zahtjevi koriste globalne JWT i tenant guardove; fleet E2E provjerava GPS.,2026-11-04
+backend/src/modules/ops/locations.dto.ts,BE,ops,BE-09,26,pregledano,CI-05: pregled obaveznih string koordinata i opcionalnih polja; parseLatLng u servisu provjerava vrijednosti.,2026-11-04
 backend/src/modules/ops/locations.service.ts,BE,ops,BE-09,199,pregledano,BE-12 (F-05): prisustvo projekta = samo dodijeljeni korisnici; ping validira koordinate,2026-11-03
 backend/src/modules/ops/machine-devices.controller.ts,BE,ops,BE-09,46,pregledano,BE-09: pregledano — 4 rute za GPS uređaje pod fleet.read/write,2026-11-03
 backend/src/modules/ops/machine-hours.ts,BE,ops,BE-09,20,pregledano,"BE-09: pregledano — Decimal sati, increment u transakciji pozivaoca",2026-11-03
@@ -318,7 +319,7 @@ backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,231,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije",2026-11-02
-backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,98,nepregledano,,
+backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,102,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.,2026-11-04
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
