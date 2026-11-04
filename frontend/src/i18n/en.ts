@@ -180,6 +180,8 @@ export const en = {
     status: 'Status',
     activate: 'Activate',
     activateConfirm: 'Activate {{name}}? They will be able to sign in again.',
+    resetPending: 'Reset in progress. Wait for the response; do not leave this page.',
+    resetUnknown: 'The reset was not confirmed. The password may already have changed; check the outcome before trying again.',
     resetConfirm: 'Reset the password for {{name}}? Their current session ends.',
     searchLabel: 'Search users',
     you: 'that is you',

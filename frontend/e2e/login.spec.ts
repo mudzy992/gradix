@@ -187,3 +187,50 @@ test('switching companies hides the previous project list during a failed refetc
     await page.unroute('**/api/**')
   }
 })
+
+test('password reset keeps its confirmation open until the one-time result arrives', async ({ page }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let resetCount = 0
+  await page.route('**/api/users**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/api/users/test-user/reset-password') {
+      resetCount += 1
+      await gate
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { temporaryPassword: 'Temporary-example-123' } }) })
+    }
+    if (path === '/api/users') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [
+        { id: 'test-user', firstName: 'Test', lastName: 'User', employeeCode: null, email: 'user@example.test', phone: null, companyId: 'tenant', hourlyRate: null, isActive: true, mustChangePassword: false, locale: 'bs', roles: ['WORKER'] },
+      ], meta: { page: 1, limit: 20, total: 1 } }) })
+    }
+    return route.abort()
+  })
+  try {
+    await page.goto('/login')
+    await page.locator('#identifier').fill(email!)
+    await page.locator('#password').fill(password!)
+    await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+    await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+    await page.goto('/users')
+    await page.getByRole('button', { name: 'Reset lozinke' }).click()
+    const dialog = page.getByRole('alertdialog')
+    await dialog.getByRole('button', { name: 'Potvrdi' }).click()
+    await expect(dialog.getByRole('status')).toContainText('Reset je u toku')
+    await expect(dialog.getByRole('button', { name: 'Potvrdi' })).toBeDisabled()
+    await expect(dialog.getByRole('button', { name: 'Otkaži' })).toBeDisabled()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeVisible()
+    expect(resetCount).toBe(1)
+    release()
+    await expect(page.getByText('Temporary-example-123')).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Potvrdi' }).click()
+    await expect(page.getByText('Temporary-example-123')).toHaveCount(0)
+  } finally {
+    release()
+    await page.unroute('**/api/users**')
+  }
+})

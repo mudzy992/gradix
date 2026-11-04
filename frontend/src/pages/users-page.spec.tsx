@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -134,6 +134,48 @@ describe('UsersPage', () => {
 
     expect(resetUserPassword).toHaveBeenCalledWith('u2')
     expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+  })
+
+  it('reset zadržava potvrdu i blokira promjenu firme do prikaza i potvrde lozinke', async () => {
+    let resolve!: (value: { data: { temporaryPassword: string } }) => void
+    resetUserPassword.mockReturnValue(new Promise((done) => { resolve = done }))
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Reset lozinke' }))
+    const dialog = await screen.findByRole('alertdialog')
+    const confirm = within(dialog).getByRole('button', { name: 'Potvrdi' })
+    // Two events before the pending render must not send two resets.
+    act(() => { fireEvent.click(confirm); fireEvent.click(confirm) })
+    await waitFor(() => expect(confirm).toBeDisabled())
+    expect(resetUserPassword).toHaveBeenCalledTimes(1)
+    expect(within(dialog).getByRole('button', { name: 'Otkaži' })).toBeDisabled()
+    expect(within(dialog).getByRole('status')).toHaveTextContent('Reset je u toku')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await act(async () => { resolve({ data: { temporaryPassword: 'Temp-1234' } }) })
+    expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Potvrdi' }))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('ne ponavlja reset automatski nakon nepoznatog ishoda, a novi pokušaj zahtijeva novo otvaranje', async () => {
+    resetUserPassword.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: { temporaryPassword: 'Temp-5678' } })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Reset lozinke' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Potvrdi' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Moguće je da je lozinka već promijenjena')
+    expect(within(dialog).getByRole('button', { name: 'Potvrdi' })).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Otkaži' }))
+    expect(resetUserPassword).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Reset lozinke' }))
+    const reopened = await screen.findByRole('alertdialog')
+    expect(within(reopened).queryByRole('alert')).not.toBeInTheDocument()
+    await userEvent.click(within(reopened).getByRole('button', { name: 'Potvrdi' }))
+    expect(await screen.findByText('Temp-5678')).toBeInTheDocument()
+    expect(resetUserPassword).toHaveBeenCalledTimes(2)
   })
 
   it('greška liste je trajna i nudi ponovni pokušaj', async () => {

@@ -180,6 +180,8 @@ export const bs = {
     status: 'Status',
     activate: 'Aktiviraj',
     activateConfirm: 'Aktivirati korisnika {{name}}? Ponovo će moći da se prijavi.',
+    resetPending: 'Reset je u toku. Sačekajte odgovor; ne zatvarajte stranicu.',
+    resetUnknown: 'Reset nije potvrđen. Moguće je da je lozinka već promijenjena; provjerite ishod prije novog pokušaja.',
     resetConfirm: 'Resetovati lozinku korisniku {{name}}? Dosadašnja sesija mu prestaje.',
     searchLabel: 'Pretraga korisnika',
     you: 'to ste vi',

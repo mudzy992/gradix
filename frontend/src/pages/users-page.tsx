@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -57,6 +57,8 @@ export function UsersPage() {
   const [deactivate, setDeactivate] = useState<ListUser | null>(null)
   const [activate, setActivate] = useState<ListUser | null>(null)
   const [resetTarget, setResetTarget] = useState<ListUser | null>(null)
+  // A synchronous latch closes the gap before React Query renders isPending.
+  const resetInFlight = useRef(false)
   const query = useQuery({
     queryKey: ['users', { page, q, role }],
     queryFn: async () => listUsers({ page, q: q || undefined, role: role === 'all' ? undefined : role, limit: 20 }),
@@ -90,6 +92,7 @@ export function UsersPage() {
       setTemp(result.data.temporaryPassword)
     },
     onError: (error) => toast.error(errorMessage(error)),
+    onSettled: () => { resetInFlight.current = false },
   })
   if (!tenantReady) {
     return (
@@ -209,7 +212,7 @@ export function UsersPage() {
                         </Button>
                         {isMe ? null : (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => setResetTarget(row)}>
+                            <Button size="sm" variant="outline" onClick={() => { reset.reset(); setResetTarget(row) }}>
                               {t('users.resetPassword')}
                             </Button>
                             {row.isActive ? (
@@ -264,7 +267,7 @@ export function UsersPage() {
       />
       <TempPasswordDialog password={temp} onClose={() => setTemp(null)} />
 
-      <AlertDialog open={Boolean(resetTarget)} onOpenChange={(open) => !open && setResetTarget(null)}>
+      <AlertDialog open={Boolean(resetTarget)} onOpenChange={(open) => { if (!open && !resetInFlight.current) setResetTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('users.resetPassword')}</AlertDialogTitle>
@@ -272,9 +275,18 @@ export function UsersPage() {
               {t('users.resetConfirm', { name: resetTarget ? displayName(resetTarget) : '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {reset.isPending ? <p role="status" className="text-sm">{t('users.resetPending')}</p> : null}
+          {reset.isError ? <p role="alert" className="text-sm text-destructive">{t('users.resetUnknown')}</p> : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => resetTarget && reset.mutate(resetTarget.id)}>
+            <AlertDialogCancel disabled={reset.isPending}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={reset.isPending || reset.isError} onClick={(event) => {
+              // Radix actions close by default; keep the old company locked until
+              // the response has either been displayed or explicitly dismissed.
+              event.preventDefault()
+              if (!resetTarget || resetInFlight.current || reset.isError) return
+              resetInFlight.current = true
+              reset.mutate(resetTarget.id)
+            }}>
               {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
