@@ -185,6 +185,26 @@ describe('apiBlob()', () => {
   })
 })
 
+describe('refreshSession() cache isolation', () => {
+  it('odbijeni refresh direktno briše korisnički keš', async () => {
+    writeRefreshToken('refresh-1', false)
+    queryClient.setQueryData(['project-document-pending', 'old'], { fileName: 'privatno.pdf' })
+    fetchMock.mockResolvedValueOnce(json({ success: false, error: { code: 'AUTH_INVALID_CREDENTIALS', message: 'x' } }, 401))
+    await expect(refreshSession()).resolves.toBe(false)
+    expect(queryClient.getQueryData(['project-document-pending', 'old'])).toBeUndefined()
+    expect(useAuthStore.getState().user).toBeNull()
+  })
+
+  it('mrežni prekid tokom direktnog refresh-a ne briše korisnički keš', async () => {
+    writeRefreshToken('refresh-1', false)
+    queryClient.setQueryData(['project-document-pending', 'active'], { fileName: 'plan.pdf' })
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'))
+    await expect(refreshSession()).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+    expect(queryClient.getQueryData(['project-document-pending', 'active'])).toEqual({ fileName: 'plan.pdf' })
+    queryClient.clear()
+  })
+})
+
 describe('clearSession()', () => {
   it('briše store, refresh token i keš upita (jedno mjesto za sve odjave)', () => {
     writeRefreshToken('refresh-1', true)
@@ -231,6 +251,7 @@ describe('session and company changes during requests', () => {
     fetchMock.mockReturnValueOnce(pending.promise)
     const oldRefresh = refreshSession().catch((error: unknown) => error)
     loginAsSecondUser()
+    queryClient.setQueryData(['new-user-cache'], 'preserved')
     pending.resolve(status === 200
       ? ok({ accessToken: 'stale-access', refreshToken: 'stale-refresh' })
       : json({ success: false, error: { code: 'AUTH_REFRESH_REUSE', message: 'x' } }, 401))
@@ -238,6 +259,8 @@ describe('session and company changes during requests', () => {
     expect(readRefreshToken()).toBe('refresh-b')
     expect(useAuthStore.getState().accessToken).toBe('token-b')
     expect(useAuthStore.getState().user?.id).toBe('u2')
+    expect(queryClient.getQueryData(['new-user-cache'])).toBe('preserved')
+    queryClient.clear()
   })
 
   it('a new login can refresh independently while the previous refresh is in flight', async () => {

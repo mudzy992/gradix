@@ -42,6 +42,8 @@ function renderTab(tab: string, client = new QueryClient({ defaultOptions: { que
   const rendered = render(view())
   return {
     client,
+    container: rendered.container,
+    unmount: rendered.unmount,
     changeTab: (next: string) => { currentTab = next; rendered.rerender(view()) },
     changeProject: (next: string) => { currentProject = next; rendered.rerender(view()) },
   }
@@ -386,6 +388,92 @@ describe('ProjectTabs', () => {
     } finally {
       clearRefreshToken()
     }
+  })
+
+  it('nepotvrđeno povezivanje preživljava unmount i povratak bez ponovnog uploada', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    const first = renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await screen.findByRole('button', { name: 'Ponovi povezivanje' })
+    first.unmount()
+    renderTab('documents', first.client)
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
+    expect(api.createDocument.mock.calls[1][1]).toEqual(api.createDocument.mock.calls[0][1])
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
+  })
+
+  it('upload koji traje i dalje blokira novi nakon povratka, zatim nudi oporavak', async () => {
+    api.permissions.add('projects.write')
+    let resolveUpload!: (value: { data: { path: string } }) => void
+    api.uploadFile.mockReset().mockReturnValueOnce(new Promise((resolve) => { resolveUpload = resolve }))
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+    const first = renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    first.unmount()
+    renderTab('documents', first.client)
+    expect(screen.getByLabelText('Dodaj dokument')).toBeDisabled()
+    expect(screen.getByText('Učitavanje dokumenta je u toku…')).toHaveAttribute('role', 'status')
+    resolveUpload({ data: { path: 'c1/plan.pdf' } })
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeEnabled()
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+  })
+
+  it('povezivanje koje traje preživljava unmount, blokira retry i čisti zapis po uspjehu', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    let resolveLink!: (value: object) => void
+    api.createDocument.mockReset().mockReturnValueOnce(new Promise((resolve) => { resolveLink = resolve }))
+    const first = renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledOnce())
+    first.unmount()
+    renderTab('documents', first.client)
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeDisabled()
+    expect(screen.getByLabelText('Dodaj dokument')).toBeDisabled()
+    resolveLink({})
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
+    expect(screen.getByLabelText('Dodaj dokument')).toBeEnabled()
+    expect(api.createDocument).toHaveBeenCalledOnce()
+  })
+
+  it('brisanje keša tokom uploada ne dozvoljava zakašnjelom odgovoru da vrati stanje ili pošalje povezivanje', async () => {
+    api.permissions.add('projects.write')
+    let resolveUpload!: (value: { data: { path: string } }) => void
+    api.uploadFile.mockReset().mockReturnValueOnce(new Promise((resolve) => { resolveUpload = resolve }))
+    api.createDocument.mockReset()
+    const first = renderTab('documents')
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    first.unmount()
+    first.client.clear()
+    resolveUpload({ data: { path: 'c1/plan.pdf' } })
+    await waitFor(() => expect(api.toastError).toHaveBeenCalled())
+    renderTab('documents', first.client)
+    expect(screen.getByLabelText('Dodaj dokument')).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument()
+    expect(api.createDocument).not.toHaveBeenCalled()
+  })
+
+  it('dva istovremena prikaza istog projekta dijele blokadu retryja', async () => {
+    api.permissions.add('projects.write')
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    let resolveLink!: (value: object) => void
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline'))
+      .mockReturnValueOnce(new Promise((resolve) => { resolveLink = resolve }))
+    const first = renderTab('documents')
+    const second = renderTab('documents', first.client)
+    const firstView = within(first.container)
+    const secondView = within(second.container)
+    await userEvent.upload(firstView.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    await userEvent.click(await firstView.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
+    expect(secondView.getByRole('button', { name: 'Ponovi povezivanje' })).toBeDisabled()
+    resolveLink({})
+    await waitFor(() => expect(secondView.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
+    expect(api.uploadFile).toHaveBeenCalledOnce()
   })
 
   it('ne šalje upload ako nije moguće generisati sigurni ključ', async () => {

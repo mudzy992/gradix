@@ -35,6 +35,8 @@ import { ProjectPagination } from '@/components/ops/project-pagination'
 const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
 type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
 type PendingDocument = { path: string; fileName: string; idempotencyKey: string }
+type PendingDocumentState = { idempotencyKey: string; inFlight: boolean; reference?: PendingDocument }
+const pendingDocumentKey = (scope: string) => ['project-document-pending', scope] as const
 
 function documentScope(projectId: string, user: MeUser | null, selectedCompany: string | null): string {
   const company = user?.roles?.includes('PLATFORM_ADMIN') ? selectedCompany : user?.companyId ?? null
@@ -95,9 +97,11 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const [machinePage, setMachinePage] = useState(1)
   const [tripPage, setTripPage] = useState(1)
   const [fuelPage, setFuelPage] = useState(1)
-  // Keep each in-flight upload attached to its original project even if the route changes.
-  const [pendingDocuments, setPendingDocuments] = useState<Record<string, PendingDocument>>({})
-  const pendingDocument = pendingDocuments[currentDocumentScope] ?? null
+  // This in-memory cache survives route unmounts and is cleared with the session.
+  const pendingDocumentState = useQuery<PendingDocumentState | null>({
+    queryKey: pendingDocumentKey(currentDocumentScope), queryFn: async () => null, enabled: false, gcTime: Infinity,
+  }).data
+  const pendingDocument = pendingDocumentState?.reference ?? null
   useEffect(() => {
     setMemberSearchInput('')
     setMemberSearch('')
@@ -160,30 +164,55 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const documentUpload = useMutation({
     mutationFn: async (input: { projectId: string; scope: string; file: File } | { projectId: string; scope: string; pending: PendingDocument }) => {
       ensureDocumentScope(input.projectId, input.scope)
+      const key = pendingDocumentKey(input.scope)
+      const previous = client.getQueryData<PendingDocumentState | null>(key)
+      let idempotencyKey: string
       if ('pending' in input) {
-        // Reconcile a response lost after creation before retrying the link.
-        const existing = await listDocuments(input.projectId)
-        ensureDocumentScope(input.projectId, input.scope)
-        const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
-        if (!found) await createDocument(input.projectId, input.pending)
-        return { projectId: input.projectId, scope: input.scope, idempotencyKey: input.pending.idempotencyKey }
+        if (!previous || previous.inFlight || previous.idempotencyKey !== input.pending.idempotencyKey) {
+          throw new Error('Document operation is no longer available')
+        }
+        idempotencyKey = input.pending.idempotencyKey
+        client.setQueryData(key, { ...previous, inFlight: true })
+      } else {
+        if (previous) throw new Error('Document operation is already pending')
+        // Generate before upload so an unavailable secure UUID cannot orphan a file.
+        idempotencyKey = crypto.randomUUID()
+        client.setQueryData(key, { idempotencyKey, inFlight: true } satisfies PendingDocumentState)
       }
-      // Generate before upload so an unavailable secure UUID cannot orphan a file.
-      const idempotencyKey = crypto.randomUUID()
-      const uploaded = await uploadFile(input.file)
-      ensureDocumentScope(input.projectId, input.scope)
-      const reference = { path: uploaded.data.path, fileName: input.file.name, idempotencyKey }
-      setPendingDocuments((current) => ({ ...current, [input.scope]: reference }))
-      await createDocument(input.projectId, reference)
-      return { projectId: input.projectId, scope: input.scope, idempotencyKey }
+      const current = () => client.getQueryData<PendingDocumentState | null>(key)
+      const ensureOperation = () => {
+        ensureDocumentScope(input.projectId, input.scope)
+        if (current()?.idempotencyKey !== idempotencyKey) {
+          throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
+        }
+      }
+      try {
+        if ('pending' in input) {
+          // Reconcile a response lost after creation before retrying the link.
+          const existing = await listDocuments(input.projectId)
+          ensureOperation()
+          const found = existing.data.find((item) => item.path === input.pending.path && item.fileName === input.pending.fileName)
+          if (!found) await createDocument(input.projectId, input.pending)
+        } else {
+          const uploaded = await uploadFile(input.file)
+          ensureOperation()
+          const reference = { path: uploaded.data.path, fileName: input.file.name, idempotencyKey }
+          client.setQueryData(key, { idempotencyKey, inFlight: true, reference } satisfies PendingDocumentState)
+          await createDocument(input.projectId, reference)
+        }
+        return { projectId: input.projectId, scope: input.scope, idempotencyKey }
+      } catch (error) {
+        const state = current()
+        if (state?.idempotencyKey === idempotencyKey) {
+          client.setQueryData(key, state.reference ? { ...state, inFlight: false } : null)
+        }
+        throw error
+      }
     },
     onSuccess: ({ projectId: targetId, scope, idempotencyKey }) => {
-      setPendingDocuments((current) => {
-        if (current[scope]?.idempotencyKey !== idempotencyKey) return current
-        const next = { ...current }
-        delete next[scope]
-        return next
-      })
+      const key = pendingDocumentKey(scope)
+      const state = client.getQueryData<PendingDocumentState | null>(key)
+      if (state?.idempotencyKey === idempotencyKey) client.setQueryData(key, null)
       if (documentScope(targetId, useAuthStore.getState().user, useCompanyStore.getState().selectedId) === scope) {
         return client.invalidateQueries({ queryKey: ['documents', targetId] })
       }
@@ -319,20 +348,21 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
         ))}
         {canWrite ? (
           <>
+            {pendingDocumentState?.inFlight && !pendingDocument ? <p role="status">{t('projects.documentUploadInProgress')}</p> : null}
             {pendingDocument ? (
               <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                 <span>{t('projects.documentLinkPending', { name: pendingDocument.fileName })}</span>
-                <Button size="sm" variant="outline" disabled={documentUpload.isPending} onClick={() => documentUpload.mutate({ projectId, scope: currentDocumentScope, pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
+                <Button size="sm" variant="outline" disabled={documentUpload.isPending || pendingDocumentState?.inFlight} onClick={() => documentUpload.mutate({ projectId, scope: currentDocumentScope, pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
               </div>
             ) : null}
             <Input
               type="file"
               aria-label={t('projects.uploadDocument')}
-              disabled={documentUpload.isPending || Boolean(pendingDocument)}
+              disabled={documentUpload.isPending || Boolean(pendingDocumentState)}
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file && !documentUpload.isPending && !pendingDocument) documentUpload.mutate({ projectId, scope: currentDocumentScope, file })
+                if (file && !documentUpload.isPending && !pendingDocumentState) documentUpload.mutate({ projectId, scope: currentDocumentScope, file })
               }}
             />
           </>

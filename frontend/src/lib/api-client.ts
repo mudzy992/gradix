@@ -123,8 +123,9 @@ async function rotateRefresh(refreshToken: string, generation: number): Promise<
       const userId = useAuthStore.getState().user?.id
       if (userId) broadcastLogout(userId)
     }
-    clearRefreshToken()
-    useAuthStore.getState().clear()
+    // Direct bootstrap/refresh callers do not necessarily pass through forceLogin.
+    // Clear all session-owned cached data as well as credentials.
+    clearSession()
     return false
   }
   useAuthStore.getState().setAccessToken(body.data.accessToken)

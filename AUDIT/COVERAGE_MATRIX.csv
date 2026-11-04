@@ -392,8 +392,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,422,pregledano,"CI-05: 26 testova kartica i oporavka; F-CI-05-45 utrke projekta, korisnika i firme.",2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,360,u-toku,CI-05: F-CI-05-45 izolacija projekta/sesije; trajni oporavak F-CI-05-15 i završni pregled ostaju otvoreni.,2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,510,pregledano,CI-05: 31 test kartica i oporavka; F-45/46 utrke konteksta i remount.,2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,390,u-toku,CI-05 F-45/46: izolacija konteksta i memorijski oporavak kroz remount; trajni oporavak i završni pregled ostaju otvoreni.,2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -440,8 +440,8 @@ frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en p
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,189,pregledano,CI-05: prijevodi kartica projekta; paritet sa engleskim.,2026-11-04
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,189,pregledano,CI-05: prijevodi kartica projekta; paritet sa bosanskim.,2026-11-04
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa engleskim.,2026-11-04
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa bosanskim.,2026-11-04
 frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
@@ -450,8 +450,8 @@ frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/en potvrđen testom; dodati ključevi iz FE-14 (loadError*, projectsError, logoSet)",2026-11-04
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
 frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
-frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,361,pregledano,"FE-15: 15 testova — 401→refresh→retry, neuspješan refresh, mrežni pad (bez brisanja tokena), ne-JSON, 204, envelope greška, X-Company-Id, apiBlob (401/429/mreža), clearSession/forceLogin",2026-11-04
-frontend/src/lib/api-client.ts,FE,shared,FE-15,284,pregledano,FE-15: mrežni prekid → ApiError NETWORK_ERROR (status 0); ne-JSON odgovor bez SyntaxError; apiBlob osvježava token na 401; clearSession() = store+token+keš (jedno mjesto za sve odjave),2026-11-04
+frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,384,pregledano,CI-05: 30 testova mrežnog sloja; F-47 testira keš pri odbijenom i zakašnjelom refreshu.,2026-11-04
+frontend/src/lib/api-client.ts,FE,shared,FE-15,285,pregledano,FE-15 i CI-05: mrežni sloj sa zaštitom konteksta; F-47 čisti keš pri odbijenom refreshu.,2026-11-04
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,pregledano,FE-15: pregledano — flota/logistika; bez nalaza,2026-11-04
 frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,pregledano,FE-15: pregledano — endpointi operacija odgovaraju backendu; bez nalaza,2026-11-04
