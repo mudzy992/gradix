@@ -171,12 +171,8 @@ export class CompaniesService {
         isActive: allowActive ? dto.isActive : undefined,
       },
     });
-    if (allowActive && dto.isActive === false && existing.isActive) {
-      await this.timers.closeOpenForCompany(id, actor.id);
-      const users = await this.prisma.user.findMany({
-        where: { companyId: id },
-      });
-      await Promise.all(users.map((user) => this.tokens.revokeAll(user.id)));
+    const deactivateRequested = allowActive && dto.isActive === false;
+    if (deactivateRequested && existing.isActive) {
       await this.audit.write({
         companyId: id,
         actorId: actor.id,
@@ -194,6 +190,16 @@ export class CompaniesService {
         entityId: id,
         payload: { fields: Object.keys(dto) },
       });
+    }
+    // Revocation must not depend on timer cleanup succeeding. Repeat it even
+    // for an already-inactive company after an earlier partial failure.
+    if (deactivateRequested) {
+      const users = await this.prisma.user.findMany({
+        where: { companyId: id },
+        select: { id: true },
+      });
+      await Promise.all(users.map((user) => this.tokens.revokeAll(user.id)));
+      await this.timers.closeOpenForCompany(id, actor.id);
     }
     return company;
   }

@@ -1,8 +1,14 @@
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
+import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { AuthTokensService } from '../src/modules/auth/auth-tokens.service';
+import { TimerForceCloseService } from '../src/modules/ops/timer-force-close.service';
+import { hashRefreshToken } from '../src/common/utils/password';
 
 describe('Tenant (e2e)', () => {
   let app: INestApplication<App>;
@@ -112,6 +118,87 @@ describe('Tenant (e2e)', () => {
     expect(denied.body.error.code).toBe('AUTH_COMPANY_INACTIVE');
   });
 
+  it('company revokes sessions before timer cleanup and retries cleanup', async () => {
+    const { companyId, platformToken, refreshToken } =
+      await companyWithSession(app);
+    const prisma = app.get(PrismaService);
+    const timers = app.get(TimerForceCloseService);
+    const failure = jest
+      .spyOn(timers, 'closeOpenForCompany')
+      .mockRejectedValueOnce(new Error('test timer failure'));
+    try {
+      const first = await request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false });
+      expect(first.status).toBe(500);
+      const company = await prisma.company.findUniqueOrThrow({
+        where: { id: companyId },
+      });
+      const token = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(company.isActive).toBe(false);
+      expect(token.revokedAt).not.toBeNull();
+      const retry = await request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false });
+      expect(retry.status).toBe(200);
+      expect(failure).toHaveBeenCalledTimes(2);
+      const reactivated = await request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: true });
+      expect(reactivated.status).toBe(200);
+      const refresh = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken });
+      expect(refresh.status).toBe(401);
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
+  it('company retries session revocation after an earlier failure', async () => {
+    const { companyId, platformToken, refreshToken } =
+      await companyWithSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const failure = jest
+      .spyOn(tokens, 'revokeAll')
+      .mockRejectedValueOnce(new Error('test revoke failure'));
+    try {
+      const first = await request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false });
+      expect(first.status).toBe(500);
+      const company = await prisma.company.findUniqueOrThrow({
+        where: { id: companyId },
+      });
+      const token = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(company.isActive).toBe(false);
+      expect(token.revokedAt).toBeNull(); // no false claim of atomicity
+      const retry = await request(app.getHttpServer())
+        .patch(`/api/companies/${companyId}`)
+        .set(auth(platformToken))
+        .send({ isActive: false });
+      expect(retry.status).toBe(200);
+      const after = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(after.revokedAt).not.toBeNull();
+    } finally {
+      failure.mockRestore();
+    }
+  });
+
   it('cross-tenant user is 404', async () => {
     const platform = await login(app, 'platform@gradix.local');
     const other = await request(app.getHttpServer())
@@ -154,3 +241,31 @@ describe('Tenant (e2e)', () => {
     expect(cross.status).toBe(404);
   });
 });
+
+async function companyWithSession(app: INestApplication<App>) {
+  const platform = await login(app, 'platform@gradix.local');
+  expect(platform.status).toBe(200);
+  const platformToken = platform.body.data.accessToken as string;
+  const suffix = randomUUID();
+  const email = `company-${suffix}@gradix.local`;
+  const created = await request(app.getHttpServer())
+    .post('/api/companies')
+    .set(auth(platformToken))
+    .send({
+      name: 'Revocation test',
+      slug: `c-${suffix}`,
+      admin: { email, firstName: 'Company', lastName: 'Admin' },
+    });
+  expect(created.status).toBe(201);
+  const logged = await login(
+    app,
+    email,
+    created.body.data.temporaryPassword as string,
+  );
+  expect(logged.status).toBe(200);
+  return {
+    companyId: created.body.data.id as string,
+    platformToken,
+    refreshToken: logged.body.data.refreshToken as string,
+  };
+}

@@ -118,7 +118,7 @@ backend/src/modules/auth/me.controller.ts,BE,auth,BE-02,27,pregledano,BE-02: či
 backend/src/modules/companies/companies.controller.ts,BE,companies,BE-04,44,pregledano,BE-04: platform rute traže platform.companies (lista/kreiranje/izmjena),2026-11-02
 backend/src/modules/companies/companies.dto.ts,BE,companies,BE-04,110,pregledano,"BE-04: bez MaxLength (F-09, odgođeno); admin blok obavezan preko ValidateNested",2026-11-02
 backend/src/modules/companies/companies.module.ts,BE,companies,BE-04,15,pregledano,BE-04: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
-backend/src/modules/companies/companies.service.ts,BE,companies,BE-04,222,pregledano,"BE-04: requireTenantCompany + readUniqueTarget iz common (F-06, F-07); deaktivacija gasi sesije",2026-11-02
+backend/src/modules/companies/companies.service.ts,BE,companies,BE-04,228,pregledano,"BE-04: requireTenantCompany + readUniqueTarget iz common (F-06, F-07); deaktivacija gasi sesije; F-CI-05-38: retry opoziva i timera; neatomarno ograničenje",2026-11-04
 backend/src/modules/companies/default-settings.ts,BE,companies,BE-04,14,pregledano,BE-04: default redovi iz registra — jedan izvor defaulta,2026-11-02
 backend/src/modules/companies/tenant-company.controller.ts,BE,companies,BE-04,27,pregledano,"BE-04: GET /company traži settings.read (F-01), PATCH settings.write",2026-11-02
 backend/src/modules/erp/costs.controller.ts,BE,erp,BE-14,57,pregledano,F-03: DELETE troška sada auditan (COST_ENTRY_REMOVED),2026-11-03
@@ -338,7 +338,7 @@ backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano 
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,300,pregledano,CI-05: PATCH clear/omitted/null/zero i negativan budžet; prethodni BE-05 testovi.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,396,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom",2026-11-03
-backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,157,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401",2026-11-02
+backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,272,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401; F-CI-05-38: greške opoziva i timera; ponovljena deaktivacija",2026-11-04
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,177,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password; F-CI-05-36: admin reset mijenja lozinku i opoziva refresh",2026-11-04
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
