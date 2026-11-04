@@ -72,7 +72,7 @@ describe('ProjectTabs', () => {
 
   it('ne prikazuje keširane podatke nakon gubitka prava', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    client.setQueryData(['machines', { projectId: 'p1' }], [{ id: 'm1', name: 'Tajna', status: 'ACTIVE' }])
+    client.setQueryData(['machines', 'project-pages', { projectId: 'p1', page: 1, limit: 100 }], { data: [{ id: 'm1', name: 'Tajna', status: 'ACTIVE' }] })
     renderTab('machines', client)
     expect(screen.getByText('Nemate pravo pristupa ovim podacima.')).toBeInTheDocument()
     expect(screen.queryByText(/Tajna/)).not.toBeInTheDocument()
@@ -148,6 +148,50 @@ describe('ProjectTabs', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Traži' }))
     expect(await screen.findByRole('option', { name: 'Ana Ime' })).toBeInTheDocument()
     expect(api.listUsers).toHaveBeenLastCalledWith({ page: 1, q: 'Ana', limit: 100 })
+  })
+
+  it.each([
+    ['tasks', 'tasks.read', 'listTasks', 'Stranice zadataka'],
+    ['machines', 'fleet.read', 'listMachines', 'Stranice vozila'],
+    ['trips', 'trips.read', 'listTrips', 'Stranice tura'],
+    ['costs', 'fuel.reports', 'listFuel', 'Stranice goriva'],
+  ] as const)('kartica %s učitava drugu stranicu', async (tab, permission, method, label) => {
+    api.permissions.add(permission)
+    api[method].mockImplementation(({ page }: { page: number }) => Promise.resolve({ data: [], meta: { page, limit: 20, total: 25 } }))
+    renderTab(tab)
+    const navigation = await screen.findByRole('navigation', { name: label })
+    expect(navigation).toHaveTextContent('Stranica 1 od 2')
+    await userEvent.click(within(navigation).getByRole('button', { name: 'Sljedeća' }))
+    await waitFor(() => expect(api[method]).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: 'p1', page: 2 })))
+    expect(await screen.findByText('Stranica 2 od 2')).toBeInTheDocument()
+  })
+
+  it('poslije neuspjele stranice korisnika moguć je povratak bez metapodataka', async () => {
+    api.permissions.add('projects.write')
+    api.permissions.add('users.read')
+    api.listUsers.mockImplementation(({ page }: { page: number }) => page === 1
+      ? Promise.resolve({ data: [], meta: { page, limit: 100, total: 101 } })
+      : Promise.reject(new Error('offline')))
+    renderTab('team')
+    const nav = await screen.findByRole('navigation', { name: 'Stranice korisnika' })
+    await userEvent.click(within(nav).getByRole('button', { name: 'Sljedeća' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Korisnici se nisu učitali.')
+    expect(screen.getByRole('navigation', { name: 'Stranice korisnika' })).toHaveTextContent('Stranica 2')
+    await userEvent.click(screen.getByRole('button', { name: 'Prethodna' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('poslije greške druge stranice zadataka moguć je povratak', async () => {
+    api.permissions.add('tasks.read')
+    api.listTasks.mockImplementation(({ page }: { page: number }) => page === 1
+      ? Promise.resolve({ data: [{ id: 't1', title: 'Prvi', status: 'PENDING' }], meta: { page, limit: 100, total: 101 } })
+      : Promise.reject(new Error('offline')))
+    renderTab('tasks')
+    const nav = await screen.findByRole('navigation', { name: 'Stranice zadataka' })
+    await userEvent.click(within(nav).getByRole('button', { name: 'Sljedeća' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Prethodna' }))
+    expect(await screen.findByText('Prvi · Nedodijeljeno')).toBeInTheDocument()
   })
 
   it('status koristi prevedene oznake i blokiran je do kraja izmjene', async () => {

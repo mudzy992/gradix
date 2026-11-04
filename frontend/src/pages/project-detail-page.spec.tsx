@@ -42,6 +42,36 @@ describe('ProjectDetailPage Gantt and tabs', () => {
     expect(api.listTasks).not.toHaveBeenCalled()
   })
 
+  it('Gantt jasno označava i učitava drugu stranicu zadataka', async () => {
+    api.permissions.add('tasks.read')
+    api.listTasks.mockImplementation(({ page }: { page: number }) => Promise.resolve({
+      data: [{ id: `t${page}`, title: `Zadatak ${page}`, plannedStart: '2026-01-01', plannedEnd: '2026-01-02' }],
+      meta: { page, limit: 100, total: 101 },
+    }))
+    renderPage()
+    expect(await screen.findByText(/Zadatak 1:/)).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Stranice zadataka na Ganttu' })
+    expect(nav).toHaveTextContent('Stranica 1 od 2')
+    expect(screen.getByText('Gantt prikazuje sve faze i zadatke samo sa izabrane stranice.')).toBeInTheDocument()
+    await userEvent.click(within(nav).getByRole('button', { name: 'Sljedeća' }))
+    expect(await screen.findByText(/Zadatak 2:/)).toBeInTheDocument()
+    expect(screen.queryByText(/Zadatak 1:/)).not.toBeInTheDocument()
+    expect(api.listTasks).toHaveBeenLastCalledWith({ projectId: 'p1', page: 2, limit: 100 })
+  })
+
+  it('poslije greške druge stranice Gantta moguće je vratiti se', async () => {
+    api.permissions.add('tasks.read')
+    api.listTasks.mockImplementation(({ page }: { page: number }) => page === 1
+      ? Promise.resolve({ data: [], meta: { page, limit: 100, total: 101 } })
+      : Promise.reject(new Error('offline')))
+    renderPage()
+    const nav = await screen.findByRole('navigation', { name: 'Stranice zadataka na Ganttu' })
+    await userEvent.click(within(nav).getByRole('button', { name: 'Sljedeća' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Podaci kartice se nisu učitali.')
+    await userEvent.click(screen.getByRole('button', { name: 'Prethodna' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
   it('ne prikazuje neuspjeli Gantt kao prazan i omogućava ponovni pokušaj', async () => {
     api.permissions.add('tasks.read')
     api.listPhases.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: [] })

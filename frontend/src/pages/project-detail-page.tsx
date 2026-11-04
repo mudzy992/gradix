@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlannedGantt } from '@/components/ops/planned-gantt'
 import { ProjectTabs } from '@/components/ops/project-tabs'
 import { ProjectPublicCard } from '@/components/ops/project-public-card'
+import { ProjectPagination } from '@/components/ops/project-pagination'
 import { Button } from '@/components/ui/button'
 
 const TABS = [
@@ -28,6 +30,8 @@ const TABS = [
 export function ProjectDetailPage() {
   const { t } = useTranslation()
   const { id = '' } = useParams()
+  const [ganttPageState, setGanttPageState] = useState({ projectId: id, page: 1 })
+  const ganttPage = ganttPageState.projectId === id ? ganttPageState.page : 1
   const [params, setParams] = useSearchParams()
   const qtyRead = useHasPermission('quantities.read')
   const publicWrite = useHasPermission('public.write')
@@ -46,8 +50,8 @@ export function ProjectDetailPage() {
     enabled: Boolean(id) && tab === 'overview',
   })
   const tasks = useQuery({
-    queryKey: ['tasks', { projectId: id, limit: 100 }],
-    queryFn: async () => (await listTasks({ projectId: id, limit: 100 })).data,
+    queryKey: ['tasks', 'project-gantt', { projectId: id, page: ganttPage, limit: 100 }],
+    queryFn: () => listTasks({ projectId: id, page: ganttPage, limit: 100 }),
     enabled: Boolean(id) && tab === 'overview' && canReadTasks,
   })
   const row = project.data
@@ -125,8 +129,10 @@ export function ProjectDetailPage() {
           ) : null}
           {!canReadTasks ? <p className="text-sm">{t('projects.ganttTasksNoAccess')}</p> : null}
           {!phases.isLoading && !phases.isError && (!canReadTasks || (!tasks.isLoading && !tasks.isError)) ? (
-            <PlannedGantt phases={phases.data ?? []} tasks={canReadTasks ? tasks.data ?? [] : []} />
+            <PlannedGantt phases={phases.data ?? []} tasks={canReadTasks ? tasks.data?.data ?? [] : []} />
           ) : null}
+          {canReadTasks && (ganttPage > 1 || (tasks.data?.meta && tasks.data.meta.total > tasks.data.meta.limit)) ? <p className="text-sm text-muted-foreground">{t('projects.ganttPagedNotice')}</p> : null}
+          {canReadTasks ? <ProjectPagination label={t('projects.ganttPagination')} page={ganttPage} meta={tasks.data?.meta} loading={tasks.isLoading} onPageChange={(page) => setGanttPageState({ projectId: id, page })} /> : null}
           {publicWrite ? (
             <ProjectPublicCard
               projectId={id}
@@ -135,7 +141,7 @@ export function ProjectDetailPage() {
             />
           ) : null}
         </TabsContent>
-        <ProjectTabs projectId={id} project={row} activeTab={tab} />
+        <ProjectTabs key={id} projectId={id} project={row} activeTab={tab} />
       </Tabs>
     </div>
   )

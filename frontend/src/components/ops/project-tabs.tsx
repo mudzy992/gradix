@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { TabsContent } from '@/components/ui/tabs'
 import { QuantitiesTab } from '@/components/ops/quantities-tab'
 import { ProjectDiaryTab } from '@/components/ops/project-diary-tab'
+import { ProjectPagination } from '@/components/ops/project-pagination'
 
 const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
 type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
@@ -37,7 +38,7 @@ type Props = { projectId: string; project: ProjectRow; activeTab: string }
 type ListState = {
   isLoading: boolean
   isError: boolean
-  data: unknown[] | undefined
+  data: unknown[] | { data: unknown[] } | undefined
   refetch: () => unknown
 }
 
@@ -51,7 +52,8 @@ function ListFeedback({ query, allowed = true }: { query: ListState; allowed?: b
       <Button size="sm" variant="outline" onClick={() => void query.refetch()}>{t('dashboard.retry')}</Button>
     </div>
   )
-  if (query.data?.length === 0) return <p className="text-sm text-muted-foreground">{t('projects.sectionEmpty')}</p>
+  const items = Array.isArray(query.data) ? query.data : query.data?.data
+  if (items?.length === 0) return <p className="text-sm text-muted-foreground">{t('projects.sectionEmpty')}</p>
   return null
 }
 
@@ -71,39 +73,47 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const [memberPage, setMemberPage] = useState(1)
   const [memberId, setMemberId] = useState('')
   const [memberRole, setMemberRole] = useState<AssignmentRole>('WORKER')
+  const [taskPage, setTaskPage] = useState(1)
+  const [machinePage, setMachinePage] = useState(1)
+  const [tripPage, setTripPage] = useState(1)
+  const [fuelPage, setFuelPage] = useState(1)
   useEffect(() => {
     setMemberSearchInput('')
     setMemberSearch('')
     setMemberPage(1)
     setMemberId('')
     setMemberRole('WORKER')
+    setTaskPage(1)
+    setMachinePage(1)
+    setTripPage(1)
+    setFuelPage(1)
   }, [projectId])
   const phases = useQuery({ queryKey: ['phases', projectId], queryFn: async () => (await listPhases(projectId)).data, enabled: activeTab === 'phases' })
   const team = useQuery({ queryKey: ['assignments', projectId], queryFn: async () => (await listAssignments(projectId)).data, enabled: activeTab === 'team' })
   const users = useQuery({
-    queryKey: ['project-member-options', { page: memberPage, q: memberSearch, limit: 100 }],
+    queryKey: ['users', 'project-pages', { page: memberPage, q: memberSearch, limit: 100 }],
     queryFn: () => listUsers({ page: memberPage, q: memberSearch || undefined, limit: 100 }),
     enabled: activeTab === 'team' && canWrite && canReadUsers,
   })
   const docs = useQuery({ queryKey: ['documents', projectId], queryFn: async () => (await listDocuments(projectId)).data, enabled: activeTab === 'documents' })
   const machines = useQuery({
-    queryKey: ['machines', { projectId }],
-    queryFn: async () => (await listMachines({ projectId, limit: 100 })).data,
+    queryKey: ['machines', 'project-pages', { projectId, page: machinePage, limit: 100 }],
+    queryFn: () => listMachines({ projectId, page: machinePage, limit: 100 }),
     enabled: activeTab === 'machines' && canReadFleet,
   })
   const trips = useQuery({
-    queryKey: ['trips', { projectId }],
-    queryFn: async () => (await listTrips({ projectId, limit: 100 })).data,
+    queryKey: ['trips', 'project-pages', { projectId, page: tripPage, limit: 100 }],
+    queryFn: () => listTrips({ projectId, page: tripPage, limit: 100 }),
     enabled: activeTab === 'trips' && canReadTrips,
   })
   const taskRows = useQuery({
-    queryKey: ['tasks', { projectId, limit: 100 }],
-    queryFn: async () => (await listTasks({ projectId, limit: 100 })).data,
+    queryKey: ['tasks', 'project-pages', { projectId, page: taskPage, limit: 100 }],
+    queryFn: () => listTasks({ projectId, page: taskPage, limit: 100 }),
     enabled: activeTab === 'tasks' && canReadTasks,
   })
   const fuel = useQuery({
-    queryKey: ['fuel', { projectId }],
-    queryFn: async () => (await listFuel({ projectId })).data,
+    queryKey: ['fuel', 'project-pages', { projectId, page: fuelPage }],
+    queryFn: () => listFuel({ projectId, page: fuelPage }),
     enabled: activeTab === 'costs' && canReadFuel,
   })
   const availableUsers = (users.data?.data ?? []).filter((user) => user.isActive && !(team.data ?? []).some((row) => row.userId === user.id))
@@ -162,11 +172,12 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       </TabsContent>
       <TabsContent value="tasks" className="grid gap-2 pt-4 text-sm">
         <ListFeedback query={taskRows} allowed={canReadTasks} />
-        {(canReadTasks ? taskRows.data ?? [] : []).map((row) => (
+        {(canReadTasks ? taskRows.data?.data ?? [] : []).map((row) => (
           <Link key={row.id} className="rounded-md border p-2 hover:bg-secondary" to={`/tasks/${row.id}`}>
             {row.title} · {t(taskStatus(row.status).labelKey, { defaultValue: row.status })}
           </Link>
         ))}
+        {canReadTasks ? <ProjectPagination label={t('projects.tasksPagination')} page={taskPage} meta={taskRows.data?.meta} loading={taskRows.isLoading} onPageChange={setTaskPage} /> : null}
       </TabsContent>
       <TabsContent value="team" className="grid gap-3 pt-4">
         <ListFeedback query={team} />
@@ -229,13 +240,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
                   <Button disabled={!memberIsAvailable || users.isLoading || users.isError || team.isLoading || team.isError || assignmentAdd.isPending}
                     onClick={() => assignmentAdd.mutate({ userId: memberId, role: memberRole })}>{t('projects.addMember')}</Button>
                 </div>
-                {users.data?.meta && users.data.meta.total > users.data.meta.limit ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Button size="sm" variant="outline" disabled={memberPage <= 1 || users.isLoading} onClick={() => { setMemberId(''); setMemberPage((page) => page - 1) }}>{t('projects.previousPage')}</Button>
-                    <span>{t('projects.pageOf', { page: memberPage, total: Math.ceil(users.data.meta.total / users.data.meta.limit) })}</span>
-                    <Button size="sm" variant="outline" disabled={memberPage * users.data.meta.limit >= users.data.meta.total || users.isLoading} onClick={() => { setMemberId(''); setMemberPage((page) => page + 1) }}>{t('projects.nextPage')}</Button>
-                  </div>
-                ) : null}
+                <ProjectPagination label={t('projects.membersPagination')} page={memberPage} meta={users.data?.meta} loading={users.isLoading} onPageChange={(page) => { setMemberId(''); setMemberPage(page) }} />
               </>
             ) : <p className="text-sm">{t('projects.usersNoAccess')}</p>}
           </div>
@@ -243,15 +248,17 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       </TabsContent>
       <TabsContent value="machines" className="grid gap-2 pt-4 text-sm">
         <ListFeedback query={machines} allowed={canReadFleet} />
-        {(canReadFleet ? machines.data ?? [] : []).map((row) => (
+        {(canReadFleet ? machines.data?.data ?? [] : []).map((row) => (
           <div key={row.id}>{row.name} · {t(machineStatus(row.status).labelKey, { defaultValue: row.status })}</div>
         ))}
+        {canReadFleet ? <ProjectPagination label={t('projects.machinesPagination')} page={machinePage} meta={machines.data?.meta} loading={machines.isLoading} onPageChange={setMachinePage} /> : null}
       </TabsContent>
       <TabsContent value="trips" className="grid gap-2 pt-4 text-sm">
         <ListFeedback query={trips} allowed={canReadTrips} />
-        {(canReadTrips ? trips.data ?? [] : []).map((row) => (
+        {(canReadTrips ? trips.data?.data ?? [] : []).map((row) => (
           <div key={row.id}>{row.originText} · {row.quantity}</div>
         ))}
+        {canReadTrips ? <ProjectPagination label={t('projects.tripsPagination')} page={tripPage} meta={trips.data?.meta} loading={trips.isLoading} onPageChange={setTripPage} /> : null}
       </TabsContent>
       <TabsContent value="quantities" className="pt-4">
         <QuantitiesTab projectId={projectId} />
@@ -279,9 +286,10 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       </TabsContent>
       <TabsContent value="costs" className="grid gap-2 pt-4 text-sm">
         <ListFeedback query={fuel} allowed={canReadFuel} />
-        {(canReadFuel ? fuel.data ?? [] : []).map((row) => (
+        {(canReadFuel ? fuel.data?.data ?? [] : []).map((row) => (
           <div key={row.id}>{row.liters} L · {row.totalCost}</div>
         ))}
+        {canReadFuel ? <ProjectPagination label={t('projects.fuelPagination')} page={fuelPage} meta={fuel.data?.meta} loading={fuel.isLoading} onPageChange={setFuelPage} /> : null}
         {canWrite ? (
           <div className="flex flex-wrap gap-2">
             {STATUSES.map((item) => (
