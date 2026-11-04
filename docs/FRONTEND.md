@@ -194,3 +194,7 @@ Panel obavijesti razlikuje učitavanje, grešku sa ponovnim pokušajem i zaista 
 ### Planirani periodi
 
 Gantt prikazuje početak i kraj i kao tekstualne datume; stavke bez valjanog perioda ne crtaju se, a grafičke trake su dekorativne.
+
+### Količine projekta
+
+Pri kreiranju se bira jedinica iz podržane šeme (m³, t, m, m², kom ili h). Neuspjela izmjena izvedene količine vraća prethodno prikazanu spremljenu vrijednost; greška učitavanja ima ponovni pokušaj.
