@@ -30,6 +30,10 @@ export const en = {
     },
   },
   auth: {
+    recoveryTitle: 'Session recovery was unsuccessful',
+    recoveryHint: 'Wait before retrying, or continue without recovering the session.',
+    recoveryRetry: 'Retry recovery',
+    recoveryContinue: 'Continue without recovery',
     login: 'Sign in',
     emailOrPhone: 'Email or phone',
     email: 'Email',

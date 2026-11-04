@@ -120,6 +120,11 @@ async function rotateRefresh(refreshToken: string, generation: number): Promise<
   const body = await readBody<{ accessToken: string; refreshToken: string }>(response)
   // Never let a response for an older login replace or clear a newer session.
   ensureRefreshCurrent(generation, refreshToken)
+  // The server's throttler rejects before rotation. Do not interpret its 429
+  // as a revoked credential or silently discard session-owned recovery state.
+  if (response.status === 429) {
+    throw new ApiError('RATE_LIMITED', 'Refresh rate limited', 429)
+  }
   if (!body || !response.ok || !body.success) {
     const code = body && !body.success ? body.error.code : 'AUTH_INVALID_CREDENTIALS'
     if (code === 'AUTH_REFRESH_REUSE') {

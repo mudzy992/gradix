@@ -1,11 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import type { ReactNode } from 'react'
-import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap'
 import { useLogoutSync } from '@/hooks/use-logout-sync'
 import { useSocket } from '@/hooks/use-socket'
 import { useAuthStore } from '@/stores/auth-store'
 import { AppShell } from '@/components/layout/app-shell'
-import { ScreenLoader } from '@/components/layout/screen-loader'
+import { BootGate } from '@/components/auth/boot-gate'
 import {
   LazyErpPage,
   LazyFleetMapPage,
@@ -51,16 +49,6 @@ function AuthedLayout() {
     return <ChangePasswordPage forced />
   }
   return <AppShell />
-}
-
-function BootGate({ children }: { children: ReactNode }) {
-  useAuthBootstrap()
-  const bootReady = useAuthStore((state) => state.ready)
-  if (!bootReady) {
-    // FE-02: umjesto „…“ — statusna regija koju čitač ekrana objavi (i spinner za vidljiv signal).
-    return <ScreenLoader className="min-h-svh" />
-  }
-  return children
 }
 
 export const appRoutes = [

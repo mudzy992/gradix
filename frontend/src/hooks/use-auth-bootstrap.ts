@@ -1,16 +1,31 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { i18n } from '@/i18n'
 import { ApiError } from '@/lib/api-types'
 import { getMe } from '@/lib/api'
 import { forceLogin, refreshSession } from '@/lib/api-client'
-import { readRefreshToken } from '@/lib/storage'
+import { getSessionGeneration, readRefreshToken } from '@/lib/storage'
 import { useAuthStore } from '@/stores/auth-store'
 
-export function useAuthBootstrap(): void {
+type RecoverableError = 'RATE_LIMITED' | 'NETWORK_ERROR'
+
+export function useAuthBootstrap() {
+  const [error, setError] = useState<RecoverableError | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  // After a successful rotation, retry a failed profile read without rotating again.
+  const refreshedGeneration = useRef<number | null>(null)
+  const user = useAuthStore((state) => state.user)
   const setReady = useAuthStore((state) => state.setReady)
   const setUser = useAuthStore((state) => state.setUser)
   useEffect(() => {
+    if (user) setError(null)
+  }, [user])
+  useEffect(() => {
     let cancelled = false
+    const recordRecoverableError = (caught: unknown) => {
+      if (!cancelled && !useAuthStore.getState().user && caught instanceof ApiError && (caught.code === 'RATE_LIMITED' || caught.code === 'NETWORK_ERROR')) {
+        setError(caught.code)
+      }
+    }
     const run = async (): Promise<void> => {
       const refresh = readRefreshToken()
       if (!refresh) {
@@ -19,29 +34,40 @@ export function useAuthBootstrap(): void {
         }
         return
       }
-      /**
-       * FE-15: `refreshSession()` odbija Promise kad mreža padne. Prije toga `void run()` je ostavljao
-       * **neuhvaćen `rejection`**, a `setReady(true)` se nikad nije izvršio — aplikacija je zauvijek
-       * stajala na „učitavanju“ bez ijedne poruke. Sada pad mreže = nema sesije, ali aplikacija radi.
-       */
-      const ok = await refreshSession().catch(() => false)
-      if (!ok) {
-        if (!cancelled) {
+      // A temporary failure is recoverable without throwing away the credential.
+      const hasCurrentAccess = refreshedGeneration.current === getSessionGeneration() && Boolean(useAuthStore.getState().accessToken)
+      if (!hasCurrentAccess) {
+        const refreshGeneration = getSessionGeneration()
+        const ok = await refreshSession().catch((caught: unknown) => {
+          recordRecoverableError(caught)
+          return false
+        })
+        if (cancelled) return
+        if (getSessionGeneration() !== refreshGeneration) {
           setReady(true)
+          return
         }
-        return
+        if (!ok) {
+          setReady(true)
+          return
+        }
+        refreshedGeneration.current = getSessionGeneration()
       }
+      const generation = getSessionGeneration()
       try {
         const me = await getMe()
-        if (cancelled) {
+        if (cancelled || getSessionGeneration() !== generation) {
           return
         }
         setUser(me.data)
         void i18n.changeLanguage(me.data.locale)
       } catch (error) {
-        // Samo neispravna sesija se odjavljuje; mrežni prekid ne smije izbrisati ispravan refresh token.
+        if (cancelled || getSessionGeneration() !== generation) return
+        // Only an invalid session is logged out. Transient failures offer retry.
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           forceLogin()
+        } else {
+          recordRecoverableError(error)
         }
       } finally {
         if (!cancelled) {
@@ -53,5 +79,12 @@ export function useAuthBootstrap(): void {
     return () => {
       cancelled = true
     }
-  }, [setReady, setUser])
+  }, [setReady, setUser, attempt])
+  const retry = useCallback(() => {
+    setError(null)
+    setReady(false)
+    setAttempt((value) => value + 1)
+  }, [setReady])
+  const continueWithoutRecovery = useCallback(() => setError(null), [])
+  return { error, retry, continueWithoutRecovery }
 }

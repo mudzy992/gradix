@@ -30,6 +30,10 @@ export const bs = {
     },
   },
   auth: {
+    recoveryTitle: 'Obnova sesije nije uspjela',
+    recoveryHint: 'Sačekajte prije ponovnog pokušaja ili nastavite bez obnove sesije.',
+    recoveryRetry: 'Ponovi obnovu',
+    recoveryContinue: 'Nastavi bez obnove',
     login: 'Prijava',
     emailOrPhone: 'Email ili telefon',
     email: 'Email',

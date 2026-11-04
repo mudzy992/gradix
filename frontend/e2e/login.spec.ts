@@ -18,6 +18,41 @@ test('seed admin can sign in', async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
 })
 
+test('refresh rate limit keeps the session and offers a deliberate retry', async ({ page }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  await page.goto('/login')
+  await page.locator('#identifier').fill(email!)
+  await page.locator('#password').fill(password!)
+  await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+  await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+  const original = await page.evaluate(() => sessionStorage.getItem('gradix:refresh'))
+  expect(original).not.toBeNull()
+  let attempts = 0
+  await page.route('**/api/auth/refresh', async (route) => {
+    attempts += 1
+    if (attempts === 1) {
+      await route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ success: false, error: { code: 'RATE_LIMITED', message: 'limited' } }) })
+    } else {
+      await route.continue()
+    }
+  })
+  try {
+    await page.reload()
+    await expect(page.getByRole('heading', { name: /obnova sesije nije uspjela|session recovery was unsuccessful/i })).toBeVisible()
+    await expect(page.getByRole('alert')).toBeVisible()
+    expect(await page.evaluate((token) => sessionStorage.getItem('gradix:refresh') === token, original)).toBe(true)
+    expect(attempts).toBe(1)
+    await page.getByRole('button', { name: /ponovi obnovu|retry recovery/i }).click()
+    await expect(page.getByRole('navigation').first()).toBeVisible()
+    expect(attempts).toBe(2)
+    expect(await page.evaluate((token) => Boolean(sessionStorage.getItem('gradix:refresh')) && sessionStorage.getItem('gradix:refresh') !== token, original)).toBe(true)
+  } finally {
+    await page.unroute('**/api/auth/refresh')
+  }
+})
+
 test('remembered refresh is serialized across tabs without adopting an unknown session', async ({ page, context }) => {
   const email = process.env.E2E_LOGIN_EMAIL
   const password = process.env.E2E_LOGIN_PASSWORD

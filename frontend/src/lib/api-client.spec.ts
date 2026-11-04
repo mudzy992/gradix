@@ -147,9 +147,7 @@ describe('api()', () => {
 
   it('ne-JSON odgovor na osvježavanje ne ostavlja sesiju „otvorenu“', async () => {
     writeRefreshToken('refresh-1', false)
-    fetchMock
-      .mockResolvedValueOnce(json({ success: false, error: { code: 'X', message: 'x' } }, 401))
-      .mockResolvedValueOnce(new Response('<html>Bad gateway</html>', { status: 502 }))
+    fetchMock.mockResolvedValueOnce(new Response('<html>Bad gateway</html>', { status: 502 }))
 
     await expect(refreshSession()).resolves.toBe(false)
     expect(readRefreshToken()).toBeNull()
@@ -193,6 +191,60 @@ describe('refreshSession() cache isolation', () => {
     await expect(refreshSession()).resolves.toBe(false)
     expect(queryClient.getQueryData(['project-document-pending', 'old'])).toBeUndefined()
     expect(useAuthStore.getState().user).toBeNull()
+  })
+
+  it.each([
+    ['JSON', json({ success: false, error: { code: 'RATE_LIMITED', message: 'x' } }, 429)],
+    ['non-JSON', new Response('rate limited', { status: 429 })],
+  ])('refresh 429 %s čuva token, korisnika i keš bez automatskog retryja', async (_label, response) => {
+    writeRefreshToken('refresh-1', false)
+    queryClient.setQueryData(['project-document-pending', 'active'], { fileName: 'plan.pdf' })
+    fetchMock.mockResolvedValueOnce(response)
+    await expect(refreshSession()).rejects.toMatchObject({ code: 'RATE_LIMITED', status: 429 })
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(readRefreshToken()).toBe('refresh-1')
+    expect(useAuthStore.getState().user?.id).toBe('u1')
+    expect(useAuthStore.getState().accessToken).toBe('token-1')
+    expect(queryClient.getQueryData(['project-document-pending', 'active'])).toEqual({ fileName: 'plan.pdf' })
+    queryClient.clear()
+  })
+
+  it.each(['api', 'blob'] as const)('401 → refresh 429 u %s vraća limit bez brisanja ili ponavljanja zahtjeva', async (kind) => {
+    writeRefreshToken('refresh-1', false)
+    queryClient.setQueryData(['project-document-pending', 'active'], { fileName: 'plan.pdf' })
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+    const result = kind === 'api' ? api('/api/projects') : apiBlob('/api/reports/export')
+    await expect(result).rejects.toMatchObject({ code: 'RATE_LIMITED', status: 429 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(readRefreshToken()).toBe('refresh-1')
+    expect(useAuthStore.getState().user?.id).toBe('u1')
+    expect(queryClient.getQueryData(['project-document-pending', 'active'])).toEqual({ fileName: 'plan.pdf' })
+    queryClient.clear()
+  })
+
+  it('istovremeni refresh pozivi dijele jedan 429 i čuvaju sesiju', async () => {
+    writeRefreshToken('refresh-1', false)
+    let resolve!: (value: Response) => void
+    fetchMock.mockReturnValueOnce(new Promise<Response>((done) => { resolve = done }))
+    const first = refreshSession().catch((error: unknown) => error)
+    const second = refreshSession().catch((error: unknown) => error)
+    resolve(new Response(null, { status: 429 }))
+    expect(await Promise.all([first, second])).toEqual([
+      expect.objectContaining({ code: 'RATE_LIMITED' }), expect.objectContaining({ code: 'RATE_LIMITED' }),
+    ])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(readRefreshToken()).toBe('refresh-1')
+  })
+
+  it('nakon 429 korisnik može pokušati refresh ponovo bez zaglavljene blokade', async () => {
+    writeRefreshToken('refresh-1', false)
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(ok({ accessToken: 'new-access', refreshToken: 'new-refresh' }))
+    await expect(refreshSession()).rejects.toMatchObject({ code: 'RATE_LIMITED' })
+    await expect(refreshSession()).resolves.toBe(true)
+    expect(readRefreshToken()).toBe('new-refresh')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('mrežni prekid tokom direktnog refresh-a ne briše korisnički keš', async () => {
@@ -245,7 +297,7 @@ describe('session and company changes during requests', () => {
     useAuthStore.setState({ accessToken: 'token-b', user: { ...me(), id: 'u2' } })
   }
 
-  it.each([200, 401])('old refresh result %i cannot overwrite or clear the new login', async (status) => {
+  it.each([200, 401, 429])('old refresh result %i cannot overwrite or clear the new login', async (status) => {
     writeRefreshToken('refresh-a', false)
     const pending = deferred()
     fetchMock.mockReturnValueOnce(pending.promise)
@@ -254,7 +306,7 @@ describe('session and company changes during requests', () => {
     queryClient.setQueryData(['new-user-cache'], 'preserved')
     pending.resolve(status === 200
       ? ok({ accessToken: 'stale-access', refreshToken: 'stale-refresh' })
-      : json({ success: false, error: { code: 'AUTH_REFRESH_REUSE', message: 'x' } }, 401))
+      : json({ success: false, error: { code: status === 429 ? 'RATE_LIMITED' : 'AUTH_REFRESH_REUSE', message: 'x' } }, status))
     expect(await oldRefresh).toMatchObject({ code: 'SESSION_CHANGED' })
     expect(readRefreshToken()).toBe('refresh-b')
     expect(useAuthStore.getState().accessToken).toBe('token-b')

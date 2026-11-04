@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '@/lib/api-types'
+import { ApiError, type MeUser } from '@/lib/api-types'
 import { i18n } from '@/i18n'
 import { useAuthBootstrap } from '@/hooks/use-auth-bootstrap'
 import { useAuthStore } from '@/stores/auth-store'
@@ -15,6 +15,7 @@ const refreshSession = vi.fn()
 const forceLogin = vi.fn()
 const getMe = vi.fn()
 const readRefreshToken = vi.fn()
+const getSessionGeneration = vi.fn()
 
 vi.mock('@/lib/api-client', () => ({
   refreshSession: () => refreshSession(),
@@ -27,9 +28,10 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/lib/storage', () => ({
   readRefreshToken: () => readRefreshToken(),
+  getSessionGeneration: () => getSessionGeneration(),
 }))
 
-const USER = {
+const USER: MeUser = {
   id: 'u1',
   firstName: 'Demo',
   lastName: 'Admin',
@@ -49,6 +51,7 @@ beforeEach(() => {
   forceLogin.mockReset()
   getMe.mockReset()
   readRefreshToken.mockReset().mockReturnValue('refresh-1')
+  getSessionGeneration.mockReset().mockReturnValue(1)
   useAuthStore.setState({ accessToken: null, user: null, ready: false })
 })
 
@@ -106,4 +109,88 @@ describe('useAuthBootstrap', () => {
     await waitFor(() => expect(useAuthStore.getState().ready).toBe(true))
     expect(getMe).not.toHaveBeenCalled()
   })
+  it.each(['RATE_LIMITED', 'NETWORK_ERROR'] as const)('oporavak %s nudi retry, ne briše token i zatim učita korisnika', async (code) => {
+    refreshSession.mockRejectedValueOnce(new ApiError(code, 'temporary', code === 'RATE_LIMITED' ? 429 : 0)).mockResolvedValueOnce(true)
+    getMe.mockResolvedValue({ data: USER })
+    const { result } = renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(result.current.error).toBe(code))
+    expect(useAuthStore.getState().ready).toBe(true)
+    expect(forceLogin).not.toHaveBeenCalled()
+    act(() => result.current.retry())
+    await waitFor(() => expect(useAuthStore.getState().user?.id).toBe('u1'))
+    expect(result.current.error).toBeNull()
+    expect(refreshSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('limit pri učitavanju profila također omogućava retry ili nastavak bez obnove', async () => {
+    refreshSession.mockResolvedValue(true)
+    getMe.mockRejectedValue(new ApiError('RATE_LIMITED', 'limit', 429))
+    const { result } = renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(result.current.error).toBe('RATE_LIMITED'))
+    expect(forceLogin).not.toHaveBeenCalled()
+    act(() => result.current.continueWithoutRecovery())
+    expect(result.current.error).toBeNull()
+    expect(useAuthStore.getState().ready).toBe(true)
+  })
+
+  it('zakašnjeli getMe ne smije odjaviti novu sesiju niti prikazati starog korisnika', async () => {
+    refreshSession.mockResolvedValue(true)
+    let reject!: (error: unknown) => void
+    getMe.mockReturnValue(new Promise((_resolve, fail) => { reject = fail }))
+    renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(getMe).toHaveBeenCalledOnce())
+    getSessionGeneration.mockReturnValue(2)
+    act(() => useAuthStore.setState({ user: { ...USER, id: 'new' } }))
+    await act(async () => reject(new ApiError('AUTH_INVALID_CREDENTIALS', 'old', 401)))
+    expect(forceLogin).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().user?.id).toBe('new')
+  })
+
+  it('nakon unmounta zakašnjeli refresh ne pokreće getMe', async () => {
+    let resolve!: (value: boolean) => void
+    refreshSession.mockReturnValue(new Promise((done) => { resolve = done }))
+    const { unmount } = renderHook(() => useAuthBootstrap())
+    unmount()
+    await act(async () => resolve(true))
+    expect(getMe).not.toHaveBeenCalled()
+  })
+
+  it('retry nakon privremene greške profila ne rotira već osvježeni token ponovo', async () => {
+    refreshSession.mockImplementation(async () => {
+      useAuthStore.setState({ accessToken: 'fresh' })
+      return true
+    })
+    getMe.mockRejectedValueOnce(new ApiError('NETWORK_ERROR', 'offline', 0)).mockResolvedValueOnce({ data: USER })
+    const { result } = renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(result.current.error).toBe('NETWORK_ERROR'))
+    act(() => result.current.retry())
+    await waitFor(() => expect(useAuthStore.getState().user?.id).toBe('u1'))
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(getMe).toHaveBeenCalledTimes(2)
+  })
+
+  it('zakašnjeli uspjeh getMe ne prepisuje novu sesiju', async () => {
+    refreshSession.mockResolvedValue(true)
+    let resolve!: (value: { data: MeUser }) => void
+    getMe.mockReturnValue(new Promise((done) => { resolve = done }))
+    renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(getMe).toHaveBeenCalledOnce())
+    getSessionGeneration.mockReturnValue(2)
+    act(() => useAuthStore.setState({ user: { ...USER, id: 'new' } }))
+    await act(async () => resolve({ data: USER }))
+    expect(useAuthStore.getState().user?.id).toBe('new')
+  })
+
+  it('nova sesija tokom refresh-a ne pokreće getMe starog bootstrapa', async () => {
+    let resolve!: (value: boolean) => void
+    refreshSession.mockReturnValue(new Promise((done) => { resolve = done }))
+    renderHook(() => useAuthBootstrap())
+    getSessionGeneration.mockReturnValue(2)
+    act(() => useAuthStore.setState({ user: { ...USER, id: 'new' } }))
+    await act(async () => resolve(true))
+    expect(getMe).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().user?.id).toBe('new')
+    expect(useAuthStore.getState().ready).toBe(true)
+  })
+
 })
