@@ -8,7 +8,28 @@ on:
     branches:
       - main
       - 'arena/0bc0e56e-gradix'
+  # CI-02: ručno pokretanje sa izborom posla, detaljnim logovima i oznakom artefakata.
+  # Bez inputa (`push`) ponašanje je identično starom: radi se `all`.
   workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Šta pokrenuti (all = svi poslovi)'
+        type: choice
+        default: all
+        options: [all, audit, backend, frontend, e2e, docker]
+      verbose:
+        description: 'Detaljni logovi (verzije, okruženje, debug izlaz)'
+        type: boolean
+        default: false
+      tag:
+        description: 'Oznaka za imena artefakata (npr. broj tiketa)'
+        type: string
+        required: false
+        default: ''
+
+# CI-02: ime runa nosi izbor, da se u listi odmah vidi šta je pokrenuto.
+run-name: >-
+  CI · ${{ inputs.suite || 'all' }}${{ inputs.tag && format(' · {0}', inputs.tag) || '' }}${{ inputs.verbose && ' · verbose' || '' }}
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +40,9 @@ permissions:
 
 env:
   NODE_VERSION: '22'
+  # CI-02: `push` nema inpute → prazno se tumači kao `all` (isto ponašanje kao prije).
+  CI_SUITE: ${{ inputs.suite || 'all' }}
+  CI_TAG: ${{ inputs.tag || '' }}
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -28,6 +52,7 @@ jobs:
   audit:
     name: Audit (guardrail + matrica pokrivenosti)
     timeout-minutes: 5
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'audit' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -49,6 +74,7 @@ jobs:
   backend:
     name: Backend (lint + unit + build)
     timeout-minutes: 15
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'backend' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -117,6 +143,8 @@ jobs:
   backend-e2e:
     name: Backend (e2e)
     timeout-minutes: 20
+    # Rucni izbor `e2e` pokrece i backend E2E (skupovi: e2e pokriva E2E poslove).
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'backend' || inputs.suite == 'e2e' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -207,6 +235,7 @@ jobs:
   frontend:
     name: Frontend (lint + typecheck + test + build)
     timeout-minutes: 15
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'frontend' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -221,6 +250,15 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci --no-audit --no-fund
+
+      - name: Dijagnostika (verbose)
+        if: ${{ inputs.verbose }}
+        run: |
+          node -v
+          npm -v
+          npx vitest --version || true
+          npx tsc --version || true
+          node -e "console.log(process.platform, process.arch, process.versions.node)"
 
       - name: Lint
         run: npm run lint
@@ -241,7 +279,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: frontend-coverage
+          name: frontend-coverage${{ inputs.tag && format('-{0}', inputs.tag) || '' }}
           path: frontend/coverage/lcov.info
           if-no-files-found: warn
           retention-days: 7
@@ -252,6 +290,7 @@ jobs:
   web-e2e:
     name: Web E2E (Playwright)
     timeout-minutes: 20
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'e2e' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -377,7 +416,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: playwright-artifacts
+          name: playwright-artifacts${{ inputs.tag && format('-{0}', inputs.tag) || '' }}
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -402,7 +441,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: playwright-report
+          name: playwright-report${{ inputs.tag && format('-{0}', inputs.tag) || '' }}
           path: frontend/playwright-report
           retention-days: 7
 
@@ -413,6 +452,7 @@ jobs:
   docker:
     name: Docker build (Coolify gate)
     timeout-minutes: 30
+    if: ${{ !inputs.suite || inputs.suite == 'all' || inputs.suite == 'docker' }}
     runs-on: ubuntu-latest
     services:
       postgres:

@@ -2,7 +2,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,97,pregledano,FE-11/D-050: throttle limiti na produkcijskim defaultima,2026-11-03
 .env.example,INF,compose,INF-01,105,pregledano,FE-11/D-050: dokumentovani throttle limiti sa defaultima,2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,148,nepregledano,,
-.github/workflows/ci.yml,CI,ci,CI-01,688,pregledano,FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu,2026-11-03
+.github/workflows/ci.yml,CI,ci,CI-01,728,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata",2026-11-04
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,73,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02

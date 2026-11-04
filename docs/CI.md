@@ -22,6 +22,41 @@ on:
 Nema `pull_request` trigera i nema šablona `arena/**`: grana koja nije aktivna ne troši CI minute.
 Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** commitu.
 
+### Ručno pokretanje — inputi (CI-02)
+
+`workflow_dispatch` prima tri inputa; **bez inputa (`push`) ponašanje je kao prije — `all`**.
+
+| Input | Tip | Default | Šta radi |
+|---|---|---|---|
+| `suite` | izbor: `all`, `audit`, `backend`, `frontend`, `e2e`, `docker` | `all` | pokreće **samo** odgovarajuće poslove (vidi mapu ispod) |
+| `verbose` | boolean | `false` | dodaje korak „Dijagnostika“ (verzije Node/npm/vitest/tsc, platforma) u `frontend`, i detaljne logove u E2E poslu |
+| `tag` | tekst | `''` | sufiks u imenima artefakata (`frontend-coverage-<tag>`, `playwright-report-<tag>`) i u imenu runa |
+
+Mapa `suite` → poslovi:
+
+| `suite` | `audit` | `backend` | `backend-e2e` | `frontend` | `web-e2e` | `docker` |
+|---|---|---|---|---|---|---|
+| `all` (default) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `audit` | ✅ | — | — | — | — | — |
+| `backend` | — | ✅ | ✅ | — | — | — |
+| `frontend` | — | — | — | ✅ | — | — |
+| `e2e` | — | — | ✅ | — | ✅ | — |
+| `docker` | — | — | — | — | — | ✅ |
+
+Primjeri:
+
+```bash
+# brzi guardrail (matrica, dokumentacija, tajne, compose) — ~10 s
+gh workflow run ci.yml -f suite=audit
+# samo web E2E, sa oznakom u imenima artefakata
+gh workflow run ci.yml -f suite=e2e -f tag=tiket-123
+# dijagnostika frontenda (verzije + detaljni logovi)
+gh workflow run ci.yml -f suite=frontend -f verbose=true
+```
+
+**Napomena:** `concurrency` grupa je `ci-<workflow>-<ref>` sa `cancel-in-progress: true`, pa ručno
+pokretanje **otkazuje** tekući push-run iste grane — puštaj ga kad prethodni run završi.
+
 ### Noćni backup/restore drill (INF-06)
 
 Workflow [`.github/workflows/backup-restore.yml`](../.github/workflows/backup-restore.yml) je
@@ -97,15 +132,15 @@ on:
     branches: [arena/0bc0e56e-gradix]   # SAMO aktivna grana
   workflow_dispatch:
     inputs:
-      suite:  { options: [all, backend, frontend, mobile-e2e], default: all }
+      suite:  { options: [all, audit, backend, frontend, e2e, docker], default: all }
       verbose:{ type: boolean, default: false }
-      tag:    { description: 'test tag/filter', required: false }
+      tag:    { type: string, description: 'oznaka u imenima artefakata', required: false }
 ```
 
 | Zahtjev | Kako | Segment |
 |---|---|---|
 | Bez `pull_request` okidača | ✅ uklonjen (CI-01), filter samo `main` + aktivna grana | CI-01 |
-| Ručni run sa izborom suite-a | `workflow_dispatch` inputi + `if:` na jobovima | CI-02 |
+| Ručni run sa izborom suite-a | ✅ `workflow_dispatch` inputi (`suite`/`verbose`/`tag`) + `if:` na svih 6 poslova | CI-02 |
 | Akcije pinovane po SHA | `actions/checkout@<sha> # v4.x` (Dependabot za bump) | CI-03 |
 | Static gate | lint, format check, `tsc`, secret scan (`gitleaks`), `npm audit --omit=dev`, license check | CI-04 |
 | Coverage prag | `jest --coverage` + `coverageThreshold`; pad ispod praga = crven | CI-04 |
@@ -159,7 +194,7 @@ on:
 | # | Dug | Segment |
 |---|---|---|
 | C1 | ~~`pull_request` trigger~~ — ✅ riješeno (CI-01) | CI-01 |
-| C2 | Nema `workflow_dispatch` inputa | CI-02 |
+| C2 | ~~Nema `workflow_dispatch` inputa~~ — ✅ riješeno (CI-02: `suite`/`verbose`/`tag`, `if:` na poslovima, `run-name`) | CI-02 |
 | C3 | Akcije su na tagovima (`@v4`), ne na SHA | CI-03 |
 | C4 | Nema secret skena, `npm audit` ni license checka | CI-04 |
 | C5 | Nema coverage praga ni audit gate-a | CI-04/CI-05 |
