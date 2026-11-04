@@ -7,6 +7,11 @@ export const publicBs = {
     langBs: 'BS',
     langEn: 'EN',
     langLabel: 'Jezik',
+    loadError: 'Stranica se trenutno ne može učitati.',
+    loadErrorHint: 'Provjerite vezu i pokušajte ponovo.',
+    loadErrorBusy: 'Previše zahtjeva u kratkom roku.',
+    loadErrorBusyHint: 'Sačekajte koji trenutak pa pokušajte ponovo.',
+    projectsError: 'Projekti se nisu učitali — kontakt podaci su tačni.',
     emptyProjects: 'Nema javnih projekata.',
     address: 'Adresa',
     phone: 'Telefon',
@@ -19,6 +24,7 @@ export const publicBs = {
   settingsPublic: {
     logo: 'Javni logo',
     logoHint: 'Prikazuje se na /p/:slug, stream po id',
+    logoSet: 'Logo je postavljen.',
     openSite: 'Otvori javni sajt',
   },
 }

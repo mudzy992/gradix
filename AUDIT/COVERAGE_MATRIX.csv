@@ -350,12 +350,13 @@ frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,nepregledano,,
 frontend/e2e/flows.spec.ts,FE,e2e,FE-06,220,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
+frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
 frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: radnik vidi HSE prečicu (prije je test tvrdio suprotno),2026-11-03
 frontend/index.html,FE,config,FE-02,20,pregledano,"FE-02: dodat theme-color (#0f5132, D-040) i meta description; lang=""bs"" (AppShell ga mijenja po jeziku)",2026-11-03
 frontend/nginx/default.conf.template,INF,frontend-image,INF-03,91,pregledano,"INF-03: ponovljeni sigurnosni headeri u /assets i =/index.html (nginx add_header poništava naslijeđene), CSP, Permissions-Policy, server_tokens off; proxy /api + /socket.io + SPA fallback provjereni",2026-11-02
 frontend/package.json,FE,config,FE-02,60,pregledano,dodati lint:check (oxlint) i typecheck (tsc -b) (STD-01),2026-11-02
-frontend/playwright.config.ts,FE,e2e,FE-06,34,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
+frontend/playwright.config.ts,FE,e2e,FE-06,41,pregledano,FE-06: retries 1 u CI-ju + trace retain-on-failure + screenshot on-failure + html reporter (prije se trace nije snimao uz retries 0),2026-11-03
 frontend/src/App.tsx,FE,app-shell,FE-02,17,pregledano,FE-02: QueryClientProvider + createBrowserRouter(appRoutes) + Toaster; router se pravi jednom (van komponente),2026-11-03
 frontend/src/components/auth/auth-card.tsx,FE,ops-ui,FE-08,36,nepregledano,,
 frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,nepregledano,,
@@ -383,7 +384,8 @@ frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,100,nepregledano,,
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,89,nepregledano,,
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
-frontend/src/components/settings/public-brand-fields.tsx,FE,admin-ui,FE-13,60,pregledano,FE-13: region + labela za fajl (pun pregled je FE-14),2026-11-04
+frontend/src/components/settings/public-brand-fields.spec.tsx,TEST,fe-unit,FE-05,90,pregledano,"FE-14: 3 testa — upload sa vrstom LOGO (polje onemogućeno dok GET traje), postavljen logo + link na /p/:slug, kartica skrivena kad podaci firme padnu",2026-11-04
+frontend/src/components/settings/public-brand-fields.tsx,FE,admin-ui,FE-13,87,pregledano,"FE-14: kartica se skriva kad podaci firme padnu (bez duplog alerta), polje onemogućeno dok upload traje, „Logo je postavljen.“ + link na /p/:slug",2026-11-04
 frontend/src/components/settings/registry-fields.tsx,FE,admin-ui,FE-13,189,pregledano,"FE-13: `Field` labele + prevedeni opisi po ključu (D-052), brojevi kao tekst i validacija (prazno se ne upisuje kao 0), skeleton/greška/prazno, „Sačuvaj“ samo uz izmjene",2026-11-04
 frontend/src/components/ui/alert-dialog.tsx,FE,ui,FE-16,197,nepregledano,,
 frontend/src/components/ui/avatar.tsx,FE,ui,FE-16,108,nepregledano,,
@@ -410,7 +412,8 @@ frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,180,pregledano,"F
 frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,49,nepregledano,,
 frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,22,nepregledano,,
 frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,nepregledano,,
-frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
+frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano,"FE-14: 5 testova — ispravne vrijednosti, nevalidna zona → fallback (bez RangeError), prazno/bez dd-MM → default, ne-string vrijednosti, bez slug-a nema poziva",2026-11-04
+frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
 frontend/src/i18n/bs.ts,FE,shared,FE-15,401,pregledano,FE-11: status.tender/status.service (bs),2026-11-03
@@ -425,8 +428,8 @@ frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,"FE-12: „Odobren
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,"FE-12: „Odobreno (h)“, broj, period, export ime (en)",2026-11-04
 frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,"FE-11: tenders.{count,columnEmpty,loadError,markWon,required}, services.{count,empty,emptyHint,loadError,list,cost,selectMachine}, reports.{caption,empty,loadError,from,to,columns.*}; ispravljen „Povučen“",2026-11-03
 frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-11: isti ključevi kao polish-bs (en),2026-11-03
-frontend/src/i18n/public-bs.ts,FE,shared,FE-15,25,nepregledano,,
-frontend/src/i18n/public-en.ts,FE,shared,FE-15,25,nepregledano,,
+frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,nepregledano,,
+frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,nepregledano,,
 frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.ts,FE,shared,FE-15,156,nepregledano,,
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
@@ -434,7 +437,8 @@ frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,nepregledano,,
 frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,nepregledano,,
 frontend/src/lib/api-payroll.ts,FE,shared,FE-15,62,pregledano,"FE-12: ugovor potvrđen kroz UI (PayrollSession/PayrollSummary, export blob)",2026-11-04
 frontend/src/lib/api-polish.ts,FE,shared,FE-15,111,nepregledano,,
-frontend/src/lib/api-public.ts,FE,shared,FE-15,52,nepregledano,,
+frontend/src/lib/api-public.spec.ts,TEST,fe-unit,FE-05,78,pregledano,"FE-14: 6 testova — uspjeh sa meta, 404, ne-JSON 502, throttlerov 429, 2xx bez `success`, `publicAssetUrl`",2026-11-04
+frontend/src/lib/api-public.ts,FE,shared,FE-15,75,pregledano,FE-14: ne-JSON tijelo (proxy 502) i 429 bez envelope-a daju ApiError sa statusom (prije SyntaxError / TypeError na body.error),2026-11-04
 frontend/src/lib/api-types.ts,FE,shared,FE-15,103,nepregledano,,
 frontend/src/lib/api.ts,FE,shared,FE-15,115,nepregledano,,
 frontend/src/lib/constants.ts,FE,shared,FE-15,37,nepregledano,,
@@ -482,7 +486,8 @@ frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,260,pregledano,"FE-12: 
 frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,128,pregledano,"FE-08: skeleton, greška + retry, preveden status sa tonom, pregled kao dt/dd parovi (WCAG 1.3.1)",2026-11-03
 frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,nepregledano,,
 frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage",2026-11-03
-frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,136,nepregledano,,
+frontend/src/pages/public-site-page.spec.tsx,TEST,fe-unit,FE-05,189,pregledano,"FE-14: 11 testova — skeleton/aria-busy, 404≠500+retry, 429 poruka, SEO meta + restore, <html lang>, preveden status, dt/dd, tel:/mailto:, izolovan pad projekata, prazno stanje",2026-11-04
+frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,337,pregledano,"FE-14: skeleton/aria-busy, 404≠greška, retry, 429 poruka, SEO meta + canonical + og, <html lang>, preveden status (projectStatus), dl/dt/dd, lazy slike, tel:/mailto:, izolovan pad projekata",2026-11-04
 frontend/src/pages/reports-page.spec.tsx,TEST,fe-unit,FE-05,132,pregledano,"FE-11: prevedene kolone + nepoznata kolona sirova, caption, prazno, skeleton, greška + retry, period u upitu, export i onemogućen bez redova",2026-11-03
 frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,160,pregledano,"FE-11: prevedena zaglavlja kolona sa defaultValue (nepoznata kolona ostaje sirova), caption sa brojem redova, period Od/Do, skeleton/greška + retry/prazno, sigurniji export (link u DOM, odgođeni revokeObjectURL)",2026-11-03
 frontend/src/pages/reset-page.tsx,FE,auth-pages,FE-07,28,pregledano,FE-07: h1 + objašnjenje šta korisnik sada može (admin reset u /users); nema forme jer BE vraća 501 (pošteno stanje),2026-11-03
@@ -560,7 +565,7 @@ scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,275,nepregledano,,
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,157,nepregledano,,
-scripts/audit/segments.json,STD,audit-tools,STD-01,438,nepregledano,,
+scripts/audit/segments.json,STD,audit-tools,STD-01,439,nepregledano,,
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
 scripts/ops/restore.sh,INF,ops-scripts,INF-06,105,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03

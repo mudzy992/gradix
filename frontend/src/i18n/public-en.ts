@@ -7,6 +7,11 @@ export const publicEn = {
     langBs: 'BS',
     langEn: 'EN',
     langLabel: 'Language',
+    loadError: 'This page cannot be loaded right now.',
+    loadErrorHint: 'Check your connection and try again.',
+    loadErrorBusy: 'Too many requests in a short time.',
+    loadErrorBusyHint: 'Wait a moment, then try again.',
+    projectsError: 'Projects could not be loaded — contact details are correct.',
     emptyProjects: 'No public projects.',
     address: 'Address',
     phone: 'Phone',
@@ -19,6 +24,7 @@ export const publicEn = {
   settingsPublic: {
     logo: 'Public logo',
     logoHint: 'Shown on /p/:slug, streamed by id',
+    logoSet: 'Logo is set.',
     openSite: 'Open public site',
   },
 }

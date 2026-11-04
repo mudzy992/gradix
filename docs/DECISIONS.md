@@ -749,6 +749,44 @@ minute; flake u E2E troši mnogo više vremena (dijagnostika bez logova je skupa
 potrebu; (b) `retries: 2` — maskira pravi pad i ne rješava sudar; (c) izbaciti timer iz worker toka —
 to je jedini test koji pokriva start→pauza→stop na stvarnom backendu.
 
+### D-054 — Javni sajt (`/p/:slug`): stanja, SEO meta i otpornost javnog API-ja
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+`/p/:slug` je jedini ekran koji otvara **neprijavljen** posjetilac, a ponašao se kao interni ekran:
+dok podaci stižu bio je prazan bijeli ekran; **svaka** greška (500, mreža, 429) izgledala je kao
+„stranica nije pronađena“ i nije bilo ponovnog pokušaja; `<title>`/`description` su ostajali
+aplikacijski (dijeljeni link se zvao „Gradix“), `<html lang>` je bio zakucan na `bs`, a pad liste
+projekata je sklanjao i firmu i kontakt. Uz to `api-public.ts` nije razlikovao HTML odgovor proxy-ja
+od 404 (`SyntaxError`) ni throttlerov 429 (`body.error` ne postoji), a `useDisplayPrefs` je sirovu
+postavku `app.timezone` prosljeđivao u `Intl.DateTimeFormat` — nevalidna vrijednost rušila je zvono
+obavještenja i dnevnik na svakom ekranu (`RangeError`).
+
+**Odluka:**
+
+1. **Četiri stanja, ne dva.** Stranica ima `loading` (skeleton + `aria-busy` + `sr-only` poruka),
+   `ready`, `missing` (samo **404**) i `error` (sve ostalo: `role="alert"` + „Pokušaj ponovo“).
+   429 dobija svoju poruku („sačekajte“) jer ponovni klik odmah ne pomaže.
+2. **Firma i projekti se učitavaju odvojeno.** Pad liste projekata prikazuje firmu, kontakt i poruku
+   uz prazno stanje — nikad ne sklanja ono što posjetilac traži.
+3. **SEO je dio ekrana, ne `index.html`-a.** `title`, `description`, `og:title/description/type/image`
+   i `canonical` se postavljaju iz podataka firme i **vraćaju na unmount** (SPA navigacija nazad u
+   aplikaciju ne smije zadržati naslov javnog sajta). `<html lang>` prati izabrani jezik ekrana.
+4. **Jezik se određuje iz aplikacije, pa iz browsera** (`i18n.resolvedLanguage` → `navigator.language`)
+   — posjetilac koji je u aplikaciji izabrao bosanski ne dobija engleski javni sajt.
+5. **Javni API klijent uvijek baca `ApiError`.** Ne-JSON tijelo (proxy 502/504) i 429 bez envelope-a
+   dobijaju kod iz statusa (`SERVER_ERROR`, `TOO_MANY_REQUESTS`), pa stranica može prikazati pravu
+   poruku umjesto da `fetch` sloj puca.
+6. **Vrijednosti iz postavki se validiraju prije upotrebe.** Vremenska zona prolazi kroz `Intl` uz
+   fallback `Europe/Sarajevo`; format bez `dd`/`MM` tokena pada na `dd.MM.yyyy`. Javni sajt pri tome
+   poštuje whitelist iz `PublicCompanyDto` — ništa se ne prikazuje „zato što je u bazi“.
+7. **Kontakt je klikabilan** (`tel:`, `mailto:` samo kad `public.contact` liči na e-mail), a slike su
+   `loading="lazy"` sa fiksnim dimenzijama.
+
+**Odbačeno:** (a) odbrojavanje `Retry-After`-a — throttle je kratak; (b) `mailto:` za svaki
+`public.contact` — polje je slobodan tekst; (c) prikaz greške i u kartici logotipa u postavkama pored
+kartice „Firma“ — dvostruki `role="alert"` za istu stvar; (d) klijentski `fetch` sa `Authorization`-om
+za javni asset — `/api/public/assets/:id` je namjerno bez prijave.
+
 ---
 
 ## Zamijenjene / povučene odluke

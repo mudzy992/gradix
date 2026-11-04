@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **43/59 segmenata `done`** (zadnji: FE-13).
+kratak izvještaj poslije svakog. Trenutno: **44/59 segmenata `done`** (zadnji: FE-14).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-14` — javni sajt: stanja umjesto bijelog ekrana, SEO meta + `<html lang>`, otporni javni API i validne postavke prikaza (D-054) — `done` · prije: `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41792792936](https://github.com/mudzy992/gradix/actions/runs/41792792936) — **6/6** (`feat(fe): FE-13` + D-053, Web E2E 28 testova) · prije: ✅ [41789352928](https://github.com/mudzy992/gradix/actions/runs/41789352928) — **6/6** (`docs(audit): FE-12 …`) · prije: ✅ [41789093535](https://github.com/mudzy992/gradix/actions/runs/41789093535) — **6/6** (`feat(fe): FE-12`, Web E2E 26 testova) · prije: ✅ [41783115547](https://github.com/mudzy992/gradix/actions/runs/41783115547) — **6/6** (`docs(audit): FE-11 …`) · prije: ✅ [41782885474](https://github.com/mudzy992/gradix/actions/runs/41782885474) — **6/6** (`feat(fe): FE-11` + D-050, Web E2E 24 testa) · prije: ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -790,10 +790,34 @@ kratak izvještaj poslije svakog. Trenutno: **43/59 segmenata `done`** (zadnji: 
 - **Potvrđeno** runom **41782885474**: Web E2E zelen sa podignutim limitima → uzrok je bio throttle,
   ne kod. Zeleni run je i backend (lint/unit/build) i E2E posao.
 
+### 2026-11-04 — FE-14 (javni sajt) → segment `done`
+- **Nalaz (visoko):** `/p/:slug` je jedini ekran bez prijave, a ponašao se kao interni: dok su podaci
+  stizali bio je **prazan bijeli ekran**, svaka greška (500/429/mreža) izgledala je kao „stranica nije
+  pronađena“, **nije bilo ponovnog pokušaja**, a pad liste projekata sklanjao je i firmu i kontakt.
+  `<title>`/`description` su ostajali aplikacijski (dijeljeni link se zvao „Gradix“), `<html lang>` je
+  bio zakucan na `bs` iako ekran ima BS/EN prebacivač, status projekta je bio **sirov enum** kad nema
+  lokacije, slike nisu bile `lazy`, `<dl>` nije imao `dt`, a telefon/e-mail su bili mrtav tekst.
+- **Nalaz (visoko, `lib/api-public.ts`):** `response.json()` bez zaštite — HTML odgovor proxy-ja
+  (502/504) bacao je `SyntaxError`, a throttlerov 429 nije imao `error` polje (`body.error.code` na
+  `undefined`); stranica zato nije mogla razlikovati „nema firme“ od „server je pao“.
+- **Nalaz (visoko, `use-public-settings.ts`):** sirova postavka `app.timezone` išla je pravo u
+  `Intl.DateTimeFormat` → nevalidna vrijednost (`GMT+1`, prazan string) rušila je **zvono obavještenja
+  i dnevnik na svakom ekranu** (`RangeError`); format bez `dd`/`MM` tokena tiho je prikazivao isti dan.
+- **Riješeno:** četiri stanja (`loading` sa skeletonom i `aria-busy`, `ready`, `missing` samo za 404,
+  `error` sa `role="alert"` + retry); 429 poruka „sačekajte“; firma i projekti odvojeno; `projectStatus`
+  + prijevod; `dl`/`dt`/`dd`; `lazy`/`async` slike sa dimenzijama; `tel:`/`mailto:`; SEO meta
+  (`title`, `description`, `og:title/description/type/image`, `canonical`) uz **vraćanje na unmount**;
+  `<html lang>` sinhronizovan; jezik iz aplikacije pa iz browsera; `ApiError` za ne-JSON i 429;
+  validacija vremenske zone/formata sa fallbackom; kartica logotipa skrivena kad podaci firme padnu,
+  upload sa stanjem i potvrdom; **3 nova E2E testa** za javni sajt (`guest` projekat).
+- **Testovi:** 25 novih unit (ukupno **232** u 30 fajlova), 3 nova E2E (lista **31**); linije
+  **91,62 %**, grane 91,28 %, funkcije 87,11 %; `tsc -b` i `oxlint` bez grešaka; `npm run check:all`
+  15/0. **D-054.**
+
 ## Šta je sljedeći korak
 
-1. **FE-12 — Payroll i ERP**: `payroll-page`, `erp-page`, `erp-*-tab` — tabele i odobravanje, prava
-   (`payroll-access.ts`), stanja; zatim **FE-13** (administracija) do **FE-14**, pa **MOB-01…MOB-07**.
+1. **FE-15 — i18n, store, hookovi, helperi** (`api-public.ts` i `use-public-settings.ts` su već
+   pregledani u FE-14), zatim **FE-16** (UI primitive) i **MOB-01…MOB-07**.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija

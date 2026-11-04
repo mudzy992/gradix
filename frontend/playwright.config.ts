@@ -24,7 +24,14 @@ export default defineConfig({
   projects: [
     {
       name: 'guest',
-      testMatch: [/login\.spec\.ts/, /a11y\.spec\.ts/, /guards\.spec\.ts/, /auth-pages\.spec\.ts/],
+      testMatch: [
+        /login\.spec\.ts/,
+        /a11y\.spec\.ts/,
+        /guards\.spec\.ts/,
+        /auth-pages\.spec\.ts/,
+        // FE-14: javni sajt (`/p/:slug`) je jedini ekran bez prijave — ide u `guest` projekat.
+        /public-site\.spec\.ts/,
+      ],
       use: { ...devices['Desktop Chrome'] },
     },
     { name: 'admin', testMatch: /flows\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
