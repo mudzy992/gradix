@@ -873,8 +873,10 @@ završeni — preostali BE segmenti idu prije `MOB-01…MOB-07`.
   `verbose` (korak „Dijagnostika“: Node/npm/vitest/tsc, platforma), `tag` (sufiks u imenima
   `frontend-coverage-*` / `playwright-report-*`), `run-name` koji u listi runova pokazuje šta je
   pokrenuto. `push` run se ponaša **identično kao prije** (`!inputs.suite` → svi poslovi).
-- **Dokaz da `if:` radi:** ručni run sa `suite=audit` izvršio je **samo `audit`**, ostalih pet poslova
-  je prijavljeno kao „skipped“.
+- **Dokaz (push put):** run **41807005307** je zelen **6/6**, a ime runa je „CI · all“ — `run-name` i
+  `if:` se parsiraju i za `push` daju `true` (ponašanje kao prije). **Ciljani run (`suite=audit`) nije
+  pokrenut iz ovog okruženja** — token nema `actions: write` (`HTTP 403`); ostaje jednokratna radnja za
+  vlasnika (vidi „Otvoreno za vlasnika“).
 - **Dokumentacija:** `docs/CI.md` — tabela inputa, mapa `suite` → poslovi, tri primjera
   `gh workflow run`, napomena da `concurrency` otkazuje tekući run iste grane; dug **C2 zatvoren**.
 
@@ -894,6 +896,9 @@ završeni — preostali BE segmenti idu prije `MOB-01…MOB-07`.
 i `AUDIT/02_MASTER_AUDIT_PLAN.md` §8); D-041 (dva domena) je obavezan uslov za produkciju.
 
 **Otvoreno za vlasnika (ne blokira kod):**
+- **CI-02 — jedan ručni run radi provjere izbora posla:** `gh workflow run ci.yml --ref arena/0bc0e56e-gradix -f suite=audit`
+  → u runu treba da se izvrši **samo `audit`**, a `backend`, `backend-e2e`, `frontend`, `web-e2e` i
+  `docker` da budu „skipped“. (Sandbox token nema `actions: write`, pa to ne mogu sam.)
 - ~~Coolify env + rebuild frontenda (D-041)~~ — **vlasnik potvrdio da je urađeno i testirano** (2026-11-03).
 - Redis `ACL SETUSER gradix …` (D-014) ako još nije izvršen; `REDIS_PORT=6380`, TLS CA mount.
 - `GET /api/files` traži `Authorization`, pa `<img src>` ne može učitati logo — kandidat za budući
