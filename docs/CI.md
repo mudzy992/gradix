@@ -47,12 +47,14 @@ Primjeri:
 
 ```bash
 # brzi guardrail (matrica, dokumentacija, tajne, compose) — ~10 s
-gh workflow run ci.yml -f suite=audit
+gh workflow run ci.yml --ref arena/0bc0e56e-gradix -f suite=audit
 # backend i web E2E, sa oznakom u imenima artefakata
-gh workflow run ci.yml -f suite=e2e -f tag=tiket-123
+gh workflow run ci.yml --ref arena/0bc0e56e-gradix -f suite=e2e -f tag=tiket-123
 # dijagnostika frontenda (verzije + detaljni logovi)
-gh workflow run ci.yml -f suite=frontend -f verbose=true
+gh workflow run ci.yml --ref arena/0bc0e56e-gradix -f suite=frontend -f verbose=true
 ```
+
+**Dokaz izbora:** run [41826584564](https://github.com/mudzy992/gradix/actions/runs/41826584564) je ručno pokrenut na `main` sa `suite=audit`: audit je uspješan, pet ostalih poslova preskočeno. Aktivna grana ima iste uslove izbora; u odnosu na testirani commit `bfa7e97` audit korak ima dodatne regresijske testove. Ostale `suite` opcije nisu pojedinačno potvrđene ručnim runom.
 
 **Napomena:** `concurrency` grupa je `ci-<workflow>-<ref>` sa `cancel-in-progress: true`, pa ručno
 pokretanje **otkazuje** tekući push-run iste grane — puštaj ga kad prethodni run završi.

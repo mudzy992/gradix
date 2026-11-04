@@ -27,7 +27,7 @@
       "id": "CI-02",
       "layer": "CI",
       "title": "workflow_dispatch inputi (suite/verbose/tag)",
-      "status": "in-progress",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Svi CI koraci su u jednom .github/workflows/ci.yml (matrica ga vodi pod CI-01); ovaj segment mijenja samo dispatch inpute u tom fajlu."
     },
