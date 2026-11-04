@@ -139,13 +139,28 @@ if (ci === null) {
 
   const body = ci.slice(ci.search(/^jobs:/m));
   const jobNames = [...body.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
-  if (jobNames.length < 6) fail(`ci.yml: pronađeno samo ${jobNames.length} poslova (očekivano ≥ 6)`);
+  const jobSuites = {
+    audit: ['audit'],
+    backend: ['backend'],
+    'backend-e2e': ['backend', 'e2e'],
+    frontend: ['frontend'],
+    'web-e2e': ['e2e'],
+    docker: ['docker'],
+  };
+  const expectedJobs = Object.keys(jobSuites);
+  if (jobNames.length !== expectedJobs.length || new Set(jobNames).size !== expectedJobs.length || expectedJobs.some((name) => !jobNames.includes(name))) {
+    fail('ci.yml: lista poslova ne odgovara dokumentovanoj suite matrici');
+  }
   const jobBlocks = body.split(/^ {2}(?=[a-z][\w-]*:$)/m).slice(1);
   jobNames.forEach((name, i) => {
     const block = jobBlocks[i] ?? '';
-    if (!/^\s{4}timeout-minutes:\s*\d+/m.test(block)) fail(`ci.yml: job \`${name}\` nema \`timeout-minutes\` (CI-03)`);
-    if (!/^\s{4}if:\s*\$\{\{\s*!inputs\.suite/m.test(block)) {
-      fail(`ci.yml: job \`${name}\` nema \`if:\` koji poštuje \`inputs.suite\` (CI-02)`);
+    if (!/^ {4}timeout-minutes:\s*[1-9]\d*\s*$/m.test(block)) fail(`ci.yml: job \`${name}\` nema pozitivan \`timeout-minutes\` (CI-03)`);
+    const suites = jobSuites[name];
+    if (!suites) return;
+    const conditions = [...block.matchAll(/^ {4}if:\s*([^\n]+)$/gm)];
+    const expected = `\${{ !inputs.suite || inputs.suite == 'all'${suites.map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}`;
+    if (conditions.length !== 1 || conditions[0][1].replace(/\s+/g, '') !== expected.replace(/\s+/g, '')) {
+      fail(`ci.yml: job \`${name}\` nema tačnu suite selekciju (CI-02)`);
     }
   });
   if (verbose) console.log(`Jobovi: ${jobNames.join(', ')}`);

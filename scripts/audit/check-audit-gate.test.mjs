@@ -9,7 +9,8 @@ import { spawnSync } from 'node:child_process';
 
 const source = path.dirname(fileURLToPath(import.meta.url));
 const sha = 'a'.repeat(40);
-const jobNames = ['audit', 'backend', 'backend-e2e', 'frontend', 'web-e2e', 'docker'];
+const jobSuites = { audit: ['audit'], backend: ['backend'], 'backend-e2e': ['backend', 'e2e'], frontend: ['frontend'], 'web-e2e': ['e2e'], docker: ['docker'] };
+const jobNames = Object.keys(jobSuites);
 function fixture(t) {
   const root = mkdtempSync(path.join(tmpdir(), 'gradix-strict-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -23,7 +24,7 @@ function fixture(t) {
   write('AUDIT/segments/STD-01.md', 'report\n');
   write('docs/CI.md', jobNames.map((name) => `\`${name}\``).join(' '));
   const trigger = "on:\n  push:\n    branches:\n      - main\n      - 'arena/work'\n  workflow_dispatch:\n";
-  const jobs = 'jobs:\n' + jobNames.map((name) => `  ${name}:\n    if: \${{ !inputs.suite || inputs.suite == 'all' }}\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@${sha}\n`).join('');
+  const jobs = 'jobs:\n' + jobNames.map((name) => `  ${name}:\n    if: \${{ !inputs.suite || inputs.suite == 'all'${jobSuites[name].map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@${sha}\n`).join('');
   write('.github/workflows/ci.yml', trigger + jobs);
   const run = () => spawnSync(process.execPath, [path.join(root, 'scripts/audit/check-audit-gate.mjs')], { cwd: root, encoding: 'utf8' });
   return { write, run, trigger, jobs };
@@ -80,6 +81,28 @@ test('job bez timeouta ili nepinnovana akcija padaju', (t) => {
   f.write('.github/workflows/ci.yml', f.trigger + f.jobs.replace('    timeout-minutes: 5\n', '').replace(sha, 'v4'));
   const result = f.run();
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /nema `timeout-minutes`/);
+  assert.match(result.stdout, /nema pozitivan `timeout-minutes`/);
   assert.match(result.stdout, /akcija nije pinovana/);
+});
+
+
+test('pogrešan suite, bezuslovni OR i nulti timeout ne prolaze', (t) => {
+  const f = fixture(t);
+  for (const jobs of [
+    f.jobs.replace("inputs.suite == 'audit'", "inputs.suite == 'frontend'"),
+    f.jobs.replace("inputs.suite == 'audit'", "inputs.suite == 'audit' || true"),
+    f.jobs.replace('timeout-minutes: 5', 'timeout-minutes: 0'),
+  ]) {
+    f.write('.github/workflows/ci.yml', f.trigger + jobs);
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+  }
+});
+
+test('nepoznat ili nedostajući posao zahtijeva ažuriranje matrice', (t) => {
+  const f = fixture(t);
+  f.write('.github/workflows/ci.yml', f.trigger + f.jobs.replace('  docker:', '  unlisted:'));
+  const result = f.run();
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /lista poslova ne odgovara/);
 });
