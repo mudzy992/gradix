@@ -95,6 +95,16 @@ describe('CompanySwitcher', () => {
     expect(getMe).toHaveBeenCalled()
   })
 
+  it('revizija raste samo kad se izbor zaista promijeni', () => {
+    useCompanyStore.setState({ selectedId: 'c1' })
+    const initial = useCompanyStore.getState().revision
+    useCompanyStore.getState().setSelectedId('c1')
+    expect(useCompanyStore.getState().revision).toBe(initial)
+    useCompanyStore.getState().setSelectedId('c2')
+    useCompanyStore.getState().setSelectedId('c1')
+    expect(useCompanyStore.getState().revision).toBe(initial + 2)
+  })
+
   it('pad liste firmi je vidljiv i blokira izbor', async () => {
     signIn(['PLATFORM_ADMIN'])
     listCompanies.mockRejectedValue(new Error('mreža'))

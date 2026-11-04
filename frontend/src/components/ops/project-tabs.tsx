@@ -43,9 +43,15 @@ function documentScope(projectId: string, user: MeUser | null, selectedCompany: 
   return JSON.stringify([getSessionGeneration(), user?.id ?? null, company, projectId])
 }
 
-function ensureDocumentScope(projectId: string, expected: string): void {
+function documentCompanyRevision(): number | null {
+  return useAuthStore.getState().user?.roles?.includes('PLATFORM_ADMIN') ? useCompanyStore.getState().revision : null
+}
+
+function ensureDocumentScope(projectId: string, expected: string, revision: number | null): void {
   const current = documentScope(projectId, useAuthStore.getState().user, useCompanyStore.getState().selectedId)
-  if (current !== expected) throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
+  if (current !== expected || documentCompanyRevision() !== revision) {
+    throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
+  }
 }
 
 const STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const
@@ -162,8 +168,8 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     onError: (error) => toast.error(errorMessage(error)),
   })
   const documentUpload = useMutation({
-    mutationFn: async (input: { projectId: string; scope: string; file: File } | { projectId: string; scope: string; pending: PendingDocument }) => {
-      ensureDocumentScope(input.projectId, input.scope)
+    mutationFn: async (input: { projectId: string; scope: string; revision: number | null; file: File } | { projectId: string; scope: string; revision: number | null; pending: PendingDocument }) => {
+      ensureDocumentScope(input.projectId, input.scope, input.revision)
       const key = pendingDocumentKey(input.scope)
       const previous = client.getQueryData<PendingDocumentState | null>(key)
       let idempotencyKey: string
@@ -181,7 +187,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
       }
       const current = () => client.getQueryData<PendingDocumentState | null>(key)
       const ensureOperation = () => {
-        ensureDocumentScope(input.projectId, input.scope)
+        ensureDocumentScope(input.projectId, input.scope, input.revision)
         if (current()?.idempotencyKey !== idempotencyKey) {
           throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
         }
@@ -200,7 +206,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
           client.setQueryData(key, { idempotencyKey, inFlight: true, reference } satisfies PendingDocumentState)
           await createDocument(input.projectId, reference)
         }
-        return { projectId: input.projectId, scope: input.scope, idempotencyKey }
+        return { projectId: input.projectId, scope: input.scope, revision: input.revision, idempotencyKey }
       } catch (error) {
         const state = current()
         if (state?.idempotencyKey === idempotencyKey) {
@@ -209,11 +215,11 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
         throw error
       }
     },
-    onSuccess: ({ projectId: targetId, scope, idempotencyKey }) => {
+    onSuccess: ({ projectId: targetId, scope, revision, idempotencyKey }) => {
       const key = pendingDocumentKey(scope)
       const state = client.getQueryData<PendingDocumentState | null>(key)
       if (state?.idempotencyKey === idempotencyKey) client.setQueryData(key, null)
-      if (documentScope(targetId, useAuthStore.getState().user, useCompanyStore.getState().selectedId) === scope) {
+      if (documentScope(targetId, useAuthStore.getState().user, useCompanyStore.getState().selectedId) === scope && documentCompanyRevision() === revision) {
         return client.invalidateQueries({ queryKey: ['documents', targetId] })
       }
     },
@@ -352,7 +358,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
             {pendingDocument ? (
               <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                 <span>{t('projects.documentLinkPending', { name: pendingDocument.fileName })}</span>
-                <Button size="sm" variant="outline" disabled={documentUpload.isPending || pendingDocumentState?.inFlight} onClick={() => documentUpload.mutate({ projectId, scope: currentDocumentScope, pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
+                <Button size="sm" variant="outline" disabled={documentUpload.isPending || pendingDocumentState?.inFlight} onClick={() => documentUpload.mutate({ projectId, scope: currentDocumentScope, revision: documentCompanyRevision(), pending: pendingDocument })}>{t('projects.retryDocumentLink')}</Button>
               </div>
             ) : null}
             <Input
@@ -362,7 +368,7 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file && !documentUpload.isPending && !pendingDocumentState) documentUpload.mutate({ projectId, scope: currentDocumentScope, file })
+                if (file && !documentUpload.isPending && !pendingDocumentState) documentUpload.mutate({ projectId, scope: currentDocumentScope, revision: documentCompanyRevision(), file })
               }}
             />
           </>

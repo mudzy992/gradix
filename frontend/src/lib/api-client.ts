@@ -22,20 +22,23 @@ const AUTH_SKIP_REFRESH = new Set([
 type RefreshFlight = { generation: number; token: string; promise: Promise<boolean> }
 let refreshInFlight: RefreshFlight | null = null
 
-type RequestContext = { generation: number; userId: string | null; companyId: string | null }
+type RequestContext = { generation: number; userId: string | null; companyId: string | null; companyRevision: number | null }
 
 function requestContext(): RequestContext {
   const user = useAuthStore.getState().user
+  const isPlatform = user?.roles?.includes('PLATFORM_ADMIN') ?? false
+  const company = useCompanyStore.getState()
   return {
     generation: getSessionGeneration(),
     userId: user?.id ?? null,
-    companyId: user?.roles?.includes('PLATFORM_ADMIN') ? useCompanyStore.getState().selectedId : user?.companyId ?? null,
+    companyId: isPlatform ? company.selectedId : user?.companyId ?? null,
+    companyRevision: isPlatform ? company.revision : null,
   }
 }
 
 function ensureContext(original: RequestContext): void {
   const current = requestContext()
-  if (original.generation !== current.generation || original.userId !== current.userId || original.companyId !== current.companyId) {
+  if (original.generation !== current.generation || original.userId !== current.userId || original.companyId !== current.companyId || original.companyRevision !== current.companyRevision) {
     throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
   }
 }
