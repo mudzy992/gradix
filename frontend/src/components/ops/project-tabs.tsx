@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +26,9 @@ import { Input } from '@/components/ui/input'
 import { TabsContent } from '@/components/ui/tabs'
 import { QuantitiesTab } from '@/components/ops/quantities-tab'
 import { ProjectDiaryTab } from '@/components/ops/project-diary-tab'
+
+const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
+type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
 
 const STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const
 
@@ -62,9 +66,25 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
   const fuelReports = useHasPermission('fuel.reports')
   const canReadFuel = fuelWrite || fuelReports
   const client = useQueryClient()
+  const [memberSearchInput, setMemberSearchInput] = useState('')
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberPage, setMemberPage] = useState(1)
+  const [memberId, setMemberId] = useState('')
+  const [memberRole, setMemberRole] = useState<AssignmentRole>('WORKER')
+  useEffect(() => {
+    setMemberSearchInput('')
+    setMemberSearch('')
+    setMemberPage(1)
+    setMemberId('')
+    setMemberRole('WORKER')
+  }, [projectId])
   const phases = useQuery({ queryKey: ['phases', projectId], queryFn: async () => (await listPhases(projectId)).data, enabled: activeTab === 'phases' })
   const team = useQuery({ queryKey: ['assignments', projectId], queryFn: async () => (await listAssignments(projectId)).data, enabled: activeTab === 'team' })
-  const users = useQuery({ queryKey: ['users', { limit: 100 }], queryFn: async () => (await listUsers({ limit: 100 })).data, enabled: activeTab === 'team' && canWrite && canReadUsers })
+  const users = useQuery({
+    queryKey: ['project-member-options', { page: memberPage, q: memberSearch, limit: 100 }],
+    queryFn: () => listUsers({ page: memberPage, q: memberSearch || undefined, limit: 100 }),
+    enabled: activeTab === 'team' && canWrite && canReadUsers,
+  })
   const docs = useQuery({ queryKey: ['documents', projectId], queryFn: async () => (await listDocuments(projectId)).data, enabled: activeTab === 'documents' })
   const machines = useQuery({
     queryKey: ['machines', { projectId }],
@@ -86,14 +106,19 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
     queryFn: async () => (await listFuel({ projectId })).data,
     enabled: activeTab === 'costs' && canReadFuel,
   })
+  const availableUsers = (users.data?.data ?? []).filter((user) => user.isActive && !(team.data ?? []).some((row) => row.userId === user.id))
+  const memberIsAvailable = availableUsers.some((user) => user.id === memberId)
   const phaseCreate = useMutation({
     mutationFn: (name: string) => createPhase(projectId, { name }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['phases', projectId] }),
     onError: (error) => toast.error(errorMessage(error)),
   })
   const assignmentAdd = useMutation({
-    mutationFn: (userId: string) => createAssignment(projectId, { userId, role: 'WORKER' }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['assignments', projectId] }),
+    mutationFn: (body: { userId: string; role: AssignmentRole }) => createAssignment(projectId, body),
+    onSuccess: () => {
+      setMemberId('')
+      return client.invalidateQueries({ queryKey: ['assignments', projectId] })
+    },
     onError: (error) => toast.error(errorMessage(error)),
   })
   const assignmentRemove = useMutation({
@@ -165,20 +190,52 @@ export function ProjectTabs({ projectId, project, activeTab }: Props) {
                     <Button size="sm" variant="outline" onClick={() => void users.refetch()}>{t('dashboard.retry')}</Button>
                   </div>
                 ) : null}
-                <select
-                  aria-label={t('projects.addMember')}
-                  className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                  value=""
-                  disabled={users.isLoading || users.isError || assignmentAdd.isPending}
-                  onChange={(event) => {
-                    if (event.target.value) assignmentAdd.mutate(event.target.value)
-                  }}
-                >
-                  <option value="">{t('projects.addMember')}</option>
-                  {(users.data ?? []).map((user) => (
-                    <option key={user.id} value={user.id}>{displayName(user)}</option>
-                  ))}
-                </select>
+                <form className="grid gap-2" onSubmit={(event) => {
+                  event.preventDefault()
+                  setMemberId('')
+                  setMemberPage(1)
+                  setMemberSearch(memberSearchInput.trim())
+                }}>
+                  <label htmlFor="member-search">{t('projects.searchMembers')}</label>
+                  <div className="flex gap-2">
+                    <Input id="member-search" value={memberSearchInput} onChange={(event) => setMemberSearchInput(event.target.value)} />
+                    <Button type="submit" variant="outline">{t('projects.searchButton')}</Button>
+                  </div>
+                </form>
+                {users.isLoading ? <p role="status">{t('common.loading')}</p> : null}
+                {!users.isLoading && !users.isError && !team.isLoading && !team.isError && availableUsers.length === 0 ? <p className="text-sm">{t('projects.noAvailableMembers')}</p> : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    aria-label={t('projects.addMember')}
+                    className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                    value={memberId}
+                    disabled={users.isLoading || users.isError || team.isLoading || team.isError || assignmentAdd.isPending}
+                    onChange={(event) => setMemberId(event.target.value)}
+                  >
+                    <option value="">{t('projects.selectMember')}</option>
+                    {availableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>{displayName(user)}</option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label={t('projects.memberRole')}
+                    className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                    value={memberRole}
+                    disabled={assignmentAdd.isPending}
+                    onChange={(event) => setMemberRole(event.target.value as AssignmentRole)}
+                  >
+                    {ASSIGNMENT_ROLES.map((role) => <option key={role} value={role}>{t(assignmentRole(role).labelKey, { defaultValue: role })}</option>)}
+                  </select>
+                  <Button disabled={!memberIsAvailable || users.isLoading || users.isError || team.isLoading || team.isError || assignmentAdd.isPending}
+                    onClick={() => assignmentAdd.mutate({ userId: memberId, role: memberRole })}>{t('projects.addMember')}</Button>
+                </div>
+                {users.data?.meta && users.data.meta.total > users.data.meta.limit ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Button size="sm" variant="outline" disabled={memberPage <= 1 || users.isLoading} onClick={() => { setMemberId(''); setMemberPage((page) => page - 1) }}>{t('projects.previousPage')}</Button>
+                    <span>{t('projects.pageOf', { page: memberPage, total: Math.ceil(users.data.meta.total / users.data.meta.limit) })}</span>
+                    <Button size="sm" variant="outline" disabled={memberPage * users.data.meta.limit >= users.data.meta.total || users.isLoading} onClick={() => { setMemberId(''); setMemberPage((page) => page + 1) }}>{t('projects.nextPage')}</Button>
+                  </div>
+                ) : null}
               </>
             ) : <p className="text-sm">{t('projects.usersNoAccess')}</p>}
           </div>

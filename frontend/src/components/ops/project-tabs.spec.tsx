@@ -104,13 +104,50 @@ describe('ProjectTabs', () => {
   it('greška učitavanja korisnika onemogućava izbor i omogućava ponovni pokušaj', async () => {
     api.permissions.add('projects.write')
     api.permissions.add('users.read')
-    api.listUsers.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: [{ id: 'u1', firstName: 'Ana', lastName: 'Anić' }] })
+    api.listUsers.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ data: [{ id: 'u1', firstName: 'Ana', lastName: 'Anić', isActive: true }] })
     renderTab('team')
     const alert = await screen.findByRole('alert')
     expect(screen.getByRole('combobox', { name: 'Dodaj' })).toBeDisabled()
     await userEvent.click(within(alert).getByRole('button', { name: 'Pokušaj ponovo' }))
     expect(await screen.findByRole('option', { name: 'Ana Anić' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Dodaj' })).toBeEnabled()
+  })
+
+  it('filtrira neaktivne i dodijeljene te šalje odabranu projektnu ulogu', async () => {
+    api.permissions.add('projects.write')
+    api.permissions.add('users.read')
+    api.listAssignments.mockResolvedValue({ data: [{ id: 'a1', userId: 'u1', role: 'PM' }] })
+    api.listUsers.mockResolvedValue({ data: [
+      { id: 'u1', firstName: 'Već', lastName: 'Dodijeljen', isActive: true },
+      { id: 'u2', firstName: 'Neaktivan', lastName: 'Korisnik', isActive: false },
+      { id: 'u3', firstName: 'Ana', lastName: 'Anić', isActive: true },
+    ] })
+    api.createAssignment.mockReset().mockResolvedValue({})
+    renderTab('team')
+    expect(await screen.findByRole('option', { name: 'Ana Anić' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Već Dodijeljen' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Neaktivan Korisnik' })).not.toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Dodaj' }), 'u3')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Uloga na projektu' }), 'SS')
+    await userEvent.click(screen.getByRole('button', { name: 'Dodaj' }))
+    await waitFor(() => expect(api.createAssignment).toHaveBeenCalledWith('p1', { userId: 'u3', role: 'SS' }))
+  })
+
+  it('nudi pretragu i narednu stranicu korisnika iz API metapodataka', async () => {
+    api.permissions.add('projects.write')
+    api.permissions.add('users.read')
+    api.listUsers.mockImplementation(({ page, q }: { page: number; q?: string }) => Promise.resolve({
+      data: [{ id: `u${page}`, firstName: q || `Korisnik${page}`, lastName: 'Ime', isActive: true }],
+      meta: { page, limit: 100, total: 150 },
+    }))
+    renderTab('team')
+    expect(await screen.findByRole('option', { name: 'Korisnik1 Ime' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Sljedeća' }))
+    expect(await screen.findByRole('option', { name: 'Korisnik2 Ime' })).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Pretraži korisnike'), 'Ana')
+    await userEvent.click(screen.getByRole('button', { name: 'Traži' }))
+    expect(await screen.findByRole('option', { name: 'Ana Ime' })).toBeInTheDocument()
+    expect(api.listUsers).toHaveBeenLastCalledWith({ page: 1, q: 'Ana', limit: 100 })
   })
 
   it('status koristi prevedene oznake i blokiran je do kraja izmjene', async () => {

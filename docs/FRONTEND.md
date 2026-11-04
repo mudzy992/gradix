@@ -221,4 +221,4 @@ Upload cover fotografije blokiran je dok prethodni traje, uz prikaz statusa; nak
 
 ### Kartice projekta
 
-Podaci se učitavaju po aktivnoj kartici, uz stanja učitavanja, greške i ponovnog pokušaja. Odgovarajuća prava provjeravaju se prije učitavanja i prikaza podataka; izostanak prava na zadatke naznačen je u Gantt pregledu. Uklanjanje člana i upload dokumenta prijavljuju grešku. Poznata ograničenja paginacije, izbora uloge i dvokorakog uploada prate se u CI-05 (F-CI-05-14/15/16).
+Podaci se učitavaju po aktivnoj kartici, uz stanja učitavanja, greške i ponovnog pokušaja. Odgovarajuća prava provjeravaju se prije učitavanja i prikaza podataka; izostanak prava na zadatke naznačen je u Gantt pregledu. Uklanjanje člana i upload dokumenta prijavljuju grešku. Dodavanje članova ima pretragu i stranice te izbor projektne uloge, uz filtriranje neaktivnih i već dodijeljenih. Preostala ograničenja paginacije i dvokorakog uploada prate se u CI-05 (F-CI-05-14/15).
