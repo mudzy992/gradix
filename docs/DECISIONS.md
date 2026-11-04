@@ -787,6 +787,46 @@ obavještenja i dnevnik na svakom ekranu (`RangeError`).
 kartice „Firma“ — dvostruki `role="alert"` za istu stvar; (d) klijentski `fetch` sa `Authorization`-om
 za javni asset — `/api/public/assets/:id` je namjerno bez prijave.
 
+### D-055 — Zajednički sloj: mrežne greške, jedno mjesto za odjavu, otporna pohrana, pošten CSV
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+Audit zajedničkog sloja (`lib/**`, `hooks/**`, `stores/**`, `i18n/**`) pokazao je da su problemi bili u
+**rubnim uslovima**, a ne u sretnom toku: mrežni pad (`fetch` odbija Promise) nije bio `ApiError`, pa je
+korisnik na bosanskom vidio `Failed to fetch`; pad mreže pri **pokretanju** aplikacije ostavljao je
+neuhvaćen `rejection` i aplikacija je zauvijek stajala na „učitavanju“; izvoz (`apiBlob`) nije
+osvježavao token, pa je poslije 15 minuta uvijek padao sa „Export failed“; odjava je brisala store i
+token, ali **ne i keš upita** (na dijeljenom računaru sljedeći korisnik je vidio tuđe liste); blokirana
+pohrana (Safari privatni režim) rušila je aplikaciju već pri uvozu modula; CSV izvoz je kvario naša
+slova u Excelu i izvršavao formule iz ćelija; `formatDateTime` je na neispravan zapis bacao `RangeError`
+u renderu; šest kodova grešaka sa backenda nije imalo prijevod (429 = „ThrottlerException“ u UI-u).
+
+**Odluka:**
+
+1. **Svaka greška mrežnog sloja je `ApiError`.** Mrežni prekid daje `NETWORK_ERROR` (status `0`),
+   ne-JSON tijelo `INTERNAL_ERROR`/`RATE_LIMITED` po statusu, a 401 jedan pokušaj osvježavanja pa
+   ponovni zahtjev — **i za `api()` i za `apiBlob()`**. Mrežni prekid tokom osvježavanja **ne briše**
+   refresh token (sesija preživljava), a neuspješno osvježavanje ga briše.
+2. **Odjava je jedna funkcija** — `clearSession()` (store + keš upita + refresh token). Zovu je
+   `forceLogin()`, korisnički meni (odjava i „odjavi svuda“), promjena lozinke i sinhronizacija tabova.
+3. **Keš se ne ponavlja naslijepo.** `shouldRetry` ponavlja samo prolazne greške (`NETWORK_ERROR`, 5xx)
+   i to jednom; 4xx se ne ponavlja (naročito ne 429 — ponavljanje produžava throttle).
+4. **Pohrana nikad ne ruši aplikaciju.** Svaki pristup `localStorage`/`sessionStorage` je zaštićen, uz
+   memorijski fallback (sesija radi do reloada i kad je pohrana blokirana).
+5. **Izvoz je siguran i čitljiv.** CSV dobija UTF-8 BOM, `\r\n`, zaštitu od formula (`=`, `+`, `-`, `@`)
+   i link koji je u dokumentu tokom klika.
+6. **Prikaz datuma nikad ne baca.** Neispravan datum ili zona daju `—`; validacija postavki ostaje na
+   izvoru (`useDisplayPrefs`, D-054).
+7. **Prijevod je ugovor.** Novi `i18n/parity.spec.ts` drži: isti skup ključeva u bs i en, nijedna
+   top-level sekcija u dva modula (spread bi je pregazio), nema praznih prijevoda i **svaki
+   `ERROR_CODES` sa backenda ima prijevod u oba jezika**. Time nedostajući prijevod pada u testu, a ne
+   u produkciji.
+
+**Odbačeno:** (a) access token u `localStorage` — XSS bi ga ukrao; (b) objedinjavanje `api-public.ts` sa
+`api()` — jedini tok bez `Authorization`-a, van obima ovog segmenta i već pokriven testovima;
+(c) automatsko ponavljanje 429 sa odbrojavanjem — produžava throttle; (d) `retry: 0` globalno — gubi se
+otpornost na kratke mrežne prekide; (e) novo pravilo u `check:all` za paritet kodova grešaka — isti
+posao radi test, bez promjene broja koraka u pet dokumenata.
+
 ---
 
 ## Zamijenjene / povučene odluke

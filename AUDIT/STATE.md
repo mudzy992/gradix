@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **44/59 segmenata `done`** (zadnji: FE-14).
+kratak izvještaj poslije svakog. Trenutno: **45/59 segmenata `done`** (zadnji: FE-15).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-14` — javni sajt: stanja umjesto bijelog ekrana, SEO meta + `<html lang>`, otporni javni API i validne postavke prikaza (D-054) — `done` · prije: `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-15` — zajednički sloj: mrežne greške kao `ApiError`, jedno mjesto za odjavu (`clearSession`), otporna pohrana, pošten CSV, paritet prijevoda (D-055) — `done` · prije: `feat(fe): FE-14` — javni sajt: stanja umjesto bijelog ekrana, SEO meta + `<html lang>`, otporni javni API i validne postavke prikaza (D-054) — `done` · prije: `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41795078702](https://github.com/mudzy992/gradix/actions/runs/41795078702) — **6/6** (`docs(audit): FE-14 …`) · prije: ✅ [41794830116](https://github.com/mudzy992/gradix/actions/runs/41794830116) — **6/6** (`feat(fe): FE-14`, Web E2E 31 test — prvi pokušaj zelen) · prije: ✅ [41793092550](https://github.com/mudzy992/gradix/actions/runs/41793092550) — **6/6** (`docs(audit): FE-13 …`) · prije: ✅ [41792792936](https://github.com/mudzy992/gradix/actions/runs/41792792936) — **6/6** (`feat(fe): FE-13` + D-053, Web E2E 28 testova) · prije: ✅ [41789352928](https://github.com/mudzy992/gradix/actions/runs/41789352928) — **6/6** (`docs(audit): FE-12 …`) · prije: ✅ [41789093535](https://github.com/mudzy992/gradix/actions/runs/41789093535) — **6/6** (`feat(fe): FE-12`, Web E2E 26 testova) · prije: ✅ [41783115547](https://github.com/mudzy992/gradix/actions/runs/41783115547) — **6/6** (`docs(audit): FE-11 …`) · prije: ✅ [41782885474](https://github.com/mudzy992/gradix/actions/runs/41782885474) — **6/6** (`feat(fe): FE-11` + D-050, Web E2E 24 testa) · prije: ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -814,10 +814,38 @@ kratak izvještaj poslije svakog. Trenutno: **44/59 segmenata `done`** (zadnji: 
   **91,62 %**, grane 91,28 %, funkcije 87,11 %; `tsc -b` i `oxlint` bez grešaka; `npm run check:all`
   15/0. **D-054.**
 
+### 2026-11-04 — FE-15 (i18n, store, hookovi, helperi) → segment `done`
+- **Nalaz (visoko, mrežni sloj):** mrežni pad (`fetch` odbija Promise) nije bio `ApiError` — korisnik je
+  na bosanskom vidio `Failed to fetch`; izvoz (`apiBlob`) **nije** osvježavao token, pa je poslije 15
+  minuta uvijek padao sa „Export failed“; ne-JSON tijelo proxy-ja na `/auth/refresh` bacalo je
+  `SyntaxError`, a sesija je ostajala „otvorena“.
+- **Nalaz (visoko, pokretanje):** pad mreže pri bootstrapu ostavljao je **neuhvaćen `rejection`** i
+  `ready` se nikad nije postavljao — aplikacija je zauvijek stajala na „učitavanju“. Uz to je mrežni
+  prekid na `getMe` odjavljivao korisnika i brisao ispravan refresh token.
+- **Nalaz (visoko, privatnost):** odjava je brisala store i token, ali **ne keš upita** — na dijeljenom
+  računaru sljedeći korisnik je vidio liste i `me` prethodnog. Odjava je bila rasuta na četiri mjesta.
+- **Nalaz (visoko, pohrana):** blokirana pohrana (Safari privatni režim) rušila je aplikaciju već pri
+  uvozu modula (`company-store` čita izbor firme na nivou modula).
+- **Nalaz (srednje):** CSV izvoz bez BOM-a (kvare se `č/ć/ž` u Excelu), `\n` umjesto `\r\n`, formule iz
+  ćelija se izvršavaju (CSV injection), link nije u dokumentu (Safari ignoriše preuzimanje);
+  `formatDateTime` baca `RangeError` na neispravan datum/zonu i ruši ekran; `retry: 1` ponavlja i
+  `403/404/429`; šest backend kodova grešaka nema prijevod (`429` = „ThrottlerException“ u UI-u).
+- **Riješeno:** `networkError`/`readBody`/`clearSession` u `api-client` (uz 401 refresh za `apiBlob` i
+  `RATE_LIMITED` za 429), `shouldRetry` (samo mreža i 5xx, jednom), zaštićena pohrana sa memorijskim
+  fallbackom, CSV sa BOM/CRLF/anti-formula zaštitom i linkom u dokumentu, `formatDateTime` → `—`,
+  `assignableRoles` tolerantan na `roles`, bootstrap uvijek postavlja `ready` i odjavljuje samo na
+  401/403, sve odjave idu kroz `clearSession()`; **8 novih kodova grešaka** u bs+en i novi
+  `i18n/parity.spec.ts` (paritet bs/en, vlasništvo sekcija, svaki backend `ERROR_CODES` preveden).
+- **Testovi:** 67 novih unit (ukupno **301** u 41 fajlu); pokrivenost linija **92,23 %**, grane 88,38 %,
+  funkcije 88,75 %; coverage ratchet proširen sa 14 fajlova (10 iz FE-15 + 4 iz FE-14 koje je FE-14
+  propustio da doda). E2E nepromijenjen (**31**). **D-055.**
+- **Usput:** test javnog sajta (FE-14) je povremeno padao jer je `beforeEach` praznio `<head>` poslije
+  postavljanja naslova — redoslijed ispravljen, tvrdnje idu kroz `waitFor`.
+
 ## Šta je sljedeći korak
 
-1. **FE-15 — i18n, store, hookovi, helperi** (`api-public.ts` i `use-public-settings.ts` su već
-   pregledani u FE-14), zatim **FE-16** (UI primitive) i **MOB-01…MOB-07**.
+1. **FE-16 — UI primitive** (`components/ui/**`: varijante, a11y, dokumentovani tokeni), zatim
+   **MOB-01…MOB-07**.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija

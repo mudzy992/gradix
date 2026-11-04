@@ -90,6 +90,20 @@ frontend/src/
 **Poznato:** `403 AUTH_PASSWORD_CHANGE_REQUIRED` i `401` se rješavaju na nivou `api` klijenta
 (redirect na change-password / login), ne u svakoj stranici.
 
+**Zajednički sloj (D-055):**
+
+- **Greške:** svaki pad mrežnog sloja je `ApiError` — mrežni prekid `NETWORK_ERROR` (status `0`),
+  ne-JSON odgovor `INTERNAL_ERROR`/`RATE_LIMITED` po statusu, 401 → jedan pokušaj osvježavanja pa
+  ponovni zahtjev (važi i za izvoz kroz `apiBlob`). `errorMessage()` prevodi kod, a nepoznat kod
+  prikazuje poruku servera (nikad sirov ključ).
+- **Ponavljanje:** `shouldRetry` ponavlja samo `NETWORK_ERROR` i 5xx, jednom; 4xx se ne ponavlja.
+- **Odjava:** jedna funkcija `clearSession()` (store + keš upita + refresh token) — zovu je
+  `forceLogin()`, korisnički meni, promjena lozinke i sinhronizacija tabova.
+- **Pohrana:** pristup `localStorage`/`sessionStorage` je zaštićen (blokirana pohrana ne ruši app);
+  memorijski fallback drži sesiju do reloada.
+- **Prijevodi:** `i18n/parity.spec.ts` drži paritet bs/en, vlasništvo sekcija i prijevod svakog
+  `ERROR_CODES` sa backenda.
+
 ---
 
 ## 4. Design system

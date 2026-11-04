@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { i18n } from '@/i18n'
 import { logout, logoutAll, patchMe } from '@/lib/api'
-import { broadcastLogout, clearRefreshToken, readRefreshToken } from '@/lib/storage'
+import { clearSession } from '@/lib/api-client'
+import { broadcastLogout, readRefreshToken } from '@/lib/storage'
 import { errorMessage } from '@/lib/error-message'
 import { displayName } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
@@ -41,8 +42,8 @@ export function UserMenu() {
     } catch {
       /* still leave */
     }
-    useAuthStore.getState().clear()
-    clearRefreshToken()
+    // FE-15: `clearSession()` briše i keš upita — tuđi podaci ne smiju ostati u pregledniku.
+    clearSession()
     navigate('/login', { replace: true })
   }
   const handleLogoutAll = async (): Promise<void> => {
@@ -52,8 +53,8 @@ export function UserMenu() {
       /* still leave */
     }
     broadcastLogout()
-    useAuthStore.getState().clear()
-    clearRefreshToken()
+    // FE-15: `clearSession()` briše i keš upita — tuđi podaci ne smiju ostati u pregledniku.
+    clearSession()
     navigate('/login', { replace: true })
   }
   return (

@@ -5,9 +5,9 @@ import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { changePassword, logout } from '@/lib/api'
-import { clearRefreshToken, readRefreshToken } from '@/lib/storage'
+import { clearSession } from '@/lib/api-client'
+import { readRefreshToken } from '@/lib/storage'
 import { errorMessage } from '@/lib/error-message'
-import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/field'
 import { AuthCard } from '@/components/auth/auth-card'
@@ -43,16 +43,14 @@ export function ChangePasswordPage({ forced = false }: Props) {
     } catch {
       /* ignore */
     }
-    useAuthStore.getState().clear()
-    clearRefreshToken()
+    clearSession()
     navigate('/login', { replace: true })
   }
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null)
     try {
       await changePassword(values)
-      useAuthStore.getState().clear()
-      clearRefreshToken()
+      clearSession()
       navigate('/login', { replace: true, state: { changed: true } })
     } catch (error) {
       setFormError(errorMessage(error))

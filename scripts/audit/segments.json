@@ -356,7 +356,7 @@
       "id": "FE-15",
       "layer": "FE",
       "title": "i18n, store, hookovi, helperi",
-      "status": "planned",
+      "status": "done",
       "scope": "files",
       "note": "api-public.ts i use-public-settings.ts pregledani u FE-14 (javni tok); ostatak i18n/store/helperi ovdje"
     },

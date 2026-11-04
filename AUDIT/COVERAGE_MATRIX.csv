@@ -372,7 +372,7 @@ frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-10/F-FE-06-01 (D-033): /hse vidljiv uz hse.read ILI hse.write (prijavljivač vidi svoj ekran),2026-11-03
 frontend/src/components/layout/screen-loader.tsx,FE,layout,FE-02,21,pregledano,"FE-02: jedan statusni prikaz (role=status, aria-live=polite) za boot i lazy rute",2026-11-03
 frontend/src/components/layout/sidebar-nav.tsx,FE,layout,FE-02,80,pregledano,"FE-02: grupisana navigacija sa aria-current=""page"", focus-visible ring, disabled stavke dok firma nije izabrana",2026-11-03
-frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,81,pregledano,"FE-02: jezik (bs/en) preko PATCH /me + i18n, promjena lozinke, logout i logout-all; nema potvrde za logout-all (FE-13)",2026-11-03
+frontend/src/components/layout/user-menu.tsx,FE,layout,FE-02,82,pregledano,FE-15: odjava ide kroz `clearSession()` (store + token + keš upita),2026-11-04
 frontend/src/components/notifications/bell.tsx,FE,ops-ui,FE-08,112,nepregledano,,
 frontend/src/components/ops/diary-conflict-sheet.spec.tsx,FE,ops-ui,FE-08,133,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, MERGE/A/B izbor, onemogućene odluke bez projekta/datuma, „Otkaži“",2026-11-03
 frontend/src/components/ops/diary-conflict-sheet.tsx,FE,ops-ui,FE-08,99,pregledano,"FE-10: datum u naslovu, „—“ za prazan tekst, objašnjenje konflikta, onemogućene odluke + role=alert kad detalji nemaju projekat/datum, dugme „Otkaži“",2026-11-03
@@ -409,58 +409,69 @@ frontend/src/components/ui/textarea.tsx,FE,ui,FE-16,19,nepregledano,,
 frontend/src/components/users/temp-password-dialog.spec.tsx,TEST,fe-unit,FE-05,56,pregledano,"FE-13: 3 testa — kopiranje, fallback bez clipboarda, zatvaranje",2026-11-04
 frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,77,pregledano,FE-13: kopiranje bez neuhvaćene greške — fallback označavanje teksta + poruka,2026-11-04
 frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,180,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
-frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,49,nepregledano,,
-frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,22,nepregledano,,
-frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,nepregledano,,
+frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,110,pregledano,"FE-15: 6 testova — bez tokena, pad mreže pri refreshu (ready, bez odjave), uspjeh + jezik, 401 → odjava, mrežni pad na getMe bez odjave",2026-11-04
+frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,58,pregledano,FE-15: neuhvaćen `rejection` pri padu mreže ostavljao je app zauvijek na „učitavanju“; mrežni pad više ne odjavljuje korisnika,2026-11-04
+frontend/src/hooks/use-logout-sync.spec.tsx,TEST,fe-unit,FE-05,52,pregledano,FE-15: 2 testa — odjava iz drugog taba zove clearSession i vodi na prijavu; ostale promjene se ignorišu,2026-11-04
+frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,21,pregledano,"FE-15: odjava u drugom tabu sada čisti i keš upita (`clearSession`), ne samo store/token",2026-11-04
+frontend/src/hooks/use-me.spec.tsx,TEST,fe-unit,FE-05,99,pregledano,"FE-15: 8 testova — prava/role bez nizova, platform rola, tenant-ready, useMeQuery (enabled false / upis u store)",2026-11-04
+frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,pregledano,FE-15: pregledano — prava/role tolerantne na `me` bez nizova; `useMeQuery` upisuje profil u store; pokriveno testom,2026-11-04
 frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano,"FE-14: 5 testova — ispravne vrijednosti, nevalidna zona → fallback (bez RangeError), prazno/bez dd-MM → default, ne-string vrijednosti, bez slug-a nema poziva",2026-11-04
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
-frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
-frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,401,pregledano,FE-11: status.tender/status.service (bs),2026-11-03
-frontend/src/i18n/en.ts,FE,shared,FE-15,401,pregledano,FE-11: status.tender/status.service (en),2026-11-03
-frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-12: labele i prazna stanja (bs),2026-11-04
-frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-12: labele i prazna stanja (en),2026-11-04
+frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
+frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,409,pregledano,"FE-15: dodati `errors.{NETWORK_ERROR,RATE_LIMITED,SERVICE_UNAVAILABLE,AUTH_RESET_NOT_AVAILABLE,MACHINE_IN_SERVICE,REPORT_UNKNOWN,TENDER_INVALID_STATUS,HTTP_ERROR}`; paritet 660 ključeva",2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,409,pregledano,FE-15: isti ključevi kao bs (parity test),2026-11-04
+frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
-frontend/src/i18n/index.ts,FE,shared,FE-15,27,nepregledano,,
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,159,pregledano,"FE-10: diary.* (mjesec, svi projekti, dani, unosi, konflikt) i hse.* (count/empty/list/projekt/datum) — bs",2026-11-03
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,159,pregledano,FE-10: isti ključevi kao ops-bs (en),2026-11-03
-frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,"FE-12: „Odobreno (h)“, broj, period, export ime (bs)",2026-11-04
-frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,"FE-12: „Odobreno (h)“, broj, period, export ime (en)",2026-11-04
-frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,"FE-11: tenders.{count,columnEmpty,loadError,markWon,required}, services.{count,empty,emptyHint,loadError,list,cost,selectMachine}, reports.{caption,empty,loadError,from,to,columns.*}; ispravljen „Povučen“",2026-11-03
-frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-11: isti ključevi kao polish-bs (en),2026-11-03
-frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,nepregledano,,
-frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,nepregledano,,
+frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,159,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,159,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
+frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/en potvrđen testom; dodati ključevi iz FE-14 (loadError*, projectsError, logoSet)",2026-11-04
+frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
 frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
-frontend/src/lib/api-client.ts,FE,shared,FE-15,156,nepregledano,,
+frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,213,pregledano,"FE-15: 15 testova — 401→refresh→retry, neuspješan refresh, mrežni pad (bez brisanja tokena), ne-JSON, 204, envelope greška, X-Company-Id, apiBlob (401/429/mreža), clearSession/forceLogin",2026-11-04
+frontend/src/lib/api-client.ts,FE,shared,FE-15,216,pregledano,FE-15: mrežni prekid → ApiError NETWORK_ERROR (status 0); ne-JSON odgovor bez SyntaxError; apiBlob osvježava token na 401; clearSession() = store+token+keš (jedno mjesto za sve odjave),2026-11-04
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
-frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,nepregledano,,
-frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,nepregledano,,
+frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,pregledano,FE-15: pregledano — flota/logistika; bez nalaza,2026-11-04
+frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,pregledano,FE-15: pregledano — endpointi operacija odgovaraju backendu; bez nalaza,2026-11-04
 frontend/src/lib/api-payroll.ts,FE,shared,FE-15,62,pregledano,"FE-12: ugovor potvrđen kroz UI (PayrollSession/PayrollSummary, export blob)",2026-11-04
-frontend/src/lib/api-polish.ts,FE,shared,FE-15,111,nepregledano,,
+frontend/src/lib/api-polish.ts,FE,shared,FE-15,111,pregledano,FE-15: pregledano — tenderi/servis/izvještaji; izvoz ide kroz `apiBlob` (sada sa 401 refresh),2026-11-04
 frontend/src/lib/api-public.spec.ts,TEST,fe-unit,FE-05,78,pregledano,"FE-14: 6 testova — uspjeh sa meta, 404, ne-JSON 502, throttlerov 429, 2xx bez `success`, `publicAssetUrl`",2026-11-04
 frontend/src/lib/api-public.ts,FE,shared,FE-15,75,pregledano,FE-14: ne-JSON tijelo (proxy 502) i 429 bez envelope-a daju ApiError sa statusom (prije SyntaxError / TypeError na body.error),2026-11-04
-frontend/src/lib/api-types.ts,FE,shared,FE-15,103,nepregledano,,
-frontend/src/lib/api.ts,FE,shared,FE-15,115,nepregledano,,
-frontend/src/lib/constants.ts,FE,shared,FE-15,37,nepregledano,,
-frontend/src/lib/csv.ts,FE,shared,FE-15,13,nepregledano,,
+frontend/src/lib/api-types.ts,FE,shared,FE-15,103,pregledano,FE-15: pregledano — tipovi ugovora (MeUser/AuthPayload/ApiError); bez nalaza,2026-11-04
+frontend/src/lib/api.ts,FE,shared,FE-15,115,pregledano,FE-15: pregledano — tanke funkcije nad `api()`; login/forgot/reset idu sa `skipRefresh` (bez nalaza),2026-11-04
+frontend/src/lib/constants.ts,FE,shared,FE-15,37,pregledano,"FE-15: pregledano — ključevi pohrane, role i tipovi notifikacija; KNOWN_NOTIFY_TYPES se filtrira u socketu (bez nalaza)",2026-11-04
+frontend/src/lib/csv.spec.ts,TEST,fe-unit,FE-05,74,pregledano,"FE-15: 4 testa — BOM (bajtovi), CRLF + eskepovanje, CSV injection, link u dokumentu",2026-11-04
+frontend/src/lib/csv.ts,FE,shared,FE-15,28,pregledano,"FE-15: UTF-8 BOM (č/ć/ž u Excelu), CRLF, zaštita od CSV injection (=,+,−,@), link u dokumentu (Safari)",2026-11-04
 frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() — null/undefined/prazno → „—“, nula ostaje 0, tekst nepromijenjen",2026-11-03
-frontend/src/lib/dash.ts,FE,shared,FE-15,7,nepregledano,,
-frontend/src/lib/error-message.ts,FE,shared,FE-15,17,nepregledano,,
-frontend/src/lib/format-date.ts,FE,shared,FE-15,25,nepregledano,,
+frontend/src/lib/dash.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `dash(0)`/prazno daje „—“; bez nalaza,2026-11-04
+frontend/src/lib/error-message.spec.ts,TEST,fe-unit,FE-05,35,pregledano,"FE-15: 5 testova — preveden kod, NETWORK_ERROR bez „Failed to fetch“, nepoznat kod → poruka servera, generička poruka",2026-11-04
+frontend/src/lib/error-message.ts,FE,shared,FE-15,17,pregledano,FE-15: NETWORK_ERROR preveden; nepoznat kod → poruka servera; pokriveno testom,2026-11-04
+frontend/src/lib/format-date.spec.ts,TEST,fe-unit,FE-05,28,pregledano,"FE-15: 4 testa — zona/format, neispravan datum → „—“ (bez RangeError), nepoznat token ostaje doslovan",2026-11-04
+frontend/src/lib/format-date.ts,FE,shared,FE-15,36,pregledano,FE-15: neispravan datum ili zona → „—“ umjesto RangeError koji je rušio ekran,2026-11-04
 frontend/src/lib/labels.spec.ts,TEST,fe-unit,FE-05,205,pregledano,FE-13: status naloga (ACTIVE/INACTIVE) uz ostale FE-08…FE-12 mape,2026-11-04
 frontend/src/lib/labels.ts,FE,shared,FE-15,310,pregledano,"FE-11 (nastavak D-046): tenderStatus/serviceStatus + formatAmount (hiljade tačkom, dvije decimale zarezom)",2026-11-03
-frontend/src/lib/notify-link.ts,FE,shared,FE-15,32,nepregledano,,
-frontend/src/lib/ops-types.ts,FE,shared,FE-15,145,nepregledano,,
+frontend/src/lib/notify-link.ts,FE,shared,FE-15,32,pregledano,FE-15: pregledano — redoslijed taskId → tip → projectId; nepoznat tip → null (bez lažnog linka); bez nalaza,2026-11-04
+frontend/src/lib/ops-types.ts,FE,shared,FE-15,145,pregledano,FE-15: pregledano — tipovi operacija; bez nalaza,2026-11-04
 frontend/src/lib/payroll-access.spec.ts,TEST,fe-unit,FE-05,52,nepregledano,,
 frontend/src/lib/payroll-access.ts,FE,shared,FE-15,22,pregledano,FE-12: prava potvrđena testom (read/export/decide),2026-11-04
-frontend/src/lib/query-client.ts,FE,shared,FE-15,11,nepregledano,,
-frontend/src/lib/roles.ts,FE,shared,FE-15,16,nepregledano,,
+frontend/src/lib/query-client.spec.ts,TEST,fe-unit,FE-05,32,pregledano,"FE-15: 4 testa — shouldRetry: mreža i 5xx jednom, 4xx nijednom",2026-11-04
+frontend/src/lib/query-client.ts,FE,shared,FE-15,25,pregledano,FE-15: shouldRetry — ponavlja samo NETWORK_ERROR i 5xx (403/404/429 se ne ponavljaju),2026-11-04
+frontend/src/lib/roles.spec.ts,TEST,fe-unit,FE-05,50,pregledano,"FE-15: 5 testova — assignableRoles (PLATFORM_ADMIN nikad, SUPER_ADMIN samo za super/platform), nedostajući `roles`, displayName",2026-11-04
+frontend/src/lib/roles.ts,FE,shared,FE-15,18,pregledano,FE-15: assignableRoles tolerantan na `roles` koji nedostaje (FE-13 lekcija),2026-11-04
 frontend/src/lib/settings-keys.ts,FE,admin-ui,FE-13,28,pregledano,FE-13: spisak ključeva registra; test drži da svaki ima bs/en prijevod (D-052),2026-11-04
-frontend/src/lib/storage.ts,FE,shared,FE-15,47,nepregledano,,
-frontend/src/lib/utils.ts,FE,shared,FE-15,7,nepregledano,,
+frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,122,pregledano,"FE-15: 9 testova — local vs session po „zapamti me“, čišćenje, blokirana pohrana (memorijski fallback)",2026-11-04
+frontend/src/lib/storage.ts,FE,shared,FE-15,96,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
+frontend/src/lib/utils.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `cn` (clsx + tailwind-merge); bez nalaza,2026-11-04
 frontend/src/main.tsx,FE,app-shell,FE-02,12,pregledano,"FE-02: createRoot + StrictMode, i18n i index.css se importuju prije App",2026-11-03
 frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,223,nepregledano,,
-frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,102,pregledano,"FE-07: poruke uz oba polja (i18n umjesto engleskog Zod teksta), PasswordInput + autoComplete, dugme „Promijeni lozinku“, role=alert za odbijenu promjenu",2026-11-03
+frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,100,pregledano,FE-15: odjava poslije promjene lozinke ide kroz `clearSession()`,2026-11-04
 frontend/src/pages/companies-page.spec.tsx,TEST,fe-unit,FE-05,160,pregledano,"FE-13: 8 testova — zaglavlje statusa, reaktivacija, deaktivacija, greška + retry, slug validacija, kreiranje sa adminom, izmjena samo naziva, prazno",2026-11-04
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,210,pregledano,"FE-13: zaglavlje kolone statusa (prije prazno `<th />`), reaktivacija firme, caption/broj, skeleton, greška + retry, prazno stanje, toast na ishod",2026-11-04
 frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme",2026-11-03
@@ -486,7 +497,7 @@ frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,260,pregledano,"FE-12: 
 frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,128,pregledano,"FE-08: skeleton, greška + retry, preveden status sa tonom, pregled kao dt/dd parovi (WCAG 1.3.1)",2026-11-03
 frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,nepregledano,,
 frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage",2026-11-03
-frontend/src/pages/public-site-page.spec.tsx,TEST,fe-unit,FE-05,189,pregledano,"FE-14: 11 testova — skeleton/aria-busy, 404≠500+retry, 429 poruka, SEO meta + restore, <html lang>, preveden status, dt/dd, tel:/mailto:, izolovan pad projekata, prazno stanje",2026-11-04
+frontend/src/pages/public-site-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-14: 11 testova — skeleton/aria-busy, 404≠500+retry, 429 poruka, SEO meta + restore, <html lang>, preveden status, dt/dd, tel:/mailto:, izolovan pad projekata, prazno stanje",2026-11-04
 frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,337,pregledano,"FE-14: skeleton/aria-busy, 404≠greška, retry, 429 poruka, SEO meta + canonical + og, <html lang>, preveden status (projectStatus), dl/dt/dd, lazy slike, tel:/mailto:, izolovan pad projekata",2026-11-04
 frontend/src/pages/reports-page.spec.tsx,TEST,fe-unit,FE-05,132,pregledano,"FE-11: prevedene kolone + nepoznata kolona sirova, caption, prazno, skeleton, greška + retry, period u upitu, export i onemogućen bez redova",2026-11-03
 frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,160,pregledano,"FE-11: prevedena zaglavlja kolona sa defaultValue (nepoznata kolona ostaje sirova), caption sa brojem redova, period Od/Do, skeleton/greška + retry/prazno, sigurniji export (link u DOM, odgođeni revokeObjectURL)",2026-11-03
@@ -505,8 +516,8 @@ frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,320,pregledano,"FE-13: ko
 frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,242,pregledano,"FE-10/F-FE-06-01: ruta /hse kroz RequireAnyPermission [hse.read, hse.write]",2026-11-03
 frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi vraćaju Navigate (bez bijelog ekrana), jednokratni toast na 403; odlazak na /dashboard kao fallback",2026-11-03
 frontend/src/routes/lazy-pages.tsx,FE,app-shell,FE-02,53,pregledano,"FE-02: lazy fleet/map (Leaflet), javni sajt, obračun i ERP; Suspense fallback = ScreenLoader (D-015/D-041)",2026-11-03
-frontend/src/stores/auth-store.ts,FE,shared,FE-15,23,nepregledano,,
-frontend/src/stores/company-store.ts,FE,shared,FE-15,18,nepregledano,,
+frontend/src/stores/auth-store.ts,FE,shared,FE-15,23,pregledano,FE-15: pregledano — access token samo u memoriji; `clear()` vraća sesiju na početno stanje (keš briše `clearSession`),2026-11-04
+frontend/src/stores/company-store.ts,FE,shared,FE-15,18,pregledano,FE-15: pregledano — izbor firme u sessionStorage + invalidacija keša; čitanje ide kroz zaštićeni `readCompanyId`,2026-11-04
 frontend/src/vite-env.d.ts,FE,app-shell,FE-02,10,pregledano,FE-02: Vite client tipovi; nema deklarisanih env varijabli (VITE_* se čita kroz import.meta.env),2026-11-03
 frontend/tsconfig.app.json,FE,config,FE-02,29,pregledano,"FE-02: strict, noUnusedLocals/Parameters, bundler resolution, alias @/*",2026-11-03
 frontend/tsconfig.json,FE,config,FE-02,14,pregledano,FE-02: project references (app + node) — tsc -b je jedina komanda u CI-ju,2026-11-03

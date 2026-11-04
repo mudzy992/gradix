@@ -396,5 +396,13 @@ export const en = {
     PAYROLL_SELF_APPROVE: 'You cannot approve your own hours.',
     IOT_DEVICE_EXISTS: 'This machine already has a GPS device.',
     INTERNAL_ERROR: 'Internal error.',
+    NETWORK_ERROR: 'No connection to the server. Check your internet and try again.',
+    RATE_LIMITED: 'Too many requests in a short time. Wait a moment and try again.',
+    SERVICE_UNAVAILABLE: 'The service is temporarily unavailable.',
+    AUTH_RESET_NOT_AVAILABLE: 'Password reset is currently unavailable.',
+    MACHINE_IN_SERVICE: 'The machine is in service.',
+    REPORT_UNKNOWN: 'The report cannot be generated.',
+    TENDER_INVALID_STATUS: 'The tender status does not allow this action.',
+    HTTP_ERROR: 'The request failed.',
   },
 }

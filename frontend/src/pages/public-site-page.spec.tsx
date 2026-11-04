@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -62,8 +62,9 @@ function renderPage(slug = 'demo') {
 beforeEach(() => {
   getPublicCompany.mockReset().mockResolvedValue({ data: company() })
   listPublicProjects.mockReset().mockResolvedValue({ data: [project()], meta: { page: 1, limit: 20, total: 1 } })
-  document.title = 'Gradix'
+  // Redoslijed je važan: `head.innerHTML = ''` uklanja i `<title>`, pa bi naslov ostao prazan.
   document.head.innerHTML = ''
+  document.title = 'Gradix'
   document.documentElement.lang = 'bs'
 })
 
@@ -119,7 +120,8 @@ describe('PublicSitePage', () => {
     renderPage()
 
     await screen.findByRole('heading', { level: 1 })
-    expect(document.title).toBe('Demo Gradnja — Gradimo pouzdano.')
+    // Efekat za meta podatke se izvršava poslije commita — `waitFor` drži test stabilnim.
+    await waitFor(() => expect(document.title).toBe('Demo Gradnja — Gradimo pouzdano.'))
     expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Gradimo pouzdano.')
     expect(document.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe(
       'Demo Gradnja — Gradimo pouzdano.',
@@ -132,10 +134,10 @@ describe('PublicSitePage', () => {
     renderPage()
     await screen.findByRole('heading', { level: 1 })
 
-    expect(document.documentElement.lang).toBe('bs')
+    await waitFor(() => expect(document.documentElement.lang).toBe('bs'))
     await userEvent.click(screen.getByRole('button', { name: 'EN' }))
 
-    expect(document.documentElement.lang).toBe('en')
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'))
     expect(screen.getByRole('heading', { level: 2, name: 'Projects' })).toBeInTheDocument()
     expect(screen.getByText('Planning')).toBeInTheDocument()
   })

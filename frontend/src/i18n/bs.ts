@@ -396,5 +396,13 @@ export const bs = {
     PAYROLL_SELF_APPROVE: 'Ne možete odobriti vlastite sate.',
     IOT_DEVICE_EXISTS: 'Mašina već ima GPS uređaj.',
     INTERNAL_ERROR: 'Interna greška.',
+    NETWORK_ERROR: 'Nema veze sa serverom. Provjerite internet i pokušajte ponovo.',
+    RATE_LIMITED: 'Previše zahtjeva u kratkom roku. Sačekajte pa pokušajte ponovo.',
+    SERVICE_UNAVAILABLE: 'Servis je privremeno nedostupan.',
+    AUTH_RESET_NOT_AVAILABLE: 'Reset lozinke trenutno nije dostupan.',
+    MACHINE_IN_SERVICE: 'Mašina je na servisu.',
+    REPORT_UNKNOWN: 'Izvještaj nije moguće napraviti.',
+    TENDER_INVALID_STATUS: 'Status tendera ne dozvoljava ovu radnju.',
+    HTTP_ERROR: 'Zahtjev nije uspio.',
   },
 }
