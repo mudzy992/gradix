@@ -603,7 +603,8 @@ scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invar
 scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
 scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
-scripts/standards/check-env.mjs,STD,standards,STD-01,133,nepregledano,,
+scripts/standards/check-env.mjs,STD,standards,STD-01,146,popravljeno,F-CI-05-20: guard i heuristička ograničenja,2026-11-04
+scripts/standards/check-env.test.mjs,STD,standards,STD-01,70,pokriveno-testom,F-CI-05-20: izolovane regresije env guarda,2026-11-04
 scripts/standards/check-image.mjs,STD,standards,STD-01,160,pregledano,"INF-02/INF-03: 17 provjera — backend non-root/healthcheck/exec/preflight; frontend STOPSIGNAL, server_tokens, CSP, nasljeđivanje headera, proxy/SPA, identičnost korijenskih kopija",2026-11-02
 scripts/standards/check-schema.mjs,STD,standards,STD-01,68,pregledano,"BE-01: guard — parsira šemu, poredi sa baseline-om, upozorava na zastarjele unose",2026-11-02
 scripts/standards/check-secrets.mjs,STD,standards,STD-01,65,pregledano,6 pravila + allowlist; placeholderi izuzeti sa razlogom (STD-01),2026-11-02

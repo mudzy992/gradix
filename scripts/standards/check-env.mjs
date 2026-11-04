@@ -20,6 +20,12 @@ const allowEnv = new Set((allow.env ?? []).map((e) => e.name));
 const DOC = '.env.example';
 const DOC_COOLIFY = '.env.coolify';
 
+if (!fs.existsSync(path.join(ROOT, DOC))) {
+  report.violation(DOC, 'nedostaje obavezni env predložak');
+  finish(report);
+  process.exit(1);
+}
+
 const documented = new Set(
   read(DOC)
     .split('\n')
@@ -52,21 +58,21 @@ for (const f of ['backend/docker-entrypoint.sh', 'Dockerfile', 'Dockerfile.front
 // 3) backend: config.get / getOrThrow / process.env
 for (const f of walk('backend/src', (p) => p.endsWith('.ts') && !p.endsWith('.spec.ts'))) {
   const text = read(f);
-  for (const m of text.matchAll(/\.get(?:OrThrow)?(?:<[^>]*>)?\(\s*'([A-Z_][A-Z0-9_]*)'/g)) add(m[1], 'backend');
-  for (const m of text.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) add(m[1], 'backend');
+  for (const m of text.matchAll(/\.get(?:OrThrow)?(?:<[^>]*>)?\(\s*(['\"])([A-Z_][A-Z0-9_]*)\1/g)) add(m[2], 'backend');
+  for (const m of text.matchAll(/process\.env(?:\.([A-Z_][A-Z0-9_]*)|\[\s*(['\"])([A-Z_][A-Z0-9_]*)\2\s*\])/g)) add(m[1] ?? m[3], 'backend');
 }
 // backend: prisma.config.ts + seed (build-time / seed)
 for (const f of ['backend/prisma.config.ts', ...walk('backend/prisma', (p) => p.endsWith('.ts'))]) {
   if (!fs.existsSync(path.join(ROOT, f))) continue;
-  for (const m of read(f).matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) add(m[1], 'backend');
+  for (const m of read(f).matchAll(/process\.env(?:\.([A-Z_][A-Z0-9_]*)|\[\s*(['\"])([A-Z_][A-Z0-9_]*)\2\s*\])/g)) add(m[1] ?? m[3], 'backend');
 }
 
 // 4) frontend / mobile (samo javne varijable)
 for (const f of walk('frontend/src', (p) => /\.(ts|tsx)$/.test(p))) {
-  for (const m of read(f).matchAll(/import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g)) add(m[1], 'frontend');
+  for (const m of read(f).matchAll(/import\.meta\.env(?:\.([A-Z_][A-Z0-9_]*)|\[\s*(['\"])([A-Z_][A-Z0-9_]*)\2\s*\])/g)) add(m[1] ?? m[3], 'frontend');
 }
 for (const f of walk('mobile', (p) => /\.(ts|tsx|js|json)$/.test(p))) {
-  for (const m of read(f).matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) add(m[1], 'mobile');
+  for (const m of read(f).matchAll(/process\.env(?:\.([A-Z_][A-Z0-9_]*)|\[\s*(['\"])([A-Z_][A-Z0-9_]*)\2\s*\])/g)) add(m[1] ?? m[3], 'mobile');
   for (const m of read(f).matchAll(/\b(EXPO_PUBLIC_[A-Z0-9_]+)\b/g)) add(m[1], 'mobile');
 }
 
@@ -77,18 +83,23 @@ for (const [name, sources] of [...usages].sort()) {
   report.violation([...sources].join('+'), `koristi ${name}, ali nije u ${DOC}`);
 }
 
-// --- provjera 1b: backend varijable moraju biti i VALIDIRANE pri startu (BE-01) ---
-// `config.get` vraća `undefined` bez greške; zato svaka varijabla koju backend čita mora
-// postojati u validacionoj šemi (`backend/src/config/env.ts`), inače aplikacija starta
-// sa pola konfiguracije.
-if (fs.existsSync(path.join(ROOT, 'backend/src/config/env.ts'))) {
-  const schema = read('backend/src/config/env.ts');
-  const validated = new Set([...schema.matchAll(/\b([A-Z][A-Z0-9_]{2,})\??:/g)].map((m) => m[1]));
+// --- provjera 1b: tekst od validateEnv mora sadržati statički pristup backend varijabli ---
+// Sama TypeScript deklaracija ne izvršava validaciju. Ovo je heuristika: statički
+// pristup raw.NAME u funkciji validateEnv nije dokaz semantičke ispravnosti validatora.
+const schemaPath = 'backend/src/config/env.ts';
+if (!fs.existsSync(path.join(ROOT, schemaPath))) {
+  report.violation(schemaPath, 'nedostaje validator okruženja');
+} else {
+  const schema = read(schemaPath);
+  const functionStart = schema.indexOf('export function validateEnv(');
+  const body = functionStart < 0 ? '' : schema.slice(functionStart);
+  if (functionStart < 0) report.violation(schemaPath, 'nedostaje funkcija validateEnv');
+  const handled = new Set([...body.matchAll(/\braw\.([A-Z][A-Z0-9_]*)/g)].map((m) => m[1]));
   for (const [name, sources] of [...usages].sort()) {
     if (!sources.has('backend')) continue;
     report.bump();
-    if (validated.has(name) || allowEnv.has(name)) continue;
-    report.violation('backend/src/config/env.ts', `ne validira ${name}, a backend ga čita`);
+    if (handled.has(name) || allowEnv.has(name)) continue;
+    report.violation(schemaPath, `nije pronađen raw.${name} u tekstu od validateEnv, a backend ga čita`);
   }
 }
 
@@ -99,7 +110,9 @@ for (const name of [...documented].sort()) {
 }
 
 // --- provjera 3: .env.example i .env.coolify imaju iste ključeve ---
-if (fs.existsSync(path.join(ROOT, DOC_COOLIFY))) {
+if (!fs.existsSync(path.join(ROOT, DOC_COOLIFY))) {
+  report.violation(DOC_COOLIFY, 'nedostaje obavezni Coolify env predložak');
+} else {
   const coolify = new Set(
     read(DOC_COOLIFY).split('\n').map((l) => l.match(/^([A-Z_][A-Z0-9_]*)=/)).filter(Boolean).map((m) => m[1]),
   );

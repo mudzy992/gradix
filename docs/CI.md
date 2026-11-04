@@ -203,3 +203,7 @@ on:
 | C6 | Nema mobile joba | CI-07 |
 | C7 | ~~Nema `timeout-minutes`~~ — ✅ dodati na sve jobove (CI-03) | CI-03 |
 | C8 | ~~Nema automatskog backup/restore testa~~ — ✅ riješeno u INF-06 (noćni drill + skripte) | INF-06 |
+
+### Env guard — granice statičke provjere
+
+`scripts/standards/check-env.mjs` zahtijeva oba env predloška i validator, provjerava statičke pristupe (uključujući navodnike i bracket literale) i eksplicitni `raw.NAME` u `validateEnv`. Ovo su tekstualne heuristike, ne TypeScript parser ni dokaz da je vrijednost ispravno validirana; dinamički ključevi i semantika zahtijevaju pregled. Izolovane regresije `scripts/standards/check-env.test.mjs` izvršavaju se u audit poslu.
