@@ -25,14 +25,12 @@ export class AuthTokensService {
   // Issuance, rotation and revocation for one user take the same row lock.
   // Keep the order User -> RefreshToken to avoid issuing a child after a
   // concurrently started revokeAll has taken its statement snapshot.
-  private async lockUser(tx: Prisma.TransactionClient, userId: string) {
+  async lockUser(tx: Prisma.TransactionClient, userId: string) {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
   }
 
-  private async revokeAllInTransaction(
-    tx: Prisma.TransactionClient,
-    userId: string,
-  ) {
+  // Caller must hold this user's row lock for the lifetime of the transaction.
+  async revokeAllInTransaction(tx: Prisma.TransactionClient, userId: string) {
     await tx.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },

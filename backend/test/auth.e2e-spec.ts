@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, decodeJwt, login } from './helpers/auth';
 import { AuthTokensService } from '../src/modules/auth/auth-tokens.service';
+import { TimerForceCloseService } from '../src/modules/ops/timer-force-close.service';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { hashRefreshToken } from '../src/common/utils/password';
 
@@ -513,6 +514,122 @@ describe('Auth (e2e)', () => {
     expect(stillActive.refreshToken).toEqual(expect.any(String));
   });
 
+  it('user deactivation waits for rotation and atomically revokes the session', async () => {
+    const { adminToken, userId, refreshToken } = await createWorkerSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        const hash = hashRefreshToken(refreshToken);
+        await tx.$queryRaw`SELECT "id" FROM "RefreshToken" WHERE "tokenHash" = ${hash} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let deactivation: Promise<request.Response> | undefined;
+    let rotation: ReturnType<AuthTokensService['rotate']> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      deactivation = request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(auth(adminToken))
+        .send({ isActive: false })
+        .then((response) => response);
+      void deactivation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%UPDATE%RefreshToken%');
+      rotation = tokens.rotate(refreshToken);
+      void rotation.catch(() => undefined);
+      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      release();
+      expect((await deactivation).status).toBe(200);
+      await expect(rotation).rejects.toMatchObject({
+        code: 'AUTH_REFRESH_REUSE',
+      });
+      const user = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      expect(user.isActive).toBe(false);
+      const reactivated = await request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(auth(adminToken))
+        .send({ isActive: true });
+      expect(reactivated.status).toBe(200);
+      const row = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(row.revokedAt).not.toBeNull();
+    } finally {
+      release();
+      await Promise.allSettled([holder, deactivation, rotation]);
+    }
+  });
+
+  it('deactivation rolls back on revocation failure and retries post-commit timer cleanup', async () => {
+    const { adminToken, userId, refreshToken } = await createWorkerSession(app);
+    const prisma = app.get(PrismaService);
+    const tokens = app.get(AuthTokensService);
+    const timers = app.get(TimerForceCloseService);
+    const revokeFailure = jest
+      .spyOn(tokens, 'revokeAllInTransaction')
+      .mockRejectedValueOnce(new Error('test revoke failure'));
+    try {
+      const failed = await request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(auth(adminToken))
+        .send({ isActive: false });
+      expect(failed.status).toBe(500);
+    } finally {
+      revokeFailure.mockRestore();
+    }
+    const unchanged = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    const activeToken = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(refreshToken) },
+      select: { revokedAt: true },
+    });
+    expect(unchanged.isActive).toBe(true);
+    expect(activeToken.revokedAt).toBeNull();
+
+    const timerFailure = jest
+      .spyOn(timers, 'closeOpenForUser')
+      .mockRejectedValueOnce(new Error('test timer failure'));
+    try {
+      const failed = await request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(auth(adminToken))
+        .send({ isActive: false });
+      expect(failed.status).toBe(500);
+      const inactive = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      const revoked = await prisma.refreshToken.findUniqueOrThrow({
+        where: { tokenHash: hashRefreshToken(refreshToken) },
+        select: { revokedAt: true },
+      });
+      expect(inactive.isActive).toBe(false);
+      expect(revoked.revokedAt).not.toBeNull();
+      const retry = await request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(auth(adminToken))
+        .send({ isActive: false });
+      expect(retry.status).toBe(200);
+      expect(timerFailure).toHaveBeenCalledTimes(2);
+    } finally {
+      timerFailure.mockRestore();
+    }
+  });
+
   it('password 9 chars returns AUTH_PASSWORD_TOO_SHORT', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const response = await request(app.getHttpServer())
@@ -526,6 +643,34 @@ describe('Auth (e2e)', () => {
     expect(response.body.error.code).toBe('AUTH_PASSWORD_TOO_SHORT');
   });
 });
+
+async function createWorkerSession(app: INestApplication<App>) {
+  const admin = await login(app, 'admin@gradix.local');
+  expect(admin.status).toBe(200);
+  const adminToken = admin.body.data.accessToken as string;
+  const email = `deactivate-${randomUUID()}@gradix.local`;
+  const created = await request(app.getHttpServer())
+    .post('/api/users')
+    .set(auth(adminToken))
+    .send({
+      email,
+      firstName: 'Deactivation',
+      lastName: 'Test',
+      roles: ['WORKER'],
+    });
+  expect(created.status).toBe(201);
+  const logged = await login(
+    app,
+    email,
+    created.body.data.temporaryPassword as string,
+  );
+  expect(logged.status).toBe(200);
+  return {
+    adminToken,
+    userId: created.body.data.id as string,
+    refreshToken: logged.body.data.refreshToken as string,
+  };
+}
 
 /** Observe the actual PostgreSQL lock wait; no token or SQL parameters are logged. */
 async function waitForBlockedQuery(

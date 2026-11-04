@@ -142,34 +142,54 @@ export class UsersService {
     assertName(dto.lastName);
     assertEmployeeCode(dto.employeeCode);
     try {
-      const user = await this.prisma.$transaction(async (tx) => {
-        if (dto.roles) {
-          await tx.userRoleAssignment.deleteMany({ where: { userId: id } });
-          await tx.userRoleAssignment.createMany({
-            data: dto.roles.map((role) => ({ userId: id, role })),
+      const { user, deactivated } = await this.prisma.$transaction(
+        async (tx) => {
+          // Match auth's lock order before changing roles, account state or tokens.
+          await this.tokens.lockUser(tx, id);
+          const current = await tx.user.findFirst({
+            where: { id, companyId: requireCompany(actor) },
+            include: { roles: true },
           });
-        }
-        return tx.user.update({
-          where: { id },
-          data: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            phone:
-              dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
-            employeeCode:
-              dto.employeeCode === undefined
-                ? undefined
-                : dto.employeeCode || null,
-            isActive: dto.isActive,
-            hourlyRate: dto.hourlyRate,
-            locale: dto.locale,
-          },
-          include: { roles: true },
-        });
-      });
-      if (dto.isActive === false && existing.isActive) {
-        await this.timers.closeOpenForUser(id, actor.id);
-        await this.tokens.revokeAll(id);
+          if (!current) {
+            throw new AppError(ERROR_CODES.NOT_FOUND, 'User not found', 404);
+          }
+          assertCanManageTarget(
+            actor,
+            current.roles.map((item) => item.role),
+          );
+          if (dto.roles) {
+            await tx.userRoleAssignment.deleteMany({ where: { userId: id } });
+            await tx.userRoleAssignment.createMany({
+              data: dto.roles.map((role) => ({ userId: id, role })),
+            });
+          }
+          const updated = await tx.user.update({
+            where: { id },
+            data: {
+              firstName: dto.firstName,
+              lastName: dto.lastName,
+              phone:
+                dto.phone !== undefined ? normalizePhone(dto.phone) : undefined,
+              employeeCode:
+                dto.employeeCode === undefined
+                  ? undefined
+                  : dto.employeeCode || null,
+              isActive: dto.isActive,
+              hourlyRate: dto.hourlyRate,
+              locale: dto.locale,
+            },
+            include: { roles: true },
+          });
+          if (dto.isActive === false) {
+            await this.tokens.revokeAllInTransaction(tx, id);
+          }
+          return {
+            user: updated,
+            deactivated: dto.isActive === false && current.isActive,
+          };
+        },
+      );
+      if (deactivated) {
         await this.audit.write({
           companyId: actor.tenantCompanyId,
           actorId: actor.id,
@@ -187,6 +207,12 @@ export class UsersService {
           entityId: id,
           payload: { fields: Object.keys(dto) },
         });
+      }
+      // Retry timer cleanup even when the user was already inactive, since the
+      // earlier post-commit cleanup may have failed. Session revocation has
+      // already committed and does not depend on these external side effects.
+      if (dto.isActive === false) {
+        await this.timers.closeOpenForUser(id, actor.id);
       }
       return serializeUser(user, actor);
     } catch (error) {

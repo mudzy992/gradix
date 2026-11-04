@@ -79,8 +79,10 @@ backend/src/
   u miješanom deploymentu ne prate porodicu ni zajednički lock. Ponovna upotreba opozvanog
   tokena i dalje opoziva sve sesije. Promjena lozinke i administratorski reset atomski
   mijenjaju hash i opozivaju sesije pod user lockom; promjena lozinke provjerava i da
-  prethodno potvrđeni hash nije promijenjen dok se čekao lock. Deaktivacija naloga ili
-  firme i naknadni opoziv još nisu jedna transakcija, a access JWT traje do isteka.
+  prethodno potvrđeni hash nije promijenjen dok se čekao lock. Deaktivacija korisnika i
+  opoziv njegovih refresh tokena također su jedna transakcija; naknadno zatvaranje timera
+  i audit nisu dio te transakcije. Ponovljeni zahtjev za deaktivaciju ponovo pokušava
+  zatvoriti timere. Deaktivacija firme i opoziv još nisu atomski, a access JWT traje do isteka.
 - Refresh se odbija i kad je korisnik deaktiviran, firma ugašena ili korisnik ostane bez rola
   (`evaluateRefreshToken`, `auth-token-rules.ts`). Dnevni cron u 03:00 briše istekle tokene i
   opozvane starije od `REFRESH_RETENTION_DAYS` (7 dana).
