@@ -52,10 +52,23 @@ let rows = new Map();
 if (!fs.existsSync(MATRIX_PATH)) {
   fail(`nema matrice: ${path.relative(ROOT, MATRIX_PATH)} (pokreni: node scripts/audit/inventory.mjs)`);
 } else {
-  const firstLine = fs.readFileSync(MATRIX_PATH, 'utf8').split('\n')[0];
-  const header = parseCsvLine(firstLine);
+  const lines = fs.readFileSync(MATRIX_PATH, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  const header = parseCsvLine(lines[0]);
   if (header.join(',') !== CSV_HEADER.join(',')) {
     fail(`matrica: header je "${header.join(',')}", očekivano "${CSV_HEADER.join(',')}"`);
+  }
+  // readMatrix() returns a Map, so duplicate keys would otherwise be silently overwritten.
+  const seen = new Set();
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cells = parseCsvLine(lines[i]);
+    if (cells.length !== CSV_HEADER.length) {
+      fail(`matrica: red ${i + 1} ima ${cells.length} kolona (očekivano ${CSV_HEADER.length})`);
+    }
+    const file = cells[0];
+    if (!file?.trim()) fail(`matrica: red ${i + 1} nema putanju fajla`);
+    else if (seen.has(file)) fail(`matrica: duplikat fajla ${file} (red ${i + 1})`);
+    else seen.add(file);
   }
   rows = readMatrix();
 }

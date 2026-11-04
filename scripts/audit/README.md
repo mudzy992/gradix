@@ -7,6 +7,7 @@ Bez zavisnosti (samo Node 22 builtin). Ne treba `npm install`.
 | `inventory.mjs` | Skenira repo, klasifikuje svaki izvorni fajl u `layer/module/segment`, upisuje `AUDIT/COVERAGE_MATRIX.csv` | ručno kad se doda/pomjeri fajl |
 | `inventory.mjs --stats` | Isto, ali samo ispiše statistiku (ništa ne piše) | orijentacija |
 | `check-coverage.mjs` | CI gate: matrica vs. kod vs. `segments.json` | CI job `audit`, lokalno prije commita |
+| `check-coverage.test.mjs` | Izolovani testovi ispravne i oštećene matrice | `node --test scripts/audit/check-coverage.test.mjs` i CI job `audit` |
 | `lib.mjs` | zajednička logika: `collectFiles`, `classify`, CSV parser, `readSegments` | — |
 
 ## Tok rada
@@ -48,7 +49,7 @@ smije ručno „popravljati“, samo generisati.
 
 ## Šta gate provjerava
 
-1. Matrica postoji, header tačan, nema duplikata.
+1. Matrica postoji, header tačan; duplikati, nedostajuće putanje i pogrešan broj kolona ruše gate.
 2. Svaki fajl iz `collectFiles()` ima red; nema redova za nepostojeće fajlove.
 3. `layer/module/segment` se poklapaju sa klasifikacijom (drift = pad).
 4. Status je iz liste; pregledani statusi imaju `findings` i ISO `date`.
