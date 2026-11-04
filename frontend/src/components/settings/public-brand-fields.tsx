@@ -32,13 +32,14 @@ export function PublicBrandFields() {
   }
   const logoAssetId = company.data?.logoAssetId
   return (
-    <Card>
+    <Card role="region" aria-label={t('settingsPublic.logo')}>
       <CardHeader>
         <CardTitle>{t('settingsPublic.logo')}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <Field label={t('settingsPublic.logo')} hint={t('settingsPublic.logoHint')}>
+        <Field label={t('settingsPublic.logo')} htmlFor="public-logo" hint={t('settingsPublic.logoHint')}>
           <Input
+            id="public-logo"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={(event) => void onLogo(event.target.files?.[0])}

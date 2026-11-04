@@ -686,6 +686,46 @@ prava, samo prestaje da krije podatke koje korisnik smije vidjeti.
 (b) `toLocaleString` za sate i iznose — okruženjski zavisno; (c) sakriti nepoznat enum — podatak bi
 tiho nestao; (d) učitavati sve tabove unaprijed — troši kvotu i skriva pravi trošak ekrana.
 
+### D-052 — Admin ekrani: forma samo nad učitanim podacima, status naloga i prevod postavki po ključu
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+FE-13 je pregledao administraciju (postavke, korisnici, firme, prebacivač firme). Najopasniji nalaz
+nije bio kozmetički: ekran postavki je prikazivao **formu firme i kad `GET` padne**. Polja su bila
+prazna, a „Sačuvaj“ je slao prazne stringove — jedan klik je mogao **pregaziti naziv, JIB i adresu**
+firme. Uz to: tabela korisnika **nije imala status**, pa se deaktiviran korisnik nije razlikovao od
+aktivnog, a reaktivacije nije bilo nigdje iako API prima `isActive: true` (deaktivacija je bila
+trajna iz UI-a); reset lozinke je išao **jednim klikom**; kolona statusa firmi imala je prazno
+zaglavlje; registar postavki je uz polje stavljao goli tehnički ključ i **engleski opis** u bosanski
+interfejs, a prazno numeričko polje se pretvaralo u `0`.
+
+**Odluka:**
+
+1. **Destruktivna forma se prikazuje samo nad učitanim podacima.** Dok `useQuery` nije `isSuccess`,
+   nema forme (skeleton), a pad je vidljiv (`role="alert"` + „Pokušaj ponovo“). Time je nemoguće
+   poslati prazna polja kao izmjenu. Isto važi za registar postavki.
+2. **Status naloga je prve klase u UI-u.** `accountStatus(isActive)` (labels.ts) daje tekst i ton;
+   status je svoja kolona sa zaglavljem i u korisnicima i u firmama. Uz deaktivaciju postoji
+   **reaktivacija** (`isActive: true`), pa deaktivacija nije trajna iz UI-a.
+3. **Opasne akcije traže potvrdu.** Reset lozinke i deaktivacija (korisnik/firma) idu kroz
+   `AlertDialog` sa imenom aktera; ishod je potvrđen toastom.
+4. **Postavke se prevode po ključu.** `SETTINGS_KEYS` (`lib/settings-keys.ts`) + i18n
+   `settings.keys.<ključ>.label/.description`; opis sa backenda ostaje **rezerva** kad prijevoda nema
+   (kao `defaultValue` u D-046/D-049). Brojevi se drže kao tekst i validiraju pri čuvanju — prazno
+   polje se **ne** upisuje (prije: `Number('')` = 0), a „Sačuvaj“ je onemogućen dok nema izmjena.
+5. **Validacija obrazaca ne zavisi od odmontiranih polja.** U `CompanySheet` se provjera radi u
+   `handleSubmit`-u (`form.setError`), jer je react-hook-form zadržavao `required` pravila polja koja
+   više nisu u DOM-u (uređivanje firme se nije moglo sačuvati). Isto svojstvo rešeno je i u
+   `UserSheet` (`shouldUnregister`).
+6. **Kartice postavki su imenovani `region`-i**, pa čitač ekrana (i test) razlikuje blokove; polje
+   fajla (logo) ima `htmlFor`/`id`, a `Switch` u registru dobija `id` preko `Field`-a.
+7. **Kopiranje privremene lozinke ne smije pući**: bez `navigator.clipboard` tekst se označi, a
+   korisnik dobija poruku šta da uradi.
+
+**Odbačeno:** (a) skrivati ceo ekran postavki bez `settings.write` — čitanje je dozvoljeno i korisno;
+(b) „mekana“ deaktivacija bez reaktivacije — nepovratna radnja u UI-u bez razloga; (c) validacija
+kroz HTML `required` — poruke nisu na bosanskom i ne vide se uz polje; (d) prevod tehničkih ključeva
+na backendu — API ugovor se ne dira u FE segmentu.
+
 ---
 
 ## Zamijenjene / povučene odluke

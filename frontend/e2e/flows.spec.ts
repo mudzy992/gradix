@@ -174,6 +174,29 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/^(CLIENT|SUPPLIER|SITE|YARD|CISTERN|MATERIAL|LABOR|PAYROLL|MANUAL)$/)).toHaveCount(0)
   })
 
+  test('korisnici imaju status i oznaku sopstvenog naloga (FE-13)', async () => {
+    await page.goto('/users')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/korisnici/i)
+    await expectNoLoadError(page)
+    await expect(page.getByRole('table')).toBeVisible({ timeout: 15_000 })
+    // Zaglavlje statusa je ranije bilo prazno `<th>`; deaktiviran korisnik se nije razlikovao.
+    await expect(page.getByRole('columnheader', { name: 'Status' })).toBeVisible()
+    await expect(page.getByText('Demo Admin')).toBeVisible()
+    await expect(page.getByText('(to ste vi)')).toBeVisible()
+    await expect(page.getByText(/^(ACTIVE|INACTIVE)$/)).toHaveCount(0)
+  })
+
+  test('postavke: podaci firme i prevedene postavke (FE-13)', async () => {
+    await page.goto('/settings')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/postavke/i)
+    await expectNoLoadError(page)
+    // Forma firme postoji samo kad su podaci učitani (prije je prazna forma gazila podatke).
+    await expect(page.getByLabel('Naziv').first()).toHaveValue('Demo Gradnja', { timeout: 15_000 })
+    // Registar: labela je prevedena, opis sa backenda (engleski) se ne prikazuje.
+    await expect(page.getByLabel('Valuta')).toBeVisible()
+    await expect(page.getByText('Default currency code')).toHaveCount(0)
+  })
+
   test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).

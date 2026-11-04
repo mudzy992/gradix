@@ -174,6 +174,12 @@ const RULES = [
   // --- frontend ---
   { re: /^frontend\/src\/index\.css$/, layer: 'FE', module: 'design', segment: 'FE-01' },
   { re: /^frontend\/src\/(App|main)\.tsx?$|^frontend\/src\/vite-env\.d\.ts$|^frontend\/src\/routes\//, layer: 'FE', module: 'app-shell', segment: 'FE-02' },
+  {
+    re: /^frontend\/src\/components\/layout\/company-switcher\.tsx$/,
+    layer: 'FE',
+    module: 'admin-ui',
+    segment: 'FE-13',
+  },
   { re: /^frontend\/src\/components\/layout\//, layer: 'FE', module: 'layout', segment: 'FE-02' },
   { re: /^frontend\/src\/components\/ui\//, layer: 'FE', module: 'ui', segment: 'FE-16' },
   { re: /^frontend\/src\/components\/ops\//, layer: 'FE', module: 'ops-ui', segment: 'FE-08' },
@@ -184,7 +190,14 @@ const RULES = [
   { re: /^frontend\/src\/components\/erp[-\/]/, layer: 'FE', module: 'erp-ui', segment: 'FE-12' },
   { re: /^frontend\/src\/components\/diary-/, layer: 'FE', module: 'diary-ui', segment: 'FE-10' },
   { re: /^frontend\/src\/components\/public-/, layer: 'FE', module: 'public-ui', segment: 'FE-14' },
-  { re: /^frontend\/src\/components\/(registry-fields|company-switcher)/, layer: 'FE', module: 'admin-ui', segment: 'FE-13' },
+  // FE-13 (D-052): administracija — postavke, korisnici, firme (prije su padali u generički FE-08).
+  {
+    re: /^frontend\/src\/components\/(settings|users|companies)\//,
+    layer: 'FE',
+    module: 'admin-ui',
+    segment: 'FE-13',
+  },
+  { re: /^frontend\/src\/lib\/settings-keys\.ts$/, layer: 'FE', module: 'admin-ui', segment: 'FE-13' },
   { re: /^frontend\/src\/components\//, layer: 'FE', module: 'ops-ui', segment: 'FE-08' },
   { re: /^frontend\/src\/pages\/(login|forgot|reset|change-password)-page\.tsx$/, layer: 'FE', module: 'auth-pages', segment: 'FE-07' },
   { re: /^frontend\/src\/pages\/dashboard-page\.tsx$/, layer: 'FE', module: 'dashboard', segment: 'FE-04' },

@@ -12,13 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field } from '@/components/field'
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 type Values = {
   firstName: string
@@ -38,12 +32,21 @@ type Props = {
   onSaved: () => void
 }
 
+/**
+ * FE-13 — obrazac korisnika. Nalazi: satnica je bila **slobodan tekst** („abc“ je išlo na API i
+ * vraćalo 400 bez objašnjenja uz polje), izbor uloga nije imao poruku kad se sve odznači, a
+ * onemogućen email nije imao razlog. Sada: satnica se validira uz polje (`Field error`), uloge imaju
+ * vlastitu poruku, a email nosi hint „ne može se mijenjati“.
+ */
 export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Props) {
   const { t } = useTranslation()
   const me = useAuthStore((state) => state.user)
   const canRate = useHasPermission('payroll.write')
   const options = me ? assignableRoles(me) : []
   const form = useForm<Values>({
+    // FE-13: satnica postoji samo uz `payroll.write` — `shouldUnregister` sklanja pravilo kad se
+    // polje odmontira (inače validacija pada na polju koje korisnik ne vidi).
+    shouldUnregister: true,
     values: {
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
@@ -54,22 +57,26 @@ export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Prop
       roles: user?.roles ?? [],
     },
   })
-  const roles = form.watch('roles')
+  // `roles` nije `<input>` pa ga `shouldUnregister` ne drži u formi — čitamo ga uz rezervu.
+  const roles = form.watch('roles') ?? []
+  const rolesError = form.formState.errors.roles?.message
   const toggleRole = (role: AppRole, checked: boolean): void => {
     const next = checked ? [...roles, role] : roles.filter((item) => item !== role)
-    form.setValue('roles', next)
+    form.setValue('roles', next, { shouldValidate: true })
   }
   const onSubmit = form.handleSubmit(async (values) => {
-    if (values.roles.length === 0) {
-      toast.error(t('errors.VALIDATION_FAILED'))
+    const nextRoles = values.roles ?? []
+    if (nextRoles.length === 0) {
+      form.setError('roles', { message: t('users.rolesRequired') })
       return
     }
+    form.clearErrors('roles')
     const body: Record<string, unknown> = {
       firstName: values.firstName,
       lastName: values.lastName,
       phone: values.phone || undefined,
       employeeCode: values.employeeCode || undefined,
-      roles: values.roles,
+      roles: nextRoles,
     }
     if (canRate && values.hourlyRate) {
       body.hourlyRate = values.hourlyRate
@@ -94,14 +101,27 @@ export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Prop
           <SheetTitle>{user ? t('users.edit') : t('users.create')}</SheetTitle>
         </SheetHeader>
         <form className="grid gap-4 px-4" onSubmit={onSubmit}>
-          <Field label={t('users.firstName')} htmlFor="firstName">
-            <Input id="firstName" {...form.register('firstName', { required: true })} />
+          <Field label={t('users.firstName')} htmlFor="firstName" error={form.formState.errors.firstName?.message}>
+            <Input
+              id="firstName"
+              {...form.register('firstName', { required: t('common.required') })}
+            />
           </Field>
-          <Field label={t('users.lastName')} htmlFor="lastName">
-            <Input id="lastName" {...form.register('lastName', { required: true })} />
+          <Field label={t('users.lastName')} htmlFor="lastName" error={form.formState.errors.lastName?.message}>
+            <Input id="lastName" {...form.register('lastName', { required: t('common.required') })} />
           </Field>
-          <Field label={t('auth.email')} htmlFor="email">
-            <Input id="email" type="email" disabled={Boolean(user)} {...form.register('email', { required: !user })} />
+          <Field
+            label={t('auth.email')}
+            htmlFor="email"
+            hint={user ? t('users.emailLocked') : undefined}
+            error={form.formState.errors.email?.message}
+          >
+            <Input
+              id="email"
+              type="email"
+              disabled={Boolean(user)}
+              {...form.register('email', { required: user ? false : t('common.required') })}
+            />
           </Field>
           <Field label={t('auth.phone')} htmlFor="phone" hint={t('users.phoneHint')}>
             <Input id="phone" {...form.register('phone')} />
@@ -110,11 +130,29 @@ export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Prop
             <Input id="employeeCode" {...form.register('employeeCode')} />
           </Field>
           {canRate ? (
-            <Field label={t('users.hourlyRate')} htmlFor="hourlyRate">
-              <Input id="hourlyRate" {...form.register('hourlyRate')} />
+            <Field
+              label={t('users.hourlyRate')}
+              htmlFor="hourlyRate"
+              hint={t('users.rateHint')}
+              error={form.formState.errors.hourlyRate?.message}
+            >
+              <Input
+                id="hourlyRate"
+                inputMode="decimal"
+                {...form.register('hourlyRate', {
+                  validate: (value) =>
+                    value === '' || (Number.isFinite(Number(value)) && Number(value) > 0)
+                      ? true
+                      : t('users.rateInvalid'),
+                })}
+              />
             </Field>
           ) : null}
-          <fieldset className="grid gap-2">
+          <fieldset
+            className="grid gap-2"
+            aria-describedby={rolesError ? 'roles-error' : undefined}
+            aria-invalid={rolesError ? true : undefined}
+          >
             <legend className="text-sm font-medium">{t('users.roles')}</legend>
             {options.map((role) => (
               <label key={role} className="flex items-center gap-2 text-sm">
@@ -125,6 +163,11 @@ export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Prop
                 {t(`roles.${role}`)}
               </label>
             ))}
+            {rolesError ? (
+              <p id="roles-error" role="alert" className="text-xs font-medium text-destructive">
+                {rolesError}
+              </p>
+            ) : null}
           </fieldset>
           <SheetFooter>
             <Button type="submit">{t('common.save')}</Button>

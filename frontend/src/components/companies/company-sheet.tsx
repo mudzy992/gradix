@@ -7,13 +7,7 @@ import type { CompanyRow } from '@/lib/api-types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/field'
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 type Values = {
   name: string
@@ -31,9 +25,19 @@ type Props = {
   onSaved: () => void
 }
 
+const SLUG = /^[a-z0-9-]{3,40}$/
+
+/**
+ * FE-13 — obrazac firme. Nalazi: izmjena je slala i `legalName` koji korisnik **ne vidi** u obrascu
+ * (vrijednost sa backenda, pa se tiho prepisivala), slug nije imao nikakvu provjeru formata (greška je
+ * dolazila sa API-ja kao toast), a polja nisu imala poruke uz sebe.
+ */
 export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }: Props) {
   const { t } = useTranslation()
   const form = useForm<Values>({
+    // FE-13: polja prvog admina postoje samo pri kreiranju — `shouldUnregister` sklanja njihova
+    // pravila kad se odmontiraju (inače `required` pada u uređivanju, gdje polja nema u DOM-u).
+    shouldUnregister: true,
     values: {
       name: company?.name ?? '',
       slug: company?.slug ?? '',
@@ -42,13 +46,48 @@ export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }
       email: '',
     },
   })
+  const errors = form.formState.errors
+  /**
+   * FE-13 — validacija je u `handleSubmit`-u, ne u `register` pravilima. Razlog je stvarni bug:
+   * polja prvog admina postoje samo pri kreiranju, a RHF pravila registrovanih (pa odmontiranih)
+   * polja ume da zadrži — u uređivanju je `required` padao na poljima kojih nema u DOM-u i forma se
+   * nije mogla sačuvati. Ovako se provjerava tačno ono što je na ekranu.
+   */
+  const validate = (values: Values): boolean => {
+    let valid = true
+    const fail = (field: keyof Values, message: string): void => {
+      form.setError(field, { message })
+      valid = false
+    }
+    if (!values.name.trim()) {
+      fail('name', t('common.required'))
+    }
+    if (!company) {
+      if (!values.slug.trim()) {
+        fail('slug', t('common.required'))
+      } else if (!SLUG.test(values.slug)) {
+        fail('slug', t('companies.slugInvalid'))
+      }
+      if (!values.firstName.trim()) {
+        fail('firstName', t('common.required'))
+      }
+      if (!values.lastName.trim()) {
+        fail('lastName', t('common.required'))
+      }
+      if (!values.email.trim()) {
+        fail('email', t('common.required'))
+      }
+    }
+    return valid
+  }
   const onSubmit = form.handleSubmit(async (values) => {
+    if (!validate(values)) {
+      return
+    }
     try {
       if (company) {
-        await patchCompanyPlatform(company.id, {
-          name: values.name,
-          legalName: company.legalName,
-        })
+        // Samo ono što je u obrascu; prije se slao i `legalName` sa backenda.
+        await patchCompanyPlatform(company.id, { name: values.name })
         onSaved()
       } else {
         const created = await createCompany({
@@ -74,23 +113,38 @@ export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }
           <SheetTitle>{company ? t('companies.edit') : t('companies.create')}</SheetTitle>
         </SheetHeader>
         <form className="grid gap-4 px-4" onSubmit={onSubmit}>
-          <Field label={t('settings.name')} htmlFor="name">
-            <Input id="name" {...form.register('name', { required: true })} />
+          <Field label={t('settings.name')} htmlFor="name" error={errors.name?.message}>
+            <Input id="name" {...form.register('name')} />
           </Field>
-          <Field label={t('settings.slug')} htmlFor="slug" hint={t('companies.slugHint')}>
-            <Input id="slug" disabled={Boolean(company)} {...form.register('slug', { required: !company })} />
+          <Field
+            label={t('settings.slug')}
+            htmlFor="slug"
+            hint={company ? t('settings.slugLocked') : t('companies.slugHint')}
+            error={errors.slug?.message}
+          >
+            <Input id="slug" disabled={Boolean(company)} {...form.register('slug')} />
           </Field>
           {!company ? (
             <>
               <p className="text-sm font-medium">{t('companies.admin')}</p>
-              <Field label={t('users.firstName')} htmlFor="adminFirst">
-                <Input id="adminFirst" {...form.register('firstName', { required: true })} />
+              <Field label={t('users.firstName')} htmlFor="adminFirst" error={errors.firstName?.message}>
+                <Input
+                  id="adminFirst"
+                  {...form.register('firstName')}
+                />
               </Field>
-              <Field label={t('users.lastName')} htmlFor="adminLast">
-                <Input id="adminLast" {...form.register('lastName', { required: true })} />
+              <Field label={t('users.lastName')} htmlFor="adminLast" error={errors.lastName?.message}>
+                <Input
+                  id="adminLast"
+                  {...form.register('lastName')}
+                />
               </Field>
-              <Field label={t('auth.email')} htmlFor="adminEmail">
-                <Input id="adminEmail" type="email" {...form.register('email', { required: true })} />
+              <Field label={t('auth.email')} htmlFor="adminEmail" error={errors.email?.message}>
+                <Input
+                  id="adminEmail"
+                  type="email"
+                  {...form.register('email')}
+                />
               </Field>
             </>
           ) : null}

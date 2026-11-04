@@ -145,6 +145,15 @@ const WAREHOUSE_TYPE: Record<string, Entry> = {
   CISTERN: { tone: 'outline' },
 }
 
+/**
+ * FE-13 — status naloga (korisnik, firma). Backend ga daje kao `isActive`, ali UI ga je ranije
+ * prikazivao samo bojom badge-a bez teksta, a deaktiviran korisnik se nije razlikovao od aktivnog.
+ */
+const ACCOUNT_STATUS: Record<string, Entry> = {
+  ACTIVE: { tone: 'secondary' },
+  INACTIVE: { tone: 'destructive' },
+}
+
 const ASSIGNMENT_ROLE: Record<string, Entry> = {
   PM: { tone: 'default' },
   SS: { tone: 'default' },
@@ -180,6 +189,8 @@ export const costCategory = (value: string): StatusMeta => meta(COST_CATEGORY, '
 export const costSource = (value: string): StatusMeta => meta(COST_SOURCE, 'costSource', value)
 export const partnerType = (value: string): StatusMeta => meta(PARTNER_TYPE, 'partnerType', value)
 export const warehouseType = (value: string): StatusMeta => meta(WAREHOUSE_TYPE, 'warehouseType', value)
+export const accountStatus = (isActive: boolean): StatusMeta =>
+  meta(ACCOUNT_STATUS, 'account', isActive ? 'ACTIVE' : 'INACTIVE')
 
 /** Tura je „istovarena“ kad ima `unloadedAt`; jedino mjesto gdje se to pravilo zna. */
 export const tripStatusOf = (row: { unloadedAt: string | null }): StatusMeta =>
@@ -205,6 +216,7 @@ export const KNOWN_STATUSES = {
   costSource: Object.keys(COST_SOURCE),
   partnerType: Object.keys(PARTNER_TYPE),
   warehouseType: Object.keys(WAREHOUSE_TYPE),
+  account: Object.keys(ACCOUNT_STATUS),
 }
 
 /**

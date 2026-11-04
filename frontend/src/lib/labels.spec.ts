@@ -1,26 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  EXPIRY_WARN_DAYS,
-  KNOWN_STATUSES,
-  assignmentRole,
-  daysUntil,
-  documentState,
-  formatDuration,
-  formatHours,
-  formatAmount,
-  gpsSource,
-  hseSeverity,
-  hseStatus,
-  machineStatus,
-  machineType,
-  materialUnit,
-  serviceStatus,
-  tenderStatus,
-  projectStatus,
-  taskPriority,
-  taskStatus,
-  tripStatusOf,
-} from '@/lib/labels'
+import { EXPIRY_WARN_DAYS, KNOWN_STATUSES, accountStatus, assignmentRole, daysUntil, documentState, formatAmount, formatDuration, formatHours, gpsSource, hseSeverity, hseStatus, machineStatus, machineType, materialUnit, projectStatus, serviceStatus, taskPriority, taskStatus, tenderStatus, tripStatusOf } from '@/lib/labels'
 
 /**
  * FE-08 — mape enuma. Test drži dvije stvari: (1) pokriveni su **svi** statusi iz Prisma šeme
@@ -205,6 +184,13 @@ describe('tenderi, servis i iznosi', () => {
     expect(serviceStatus('CANCELLED').tone).toBe('destructive')
     expect(serviceStatus('IN_PROGRESS').tone).toBe('default')
     expect(serviceStatus('NEKI_NOVI').known).toBe(false)
+  })
+
+  it('status naloga: aktivan je neutralan, neaktivan crven (FE-13)', () => {
+    expect(accountStatus(true).labelKey).toBe('status.account.ACTIVE')
+    expect(accountStatus(true).tone).toBe('secondary')
+    expect(accountStatus(false).labelKey).toBe('status.account.INACTIVE')
+    expect(accountStatus(false).tone).toBe('destructive')
   })
 
   it('formatAmount razdvaja hiljade tačkom i decimale zarezom', () => {
