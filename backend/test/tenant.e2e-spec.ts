@@ -357,6 +357,126 @@ describe('Tenant (e2e)', () => {
     }
   });
 
+  it('protects the last active super admin from role removal and deactivation', async () => {
+    const { companyId, platformToken, userId, refreshToken } =
+      await companyWithSession(app);
+    const headers = { ...auth(platformToken), 'X-Company-Id': companyId };
+    const demote = await request(app.getHttpServer())
+      .patch(`/api/users/${userId}`)
+      .set(headers)
+      .send({ roles: ['WORKER'] });
+    expect(demote.status).toBe(403);
+    const deactivate = await request(app.getHttpServer())
+      .patch(`/api/users/${userId}`)
+      .set(headers)
+      .send({ isActive: false });
+    expect(deactivate.status).toBe(403);
+    const prisma = app.get(PrismaService);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { roles: true },
+    });
+    const token = await prisma.refreshToken.findUniqueOrThrow({
+      where: { tokenHash: hashRefreshToken(refreshToken) },
+      select: { revokedAt: true },
+    });
+    expect(user.isActive).toBe(true);
+    expect(user.roles.map((role) => role.role)).toContain('SUPER_ADMIN');
+    expect(token.revokedAt).toBeNull();
+  });
+
+  it('serializes concurrent deactivation and demotion of two super admins', async () => {
+    const { companyId, platformToken, userId } = await companyWithSession(app);
+    const headers = { ...auth(platformToken), 'X-Company-Id': companyId };
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({
+        email: `super-${randomUUID()}@example.test`,
+        firstName: 'Second',
+        lastName: 'Super',
+        roles: ['SUPER_ADMIN'],
+      });
+    expect(created.status).toBe(201);
+    const secondId = created.body.data.id as string;
+    const prisma = app.get(PrismaService);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Company" WHERE "id" = ${companyId} FOR UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let first: Promise<request.Response> | undefined;
+    let second: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      first = request(app.getHttpServer())
+        .patch(`/api/users/${userId}`)
+        .set(headers)
+        .send({ isActive: false })
+        .then((response) => response);
+      second = request(app.getHttpServer())
+        .patch(`/api/users/${secondId}`)
+        .set(headers)
+        .send({ roles: ['WORKER'] })
+        .then((response) => response);
+      void first.catch(() => undefined);
+      void second.catch(() => undefined);
+      await waitForCompanyQuery(prisma, '%FROM "Company"%FOR UPDATE%', 2);
+      release();
+      const [a, b] = await Promise.all([first, second]);
+      expect([a.status, b.status].sort()).toEqual([200, 403]);
+      const count = await prisma.userRoleAssignment.count({
+        where: { role: 'SUPER_ADMIN', user: { companyId, isActive: true } },
+      });
+      expect(count).toBe(1);
+    } finally {
+      release();
+      await Promise.allSettled([holder, first, second]);
+    }
+  });
+
+  it('can remove the super role from an inactive user without harming the active one', async () => {
+    const { companyId, platformToken } = await companyWithSession(app);
+    const headers = { ...auth(platformToken), 'X-Company-Id': companyId };
+    const created = await request(app.getHttpServer())
+      .post('/api/users')
+      .set(headers)
+      .send({
+        email: `inactive-super-${randomUUID()}@example.test`,
+        firstName: 'Inactive',
+        lastName: 'Super',
+        roles: ['SUPER_ADMIN'],
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    const deactivate = await request(app.getHttpServer())
+      .patch(`/api/users/${id}`)
+      .set(headers)
+      .send({ isActive: false });
+    expect(deactivate.status).toBe(200);
+    const demote = await request(app.getHttpServer())
+      .patch(`/api/users/${id}`)
+      .set(headers)
+      .send({ roles: ['WORKER'] });
+    expect(demote.status).toBe(200);
+    const prisma = app.get(PrismaService);
+    const count = await prisma.userRoleAssignment.count({
+      where: { role: 'SUPER_ADMIN', user: { companyId, isActive: true } },
+    });
+    expect(count).toBe(1);
+  });
+
   it('cross-tenant user is 404', async () => {
     const platform = await login(app, 'platform@gradix.local');
     const other = await request(app.getHttpServer())
@@ -433,13 +553,14 @@ async function companyWithSession(app: INestApplication<App>) {
 async function waitForCompanyQuery(
   prisma: PrismaService,
   pattern: string,
+  minimum = 1,
 ): Promise<void> {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
       SELECT count(*)::integer AS waiting FROM pg_stat_activity
       WHERE datname = current_database() AND pid <> pg_backend_pid()
         AND wait_event_type = 'Lock' AND query LIKE ${pattern}`;
-    if (rows[0].waiting > 0) return;
+    if (rows[0].waiting >= minimum) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error('Expected company lock wait did not occur');

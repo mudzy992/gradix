@@ -15,7 +15,11 @@ import {
 import { normalizePhone } from '../../common/utils/phone';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { serializeUser } from './serialize-user';
-import { assertCanManageTarget, assertRoleChange } from './role-escalation';
+import {
+  assertCanManageTarget,
+  assertNotLastSuper,
+  assertRoleChange,
+} from './role-escalation';
 import { UsersQueryDto } from './users.dto';
 import {
   assertEmployeeCode,
@@ -127,14 +131,6 @@ export class UsersService {
       actor,
       existing.roles.map((item) => item.role),
     );
-    if (dto.roles) {
-      await assertRoleChange({
-        actor,
-        targetUserId: id,
-        nextRoles: dto.roles,
-        prisma: this.prisma,
-      });
-    }
     if (dto.hourlyRate !== undefined) {
       assertPayrollWrite(actor);
     }
@@ -144,10 +140,15 @@ export class UsersService {
     try {
       const { user, deactivated } = await this.prisma.$transaction(
         async (tx) => {
-          // Match auth's lock order before changing roles, account state or tokens.
+          // Role and status changes affect the company-wide active-super count.
+          // Company -> User matches auth/deactivation lock order.
+          const companyId = requireCompany(actor);
+          if (dto.roles || dto.isActive !== undefined) {
+            await tx.$queryRaw`SELECT "id" FROM "Company" WHERE "id" = ${companyId} FOR UPDATE`;
+          }
           await this.tokens.lockUser(tx, id);
           const current = await tx.user.findFirst({
-            where: { id, companyId: requireCompany(actor) },
+            where: { id, companyId },
             include: { roles: true },
           });
           if (!current) {
@@ -157,6 +158,20 @@ export class UsersService {
             actor,
             current.roles.map((item) => item.role),
           );
+          if (dto.roles) {
+            await assertRoleChange({
+              actor,
+              targetUserId: id,
+              nextRoles: dto.roles,
+              prisma: tx,
+            });
+          }
+          if (
+            dto.isActive === false &&
+            current.roles.some((item) => item.role === 'SUPER_ADMIN')
+          ) {
+            await assertNotLastSuper(tx, id);
+          }
           if (dto.roles) {
             await tx.userRoleAssignment.deleteMany({ where: { userId: id } });
             await tx.userRoleAssignment.createMany({

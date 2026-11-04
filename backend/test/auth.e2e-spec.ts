@@ -548,7 +548,7 @@ describe('Auth (e2e)', () => {
       await waitForBlockedQuery(prisma, '%UPDATE%RefreshToken%');
       rotation = tokens.rotate(refreshToken);
       void rotation.catch(() => undefined);
-      await waitForBlockedQuery(prisma, '%FROM "User"%FOR UPDATE%');
+      await waitForBlockedQuery(prisma, '%FROM "Company"%FOR SHARE%');
       release();
       expect((await deactivation).status).toBe(200);
       await expect(rotation).rejects.toMatchObject({

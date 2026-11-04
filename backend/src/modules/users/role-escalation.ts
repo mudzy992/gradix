@@ -6,13 +6,18 @@ import {
 import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
-import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../../../generated/client';
+
+type RoleQueries = Pick<
+  Prisma.TransactionClient,
+  'user' | 'userRoleAssignment'
+>;
 
 export async function assertRoleChange(params: {
   actor: AuthUser;
   targetUserId: string;
   nextRoles: AppRole[];
-  prisma: PrismaService;
+  prisma: RoleQueries;
 }): Promise<void> {
   const { actor, targetUserId, nextRoles, prisma } = params;
   if (nextRoles.length === 0) {
@@ -59,12 +64,12 @@ export function assertCanManageTarget(
   }
 }
 
-async function assertNotLastSuper(
-  prisma: PrismaService,
+export async function assertNotLastSuper(
+  prisma: RoleQueries,
   userId: string,
 ): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user?.companyId) {
+  if (!user?.companyId || !user.isActive) {
     return;
   }
   const count = await prisma.userRoleAssignment.count({

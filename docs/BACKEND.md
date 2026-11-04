@@ -104,7 +104,10 @@ backend/src/
   `400`, a ne 500 iz Prisma `Decimal`.
 - **Hijerarhija (D-030):** `users.write` ne dozvoljava upravljanje nalogom sa višom rolom — samo
   `SUPER_ADMIN`/`PLATFORM_ADMIN` diraju SUPER_ADMIN naloge, a `PLATFORM_ADMIN` se ne dodjeljuje
-  kroz tenant rute (`common/rbac/role-hierarchy.ts`).
+  kroz tenant rute (`common/rbac/role-hierarchy.ts`). Posljednjem aktivnom SUPER_ADMIN-u
+  nije moguće oduzeti tu rolu niti deaktivirati nalog; konkurentne promjene u istoj firmi
+  provjeravaju ovo pravilo pod zaključavanjem firme. Neaktivnom SUPER_ADMIN-u se rola
+  može ukloniti jer on nije dio broja aktivnih administratora.
 - Tenant: `@TenantRoute()` + header `X-Company-Id` — **samo** za `PLATFORM_ADMIN`.
 - `mustChangePassword` ⇒ dozvoljeni su samo `/me`, change-password i logout(i); ostalo
   `403 AUTH_PASSWORD_CHANGE_REQUIRED`.
