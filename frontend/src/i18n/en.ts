@@ -244,6 +244,20 @@ export const en = {
       expired: 'Expired',
       none: 'No expiry',
     },
+    tender: {
+      DRAFT: 'Draft',
+      SUBMITTED: 'Submitted',
+      WON: 'Won',
+      LOST: 'Lost',
+      WITHDRAWN: 'Withdrawn',
+    },
+    service: {
+      PLANNED: 'Planned',
+      SCHEDULED: 'Scheduled',
+      IN_PROGRESS: 'In progress',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',

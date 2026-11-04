@@ -117,6 +117,16 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/^(LOW|MEDIUM|HIGH|OPEN|ACK|CLOSED)$/)).toHaveCount(0)
   })
 
+  test('tenderi imaju prevedene kolone i prazno stanje (FE-11)', async () => {
+    await page.goto('/tenders')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/tenderi/i)
+    // Kolone su faze tendera; seed nema tendera → svaka kolona to kaže.
+    await expect(page.getByRole('region', { name: /^Nacrt/ })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('region', { name: /^Povučen/ })).toBeVisible()
+    await expect(page.getByText('Nema tendera u ovoj fazi.').first()).toBeVisible()
+    await expect(page.getByText(/^(DRAFT|SUBMITTED|WON|LOST|WITHDRAWN)$/)).toHaveCount(0)
+  })
+
   test('navigacija označava aktivnu stranicu (aria-current)', async () => {
     await page.goto('/projects')
     // Na desktopu je samo jedan `<nav>` u DOM-u (mobilni je u `Sheet`-u koji se ne montira).

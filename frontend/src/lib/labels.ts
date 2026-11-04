@@ -97,6 +97,22 @@ const HSE_STATUS: Record<string, Entry> = {
   CLOSED: { tone: 'outline' },
 }
 
+const TENDER_STATUS: Record<string, Entry> = {
+  DRAFT: { tone: 'outline' },
+  SUBMITTED: { tone: 'default' },
+  WON: { tone: 'secondary' },
+  LOST: { tone: 'destructive' },
+  WITHDRAWN: { tone: 'outline' },
+}
+
+const SERVICE_STATUS: Record<string, Entry> = {
+  PLANNED: { tone: 'outline' },
+  SCHEDULED: { tone: 'secondary' },
+  IN_PROGRESS: { tone: 'default' },
+  COMPLETED: { tone: 'secondary' },
+  CANCELLED: { tone: 'destructive' },
+}
+
 const ASSIGNMENT_ROLE: Record<string, Entry> = {
   PM: { tone: 'default' },
   SS: { tone: 'default' },
@@ -125,6 +141,8 @@ export const materialUnit = (value: string): StatusMeta => meta(MATERIAL_UNIT, '
 export const tripStatus = (value: string): StatusMeta => meta(TRIP_STATUS, 'trip', value)
 export const hseSeverity = (value: string): StatusMeta => meta(HSE_SEVERITY, 'hseSeverity', value)
 export const hseStatus = (value: string): StatusMeta => meta(HSE_STATUS, 'hseStatus', value)
+export const tenderStatus = (value: string): StatusMeta => meta(TENDER_STATUS, 'tender', value)
+export const serviceStatus = (value: string): StatusMeta => meta(SERVICE_STATUS, 'service', value)
 
 /** Tura je „istovarena“ kad ima `unloadedAt`; jedino mjesto gdje se to pravilo zna. */
 export const tripStatusOf = (row: { unloadedAt: string | null }): StatusMeta =>
@@ -143,6 +161,8 @@ export const KNOWN_STATUSES = {
   trip: Object.keys(TRIP_STATUS),
   hseSeverity: Object.keys(HSE_SEVERITY),
   hseStatus: Object.keys(HSE_STATUS),
+  tender: Object.keys(TENDER_STATUS),
+  service: Object.keys(SERVICE_STATUS),
 }
 
 /**
@@ -218,4 +238,18 @@ export function documentState(expiresAt: string | null | undefined, now: Date = 
     return { labelKey: 'status.doc.expiring', tone: 'default', known: true }
   }
   return { labelKey: 'status.doc.valid', tone: 'secondary', known: true }
+}
+
+/**
+ * Novac/iznos (`Decimal` string) → „12.500,00“. Bez ovoga su tenderski ekrani prikazivali
+ * „12000.00 vs 15230.50“ — tačka kao decimalni znak i bez razdvajanja hiljada.
+ */
+export function formatAmount(value: string | number | null | undefined): string {
+  const raw = typeof value === 'string' ? Number(value.replace(',', '.')) : value
+  if (raw === null || raw === undefined || !Number.isFinite(Number(raw))) {
+    return '—'
+  }
+  const [whole, decimal] = Math.abs(Number(raw)).toFixed(2).split('.')
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${Number(raw) < 0 ? '-' : ''}${grouped},${decimal}`
 }

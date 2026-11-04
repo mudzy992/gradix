@@ -244,6 +244,20 @@ export const bs = {
       expired: 'Istekao',
       none: 'Bez roka',
     },
+    tender: {
+      DRAFT: 'Nacrt',
+      SUBMITTED: 'Poslano',
+      WON: 'Dobijen',
+      LOST: 'Izgubljen',
+      WITHDRAWN: 'Povučen',
+    },
+    service: {
+      PLANNED: 'Planiran',
+      SCHEDULED: 'Zakazan',
+      IN_PROGRESS: 'U toku',
+      COMPLETED: 'Završen',
+      CANCELLED: 'Otkazan',
+    },
   },
   roles: {
     PLATFORM_ADMIN: 'Platform admin',

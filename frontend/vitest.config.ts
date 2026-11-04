@@ -54,6 +54,10 @@ export default defineConfig({
         'src/pages/hse-page.tsx',
         'src/pages/documents-page.tsx',
         'src/components/ops/diary-conflict-sheet.tsx',
+        // FE-11 — ured: tenderi, servis, izvještaji
+        'src/pages/tenders-page.tsx',
+        'src/pages/services-page.tsx',
+        'src/pages/reports-page.tsx',
       ],
       thresholds: { lines: 85, functions: 85, statements: 85, branches: 85 },
     },

@@ -606,6 +606,30 @@ konflikta je na nepotpune detalje **tiho** odustajao.
 (b) boja kao jedini nosilac značenja roka — uz nju ide i tekst; (c) „popravi“ dan klikom na
 `setParams({ projectId })` (isto stanje) — prikaz je sada informativan, a unos ide kroz tab projekta.
 
+### D-049 — Ured (tenderi, servis, izvještaji): prevod kolona, naziv mašine i siguran export
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Ekrani tendera, servisa i izvještaja imali su iste propuste kao prethodni segmenti (sirovi enumi, nema
+stanja liste), plus tri svoja: (1) servisni nalozi su umjesto naziva mašine prikazivali **`machineId`
+(CUID)**; (2) izvještaji su imali zaglavlja kolona kao **sirove ključeve sa backenda**
+(`plannedBudget`, `avgCompletedSpend`); (3) export je brisao `objectURL` odmah poslije `click()`, pa se
+preuzimanje u nekim browserima otkazivalo. Uz to su iznosi bili `12000.00`, a dugme „Označi WON“.
+
+**Odluka:**
+1. `lib/labels.ts` proširen: `tenderStatus` (LOST crveno, WON subtilno), `serviceStatus` (CANCELLED
+   crveno) i `formatAmount` (hiljade tačkom, dvije decimale zarezom, „—“ za prazno).
+2. Nazivi mašina: lista servisa učitava `listMachines` i prikazuje **ime** mašine; CUID ostaje samo
+   kao fallback kad mašina više ne postoji.
+3. Zaglavlja izvještaja se prevode kroz `reports.columns.<ključ>` sa `defaultValue` — nepoznat ključ
+   iz backenda se vidi **sirov** (isti ugovor kao D-046), pa se primijeti kad se doda nova kolona.
+4. Izvještaji dobili period (`Od`/`Do`), `caption` sa brojem redova, stanja i onemogućen export kad
+   nema redova; export briše `objectURL` sa odgodom i link se dodaje u DOM (Safari/Firefox).
+5. Tenderi: broj po fazi, prazna faza sa porukom, `role="region"` po fazi, prevedena dugmad
+   („Označi kao dobijen“), labele i poruka za obavezna polja.
+
+**Odbačeno:** (a) mijenjati backend da vraća nazive kolona — ugovor API-ja se ne dira; (b) skrivati
+nepoznate kolone — tada bi tiho nestao podatak; (c) `toLocaleString` za iznose — okruženjski zavisno.
+
 ---
 
 ## Zamijenjene / povučene odluke

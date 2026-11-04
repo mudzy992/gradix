@@ -10,13 +10,13 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **40/59 segmenata `done`** (zadnji: FE-10).
+kratak izvještaj poslije svakog. Trenutno: **41/59 segmenata `done`** (zadnji: FE-11).
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -687,6 +687,17 @@ kratak izvještaj poslije svakog. Trenutno: **40/59 segmenata `done`** (zadnji: 
   **19**; `a11y.spec` ažuriran (prekidač lozinke je sada između polja i „zapamti me“).
 - **Coverage ratchet proširen** na auth ekrane: linije **96,9 %**, grane 91,1 %.
 
+### 2026-11-03 — FE-11 (tenderi, servis, izvještaji) → segment `done`
+- **Nalaz (visoko):** servisni nalozi su prikazivali **`machineId` (CUID)** umjesto naziva mašine;
+  izvještaji su imali zaglavlja kao sirove ključeve sa backenda (`plannedBudget`); export je brisao
+  `objectURL` odmah poslije `click()`; iznosi su bili `12000.00`, dugme „Označi WON“.
+- **Riješeno:** `tenderStatus`/`serviceStatus`/`formatAmount` u `lib/labels.ts`; naziv mašine iz
+  `listMachines` (CUID samo fallback); prevedena zaglavlja izvještaja sa `defaultValue` (nepoznata
+  kolona ostaje sirova), `caption` sa brojem redova i period `Od`/`Do`; tenderi dobili broj i praznu
+  fazu, akcije prevedene, labele i poruke za obavezna polja; export sigurniji. **D-049**.
+- **Testovi:** 23 nova (ukupno **151**), coverage ratchet +3 fajla: linije **92,0 %**, funkcije 88,4 %;
+  E2E +1 (tenderi) → **24**.
+
 ### 2026-11-03 — FE-10 (dnevnik, HSE, dokumenti) → segment `done`
 - **Nalaz (visoko):** HSE je prikazivao sirove `LOW`/`OPEN`/`ACK`, a dugmad „Potvrdi“/„Zatvori“ su
   vidjeli **svi** koji vide listu; ekran dokumenata je obećavao „upozorenja 30/15/5“, a uz dokument je
@@ -730,8 +741,8 @@ kratak izvještaj poslije svakog. Trenutno: **40/59 segmenata `done`** (zadnji: 
 
 ## Šta je sljedeći korak
 
-1. **FE-11 — Ured (tenderi, servis, izvještaji)**: `tenders-page`, `services-page`, `reports-page` —
-   statusi kroz `lib/labels.ts`, stanja lista i export; zatim **FE-12** (payroll/ERP) do **FE-14**.
+1. **FE-12 — Payroll i ERP**: `payroll-page`, `erp-page`, `erp-*-tab` — tabele i odobravanje, prava
+   (`payroll-access.ts`), stanja; zatim **FE-13** (administracija) do **FE-14**, pa **MOB-01…MOB-07**.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija

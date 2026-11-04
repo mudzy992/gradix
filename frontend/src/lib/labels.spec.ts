@@ -7,12 +7,15 @@ import {
   documentState,
   formatDuration,
   formatHours,
+  formatAmount,
   gpsSource,
   hseSeverity,
   hseStatus,
   machineStatus,
   machineType,
   materialUnit,
+  serviceStatus,
+  tenderStatus,
   projectStatus,
   taskPriority,
   taskStatus,
@@ -183,5 +186,33 @@ describe('HSE i rokovi dokumenata', () => {
     expect(documentState('2026-11-20T00:00:00.000Z', now).labelKey).toBe('status.doc.expiring')
     expect(documentState('2027-06-01T00:00:00.000Z', now).labelKey).toBe('status.doc.valid')
     expect(documentState(null, now).labelKey).toBe('status.doc.none')
+  })
+})
+
+/**
+ * FE-11 — tenderi i servis. Isti ugovor kao D-046: skup vrijednosti prati `polish.prisma`, a ton nosi
+ * značenje (izgubljen/otkazan crveno). `formatAmount` zamjenjuje prikaz „12000.00“.
+ */
+describe('tenderi, servis i iznosi', () => {
+  it('pokrivaju sve statuse iz šeme', () => {
+    expect(KNOWN_STATUSES.tender).toEqual(['DRAFT', 'SUBMITTED', 'WON', 'LOST', 'WITHDRAWN'])
+    expect(KNOWN_STATUSES.service).toEqual(['PLANNED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'])
+  })
+
+  it('tonovi nose značenje: izgubljen i otkazan su crveni', () => {
+    expect(tenderStatus('LOST').tone).toBe('destructive')
+    expect(tenderStatus('WON').tone).toBe('secondary')
+    expect(serviceStatus('CANCELLED').tone).toBe('destructive')
+    expect(serviceStatus('IN_PROGRESS').tone).toBe('default')
+    expect(serviceStatus('NEKI_NOVI').known).toBe(false)
+  })
+
+  it('formatAmount razdvaja hiljade tačkom i decimale zarezom', () => {
+    expect(formatAmount('12000.00')).toBe('12.000,00')
+    expect(formatAmount('450.5')).toBe('450,50')
+    expect(formatAmount(0)).toBe('0,00')
+    expect(formatAmount('1234567.891')).toBe('1.234.567,89')
+    expect(formatAmount(null)).toBe('—')
+    expect(formatAmount('nije broj')).toBe('—')
   })
 })

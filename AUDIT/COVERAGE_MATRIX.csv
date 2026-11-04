@@ -347,7 +347,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,nepregledano,,
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,138,pregledano,FE-10: HSE prazno stanje bez sirovih enuma; radnikov tok sada očekuje HSE link (F-FE-06-01),2026-11-03
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,148,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,nepregledano,,
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,20,nepregledano,,
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
@@ -411,8 +411,8 @@ frontend/src/hooks/use-me.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,21,nepregledano,,
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,nepregledano,,
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,nepregledano,,
-frontend/src/i18n/bs.ts,FE,shared,FE-15,292,pregledano,FE-10: status.hseSeverity/hseStatus/doc (bs) + common.required,2026-11-03
-frontend/src/i18n/en.ts,FE,shared,FE-15,292,pregledano,FE-10: status.hseSeverity/hseStatus/doc (en) + common.required,2026-11-03
+frontend/src/i18n/bs.ts,FE,shared,FE-15,306,pregledano,FE-11: status.tender/status.service (bs),2026-11-03
+frontend/src/i18n/en.ts,FE,shared,FE-15,306,pregledano,FE-11: status.tender/status.service (en),2026-11-03
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,33,nepregledano,,
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
@@ -421,8 +421,8 @@ frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,159,pregledano,"FE-10: diary.* (mjes
 frontend/src/i18n/ops-en.ts,FE,shared,FE-15,159,pregledano,FE-10: isti ključevi kao ops-bs (en),2026-11-03
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,27,nepregledano,,
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,27,nepregledano,,
-frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,62,pregledano,"FE-10: docs.{count,empty,emptyHint,loadError,file,fileHint,expiresIn,expiredAgo,list} (bs)",2026-11-03
-frontend/src/i18n/polish-en.ts,FE,shared,FE-15,62,pregledano,FE-10: isti ključevi kao polish-bs (en),2026-11-03
+frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,"FE-11: tenders.{count,columnEmpty,loadError,markWon,required}, services.{count,empty,emptyHint,loadError,list,cost,selectMachine}, reports.{caption,empty,loadError,from,to,columns.*}; ispravljen „Povučen“",2026-11-03
+frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-11: isti ključevi kao polish-bs (en),2026-11-03
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,25,nepregledano,,
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,25,nepregledano,,
 frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
@@ -441,8 +441,8 @@ frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() �
 frontend/src/lib/dash.ts,FE,shared,FE-15,7,nepregledano,,
 frontend/src/lib/error-message.ts,FE,shared,FE-15,17,nepregledano,,
 frontend/src/lib/format-date.ts,FE,shared,FE-15,25,nepregledano,,
-frontend/src/lib/labels.spec.ts,TEST,fe-unit,FE-05,188,pregledano,"FE-10: HSE enumi i tonovi, daysUntil (UTC), pragovi roka dokumenta",2026-11-03
-frontend/src/lib/labels.ts,FE,shared,FE-15,222,pregledano,"FE-10 (nastavak D-046): hseSeverity/hseStatus, documentState/daysUntil/EXPIRY_WARN_DAYS (30/15/5)",2026-11-03
+frontend/src/lib/labels.spec.ts,TEST,fe-unit,FE-05,219,pregledano,"FE-11: statusi tendera/servisa iz šeme, tonovi, formatAmount (hiljade/decimale/prazno)",2026-11-03
+frontend/src/lib/labels.ts,FE,shared,FE-15,256,pregledano,"FE-11 (nastavak D-046): tenderStatus/serviceStatus + formatAmount (hiljade tačkom, dvije decimale zarezom)",2026-11-03
 frontend/src/lib/notify-link.ts,FE,shared,FE-15,32,nepregledano,,
 frontend/src/lib/ops-types.ts,FE,shared,FE-15,145,nepregledano,,
 frontend/src/lib/payroll-access.spec.ts,TEST,fe-unit,FE-05,52,nepregledano,,
@@ -477,14 +477,17 @@ frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,128,pregledano,"FE
 frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,nepregledano,,
 frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage",2026-11-03
 frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,136,nepregledano,,
-frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,90,nepregledano,,
+frontend/src/pages/reports-page.spec.tsx,TEST,fe-unit,FE-05,132,pregledano,"FE-11: prevedene kolone + nepoznata kolona sirova, caption, prazno, skeleton, greška + retry, period u upitu, export i onemogućen bez redova",2026-11-03
+frontend/src/pages/reports-page.tsx,FE,office-pages,FE-11,160,pregledano,"FE-11: prevedena zaglavlja kolona sa defaultValue (nepoznata kolona ostaje sirova), caption sa brojem redova, period Od/Do, skeleton/greška + retry/prazno, sigurniji export (link u DOM, odgođeni revokeObjectURL)",2026-11-03
 frontend/src/pages/reset-page.tsx,FE,auth-pages,FE-07,28,pregledano,FE-07: h1 + objašnjenje šta korisnik sada može (admin reset u /users); nema forme jer BE vraća 501 (pošteno stanje),2026-11-03
-frontend/src/pages/services-page.tsx,FE,office-pages,FE-11,96,nepregledano,,
+frontend/src/pages/services-page.spec.tsx,TEST,fe-unit,FE-05,168,pregledano,"FE-11: preveden status, naziv mašine umjesto CUID-a, trošak, prazno, skeleton, greška + retry, start/završi/otkaži, obavezna mašina",2026-11-03
+frontend/src/pages/services-page.tsx,FE,office-pages,FE-11,180,pregledano,"FE-11: naziv mašine umjesto CUID-a (fallback CUID), preveden status sa tonom, trošak kroz formatAmount, broj/prazno/greška + retry, povezane labele",2026-11-03
 frontend/src/pages/settings-page.tsx,FE,admin-pages,FE-13,27,nepregledano,,
 frontend/src/pages/task-detail-page.tsx,FE,ops-pages,FE-08,105,pregledano,"FE-08: skeleton umjesto večnog „Učitavanje…“, greška + retry, preveden status/prioritet, formatDuration (1 h 35 min), „u toku {{duration}}“",2026-11-03
 frontend/src/pages/tasks-page.spec.tsx,TEST,fe-unit,FE-05,216,nepregledano,,
 frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,118,pregledano,"FE-08: prevedene kolone sa brojem, skeleton po koloni, prazna kolona porukom, preveden prioritet sa tonom, role=region za horizontalni skrol, greška + retry",2026-11-03
-frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,108,nepregledano,,
+frontend/src/pages/tenders-page.spec.tsx,TEST,fe-unit,FE-05,152,pregledano,"FE-11: prevedene faze i iznosi, broj po fazi, prazna faza, skeleton, greška + retry, akcije (poslan→dobijen), obavezna polja i kreiranje",2026-11-03
+frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,197,pregledano,"FE-11: broj i prazno stanje po fazi (region po fazi), skeleton + aria-busy, greška + retry, formatAmount (12.000,00), prevedene akcije („Označi kao dobijen“), labele i poruka za obavezna polja",2026-11-03
 frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,185,nepregledano,,
 frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,242,pregledano,"FE-10/F-FE-06-01: ruta /hse kroz RequireAnyPermission [hse.read, hse.write]",2026-11-03
 frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi vraćaju Navigate (bez bijelog ekrana), jednokratni toast na 403; odlazak na /dashboard kao fallback",2026-11-03
