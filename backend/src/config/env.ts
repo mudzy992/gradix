@@ -41,6 +41,11 @@ export interface AppEnv {
   REDIS_TLS_CA_FILE?: string;
   /** Broj proxy hopova koje aplikacija smije vjerovati (Coolify/Traefik = 1). */
   TRUST_PROXY?: number;
+  /** D-050: throttle limiti (default 120/min, 5 prijava/min, 20 refresh/min). */
+  THROTTLE_LIMIT?: number;
+  THROTTLE_TTL_MS?: number;
+  AUTH_LOGIN_LIMIT?: number;
+  AUTH_REFRESH_LIMIT?: number;
 }
 
 const MIN_SECRET_LENGTH = 32;
@@ -217,6 +222,13 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
       out.TRUST_PROXY = String(parsed);
     }
   }
+
+  // D-050: throttle limiti. `asInt` pokriva opseg 1–65535, što je dovoljno za sva četiri ključa;
+  // `THROTTLE_TTL_MS` mora biti najmanje 1000 ms da prozor ne bude besmisleno kratak.
+  out.THROTTLE_LIMIT = String(asInt('THROTTLE_LIMIT', raw.THROTTLE_LIMIT, 120, errors));
+  out.THROTTLE_TTL_MS = String(asInt('THROTTLE_TTL_MS', raw.THROTTLE_TTL_MS, 60_000, errors));
+  out.AUTH_LOGIN_LIMIT = String(asInt('AUTH_LOGIN_LIMIT', raw.AUTH_LOGIN_LIMIT, 5, errors));
+  out.AUTH_REFRESH_LIMIT = String(asInt('AUTH_REFRESH_LIMIT', raw.AUTH_REFRESH_LIMIT, 20, errors));
 
   // `asInt`/`asBool` su već skupili greške — provjeri ih i poslije normalizacije.
   if (errors.length) {

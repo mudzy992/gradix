@@ -630,6 +630,26 @@ preuzimanje u nekim browserima otkazivalo. Uz to su iznosi bili `12000.00`, a du
 **Odbačeno:** (a) mijenjati backend da vraća nazive kolona — ugovor API-ja se ne dira; (b) skrivati
 nepoznate kolone — tada bi tiho nestao podatak; (c) `toLocaleString` za iznose — okruženjski zavisno.
 
+### D-050 — Throttle limiti su konfigurabilni; u E2E poslu se podižu, defaulti ostaju isti
+**Datum:** 2026-11-03 · **Status:** na snazi
+
+Run **41780990334** je pao u koraku „Playwright testovi“, a anotacije su sadržavale samo rep liste —
+nije se vidjelo koji test pada. Novi korak u CI-ju (samo na pad) pretvara svaki pad u `::error::`
+anotaciju i ispisuje sekciju „Failed Tests“. Sljedeći run (**41781490823**) pokazao je tri pada
+(`lista projekata`, `flota`, `HSE`) sa „element(s) not found“ i **retry koji traje 0 ms** — to nije
+spor API, nego odbijena prijava/zahtjev: backend drži **120 zahtjeva/min globalno** i **5 prijava/min**,
+a `retries: 1` ponovo izvršava `beforeAll`, tj. **novu prijavu**, pa četvrta prijava u minuti vraća 429
+i ekran ostane bez podataka.
+
+**Odluka:** limiti ostaju **isti po defaultu** (120/min globalno, 5/min prijava, 20/min refresh), ali se
+čitaju iz okruženja: `THROTTLE_LIMIT`/`THROTTLE_TTL_MS`, `AUTH_LOGIN_LIMIT`, `AUTH_REFRESH_LIMIT`.
+CI job `web-e2e` postavlja `1000 / 30 / 200` — testovi tako ne troše produkcijsku kvotu, a produkcija
+nema nijednu novu varijablu i ponaša se identično. Uz to E2E dobija pomoćnik `expectNoLoadError(page)`
+koji pad pretvara u poruku „Ekran prikazuje grešku umjesto podataka: …“ (vidi se i 429 tekst).
+
+**Odbačeno:** (a) isključiti throttle u testovima — testirao bi se drugi sistem od produkcijskog;
+(b) `retries: 0` — pravi flake bi maskirao pravi pad; (c) povećati limite svuda — slabi zaštitu.
+
 ---
 
 ## Zamijenjene / povučene odluke

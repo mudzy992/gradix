@@ -15,7 +15,16 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types/auth-user';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
+/**
+ * FE-11 (D-050): limiti su isti kao prije (5/min za prijavu, 20/min za refresh), ali se u E2E poslu
+ * mogu podići — Playwright sa `retries: 1` ponovo izvršava `beforeAll`, tj. novu prijavu, pa bi
+ * četvrta prijava u minuti vratila 429 i test bi pao na „element nije nađen“.
+ */
+const LOGIN_LIMIT = Number(process.env.AUTH_LOGIN_LIMIT ?? 5);
+const REFRESH_LIMIT = Number(process.env.AUTH_REFRESH_LIMIT ?? 20);
+
 @Controller('auth')
+
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
@@ -23,7 +32,7 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: LOGIN_LIMIT, ttl: 60000 } })
   @HttpCode(200)
   @Post('login')
   login(@Body() dto: LoginDto) {
@@ -31,7 +40,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: REFRESH_LIMIT, ttl: 60000 } })
   @HttpCode(200)
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {

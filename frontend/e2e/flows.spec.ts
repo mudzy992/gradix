@@ -17,6 +17,18 @@ const ADMIN = {
   password: process.env.E2E_LOGIN_PASSWORD ?? '',
 }
 
+/**
+ * FE-11: kad API vrati grešku (npr. 429 zbog limita), ekran prikaže `role="alert"` umjesto podataka i
+ * test padne na „element nije nađen“ — poruka tada ne kaže šta se stvarno dogodilo. Ovaj pomoćnik
+ * pretvara to stanje u jasnu grešku sa tekstom ekrana.
+ */
+async function expectNoLoadError(target: Page) {
+  const alert = target.getByRole('alert')
+  if ((await alert.count()) > 0) {
+    throw new Error(`Ekran prikazuje grešku umjesto podataka: ${(await alert.first().innerText()).trim()}`)
+  }
+}
+
 let context: BrowserContext
 let page: Page
 
@@ -58,6 +70,7 @@ test.describe('FE-06 — admin tok', () => {
 
     const project = page.getByRole('link', { name: 'Sarajevo obilaznica' })
     await expect(project).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
     await project.click()
 
     await expect(page).toHaveURL(/\/projects\/[0-9a-z]{20,}$/i) // CUID, ne UUID
@@ -82,6 +95,7 @@ test.describe('FE-06 — admin tok', () => {
     await page.goto('/projects')
     const row = page.getByRole('row').filter({ hasText: 'Sarajevo obilaznica' })
     await expect(row).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
     // Seedov projekat nema eksplicitan status → šema daje `PLANNING` ⇒ prikaz je „U planu“.
     await expect(row).toContainText('U planu')
     // Nijedan sirov enum se ne smije prikazati korisniku.
@@ -103,6 +117,7 @@ test.describe('FE-06 — admin tok', () => {
     await page.goto('/fleet')
     const row = page.getByRole('row').filter({ hasText: 'Kiper 1' })
     await expect(row).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
     // Seed: `Kiper 1` je `TRUCK`, status iz šeme je `IDLE` ⇒ „Kamion“ i „Slobodna“.
     await expect(row).toContainText('Kamion')
     await expect(row).toContainText('Slobodna')
@@ -113,6 +128,7 @@ test.describe('FE-06 — admin tok', () => {
     await page.goto('/hse')
     // U seed-u nema incidenata → prazno stanje mora biti jasno rečeno, ne prazna lista.
     await expect(page.getByText('Nema HSE prijava.')).toBeVisible({ timeout: 15_000 })
+    await expectNoLoadError(page)
     await expect(page.getByText(/Prijavite incident ili opasnost/)).toBeVisible()
     await expect(page.getByText(/^(LOW|MEDIUM|HIGH|OPEN|ACK|CLOSED)$/)).toHaveCount(0)
   })
@@ -120,6 +136,7 @@ test.describe('FE-06 — admin tok', () => {
   test('tenderi imaju prevedene kolone i prazno stanje (FE-11)', async () => {
     await page.goto('/tenders')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/tenderi/i)
+    await expectNoLoadError(page)
     // Kolone su faze tendera; seed nema tendera → svaka kolona to kaže.
     await expect(page.getByRole('region', { name: /^Nacrt/ })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('region', { name: /^Povučen/ })).toBeVisible()

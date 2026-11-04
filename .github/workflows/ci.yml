@@ -288,6 +288,13 @@ jobs:
       E2E_WORKER_PASSWORD: GradixSeed1
       # BE-08: Playwright se prijavljuje kao demo admin → seed mora napuniti demo podatke.
       SEED_DEMO: 'true'
+      # FE-11: tri Playwright worker-a × ~24 testa × nekoliko API poziva lako pređe globalnih
+      # 120/min i 5 prijava/min; `retries: 1` ponovo izvršava `beforeAll` (nova prijava) pa se
+      # umjesto pravog pada dobije serija 429. Zato se u **E2E poslu** limiti podižu, a defaulti u
+      # kodu ostaju 120/min i 5/min (produkcija se ne mijenja).
+      THROTTLE_LIMIT: '1000'
+      AUTH_LOGIN_LIMIT: '30'
+      AUTH_REFRESH_LIMIT: '200'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

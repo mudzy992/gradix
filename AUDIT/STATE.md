@@ -739,6 +739,15 @@ kratak izvještaj poslije svakog. Trenutno: **41/59 segmenata `done`** (zadnji: 
   nema eksplicitan status → šema daje `PLANNING` („U planu“). Tvrdnja sada provjerava prevod tog
   statusa **i** da se nijedan sirov enum ne pojavljuje (runovi 41734726483, 41735245381).
 
+### 2026-11-03 — CI dijagnostika i 429 u E2E (D-050)
+- Run **41780990334** pao je u „Playwright testovi“, a anotacije su imale samo rep liste → dodat korak
+  „Playwright sažetak padova“ (svaki pad kao `::error::` + ispis „Failed Tests“).
+- Run **41781490823** otkrio je pravi uzrok: tri pada sa **retry 0 ms** = odbijeni zahtjevi, ne spor
+  API. Backend drži 120 zahtjeva/min i 5 prijava/min, a `retries: 1` ponovo izvršava `beforeAll`
+  (novu prijavu). Limiti su sada **konfigurabilni** (`THROTTLE_LIMIT`, `AUTH_LOGIN_LIMIT`,
+  `AUTH_REFRESH_LIMIT`); defaulti nepromijenjeni, CI `web-e2e` diže na 1000/30/200. **D-050**.
+- Dodat `expectNoLoadError(page)` u E2E: pad kaže „Ekran prikazuje grešku umjesto podataka: …“.
+
 ## Šta je sljedeći korak
 
 1. **FE-12 — Payroll i ERP**: `payroll-page`, `erp-page`, `erp-*-tab` — tabele i odobravanje, prava

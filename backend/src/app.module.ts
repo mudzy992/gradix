@@ -39,7 +39,15 @@ import { ErpModule } from './modules/erp/erp.module';
       imports: [RedisModule],
       inject: [RedisService],
       useFactory: (redis: RedisService) => ({
-        throttlers: [{ name: 'default', ttl: 60000, limit: 120 }],
+        // FE-11 (D-050): limiti ostaju 120/min, ali se mogu podići u E2E poslu gdje tri
+        // Playwright worker-a lako pređu kvotu i testovi onda padaju na 429 umjesto na pravoj grešci.
+        throttlers: [
+          {
+            name: 'default',
+            ttl: Number(process.env.THROTTLE_TTL_MS ?? 60_000),
+            limit: Number(process.env.THROTTLE_LIMIT ?? 120),
+          },
+        ],
         storage: new FailoverThrottlerStorage(
           redis.client,
           redis.prefix,
