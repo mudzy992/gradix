@@ -101,6 +101,7 @@ frontend/src/
   `forceLogin()`, korisnički meni, promjena lozinke i sinhronizacija tabova.
 - **Pohrana:** pristup `localStorage`/`sessionStorage` je zaštićen (blokirana pohrana ne ruši app);
   memorijski fallback drži sesiju do reloada.
+- **Utrke sesije i firme:** mrežni sloj provjerava generaciju sesije, korisnika i aktivnu firmu prije primjene odgovora i ponavljanja nakon refresh-a. Stari refresh ne može prepisati ili obrisati novu prijavu; u tom slučaju prikazuje se `SESSION_CHANGED`. Ovo ne poništava zahtjev koji je server već obradio. Jedan tab dijeli refresh u toku za isti token; međutabna rotacija i serverski `revokeAll` ostaju zaseban otvoreni rizik F-FE-06-06.
 - **Prijevodi:** `i18n/parity.spec.ts` drži paritet bs/en, vlasništvo sekcija i prijevod svakog
   `ERROR_CODES` sa backenda.
 

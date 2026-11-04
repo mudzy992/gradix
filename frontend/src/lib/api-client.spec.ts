@@ -6,6 +6,7 @@ import { queryClient } from '@/lib/query-client'
 import { clearRefreshToken, readRefreshToken, writeRefreshToken } from '@/lib/storage'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
+import { REFRESH_KEY } from '@/lib/constants'
 
 /**
  * FE-15 — jezgro mrežnog sloja. Drži ono što je prije tiho pucalo: mrežni prekid mora dati
@@ -208,5 +209,116 @@ describe('forceLogin()', () => {
     expect(clear).toHaveBeenCalled()
     expect(queryClient.getQueryData(['me'])).toBeUndefined()
     expect(useAuthStore.getState().user).toBeNull()
+  })
+})
+
+describe('session and company changes during requests', () => {
+  function deferred() {
+    let resolve!: (value: Response) => void
+    const promise = new Promise<Response>((done) => { resolve = done })
+    return { promise, resolve }
+  }
+
+  function loginAsSecondUser() {
+    clearSession()
+    writeRefreshToken('refresh-b', false)
+    useAuthStore.setState({ accessToken: 'token-b', user: { ...me(), id: 'u2' } })
+  }
+
+  it.each([200, 401])('old refresh result %i cannot overwrite or clear the new login', async (status) => {
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise)
+    const oldRefresh = refreshSession().catch((error: unknown) => error)
+    loginAsSecondUser()
+    pending.resolve(status === 200
+      ? ok({ accessToken: 'stale-access', refreshToken: 'stale-refresh' })
+      : json({ success: false, error: { code: 'AUTH_REFRESH_REUSE', message: 'x' } }, 401))
+    expect(await oldRefresh).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(readRefreshToken()).toBe('refresh-b')
+    expect(useAuthStore.getState().accessToken).toBe('token-b')
+    expect(useAuthStore.getState().user?.id).toBe('u2')
+  })
+
+  it('a new login can refresh independently while the previous refresh is in flight', async () => {
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(ok({ accessToken: 'new-b', refreshToken: 'rotated-b' }))
+    const oldRefresh = refreshSession().catch((error: unknown) => error)
+    loginAsSecondUser()
+    await expect(refreshSession()).resolves.toBe(true)
+    pending.resolve(ok({ accessToken: 'stale-access', refreshToken: 'stale-refresh' }))
+    expect(await oldRefresh).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(readRefreshToken()).toBe('rotated-b')
+    expect(useAuthStore.getState().accessToken).toBe('new-b')
+  })
+
+  it.each([200, 401])('an old API response %i is not applied or retried using another user', async (status) => {
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise)
+    const result = api('/api/projects', { method: 'POST', body: { name: 'old' } }).catch((error: unknown) => error)
+    loginAsSecondUser()
+    pending.resolve(status === 200 ? ok({ id: 'old-project' }) : json({ success: false }, 401))
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(readRefreshToken()).toBe('refresh-b')
+  })
+
+  it.each([200, 401])('company switch rejects an old blob response %i without retrying it', async (status) => {
+    useAuthStore.setState({ user: me(['PLATFORM_ADMIN']) })
+    useCompanyStore.setState({ selectedId: 'c1' })
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise)
+    const result = apiBlob('/api/export').catch((error: unknown) => error)
+    useCompanyStore.setState({ selectedId: 'c2' })
+    pending.resolve(new Response(status === 200 ? 'old report' : null, { status }))
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(readRefreshToken()).toBe('refresh-a')
+  })
+
+  it('a refresh token changed externally is not overwritten by an old response', async () => {
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise)
+    const result = refreshSession().catch((error: unknown) => error)
+    sessionStorage.setItem(REFRESH_KEY, 'external-token')
+    pending.resolve(ok({ accessToken: 'stale-access', refreshToken: 'stale-refresh' }))
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(readRefreshToken()).toBe('external-token')
+    expect(useAuthStore.getState().accessToken).toBe('token-1')
+  })
+
+  it('changing company during refresh prevents retrying the old write in the new company', async () => {
+    useAuthStore.setState({ user: me(['PLATFORM_ADMIN']) })
+    useCompanyStore.setState({ selectedId: 'c1' })
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockResolvedValueOnce(json({ success: false }, 401)).mockReturnValueOnce(pending.promise)
+    const result = api('/api/projects', { method: 'POST', body: { name: 'old' } }).catch((error: unknown) => error)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    useCompanyStore.setState({ selectedId: 'c2' })
+    pending.resolve(ok({ accessToken: 'rotated-access', refreshToken: 'rotated-token' }))
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(readRefreshToken()).toBe('rotated-token')
+  })
+
+  it('concurrent requests share the same session refresh and both retry', async () => {
+    writeRefreshToken('refresh-a', false)
+    const pending = deferred()
+    fetchMock.mockResolvedValueOnce(json({ success: false }, 401))
+      .mockResolvedValueOnce(json({ success: false }, 401))
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce(ok('one'))
+      .mockResolvedValueOnce(ok('two'))
+    const one = api('/api/one')
+    const two = api('/api/two')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    pending.resolve(ok({ accessToken: 'rotated-access', refreshToken: 'rotated-token' }))
+    expect((await Promise.all([one, two])).map((v) => v.data).sort()).toEqual(['one', 'two'])
+    expect(fetchMock).toHaveBeenCalledTimes(5)
   })
 })

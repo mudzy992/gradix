@@ -5,9 +5,10 @@ import { queryClient } from '@/lib/query-client'
 import {
   broadcastLogout,
   clearRefreshToken,
+  getSessionGeneration,
   isRemembered,
   readRefreshToken,
-  writeRefreshToken,
+  writeRotatedRefreshToken,
 } from '@/lib/storage'
 
 const AUTH_SKIP_REFRESH = new Set([
@@ -17,7 +18,45 @@ const AUTH_SKIP_REFRESH = new Set([
   '/api/auth/reset',
 ])
 
-let refreshInFlight: Promise<boolean> | null = null
+type RefreshFlight = { generation: number; token: string; promise: Promise<boolean> }
+let refreshInFlight: RefreshFlight | null = null
+
+type RequestContext = { generation: number; userId: string | null; companyId: string | null }
+
+function requestContext(): RequestContext {
+  const user = useAuthStore.getState().user
+  return {
+    generation: getSessionGeneration(),
+    userId: user?.id ?? null,
+    companyId: user?.roles?.includes('PLATFORM_ADMIN') ? useCompanyStore.getState().selectedId : user?.companyId ?? null,
+  }
+}
+
+function ensureContext(original: RequestContext): void {
+  const current = requestContext()
+  if (original.generation !== current.generation || original.userId !== current.userId || original.companyId !== current.companyId) {
+    throw new ApiError('SESSION_CHANGED', 'Session or company changed; retry the operation', 409)
+  }
+}
+
+function ensureNoNewSessionAfterFailedRefresh(original: RequestContext): void {
+  const generation = getSessionGeneration()
+  if (generation === original.generation) {
+    ensureContext(original)
+    return
+  }
+  // The failed refresh itself clears the old session exactly once. Do not log
+  // out a newer login that appeared while awaiting the old request.
+  if (generation !== original.generation + 1 || readRefreshToken() !== null || useAuthStore.getState().user !== null) {
+    throw new ApiError('SESSION_CHANGED', 'Session changed during refresh', 409)
+  }
+}
+
+function ensureRefreshCurrent(generation: number, token: string): void {
+  if (getSessionGeneration() !== generation || readRefreshToken() !== token) {
+    throw new ApiError('SESSION_CHANGED', 'Session changed during refresh', 409)
+  }
+}
 
 /**
  * FE-15: kad mreža padne, `fetch` odbija Promise sa `TypeError: Failed to fetch`. To nije `ApiError`,
@@ -61,11 +100,7 @@ export function forceLogin(): void {
   }
 }
 
-async function rotateRefresh(): Promise<boolean> {
-  const refreshToken = readRefreshToken()
-  if (!refreshToken) {
-    return false
-  }
+async function rotateRefresh(refreshToken: string, generation: number): Promise<boolean> {
   let response: Response
   try {
     response = await fetch(`${apiBase()}/api/auth/refresh`, {
@@ -74,10 +109,13 @@ async function rotateRefresh(): Promise<boolean> {
       body: JSON.stringify({ refreshToken }),
     })
   } catch (error) {
+    ensureRefreshCurrent(generation, refreshToken)
     // Mreža je pala: sesija (refresh token) ostaje, sljedeći pokušaj ide ponovo.
     throw networkError(error)
   }
   const body = await readBody<{ accessToken: string; refreshToken: string }>(response)
+  // Never let a response for an older login replace or clear a newer session.
+  ensureRefreshCurrent(generation, refreshToken)
   if (!body || !response.ok || !body.success) {
     const code = body && !body.success ? body.error.code : 'AUTH_INVALID_CREDENTIALS'
     if (code === 'AUTH_REFRESH_REUSE') {
@@ -88,17 +126,21 @@ async function rotateRefresh(): Promise<boolean> {
     return false
   }
   useAuthStore.getState().setAccessToken(body.data.accessToken)
-  writeRefreshToken(body.data.refreshToken, isRemembered())
+  writeRotatedRefreshToken(body.data.refreshToken, isRemembered())
   return true
 }
 
 export function refreshSession(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = rotateRefresh().finally(() => {
-      refreshInFlight = null
-    })
-  }
-  return refreshInFlight
+  const token = readRefreshToken()
+  if (!token) return Promise.resolve(false)
+  const generation = getSessionGeneration()
+  if (refreshInFlight?.generation === generation && refreshInFlight.token === token) return refreshInFlight.promise
+  const flight: RefreshFlight = { generation, token, promise: Promise.resolve(false) }
+  flight.promise = rotateRefresh(token, generation).finally(() => {
+    if (refreshInFlight === flight) refreshInFlight = null
+  })
+  refreshInFlight = flight
+  return flight.promise
 }
 
 type RequestOptions = {
@@ -145,6 +187,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   data: T
   meta?: { page: number; limit: number; total: number }
 }> {
+  const context = requestContext()
   const url = buildUrl(path, options.query)
   let response: Response
   try {
@@ -160,11 +203,14 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   } catch (error) {
     throw networkError(error)
   }
+  ensureContext(context)
   if (response.status === 401 && !options.skipRefresh && !AUTH_SKIP_REFRESH.has(path)) {
     const ok = await refreshSession()
     if (ok) {
+      ensureContext(context)
       return api<T>(path, { ...options, skipRefresh: true })
     }
+    ensureNoNewSessionAfterFailedRefresh(context)
     forceLogin()
     throw new ApiError('AUTH_INVALID_CREDENTIALS', 'Session expired', 401)
   }
@@ -172,6 +218,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     return { data: null as T }
   }
   const body = await readBody<T>(response)
+  ensureContext(context)
   if (!body) {
     throw new ApiError(response.status === 429 ? 'RATE_LIMITED' : 'INTERNAL_ERROR', 'Invalid response', response.status)
   }
@@ -188,6 +235,7 @@ export async function apiBlob(
   query?: Record<string, string | number | undefined>,
   skipRefresh = false,
 ): Promise<Blob> {
+  const context = requestContext()
   const url = buildUrl(path, query)
   let response: Response
   try {
@@ -200,16 +248,21 @@ export async function apiBlob(
    * (15 min) preuzimanje je padalo sa „Export failed“ iako je sesija bila ispravna. Sada isto pravilo
    * kao `api()`: jedan pokušaj osvježavanja pa ponovni zahtjev.
    */
+  ensureContext(context)
   if (response.status === 401 && !skipRefresh && !AUTH_SKIP_REFRESH.has(path)) {
     const ok = await refreshSession()
     if (ok) {
+      ensureContext(context)
       return apiBlob(path, query, true)
     }
+    ensureNoNewSessionAfterFailedRefresh(context)
     forceLogin()
     throw new ApiError('AUTH_INVALID_CREDENTIALS', 'Session expired', 401)
   }
   if (!response.ok) {
     throw new ApiError(response.status === 429 ? 'RATE_LIMITED' : 'REPORT_UNKNOWN', 'Export failed', response.status)
   }
-  return response.blob()
+  const blob = await response.blob()
+  ensureContext(context)
+  return blob
 }

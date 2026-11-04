@@ -8,6 +8,12 @@ import { COMPANY_KEY, LOGOUT_KEY, REFRESH_KEY, REMEMBER_KEY } from '@/lib/consta
  * da sesija radi i kad pohrana nije dostupna (do prvog reloada).
  */
 const memory = new Map<string, string>()
+// Advances on login/logout, not on rotation within the same session.
+let sessionGeneration = 0
+
+export function getSessionGeneration(): number {
+  return sessionGeneration
+}
 
 function resolve(area: 'local' | 'session'): Storage | null {
   try {
@@ -61,6 +67,16 @@ export function readRefreshToken(): string | null {
 }
 
 export function writeRefreshToken(token: string, remember: boolean): void {
+  sessionGeneration += 1
+  storeRefreshToken(token, remember)
+}
+
+/** Called only after verifying that the refresh belongs to the current session. */
+export function writeRotatedRefreshToken(token: string, remember: boolean): void {
+  storeRefreshToken(token, remember)
+}
+
+function storeRefreshToken(token: string, remember: boolean): void {
   remove('local', REFRESH_KEY)
   remove('session', REFRESH_KEY)
   if (remember) {
@@ -73,6 +89,7 @@ export function writeRefreshToken(token: string, remember: boolean): void {
 }
 
 export function clearRefreshToken(): void {
+  sessionGeneration += 1
   remove('local', REFRESH_KEY)
   remove('session', REFRESH_KEY)
   remove('local', REMEMBER_KEY)
