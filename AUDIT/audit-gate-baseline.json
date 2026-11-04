@@ -1,0 +1,104 @@
+{
+  "$comment": "CI-05: informativni snimak nepregledanih fajlova u segmentima označenim done, 2026-11-04. Nije izuzetak i ne koristi se za zaobilaženje gatea.",
+  "segments": [
+    {
+      "segment": "BE-01",
+      "files": [
+        "backend/src/common/errors/app-error.ts",
+        "backend/src/common/guards/permissions.guard.ts",
+        "backend/src/common/guards/tenant.guard.ts",
+        "backend/src/common/utils/date-input.spec.ts",
+        "backend/src/common/utils/date-input.ts",
+        "backend/src/modules/prisma/prisma.module.ts"
+      ]
+    },
+    {
+      "segment": "BE-02",
+      "files": [
+        "backend/test/auth.e2e-spec.ts"
+      ]
+    },
+    {
+      "segment": "BE-03",
+      "files": [
+        "backend/src/common/scope/ops-dates.ts"
+      ]
+    },
+    {
+      "segment": "BE-07",
+      "files": [
+        "backend/src/modules/ops/timer-settings.ts"
+      ]
+    },
+    {
+      "segment": "BE-08",
+      "files": [
+        "backend/prisma/migrations/20261103190000_be14_payroll_snapshot_erp_audit/migration.sql",
+        "backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql"
+      ]
+    },
+    {
+      "segment": "BE-09",
+      "files": [
+        "backend/src/modules/ops/locations.controller.ts",
+        "backend/src/modules/ops/locations.dto.ts"
+      ]
+    },
+    {
+      "segment": "BE-13",
+      "files": [
+        "backend/src/modules/payroll/payroll-amount.spec.ts"
+      ]
+    },
+    {
+      "segment": "CI-01",
+      "files": [
+        ".github/workflows/backup-restore.yml"
+      ]
+    },
+    {
+      "segment": "FE-05",
+      "files": [
+        "frontend/src/lib/payroll-access.spec.ts",
+        "frontend/src/pages/auth-pages.spec.tsx",
+        "frontend/src/pages/projects-page.spec.tsx",
+        "frontend/src/pages/tasks-page.spec.tsx"
+      ]
+    },
+    {
+      "segment": "FE-06",
+      "files": [
+        "frontend/e2e/auth-pages.spec.ts",
+        "frontend/e2e/guards.spec.ts",
+        "frontend/e2e/login.spec.ts"
+      ]
+    },
+    {
+      "segment": "FE-08",
+      "files": [
+        "frontend/src/components/auth/auth-card.tsx",
+        "frontend/src/components/auth/password-input.tsx",
+        "frontend/src/components/notifications/bell.tsx",
+        "frontend/src/components/ops/dispatch-sheet.tsx",
+        "frontend/src/components/ops/planned-gantt.tsx",
+        "frontend/src/components/ops/project-diary-tab.tsx",
+        "frontend/src/components/ops/project-public-card.tsx",
+        "frontend/src/components/ops/project-sheet.tsx",
+        "frontend/src/components/ops/project-tabs.tsx",
+        "frontend/src/components/ops/quantities-tab.tsx"
+      ]
+    },
+    {
+      "segment": "STD-01",
+      "files": [
+        "scripts/audit/check-coverage.mjs",
+        "scripts/audit/inventory.mjs",
+        "scripts/audit/lib.mjs",
+        "scripts/audit/scaffold-segments.mjs",
+        "scripts/audit/segments.json",
+        "scripts/standards/check-env.mjs"
+      ]
+    }
+  ],
+  "reason": "Fajlovi nisu pregledani prema matrici; uzrok nastanka svakog reda nije potvrđen. Pregledati prije zatvaranja gatea; izvor istine je COVERAGE_MATRIX.csv."
+}

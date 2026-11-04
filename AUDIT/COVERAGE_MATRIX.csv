@@ -574,6 +574,7 @@ mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
+scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,165,u-toku,CI-05 prototip: stroga provjera stanja; nije još testiran ni uključen u CI.,2026-11-04
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,123,nepregledano,,
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,74,nepregledano,,
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,275,nepregledano,,

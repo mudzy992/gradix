@@ -29,7 +29,7 @@ Ako se aktivna grana promijeni, filter i ovaj dokument se mijenjaju u **istom** 
 | Input | Tip | Default | Šta radi |
 |---|---|---|---|
 | `suite` | izbor: `all`, `audit`, `backend`, `frontend`, `e2e`, `docker` | `all` | pokreće **samo** odgovarajuće poslove (vidi mapu ispod) |
-| `verbose` | boolean | `false` | dodaje korak „Dijagnostika“ (verzije Node/npm/vitest/tsc, platforma) u `frontend`, i detaljne logove u E2E poslu |
+| `verbose` | boolean | `false` | dodaje korak „Dijagnostika“ (verzije Node/npm/vitest/tsc, platforma) u `frontend` poslu (ne utiče na E2E) |
 | `tag` | tekst | `''` | sufiks u imenima artefakata (`frontend-coverage-<tag>`, `playwright-report-<tag>`) i u imenu runa |
 
 Mapa `suite` → poslovi:
@@ -48,7 +48,7 @@ Primjeri:
 ```bash
 # brzi guardrail (matrica, dokumentacija, tajne, compose) — ~10 s
 gh workflow run ci.yml -f suite=audit
-# samo web E2E, sa oznakom u imenima artefakata
+# backend i web E2E, sa oznakom u imenima artefakata
 gh workflow run ci.yml -f suite=e2e -f tag=tiket-123
 # dijagnostika frontenda (verzije + detaljni logovi)
 gh workflow run ci.yml -f suite=frontend -f verbose=true
