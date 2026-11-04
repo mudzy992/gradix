@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProjectRow } from '@/lib/ops-types'
 import { ApiError, type MeUser } from '@/lib/api-types'
+import { queryClient } from '@/lib/query-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { clearRefreshToken, writeRefreshToken } from '@/lib/storage'
 import { useCompanyStore } from '@/stores/company-store'
@@ -525,6 +526,27 @@ describe('ProjectTabs', () => {
     await waitFor(() => expect(api.toastError).toHaveBeenCalledWith(expect.stringContaining('Sesija ili firma')))
     expect(api.createDocument).not.toHaveBeenCalled()
     expect(screen.getByLabelText('Dodaj dokument')).toBeEnabled()
+  })
+
+  it('reset stvarnog keša pri promjeni firme ne gubi nepotvrđenu vezu A', async () => {
+    queryClient.clear()
+    api.permissions.add('projects.write')
+    useAuthStore.setState({ user: { id: 'u1', roles: ['PLATFORM_ADMIN'], companyId: null } as MeUser })
+    useCompanyStore.setState({ selectedId: 'c1' })
+    api.uploadFile.mockReset().mockResolvedValueOnce({ data: { path: 'c1/plan.pdf' } })
+    api.createDocument.mockReset().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    const { unmount } = renderTab('documents', queryClient)
+    await userEvent.upload(screen.getByLabelText('Dodaj dokument'), new File(['x'], 'plan.pdf', { type: 'application/pdf' }))
+    expect(await screen.findByRole('button', { name: 'Ponovi povezivanje' })).toBeInTheDocument()
+    act(() => useCompanyStore.getState().setSelectedId('c2'))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Ponovi povezivanje' })).not.toBeInTheDocument())
+    act(() => useCompanyStore.getState().setSelectedId('c1'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ponovi povezivanje' }))
+    await waitFor(() => expect(api.createDocument).toHaveBeenCalledTimes(2))
+    expect(api.createDocument.mock.calls[1][1]).toEqual(api.createDocument.mock.calls[0][1])
+    expect(api.uploadFile).toHaveBeenCalledOnce()
+    unmount()
+    queryClient.clear()
   })
 
   it('A → B → A tokom provjere čuva staru referencu za novi namjerni retry', async () => {

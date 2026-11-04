@@ -353,7 +353,7 @@ frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prij
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
 frontend/e2e/flows.spec.ts,FE,e2e,FE-06,227,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
-frontend/e2e/login.spec.ts,FE,e2e,FE-06,130,pregledano,"CI-05 F-50: browser simulira 429, provjerava token i retry sa stvarnim serverom; izvršenje u CI.",2026-11-04
+frontend/e2e/login.spec.ts,FE,e2e,FE-06,190,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
 frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: radnik vidi HSE prečicu (prije je test tvrdio suprotno),2026-11-03
@@ -374,7 +374,7 @@ frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,98,pregledano,"
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,167,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
-frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,117,pregledano,CI-05 F-48: izbor firme i test monotone revizije uz ranije testove grešaka.,2026-11-04
+frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,133,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
 frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,61,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
 frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano,"FE-10: HSE stavka vidljiva uz hse.write bez hse.read, uz hse.read, i skrivena bez ijednog prava",2026-11-03
 frontend/src/components/layout/navigation.ts,FE,layout,FE-02,145,pregledano,FE-10/F-FE-06-01 (D-033): /hse vidljiv uz hse.read ILI hse.write (prijavljivač vidi svoj ekran),2026-11-03
@@ -397,8 +397,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,609,pregledano,CI-05: 36 testova; F-49 isti ključ protiv različite veze i obrisani retry.,2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,397,u-toku,CI-05 F-49: server odlučuje po ključu; memorijski oporavak i završni pregled ostaju otvoreni.,2026-11-04
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,631,pregledano,CI-05 F-51: 37 testova uključujući očuvanje recoveryja pri stvarnom resetu keša.,2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,398,u-toku,CI-05 F-49/51: idempotentni retry i zajednički scopeovani ključ; završni pregled u toku.,2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -466,7 +466,7 @@ frontend/src/lib/api-public.spec.ts,TEST,fe-unit,FE-05,78,pregledano,"FE-14: 6 t
 frontend/src/lib/api-public.ts,FE,shared,FE-15,75,pregledano,FE-14: ne-JSON tijelo (proxy 502) i 429 bez envelope-a daju ApiError sa statusom (prije SyntaxError / TypeError na body.error),2026-11-04
 frontend/src/lib/api-types.ts,FE,shared,FE-15,103,pregledano,FE-15: pregledano — tipovi ugovora (MeUser/AuthPayload/ApiError); bez nalaza,2026-11-04
 frontend/src/lib/api.ts,FE,shared,FE-15,115,pregledano,FE-15: pregledano — tanke funkcije nad `api()`; login/forgot/reset idu sa `skipRefresh` (bez nalaza),2026-11-04
-frontend/src/lib/constants.ts,FE,shared,FE-15,37,pregledano,"FE-15: pregledano — ključevi pohrane, role i tipovi notifikacija; KNOWN_NOTIFY_TYPES se filtrira u socketu (bez nalaza)",2026-11-04
+frontend/src/lib/constants.ts,FE,shared,FE-15,38,pregledano,CI-05 F-51: zajednički korijen ključa za keš oporavka dokumenta.,2026-11-04
 frontend/src/lib/csv.spec.ts,TEST,fe-unit,FE-05,74,pregledano,"FE-15: 4 testa — BOM (bajtovi), CRLF + eskepovanje, CSV injection, link u dokumentu",2026-11-04
 frontend/src/lib/csv.ts,FE,shared,FE-15,28,pregledano,"FE-15: UTF-8 BOM (č/ć/ž u Excelu), CRLF, zaštita od CSV injection (=,+,−,@), link u dokumentu (Safari)",2026-11-04
 frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() — null/undefined/prazno → „—“, nula ostaje 0, tekst nepromijenjen",2026-11-03
@@ -516,8 +516,8 @@ frontend/src/pages/payroll-page.spec.tsx,TEST,fe-unit,FE-05,236,pregledano,"FE-1
 frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,260,pregledano,"FE-12: sati umjesto sirovih minuta, formatAmount, ton po statusu (REJECTED crveno), skeletoni, prazan mjesec, trajna greška sa „Pokušaj ponovo“, zaglavlje kolone Akcije, export sa imenom perioda i odgođenim revoke, zbir vidljiv i supervizoru | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/project-detail-page.spec.tsx,TEST,fe-unit,FE-05,106,pregledano,"CI-05: 5 testova kartica i Gantta, uključujući stranice i oporavak.",2026-11-04
 frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,153,pregledano,"CI-05: Gantt prava, stanja i stranicirani zadaci sa pojašnjenjem.",2026-11-04
-frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,pregledano,"CI-05: pregled i izvođenje 6 testova statusa, učitavanja, greške, pretrage i paginacije.",2026-11-04
-frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
+frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,168,pregledano,CI-05 F-51: 7 testova uključujući promjenu firme i grešku refetcha sa stvarnim QueryClientom.,2026-11-04
+frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,CI-05 F-52: pregledano; lokalni state otvorenog obrasca nije scopeovan na firmu.,2026-11-04
 frontend/src/pages/public-site-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-14: 11 testova — skeleton/aria-busy, 404≠500+retry, 429 poruka, SEO meta + restore, <html lang>, preveden status, dt/dd, tel:/mailto:, izolovan pad projekata, prazno stanje",2026-11-04
 frontend/src/pages/public-site-page.tsx,FE,public-site,FE-14,337,pregledano,"FE-14: skeleton/aria-busy, 404≠greška, retry, 429 poruka, SEO meta + canonical + og, <html lang>, preveden status (projectStatus), dl/dt/dd, lazy slike, tel:/mailto:, izolovan pad projekata",2026-11-04
 frontend/src/pages/reports-page.spec.tsx,TEST,fe-unit,FE-05,132,pregledano,"FE-11: prevedene kolone + nepoznata kolona sirova, caption, prazno, skeleton, greška + retry, period u upitu, export i onemogućen bez redova",2026-11-03
@@ -533,12 +533,13 @@ frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,118,pregledano,"FE-08: prev
 frontend/src/pages/tenders-page.spec.tsx,TEST,fe-unit,FE-05,152,pregledano,"FE-11: prevedene faze i iznosi, broj po fazi, prazna faza, skeleton, greška + retry, akcije (poslan→dobijen), obavezna polja i kreiranje",2026-11-03
 frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,197,pregledano,"FE-11: broj i prazno stanje po fazi (region po fazi), skeleton + aria-busy, greška + retry, formatAmount (12.000,00), prevedene akcije („Označi kao dobijen“), labele i poruka za obavezna polja",2026-11-03
 frontend/src/pages/users-page.spec.tsx,TEST,fe-unit,FE-05,226,pregledano,"FE-13: 11 testova — status/„to ste vi“, reaktivacija, deaktivacija, reset uz potvrdu, greška + retry, prazno, labele, kreiranje, validacije, paginacija",2026-11-04
-frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,320,pregledano,"FE-13: kolona Status (prije prazna), reaktivacija (prije je nije bilo), potvrda prije reseta lozinke, labela pretrage, caption/broj, skeleton, greška + retry, prazno stanje, „to ste vi“ | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
+frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,320,pregledano,CI-05 F-52: pregledano; lokalni state dijaloga i jednokratne lozinke nije scopeovan na firmu.,2026-11-04
 frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,230,pregledano,CI-05 F-50: izdvojen BootGate; javni sajt i auth rute zadržavaju postojeći raspored.,2026-11-04
 frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi vraćaju Navigate (bez bijelog ekrana), jednokratni toast na 403; odlazak na /dashboard kao fallback",2026-11-03
 frontend/src/routes/lazy-pages.tsx,FE,app-shell,FE-02,53,pregledano,"FE-02: lazy fleet/map (Leaflet), javni sajt, obračun i ERP; Suspense fallback = ScreenLoader (D-015/D-041)",2026-11-03
 frontend/src/stores/auth-store.ts,FE,shared,FE-15,23,pregledano,FE-15: pregledano — access token samo u memoriji; `clear()` vraća sesiju na početno stanje (keš briše `clearSession`),2026-11-04
-frontend/src/stores/company-store.ts,FE,shared,FE-15,20,pregledano,CI-05 F-48: monoton brojač stvarnih promjena izbora firme; pohrana i invalidacija keša.,2026-11-04
+frontend/src/stores/company-cache.spec.tsx,TEST,fe-unit,FE-05,76,pregledano,"CI-05 F-51: aktivni/neaktivni keš, greška B, zakašnjeli A, povratak i isti izbor.",2026-11-04
+frontend/src/stores/company-store.ts,FE,shared,FE-15,27,pregledano,CI-05 F-51: reset cachea pri promjeni firme uz izuzetak scopeovanog recoveryja.,2026-11-04
 frontend/src/vite-env.d.ts,FE,app-shell,FE-02,10,pregledano,FE-02: Vite client tipovi; nema deklarisanih env varijabli (VITE_* se čita kroz import.meta.env),2026-11-03
 frontend/tsconfig.app.json,FE,config,FE-02,29,pregledano,"FE-02: strict, noUnusedLocals/Parameters, bundler resolution, alias @/*",2026-11-03
 frontend/tsconfig.json,FE,config,FE-02,14,pregledano,FE-02: project references (app + node) — tsc -b je jedina komanda u CI-ju,2026-11-03

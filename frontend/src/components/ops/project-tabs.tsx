@@ -19,6 +19,7 @@ import { listUsers, uploadFile } from '@/lib/api'
 import { errorMessage } from '@/lib/error-message'
 import { ApiError, type MeUser } from '@/lib/api-types'
 import { getSessionGeneration } from '@/lib/storage'
+import { PROJECT_DOCUMENT_PENDING_QUERY } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { assignmentRole, machineStatus, projectStatus, taskStatus } from '@/lib/labels'
@@ -36,7 +37,7 @@ const ASSIGNMENT_ROLES = ['PM', 'SS', 'WORKER', 'DRIVER', 'OP'] as const
 type AssignmentRole = (typeof ASSIGNMENT_ROLES)[number]
 type PendingDocument = { path: string; fileName: string; idempotencyKey: string }
 type PendingDocumentState = { idempotencyKey: string; inFlight: boolean; reference?: PendingDocument }
-const pendingDocumentKey = (scope: string) => ['project-document-pending', scope] as const
+const pendingDocumentKey = (scope: string) => [PROJECT_DOCUMENT_PENDING_QUERY, scope] as const
 
 function documentScope(projectId: string, user: MeUser | null, selectedCompany: string | null): string {
   const company = user?.roles?.includes('PLATFORM_ADMIN') ? selectedCompany : user?.companyId ?? null

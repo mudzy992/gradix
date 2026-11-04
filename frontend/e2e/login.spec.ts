@@ -127,3 +127,63 @@ test('logout-all reaches only the same account and preserves another remembered 
   await expect(worker).toHaveURL(/dashboard/)
   await expect(worker.getByRole('navigation').first()).toBeVisible()
 })
+
+test('switching companies hides the previous project list during a failed refetch', async ({ page }) => {
+  const platformUser = {
+    id: 'test-platform', firstName: 'Test', lastName: 'Platform', employeeCode: null,
+    email: 'test@example.test', roles: ['PLATFORM_ADMIN'], permissions: ['projects.read'],
+    companyId: null, company: null, hourlyRate: null, mustChangePassword: false, locale: 'bs',
+  }
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let companyBRequests = 0
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    const ok = (data: unknown, meta?: object) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data, ...(meta ? { meta } : {}) }),
+    })
+    if (path === '/api/auth/login' || path === '/api/auth/refresh') {
+      return ok({ accessToken: 'test-access', refreshToken: 'test-refresh', user: platformUser })
+    }
+    if (path === '/api/me') return ok(platformUser)
+    if (path === '/api/companies') return ok([
+      { id: 'tenant-a', name: 'Firma A', slug: 'firma-a', isActive: true },
+      { id: 'tenant-b', name: 'Firma B', slug: 'firma-b', isActive: true },
+    ])
+    if (path === '/api/projects') {
+      if (route.request().headers()['x-company-id'] === 'tenant-b') {
+        companyBRequests += 1
+        await gate
+        return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ success: false, error: { code: 'INTERNAL_ERROR', message: 'test failure' } }) })
+      }
+      return ok([{ id: 'project-a', name: 'Povjerljivi projekat A', status: 'PLANNING', progressPercent: 0, plannedBudget: null, currentSpend: '0' }], { page: 1, limit: 20, total: 1 })
+    }
+    if (path === '/api/dashboard') return ok({ cards: [], expiring: [], presence: null })
+    if (path === '/api/notifications') return ok([], { page: 1, limit: 20, total: 0 })
+    return ok({})
+  })
+  try {
+    await page.goto('/login')
+    await page.locator('#identifier').fill('test@example.test')
+    await page.locator('#password').fill('test-password')
+    await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+    await expect(page).toHaveURL(/dashboard/)
+    const selector = page.getByRole('combobox', { name: /izaberite firmu|select a company/i })
+    await expect(selector).toBeEnabled()
+    await selector.click()
+    await page.getByRole('option', { name: 'Firma A' }).click()
+    await page.goto('/projects')
+    await expect(page.getByRole('link', { name: 'Povjerljivi projekat A' })).toBeVisible()
+    await expect(selector).toBeEnabled()
+    await selector.click()
+    await page.getByRole('option', { name: 'Firma B' }).click()
+    await expect.poll(() => companyBRequests).toBeGreaterThan(0)
+    await expect(page.getByText('Povjerljivi projekat A')).toHaveCount(0)
+    release()
+    await expect(page.getByRole('alert').filter({ hasText: /projekti se nisu učitali/i })).toBeVisible()
+    await expect(page.getByText('Povjerljivi projekat A')).toHaveCount(0)
+  } finally {
+    release()
+    await page.unroute('**/api/**')
+  }
+})

@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ProjectRow } from '@/lib/ops-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
+import { queryClient } from '@/lib/query-client'
 import { ProjectsPage } from '@/pages/projects-page'
 
 /**
@@ -140,4 +141,27 @@ describe('ProjectsPage', () => {
     await screen.findByRole('link', { name: 'Sarajevo obilaznica' })
     expect(screen.queryByRole('navigation', { name: 'Stranice' })).not.toBeInTheDocument()
   })
+  it('promjena firme uklanja staru tabelu i kada novi zahtjev ne uspije', async () => {
+    queryClient.clear()
+    useAuthStore.setState((state) => ({ user: state.user ? { ...state.user, roles: ['PLATFORM_ADMIN'] } : null }))
+    let reject!: (error: unknown) => void
+    listProjects.mockResolvedValueOnce({ data: [project({ name: 'Projekat firme A' })], meta: { total: 1 } })
+      .mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail }))
+    const { unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter><ProjectsPage /></MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByRole('link', { name: 'Projekat firme A' })).toBeInTheDocument()
+    act(() => useCompanyStore.getState().setSelectedId('c2'))
+    await waitFor(() => expect(screen.queryByText('Projekat firme A')).not.toBeInTheDocument())
+    await act(async () => reject(new Error('offline')))
+    // The global client retries transient errors once; fail the retry as well.
+    listProjects.mockRejectedValue(new Error('offline'))
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent('Projekti se nisu učitali.')
+    expect(screen.queryByText('Projekat firme A')).not.toBeInTheDocument()
+    unmount()
+    queryClient.clear()
+  })
+
 })

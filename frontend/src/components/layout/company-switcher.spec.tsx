@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/stores/auth-store'
+import { queryClient } from '@/lib/query-client'
 import { useCompanyStore } from '@/stores/company-store'
 import { CompanySwitcher } from '@/components/layout/company-switcher'
 
@@ -19,8 +20,7 @@ vi.mock('@/lib/api', () => ({
   getMe: () => getMe(),
 }))
 
-function renderSwitcher() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function renderSwitcher(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <QueryClientProvider client={client}>
       <CompanySwitcher />
@@ -93,6 +93,22 @@ describe('CompanySwitcher', () => {
 
     expect(useCompanyStore.getState().selectedId).toBe('c2')
     expect(getMe).toHaveBeenCalled()
+  })
+
+  it('nakon resetovanja stvarnog keša opet učita firmu i zadrži izbor', async () => {
+    queryClient.clear()
+    signIn(['PLATFORM_ADMIN'])
+    const { unmount } = renderSwitcher(queryClient)
+    const trigger = await screen.findByRole('combobox', { name: 'Izaberite firmu' })
+    await waitFor(() => expect(trigger).toBeEnabled())
+    await userEvent.click(trigger)
+    await userEvent.click(await screen.findByRole('option', { name: 'Test gradnja' }))
+    await waitFor(() => expect(trigger).toBeEnabled())
+    expect(useCompanyStore.getState().selectedId).toBe('c2')
+    expect(trigger).toHaveTextContent('Test gradnja')
+    expect(listCompanies.mock.calls.length).toBeGreaterThanOrEqual(2)
+    unmount()
+    queryClient.clear()
   })
 
   it('revizija raste samo kad se izbor zaista promijeni', () => {
