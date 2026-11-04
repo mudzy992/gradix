@@ -19,6 +19,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { ROOT, PLAN_PATH, readMatrix, readSegments, REVIEWED } from './lib.mjs';
 
 const verbose = process.argv.includes('--verbose');
@@ -34,13 +35,25 @@ const warn = (m) => warnings.push(m);
 
 const read = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null);
 
+// The strict checks depend on a complete, valid inventory. readMatrix() alone
+// silently discards duplicate paths and does not detect missing/stale files.
+const coverage = spawnSync(process.execPath, [path.join(ROOT, 'scripts/audit/check-coverage.mjs')], {
+  cwd: ROOT, encoding: 'utf8',
+});
+if (coverage.status !== 0) {
+  fail(`check-coverage nije prošao; strogi gate ne može vjerovati matrici:\n${coverage.stdout || coverage.stderr || coverage.error?.message || 'nepoznata greška'}`);
+}
+
 let segments = [];
 try {
   segments = readSegments();
+  if (!Array.isArray(segments)) throw new Error('segments mora biti niz');
 } catch (e) {
   fail(`segments.json se ne može pročitati: ${e.message}`);
+  segments = [];
 }
-const rows = readMatrix();
+let rows = new Map();
+try { rows = readMatrix(); } catch (e) { fail(`matrica se ne može pročitati: ${e.message}`); }
 const done = segments.filter((s) => s.status === 'done');
 const planned = segments.filter((s) => s.status !== 'done');
 

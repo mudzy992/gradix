@@ -71,4 +71,4 @@ auditiraju. Sve ostalo **mora** biti u matrici.
 MOB-07 je EAS profil koji još ne postoji). Oni u `segments.json` imaju `scope: "process"` i
 `scopeReason`; gate za njih ne traži redove u matrici, ali traži razlog.
 
-Prototip `check-audit-gate.mjs` ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Njegova provjera CI okidača namjerno prihvata samo trenutni jednostavni YAML block-format, ne parsira proizvoljan YAML; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.
+Prototip `check-audit-gate.mjs` najprije izvršava `check-coverage.mjs` i pada ako matrica/inventar nisu usklađeni. Ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Njegova provjera CI okidača namjerno prihvata samo trenutni jednostavni YAML block-format, ne parsira proizvoljan YAML; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.

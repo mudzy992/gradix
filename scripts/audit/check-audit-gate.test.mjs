@@ -1,7 +1,7 @@
 // Test the draft strict gate in an isolated miniature workspace.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,19 +15,32 @@ function fixture(t) {
   const root = mkdtempSync(path.join(tmpdir(), 'gradix-strict-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   for (const dir of ['scripts/audit', 'AUDIT/segments', 'docs', '.github/workflows']) mkdirSync(path.join(root, dir), { recursive: true });
-  for (const file of ['lib.mjs', 'check-audit-gate.mjs']) copyFileSync(path.join(source, file), path.join(root, 'scripts/audit', file));
+  for (const file of ['lib.mjs', 'check-audit-gate.mjs', 'check-coverage.mjs']) copyFileSync(path.join(source, file), path.join(root, 'scripts/audit', file));
   const write = (file, value) => writeFileSync(path.join(root, file), value);
-  write('scripts/audit/segments.json', JSON.stringify({ segments: [{ id: 'STD-01', layer: 'STD', status: 'done', scope: 'files' }] }));
-  write('AUDIT/COVERAGE_MATRIX.csv', 'file,layer,module,segment,loc,status,findings,date\nexample.ts,STD,audit-tools,STD-01,1,pregledano,test,2026-11-04\n');
-  write('AUDIT/STATE.md', '`arena/work` (remote: `example/repo`)\nTrenutno: **1/1 segmenata `done`**\n## Zadnji commit i CI\n');
-  write('AUDIT/02_MASTER_AUDIT_PLAN.md', '**STD-01**\n');
+  write('scripts/audit/segments.json', JSON.stringify({ segments: [
+    { id: 'STD-01', layer: 'STD', status: 'done', scope: 'files' },
+    { id: 'CI-01', layer: 'CI', status: 'planned', scope: 'files' },
+  ] }));
+  write('AUDIT/STATE.md', '`arena/work` (remote: `example/repo`)\nTrenutno: **1/2 segmenata `done`**\n## Zadnji commit i CI\n');
+  write('AUDIT/02_MASTER_AUDIT_PLAN.md', '**STD-01**\n**CI-01**\n');
   write('AUDIT/segments/STD-01.md', 'report\n');
   write('docs/CI.md', jobNames.map((name) => `\`${name}\``).join(' '));
   const trigger = "on:\n  push:\n    branches:\n      - 'arena/work'\n  workflow_dispatch:\n";
   const jobs = 'jobs:\n' + jobNames.map((name) => `  ${name}:\n    if: \${{ !inputs.suite || inputs.suite == 'all'${jobSuites[name].map((suite) => ` || inputs.suite == '${suite}'`).join('')} }}\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@${sha}\n`).join('');
   write('.github/workflows/ci.yml', trigger + jobs);
+  const files = [
+    'scripts/audit/lib.mjs', 'scripts/audit/check-audit-gate.mjs',
+    'scripts/audit/check-coverage.mjs', 'scripts/audit/segments.json', '.github/workflows/ci.yml',
+  ];
+  const rows = files.map((file) => {
+    const ci = file.startsWith('.github/');
+    const loc = readFileSync(path.join(root, file), 'utf8').split('\n').length;
+    return `${file},${ci ? 'CI,ci,CI-01' : 'STD,audit-tools,STD-01'},${loc},pregledano,test,2026-11-04`;
+  });
+  const matrix = `file,layer,module,segment,loc,status,findings,date\n${rows.join('\n')}\n`;
+  write('AUDIT/COVERAGE_MATRIX.csv', matrix);
   const run = () => spawnSync(process.execPath, [path.join(root, 'scripts/audit/check-audit-gate.mjs')], { cwd: root, encoding: 'utf8' });
-  return { write, run, trigger, jobs };
+  return { root, write, run, trigger, jobs, matrix };
 }
 
 test('validno minijaturno stanje prolazi', (t) => {
@@ -38,11 +51,11 @@ test('validno minijaturno stanje prolazi', (t) => {
 
 test('otvoreni fajl u gotovom segmentu i pogrešan STATE brojač padaju', (t) => {
   const f = fixture(t);
-  f.write('AUDIT/COVERAGE_MATRIX.csv', 'file,layer,module,segment,loc,status,findings,date\nexample.ts,STD,audit-tools,STD-01,1,u-toku,,\n');
-  f.write('AUDIT/STATE.md', '`arena/work` (remote: `example/repo`)\nTrenutno: **0/1 segmenata `done`**\n');
+  f.write('AUDIT/COVERAGE_MATRIX.csv', f.matrix.replace(/(scripts\/audit\/lib\.mjs,[^\n]*?),pregledano,test,2026-11-04/, '$1,u-toku,,'));
+  f.write('AUDIT/STATE.md', '`arena/work` (remote: `example/repo`)\nTrenutno: **0/2 segmenata `done`**\n');
   const result = f.run();
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /example\.ts: status `u-toku`/);
+  assert.match(result.stdout, /scripts\/audit\/lib\.mjs: status `u-toku`/);
   assert.match(result.stdout, /STATE\.md tvrdi 0 segmenata/);
 });
 
@@ -71,7 +84,7 @@ test('glob, dodatan filter, PR i nedostajući dispatch ne prolaze', (t) => {
 
 test('nedostajuća aktivna grana nije samo upozorenje', (t) => {
   const f = fixture(t);
-  f.write('AUDIT/STATE.md', 'Trenutno: **1/1 segmenata `done`**\n');
+  f.write('AUDIT/STATE.md', 'Trenutno: **1/2 segmenata `done`**\n');
   const result = f.run();
   assert.equal(result.status, 1);
   assert.match(result.stdout, /ne mogu pročitati aktivnu granu/);
@@ -115,4 +128,30 @@ test('stvarni workflow poštuje provjere okidača i suite matrice bez nametanja 
   assert.ok(result.status === 0 || result.status === 1, result.stdout + result.stderr);
   assert.match(result.stdout, /GATE: (PASS|FAIL)/);
   assert.doesNotMatch(result.stdout, /ci\.yml:/);
+});
+
+
+test('strogi gate odbija duplikate, nestale i izostavljene redove matrice', (t) => {
+  const f = fixture(t);
+  const lines = f.matrix.trimEnd().split('\n');
+  for (const bad of [
+    f.matrix + lines[1] + '\n',
+    f.matrix + 'old.ts,STD,audit-tools,STD-01,1,pregledano,test,2026-11-04\n',
+    [lines[0], ...lines.slice(2), ''].join('\n'),
+    f.matrix + 'bad,row\n',
+  ]) {
+    f.write('AUDIT/COVERAGE_MATRIX.csv', bad);
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /check-coverage nije prošao/);
+  }
+});
+
+test('neispravan segments.json ne može rezultirati zelenim gateom', (t) => {
+  const f = fixture(t);
+  f.write('scripts/audit/segments.json', '{}');
+  const result = f.run();
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /segments mora biti niz/);
+  assert.match(result.stdout, /GATE: FAIL/);
 });
