@@ -388,7 +388,8 @@ frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,preg
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,181,nepregledano,,
+frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,146,pregledano,"CI-05: 8 testova aktivne kartice, prava, stanja, mutacija i uploada.",2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,241,u-toku,"CI-05: učitavanje po aktivnoj kartici, stanja, prava, greške i prevodi; ostaju F-CI-05-14/15/16.",2026-11-04
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -435,8 +436,8 @@ frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en p
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
-frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,164,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine. | CI-05: oznake za projektni dnevnik.",2026-11-04
-frontend/src/i18n/ops-en.ts,FE,shared,FE-15,164,pregledano,"FE-15: paritet bs/en potvrđen globalnim testom | CI-05: oznake, greške i jedinice za količine. | CI-05: oznake za projektni dnevnik.",2026-11-04
+frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,171,pregledano,CI-05: prijevodi kartica projekta; paritet sa engleskim.,2026-11-04
+frontend/src/i18n/ops-en.ts,FE,shared,FE-15,171,pregledano,CI-05: prijevodi kartica projekta; paritet sa bosanskim.,2026-11-04
 frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
@@ -504,7 +505,8 @@ frontend/src/pages/logistics-page.spec.tsx,TEST,fe-unit,FE-05,146,pregledano,"FE
 frontend/src/pages/logistics-page.tsx,FE,fleet-pages,FE-09,237,pregledano,"FE-09: preveden status ture (LOADED/UNLOADED iz unloadedAt), jedinica materijala kao m³/t/kom, caption + skeleton + greška + retry, prazne liste materijala/deponija, labele na poljima (prije samo placeholder), CSV sa prevedenim zaglavljima i onemogućen bez tura | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/payroll-page.spec.tsx,TEST,fe-unit,FE-05,236,pregledano,"FE-12: 10 testova — prikaz sati/iznosa/statusa, zbir, ton odbijenog, skeleton, prazno stanje, trajna greška + retry, akcije po pravu, export",2026-11-04
 frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,260,pregledano,"FE-12: sati umjesto sirovih minuta, formatAmount, ton po statusu (REJECTED crveno), skeletoni, prazan mjesec, trajna greška sa „Pokušaj ponovo“, zaglavlje kolone Akcije, export sa imenom perioda i odgođenim revoke, zbir vidljiv i supervizoru | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
-frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,128,pregledano,"FE-08: skeleton, greška + retry, preveden status sa tonom, pregled kao dt/dd parovi (WCAG 1.3.1)",2026-11-03
+frontend/src/pages/project-detail-page.spec.tsx,TEST,fe-unit,FE-05,56,pregledano,"CI-05: 3 testa pristupa karticama, učitavanja i Gantt greške.",2026-11-04
+frontend/src/pages/project-detail-page.tsx,FE,ops-pages,FE-08,143,pregledano,"CI-05: Gantt prava, stanja, retry i učitavanje samo u pregledu; F-CI-05-14 ograničenje paginacije.",2026-11-04
 frontend/src/pages/projects-page.spec.tsx,TEST,fe-unit,FE-05,144,pregledano,"CI-05: pregled i izvođenje 6 testova statusa, učitavanja, greške, pretrage i paginacije.",2026-11-04
 frontend/src/pages/projects-page.tsx,FE,ops-pages,FE-08,160,pregledano,"FE-08: skeleton (aria-busy), greška role=alert + retry, prazno vs. „nema rezultata“, TableCaption sa ukupnim brojem, preveden status, paginacija sa granicama i „Stranica X od Y“, označeno polje pretrage | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/public-site-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-14: 11 testova — skeleton/aria-busy, 404≠500+retry, 429 poruka, SEO meta + restore, <html lang>, preveden status, dt/dd, tel:/mailto:, izolovan pad projekata, prazno stanje",2026-11-04

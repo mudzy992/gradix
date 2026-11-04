@@ -31,7 +31,10 @@ export function ProjectDetailPage() {
   const [params, setParams] = useSearchParams()
   const qtyRead = useHasPermission('quantities.read')
   const publicWrite = useHasPermission('public.write')
-  const tab = params.get('tab') ?? 'overview'
+  const canReadTasks = useHasPermission('tasks.read')
+  const visibleTabs = TABS.filter((item) => item !== 'quantities' || qtyRead)
+  const requestedTab = params.get('tab')
+  const tab = visibleTabs.find((item) => item === requestedTab) ?? 'overview'
   const project = useQuery({
     queryKey: ['project', id],
     queryFn: async () => (await getProject(id)).data,
@@ -40,12 +43,12 @@ export function ProjectDetailPage() {
   const phases = useQuery({
     queryKey: ['phases', id],
     queryFn: async () => (await listPhases(id)).data,
-    enabled: Boolean(id),
+    enabled: Boolean(id) && tab === 'overview',
   })
   const tasks = useQuery({
     queryKey: ['tasks', { projectId: id, limit: 100 }],
     queryFn: async () => (await listTasks({ projectId: id, limit: 100 })).data,
-    enabled: Boolean(id),
+    enabled: Boolean(id) && tab === 'overview' && canReadTasks,
   })
   const row = project.data
   if (project.isError) {
@@ -72,7 +75,6 @@ export function ProjectDetailPage() {
     )
   }
   const status = projectStatus(row.status)
-  const visibleTabs = TABS.filter((item) => item !== 'quantities' || qtyRead)
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -111,7 +113,20 @@ export function ProjectDetailPage() {
             </div>
           </dl>
           <h2 className="text-lg font-medium">{t('projects.gantt')}</h2>
-          <PlannedGantt phases={phases.data ?? []} tasks={tasks.data ?? []} />
+          {(phases.isLoading || (canReadTasks && tasks.isLoading)) ? <p role="status">{t('common.loading')}</p> : null}
+          {phases.isError || (canReadTasks && tasks.isError) ? (
+            <div role="alert" className="flex items-center gap-2 text-sm text-destructive">
+              <span>{t('projects.sectionLoadError')}</span>
+              <Button size="sm" variant="outline" onClick={() => {
+                if (phases.isError) void phases.refetch()
+                if (canReadTasks && tasks.isError) void tasks.refetch()
+              }}>{t('dashboard.retry')}</Button>
+            </div>
+          ) : null}
+          {!canReadTasks ? <p className="text-sm">{t('projects.ganttTasksNoAccess')}</p> : null}
+          {!phases.isLoading && !phases.isError && (!canReadTasks || (!tasks.isLoading && !tasks.isError)) ? (
+            <PlannedGantt phases={phases.data ?? []} tasks={canReadTasks ? tasks.data ?? [] : []} />
+          ) : null}
           {publicWrite ? (
             <ProjectPublicCard
               projectId={id}
@@ -120,7 +135,7 @@ export function ProjectDetailPage() {
             />
           ) : null}
         </TabsContent>
-        <ProjectTabs projectId={id} project={row} />
+        <ProjectTabs projectId={id} project={row} activeTab={tab} />
       </Tabs>
     </div>
   )

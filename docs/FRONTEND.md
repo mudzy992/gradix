@@ -218,3 +218,7 @@ Pri izmjeni se kod, lokacija, naručilac i budžet šalju samo ako su promijenje
 ### Javna fotografija projekta
 
 Upload cover fotografije blokiran je dok prethodni traje, uz prikaz statusa; nakon greške moguće je ponovo izabrati isti fajl.
+
+### Kartice projekta
+
+Podaci se učitavaju po aktivnoj kartici, uz stanja učitavanja, greške i ponovnog pokušaja. Odgovarajuća prava provjeravaju se prije učitavanja i prikaza podataka; izostanak prava na zadatke naznačen je u Gantt pregledu. Uklanjanje člana i upload dokumenta prijavljuju grešku. Poznata ograničenja paginacije, izbora uloge i dvokorakog uploada prate se u CI-05 (F-CI-05-14/15/16).
