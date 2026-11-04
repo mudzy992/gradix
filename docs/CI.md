@@ -81,7 +81,7 @@ broja primijenjenih migracija → dump kao artefakt 7 dana. SQL/pipeline greška
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
-| `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
+| `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice, zaštite izvještaja i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` (Frontend lint + typecheck + test + build) | `npm ci` → `oxlint` → `tsc -b` → **`npm run test:cov`** (Vitest + Testing Library, jsdom) → `vite build` → artefakt `frontend-coverage` | ~45 s |

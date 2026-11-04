@@ -77,7 +77,7 @@ if (!fs.existsSync(MATRIX_PATH)) {
 const files = collectFiles();
 const fileSet = new Set(files);
 for (const f of files) if (!rows.has(f)) fail(`nije u matrici: ${f}`);
-for (const f of rows.keys()) if (!fileSet.has(f)) fail(`matrica ima red za nepostojeći fajl: ${f} (pokreni inventory --write)`);
+for (const f of rows.keys()) if (!fileSet.has(f)) fail(`matrica ima red za nepostojeći fajl: ${f} (pregledaj i arhiviraj nalaz prije usklađivanja matrice)`);
 
 // --- 4/5. red po red ---
 const byStatus = new Map(STATUSES.map((s) => [s, 0]));

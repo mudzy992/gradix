@@ -7,6 +7,7 @@ Bez zavisnosti (samo Node 22 builtin). Ne treba `npm install`.
 | `inventory.mjs` | Skenira repo, klasifikuje svaki izvorni fajl u `layer/module/segment`, upisuje `AUDIT/COVERAGE_MATRIX.csv` | ručno kad se doda/pomjeri fajl |
 | `inventory.mjs --stats` | Isto, ali samo ispiše statistiku (ništa ne piše) | orijentacija |
 | `check-coverage.mjs` | CI gate: matrica vs. kod vs. `segments.json` | CI job `audit`, lokalno prije commita |
+| `inventory-scaffold.test.mjs` | Regresije sigurnog inventara i zabrane prepisivanja izvještaja | CI audit i lokalno |
 | `check-coverage.test.mjs` | Izolovani testovi ispravne i oštećene matrice | `node --test scripts/audit/check-coverage.test.mjs` i CI job `audit` |
 | `lib.mjs` | zajednička logika: `collectFiles`, `classify`, CSV parser, `readSegments` | — |
 
@@ -45,7 +46,7 @@ smije ručno „popravljati“, samo generisati.
 | `pokriveno-testom` | ponašanje zaključano testom | da |
 
 `inventory.mjs` **nikad** ne prepisuje `status`/`findings`/`date`; mijenja samo `layer`, `module`,
-`segment`, `loc`. Zato je sigurno pokrenuti ga u svakom trenutku.
+`segment`, `loc`. Neispravna matrica, duplikati, nepoznat segment ili red za nestali fajl zaustavljaju upis; nalaz o nestalom fajlu mora se prvo pregledati i arhivirati. Završeni sadržaj se atomarno zamjenjuje. `scaffold-segments.mjs --force` se odbija kako se postojeći izvještaji ne bi prepisali.
 
 ## Šta gate provjerava
 

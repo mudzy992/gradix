@@ -11,11 +11,38 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ROOT, MATRIX_PATH, CSV_HEADER, STATUSES, collectFiles, classify, countLoc,
-  readMatrix, csvEscape, readSegments,
+  readMatrix, csvEscape, readSegments, parseCsvLine,
 } from './lib.mjs';
 
 const statsOnly = process.argv.includes('--stats');
 
+// Validate before readMatrix's Map can overwrite duplicates or discard malformed rows.
+if (fs.existsSync(MATRIX_PATH)) {
+  const lines = fs.readFileSync(MATRIX_PATH, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  const errors = [];
+  if (parseCsvLine(lines[0]).join(',') !== CSV_HEADER.join(',')) errors.push('neispravan header');
+  const seen = new Set();
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    let quoted = false;
+    for (let j = 0; j < line.length; j++) {
+      if (line[j] !== '"') continue;
+      if (quoted && line[j + 1] === '"') j++;
+      else quoted = !quoted;
+    }
+    const cells = parseCsvLine(line);
+    if (quoted || cells.length !== CSV_HEADER.length) { errors.push(`neispravan red ${i + 1}`); continue; }
+    if (!cells[0]?.trim()) errors.push(`prazna putanja u redu ${i + 1}`);
+    else if (seen.has(cells[0])) errors.push(`duplikat ${cells[0]}`);
+    else seen.add(cells[0]);
+    if (!STATUSES.includes(cells[5])) errors.push(`neispravan status u redu ${i + 1}`);
+  }
+  if (errors.length) {
+    console.error('❌ Inventar nije upisan; matrica ima greške:', errors.join('; '));
+    process.exit(1);
+  }
+}
 const files = collectFiles();
 const previous = readMatrix();
 const segments = new Set(readSegments().map((s) => s.id));
@@ -35,7 +62,7 @@ for (const file of files) {
     module,
     segment,
     loc: countLoc(file),
-    status: old?.status && STATUSES.includes(old.status) ? old.status : 'nepregledano',
+    status: old?.status ?? 'nepregledano',
     findings: old?.findings ?? '',
     date: old?.date ?? '',
   });
@@ -64,10 +91,28 @@ if (unknownSegments.size) {
 }
 
 if (statsOnly) process.exit(0);
+if (removed > 0 || unknownSegments.size > 0) {
+  console.error('❌ Inventar nije upisan: pregledaj i arhiviraj postojeće nalaze za uklonjene fajlove ili popravi klasifikaciju.');
+  for (const file of previous.keys()) if (!files.includes(file)) console.error(`   - ${file}`);
+  process.exit(1);
+}
 
 const lines = [CSV_HEADER.join(',')];
 for (const r of rows) lines.push(CSV_HEADER.map((k) => csvEscape(r[k])).join(','));
-fs.writeFileSync(MATRIX_PATH, lines.join('\n') + '\n', 'utf8');
+// Write alongside the matrix and replace atomically only after a complete write.
+const temporary = `${MATRIX_PATH}.tmp-${process.pid}`;
+let temporaryCreated = false;
+try {
+  const fd = fs.openSync(temporary, 'wx');
+  temporaryCreated = true;
+  try {
+    fs.writeFileSync(fd, lines.join('\n') + '\n', 'utf8');
+  } finally {
+    fs.closeSync(fd);
+  }
+  fs.renameSync(temporary, MATRIX_PATH);
+  temporaryCreated = false;
+} finally {
+  if (temporaryCreated && fs.existsSync(temporary)) fs.unlinkSync(temporary);
+}
 console.log(`\nUpisano: ${path.relative(ROOT, MATRIX_PATH)}`);
-
-if (unknownSegments.size) process.exit(1);

@@ -224,7 +224,7 @@ Svaka nova zavisnost ide u `docs/DECISIONS.md` (D-006).
 ## 9.1 Struktura `AUDIT/segments/<ID>.md`
 
 Skeletoni se generišu sa `node scripts/audit/scaffold-segments.mjs` (postojeći fajlovi se ne
-prepisuju; `--force` regeneriše, `--check` provjerava da svih 59 postoji). Deset sekcija:
+prepisuju; `--force` je blokiran radi očuvanja izvještaja, `--check` provjerava da svih 59 postoji). Deset sekcija:
 
 | # | Sekcija | Šta mora sadržavati |
 |---|---|---|

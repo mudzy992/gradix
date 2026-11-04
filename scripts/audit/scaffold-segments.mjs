@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Generiše AUDIT/segments/<ID>.md skeletone (10 sekcija) iz segments.json + matrice.
-// Postojeći fajlovi se NE prepisuju (da se ne izgubi rad) osim uz --force.
+// Postojeći fajlovi se NE prepisuju; --force je blokiran da se ne izgubi rad.
 //
 //   node scripts/audit/scaffold-segments.mjs           # samo nedostajući
-//   node scripts/audit/scaffold-segments.mjs --force   # regeneriši sve (gubi unos!)
+//   node scripts/audit/scaffold-segments.mjs --force   # odbijeno: čuva postojeće izvještaje
 //   node scripts/audit/scaffold-segments.mjs --check   # exit 1 ako neki segment nema fajl
 
 import fs from 'node:fs';
@@ -11,7 +11,10 @@ import path from 'node:path';
 import { ROOT, MATRIX_PATH, readMatrix, readSegments } from './lib.mjs';
 
 const DIR = path.join(ROOT, 'AUDIT/segments');
-const force = process.argv.includes('--force');
+if (process.argv.includes('--force')) {
+  console.error('❌ --force je blokiran: postojeći audit izvještaji ne smiju biti prepisani.');
+  process.exit(1);
+}
 const check = process.argv.includes('--check');
 
 const segments = readSegments();
@@ -138,7 +141,7 @@ for (const seg of segments) {
     if (!exists) missing.push(seg.id);
     continue;
   }
-  if (exists && !force) { skipped += 1; continue; }
+  if (exists) { skipped += 1; continue; }
   fs.writeFileSync(file, render(seg), 'utf8');
   written += 1;
 }
