@@ -69,7 +69,7 @@ export function LogisticsPage() {
       </div>
 
       <div aria-busy={trips.isLoading}>
-        <Table>
+        <Table label={t('logistics.title')}>
           <TableCaption className="text-left text-sm text-muted-foreground">
             {trips.isSuccess ? (rows.length > 0 ? t('logistics.count', { count: rows.length }) : t('logistics.empty')) : null}
           </TableCaption>

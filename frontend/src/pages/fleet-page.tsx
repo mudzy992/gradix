@@ -61,7 +61,7 @@ export function FleetPage() {
       </div>
 
       <div aria-busy={query.isLoading}>
-        <Table>
+        <Table label={t('fleet.title')}>
           <TableCaption className="text-left text-sm text-muted-foreground">
             {query.isSuccess ? (rows.length > 0 ? t('fleet.count', { count: rows.length }) : t('fleet.empty')) : null}
           </TableCaption>

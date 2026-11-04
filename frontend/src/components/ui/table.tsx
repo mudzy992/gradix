@@ -4,11 +4,24 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * FE-16 — široka tabela se skroluje horizontalno, a kontejner nije bio fokusable: korisnik koji ne
+ * koristi miš **nije mogao** doći do kolona van ekrana (WCAG 2.1.1; axe pravilo
+ * `scrollable-region-focusable`). Sada je kontejner fokusable `region` sa vidljivim fokusom i
+ * opcionalnom oznakom (`label`) — imenovan region je i orijentir za čitače ekrana.
+ */
+function Table({
+  className,
+  label,
+  ...props
+}: React.ComponentProps<"table"> & { label?: string }) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      className="relative w-full overflow-x-auto rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring"
     >
       <table
         data-slot="table"

@@ -103,7 +103,7 @@ export function ReportsPage() {
       </div>
 
       <div aria-busy={query.isLoading}>
-        <Table>
+        <Table label={t('reports.title')}>
           <TableCaption className="text-left text-sm text-muted-foreground">
             {table
               ? t('reports.caption', { name: reportName, count: table.rows.length })

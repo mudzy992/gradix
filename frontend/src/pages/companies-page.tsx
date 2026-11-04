@@ -91,7 +91,7 @@ export function CompaniesPage() {
       ) : null}
 
       <div aria-busy={query.isLoading}>
-        <Table>
+        <Table label={t('companies.title')}>
           <TableCaption>
             {query.isSuccess ? t('companies.caption', { count: total }) : t('companies.title')}
           </TableCaption>

@@ -827,6 +827,39 @@ u renderu; šest kodova grešaka sa backenda nije imalo prijevod (429 = „Throt
 otpornost na kratke mrežne prekide; (e) novo pravilo u `check:all` za paritet kodova grešaka — isti
 posao radi test, bez promjene broja koraka u pet dokumenata.
 
+### D-056 — UI primitive: mjerljiv kontrast, prevedene oznake i fokusabilni regioni
+**Datum:** 2026-11-04 · **Status:** na snazi
+
+Audit osnovnih komponenti (`components/ui/**`) našao je tri stvari koje su se množile kroz cijelu
+aplikaciju: neaktivni tab je bio `text-foreground/60`, što na `--muted` podlozi daje **4,26:1** (WCAG 2.2
+AA traži 4,5:1 za tekst od 14 px), pa je sporedni tekst u tabovima bio preslab; oznaka za zatvaranje
+dijaloga i „šita“ bila je **hardkodirana na engleskom** („Close“), pa je čitač ekrana u bosanskom
+interfejsu izgovarao engleski na svakom dijalogu; a kontejner tabele i viewport `ScrollArea` nisu bili
+fokusabilni, pa korisnik koji ne koristi miš **nije mogao** doći do kolona/sadržaja van ekrana
+(WCAG 2.1.1, axe `scrollable-region-focusable`).
+
+**Odluka:**
+
+1. **Kontrast se mjeri, ne procjenjuje.** Sporedni tekst koristi semantički token
+   (`--muted-foreground` = 5,02:1), a ne prozirnu varijantu glavnog teksta (`/60` = 4,26:1). Test drži
+   klasu i zabranjuje povratak na `/60`.
+2. **Nijedna oznaka u primitivama nije hardkodirana.** `common.close` (bs „Zatvori“ / en „Close“) ide
+   kroz `useTranslation`; parity test iz D-055 čuva da ključ postoji u oba jezika.
+3. **Skrolovani sadržaj je fokusabilan i imenovan.** `Table` kontejner je `role="region"` sa
+   `tabIndex={0}`, vidljivim fokusom i opcionom `label`; ekrani sa tabelama prosljeđuju naslov stranice.
+   `ScrollArea` viewport dobija `tabIndex={0}`.
+4. **`CardTitle` ostaje `div`.** Kartice se ne pretvaraju u `h3` (nastali bi preskočeni nivoi naslova u
+   20+ ekrana); umjesto toga sekcije su **imenovani regioni** (`role="region"` + `aria-label`, obrazac
+   iz FE-13), a naslovi ekrana ostaju `h1`/`h2` van kartica. Struktura se time dobija bez „skakanja“
+   nivoa naslova.
+5. **Primitive su pokrivene testovima.** 19 fajlova ulazi u `coverage.include`; testovi provjeravaju
+   uloge, imena i stanja (ne izgled), pa se regresija vidi u CI-ju.
+
+**Odbačeno:** (a) `h3` u `CardTitle` — preskočeni nivoi naslova; (b) obavezan `label` na `Table` — rušilo
+bi kompilaciju na svakom mestu upotrebe bez stvarne koristi; (c) uklanjanje `dark:` klasa — `.dark` je
+inertan, ali tokeni su pripremljeni (D-008); (d) normalizacija navodnika u četiri generisana fajla —
+kozmetika bez uticaja na ponašanje.
+
 ---
 
 ## Zamijenjene / povučene odluke

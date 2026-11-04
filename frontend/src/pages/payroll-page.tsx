@@ -147,7 +147,7 @@ export function PayrollPage() {
       ) : null}
 
       <div aria-busy={sessions.isLoading}>
-        <Table>
+        <Table label={t('payroll.title')}>
           <TableCaption className="text-left text-sm text-muted-foreground">
             {sessions.isSuccess
               ? rows.length > 0

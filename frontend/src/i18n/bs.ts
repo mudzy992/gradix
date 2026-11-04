@@ -219,6 +219,7 @@ export const bs = {
   common: {
     save: 'Sačuvaj',
     cancel: 'Otkaži',
+    close: 'Zatvori',
     confirm: 'Potvrdi',
     loading: 'Učitavanje…',
     actions: 'Akcije',

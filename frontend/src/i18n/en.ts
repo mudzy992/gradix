@@ -219,6 +219,7 @@ export const en = {
   common: {
     save: 'Save',
     cancel: 'Cancel',
+    close: 'Close',
     confirm: 'Confirm',
     loading: 'Loading…',
     actions: 'Actions',

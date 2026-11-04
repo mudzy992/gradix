@@ -156,7 +156,7 @@ export function UsersPage() {
       ) : null}
 
       <div aria-busy={query.isLoading}>
-        <Table>
+        <Table label={t('users.title')}>
           <TableCaption>
             {query.isSuccess ? t('users.caption', { count: total }) : t('users.title')}
           </TableCaption>

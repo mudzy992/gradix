@@ -10,13 +10,16 @@
 
 **FAZA 2–4 ✅ završene; KAPIJA 1 i KAPIJA 2 ✅ prošle.** Vlasnik je dao blanket odobrenje
 („Postupi po svojoj preporuci sve i nastavi dalje“), pa se segmenti izvršavaju **kontinuirano**, uz
-kratak izvještaj poslije svakog. Trenutno: **45/59 segmenata `done`** (zadnji: FE-15).
+kratak izvještaj poslije svakog. Trenutno: **46/59 segmenata `done`** (zadnji: FE-16).
+
+**Napomena vlasnika (2026-11-04):** na **mobile se ne prelazi** dok backend i frontend nisu kompletno
+završeni — preostali BE segmenti idu prije `MOB-01…MOB-07`.
 
 ## Zadnji commit i CI
 
 | | |
 |---|---|
-| Zadnji commit | `feat(fe): FE-15` — zajednički sloj: mrežne greške kao `ApiError`, jedno mjesto za odjavu (`clearSession`), otporna pohrana, pošten CSV, paritet prijevoda (D-055) — `done` · prije: `feat(fe): FE-14` — javni sajt: stanja umjesto bijelog ekrana, SEO meta + `<html lang>`, otporni javni API i validne postavke prikaza (D-054) — `done` · prije: `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
+| Zadnji commit | `feat(fe): FE-16` — UI primitive: mjerljiv kontrast taba, prevedene oznake, fokusabilni regioni tabela i skrola (D-056) — `done` · prije: `feat(fe): FE-15` — zajednički sloj: mrežne greške kao `ApiError`, jedno mjesto za odjavu (`clearSession`), otporna pohrana, pošten CSV, paritet prijevoda (D-055) — `done` · prije: `feat(fe): FE-14` — javni sajt: stanja umjesto bijelog ekrana, SEO meta + `<html lang>`, otporni javni API i validne postavke prikaza (D-054) — `done` · prije: `feat(fe): FE-13` — administracija: forma samo nad učitanim podacima, status naloga, reaktivacija, prevedene postavke (D-052) — `done` · prije: `feat(fe): FE-12` — obračun i ERP: sati umjesto minuta, prevedeni statusi/kategorije, upit po tabu, stanja i labele (D-051) — `done` · prije: `feat(fe): FE-11` — ured: tenderi/servis/izvještaji, naziv mašine umjesto CUID-a, prevedena zaglavlja (D-049) — `done` · prije: `feat(fe): FE-10` — dnevnik/HSE/dokumenti: stanje roka, prava na akcije, pristupačan kalendar (D-048) — `done` · prije: `feat(fe): FE-09` — flota i logistika: prevedeni enumi, `formatHours`, tekstualna lista uz mapu (D-047) — `done` · prije: `feat(fe): FE-08` — projekti/zadaci: prevedeni enumi (D-046), stanja lista, paginacija, dt/dd — `done` · prije: `feat(fe): FE-07` — auth ekrani: AuthCard (jedno h1), greške uz polja, trajni alert za 429, pošten /reset, prekidač lozinke — `done` · prije: `test(fe): FE-06` — 16 Playwright testova (admin tok, radnik + timer, guardovi), jedna sesija po fajlu — `done` · prije: `test(fe): FE-06` — dashboard — 16 Playwright testova u 4 fajla (admin tok, radnik + timer, guardovi) + trace/retry dijagnostika — `done` · prije: `test(fe): FE-05` — testna okosnica (Vitest + Testing Library, jsdom, D-044), 28 testova, coverage ratchet, CI korak; usput ispravljen netačan FE-04 nalaz i konsolidovan `dash` i18n — `done` |
 | CI | ✅ [41799476716](https://github.com/mudzy992/gradix/actions/runs/41799476716) — **6/6** (`feat(fe): FE-15`, Frontend unit 301, Web E2E 31 — prvi pokušaj zelen) · prije: ✅ [41795078702](https://github.com/mudzy992/gradix/actions/runs/41795078702) — **6/6** (`docs(audit): FE-14 …`) · prije: ✅ [41794830116](https://github.com/mudzy992/gradix/actions/runs/41794830116) — **6/6** (`feat(fe): FE-14`, Web E2E 31 test — prvi pokušaj zelen) · prije: ✅ [41793092550](https://github.com/mudzy992/gradix/actions/runs/41793092550) — **6/6** (`docs(audit): FE-13 …`) · prije: ✅ [41792792936](https://github.com/mudzy992/gradix/actions/runs/41792792936) — **6/6** (`feat(fe): FE-13` + D-053, Web E2E 28 testova) · prije: ✅ [41789352928](https://github.com/mudzy992/gradix/actions/runs/41789352928) — **6/6** (`docs(audit): FE-12 …`) · prije: ✅ [41789093535](https://github.com/mudzy992/gradix/actions/runs/41789093535) — **6/6** (`feat(fe): FE-12`, Web E2E 26 testova) · prije: ✅ [41783115547](https://github.com/mudzy992/gradix/actions/runs/41783115547) — **6/6** (`docs(audit): FE-11 …`) · prije: ✅ [41782885474](https://github.com/mudzy992/gradix/actions/runs/41782885474) — **6/6** (`feat(fe): FE-11` + D-050, Web E2E 24 testa) · prije: ✅ [41779976740](https://github.com/mudzy992/gradix/actions/runs/41779976740) — **6/6** (`feat(fe): FE-10`, Web E2E 23 testa) · prije: ✅ [41737320120](https://github.com/mudzy992/gradix/actions/runs/41737320120) — **6/6** (`feat(fe): FE-09`, Web E2E 22 testa) · prije: ✅ [41735868494](https://github.com/mudzy992/gradix/actions/runs/41735868494) — **6/6** (`feat(fe): FE-08` + popravke; Web E2E 21 test) · prije: ✅ [41732607216](https://github.com/mudzy992/gradix/actions/runs/41732607216) — **6/6** (`feat(fe): FE-07`) · prije: ✅ [41730661179](https://github.com/mudzy992/gradix/actions/runs/41730661179) — **6/6** (`test(fe): FE-06 …` + popravke; Web E2E sa 16 testova) · prije: ✅ [41724035626](https://github.com/mudzy992/gradix/actions/runs/41724035626) — **6/6** (`test(fe): FE-05 …`, job `Frontend (lint + typecheck + test + build)`) · prije: ✅ [41714214228](https://github.com/mudzy992/gradix/actions/runs/41714214228) (FE-04 zapis) · ✅ [41713747923](https://github.com/mudzy992/gradix/actions/runs/41713747923) — **6/6** (FE-04) · ✅ [41712142337](https://github.com/mudzy992/gradix/actions/runs/41712142337) — **6/6** (D-041/D-042) · ✅ [41708189041](https://github.com/mudzy992/gradix/actions/runs/41708189041) (probe log) · ✅ [41703994353](https://github.com/mudzy992/gradix/actions/runs/41703994353) (FE-03) · ✅ [41696920558](https://github.com/mudzy992/gradix/actions/runs/41696920558) (FE-02) · ✅ [41693498226](https://github.com/mudzy992/gradix/actions/runs/41693498226) (FE-01) · drill [41666523647](https://github.com/mudzy992/gradix/actions/runs/41666523647) ✅ |
 | Sljedeća kapija | nema — izvršavanje segmenata po planu (§3), izvještaj nakon svakog |
 
@@ -842,10 +845,30 @@ kratak izvještaj poslije svakog. Trenutno: **45/59 segmenata `done`** (zadnji: 
 - **Usput:** test javnog sajta (FE-14) je povremeno padao jer je `beforeEach` praznio `<head>` poslije
   postavljanja naslova — redoslijed ispravljen, tvrdnje idu kroz `waitFor`.
 
+### 2026-11-04 — FE-16 (UI primitive) → segment `done`
+- **Nalaz (visoko, kontrast):** neaktivni tab je bio `text-foreground/60` — na `--muted` podlozi to je
+  **4,26:1**, ispod granice 4,5:1 za tekst od 14 px (WCAG 2.2 AA). Tabovi su na ERP-u, obračunu i
+  postavkama, pa je slab kontrast bio svuda. Sada `text-muted-foreground` (**5,02:1**), a test zabranjuje
+  povratak na `/60`.
+- **Nalaz (visoko, tastatura):** kontejner tabele (`overflow-x-auto`) i `ScrollArea` viewport nisu bili
+  fokusabilni, pa korisnik bez miša **nije mogao** doći do kolona van ekrana (WCAG 2.1.1, axe
+  `scrollable-region-focusable`). Sada su `region` + `tabIndex=0` + vidljiv fokus; sedam tabela dobija
+  ime regiona (naslov ekrana), a E2E tvrdi da region prima fokus.
+- **Nalaz (srednje, i18n):** oznaka za zatvaranje dijaloga i „šita“ bila je **hardkodirana na engleskom**
+  („Close“) — čitač ekrana je u bosanskom interfejsu izgovarao engleski na svakom dijalogu; dugme u
+  podnožju dijaloga bilo je vidljivo englesko. Sada `common.close` (bs „Zatvori“/en „Close“).
+- **Nalaz (srednje):** `CardTitle` je `div`, pa dugačke stranice nisu imale strukturu naslova. Odluka
+  (D-056): naslovi **ostaju** `h1`/`h2` van kartica, a kartice su **imenovani regioni** — bez preskočenih
+  nivoa naslova. Usput: `Textarea` je dobila ista `aria-invalid`/`disabled` stanja kao `Input`.
+- **Testovi:** 33 nova (`primitives.spec.tsx` 22, `overlays.spec.tsx` 11) — ukupno **334** unit testa u
+  43 fajla; pokrivenost linija **92,57 %**, grane 88,40 %, funkcije 89,98 %. 19 UI fajlova dodato u
+  coverage ratchet (15 fajlova 100 %, `alert-dialog`/`dialog` 92,3 %, `sheet` 90,9 %). E2E ostaje **31**
+  (tvrdnja o regionu tabele ušla je u postojeći tok). **D-056.**
+
 ## Šta je sljedeći korak
 
-1. **FE-16 — UI primitive** (`components/ui/**`: varijante, a11y, dokumentovani tokeni), zatim
-   **MOB-01…MOB-07**.
+1. **Preostali BE segmenti** (backend mora biti kompletan prije mobile-a), pa tek onda
+   **MOB-01…MOB-07** — vlasnik je izričito tražio da se na mobile ne prelazi ranije.
 2. Svaki sljedeći segment dodaje svoje module u `coverage.include` (ratchet, D-044) i, gdje ima
    smisla, E2E tok (D-044/FE-06 obrazac: jedna sesija po fajlu).
 3. **F-FE-06-01** (radnik + `hse.read`) čeka odluku u FE-10 / BE segmentu; **F-FE-06-06** (rotacija

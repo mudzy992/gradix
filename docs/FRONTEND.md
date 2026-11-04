@@ -115,6 +115,18 @@ frontend/src/
 - Boje iz starih pravila (primary `#1B365D`, background `#F4F1EA`, accent `#C45C26` …) su
   **polazna osnova**, ne obaveza (odluka D-008).
 
+### 4.3 UI primitive — obaveze (D-056)
+- **Kontrast sporednog teksta:** `--muted-foreground` (5,02:1 na `--muted`), nikad prozirna varijanta
+  glavnog teksta (`text-foreground/60` = 4,26:1 → pada AA).
+- **Nijedna oznaka u primitivama nije hardkodirana:** `common.close` kroz `useTranslation`
+  (dijalog, šit); parity test drži ključ u oba jezika.
+- **Skrolovanje tastaturom:** `Table` kontejner je `role="region"` + `tabIndex={0}` (+ `label` sa
+  ekrana), `ScrollArea` viewport je fokusabilan; oba imaju vidljiv fokus.
+- **Struktura:** kartice su imenovani regioni (`role="region"` + `aria-label`), `CardTitle` je `div`;
+  naslovi ekrana ostaju `h1`/`h2` (bez preskočenih nivoa).
+- **Testovi:** primitive se testiraju na uloge/imena/stanja (`primitives.spec.tsx`,
+  `overlays.spec.tsx`), a ne na izgled.
+
 ### 4.2 Obaveze za novi dizajn (D-008, odobreno)
 1. **Nova paleta** je dozvoljena; brend smije evoluirati.
 2. Minimalni set tokena: `color.{bg,surface,border,text,muted,primary,primary-fg,accent,

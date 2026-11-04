@@ -186,6 +186,13 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByRole('table').getByText('Demo Admin')).toBeVisible()
     await expect(page.getByText('(to ste vi)')).toBeVisible()
     await expect(page.getByText(/^(ACTIVE|INACTIVE)$/)).toHaveCount(0)
+    // FE-16: široka tabela se skroluje — kontejner mora biti fokusabilan i imenovan, inače korisnik
+    // koji ne koristi miš ne može doći do kolona van ekrana (WCAG 2.1.1).
+    const scrollRegion = page.getByRole('region', { name: /korisnici/i })
+    await expect(scrollRegion).toBeVisible()
+    await expect(scrollRegion).toHaveAttribute('tabindex', '0')
+    await scrollRegion.focus()
+    await expect(scrollRegion).toBeFocused()
   })
 
   test('postavke: podaci firme i prevedene postavke (FE-13)', async () => {

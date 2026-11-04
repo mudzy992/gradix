@@ -58,7 +58,7 @@ export function ProjectsPage() {
       </div>
 
       <div aria-busy={query.isLoading}>
-        <Table>
+        <Table label={t('projects.title')}>
           <TableCaption className="text-left text-sm text-muted-foreground">
             {query.isSuccess
               ? total > 0
