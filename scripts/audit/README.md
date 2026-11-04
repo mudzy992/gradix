@@ -51,7 +51,7 @@ smije ručno „popravljati“, samo generisati.
 
 ## Šta gate provjerava
 
-1. Matrica postoji, header tačan; duplikati, nedostajuće putanje i pogrešan broj kolona ruše gate.
+1. Matrica postoji, header tačan; duplikati, neispravno CSV citiranje, nedostajuće putanje i pogrešan broj kolona ruše gate. Polje matrice mora biti u jednom fizičkom redu; višelinijski CSV nije podržan.
 2. Svaki fajl iz `collectFiles()` ima red; nema redova za nepostojeće fajlove.
 3. `layer/module/segment` se poklapaju sa klasifikacijom (drift = pad).
 4. Status je iz liste; pregledani statusi imaju `findings` i ISO `date`.

@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ROOT, MATRIX_PATH, CSV_HEADER, STATUSES, REVIEWED, collectFiles, classify,
-  readMatrix, readSegments, parseCsvLine, countLoc,
+  readMatrix, readSegments, parseCsvLine, isValidCsvLine, countLoc,
 } from './lib.mjs';
 
 const verbose = process.argv.includes('--verbose');
@@ -54,7 +54,7 @@ if (!fs.existsSync(MATRIX_PATH)) {
 } else {
   const lines = fs.readFileSync(MATRIX_PATH, 'utf8').replace(/\r\n/g, '\n').split('\n');
   const header = parseCsvLine(lines[0]);
-  if (header.join(',') !== CSV_HEADER.join(',')) {
+  if (!isValidCsvLine(lines[0]) || header.join(',') !== CSV_HEADER.join(',')) {
     fail(`matrica: header je "${header.join(',')}", očekivano "${CSV_HEADER.join(',')}"`);
   }
   // readMatrix() returns a Map, so duplicate keys would otherwise be silently overwritten.
@@ -62,6 +62,7 @@ if (!fs.existsSync(MATRIX_PATH)) {
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const cells = parseCsvLine(lines[i]);
+    if (!isValidCsvLine(lines[i])) fail(`matrica: red ${i + 1} ima neispravno CSV citiranje`);
     if (cells.length !== CSV_HEADER.length) {
       fail(`matrica: red ${i + 1} ima ${cells.length} kolona (očekivano ${CSV_HEADER.length})`);
     }

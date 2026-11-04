@@ -139,6 +139,7 @@ test('strogi gate odbija duplikate, nestale i izostavljene redove matrice', (t) 
     f.matrix + 'old.ts,STD,audit-tools,STD-01,1,pregledano,test,2026-11-04\n',
     [lines[0], ...lines.slice(2), ''].join('\n'),
     f.matrix + 'bad,row\n',
+    f.matrix.replace('test,2026-11-04', 'test,"2026-11-04'),
   ]) {
     f.write('AUDIT/COVERAGE_MATRIX.csv', bad);
     const result = f.run();

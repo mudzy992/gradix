@@ -40,7 +40,7 @@ test('inventar čuva pregledane podatke i dodaje nove fajlove', (t) => {
 
 test('ne prepisuje duplikat, neispravan status, oštećen ili nepodudaran header', (t) => {
   const f = fixture(t);
-  for (const input of [header + f.row + f.row, header + f.row.replace('pregledano', 'typo'), header + 'bad,row\n', header + '"open,broken\n', 'incorrect\n' + f.row]) {
+  for (const input of [header + f.row + f.row, header + f.row.replace('pregledano', 'typo'), header + 'bad,row\n', header + '"open,broken\n', header + f.row.replace('2026-11-04', '"2026-11-04'), header + f.row.replace('važno', 'va"ž"no'), 'incorrect\n' + f.row]) {
     writeFileSync(f.matrix, input);
     assert.notEqual(f.run('inventory.mjs').status, 0);
     assert.equal(readFileSync(f.matrix, 'utf8'), input);

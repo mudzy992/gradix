@@ -251,6 +251,27 @@ export function csvEscape(value) {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/** Validate one CSV record (multiline fields are not supported by the matrix). */
+export function isValidCsvLine(line) {
+  let state = 'start'; // start | bare | quoted | closed
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '\n' || ch === '\r') return false;
+    if (state === 'quoted') {
+      if (ch === '"' && line[i + 1] === '"') i += 1;
+      else if (ch === '"') state = 'closed';
+    } else if (state === 'closed') {
+      if (ch !== ',') return false;
+      state = 'start';
+    } else if (ch === ',') state = 'start';
+    else if (ch === '"') {
+      if (state !== 'start') return false;
+      state = 'quoted';
+    } else state = 'bare';
+  }
+  return state !== 'quoted';
+}
+
 export function parseCsvLine(line) {
   const out = [];
   let cur = '';

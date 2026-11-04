@@ -587,12 +587,12 @@ mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,213,u-toku,CI-05 prototip: stroga provjera stanja; nije još testiran ni uključen u CI.,2026-11-04
-scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,158,pokriveno-testom,F-CI-05-21: izolovane regresije prototipa,2026-11-04
-scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,136,pregledano,"CI-05: stale zapisi traže pregled i arhiviranje, ne automatsko odbacivanje.",2026-11-04
-scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,72,pregledano,"CI-05: izolovani node:test slučajevi: duplikat, neispravan red, nedostajući i zastarjeli fajl, LOC drift.",2026-11-04
+scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,159,pokriveno-testom,F-CI-05-21: izolovane regresije prototipa,2026-11-04
+scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,137,pregledano,"CI-05: stale zapisi traže pregled i arhiviranje, ne automatsko odbacivanje.",2026-11-04
+scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,91,pregledano,"CI-05: izolovani node:test slučajevi: duplikat, neispravan red, nedostajući i zastarjeli fajl, LOC drift.",2026-11-04
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
-scripts/audit/inventory.mjs,STD,audit-tools,STD-01,119,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,275,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
+scripts/audit/inventory.mjs,STD,audit-tools,STD-01,113,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,296,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,439,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 dug statusa done ostaje otvoren,2026-11-04
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04

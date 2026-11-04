@@ -69,3 +69,22 @@ test('missing, stale and changed source files fail the gate', async (t) => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, /drift: scripts\/audit\/lib\.mjs loc=/);
 });
+
+test('CSV citiranje je validno čak i kad oštećeni red ima tačno osam kolona', async (t) => {
+  const f = await fixture(t);
+  const original = readFileSync(f.matrix, 'utf8');
+  const first = f.lines[0];
+  const valid = first.replace(',nepregledano,,', ',pregledano,"nalaz, sa ""navodnicima""",2026-11-04');
+  writeFileSync(f.matrix, original.replace(first, valid));
+  assert.equal(f.run().status, 0);
+  for (const broken of [
+    valid.replace('2026-11-04', '"2026-11-04'), // unclosed last cell; still eight parsed columns
+    valid.replace('2026-11-04', '20"26"-11-04'), // quote inside an unquoted field
+    valid.replace('"nalaz, sa ""navodnicima"""', '"nalaz, sa ""navodnicima"""x'), // text after closing quote
+  ]) {
+    writeFileSync(f.matrix, original.replace(first, broken));
+    const result = f.run();
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stdout, /neispravno CSV citiranje/);
+  }
+});

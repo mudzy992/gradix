@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ROOT, MATRIX_PATH, CSV_HEADER, STATUSES, collectFiles, classify, countLoc,
-  readMatrix, csvEscape, readSegments, parseCsvLine,
+  readMatrix, csvEscape, readSegments, parseCsvLine, isValidCsvLine,
 } from './lib.mjs';
 
 const statsOnly = process.argv.includes('--stats');
@@ -20,19 +20,13 @@ const statsOnly = process.argv.includes('--stats');
 if (fs.existsSync(MATRIX_PATH)) {
   const lines = fs.readFileSync(MATRIX_PATH, 'utf8').replace(/\r\n/g, '\n').split('\n');
   const errors = [];
-  if (parseCsvLine(lines[0]).join(',') !== CSV_HEADER.join(',')) errors.push('neispravan header');
+  if (!isValidCsvLine(lines[0]) || parseCsvLine(lines[0]).join(',') !== CSV_HEADER.join(',')) errors.push('neispravan header');
   const seen = new Set();
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
-    let quoted = false;
-    for (let j = 0; j < line.length; j++) {
-      if (line[j] !== '"') continue;
-      if (quoted && line[j + 1] === '"') j++;
-      else quoted = !quoted;
-    }
     const cells = parseCsvLine(line);
-    if (quoted || cells.length !== CSV_HEADER.length) { errors.push(`neispravan red ${i + 1}`); continue; }
+    if (!isValidCsvLine(line) || cells.length !== CSV_HEADER.length) { errors.push(`neispravan red ${i + 1}`); continue; }
     if (!cells[0]?.trim()) errors.push(`prazna putanja u redu ${i + 1}`);
     else if (seen.has(cells[0])) errors.push(`duplikat ${cells[0]}`);
     else seen.add(cells[0]);
