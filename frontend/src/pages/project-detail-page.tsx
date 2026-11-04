@@ -85,7 +85,11 @@ export function ProjectDetailPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{row.name}</h1>
         <Badge variant={status.tone}>{t(status.labelKey, { defaultValue: row.status })}</Badge>
       </div>
-      <Tabs value={tab} onValueChange={(value) => setParams({ tab: value })}>
+      <Tabs value={tab} onValueChange={(value) => {
+        const next = new URLSearchParams(params)
+        next.set('tab', value)
+        setParams(next)
+      }}>
         <TabsList variant="line" className="h-auto flex-wrap">
           {visibleTabs.map((item) => (
             <TabsTrigger key={item} value={item}>

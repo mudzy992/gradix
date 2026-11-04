@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProjectDetailPage } from './project-detail-page'
 
@@ -11,10 +11,14 @@ vi.mock('@/hooks/use-me', () => ({ useHasPermission: (permission: string) => api
 vi.mock('@/components/ops/project-tabs', () => ({ ProjectTabs: ({ activeTab }: { activeTab: string }) => <span>active: {activeTab}</span> }))
 vi.mock('@/components/ops/project-public-card', () => ({ ProjectPublicCard: () => null }))
 
+function LocationSearch() {
+  return <output aria-label="Query">{useLocation().search}</output>
+}
+
 function renderPage(path = '/projects/p1') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Routes>
-    <Route path="/projects/:id" element={<ProjectDetailPage />} />
+    <Route path="/projects/:id" element={<><ProjectDetailPage /><LocationSearch /></>} />
   </Routes></MemoryRouter></QueryClientProvider>)
 }
 
@@ -26,6 +30,22 @@ beforeEach(() => {
 })
 
 describe('ProjectDetailPage Gantt and tabs', () => {
+  it('promjena kartice čuva ostale query parametre, uključujući ponovljene', async () => {
+    renderPage('/projects/p1?filter=active&tag=a&tag=b&tab=overview')
+    await screen.findByRole('heading', { name: 'Most' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Dokumenti' }))
+    const query = new URLSearchParams(screen.getByLabelText('Query').textContent ?? '')
+    expect(query.get('tab')).toBe('documents')
+    expect(query.get('filter')).toBe('active')
+    expect(query.getAll('tag')).toEqual(['a', 'b'])
+  })
+
+  it('prikazuje nulti budžet iz API ugovora kao string, a ne nedostajuću vrijednost', async () => {
+    api.getProject.mockResolvedValue({ data: { id: 'p1', name: 'Most', status: 'PLANNING', progressPercent: 0, plannedBudget: '0', currentSpend: '0' } })
+    renderPage()
+    expect(await screen.findByText('0 / 0')).toBeInTheDocument()
+  })
+
   it('ne učitava pregled na drugoj kartici', async () => {
     api.permissions.add('tasks.read')
     renderPage('/projects/p1?tab=documents')
