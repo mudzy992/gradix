@@ -6,6 +6,7 @@ import { generateDiaryPdf, createDiary, listDiary, patchDiary } from '@/lib/api-
 import { ApiError } from '@/lib/api-types'
 import { errorMessage } from '@/lib/error-message'
 import { useHasPermission } from '@/hooks/use-me'
+import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
 import { useDisplayPrefs } from '@/hooks/use-public-settings'
 import { formatDateTime } from '@/lib/format-date'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,8 @@ export function ProjectDiaryTab({ projectId }: { projectId: string }) {
   const date = chosenDate ?? formatDateTime(new Date().toISOString(), timeZone, 'yyyy-MM-dd').slice(0, 10)
   const [work, setWork] = useState('')
   const [saving, setSaving] = useState(false)
+  const draft = work !== '' || chosenDate !== null
+  useCompanySwitchBlock((canWrite && draft) || saving)
   const fieldId = useId()
   const [conflict, setConflict] = useState<unknown>(null)
   const query = useQuery({
@@ -42,6 +45,7 @@ export function ProjectDiaryTab({ projectId }: { projectId: string }) {
             try {
               await createDiary({ projectId, date, workDescription: work })
               setWork('')
+              setDate(null)
               await client.invalidateQueries({ queryKey: ['diary'] })
             } catch (error) {
               if (error instanceof ApiError && error.code === 'DIARY_CONFLICT') {
@@ -55,10 +59,11 @@ export function ProjectDiaryTab({ projectId }: { projectId: string }) {
           }}
         >
           <Label htmlFor={`${fieldId}-date`}>{t('diary.date')}</Label>
-          <Input id={`${fieldId}-date`} type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+          <Input id={`${fieldId}-date`} type="date" disabled={saving} value={date} onChange={(event) => setDate(event.target.value)} required />
           <Label htmlFor={`${fieldId}-work`}>{t('diary.work')}</Label>
-          <Textarea id={`${fieldId}-work`} value={work} onChange={(event) => setWork(event.target.value)} />
+          <Textarea id={`${fieldId}-work`} disabled={saving} value={work} onChange={(event) => setWork(event.target.value)} />
           <Button type="submit" disabled={saving}>{t('common.save')}</Button>
+          {draft ? <Button type="button" variant="outline" disabled={saving} onClick={() => { setWork(''); setDate(null) }}>{t('common.discardDraft')}</Button> : null}
         </form>
       ) : null}
       {query.isLoading ? <p role="status">{t('common.loading')}</p> : null}

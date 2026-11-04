@@ -6,6 +6,7 @@ import { createQuantity, listQuantities, patchQuantity } from '@/lib/api-ops'
 import { errorMessage } from '@/lib/error-message'
 import { useAuthStore } from '@/stores/auth-store'
 import { useHasPermission } from '@/hooks/use-me'
+import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +30,8 @@ export function QuantitiesTab({ projectId }: { projectId: string }) {
   const [planned, setPlanned] = useState('')
   const [unit, setUnit] = useState<(typeof UNITS)[number]>('M3')
   const [saving, setSaving] = useState(false)
+  const draft = name !== '' || planned !== '' || unit !== 'M3'
+  useCompanySwitchBlock((canWrite && canPlanned && draft) || saving)
   const fieldId = useId()
   return (
     <div className="grid gap-3">
@@ -91,6 +94,7 @@ export function QuantitiesTab({ projectId }: { projectId: string }) {
               await createQuantity(projectId, { name, unit, plannedQty: planned })
               setName('')
               setPlanned('')
+              setUnit('M3')
               await client.invalidateQueries({ queryKey: ['quantities', projectId] })
             } catch (error) {
               toast.error(errorMessage(error))
@@ -101,19 +105,20 @@ export function QuantitiesTab({ projectId }: { projectId: string }) {
         >
           <div className="grid gap-1">
             <Label htmlFor={`${fieldId}-name`}>{t('projects.name')}</Label>
-            <Input id={`${fieldId}-name`} className="max-w-40" value={name} onChange={(event) => setName(event.target.value)} required />
+            <Input id={`${fieldId}-name`} className="max-w-40" disabled={saving} value={name} onChange={(event) => setName(event.target.value)} required />
           </div>
           <div className="grid gap-1">
             <Label htmlFor={`${fieldId}-planned`}>{t('projects.planned')}</Label>
-            <Input id={`${fieldId}-planned`} className="max-w-28" value={planned} onChange={(event) => setPlanned(event.target.value)} required inputMode="decimal" />
+            <Input id={`${fieldId}-planned`} className="max-w-28" disabled={saving} value={planned} onChange={(event) => setPlanned(event.target.value)} required inputMode="decimal" />
           </div>
           <div className="grid gap-1">
             <Label htmlFor={`${fieldId}-unit`}>{t('projects.unit')}</Label>
-            <select id={`${fieldId}-unit`} className="h-9 rounded-md border border-input bg-transparent px-2 text-sm" value={unit} onChange={(event) => setUnit(event.target.value as (typeof UNITS)[number])}>
+            <select id={`${fieldId}-unit`} className="h-9 rounded-md border border-input bg-transparent px-2 text-sm" disabled={saving} value={unit} onChange={(event) => setUnit(event.target.value as (typeof UNITS)[number])}>
               {UNITS.map((item) => <option key={item} value={item}>{t(`status.unit.${item}`)}</option>)}
             </select>
           </div>
           <Button type="submit" disabled={saving}>{t('common.save')}</Button>
+          {draft ? <Button type="button" variant="outline" disabled={saving} onClick={() => { setName(''); setPlanned(''); setUnit('M3') }}>{t('common.discardDraft')}</Button> : null}
         </form>
       ) : null}
     </div>

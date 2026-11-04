@@ -8,6 +8,7 @@ import { errorMessage } from '@/lib/error-message'
 import { materialUnit, tripStatusOf } from '@/lib/labels'
 import { useTenantReady } from '@/hooks/use-tenant-ready'
 import { useHasPermission } from '@/hooks/use-me'
+import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -28,6 +29,10 @@ export function LogisticsPage() {
   const [material, setMaterial] = useState('')
   const [materialUnitValue, setMaterialUnitValue] = useState('T')
   const [depot, setDepot] = useState('')
+  const [materialSaving, setMaterialSaving] = useState(false)
+  const [depotSaving, setDepotSaving] = useState(false)
+  const materialDraft = material !== '' || materialUnitValue !== 'T'
+  useCompanySwitchBlock((canWrite && (materialDraft || depot !== '')) || materialSaving || depotSaving)
   const trips = useQuery({
     queryKey: ['trips'],
     queryFn: async () => listTrips({ limit: 100 }),
@@ -147,12 +152,17 @@ export function LogisticsPage() {
             className="flex flex-wrap items-end gap-2"
             onSubmit={async (event) => {
               event.preventDefault()
+              if (materialSaving) return
+              setMaterialSaving(true)
               try {
                 await createMaterial({ name: material, unit: materialUnitValue })
                 setMaterial('')
+                setMaterialUnitValue('T')
                 await client.invalidateQueries({ queryKey: ['materials'] })
               } catch (error) {
                 toast.error(errorMessage(error))
+              } finally {
+                setMaterialSaving(false)
               }
             }}
           >
@@ -162,6 +172,7 @@ export function LogisticsPage() {
               </label>
               <Input
                 id="material-name"
+                disabled={materialSaving}
                 value={material}
                 onChange={(event) => setMaterial(event.target.value)}
                 placeholder={t('logistics.addMaterial')}
@@ -173,6 +184,7 @@ export function LogisticsPage() {
               </label>
               <select
                 id="material-unit"
+                disabled={materialSaving}
                 className="h-9 rounded-md border px-2 text-sm"
                 value={materialUnitValue}
                 onChange={(event) => setMaterialUnitValue(event.target.value)}
@@ -184,7 +196,8 @@ export function LogisticsPage() {
                 ))}
               </select>
             </div>
-            <Button type="submit">{t('common.save')}</Button>
+            <Button type="submit" disabled={materialSaving}>{t('common.save')}</Button>
+            {materialDraft ? <Button type="button" variant="outline" disabled={materialSaving} onClick={() => { setMaterial(''); setMaterialUnitValue('T') }}>{t('common.discardDraft')}</Button> : null}
           </form>
         ) : null}
       </section>
@@ -207,12 +220,16 @@ export function LogisticsPage() {
             className="flex flex-wrap items-end gap-2"
             onSubmit={async (event) => {
               event.preventDefault()
+              if (depotSaving) return
+              setDepotSaving(true)
               try {
                 await createDepot({ name: depot })
                 setDepot('')
                 await client.invalidateQueries({ queryKey: ['depots'] })
               } catch (error) {
                 toast.error(errorMessage(error))
+              } finally {
+                setDepotSaving(false)
               }
             }}
           >
@@ -222,12 +239,14 @@ export function LogisticsPage() {
               </label>
               <Input
                 id="depot-name"
+                disabled={depotSaving}
                 value={depot}
                 onChange={(event) => setDepot(event.target.value)}
                 placeholder={t('logistics.addDepot')}
               />
             </div>
-            <Button type="submit">{t('common.save')}</Button>
+            <Button type="submit" disabled={depotSaving}>{t('common.save')}</Button>
+            {depot !== '' ? <Button type="button" variant="outline" disabled={depotSaving} onClick={() => setDepot('')}>{t('common.discardDraft')}</Button> : null}
           </form>
         ) : null}
       </section>

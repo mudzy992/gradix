@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProjectDiaryTab } from './project-diary-tab'
+import { useCompanyStore } from '@/stores/company-store'
 
 const listDiary = vi.fn()
 const createDiary = vi.fn()
@@ -24,6 +25,7 @@ beforeEach(() => {
   listDiary.mockReset()
   createDiary.mockReset()
   patchDiary.mockReset()
+  useCompanyStore.setState({ selectedId: 'a' })
 })
 
 describe('ProjectDiaryTab', () => {
@@ -72,6 +74,29 @@ describe('ProjectDiaryTab', () => {
     expect(patchDiary).toHaveBeenCalledWith('d1', { problemsNoted: 'Led' })
   })
 
+  it('čuva datum i nacrt do izričitog odbacivanja', async () => {
+    listDiary.mockResolvedValue({ data: [] })
+    renderTab()
+    await userEvent.type(screen.getByLabelText('Opis rada'), 'Iskop')
+    expect(useCompanyStore.getState().setSelectedId('b')).toBe(false)
+    expect(screen.getByLabelText('Opis rada')).toHaveValue('Iskop')
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(screen.getByLabelText('Opis rada')).toHaveValue('')
+    act(() => { expect(useCompanyStore.getState().setSelectedId('b')).toBe(true) })
+  })
+
+  it('samostalna promjena datuma smatra se nacrtom i može se odbaciti', async () => {
+    listDiary.mockResolvedValue({ data: [] })
+    renderTab()
+    const date = screen.getByLabelText('Datum')
+    const initial = (date as HTMLInputElement).value
+    fireEvent.change(date, { target: { value: '2020-02-03' } })
+    expect(useCompanyStore.getState().setSelectedId('b')).toBe(false)
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(date).toHaveValue(initial)
+    act(() => { expect(useCompanyStore.getState().setSelectedId('b')).toBe(true) })
+  })
+
   it('blokira ponovni submit dok upis traje', async () => {
     listDiary.mockResolvedValue({ data: [] })
     let resolve!: () => void
@@ -81,9 +106,13 @@ describe('ProjectDiaryTab', () => {
     const button = screen.getByRole('button', { name: 'Sačuvaj' })
     await userEvent.click(button)
     await waitFor(() => expect(button).toBeDisabled())
+    expect(screen.getByLabelText('Opis rada')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Odbaci nacrt' })).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('b')).toBe(false)
     expect(createDiary).toHaveBeenCalledOnce()
     resolve()
     await waitFor(() => expect(button).toBeEnabled())
     expect(screen.getByLabelText('Opis rada')).toHaveValue('')
+    act(() => { expect(useCompanyStore.getState().setSelectedId('b')).toBe(true) })
   })
 })

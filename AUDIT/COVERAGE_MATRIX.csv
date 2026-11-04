@@ -390,8 +390,8 @@ frontend/src/components/ops/dispatch-sheet.spec.tsx,FE,ops-ui,FE-08,89,pregledan
 frontend/src/components/ops/dispatch-sheet.tsx,FE,ops-ui,FE-08,95,pregledano,"CI-05: obavezna polja imaju povezane greške; učitavanje i retry, onemogućavanje duplog snimanja; opciona dodjela.",2026-11-04
 frontend/src/components/ops/planned-gantt.spec.tsx,FE,ops-ui,FE-08,30,pregledano,"CI-05: test semantičkih datuma i traka, neispravnih i obrnutih raspona, granične jednodnevne stavke.",2026-11-04
 frontend/src/components/ops/planned-gantt.tsx,FE,ops-ui,FE-08,52,pregledano,"CI-05: pregled grafika; validacija datuma i raspona, vidljiv tekst perioda i dekorativne trake, granice grafika.",2026-11-04
-frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,90,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
-frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
+frontend/src/components/ops/project-diary-tab.spec.tsx,FE,ops-ui,FE-08,119,pregledano,"CI-05: pet testova pristupačnosti, zone dana, stanja, rollbacka i zabrane duplog snimanja.",2026-11-04
+frontend/src/components/ops/project-diary-tab.tsx,FE,ops-ui,FE-08,124,pregledano,"CI-05: labela polja, statusi i retry, zaštita snimanja i rollback pri grešci; početni datum prema zoni firme.",2026-11-04
 frontend/src/components/ops/project-pagination.tsx,FE,ops-ui,FE-08,25,pregledano,CI-05: pristupačna paginacija sa povratkom nakon greške bez meta; integracijski testovi.,2026-11-04
 frontend/src/components/ops/project-public-card.spec.tsx,FE,ops-ui,FE-08,65,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
 frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledano,"CI-05: upload covera zaštićen od duplikata, retry istog fajla i testovi vidljivosti.",2026-11-04
@@ -399,8 +399,8 @@ frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
 frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,631,pregledano,CI-05 F-51: 37 testova uključujući očuvanje recoveryja pri stvarnom resetu keša.,2026-11-04
 frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,398,u-toku,CI-05 F-49/51: idempotentni retry i zajednički scopeovani ključ; završni pregled u toku.,2026-11-04
-frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,73,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
-frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,122,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
+frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,123,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
+frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,127,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
 frontend/src/components/settings/public-brand-fields.spec.tsx,TEST,fe-unit,FE-05,90,pregledano,"FE-14: 3 testa — upload sa vrstom LOGO (polje onemogućeno dok GET traje), postavljen logo + link na /p/:slug, kartica skrivena kad podaci firme padnu",2026-11-04
 frontend/src/components/settings/public-brand-fields.tsx,FE,admin-ui,FE-13,87,pregledano,"FE-14: kartica se skriva kad podaci firme padnu (bez duplog alerta), polje onemogućeno dok upload traje, „Logo je postavljen.“ + link na /p/:slug",2026-11-04
@@ -440,8 +440,8 @@ frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,418,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,418,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,419,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,419,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
@@ -513,8 +513,8 @@ frontend/src/pages/forgot-page.tsx,FE,auth-pages,FE-07,75,pregledano,"FE-07: gre
 frontend/src/pages/hse-page.spec.tsx,TEST,fe-unit,FE-05,183,pregledano,"FE-10: preveden nivo/status, skeleton, prazno, greška + retry, akcije skrivene bez hse.write, potvrda/zatvaranje kroz API, obavezan opis, prevedene opcije forme",2026-11-03
 frontend/src/pages/hse-page.tsx,FE,site-pages,FE-10,211,pregledano,"FE-10: prevedena ozbiljnost i status sa tonom (hseSeverity/hseStatus), akcije „Potvrdi“/„Zatvori“ samo uz hse.write, skeleton + aria-busy, broj/prazno/greška + retry, htmlFor/id na svim poljima, poruka uz obavezan opis",2026-11-03
 frontend/src/pages/login-page.tsx,FE,auth-pages,FE-07,97,pregledano,"FE-07: AuthCard (jedno h1), PasswordInput, trajna greška servera role=alert umjesto toasta, noValidate; identifikator bez @ ide kao telefon",2026-11-03
-frontend/src/pages/logistics-page.spec.tsx,TEST,fe-unit,FE-05,146,pregledano,"FE-09: preveden status ture, prazne liste, greška + retry, jedinica materijala, labele i slanje jedinice u API",2026-11-03
-frontend/src/pages/logistics-page.tsx,FE,fleet-pages,FE-09,237,pregledano,"FE-09: preveden status ture (LOADED/UNLOADED iz unloadedAt), jedinica materijala kao m³/t/kom, caption + skeleton + greška + retry, prazne liste materijala/deponija, labele na poljima (prije samo placeholder), CSV sa prevedenim zaglavljima i onemogućen bez tura | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
+frontend/src/pages/logistics-page.spec.tsx,TEST,fe-unit,FE-05,198,pregledano,"FE-09: preveden status ture, prazne liste, greška + retry, jedinica materijala, labele i slanje jedinice u API",2026-11-03
+frontend/src/pages/logistics-page.tsx,FE,fleet-pages,FE-09,256,pregledano,"FE-09: preveden status ture (LOADED/UNLOADED iz unloadedAt), jedinica materijala kao m³/t/kom, caption + skeleton + greška + retry, prazne liste materijala/deponija, labele na poljima (prije samo placeholder), CSV sa prevedenim zaglavljima i onemogućen bez tura | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/payroll-page.spec.tsx,TEST,fe-unit,FE-05,236,pregledano,"FE-12: 10 testova — prikaz sati/iznosa/statusa, zbir, ton odbijenog, skeleton, prazno stanje, trajna greška + retry, akcije po pravu, export",2026-11-04
 frontend/src/pages/payroll-page.tsx,FE,money-pages,FE-12,260,pregledano,"FE-12: sati umjesto sirovih minuta, formatAmount, ton po statusu (REJECTED crveno), skeletoni, prazan mjesec, trajna greška sa „Pokušaj ponovo“, zaglavlje kolone Akcije, export sa imenom perioda i odgođenim revoke, zbir vidljiv i supervizoru | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
 frontend/src/pages/project-detail-page.spec.tsx,TEST,fe-unit,FE-05,106,pregledano,"CI-05: 5 testova kartica i Gantta, uključujući stranice i oporavak.",2026-11-04

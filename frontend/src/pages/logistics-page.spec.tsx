@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -126,6 +126,58 @@ describe('LogisticsPage', () => {
     expect(await within(materials).findByRole('listitem')).toHaveTextContent('Šljunak · m³')
     const depots = screen.getByRole('region', { name: 'Deponije' })
     expect(within(depots).getByText('Nema deponija.')).toBeInTheDocument()
+  })
+
+  it('štiti oba nezavisna nacrta i oslobađa izbor tek kada su oba odbačena', async () => {
+    listTrips.mockResolvedValue({ data: [], meta: { total: 0 } })
+    renderPage()
+    const materials = screen.getByRole('region', { name: 'Materijali' })
+    const depots = screen.getByRole('region', { name: 'Deponije' })
+    await userEvent.selectOptions(screen.getByLabelText('Jedinica'), 'PCS')
+    await userEvent.type(screen.getByLabelText('Naziv deponije'), 'Nova')
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(materials).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(screen.getByLabelText('Jedinica')).toHaveValue('T')
+    expect(screen.getByLabelText('Naziv deponije')).toHaveValue('Nova')
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(depots).getByRole('button', { name: 'Odbaci nacrt' }))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('čeka kreiranje materijala, sprečava dupliranje i čuva nacrt kod greške', async () => {
+    listTrips.mockResolvedValue({ data: [], meta: { total: 0 } })
+    let reject!: (error: Error) => void
+    createMaterial.mockReturnValue(new Promise((_, fail) => { reject = fail }))
+    renderPage()
+    const materials = screen.getByRole('region', { name: 'Materijali' })
+    await userEvent.type(screen.getByLabelText('Naziv materijala'), 'Pijesak')
+    await userEvent.click(within(materials).getByRole('button', { name: 'Sačuvaj' }))
+    expect(within(materials).getByRole('button', { name: 'Sačuvaj' })).toBeDisabled()
+    expect(within(materials).getByRole('button', { name: 'Odbaci nacrt' })).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    expect(createMaterial).toHaveBeenCalledOnce()
+    await act(async () => { reject(new Error('offline')) })
+    await waitFor(() => expect(within(materials).getByRole('button', { name: 'Odbaci nacrt' })).toBeEnabled())
+    expect(screen.getByLabelText('Naziv materijala')).toHaveValue('Pijesak')
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(materials).getByRole('button', { name: 'Odbaci nacrt' }))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('deponija blokira promjenu tokom zahtjeva i oslobađa je nakon uspjeha', async () => {
+    listTrips.mockResolvedValue({ data: [], meta: { total: 0 } })
+    let resolve!: () => void
+    createDepot.mockReturnValue(new Promise<void>((done) => { resolve = done }))
+    renderPage()
+    const depots = screen.getByRole('region', { name: 'Deponije' })
+    await userEvent.type(screen.getByLabelText('Naziv deponije'), 'Nova')
+    await userEvent.click(within(depots).getByRole('button', { name: 'Sačuvaj' }))
+    expect(screen.getByLabelText('Naziv deponije')).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await act(async () => { resolve() })
+    await waitFor(() => expect(screen.getByLabelText('Naziv deponije')).toBeEnabled())
+    expect(screen.getByLabelText('Naziv deponije')).toHaveValue('')
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
   })
 
   it('polja za dodavanje imaju labele i šalju jedinicu', async () => {
