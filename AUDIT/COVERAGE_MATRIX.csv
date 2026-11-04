@@ -97,7 +97,7 @@ backend/src/common/utils/prisma-errors.ts,BE,common,BE-01,26,pregledano,BE-04: n
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,BE-11: traversal i strani prefiks odbijeni; `buildObjectPath` = `{companyId}/{yyyy}/{mm}/{uuid}.{ext}`,2026-11-03
 backend/src/config/env.spec.ts,BE,config,BE-01,210,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
-backend/src/config/env.ts,BE,config,BE-01,280,pregledano,"FE-11/D-050: validira THROTTLE_LIMIT, THROTTLE_TTL_MS, AUTH_LOGIN_LIMIT, AUTH_REFRESH_LIMIT (defaulti 120/60000/5/20)",2026-11-03
+backend/src/config/env.ts,BE,config,BE-01,288,pregledano,"FE-11/D-050: validira THROTTLE_LIMIT, THROTTLE_TTL_MS, AUTH_LOGIN_LIMIT, AUTH_REFRESH_LIMIT (defaulti 120/60000/5/20)",2026-11-03
 backend/src/main.ts,BE,bootstrap,BE-01,31,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,10,pregledano,"BE-04: @Global modul, samo izvoz AuditService",2026-11-02
 backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
@@ -105,7 +105,7 @@ backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: 
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pregledano,"BE-02: nova čista pravila rotacije (6 ishoda), 9 unit testova (F-10)",2026-11-02
 backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,149,pregledano,"BE-02: rotate() provjerava i korisnika/firmu/role + cron čišćenja (F-01, F-04, F-06)",2026-11-02
-backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,92,pregledano,FE-11/D-050: login/refresh limiti iz okruženja (default 5/20 po minuti) — E2E posao ih podiže,2026-11-03
+backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,91,pregledano,FE-11/D-050: login/refresh limiti iz okruženja (default 5/20 po minuti) — E2E posao ih podiže,2026-11-03
 backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
 backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
 backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,191,pregledano,BE-02: reset() → 501 AUTH_RESET_NOT_AVAILABLE (F-02); login/changePassword pregledani,2026-11-02
