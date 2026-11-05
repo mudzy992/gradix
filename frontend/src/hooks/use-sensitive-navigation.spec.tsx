@@ -41,7 +41,7 @@ describe('one-time credential navigation protection', () => {
     try {
       const { router } = mount()
       await userEvent.click(screen.getByRole('link', { name: 'Go' }))
-      await waitFor(() => expect(error).toHaveBeenCalled())
+      await waitFor(() => expect(error).toHaveBeenCalledWith('Sačuvajte ili zatvorite obrazac, odnosno potvrdite jednokratnu lozinku prije napuštanja stranice.'))
       expect(router.state.location.pathname).toBe('/work')
       await userEvent.click(screen.getByRole('button', { name: 'Back' }))
       await waitFor(() => expect(error).toHaveBeenCalledTimes(2))

@@ -242,6 +242,7 @@ test('creating a user keeps the form open until the one-time result arrives', as
   let release!: () => void
   const gate = new Promise<void>((resolve) => { release = resolve })
   let createCount = 0
+  let phase = 'login'
   await page.route('**/api/users**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -261,7 +262,12 @@ test('creating a user keeps the form open until the one-time result arrives', as
     await page.locator('#password').fill(password!)
     await page.getByRole('button', { name: /prijavi|sign in/i }).click()
     await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
-    await page.goto('/users')
+    // Create this history entry through the data router. A full page navigation
+    // uses the browser's unload warning, not React Router's same-document blocker.
+    phase = 'router entry'
+    await page.getByRole('link', { name: 'Korisnici', exact: true }).click()
+    await expect(page).toHaveURL(/\/users$/)
+    phase = 'open and submit'
     await page.getByRole('button', { name: 'Novi korisnik' }).click()
     const sheet = page.getByRole('dialog')
     await sheet.getByLabel('Ime', { exact: true }).fill('Test')
@@ -275,19 +281,26 @@ test('creating a user keeps the form open until the one-time result arrives', as
     await sheet.getByRole('button', { name: 'Zatvori' }).click()
     await page.keyboard.press('Escape')
     await expect(sheet).toBeVisible()
+    phase = 'blocked history back and feedback'
     await page.evaluate(() => window.history.back())
     await expect(page.getByText('Sačuvajte ili zatvorite obrazac, odnosno potvrdite jednokratnu lozinku prije napuštanja stranice.')).toBeVisible()
     await expect(page).toHaveURL(/\/users$/)
+    phase = 'synthetic unload'
     expect(await page.evaluate(() => {
       const event = new Event('beforeunload', { cancelable: true })
       window.dispatchEvent(event)
       return event.defaultPrevented
     })).toBe(true)
     expect(createCount).toBe(1)
+    phase = 'one-time password'
     release()
     await expect(page.getByText('Temporary-example-456')).toBeVisible()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Potvrdi' }).click()
     await expect(page.getByText('Temporary-example-456')).toHaveCount(0)
+  } catch (error) {
+    // Fixed labels only: do not expose request contents or credentials in CI annotations.
+    console.error(`::error::Sensitive navigation E2E failed at phase: ${phase}`)
+    throw error
   } finally {
     release()
     await page.unroute('**/api/users**')
