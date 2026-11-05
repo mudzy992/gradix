@@ -36,6 +36,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   NODE_VERSION: '22'
@@ -65,6 +66,11 @@ jobs:
 
       - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
         run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose
+
+      - name: Strogi audit gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/audit/check-audit-gate.mjs --verify-ci
 
       - name: Matrica je regenerabilna (nema drift-a)
         run: |

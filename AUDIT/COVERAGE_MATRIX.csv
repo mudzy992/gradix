@@ -2,7 +2,7 @@ file,layer,module,segment,loc,status,findings,date
 .env.coolify,INF,compose,INF-01,97,pregledano,FE-11/D-050: throttle limiti na produkcijskim defaultima,2026-11-03
 .env.example,INF,compose,INF-01,105,pregledano,FE-11/D-050: dokumentovani throttle limiti sa defaultima,2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,157,pregledano,"CI-05: pregled drill-a; SQL greška i nevalidni brojevi ne mogu proći, broj migracija mora odgovarati.",2026-11-04
-.github/workflows/ci.yml,CI,ci,CI-01,708,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda.",2026-11-04
+.github/workflows/ci.yml,CI,ci,CI-01,714,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda.",2026-11-04
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,73,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -407,7 +407,7 @@ frontend/src/components/ops/project-public-card.tsx,FE,ops-ui,FE-08,85,pregledan
 frontend/src/components/ops/project-sheet.spec.tsx,FE,ops-ui,FE-08,94,pregledano,"CI-05: validacija, brisanje datuma i opcionih polja, skrivena polja, zaštita submita.",2026-11-04
 frontend/src/components/ops/project-sheet.tsx,FE,ops-ui,FE-08,103,pregledano,"CI-05: validacija, brisanje datuma i slanje samo izmijenjenih opcionih polja.",2026-11-04
 frontend/src/components/ops/project-tabs.spec.tsx,FE,ops-ui,FE-08,631,pregledano,CI-05 F-51: 37 testova uključujući očuvanje recoveryja pri stvarnom resetu keša.,2026-11-04
-frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,398,u-toku,CI-05 F-49/51: idempotentni retry i zajednički scopeovani ključ; završni pregled u toku.,2026-11-04
+frontend/src/components/ops/project-tabs.tsx,FE,ops-ui,FE-08,398,pregledano,FE-08 pregled: lista i prava paginacija mutacije i oporavak dokumenata; project-tabs Vitest 37/37. Preostaje F-CI-05-15 i oporavak nakon reloada.,2026-11-05
 frontend/src/components/ops/quantities-tab.spec.tsx,FE,ops-ui,FE-08,123,pregledano,"CI-05: četiri testirana scenarija — izbor jedinice, retry, pristupačne oznake i neuspjela izmjena.",2026-11-04
 frontend/src/components/ops/quantities-tab.tsx,FE,ops-ui,FE-08,127,pregledano,"CI-05: izbor jedinica umjesto hardkodiranog M3; naziv regije i polja, stanje greške, povrat vrijednosti na neuspjeloj izmjeni.",2026-11-04
 frontend/src/components/settings/company-fields.tsx,FE,admin-ui,FE-13,179,pregledano,"FE-13: forma se prikazuje **samo** kad su podaci učitani (prije je prazna forma gazila naziv/JIB), alert + retry, labela za slug i logo, `settings.logoSet` umjesto sirove putanje",2026-11-04
@@ -612,8 +612,8 @@ mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
-scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,234,u-toku,CI-05: prototip pregled i jačanje statusa izvještaja i nekih uses oblika; YAML parser i završni pregled ostaju otvoreni.,2026-11-04
-scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,197,pokriveno-testom,F-CI-05-42/44: regresije statusa izvještaja i alternativnih uses oblika; prototip nije CI gate.,2026-11-04
+scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,255,pokriveno-testom,STD-01 pregled: integritet matrice status izvještaja CI invarijante i online dokaz; izolovani negativni node testovi. YAML provjera ostaje ograničena.,2026-11-05
+scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,244,pokriveno-testom,F-CI-05-42/44: regresije statusa izvještaja i alternativnih uses oblika; prototip nije CI gate.,2026-11-04
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,144,pregledano,F-CI-05-43: kalendarska validacija ISO datuma za pregledane redove.,2026-11-04
 scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,109,pregledano,F-CI-05-43: regresije prestupne godine i nepostojećih datuma uz ranije testove matrice.,2026-11-04
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
@@ -623,6 +623,7 @@ scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,52,pregledano,CI-05: pregled
 scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,67,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,439,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 dug statusa done ostaje otvoren,2026-11-04
+scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,35,pokriveno-testom,STD-01: GitHub dokaz punog CI; test neuspjeha nekompletnog runa preskočenog posla i greške API.,2026-11-05
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03

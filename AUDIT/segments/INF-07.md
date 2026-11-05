@@ -6,6 +6,7 @@
 | Obim | `proces` (kod: `backend/src/common/redis/`, `scripts/ops/redis-acl.sh`) |
 | Ispravka | 2026-11-03: vlasnik javio da Redis TLS sluša na **`6380`** (ne 6379) — defaulti (`env.ts`, `redis.service.ts`, compose, env šabloni, ACL skripta, docs §5.4/§11) usklađeni na 6380 |
 | Status | `done` |
+| Potvrđeni puni CI | [42104618087](https://github.com/mudzy992/gradix/actions/runs/42104618087) — success |
 | Plan | [`AUDIT/02_MASTER_AUDIT_PLAN.md`](../02_MASTER_AUDIT_PLAN.md) |
 | Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) (filter `segment=INF-07`) |
 | Živi dnevnik | [`AUDIT/STATE.md`](../STATE.md) |

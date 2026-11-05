@@ -129,3 +129,12 @@ ponavlja kao izvor istine.
 3. Novi endpoint: eksplicitno `@Public()` **samo** kad je javno; sve ostalo je iza guardova.
 4. Upload: provjeri MIME i veličinu na serveru; putanja uvijek `{companyId}/...`.
 5. Zavisnosti: nova biblioteka = obrazloženje u `DECISIONS.md` (odluka D-006).
+
+## 9. Završeni audit segmenti
+
+Prije oznake `done` pregledati sve fajlove segmenta, ažurirati matricu i izvještaj.
+U zaglavlju izvještaja navesti `| Potvrđeni puni CI | [ID](https://github.com/mudzy992/gradix/actions/runs/ID) — success |`
+sa stvarnim istim numeričkim ID-om u linku i naslovu, nakon provjere svih šest poslova.
+Strogi gate je obavezan u CI; lokalni gate bez `--verify-ci` ne provjerava GitHub.
+Planirani i aktivni segmenti mogu sadržati nepregledane redove, ali ne i neispravnu matricu.
+Puni CI na kasnijoj reviziji mora se zasebno sačekati; ne upisivati budući run kao zelen.

@@ -5,6 +5,7 @@
 | Sloj | `STD` |
 | Obim | `fajlovi` |
 | Status | `done` |
+| Potvrđeni puni CI | [42104618087](https://github.com/mudzy992/gradix/actions/runs/42104618087) — success |
 | Plan | [`AUDIT/02_MASTER_AUDIT_PLAN.md`](../02_MASTER_AUDIT_PLAN.md) |
 | Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) (filter `segment=STD-01`) |
 | Živi dnevnik | [`AUDIT/STATE.md`](../STATE.md) |
@@ -96,6 +97,10 @@ obrazloženje u §6), `check:tokens`, `check:complexity`, `check:endpoints`, `ch
 - [x] `docs/CONVENTIONS.md` §7 (tabela stvarnog stanja + izuzeci)
 - [x] `docs/CI.md` (job `audit` + guard tabela)
 - [ ] `docs/DECISIONS.md` — nema arhitektonske odluke (korijen bez zavisnosti nije izbor tehnologije)
+
+### Dopunski pregled 2026-11-05
+
+`check-audit-gate.mjs` i novi verifier pregledani su uz izolovane negativne regresije: stale matrica, statusi, nedostajući izvještaj, CI dokaz, greške API-ja i nedovršeni poslovi. Strogi gate je zaseban CI korak; lokalno bez `--verify-ci` samo provjerava format linka. Tekstualna workflow provjera nije opći YAML parser. Novi CI još mora potvrditi integraciju.
 
 ## 10. Zapis izvršavanja
 

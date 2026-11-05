@@ -9,7 +9,8 @@ Bez zavisnosti (samo Node 22 builtin). Ne treba `npm install`.
 | `inventory.mjs --stats` | Isto, ali samo ispiše statistiku (ništa ne piše) | orijentacija |
 | `check-coverage.mjs` | CI gate: matrica vs. kod vs. `segments.json` | CI job `audit`, lokalno prije commita |
 | `inventory-scaffold.test.mjs` | Regresije sigurnog inventara i zabrane prepisivanja izvještaja | CI audit i lokalno |
-| `check-audit-gate.test.mjs` | Izolovane regresije prototipa strogog gatea; sam prototip još nije obavezan u CI | CI audit i lokalno |
+| `check-audit-gate.mjs` | Strogi gate: integritet inventara, usklađeni izvještaji, pregledani fajlovi u `done`, te CI dokaz | CI audit i lokalno |
+| `check-audit-gate.test.mjs`, `verify-ci-evidence.mjs` | Izolovane regresije i online potvrda punog GitHub CI runa | CI audit i lokalno |
 | `check-coverage.test.mjs` | Izolovani testovi ispravne i oštećene matrice | `node --test scripts/audit/check-coverage.test.mjs` i CI job `audit` |
 | `lib.mjs` | zajednička logika: `collectFiles`, `classify`, CSV parser, `readSegments` | — |
 
@@ -73,3 +74,17 @@ MOB-07 je EAS profil koji još ne postoji). Oni u `segments.json` imaju `scope: 
 `scopeReason`; gate za njih ne traži redove u matrici; nedostajući razlog je upozorenje, ne greška.
 
 Prototip `check-audit-gate.mjs` najprije izvršava `check-coverage.mjs` i pada ako matrica/inventar nisu usklađeni. Ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Provjerava i prisustvo izvještaja svih segmenata te status u zaglavlju i zapisu izvršavanja prema registru; format izvještaja je ograničen na postojeći obrazac. Njegova CI provjera je tekstualna, ne parsira proizvoljan YAML: neke alternativne `uses` ključeve i inline korake odbija, ali ne dokazuje sigurnost drugih oblika, aliasa ni lokalnih akcija; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.
+
+## Strogi audit gate
+
+`node scripts/audit/check-audit-gate.mjs` provjerava kompletnost inventara, postojeće
+izvještaje i njihove statuse, te za `done` segmente traži isključivo pregledane redove i
+jedan `Potvrđeni puni CI` link s ID-om i `success` u zaglavlju izvještaja. Nedovršeni
+segmenti mogu imati `nepregledano` i `u-toku`, ali integritet matrice i dalje važi za sve.
+U CI-ju `--verify-ci` uz `GITHUB_TOKEN` i `actions: read` provjerava GitHub API: isti
+repozitorij, završeni uspješni CI workflow i svih šest uspješnih poslova. Greška API-ja,
+nedostupan token, nedostajući ili preskočen posao ruše gate. Lokalni poziv bez opcije
+provjerava samo format tvrdnje, **ne** provjerava GitHub. Referenca je dokaz punog CI-ja
+za snimljeni kod, ne sama po sebi dokaz kvaliteta pregleda niti da je to završni commit
+segmenta. Po završetku promjene sačekati puni CI prije tvrdnje da je nova revizija zelena.
+Parser workflowa je namjerno ograničena tekstualna provjera, ne opšti YAML parser.

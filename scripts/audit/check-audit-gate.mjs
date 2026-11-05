@@ -15,12 +15,13 @@
 //      i `timeout-minutes`, prepoznate vanjske `uses:` akcije su pinovane na 40-znakovni SHA
 //   6. svaki job iz `ci.yml` je dokumentovan u `docs/CI.md` (tabela poslova)
 //
-// Prototip samo čita; još nije uključen u `check:all` ni CI. Prvo treba dovršiti pregled duga i testove.
+// CI pokreće gate zasebno; dokaz uspjeha je dokumentovana provjera, ne online GitHub API upit.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT, PLAN_PATH, readMatrix, readSegments, REVIEWED } from './lib.mjs';
+import { githubRequest, verifyRun } from './verify-ci-evidence.mjs';
 
 const verbose = process.argv.includes('--verbose');
 const CI_PATH = path.join(ROOT, '.github/workflows/ci.yml');
@@ -82,6 +83,7 @@ const reports = fs.existsSync(SEG_DIR)
   ? fs.readdirSync(SEG_DIR).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3))
   : [];
 const segIds = new Set(segments.map((s) => s.id));
+const ciEvidence = new Set();
 for (const s of segments) {
   if (!reports.includes(s.id)) {
     fail(`segment ${s.id} nema izvještaj AUDIT/segments/${s.id}.md`);
@@ -92,6 +94,16 @@ for (const s of segments) {
   const header = report.split(/^## 1\. /m)[0];
   const log = report.split(/^## \d+\. Zapis izvršavanja[^\n]*$/m);
   const statusRows = (text) => [...text.matchAll(/^\|\s*Status\s*\|\s*`([^`]+)`[^\n]*\|\s*$/gm)].map((m) => m[1]);
+  if (s.status === 'done') {
+    // A stable, auditable assertion; this is not an online verification of GitHub.
+    const repo = state?.match(/^`[^`]+` \(remote: `([^`]+)`\)/m)?.[1];
+    const evidence = [...header.matchAll(/^\| Potvrđeni puni CI \| \[(\d+)\]\(https:\/\/github\.com\/([^/]+\/[^/]+)\/actions\/runs\/(\d+)\) — success \|$/gm)];
+    if (evidence.length !== 1 || !repo || evidence[0][2] !== repo || evidence[0][1] !== evidence[0][3]) {
+      fail(`izvještaj ${s.id}: done zahtijeva jedan Potvrđeni puni CI link sa success iz istog repozitorija`);
+    } else {
+      ciEvidence.add(`${repo}#${evidence[0][1]}`);
+    }
+  }
   const headerStatuses = statusRows(header);
   const logStatuses = log.length === 2 ? statusRows(log[1]) : [];
   if (headerStatuses.length !== 1 || logStatuses.length === 0) {
@@ -104,6 +116,15 @@ for (const s of segments) {
 for (const id of reports) {
   if (!segIds.has(id)) fail(`AUDIT/segments/${id}.md postoji, ali segment ${id} nije u segments.json`);
   // (skeleton izvještaj za svih 59 segmenata je pravilo, ne problem)
+}
+
+// CI makes the documented claim verifiable rather than trusting a fabricated link.
+if (process.argv.includes('--verify-ci')) {
+  for (const evidence of ciEvidence) {
+    const [repo, id] = evidence.split('#');
+    try { await verifyRun(repo, id, githubRequest); }
+    catch (e) { fail(`CI dokaz ${repo}#${id}: ${e.message}`); }
+  }
 }
 
 // --- 3. done segment vs matrica ---------------------------------------------------------------

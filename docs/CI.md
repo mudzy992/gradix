@@ -215,3 +215,15 @@ prazan/neispravan izvještaj, pad suitea (uključujući setup/teardown) ili test
 Reporter ne kopira proizvoljne testne poruke u anotacije; kompletan testni izlaz ostaje u logu.
 Izolovane regresije reportera pokreću se u audit poslu. Historijski zeleni runovi prije ove
 popravke nisu sami po sebi dokaz da je svaki backend E2E suite uspio.
+
+### Strogi audit gate
+
+Posao `audit` obavezno pokreće `node scripts/audit/check-audit-gate.mjs --verify-ci`
+s `actions: read`. Provjerava inventar, izvještaje i pregledanost fajlova završenih
+segmenata te potvrđuje GitHub API-jem da svaki evidentirani CI run pripada ovom
+repozitoriju i da je svih šest poslova uspješno završilo. API greška ruši gate.
+Lokalno se komanda može pokrenuti bez `--verify-ci`; tada se provjerava format
+CI dokaza, ne i njegov stvarni rezultat. `planned` i `in-progress` smiju imati
+nezavršene redove; nedostajući/stari fajlovi u matrici uvijek ruše gate. CI run
+izvještaja opisuje provjerenu reviziju, a ne dokazuje automatski noviji commit.
+Više o formatu i ograničenjima: `scripts/audit/README.md`.
