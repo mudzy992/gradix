@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,8 @@ import type { CostRow, PartnerRow, StockRow, WarehouseRow } from '@/lib/api-erp'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { ErpPage } from '@/pages/erp-page'
+import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
+import { toast } from 'sonner'
 
 /**
  * FE-12 — ERP-lite. Drži: prevedene tipove/kategorije/izvore (prije `CLIENT`, `MATERIAL`, `PAYROLL`),
@@ -149,6 +151,58 @@ describe('ErpPage', () => {
     // Ostali tabovi ne učitavaju svoje upite dok se ne otvore.
     expect(listCostEntries).not.toHaveBeenCalled()
     expect(listStock).not.toHaveBeenCalled()
+  })
+
+  it('izbor tipa ili nacrt partnera blokira firmu i ERP karticu dok se ne odbaci', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    try {
+      renderPage()
+      await userEvent.selectOptions(screen.getByLabelText('Tip'), 'SUPPLIER')
+      expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+      expect(isSensitiveNavigationBlocked()).toBe(true)
+      await userEvent.type(screen.getByLabelText('Naziv partnera'), 'JP Autoceste')
+      await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+      expect(screen.getByRole('tab', { name: 'Partneri' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByLabelText('Naziv partnera')).toHaveValue('JP Autoceste')
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('nacrt partnera'))
+      expect(listCostEntries).not.toHaveBeenCalled()
+      await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+      expect(screen.getByLabelText('Tip')).toHaveValue('CLIENT')
+      expect(isSensitiveNavigationBlocked()).toBe(false)
+      act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+      await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+      expect(await screen.findByRole('heading', { name: 'Novi trošak' })).toBeInTheDocument()
+    } finally { error.mockRestore() }
+  })
+
+  it('partner upis blokira izmjene i dupli submit; greška čuva nacrt i traži svjestan retry', async () => {
+    let reject!: (error: Error) => void
+    createPartner.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})
+    renderPage()
+    const name = screen.getByLabelText('Naziv partnera')
+    await userEvent.type(name, 'JP Autoceste')
+    const button = screen.getByRole('button', { name: 'Novi partner' })
+    const form = button.closest('form')!
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    expect(createPartner).toHaveBeenCalledTimes(1)
+    expect(name).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Odbaci nacrt' })).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(screen.getByRole('tab', { name: 'Partneri' })).toHaveAttribute('aria-selected', 'true')
+    await act(async () => { reject(new Error('offline')) })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Partner možda već postoji')
+    expect(name).toHaveValue('JP Autoceste')
+    expect(button).toBeDisabled()
+    fireEvent.submit(form)
+    expect(createPartner).toHaveBeenCalledTimes(1)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(button)
+    expect(createPartner).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(name).toHaveValue(''))
+    await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
   })
 
   it('partneri: prazna lista ima poruku', async () => {

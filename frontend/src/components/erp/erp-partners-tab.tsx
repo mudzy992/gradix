@@ -1,7 +1,10 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { createPartner, type PartnerRow } from '@/lib/api-erp'
 import { errorMessage } from '@/lib/error-message'
+import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { partnerType } from '@/lib/labels'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +16,7 @@ type Props = {
   rows: PartnerRow[]
   isLoading: boolean
   onChanged: () => void
+  onProtectedChange: (active: boolean) => void
 }
 
 /**
@@ -20,27 +24,46 @@ type Props = {
  * stanje ni broj, a tip partnera je bio `<option>{t('erp.CLIENT')}</option>` bez tona i bez
  * `known` zaštite za nove vrijednosti.
  */
-export function ErpPartnersTab({ canWrite, rows, isLoading, onChanged }: Props) {
+export function ErpPartnersTab({ canWrite, rows, isLoading, onChanged, onProtectedChange }: Props) {
   const { t } = useTranslation()
   const TYPES = ['CLIENT', 'SUPPLIER']
+  const [name, setName] = useState('')
+  const [type, setType] = useState('CLIENT')
+  const [saving, setSaving] = useState(false)
+  const [uncertain, setUncertain] = useState(false)
+  const savingRef = useRef(false)
+  const uncertainRef = useRef(false)
+  const dirty = name !== '' || type !== 'CLIENT'
+  const protectedDraft = (canWrite && (dirty || uncertain)) || saving
+  useCompanySwitchBlock(protectedDraft)
+  useSensitiveNavigationBlock(protectedDraft)
+  useLayoutEffect(() => {
+    onProtectedChange(protectedDraft)
+    return () => onProtectedChange(false)
+  }, [onProtectedChange, protectedDraft])
   return (
     <div className="grid gap-3" aria-busy={isLoading}>
       {canWrite ? (
         <form
           className="flex flex-wrap items-end gap-2"
+          aria-busy={saving}
           onSubmit={async (event) => {
             event.preventDefault()
-            const form = event.currentTarget
-            const data = new FormData(form)
+            if (savingRef.current || uncertainRef.current) return
+            savingRef.current = true
+            setSaving(true)
             try {
-              await createPartner({
-                type: String(data.get('type')),
-                name: String(data.get('name')),
-              })
-              form.reset()
+              await createPartner({ type, name })
+              setName('')
+              setType('CLIENT')
               onChanged()
             } catch (error) {
+              uncertainRef.current = true
+              setUncertain(true)
               toast.error(errorMessage(error))
+            } finally {
+              savingRef.current = false
+              setSaving(false)
             }
           }}
         >
@@ -49,7 +72,9 @@ export function ErpPartnersTab({ canWrite, rows, isLoading, onChanged }: Props) 
               id="partner-type"
               name="type"
               className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-              defaultValue="CLIENT"
+              disabled={saving}
+              value={type}
+              onChange={(event) => setType(event.target.value)}
             >
               {TYPES.map((type) => {
                 const meta = partnerType(type)
@@ -62,9 +87,35 @@ export function ErpPartnersTab({ canWrite, rows, isLoading, onChanged }: Props) 
             </select>
           </Field>
           <Field label={t('erp.partnerName')} htmlFor="partner-name">
-            <Input id="partner-name" name="name" required className="max-w-xs" />
+            <Input
+              id="partner-name"
+              name="name"
+              required
+              className="max-w-xs"
+              disabled={saving}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
           </Field>
-          <Button type="submit">{t('erp.createPartner')}</Button>
+          <Button type="submit" disabled={saving || uncertain}>{t('erp.createPartner')}</Button>
+          {dirty || uncertain ? (
+            <Button type="button" variant="outline" disabled={saving} onClick={() => {
+              setName('')
+              setType('CLIENT')
+              uncertainRef.current = false
+              setUncertain(false)
+            }}>{t('common.discardDraft')}</Button>
+          ) : null}
+          {saving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
+          {uncertain ? (
+            <div className="grid gap-2">
+              <p role="alert" className="text-sm text-destructive">{t('erp.partnerUnknown')}</p>
+              <Button type="button" variant="outline" onClick={() => {
+                uncertainRef.current = false
+                setUncertain(false)
+              }}>{t('common.enableRetry')}</Button>
+            </div>
+          ) : null}
         </form>
       ) : null}
 

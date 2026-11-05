@@ -1,5 +1,7 @@
 export const erpBs = {
   erp: {
+    partnerUnknown: 'Kreiranje nije potvrđeno. Partner možda već postoji; provjerite prije novog pokušaja.',
+    partnerTabBlocked: 'Sačuvajte ili odbacite nacrt partnera i sačekajte završetak upisa prije promjene kartice.',
     title: 'ERP-lite',
     partners: 'Partneri',
     costs: 'Troškovi',

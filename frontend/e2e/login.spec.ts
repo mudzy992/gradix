@@ -283,7 +283,7 @@ test('creating a user keeps the form open until the one-time result arrives', as
     await expect(sheet).toBeVisible()
     phase = 'blocked history back and feedback'
     await page.evaluate(() => window.history.back())
-    await expect(page.getByText('Sačuvajte ili zatvorite obrazac, odnosno potvrdite jednokratnu lozinku prije napuštanja stranice.')).toBeVisible()
+    await expect(page.getByText('Sačuvajte ili odbacite nacrt, zatvorite obrazac ili potvrdite jednokratnu lozinku prije napuštanja stranice.')).toBeVisible()
     await expect(page).toHaveURL(/\/users$/)
     phase = 'synthetic unload'
     expect(await page.evaluate(() => {

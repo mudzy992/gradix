@@ -225,7 +225,7 @@ export const bs = {
     markAll: 'Označi sve pročitane',
   },
   common: {
-    navigationProtected: 'Sačuvajte ili zatvorite obrazac, odnosno potvrdite jednokratnu lozinku prije napuštanja stranice.',
+    navigationProtected: 'Sačuvajte ili odbacite nacrt, zatvorite obrazac ili potvrdite jednokratnu lozinku prije napuštanja stranice.',
     createUnknown: 'Kreiranje nije potvrđeno. Zapis i privremena lozinka možda su već kreirani; provjerite ishod prije novog pokušaja.',
     enableRetry: 'Razumijem, omogući novi pokušaj',
     savingWait: 'Spremanje je u toku. Sačekajte odgovor i ne zatvarajte stranicu.',

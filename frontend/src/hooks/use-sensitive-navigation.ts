@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { holdSensitiveNavigation, isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
 
-/** Register only for workflows that must not lose a one-time response. */
+/** Register for protected drafts and workflows that must not lose a one-time response. */
 export function useSensitiveNavigationBlock(active: boolean): void {
   useLayoutEffect(() => {
     if (!active) return

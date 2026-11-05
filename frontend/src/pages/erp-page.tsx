@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { listCostEntries, listPartners, listStock, listWarehouses } from '@/lib/api-erp'
 import { listMaterials } from '@/lib/api-fleet'
 import { useTenantReady } from '@/hooks/use-tenant-ready'
@@ -23,6 +24,7 @@ export function ErpPage() {
   const canWrite = useHasPermission('erp.write')
   const client = useQueryClient()
   const [tab, setTab] = useState('partners')
+  const [partnerProtected, setPartnerProtected] = useState(false)
   const partners = useQuery({
     queryKey: ['erp-partners'],
     queryFn: async () => (await listPartners()).data,
@@ -59,7 +61,13 @@ export function ErpPage() {
     <div className="grid gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">{t('erp.title')}</h1>
       <p className="text-sm text-muted-foreground">{t('erp.hint')}</p>
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={(next) => {
+        if (next !== tab && partnerProtected) {
+          toast.error(t('erp.partnerTabBlocked'))
+          return
+        }
+        setTab(next)
+      }}>
         <TabsList>
           <TabsTrigger value="partners">{t('erp.partners')}</TabsTrigger>
           <TabsTrigger value="costs">{t('erp.costs')}</TabsTrigger>
@@ -71,6 +79,7 @@ export function ErpPage() {
             rows={partners.data ?? []}
             isLoading={partners.isLoading}
             onChanged={refresh}
+            onProtectedChange={setPartnerProtected}
           />
         </TabsContent>
         <TabsContent value="costs">

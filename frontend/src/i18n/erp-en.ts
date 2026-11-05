@@ -1,5 +1,7 @@
 export const erpEn = {
   erp: {
+    partnerUnknown: 'Creation was not confirmed. The partner may already exist; check before trying again.',
+    partnerTabBlocked: 'Save or discard the partner draft and wait for the operation to finish before changing tabs.',
     title: 'ERP-lite',
     partners: 'Partners',
     costs: 'Costs',
