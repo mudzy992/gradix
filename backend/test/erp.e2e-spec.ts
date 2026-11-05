@@ -551,7 +551,7 @@ describe('Phase 10 erp-lite (e2e)', () => {
     const body = {
       warehouseId,
       materialId,
-      qty: '0.0005',
+      qty: '0.001',
       idempotencyKey: randomUUID(),
     };
     const post = () =>
