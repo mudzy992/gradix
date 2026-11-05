@@ -12,8 +12,8 @@ Trenutno: **47/59 segmenata `done`**. CI-05 je `in-progress`; BE/FE dashboard v2
 
 ## Zadnji commit i CI
 
-- U pripremi: test-first BE-01 zaštita decimalnog podlijevanja (ovaj commit); njen CI još nije potvrđen.
-- Prethodni: `6d1e925` (strogi gate, puni CI potvrđen 6/6), `8ca1450` (SERVICE cost source).
+- Zadnji potvrđeni: `8cac43d` (BE-01 zaštita decimalnog podlijevanja), puni CI 6/6.
+- Prethodni: `6d1e925` (strogi gate, puni CI 6/6), `8ca1450` (SERVICE cost source).
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
 ## CI-05 — procesno zatvaranje u toku

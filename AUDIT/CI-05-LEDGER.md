@@ -445,7 +445,7 @@ Obuhvat: svih 72 nalaza iz [izvještaja CI-05](segments/CI-05.md#5-nalazi); izvo
 
 ## F-CI-05-64
 
-**Dopuna BE-01 (u radu):** zajednički parser odbija podlijevanje nenultih ulaza; unit regresija i PG E2E, a ostala polja/skale i stari podaci ostaju otvoreni (BL-001). Commit i CI ove dopune još nisu potvrđeni.
+**Dopuna BE-01 (u radu):** zajednički parser odbija podlijevanje nenultih ulaza; unit regresija i PG E2E, a ostala polja/skale i stari podaci ostaju otvoreni (BL-001). Dopuna je commit `8cac43d`; puni CI [42108548062](https://github.com/mudzy992/gradix/actions/runs/42108548062) je prošao 6/6.
 
 - **Težina:** visoko. **Status:** djelimično / daljnja trijaža. **Commit:** da68931, 5e9a4cd.
 - **Scenarij:** Konačan Decimal može preći opseg DB kolone, tiho se zaokružiti ili se ekstremno mali eksponent podliti u nulu; neka polja uopće ne koriste zajednički parser
