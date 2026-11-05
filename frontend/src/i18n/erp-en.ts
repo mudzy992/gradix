@@ -1,5 +1,7 @@
 export const erpEn = {
   erp: {
+    warehouseUnknown: 'Creation was not confirmed. The warehouse may already exist; check before trying again.',
+    stockTabBlocked: 'Save or discard the warehouse draft and wait for the operation to finish before changing tabs.',
     payrollUnknown: 'Creation from payroll was not confirmed. A cost for the selected period may already exist; check before trying again.',
     costUnknown: 'Creation was not confirmed. The cost entry may already exist; check before trying again.',
     costTabBlocked: 'Save or discard the cost or payroll draft and wait for the operation to finish before changing tabs.',

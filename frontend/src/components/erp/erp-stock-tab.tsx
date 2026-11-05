@@ -1,8 +1,11 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { createStockMovement, createWarehouse, type StockRow, type WarehouseRow } from '@/lib/api-erp'
 import type { CatalogRow } from '@/lib/ops-types'
 import { errorMessage } from '@/lib/error-message'
+import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { warehouseType } from '@/lib/labels'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +18,7 @@ type Props = {
   stock: StockRow[]
   isLoading: boolean
   onChanged: () => void
+  onProtectedChange: (active: boolean) => void
 }
 
 /**
@@ -22,42 +26,71 @@ type Props = {
  * ne akcija), polja nisu imala labele, a prazne liste (bez skladišta/materijala/stavki) nisu imale
  * nikakvo objašnjenje — forma je izgledala pokvareno.
  */
-export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading, onChanged }: Props) {
+export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading, onChanged, onProtectedChange }: Props) {
   const { t } = useTranslation()
   const TYPES = ['SITE', 'YARD', 'CISTERN']
+  const [name, setName] = useState('')
+  const [type, setType] = useState('SITE')
+  const [saving, setSaving] = useState(false)
+  const [uncertain, setUncertain] = useState(false)
+  const savingRef = useRef(false)
+  const uncertainRef = useRef(false)
+  const dirty = name !== '' || type !== 'SITE'
+  const protectedDraft = (canWrite && (dirty || uncertain)) || saving
+  useCompanySwitchBlock(protectedDraft)
+  useSensitiveNavigationBlock(protectedDraft)
+  useLayoutEffect(() => {
+    onProtectedChange(protectedDraft)
+    return () => onProtectedChange(false)
+  }, [onProtectedChange, protectedDraft])
   const canMove = canWrite && warehouses.length > 0 && materials.length > 0
   return (
     <div className="grid gap-3" aria-busy={isLoading}>
       {canWrite ? (
         <form
           className="grid gap-2 rounded-md border p-3"
+          aria-busy={saving}
           onSubmit={async (event) => {
             event.preventDefault()
-            const form = event.currentTarget
-            const data = new FormData(form)
+            if (savingRef.current || uncertainRef.current) return
+            savingRef.current = true
+            setSaving(true)
             try {
-              await createWarehouse({
-                name: String(data.get('name')),
-                type: String(data.get('type')),
-              })
-              form.reset()
+              await createWarehouse({ name, type })
+              setName('')
+              setType('SITE')
               onChanged()
             } catch (error) {
+              uncertainRef.current = true
+              setUncertain(true)
               toast.error(errorMessage(error))
+            } finally {
+              savingRef.current = false
+              setSaving(false)
             }
           }}
         >
           <h2 className="text-sm font-medium">{t('erp.newWarehouse')}</h2>
           <div className="flex flex-wrap items-end gap-2">
             <Field label={t('erp.warehouseName')} htmlFor="warehouse-name">
-              <Input id="warehouse-name" name="name" required className="max-w-xs" />
+              <Input
+                id="warehouse-name"
+                name="name"
+                required
+                className="max-w-xs"
+                disabled={saving}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
             </Field>
             <Field label={t('erp.type')} htmlFor="warehouse-type">
               <select
                 id="warehouse-type"
                 name="type"
                 className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                defaultValue="SITE"
+                disabled={saving}
+                value={type}
+                onChange={(event) => setType(event.target.value)}
               >
                 {TYPES.map((type) => {
                   const meta = warehouseType(type)
@@ -69,8 +102,26 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                 })}
               </select>
             </Field>
-            <Button type="submit">{t('erp.createWarehouse')}</Button>
+            <Button type="submit" disabled={saving || uncertain}>{t('erp.createWarehouse')}</Button>
+            {dirty || uncertain ? (
+              <Button type="button" variant="outline" disabled={saving} onClick={() => {
+                setName('')
+                setType('SITE')
+                uncertainRef.current = false
+                setUncertain(false)
+              }}>{t('common.discardDraft')}</Button>
+            ) : null}
           </div>
+          {saving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
+          {uncertain ? (
+            <div className="grid gap-2">
+              <p role="alert" className="text-sm text-destructive">{t('erp.warehouseUnknown')}</p>
+              <Button type="button" variant="outline" onClick={() => {
+                uncertainRef.current = false
+                setUncertain(false)
+              }}>{t('common.enableRetry')}</Button>
+            </div>
+          ) : null}
         </form>
       ) : null}
 

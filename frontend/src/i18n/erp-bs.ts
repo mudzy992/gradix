@@ -1,5 +1,7 @@
 export const erpBs = {
   erp: {
+    warehouseUnknown: 'Kreiranje nije potvrđeno. Skladište možda već postoji; provjerite prije novog pokušaja.',
+    stockTabBlocked: 'Sačuvajte ili odbacite nacrt skladišta i sačekajte završetak upisa prije promjene kartice.',
     payrollUnknown: 'Kreiranje iz obračuna nije potvrđeno. Trošak za odabrani period možda već postoji; provjerite prije novog pokušaja.',
     costUnknown: 'Kreiranje nije potvrđeno. Trošak možda već postoji; provjerite prije novog pokušaja.',
     costTabBlocked: 'Sačuvajte ili odbacite nacrt troška ili obračuna i sačekajte završetak upisa prije promjene kartice.',

@@ -26,6 +26,7 @@ export function ErpPage() {
   const [tab, setTab] = useState('partners')
   const [partnerProtected, setPartnerProtected] = useState(false)
   const [costProtected, setCostProtected] = useState(false)
+  const [stockProtected, setStockProtected] = useState(false)
   const partners = useQuery({
     queryKey: ['erp-partners'],
     queryFn: async () => (await listPartners()).data,
@@ -71,6 +72,10 @@ export function ErpPage() {
           toast.error(t('erp.costTabBlocked'))
           return
         }
+        if (next !== tab && stockProtected) {
+          toast.error(t('erp.stockTabBlocked'))
+          return
+        }
         setTab(next)
       }}>
         <TabsList>
@@ -104,6 +109,7 @@ export function ErpPage() {
             stock={stock.data ?? []}
             isLoading={warehouses.isLoading || stock.isLoading || materials.isLoading}
             onChanged={refresh}
+            onProtectedChange={setStockProtected}
           />
         </TabsContent>
       </Tabs>
