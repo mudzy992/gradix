@@ -1269,6 +1269,166 @@ describe('Phase 10 erp-lite (e2e)', () => {
     ).toBe('0.00');
   });
 
+  it('validates explicit and inherited stock movement projects in the tenant without consuming failed keys', async () => {
+    const other = await prisma.company.create({
+      data: {
+        name: 'Stock foreign project',
+        slug: `stock-project-${randomUUID()}`,
+      },
+    });
+    const foreign = await prisma.project.create({
+      data: {
+        companyId: other.id,
+        name: 'Foreign stock project',
+        geofenceRadius: 100,
+        code: `F${randomUUID().slice(0, 8)}`,
+      },
+    });
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Project scoped warehouse', type: 'SITE', projectId });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Project scoped material', unit: 'L' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    const key = randomUUID();
+    const body = { warehouseId, materialId, qty: '1', idempotencyKey: key };
+    const post = (data: object) =>
+      request(app.getHttpServer())
+        .post('/api/stock-movements')
+        .set(auth(admin))
+        .send(data);
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'STOCK_MOVEMENT' },
+    });
+    for (const invalid of [foreign.id, `missing-${randomUUID()}`]) {
+      const response = await post({ ...body, projectId: invalid });
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe('NOT_FOUND');
+    }
+    expect((await post({ ...body, projectId: '' })).status).toBe(400);
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, warehouseId, materialId },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'STOCK_MOVEMENT' },
+      }),
+    ).toBe(auditBefore);
+    const valid = await post(body);
+    expect(valid.status).toBe(201);
+    expect(valid.body.data.projectId).toBe(projectId);
+    const explicit = await post({
+      ...body,
+      projectId,
+      idempotencyKey: randomUUID(),
+    });
+    expect(explicit.status).toBe(201);
+    expect(explicit.body.data.projectId).toBe(projectId);
+    // Simulate historical data outside the current API. Existing retry still replays,
+    // but a new request cannot propagate the bad warehouse default.
+    await prisma.warehouse.update({
+      where: { id: warehouseId },
+      data: { projectId: foreign.id },
+    });
+    const replay = await post(body);
+    expect(replay.status).toBe(201);
+    expect(replay.body.data.id).toBe(valid.body.data.id);
+    expect(replay.body.data.projectId).toBe(projectId);
+    const rejected = await post({ ...body, idempotencyKey: randomUUID() });
+    expect(rejected.status).toBe(404);
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, warehouseId, materialId },
+      }),
+    ).toBe(2);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'STOCK_MOVEMENT' },
+      }),
+    ).toBe(auditBefore + 2);
+  });
+
+  it('revalidates stock project tenant after waiting for a concurrent project change', async () => {
+    const other = await prisma.company.create({
+      data: {
+        name: 'Stock lock other company',
+        slug: `stock-lock-${randomUUID()}`,
+      },
+    });
+    const project = await prisma.project.create({
+      data: { companyId, name: 'Stock lock project', geofenceRadius: 100 },
+    });
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Stock lock warehouse', type: 'YARD' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Stock lock material', unit: 'L' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${project.id} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+        await tx.project.update({
+          where: { id: project.id },
+          data: { companyId: other.id },
+        });
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = request(app.getHttpServer())
+        .post('/api/stock-movements')
+        .set(auth(admin))
+        .send({
+          warehouseId,
+          materialId,
+          qty: '1',
+          projectId: project.id,
+          idempotencyKey: randomUUID(),
+        })
+        .then((response) => response);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'Project', 'FOR SHARE');
+      release();
+      await holder;
+      const result = await posting;
+      expect(result.status).toBe(404);
+      expect(
+        await prisma.stockMovement.count({
+          where: { companyId, warehouseId, materialId },
+        }),
+      ).toBe(0);
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting]);
+    }
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')
@@ -1781,8 +1941,9 @@ async function waitForCostProjectLock(
   prisma: PrismaService,
   minimum: number,
   table: 'Project' | 'FuelEntry' = 'Project',
+  lock = 'FOR NO KEY UPDATE',
 ): Promise<void> {
-  const pattern = `%FROM "${table}"%FOR NO KEY UPDATE%`;
+  const pattern = `%FROM "${table}"%${lock}%`;
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
       SELECT count(*)::integer AS waiting FROM pg_stat_activity

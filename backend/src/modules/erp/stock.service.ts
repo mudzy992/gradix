@@ -96,6 +96,18 @@ export class StockService {
             return { row: previous, created: false };
           }
         }
+        const projectId = dto.projectId ?? warehouse.projectId;
+        if (projectId !== null) {
+          // A foreign-key alone does not bind the project to this tenant. SHARE
+          // also blocks deletion or company changes until the insert commits.
+          const projects = await tx.$queryRaw<Array<{ id: string }>>`
+            SELECT "id" FROM "Project"
+            WHERE "id" = ${projectId} AND "companyId" = ${companyId}
+            FOR SHARE`;
+          if (projects.length === 0) {
+            throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
+          }
+        }
         await this.assertNotNegative(
           tx,
           companyId,
@@ -109,7 +121,7 @@ export class StockService {
             warehouseId: warehouse.id,
             materialId: dto.materialId,
             qty,
-            projectId: dto.projectId ?? warehouse.projectId,
+            projectId,
             idempotencyKey: key,
             requestFingerprint: fingerprint,
           },
@@ -242,9 +254,7 @@ export class StockService {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error) {
-        const retryable =
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2034';
+        const retryable = this.isStockRetryable(error);
         if (!retryable) {
           throw error;
         }
@@ -257,6 +267,25 @@ export class StockService {
         }
       }
     }
+  }
+
+  private isStockRetryable(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+    if (error.code === 'P2034') return true;
+    // Raw SELECT ... FOR SHARE can surface PostgreSQL 40001 as P2010 instead
+    // of P2034 with the driver adapter. Retry only that exact serialization
+    // failure, never unrelated SQL or raw-query errors.
+    if (error.code !== 'P2010') return false;
+    const meta = error.meta as
+      | {
+          code?: unknown;
+          driverAdapterError?: { cause?: { originalCode?: unknown } };
+        }
+      | undefined;
+    return (
+      meta?.code === '40001' ||
+      meta?.driverAdapterError?.cause?.originalCode === '40001'
+    );
   }
 
   /** BE-14 F-02: paralelni `apply-stock` je već upisao pokret → vrati postojeći red. */

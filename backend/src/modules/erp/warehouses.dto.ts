@@ -46,6 +46,7 @@ export class CreateMovementDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(1)
   projectId?: string;
 }
 

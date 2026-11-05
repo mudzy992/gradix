@@ -29,7 +29,11 @@ function fixture() {
   const findFirst = jest.fn().mockResolvedValue(null);
   const create = jest.fn().mockResolvedValue(movement);
   const aggregate = jest.fn().mockResolvedValue({ _sum: { qty: null } });
-  const tx = { stockMovement: { findFirst, create, aggregate } };
+  const queryRaw = jest.fn().mockResolvedValue([{ id: 'project-1' }]);
+  const tx = {
+    stockMovement: { findFirst, create, aggregate },
+    $queryRaw: queryRaw,
+  };
   const prisma = {
     stockMovement: { findFirst },
     warehouse: {
@@ -51,6 +55,7 @@ function fixture() {
     findFirst,
     create,
     aggregate,
+    queryRaw,
   };
 }
 
@@ -170,6 +175,47 @@ describe('stock movement idempotency', () => {
     expect(f.create).not.toHaveBeenCalled();
   });
 
+  it('checks the explicit project within the transaction before inserting', async () => {
+    const f = fixture();
+    await f.service.createMovement(actor, { ...body, projectId: 'project-1' });
+    expect(f.queryRaw).toHaveBeenCalledTimes(1);
+    const query = f.queryRaw.mock.calls as unknown as Array<
+      [TemplateStringsArray, string, string]
+    >;
+    expect(query[0][1]).toBe('project-1');
+    expect(query[0][2]).toBe('company-1');
+    expect(f.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a foreign or missing explicit/default project before balance or write', async () => {
+    const f = fixture();
+    f.queryRaw.mockResolvedValue([]);
+    await expect(
+      f.service.createMovement(actor, { ...body, projectId: 'foreign' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+    f.prisma.warehouse.findFirst.mockResolvedValue({
+      id: 'warehouse-1',
+      projectId: 'foreign',
+    });
+    await expect(f.service.createMovement(actor, body)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      status: 404,
+    });
+    expect(f.aggregate).not.toHaveBeenCalled();
+    expect(f.create).not.toHaveBeenCalled();
+    expect(f.audit.write).not.toHaveBeenCalled();
+  });
+
+  it('replays an existing legacy key before project revalidation', async () => {
+    const f = fixture();
+    f.movement.projectId = 'foreign';
+    f.findFirst.mockResolvedValue(f.movement);
+    const result = await f.service.createMovement(actor, body);
+    expect(result.projectId).toBe('foreign');
+    expect(f.queryRaw).not.toHaveBeenCalled();
+    expect(f.prisma.warehouse.findFirst).not.toHaveBeenCalled();
+  });
+
   it('checks the key again inside the transaction and skips a duplicate audit', async () => {
     const f = fixture();
     f.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(f.movement);
@@ -179,6 +225,50 @@ describe('stock movement idempotency', () => {
     expect(f.aggregate).not.toHaveBeenCalled();
     expect(f.audit.write).not.toHaveBeenCalled();
   });
+  it('retries raw PostgreSQL serialization errors but not unrelated raw errors', async () => {
+    const f = fixture();
+    f.prisma.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('serialization failure', {
+        code: 'P2010',
+        clientVersion: 'test',
+        meta: { driverAdapterError: { cause: { originalCode: '40001' } } },
+      }),
+    );
+    await f.service.createMovement(actor, { ...body, projectId: 'project-1' });
+    expect(f.prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(f.create).toHaveBeenCalledTimes(1);
+    const other = fixture();
+    other.prisma.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('other', {
+        code: 'P2010',
+        clientVersion: 'test',
+        meta: { driverAdapterError: { cause: { originalCode: '23503' } } },
+      }),
+    );
+    await expect(
+      other.service.createMovement(actor, body),
+    ).rejects.toMatchObject({ code: 'P2010' });
+    expect(other.prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a bounded conflict after repeated raw serialization failures', async () => {
+    const f = fixture();
+    f.prisma.$transaction.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('serialization failure', {
+        code: 'P2010',
+        clientVersion: 'test',
+        meta: { code: '40001' },
+      }),
+    );
+    await expect(f.service.createMovement(actor, body)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      status: 409,
+    });
+    expect(f.prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(f.create).not.toHaveBeenCalled();
+    expect(f.audit.write).not.toHaveBeenCalled();
+  });
+
   it('replays the winning row after a concurrent unique-key race', async () => {
     const f = fixture();
     f.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(f.movement);
