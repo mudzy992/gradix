@@ -97,17 +97,7 @@ export class StockService {
           }
         }
         const projectId = dto.projectId ?? warehouse.projectId;
-        if (projectId !== null) {
-          // A foreign-key alone does not bind the project to this tenant. SHARE
-          // also blocks deletion or company changes until the insert commits.
-          const projects = await tx.$queryRaw<Array<{ id: string }>>`
-            SELECT "id" FROM "Project"
-            WHERE "id" = ${projectId} AND "companyId" = ${companyId}
-            FOR SHARE`;
-          if (projects.length === 0) {
-            throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
-          }
-        }
+        await this.lockStockProject(tx, companyId, projectId);
         await this.assertNotNegative(
           tx,
           companyId,
@@ -180,12 +170,6 @@ export class StockService {
     if (existing) {
       return { created: false, row: serializeMovement(existing) };
     }
-    const fuel = await this.prisma.fuelEntry.findFirst({
-      where: { id: fuelId, companyId },
-    });
-    if (!fuel) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'Fuel entry not found', 404);
-    }
     const warehouse = await this.loadWarehouse(companyId, dto.warehouseId);
     if (warehouse.type !== 'CISTERN') {
       throw new AppError(
@@ -195,14 +179,39 @@ export class StockService {
       );
     }
     await this.loadMaterial(companyId, dto.materialId);
-    const qty = fuel.liters.neg();
-    // BE-14 F-02: `findFirst` pa `create` nije atomski — dva paralelna zahtjeva su mogla
-    // oba proći `existing` provjeru i drugi bi pao na unique `fuelEntryId` uz 500.
-    // Sada se P2002 prevodi u idempotentan odgovor (created: false), a provjera stanja
-    // i upis su u SERIALIZABLE transakciji.
-    let row;
+    let result: { row: StockMovement; created: boolean };
     try {
-      row = await this.runStockTx(async (tx) => {
+      result = await this.runStockTx(async (tx) => {
+        // Recheck inside every SERIALIZABLE attempt, before balance validation.
+        const previous = await tx.stockMovement.findFirst({
+          where: { companyId, fuelEntryId: fuelId },
+        });
+        if (previous) return { row: previous, created: false };
+        // Match amendments' fuel-then-project lock order. SHARE protects the
+        // liters/project snapshot until the stock movement has committed.
+        const locked = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT "id" FROM "FuelEntry"
+          WHERE "id" = ${fuelId} AND "companyId" = ${companyId}
+          FOR SHARE`;
+        if (!locked.length) {
+          throw new AppError(
+            ERROR_CODES.NOT_FOUND,
+            'Fuel entry not found',
+            404,
+          );
+        }
+        const fuel = await tx.fuelEntry.findFirst({
+          where: { id: fuelId, companyId },
+        });
+        if (!fuel) {
+          throw new AppError(
+            ERROR_CODES.NOT_FOUND,
+            'Fuel entry not found',
+            404,
+          );
+        }
+        await this.lockStockProject(tx, companyId, fuel.projectId);
+        const qty = fuel.liters.neg();
         await this.assertNotNegative(
           tx,
           companyId,
@@ -210,7 +219,7 @@ export class StockService {
           dto.materialId,
           qty,
         );
-        return tx.stockMovement.create({
+        const row = await tx.stockMovement.create({
           data: {
             companyId,
             warehouseId: warehouse.id,
@@ -220,23 +229,40 @@ export class StockService {
             fuelEntryId: fuel.id,
           },
         });
+        return { row, created: true };
       });
     } catch (error) {
       const raced = await this.raceWinner(companyId, fuelId, error);
-      if (raced) {
-        return { created: false, row: serializeMovement(raced) };
-      }
+      if (raced) return { created: false, row: serializeMovement(raced) };
       throw error;
     }
-    await this.audit.write({
-      companyId,
-      actorId: actor.id,
-      action: 'STOCK_MOVEMENT',
-      entityType: 'StockMovement',
-      entityId: row.id,
-      payload: { fuelEntryId: fuel.id },
-    });
-    return { created: true, row: serializeMovement(row) };
+    if (result.created) {
+      await this.audit.write({
+        companyId,
+        actorId: actor.id,
+        action: 'STOCK_MOVEMENT',
+        entityType: 'StockMovement',
+        entityId: result.row.id,
+        payload: { fuelEntryId: fuelId },
+      });
+    }
+    return { created: result.created, row: serializeMovement(result.row) };
+  }
+
+  private async lockStockProject(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    projectId: string | null,
+  ): Promise<void> {
+    if (projectId === null) return;
+    // A foreign-key alone does not bind the project to this tenant. SHARE
+    // blocks deletion or company changes until the insert commits.
+    const projects = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "Project"
+      WHERE "id" = ${projectId} AND "companyId" = ${companyId}
+      FOR SHARE`;
+    if (!projects.length)
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
   }
 
   /**

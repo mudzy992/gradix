@@ -458,4 +458,11 @@ UI ručnog troška sada koristi isti ključ i payload za svjesni retry dok je op
 
 ### Projekt ručnog kretanja zaliha (F-CI-05-67)
 
-Novi `POST /api/stock-movements` koristi eksplicitni `projectId`, ili ako nije poslan podrazumijevani projekt skladišta. Neprazan efektivni projekt mora pripadati istoj firmi; provjera i `FOR SHARE` lock se izvršavaju unutar SERIALIZABLE transakcije prije knjiženja. Prazni ID je 400, strani ili nepostojeći 404. Pored Prisma P2034, sirovi PostgreSQL 40001 u P2010 ponavlja se najviše tri puta; iscrpljivanje vraća 409. Već postojeći keyed replay ostaje prije te provjere radi sigurnog ponavljanja i može vratiti historijsku vezu koju ova izmjena ne popravlja. Raniji neispravni redovi, `apply-stock`, vanjski i stari/miješani serveri nisu obuhvaćeni.
+Novi `POST /api/stock-movements` koristi eksplicitni `projectId`, ili ako nije poslan podrazumijevani projekt skladišta. Neprazan efektivni projekt mora pripadati istoj firmi; provjera i `FOR SHARE` lock se izvršavaju unutar SERIALIZABLE transakcije prije knjiženja. Prazni ID je 400, strani ili nepostojeći 404. Pored Prisma P2034, sirovi PostgreSQL 40001 u P2010 ponavlja se najviše tri puta; iscrpljivanje vraća 409. Već postojeći keyed replay ostaje prije te provjere radi sigurnog ponavljanja i može vratiti historijsku vezu koju ova izmjena ne popravlja. Raniji neispravni redovi, vanjski i stari/miješani serveri nisu obuhvaćeni.
+
+
+### Knjiženje goriva u zalihe (F-CI-05-68)
+
+`POST /api/fuel/:id/apply-stock` za novi pokret ponovo provjerava prethodni upis unutar svakog SERIALIZABLE pokušaja prije provjere negativne zalihe. Zaključava tenant fuel red (`FOR SHARE`), čita aktualne litre i projekt, zatim zaključava projekt iste firme i upisuje kretanje. Tuđi ili nedostajući projekt odbija se sa 404 bez kretanja. Ovaj redoslijed fuel → projekt prati aplikacijske ispravke goriva. P2002 se obrađuje traženjem već kreiranog pokreta, a serialization retry ostaje ograničen postojećim pravilima.
+
+Postojeći pokret se i dalje vraća sa 200 čak i ako se skladište ili materijal u ponovljenom tijelu razlikuju: ovo nije fingerprint idempotency. Prethodna validacija skladišta/materijala ostaje izvan transakcije. Naknadna ispravka goriva ne prilagođava već proknjiženi pokret; raniji loši podaci, vanjski i stari/miješani serveri nisu popravljeni. Audit nakon commita je best-effort i može izostati nakon kvara.

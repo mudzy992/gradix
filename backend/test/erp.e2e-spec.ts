@@ -1429,6 +1429,407 @@ describe('Phase 10 erp-lite (e2e)', () => {
     }
   });
 
+  it('apply-stock serializes concurrent retries at the exact available balance', async () => {
+    const setting = await request(app.getHttpServer())
+      .put('/api/settings')
+      .set(auth(admin))
+      .send({ 'erp.allowNegativeStock': false });
+    expect(setting.status).toBe(200);
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Exact fuel balance cistern', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Exact fuel balance material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Exact fuel balance machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    const inbound = await request(app.getHttpServer())
+      .post('/api/stock-movements')
+      .set(auth(admin))
+      .send({ warehouseId, materialId, qty: '7' });
+    expect(inbound.status).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '7',
+        unitPrice: '1',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'STOCK_MOVEMENT' },
+    });
+    const apply = () =>
+      request(app.getHttpServer())
+        .post(`/api/fuel/${fuelId}/apply-stock`)
+        .set(auth(admin))
+        .send({ warehouseId, materialId });
+    const responses = await Promise.all([apply(), apply(), apply()]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 200, 201]);
+    const ids = responses.map((r) => r.body.data.id as string);
+    expect(new Set(ids).size).toBe(1);
+    expect(responses[0].body.data.qty).toBe('-7');
+    const balance = await prisma.stockMovement.aggregate({
+      where: { companyId, warehouseId, materialId },
+      _sum: { qty: true },
+    });
+    expect(balance._sum.qty?.toString()).toBe('0');
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'STOCK_MOVEMENT' },
+      }),
+    ).toBe(auditBefore + 1);
+  });
+
+  it('apply-stock waits for fuel edits and uses the committed liters and tenant project', async () => {
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Fuel lock cistern', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Fuel lock material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel lock machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/api/stock-movements')
+          .set(auth(admin))
+          .send({ warehouseId, materialId, qty: '30' })
+      ).status,
+    ).toBe(201);
+    const target = await prisma.project.create({
+      data: { companyId, name: 'Fuel apply target', geofenceRadius: 100 },
+    });
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '5',
+        unitPrice: '1',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "FuelEntry" WHERE "id" = ${fuelId} FOR NO KEY UPDATE`;
+        await tx.fuelEntry.update({
+          where: { id: fuelId },
+          data: { liters: '9', totalCost: '9', projectId: target.id },
+        });
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = request(app.getHttpServer())
+        .post(`/api/fuel/${fuelId}/apply-stock`)
+        .set(auth(admin))
+        .send({ warehouseId, materialId })
+        .then((response) => response);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'FuelEntry', 'FOR SHARE');
+      release();
+      await holder;
+      const result = await posting;
+      expect(result.status).toBe(201);
+      expect(result.body.data.qty).toBe('-9');
+      expect(result.body.data.projectId).toBe(target.id);
+      const balance = await prisma.stockMovement.aggregate({
+        where: { companyId, warehouseId, materialId },
+        _sum: { qty: true },
+      });
+      expect(balance._sum.qty?.toString()).toBe('21');
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting]);
+    }
+  });
+
+  it('apply-stock replays a committed movement after a lost response, even with changed payload', async () => {
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Fuel lost response cistern', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Fuel lost response material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel lost response machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/api/stock-movements')
+          .set(auth(admin))
+          .send({ warehouseId, materialId, qty: '5' })
+      ).status,
+    ).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '5',
+        unitPrice: '1',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const post = (body: { warehouseId: string; materialId: string }) =>
+      request(app.getHttpServer())
+        .post(`/api/fuel/${fuelId}/apply-stock`)
+        .set(auth(admin))
+        .send(body);
+    const audit = jest
+      .spyOn(app.get(AuditService), 'write')
+      .mockRejectedValueOnce(
+        new Error('simulated fuel stock post-commit failure'),
+      );
+    try {
+      expect((await post({ warehouseId, materialId })).status).toBe(500);
+      const replay = await post({
+        warehouseId: 'different-warehouse',
+        materialId: 'different-material',
+      });
+      expect(replay.status).toBe(200);
+      expect(replay.body.data.warehouseId).toBe(warehouseId);
+      expect(replay.body.data.materialId).toBe(materialId);
+      expect(
+        await prisma.stockMovement.count({
+          where: { companyId, fuelEntryId: fuelId },
+        }),
+      ).toBe(1);
+      expect(audit).toHaveBeenCalledTimes(1);
+    } finally {
+      audit.mockRestore();
+    }
+  });
+
+  it('apply-stock rolls back when the locked project changes tenant before commit', async () => {
+    const other = await prisma.company.create({
+      data: { name: 'Fuel race foreign', slug: `fuel-race-${randomUUID()}` },
+    });
+    const target = await prisma.project.create({
+      data: { companyId, name: 'Fuel race project', geofenceRadius: 100 },
+    });
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Fuel project race cistern', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Fuel project race material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel project race machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/api/stock-movements')
+          .set(auth(admin))
+          .send({ warehouseId, materialId, qty: '5' })
+      ).status,
+    ).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId: target.id,
+        liters: '5',
+        unitPrice: '1',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'STOCK_MOVEMENT' },
+    });
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${target.id} FOR NO KEY UPDATE`;
+        await tx.project.update({
+          where: { id: target.id },
+          data: { companyId: other.id },
+        });
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = request(app.getHttpServer())
+        .post(`/api/fuel/${fuelId}/apply-stock`)
+        .set(auth(admin))
+        .send({ warehouseId, materialId })
+        .then((response) => response);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'Project', 'FOR SHARE');
+      release();
+      await holder;
+      expect((await posting).status).toBe(404);
+      expect(
+        await prisma.stockMovement.count({
+          where: { companyId, fuelEntryId: fuelId },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.auditEvent.count({
+          where: { companyId, action: 'STOCK_MOVEMENT' },
+        }),
+      ).toBe(auditBefore);
+      const balance = await prisma.stockMovement.aggregate({
+        where: { companyId, warehouseId, materialId },
+        _sum: { qty: true },
+      });
+      expect(balance._sum.qty?.toString()).toBe('5');
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting]);
+    }
+  });
+
+  it('apply-stock rejects a legacy foreign fuel project but replays an existing movement', async () => {
+    const other = await prisma.company.create({
+      data: { name: 'Fuel apply foreign', slug: `fuel-apply-${randomUUID()}` },
+    });
+    const foreign = await prisma.project.create({
+      data: {
+        companyId: other.id,
+        name: 'Fuel apply foreign project',
+        geofenceRadius: 100,
+      },
+    });
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Foreign fuel cistern', type: 'CISTERN' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Foreign fuel material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Foreign fuel machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/api/stock-movements')
+          .set(auth(admin))
+          .send({ warehouseId, materialId, qty: '5' })
+      ).status,
+    ).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId,
+        liters: '5',
+        unitPrice: '1',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const apply = () =>
+      request(app.getHttpServer())
+        .post(`/api/fuel/${fuelId}/apply-stock`)
+        .set(auth(admin))
+        .send({ warehouseId, materialId });
+    await prisma.fuelEntry.update({
+      where: { id: fuelId },
+      data: { projectId: foreign.id },
+    });
+    expect((await apply()).status).toBe(404);
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, fuelEntryId: fuelId },
+      }),
+    ).toBe(0);
+    await prisma.fuelEntry.update({
+      where: { id: fuelId },
+      data: { projectId },
+    });
+    const created = await apply();
+    expect(created.status).toBe(201);
+    await prisma.fuelEntry.update({
+      where: { id: fuelId },
+      data: { projectId: foreign.id },
+    });
+    const replay = await apply();
+    expect(replay.status).toBe(200);
+    expect(replay.body.data.id).toBe(created.body.data.id);
+    expect(replay.body.data.projectId).toBe(projectId);
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, fuelEntryId: fuelId },
+      }),
+    ).toBe(1);
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')
