@@ -9,6 +9,7 @@ import {
 } from '../../common/utils/decimal-input';
 import { fuelTotalCost } from './serialize-fleet';
 import { lockSpendProject, recalcSpend } from './spend';
+import { allowNegativeStock, stockBalance } from '../erp/stock-balance';
 
 type Db = Prisma.TransactionClient | PrismaService;
 
@@ -121,6 +122,60 @@ export async function applyFuelAmendment(
   ].sort();
   for (const projectId of projects) {
     await lockSpendProject(prisma, companyId, projectId);
+  }
+  if (field === 'liters' || field === 'projectId') {
+    // The fuel lock serializes with apply-stock. Refuse ambiguous legacy rows
+    // instead of silently overwriting discrepancies or crossing tenant bounds.
+    const movement = await prisma.stockMovement.findUnique({
+      where: { fuelEntryId: row.id },
+    });
+    if (movement) {
+      const [warehouse, material] = await Promise.all([
+        prisma.warehouse.findFirst({
+          where: { id: movement.warehouseId, companyId },
+        }),
+        prisma.material.findFirst({
+          where: { id: movement.materialId, companyId },
+        }),
+      ]);
+      if (
+        movement.companyId !== companyId ||
+        !warehouse ||
+        warehouse.type !== 'CISTERN' ||
+        !material ||
+        !movement.qty.eq(row.liters.neg()) ||
+        movement.projectId !== row.projectId
+      ) {
+        throw new AppError(
+          ERROR_CODES.CONFLICT,
+          'Fuel stock movement requires reconciliation',
+          409,
+        );
+      }
+      const nextQty = liters.neg();
+      const delta = nextQty.minus(movement.qty);
+      if (delta.lt(0)) {
+        const balance = await stockBalance(
+          prisma,
+          movement.warehouseId,
+          movement.materialId,
+        );
+        if (
+          balance.plus(delta).lt(0) &&
+          !(await allowNegativeStock(prisma, companyId))
+        ) {
+          throw new AppError(
+            ERROR_CODES.CONFLICT,
+            'Stock cannot go negative',
+            409,
+          );
+        }
+      }
+      await prisma.stockMovement.update({
+        where: { id: movement.id },
+        data: { qty: nextQty, projectId: nextProjectId },
+      });
+    }
   }
   await prisma.fuelEntry.update({
     where: { id: row.id },

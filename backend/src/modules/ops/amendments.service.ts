@@ -9,6 +9,7 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { canAmend } from '../../common/scope/ops-roles';
 import { requireCompany } from '../users/users-helpers';
+import { isSerializationFailure } from '../../common/utils/serialization-retry';
 import { addTaskMinutes } from './task-status';
 import { recalcProgress } from './progress';
 import { addMachineHours } from './machine-hours';
@@ -60,7 +61,7 @@ export class AmendmentsService {
     const action = dto.entityType === 'TRIP' ? 'TRIP_AMENDED' : 'FUEL_AMENDED';
     // BE-07 (F-07): izmjena entiteta i zapis ispravke su jedna transakcija — ranije je pad
     // na `amendment.create` ostavljao promijenjene podatke bez traga o ispravci.
-    const { row, applied } = await this.prisma.$transaction(async (tx) => {
+    const operation = async (tx: Prisma.TransactionClient) => {
       const applied =
         dto.entityType === 'TRIP'
           ? await applyTripAmendment(
@@ -90,7 +91,11 @@ export class AmendmentsService {
         },
       });
       return { row, applied };
-    });
+    };
+    const { row, applied } =
+      dto.entityType === 'FUEL'
+        ? await this.runFuelAmendmentTx(operation)
+        : await this.prisma.$transaction(operation);
     await this.audit.write({
       companyId,
       actorId: actor.id,
@@ -108,6 +113,26 @@ export class AmendmentsService {
       data: { entityType: dto.entityType, entityId: dto.entityId },
     });
     return row;
+  }
+
+  private async runFuelAmendmentTx<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (!isSerializationFailure(error)) throw error;
+        if (attempt >= 3)
+          throw new AppError(
+            ERROR_CODES.CONFLICT,
+            'Fuel or stock is being updated concurrently, retry',
+            409,
+          );
+      }
+    }
   }
 
   private async createTimer(

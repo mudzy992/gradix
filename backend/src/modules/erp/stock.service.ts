@@ -7,6 +7,7 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { parseNonZeroDecimal } from '../../common/utils/decimal-input';
+import { isSerializationFailure } from '../../common/utils/serialization-retry';
 import { requireCompany } from '../users/users-helpers';
 import { ApplyStockDto, CreateMovementDto } from './warehouses.dto';
 import { serializeMovement, serializeStockRow } from './serialize-erp';
@@ -280,7 +281,7 @@ export class StockService {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error) {
-        const retryable = this.isStockRetryable(error);
+        const retryable = isSerializationFailure(error);
         if (!retryable) {
           throw error;
         }
@@ -293,25 +294,6 @@ export class StockService {
         }
       }
     }
-  }
-
-  private isStockRetryable(error: unknown): boolean {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
-    if (error.code === 'P2034') return true;
-    // Raw SELECT ... FOR SHARE can surface PostgreSQL 40001 as P2010 instead
-    // of P2034 with the driver adapter. Retry only that exact serialization
-    // failure, never unrelated SQL or raw-query errors.
-    if (error.code !== 'P2010') return false;
-    const meta = error.meta as
-      | {
-          code?: unknown;
-          driverAdapterError?: { cause?: { originalCode?: unknown } };
-        }
-      | undefined;
-    return (
-      meta?.code === '40001' ||
-      meta?.driverAdapterError?.cause?.originalCode === '40001'
-    );
   }
 
   /** BE-14 F-02: paralelni `apply-stock` je već upisao pokret → vrati postojeći red. */
