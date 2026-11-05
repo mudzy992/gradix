@@ -1,6 +1,9 @@
 export const erpEn = {
   erp: {
-    movementUnknown: 'Posting was not confirmed. The movement may already have been recorded; check before trying again.',
+    movementKeyUnavailable: 'A secure identifier is unavailable. Nothing was posted; try using a secure browser.',
+    movementScopeChanged: 'The session or company has changed. This movement cannot be retried; check its outcome in the original company.',
+    movementUnknown: 'Posting was not confirmed. The movement may already have been recorded; check before trying again. Retrying the retained entry uses the same key while this page remains open. Discarding cannot cancel a posting that may already have completed and loses the retry key.',
+    movementSelectionMissingUncertain: 'The selected warehouse or material is no longer available. The retained entry stays locked; retry when it becomes available again or discard the draft and lose the key.',
     movementSelectionMissing: 'The selected warehouse or material is no longer available. Choose an available item or discard the draft.',
     movementSelectionUnavailable: 'Selected item is unavailable',
     warehouseUnknown: 'Creation was not confirmed. The warehouse may already exist; check before trying again.',

@@ -373,7 +373,7 @@ frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
 frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,267,pregledano,"FE-12: prevedene kategorije i izvori, formatAmount, odvojena forma „Iz obračuna“, labela datuma, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,149,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
-frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,293,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
+frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,349,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,122,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
 frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,156,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
@@ -446,8 +446,8 @@ frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledan
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
 frontend/src/i18n/bs.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/en.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,61,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
-frontend/src/i18n/erp-en.ts,FE,shared,FE-15,61,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,64,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/erp-en.ts,FE,shared,FE-15,64,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
 frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa engleskim.,2026-11-04
@@ -508,7 +508,7 @@ frontend/src/pages/diary-page.spec.tsx,TEST,fe-unit,FE-05,173,pregledano,"FE-10:
 frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,186,pregledano,"FE-10: označen mjesec, izbor projekta sa labelom i opcijom „Svi projekti“, kalendar sa zaglavljem dana i offsetom, dan kao ćelija sa punim imenom (bez lažnih dugmadi), broj/prazno/greška + retry, lista unosa i link na projekat | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
 frontend/src/pages/documents-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-10: istekao/ističe/vrijedi/bez roka, relativni pomak, broj, skeleton, prazno, greška + retry, upload + kreiranje po kategoriji (radnik/mašina)",2026-11-03
 frontend/src/pages/documents-page.tsx,FE,site-pages,FE-10,226,pregledano,"FE-10: stanje roka (Istekao/Ističe/Vrijedi/Bez roka) + „ističe za N d“ kroz documentState/daysUntil (30/15/5), broj/prazno/greška + retry, skeleton, hint uz fajl, poruka kad fajl nedostaje",2026-11-03
-frontend/src/pages/erp-page.spec.tsx,TEST,fe-unit,FE-05,807,pregledano,"FE-12: 7 testova — prevedene oznake, iznosi, labele, prazna stanja, greška + retry, lager bez skladišta, kreiranje partnera",2026-11-04
+frontend/src/pages/erp-page.spec.tsx,TEST,fe-unit,FE-05,936,pregledano,"FE-12: 7 testova — prevedene oznake, iznosi, labele, prazna stanja, greška + retry, lager bez skladišta, kreiranje partnera",2026-11-04
 frontend/src/pages/erp-page.tsx,FE,money-pages,FE-12,140,pregledano,"FE-12: upit po aktivnom tabu (`enabled`), trajna greška sa ponovnim pokušajem, `isLoading` proslijeđen tabovima",2026-11-04
 frontend/src/pages/fleet-map-page.spec.tsx,TEST,fe-unit,FE-05,119,pregledano,"FE-09: preveden status i izvor GPS-a, tekstualna lista kao region, mašina bez GPS-a ne pravi pin, greška + retry (react-leaflet mockovan u jsdom-u)",2026-11-03
 frontend/src/pages/fleet-map-page.tsx,FE,fleet-pages,FE-09,112,pregledano,"FE-09: preveden status i izvor GPS-a u balončiću, paleta C umjesto starih boja, skeleton, greška + retry, prazno stanje i tekstualna lista mašina (mapa nije čitljiva čitaču ekrana)",2026-11-03

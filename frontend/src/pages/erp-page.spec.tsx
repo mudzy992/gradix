@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { ErpPage } from '@/pages/erp-page'
 import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
+import { clearRefreshToken } from '@/lib/storage'
 import { toast } from 'sonner'
 
 /**
@@ -581,7 +582,9 @@ describe('ErpPage', () => {
     const form = button.closest('form')!
     act(() => { fireEvent.submit(form); fireEvent.submit(form) })
     expect(createStockMovement).toHaveBeenCalledTimes(1)
-    expect(createStockMovement).toHaveBeenCalledWith({ warehouseId: 'w1', materialId: 'm1', qty: '-5' })
+    expect(createStockMovement).toHaveBeenCalledWith({ warehouseId: 'w1', materialId: 'm1', qty: '-5', idempotencyKey: expect.any(String) })
+    const original = createStockMovement.mock.calls[0][0] as { idempotencyKey: string }
+    expect(original.idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
     expect(qty).toBeDisabled()
     expect(warehouseSelect).toBeDisabled()
     expect(materialSelect).toBeDisabled()
@@ -599,9 +602,10 @@ describe('ErpPage', () => {
     expect(createStockMovement).toHaveBeenCalledTimes(1)
     expect(isSensitiveNavigationBlocked()).toBe(true)
     await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
-    expect(qty).toBeEnabled()
+    expect(qty).toBeDisabled()
     await userEvent.click(button)
     expect(createStockMovement).toHaveBeenCalledTimes(2)
+    expect(createStockMovement.mock.calls[1][0]).toEqual(createStockMovement.mock.calls[0][0])
     await waitFor(() => expect(qty).toHaveValue(''))
     await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
     expect(button).toBeEnabled()
@@ -684,6 +688,131 @@ describe('ErpPage', () => {
     expect(createStockMovement).toHaveBeenCalledTimes(1)
   })
 
+  it('kretanje zadržava isti ključ i zaključana polja kroz više neuspjelih pokušaja', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    await userEvent.type(qty, '-2')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    await within(form).findByRole('alert')
+    expect(within(form).getByRole('alert')).toHaveTextContent('Odbacivanje ne otkazuje')
+    for (let attempts = 2; attempts <= 3; attempts++) {
+      await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+      expect(qty).toBeDisabled()
+      await userEvent.click(button)
+      await waitFor(() => expect(createStockMovement).toHaveBeenCalledTimes(attempts))
+      expect(createStockMovement.mock.calls[attempts - 1][0]).toEqual(createStockMovement.mock.calls[0][0])
+      if (attempts === 2) await within(form).findByRole('alert')
+    }
+    await waitFor(() => expect(qty).toHaveValue(''))
+  })
+
+  it('kretanje koristi novi ključ tek za novi unos nakon uspjeha ili odbacivanja', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({})
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    await userEvent.type(qty, '10')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    expect(await within(form).findByRole('alert')).toHaveTextContent('možda već upisano')
+    const first = createStockMovement.mock.calls[0][0] as { idempotencyKey: string }
+    await userEvent.click(within(form).getByRole('button', { name: 'Odbaci nacrt' }))
+    await userEvent.type(qty, '10')
+    await userEvent.click(button)
+    await waitFor(() => expect(qty).toHaveValue(''))
+    const second = createStockMovement.mock.calls[1][0] as { idempotencyKey: string }
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey)
+    await userEvent.type(qty, '10')
+    await userEvent.click(button)
+    await waitFor(() => expect(createStockMovement).toHaveBeenCalledTimes(3))
+    const third = createStockMovement.mock.calls[2][0] as { idempotencyKey: string }
+    expect(third.idempotencyKey).not.toBe(second.idempotencyKey)
+  })
+
+  it('kretanje ne šalje ništa ako siguran UUID nije dostupan', async () => {
+    const uuid = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => { throw new Error('no secure random') })
+    try {
+      renderPage()
+      await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+      const qty = await screen.findByLabelText('Količina')
+      await userEvent.type(qty, '5')
+      const form = screen.getByRole('button', { name: 'Knjiži' }).closest('form')!
+      await userEvent.click(within(form).getByRole('button', { name: 'Knjiži' }))
+      expect(within(form).getByRole('alert')).toHaveTextContent('Knjiženje nije poslano')
+      expect(createStockMovement).not.toHaveBeenCalled()
+      expect(qty).toHaveValue('5')
+      expect(isSensitiveNavigationBlocked()).toBe(true)
+    } finally { uuid.mockRestore() }
+  })
+
+  it('kretanje ne ponavlja stari ključ nakon promjene korisnika', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '5')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    expect(await within(form).findByRole('alert')).toHaveTextContent('možda već upisano')
+    act(() => {
+      const previous = useAuthStore.getState().user!
+      useAuthStore.setState({ user: { ...previous, id: 'u2' } })
+    })
+    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    expect(within(form).getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Količina')).toBeDisabled()
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+  })
+
+  it('kretanje ne ponavlja ključ nakon promjene generacije sesije', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '5')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    await within(form).findByRole('alert')
+    clearRefreshToken()
+    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    expect(within(form).getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
+  })
+
+  it('kretanje ne prihvata zakašnjeli uspjeh nakon promjene i povratka firme platform administratora', async () => {
+    let resolve!: (value: object) => void
+    createStockMovement.mockReturnValueOnce(new Promise((done) => { resolve = done }))
+    const previous = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...previous, roles: ['PLATFORM_ADMIN'] } })
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    await userEvent.type(qty, '5')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    act(() => {
+      const revision = useCompanyStore.getState().revision
+      useCompanyStore.setState({ selectedId: 'c2', revision: revision + 1 })
+      useCompanyStore.setState({ selectedId: 'c1', revision: revision + 2 })
+      resolve({})
+    })
+    await waitFor(() => expect(within(form).getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument())
+    expect(qty).toHaveValue('5')
+    expect(qty).toBeDisabled()
+    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+  })
+
   it('paralelna kreiranja skladišta i kretanja ne otključavaju jedno drugo', async () => {
     let finishWarehouse!: (value: object) => void
     let finishMovement!: (value: object) => void
@@ -762,7 +891,7 @@ describe('ErpPage', () => {
 
     await userEvent.type(screen.getByLabelText('Količina'), '7.25')
     await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
-    expect(createStockMovement).toHaveBeenCalledWith({ warehouseId: 'w1', materialId: 'm1', qty: '7.25' })
+    expect(createStockMovement).toHaveBeenCalledWith({ warehouseId: 'w1', materialId: 'm1', qty: '7.25', idempotencyKey: expect.any(String) })
   })
 
   it('bez erp.write nema formi, samo pregled', async () => {
