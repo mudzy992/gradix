@@ -5,8 +5,8 @@ import { ERROR_CODES } from '../errors/error-codes';
 export function parseDecimal(value: string, field: string): Prisma.Decimal {
   try {
     const parsed = new Prisma.Decimal(value);
-    if (parsed.isNaN()) {
-      throw new Error('nan');
+    if (!parsed.isFinite()) {
+      throw new Error('non-finite decimal');
     }
     return parsed;
   } catch {

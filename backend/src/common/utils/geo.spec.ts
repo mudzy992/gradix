@@ -7,8 +7,8 @@ class FakeDecimal {
     this.value = Number(input);
   }
 
-  isNaN(): boolean {
-    return Number.isNaN(this.value);
+  isFinite(): boolean {
+    return Number.isFinite(this.value);
   }
 
   lt(other: number): boolean {

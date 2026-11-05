@@ -129,6 +129,124 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(payrollDup.status).toBe(409);
   });
 
+  it('rejects non-finite decimal inputs across stock, costs, projects, fuel and quantities without writing', async () => {
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Finite decimal warehouse', type: 'YARD' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Finite decimal material', unit: 'L' });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Finite decimal machine', type: 'TRUCK' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const machineId = machine.body.data.id as string;
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    const projectName = `Nonfinite-${randomUUID()}`;
+    const costCountBefore = await prisma.costEntry.count({
+      where: { companyId, projectId },
+    });
+    const quantityCountBefore = await prisma.quantityItem.count({
+      where: { companyId, projectId },
+    });
+    const fuelCountBefore = await prisma.fuelEntry.count({
+      where: { companyId, machineId },
+    });
+    const beforeProject = await prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    for (const value of [
+      'Infinity',
+      '-Infinity',
+      'NaN',
+      '1e999999999999999999',
+    ]) {
+      const movement = await request(app.getHttpServer())
+        .post('/api/stock-movements')
+        .set(auth(admin))
+        .send({
+          warehouseId,
+          materialId,
+          qty: value,
+          idempotencyKey: randomUUID(),
+        });
+      expect(movement.status).toBe(400);
+      expect(movement.body.error.code).toBe('VALIDATION_FAILED');
+      expect(movement.body.error.message).toBe('qty must be a decimal');
+      const cost = await request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          amount: value,
+          category: 'OTHER',
+          date: '2026-11-05',
+          projectId,
+        });
+      expect(cost.status).toBe(400);
+      expect(cost.body.error.code).toBe('VALIDATION_FAILED');
+      expect(cost.body.error.message).toBe('amount must be a decimal');
+      const project = await request(app.getHttpServer())
+        .post('/api/projects')
+        .set(auth(admin))
+        .send({ name: projectName, plannedBudget: value });
+      expect(project.status).toBe(400);
+      expect(project.body.error.code).toBe('VALIDATION_FAILED');
+      expect(project.body.error.message).toBe(
+        'plannedBudget must be a decimal',
+      );
+      const quantity = await request(app.getHttpServer())
+        .post(`/api/projects/${projectId}/quantities`)
+        .set(auth(admin))
+        .send({
+          name: 'Nonfinite qty',
+          unit: 'M3',
+          plannedQty: '1',
+          executedQty: value,
+        });
+      expect(quantity.status).toBe(400);
+      expect(quantity.body.error.code).toBe('VALIDATION_FAILED');
+      expect(quantity.body.error.message).toBe('executedQty must be a decimal');
+      const fuel = await request(app.getHttpServer())
+        .post('/api/fuel')
+        .set(auth(admin))
+        .send({ machineId, projectId, liters: value, unitPrice: '1' });
+      expect(fuel.status).toBe(400);
+      expect(fuel.body.error.code).toBe('VALIDATION_FAILED');
+      expect(fuel.body.error.message).toBe('liters must be a decimal');
+    }
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, warehouseId, materialId },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.project.count({ where: { companyId, name: projectName } }),
+    ).toBe(0);
+    expect(
+      await prisma.costEntry.count({ where: { companyId, projectId } }),
+    ).toBe(costCountBefore);
+    expect(
+      await prisma.quantityItem.count({ where: { companyId, projectId } }),
+    ).toBe(quantityCountBefore);
+    expect(
+      await prisma.fuelEntry.count({ where: { companyId, machineId } }),
+    ).toBe(fuelCountBefore);
+    // Invalid requests cannot have modified this project's spend either.
+    const project = await request(app.getHttpServer())
+      .get(`/api/projects/${projectId}`)
+      .set(auth(admin));
+    expect(project.status).toBe(200);
+    expect(Number(project.body.data.currentSpend)).toBe(
+      Number(beforeProject.currentSpend),
+    );
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')

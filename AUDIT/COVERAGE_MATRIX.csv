@@ -91,8 +91,9 @@ backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/date-input.spec.ts,BE,common,BE-01,48,pregledano,CI-05: dodan regresijski test za nepostojeći datum u timestampu i prijestupnu godinu sa offsetom.,2026-11-04
 backend/src/common/utils/date-input.ts,BE,common,BE-01,40,pregledano,"CI-05: timestamp sa nepostojećim datumom se normalizovao; provjera kalendara prije parsiranja, regresijski test.",2026-11-04
-backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,pregledano,BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02),2026-11-02
-backend/src/common/utils/geo.spec.ts,BE,common,BE-01,109,pregledano,"BE-09/10: 9 testova — granice, smeće, par koordinata",2026-11-03
+backend/src/common/utils/decimal-input.spec.ts,BE,common,BE-01,71,pokriveno-testom,CI-05 F-63: stvarni Decimal; finite i pravila predznaka,2026-11-05
+backend/src/common/utils/decimal-input.ts,BE,common,BE-01,65,popravljeno,BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02) | CI-05 F-63: odbij ne-finite vrijednosti,2026-11-05
+backend/src/common/utils/geo.spec.ts,BE,common,BE-01,109,pregledano,"BE-09/10: 9 testova — granice, smeće, par koordinata | CI-05 F-63: finite decimal regresija",2026-11-05
 backend/src/common/utils/geo.ts,BE,common,BE-01,62,pregledano,"BE-09/10: parseLatLng + parseOptionalLatLng (oba ili nijedan, opseg) (F-03)",2026-11-03
 backend/src/common/utils/pagination.ts,BE,common,BE-01,48,pregledano,BE-01: pregledano — AppError PAGINATION_LIMIT za page<1/limit>100,2026-11-02
 backend/src/common/utils/password.ts,BE,common,BE-01,46,pregledano,"BE-02: pregledano — argon2id, min 10 znakova (AUTH_PASSWORD_TOO_SHORT), SHA-256 hash refresh tokena",2026-11-02
@@ -325,7 +326,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,286,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom; F-CI-05-37: atomska deaktivacija i ponovljeni timer cleanup; F-CI-05-40: revalidacija ciljnog tenanta i rola pod lockom pri resetu; F-CI-05-41: company lock i provjere prije izmjene rola/statusa",2026-11-04
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,828,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka; F-CI-05-36: DB rollback i kontrolisane utrke promjene lozinke; F-CI-05-37: DB rollback i rotacija; timer failure/retry; F-CI-05-40: promocija cilja i rollback admin reseta; F-CI-05-41: deactivation/rotation čeka company SHARE,2026-11-04
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,528,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,646,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija,2026-11-05
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
