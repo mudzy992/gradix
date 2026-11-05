@@ -1,14 +1,17 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createStockMovement, createWarehouse, type StockRow, type WarehouseRow } from '@/lib/api-erp'
 import type { CatalogRow } from '@/lib/ops-types'
+import type { MeUser } from '@/lib/api-types'
 import { errorMessage } from '@/lib/error-message'
 import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
 import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { getSessionGeneration } from '@/lib/storage'
+import { STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
 import { warehouseType } from '@/lib/labels'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,7 +27,17 @@ function movementScope(): string | null {
   return JSON.stringify([getSessionGeneration(), user.id, companyId, platform ? company.revision : null])
 }
 
+// Revision stays in the operation scope, not the cache key: after A→B→A the
+// original entry remains visible, but cannot be sent under a changed revision.
+function movementCacheScope(user: MeUser | null = useAuthStore.getState().user, selectedCompany: string | null = useCompanyStore.getState().selectedId): string | null {
+  if (!user) return null
+  const companyId = user.roles.includes('PLATFORM_ADMIN') ? selectedCompany : user.companyId
+  return companyId ? JSON.stringify([getSessionGeneration(), user.id, companyId]) : null
+}
+
 type PendingMovement = { idempotencyKey: string; warehouseId: string; materialId: string; qty: string; scope: string }
+type MovementRecovery = { cacheScope: string; operation: PendingMovement; inFlight: boolean; attempt: number }
+
 
 type Props = {
   canWrite: boolean
@@ -43,6 +56,12 @@ type Props = {
  */
 export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading, onChanged, onProtectedChange }: Props) {
   const { t } = useTranslation()
+  const client = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const selectedCompany = useCompanyStore((state) => state.selectedId)
+  const cacheScope = movementCacheScope(user, selectedCompany)
+  const cacheKey = [STOCK_MOVEMENT_PENDING_QUERY, cacheScope] as const
+  const recovery = useQuery<MovementRecovery | null>({ queryKey: cacheKey, queryFn: async () => null, enabled: false, gcTime: Infinity }).data
   const TYPES = ['SITE', 'YARD', 'CISTERN']
   const [name, setName] = useState('')
   const [type, setType] = useState('SITE')
@@ -62,6 +81,78 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
   const movementUncertainRef = useRef(false)
   const movementRetryEnabledRef = useRef(false)
   const pendingMovement = useRef<PendingMovement | null>(null)
+  const observedAttempt = useRef(0)
+  const boundScope = useRef(cacheScope)
+  const scopeWasChanged = useRef(false)
+  type MovementDraft = { warehouseId: string; materialId: string; qty: string; baseline: { warehouseId: string; materialId: string } | null }
+  const parkedDraft = useRef<MovementDraft | null>(null)
+  const localDraft = useRef<MovementDraft>({ warehouseId, materialId, qty, baseline: movementBaseline })
+  useLayoutEffect(() => {
+    localDraft.current = { warehouseId, materialId, qty, baseline: movementBaseline }
+  }, [warehouseId, materialId, qty, movementBaseline])
+  useLayoutEffect(() => {
+    if (boundScope.current === cacheScope) return
+    // Never show or edit one session/company's local state in another scope.
+    boundScope.current = cacheScope
+    scopeWasChanged.current = true
+    pendingMovement.current = null
+    parkedDraft.current = null
+    movementSavingRef.current = false
+    movementUncertainRef.current = false
+    movementRetryEnabledRef.current = false
+    observedAttempt.current = 0
+    setMovementSaving(false)
+    setMovementUncertain(false)
+    setMovementRetryEnabled(false)
+    setMovementProblem(null)
+    setMovementBaseline(null)
+    setWarehouseId('')
+    setMaterialId('')
+    setQty('')
+  }, [cacheScope])
+  useLayoutEffect(() => {
+    if (recovery && recovery.cacheScope === cacheScope) {
+      const { operation, inFlight, attempt } = recovery
+      const draft = localDraft.current
+      if (!scopeWasChanged.current && !pendingMovement.current && draft.baseline && (draft.qty !== '' || draft.warehouseId !== draft.baseline.warehouseId || draft.materialId !== draft.baseline.materialId)) {
+        // A second view may already have its own draft; temporarily park it.
+        parkedDraft.current = draft
+      }
+      pendingMovement.current = operation
+      movementSavingRef.current = inFlight
+      movementUncertainRef.current = !inFlight || attempt > 1
+      if (observedAttempt.current !== attempt) {
+        movementRetryEnabledRef.current = false
+        setMovementRetryEnabled(false)
+        observedAttempt.current = attempt
+      }
+      setMovementSaving(inFlight)
+      setMovementUncertain(!inFlight || attempt > 1)
+      setMovementBaseline((old) => old ?? { warehouseId: operation.warehouseId, materialId: operation.materialId })
+      setWarehouseId(operation.warehouseId)
+      setMaterialId(operation.materialId)
+      setQty(operation.qty)
+    } else if (pendingMovement.current) {
+      // Another mounted view completed or discarded the shared operation.
+      const operation = pendingMovement.current
+      pendingMovement.current = null
+      movementSavingRef.current = false
+      movementUncertainRef.current = false
+      movementRetryEnabledRef.current = false
+      observedAttempt.current = 0
+      setMovementSaving(false)
+      setMovementUncertain(false)
+      setMovementRetryEnabled(false)
+      setMovementProblem(null)
+      const draft = parkedDraft.current
+      parkedDraft.current = null
+      setWarehouseId(draft?.warehouseId ?? operation.warehouseId)
+      setMaterialId(draft?.materialId ?? operation.materialId)
+      setQty(draft?.qty ?? '')
+      setMovementBaseline(draft?.baseline ?? { warehouseId: operation.warehouseId, materialId: operation.materialId })
+    }
+    scopeWasChanged.current = false
+  }, [recovery, cacheScope])
   useLayoutEffect(() => {
     if (movementBaseline || !warehouses.length || !materials.length) return
     const initial = { warehouseId: warehouses[0].id, materialId: materials[0].id }
@@ -175,10 +266,13 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
             event.preventDefault()
             if (movementSavingRef.current || (movementUncertainRef.current && !movementRetryEnabledRef.current) || !hasWarehouse || !hasMaterial) return
             const scope = movementScope()
-            if (!scope || (pendingMovement.current && pendingMovement.current.scope !== scope)) {
+            if (!scope || !cacheScope || movementCacheScope() !== cacheScope || (pendingMovement.current && pendingMovement.current.scope !== scope)) {
               setMovementProblem('scope')
               return
             }
+            const shared = client.getQueryData<MovementRecovery | null>(cacheKey)
+            // Cache is the synchronous lock across mounted views and remounts.
+            if (shared?.inFlight || (shared && shared.operation.idempotencyKey !== pendingMovement.current?.idempotencyKey) || (!shared && pendingMovement.current)) return
             if (!pendingMovement.current) {
               try {
                 pendingMovement.current = { idempotencyKey: crypto.randomUUID(), warehouseId, materialId, qty, scope }
@@ -188,11 +282,14 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
               }
             }
             const operation = pendingMovement.current
+            const attempt = (shared?.attempt ?? 0) + 1
+            client.setQueryData(cacheKey, { cacheScope, operation, inFlight: true, attempt } satisfies MovementRecovery)
             movementSavingRef.current = true
             movementRetryEnabledRef.current = false
             setMovementRetryEnabled(false)
             setMovementProblem(null)
             setMovementSaving(true)
+            const stillOurs = () => client.getQueryData<MovementRecovery | null>(cacheKey)?.operation.idempotencyKey === operation.idempotencyKey
             try {
               await createStockMovement({
                 warehouseId: operation.warehouseId,
@@ -200,26 +297,41 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                 qty: operation.qty,
                 idempotencyKey: operation.idempotencyKey,
               })
+              if (!stillOurs()) return // Session/cache was cleared; never resurrect it.
               if (movementScope() !== operation.scope) {
-                setMovementProblem('scope')
-                movementUncertainRef.current = true
-                setMovementUncertain(true)
+                client.setQueryData(cacheKey, { cacheScope, operation, inFlight: false, attempt } satisfies MovementRecovery)
+                if (boundScope.current === cacheScope && movementCacheScope() === cacheScope) {
+                  setMovementProblem('scope')
+                  movementUncertainRef.current = true
+                  setMovementUncertain(true)
+                }
                 return
               }
             } catch (error) {
-              movementUncertainRef.current = true
-              setMovementUncertain(true)
-              toast.error(errorMessage(error))
+              if (!stillOurs()) return
+              client.setQueryData(cacheKey, { cacheScope, operation, inFlight: false, attempt } satisfies MovementRecovery)
+              if (boundScope.current === cacheScope && movementCacheScope() === cacheScope) {
+                movementUncertainRef.current = true
+                setMovementUncertain(true)
+                toast.error(errorMessage(error))
+              }
               return
             } finally {
-              movementSavingRef.current = false
-              setMovementSaving(false)
+              if (boundScope.current === cacheScope && movementCacheScope() === cacheScope) {
+                movementSavingRef.current = false
+                setMovementSaving(false)
+              }
             }
+            client.setQueryData(cacheKey, null)
             pendingMovement.current = null
             movementUncertainRef.current = false
             setMovementUncertain(false)
-            setQty('')
-            setMovementBaseline({ warehouseId: operation.warehouseId, materialId: operation.materialId })
+            const draft = parkedDraft.current
+            parkedDraft.current = null
+            setWarehouseId(draft?.warehouseId ?? operation.warehouseId)
+            setMaterialId(draft?.materialId ?? operation.materialId)
+            setQty(draft?.qty ?? '')
+            setMovementBaseline(draft?.baseline ?? { warehouseId: operation.warehouseId, materialId: operation.materialId })
             onChanged()
           }}
         >
@@ -276,6 +388,9 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
             </Button>
             {movementDirty || movementUncertain ? (
               <Button type="button" variant="outline" disabled={movementSaving} onClick={() => {
+                const current = client.getQueryData<MovementRecovery | null>(cacheKey)
+                if (current?.inFlight || (current && current.operation.idempotencyKey !== pendingMovement.current?.idempotencyKey)) return
+                if (current) client.setQueryData(cacheKey, null)
                 const initial = warehouses.length && materials.length
                   ? {
                       warehouseId: warehouses.some((row) => row.id === movementBaseline?.warehouseId)
@@ -284,10 +399,12 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                         ? movementBaseline!.materialId : materials[0].id,
                     }
                   : null
-                setMovementBaseline(initial)
-                setWarehouseId(initial?.warehouseId ?? '')
-                setMaterialId(initial?.materialId ?? '')
-                setQty('')
+                const draft = parkedDraft.current
+                parkedDraft.current = null
+                setMovementBaseline(draft?.baseline ?? initial)
+                setWarehouseId(draft?.warehouseId ?? initial?.warehouseId ?? '')
+                setMaterialId(draft?.materialId ?? initial?.materialId ?? '')
+                setQty(draft?.qty ?? '')
                 pendingMovement.current = null
                 movementUncertainRef.current = false
                 movementRetryEnabledRef.current = false

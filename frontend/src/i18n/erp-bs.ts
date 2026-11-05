@@ -2,7 +2,7 @@ export const erpBs = {
   erp: {
     movementKeyUnavailable: 'Sigurni identifikator nije dostupan. Knjiženje nije poslano; pokušajte u sigurnom pregledniku.',
     movementScopeChanged: 'Sesija ili firma su se promijenile. Ponovni pokušaj ovog knjiženja nije dozvoljen; provjerite ishod u izvornoj firmi.',
-    movementUnknown: 'Knjiženje nije potvrđeno. Kretanje je možda već upisano; provjerite prije novog pokušaja. Ponovni pokušaj sačuvanog unosa koristi isti ključ dok je stranica otvorena. Odbacivanje ne otkazuje moguće već izvršeno knjiženje i gubi ključ za ponavljanje.',
+    movementUnknown: 'Knjiženje nije potvrđeno. Kretanje je možda već upisano; provjerite prije novog pokušaja. Ponovni pokušaj sačuvanog unosa koristi isti ključ u ovoj sesiji; ponovno učitavanje stranice briše ključ. Odbacivanje ne otkazuje moguće već izvršeno knjiženje i gubi ključ za ponavljanje.',
     movementSelectionMissingUncertain: 'Odabrano skladište ili materijal više nije dostupno. Sačuvani unos ostaje zaključan; pokušaj je moguć kada stavka ponovo bude dostupna ili se nacrt može odbaciti uz gubitak ključa.',
     movementSelectionMissing: 'Odabrano skladište ili materijal više nije dostupno. Izaberite dostupnu stavku ili odbacite nacrt.',
     movementSelectionUnavailable: 'Odabrana stavka nije dostupna',

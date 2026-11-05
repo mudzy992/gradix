@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { queryClient } from '@/lib/query-client'
-import { PROJECT_DOCUMENT_PENDING_QUERY } from '@/lib/constants'
+import { PROJECT_DOCUMENT_PENDING_QUERY, STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
 import { isCompanySwitchBlocked } from '@/lib/company-switch-block'
 import { readCompanyId, writeCompanyId } from '@/lib/storage'
 
@@ -20,9 +20,9 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
     set((state) => ({ selectedId: id, revision: state.revision + 1 }))
     // Invalidation alone leaves the previous company's data visible while a
     // refetch is pending or fails. Reset both active and inactive data first.
-    // Document recovery is separately scoped to session/user/company/project.
+    // Recovery entries are separately scoped to session, user and company.
     void queryClient.resetQueries({
-      predicate: (query) => query.queryKey[0] !== PROJECT_DOCUMENT_PENDING_QUERY,
+      predicate: (query) => query.queryKey[0] !== PROJECT_DOCUMENT_PENDING_QUERY && query.queryKey[0] !== STOCK_MOVEMENT_PENDING_QUERY,
     })
     return true
   },

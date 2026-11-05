@@ -9,6 +9,7 @@ import { useCompanyStore } from '@/stores/company-store'
 import { ErpPage } from '@/pages/erp-page'
 import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
 import { clearRefreshToken } from '@/lib/storage'
+import { STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
 import { toast } from 'sonner'
 
 /**
@@ -91,8 +92,8 @@ function stockLine(overrides: Partial<StockRow> = {}): StockRow {
   }
 }
 
-function renderPage() {
-  const client = new QueryClient({
+function renderPage(existingClient?: QueryClient) {
+  const client = existingClient ?? new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   const view = render(
@@ -763,12 +764,10 @@ describe('ErpPage', () => {
       const previous = useAuthStore.getState().user!
       useAuthStore.setState({ user: { ...previous, id: 'u2' } })
     })
-    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
-    await userEvent.click(button)
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    expect(screen.queryByText(/Knjiženje nije potvrđeno/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Razumijem, omogući novi pokušaj' })).not.toBeInTheDocument()
     expect(createStockMovement).toHaveBeenCalledTimes(1)
-    expect(within(form).getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Količina')).toBeDisabled()
-    expect(isSensitiveNavigationBlocked()).toBe(true)
   })
 
   it('kretanje ne ponavlja ključ nakon promjene generacije sesije', async () => {
@@ -782,9 +781,10 @@ describe('ErpPage', () => {
     await within(form).findByRole('alert')
     clearRefreshToken()
     await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
-    await userEvent.click(button)
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
     expect(createStockMovement).toHaveBeenCalledTimes(1)
-    expect(within(form).getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
+    expect(screen.queryByText(/Knjiženje nije potvrđeno/)).not.toBeInTheDocument()
   })
 
   it('kretanje ne prihvata zakašnjeli uspjeh nakon promjene i povratka firme platform administratora', async () => {
@@ -810,6 +810,259 @@ describe('ErpPage', () => {
     expect(qty).toBeDisabled()
     await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
     await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+  })
+
+  it('nepotvrđeno kretanje preživi unmount i ponavlja isti payload', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '8')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    const original = createStockMovement.mock.calls[0][0]
+    first.unmount()
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(await screen.findByText(/Knjiženje nije potvrđeno/)).toBeInTheDocument()
+    const qty = screen.getByLabelText('Količina')
+    expect(qty).toHaveValue('8')
+    expect(qty).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await waitFor(() => expect(qty).toHaveValue(''))
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+    expect(createStockMovement.mock.calls[1][0]).toEqual(original)
+  })
+
+  it('upis koji je u toku ostaje zaključan kroz unmount, a uspjeh oslobađa povratni prikaz', async () => {
+    let resolve!: (value: object) => void
+    createStockMovement.mockReturnValueOnce(new Promise((done) => { resolve = done })).mockResolvedValueOnce({})
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '9')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    const original = createStockMovement.mock.calls[0][0] as { idempotencyKey: string }
+    first.unmount()
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    await waitFor(() => expect(qty).toHaveValue('9'))
+    expect(qty).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Knjiži' })).toBeDisabled()
+    fireEvent.submit(screen.getByRole('button', { name: 'Knjiži' }).closest('form')!)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    await act(async () => resolve({}))
+    await waitFor(() => expect(qty).toHaveValue(''))
+    expect(qty).toBeEnabled()
+    await userEvent.type(qty, '9')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    const next = createStockMovement.mock.calls[1][0] as { idempotencyKey: string }
+    expect(next.idempotencyKey).not.toBe(original.idempotencyKey)
+  })
+
+  it('greška zahtjeva nakon unmounta prebacuje povratni prikaz u oporavak', async () => {
+    let reject!: (error: Error) => void
+    createStockMovement.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '6')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    first.unmount()
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await act(async () => reject(new Error('offline')))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    expect(screen.getByLabelText('Količina')).toHaveValue('6')
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await waitFor(() => expect(createStockMovement).toHaveBeenCalledTimes(2))
+    expect(createStockMovement.mock.calls[1][0]).toEqual(createStockMovement.mock.calls[0][0])
+  })
+
+  it('dva istovremena prikaza dijele sinhroni lock i ne mogu poslati paralelan retry', async () => {
+    let reject!: (error: Error) => void
+    let resolve!: (value: object) => void
+    createStockMovement.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+      .mockReturnValueOnce(new Promise((done) => { resolve = done }))
+    const first = renderPage()
+    const second = renderPage(first.client)
+    const a = within(first.container)
+    const b = within(second.container)
+    await userEvent.click(a.getByRole('tab', { name: 'Lager' }))
+    await userEvent.click(b.getByRole('tab', { name: 'Lager' }))
+    const firstQty = await a.findByLabelText('Količina')
+    const secondQty = second.container.querySelector<HTMLInputElement>('#movement-qty')!
+    await userEvent.type(firstQty, '5')
+    fireEvent.change(secondQty, { target: { value: '12' } })
+    await userEvent.click(a.getByRole('button', { name: 'Knjiži' }))
+    // Even before observer notifications, the shared lock rejects this submission.
+    fireEvent.submit(b.getByRole('button', { name: 'Knjiži' }).closest('form')!)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(secondQty).toHaveValue('5'))
+    expect(secondQty).toBeDisabled()
+    await act(async () => reject(new Error('offline')))
+    await a.findByText(/Knjiženje nije potvrđeno/)
+    await b.findByText(/Knjiženje nije potvrđeno/)
+    await userEvent.click(a.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(b.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    act(() => {
+      fireEvent.submit(a.getByRole('button', { name: 'Knjiži' }).closest('form')!)
+      fireEvent.submit(b.getByRole('button', { name: 'Knjiži' }).closest('form')!)
+    })
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+    expect(createStockMovement.mock.calls[1][0]).toEqual(createStockMovement.mock.calls[0][0])
+    await act(async () => resolve({}))
+    // The second view's separate draft was parked, not discarded.
+    await waitFor(() => expect(secondQty).toHaveValue('12'))
+    expect(secondQty).toBeEnabled()
+  })
+
+  it('prikaz koji ponovi tuđe kretanje vraća svoj privremeno parkirani nacrt', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({})
+    const first = renderPage()
+    const second = renderPage(first.client)
+    const a = within(first.container)
+    const b = within(second.container)
+    await userEvent.click(a.getByRole('tab', { name: 'Lager' }))
+    await userEvent.click(b.getByRole('tab', { name: 'Lager' }))
+    const firstQty = await a.findByLabelText('Količina')
+    const secondQty = second.container.querySelector<HTMLInputElement>('#movement-qty')!
+    await userEvent.type(firstQty, '5')
+    fireEvent.change(secondQty, { target: { value: '12' } })
+    await userEvent.click(a.getByRole('button', { name: 'Knjiži' }))
+    await b.findByText(/Knjiženje nije potvrđeno/)
+    await userEvent.click(b.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(b.getByRole('button', { name: 'Knjiži' }))
+    await waitFor(() => expect(secondQty).toHaveValue('12'))
+    expect(secondQty).toBeEnabled()
+    expect(createStockMovement.mock.calls[1][0]).toEqual(createStockMovement.mock.calls[0][0])
+  })
+
+  it('prikaz koji odbaci tuđe kretanje vraća svoj privremeno parkirani nacrt', async () => {
+    createStockMovement.mockRejectedValueOnce(new Error('offline'))
+    const first = renderPage()
+    const second = renderPage(first.client)
+    const a = within(first.container)
+    const b = within(second.container)
+    await userEvent.click(a.getByRole('tab', { name: 'Lager' }))
+    await userEvent.click(b.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await a.findByLabelText('Količina'), '5')
+    const secondQty = second.container.querySelector<HTMLInputElement>('#movement-qty')!
+    fireEvent.change(secondQty, { target: { value: '12' } })
+    await userEvent.click(a.getByRole('button', { name: 'Knjiži' }))
+    await b.findByText(/Knjiženje nije potvrđeno/)
+    await userEvent.click(b.getByRole('button', { name: 'Odbaci nacrt' }))
+    await waitFor(() => expect(secondQty).toHaveValue('12'))
+    expect(secondQty).toBeEnabled()
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+  })
+
+  it('brisanje keša tokom upisa ne dozvoljava zakašnjelom odgovoru da vrati oporavak', async () => {
+    let reject!: (error: Error) => void
+    createStockMovement.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '3')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    expect(first.client.getQueriesData({ queryKey: [STOCK_MOVEMENT_PENDING_QUERY] }).some(([, value]) => value)).toBe(true)
+    first.unmount()
+    first.client.clear()
+    clearRefreshToken()
+    await act(async () => reject(new Error('offline')))
+    expect(first.client.getQueriesData({ queryKey: [STOCK_MOVEMENT_PENDING_QUERY] })).toHaveLength(0)
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(await screen.findByLabelText('Količina')).toHaveValue('')
+    expect(screen.queryByText(/Knjiženje nije potvrđeno/)).not.toBeInTheDocument()
+  })
+
+  it('promjena firme bez nacrta dopušta novi unos u novom kontekstu', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await screen.findByLabelText('Količina')
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+    const qty = await screen.findByLabelText('Količina')
+    await userEvent.type(qty, '8')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await waitFor(() => expect(createStockMovement).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText(/Sesija ili firma su se promijenile/)).not.toBeInTheDocument()
+  })
+
+  it('oporavci firmi ne prenose ni privremeno parkirani nacrt u drugu firmu', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    createStockMovement.mockRejectedValue(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    // Model an external/context race, bypassing the normal UI switch lock.
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c2', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    expect(screen.queryByText(/Knjiženje nije potvrđeno/)).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Količina'), '7')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c1', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue('5'))
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c2', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue('7'))
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+  })
+
+  it('zakašnjeli odgovor firme A ne otključava upis koji je u toku u firmi B', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    let resolveA!: (value: object) => void
+    let resolveB!: (value: object) => void
+    createStockMovement.mockReturnValueOnce(new Promise((done) => { resolveA = done }))
+      .mockReturnValueOnce(new Promise((done) => { resolveB = done }))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c2', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Količina')).toHaveValue(''))
+    await userEvent.type(screen.getByLabelText('Količina'), '7')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await act(async () => resolveA({}))
+    const qty = screen.getByLabelText('Količina')
+    expect(qty).toHaveValue('7')
+    expect(qty).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Knjiži' })).toBeDisabled()
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+    await act(async () => resolveB({}))
+    await waitFor(() => expect(qty).toHaveValue(''))
+  })
+
+  it('povratak platform administratora na istu firmu prikazuje oporavak ali ne ponavlja stari kontekst', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    createStockMovement.mockRejectedValueOnce(new Error('offline'))
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(await screen.findByLabelText('Količina'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    first.unmount()
+    act(() => {
+      expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true)
+      expect(useCompanyStore.getState().setSelectedId('c1')).toBe(true)
+    })
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await screen.findByText(/Knjiženje nije potvrđeno/)
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    expect(screen.getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
     expect(createStockMovement).toHaveBeenCalledTimes(1)
   })
 

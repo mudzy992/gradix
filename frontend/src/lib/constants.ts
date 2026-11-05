@@ -3,6 +3,7 @@ export const REMEMBER_KEY = 'gradix:remember'
 export const COMPANY_KEY = 'gradix:company-id'
 export const LOGOUT_KEY = 'gradix:logout'
 export const PROJECT_DOCUMENT_PENDING_QUERY = 'project-document-pending'
+export const STOCK_MOVEMENT_PENDING_QUERY = 'stock-movement-pending'
 
 export const KNOWN_NOTIFY_TYPES = [
   'TASK_DISPATCHED',
