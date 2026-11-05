@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
-import { openSession } from './session'
+import { openSession, waitForAuthenticatedShell } from './session'
 
 /**
  * FE-06 — tok radnika (`worker@gradix.local`, rola `WORKER`). Jedna prijava po fajlu (`session.ts`).
@@ -33,8 +33,8 @@ test.describe('FE-06 — radnik', () => {
 
   test.beforeEach(async () => {
     await page.goto('/dashboard')
-    // Sesija iz `storageState`: ako padne, test mora reći „nismo prijavljeni“, ne „nema kartica“.
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
+    // Wait for refresh/bootstrap before another cross-document navigation.
+    await waitForAuthenticatedShell(page)
   })
 
   test('dashboard prikazuje kartice svoje role i objašnjava odsustvo prisustva', async () => {

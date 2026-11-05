@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
-import { openSession } from './session'
+import { openSession, waitForAuthenticatedShell } from './session'
 
 /**
  * FE-06 — admin tok na **stvarnom** backendu (seed `SEED_DEMO=true`).
@@ -47,8 +47,8 @@ test.describe('FE-06 — admin tok', () => {
 
   test.beforeEach(async () => {
     await page.goto('/dashboard')
-    // Ako sesija padne, test mora reći „nismo prijavljeni“, ne „nema kartica“.
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
+    // URL alone appears before bootstrap finishes; do not abort an in-flight rotation.
+    await waitForAuthenticatedShell(page)
   })
 
   test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async () => {

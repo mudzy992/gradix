@@ -15,6 +15,12 @@ export type Session = { context: BrowserContext; page: Page }
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173'
 
+/** Wait for bootstrap and refresh rotation to finish before the next document navigation. */
+export async function waitForAuthenticatedShell(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
+  await expect(page.getByRole('navigation').first()).toBeVisible({ timeout: 20_000 })
+}
+
 export async function openSession(browser: Browser, email: string, password: string): Promise<Session> {
   const context = await browser.newContext({ baseURL: BASE_URL })
   const page = await context.newPage()
@@ -22,6 +28,6 @@ export async function openSession(browser: Browser, email: string, password: str
   await page.locator('#identifier').fill(email)
   await page.locator('#password').fill(password)
   await page.getByRole('button', { name: /prijavi|sign in/i }).click()
-  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
+  await waitForAuthenticatedShell(page)
   return { context, page }
 }

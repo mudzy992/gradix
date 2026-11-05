@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { waitForAuthenticatedShell } from './session'
 
 test('login form is visible', async ({ page }) => {
   await page.goto('/login')
@@ -16,6 +17,41 @@ test('seed admin can sign in', async ({ page }) => {
   await page.locator('#password').fill(password)
   await page.getByRole('button', { name: /prijavi|sign in/i }).click()
   await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+})
+
+test('authenticated shell waits for a delayed bootstrap refresh', async ({ page }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  await page.goto('/login')
+  await page.locator('#identifier').fill(email!)
+  await page.locator('#password').fill(password!)
+  await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+  await waitForAuthenticatedShell(page)
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let refreshStarted = 0
+  await page.route('**/api/auth/refresh', async (route) => {
+    refreshStarted += 1
+    await gate
+    await route.continue()
+  })
+  try {
+    await page.reload()
+    await expect.poll(() => refreshStarted).toBe(1)
+    let ready = false
+    const shell = waitForAuthenticatedShell(page).then(() => { ready = true })
+    await expect(page.getByRole('navigation').first()).toHaveCount(0)
+    expect(ready).toBe(false)
+    release()
+    await shell
+    expect(ready).toBe(true)
+    await page.goto('/dashboard')
+    await waitForAuthenticatedShell(page)
+  } finally {
+    release()
+    await page.unroute('**/api/auth/refresh')
+  }
 })
 
 test('refresh rate limit keeps the session and offers a deliberate retry', async ({ page }) => {
