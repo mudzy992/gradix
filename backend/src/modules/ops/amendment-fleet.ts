@@ -7,7 +7,7 @@ import {
   parsePositiveDecimal,
 } from '../../common/utils/decimal-input';
 import { fuelTotalCost } from './serialize-fleet';
-import { recalcSpend } from './spend';
+import { lockSpendProject, recalcSpend } from './spend';
 
 type Db = Prisma.TransactionClient | PrismaService;
 
@@ -74,7 +74,7 @@ export async function applyTripAmendment(
 }
 
 export async function applyFuelAmendment(
-  prisma: Db,
+  prisma: Prisma.TransactionClient,
   companyId: string,
   entityId: string,
   field: string,
@@ -86,6 +86,15 @@ export async function applyFuelAmendment(
       'FUEL field not allowed',
       400,
     );
+  }
+  // Lock the fuel row first so simultaneous amendments see its latest project
+  // and values before choosing the project locks and recording oldValue.
+  const locked = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "FuelEntry"
+    WHERE "id" = ${entityId} AND "companyId" = ${companyId}
+    FOR NO KEY UPDATE`;
+  if (locked.length === 0) {
+    throw new AppError(ERROR_CODES.NOT_FOUND, 'Fuel entry not found', 404);
   }
   const row = await prisma.fuelEntry.findFirst({
     where: { id: entityId, companyId },
@@ -102,6 +111,16 @@ export async function applyFuelAmendment(
       : row.unitPrice;
   const nextProjectId =
     field === 'projectId' ? newValue || null : row.projectId;
+  // Sort to avoid opposite-direction moves acquiring project locks in opposite
+  // orders. Tenant-scoped locks also reject foreign/nonexistent destinations.
+  const projects = [
+    ...new Set(
+      [row.projectId, nextProjectId].filter((id): id is string => id !== null),
+    ),
+  ].sort();
+  for (const projectId of projects) {
+    await lockSpendProject(prisma, companyId, projectId);
+  }
   await prisma.fuelEntry.update({
     where: { id: row.id },
     data: {

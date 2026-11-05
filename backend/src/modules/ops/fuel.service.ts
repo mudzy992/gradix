@@ -19,7 +19,7 @@ import {
 import { requireCompany } from '../users/users-helpers';
 import { ProjectAccessService } from './project-access.service';
 import { fuelTotalCost, serializeFuel } from './serialize-fleet';
-import { recalcSpend } from './spend';
+import { lockSpendProject, recalcSpend } from './spend';
 import { maybeNotifyFuelAnomaly } from './fuel-anomaly';
 import { CreateFuelDto, FuelListQueryDto } from './fuel.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -80,6 +80,7 @@ export class FuelService {
     const unitPrice = parseNonNegativeDecimal(dto.unitPrice, 'unitPrice');
     // BE-10 (F-01): upis goriva i ponovni obračun potrošnje projekta su jedna transakcija.
     const row = await this.prisma.$transaction(async (tx) => {
+      if (projectId) await lockSpendProject(tx, companyId, projectId);
       const created = await tx.fuelEntry.create({
         data: {
           companyId,

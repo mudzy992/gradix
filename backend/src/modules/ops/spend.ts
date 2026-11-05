@@ -5,6 +5,22 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
+/** All cooperating spend writers lock the tenant's project before changing source rows. */
+export async function lockSpendProject(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  projectId: string,
+): Promise<void> {
+  // NO KEY UPDATE remains compatible with foreign-key KEY SHARE locks.
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "Project"
+    WHERE "id" = ${projectId} AND "companyId" = ${companyId}
+    FOR NO KEY UPDATE`;
+  if (rows.length === 0) {
+    throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
+  }
+}
+
 export async function recalcSpend(tx: Tx, projectId: string): Promise<void> {
   const linkedFuel = await linkedSourceIds(tx, projectId, 'FUEL');
   const linkedService = await linkedSourceIds(tx, projectId, 'SERVICE');

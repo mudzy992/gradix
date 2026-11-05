@@ -9,7 +9,7 @@ import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parseNonNegativeMoney } from '../../common/utils/decimal-input';
 import { parseDateOnly } from '../../common/scope/company-tz';
 import { requireCompany } from '../users/users-helpers';
-import { recalcSpend } from '../ops/spend';
+import { lockSpendProject, recalcSpend } from '../ops/spend';
 import { CostQueryDto, CreateCostDto, FromPayrollDto } from './costs.dto';
 import { serializeCostEntry } from './serialize-erp';
 import { buildPayrollCost, mapCostConflict } from './from-payroll';
@@ -62,7 +62,7 @@ export class CostsService {
     const date = parseDateOnly(dto.date);
     try {
       const row = await this.prisma.$transaction(async (tx) => {
-        if (dto.projectId) await this.lockProject(tx, companyId, dto.projectId);
+        if (dto.projectId) await lockSpendProject(tx, companyId, dto.projectId);
         const created = await tx.costEntry.create({
           data: {
             companyId,
@@ -105,7 +105,7 @@ export class CostsService {
     try {
       const row = await this.prisma.$transaction(async (tx) => {
         if (built.projectId)
-          await this.lockProject(tx, companyId, built.projectId);
+          await lockSpendProject(tx, companyId, built.projectId);
         const created = await tx.costEntry.create({
           data: {
             companyId,
@@ -156,7 +156,7 @@ export class CostsService {
     // destruktivna ERP operacija koja nije ostavljala trag. Sada se briše i preračunava
     // u transakciji, a `COST_ENTRY_REMOVED` nosi dovoljno podataka za rekonstrukciju.
     await this.prisma.$transaction(async (tx) => {
-      if (row.projectId) await this.lockProject(tx, companyId, row.projectId);
+      if (row.projectId) await lockSpendProject(tx, companyId, row.projectId);
       // Another removal may have completed while waiting for the project lock.
       const current = await tx.costEntry.findFirst({
         where: { id, companyId },
@@ -182,22 +182,6 @@ export class CostsService {
         projectId: row.projectId,
       },
     });
-  }
-
-  private async lockProject(
-    tx: Prisma.TransactionClient,
-    companyId: string,
-    projectId: string,
-  ): Promise<void> {
-    // Serialize cooperating cost operations before mutation; NO KEY UPDATE stays
-    // compatible with FK KEY SHARE locks acquired by inserts for this project.
-    const rows = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id" FROM "Project"
-      WHERE "id" = ${projectId} AND "companyId" = ${companyId}
-      FOR NO KEY UPDATE`;
-    if (rows.length === 0) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
-    }
   }
 
   private async assertProject(

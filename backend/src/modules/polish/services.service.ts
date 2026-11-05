@@ -9,7 +9,7 @@ import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
 import { requireCompany } from '../users/users-helpers';
-import { recalcSpend } from '../ops/spend';
+import { lockSpendProject, recalcSpend } from '../ops/spend';
 import {
   CompleteServiceDto,
   CreateServiceDto,
@@ -180,6 +180,8 @@ export class ServicesService {
     // je dva puta vraćao status mašine, a pad između upisa ostavljao mašinu u servisu.
     // Sada je jedan atomski claim + restore mašine + `recalcSpend` u istoj transakciji.
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (record.projectId)
+        await lockSpendProject(tx, record.companyId, record.projectId);
       const claimed = await tx.serviceRecord.updateMany({
         where: { id, companyId: record.companyId, status: 'IN_PROGRESS' },
         data: {

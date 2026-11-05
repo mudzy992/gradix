@@ -581,6 +581,511 @@ describe('Phase 10 erp-lite (e2e)', () => {
     ).toBe('0.00');
   });
 
+  it('serializes cost, fuel and service completion before their project mutations', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({ name: 'Mixed spend race', code: `M${randomUUID().slice(0, 8)}` });
+    expect(project.status).toBe(201);
+    const id = project.body.data.id as string;
+    const otherProject = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Independent spend project',
+        code: `I${randomUUID().slice(0, 8)}`,
+      });
+    expect(otherProject.status).toBe(201);
+    const otherProjectId = otherProject.body.data.id as string;
+    const fuelMachine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Spend fuel machine', type: 'LOADER' });
+    const serviceMachine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Spend service machine', type: 'LOADER' });
+    expect(fuelMachine.status).toBe(201);
+    expect(serviceMachine.status).toBe(201);
+    const fuelMachineId = fuelMachine.body.data.id as string;
+    const serviceMachineId = serviceMachine.body.data.id as string;
+    const service = await request(app.getHttpServer())
+      .post('/api/services')
+      .set(auth(admin))
+      .send({ machineId: serviceMachineId, projectId: id });
+    expect(service.status).toBe(201);
+    const serviceId = service.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post(`/api/services/${serviceId}/start`)
+          .set(auth(admin))
+      ).status,
+    ).toBe(201);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${id} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let cost: Promise<request.Response> | undefined;
+    let fuel: Promise<request.Response> | undefined;
+    let complete: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      cost = request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          projectId: id,
+          category: 'MATERIAL',
+          date: '2026-11-05',
+          amount: '10',
+        })
+        .then((response) => response);
+      fuel = request(app.getHttpServer())
+        .post('/api/fuel')
+        .set(auth(admin))
+        .send({
+          projectId: id,
+          machineId: fuelMachineId,
+          liters: '10',
+          unitPrice: '2.50',
+        })
+        .then((response) => response);
+      complete = request(app.getHttpServer())
+        .post(`/api/services/${serviceId}/complete`)
+        .set(auth(admin))
+        .send({ totalCost: '30' })
+        .then((response) => response);
+      void cost.catch(() => undefined);
+      void fuel.catch(() => undefined);
+      void complete.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 3);
+      expect(await prisma.costEntry.count({ where: { projectId: id } })).toBe(
+        0,
+      );
+      expect(await prisma.fuelEntry.count({ where: { projectId: id } })).toBe(
+        0,
+      );
+      expect(
+        (
+          await prisma.serviceRecord.findUniqueOrThrow({
+            where: { id: serviceId },
+          })
+        ).status,
+      ).toBe('IN_PROGRESS');
+      expect(
+        (
+          await prisma.machine.findUniqueOrThrow({
+            where: { id: serviceMachineId },
+          })
+        ).status,
+      ).toBe('IN_SERVICE');
+      const independent = await request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          projectId: otherProjectId,
+          category: 'MATERIAL',
+          date: '2026-11-05',
+          amount: '1',
+        });
+      expect(independent.status).toBe(201);
+      release();
+      const [a, b, c] = await Promise.all([cost, fuel, complete]);
+      expect([a.status, b.status, c.status]).toEqual([201, 201, 201]);
+      expect(
+        (
+          await prisma.project.findUniqueOrThrow({ where: { id } })
+        ).currentSpend.toFixed(2),
+      ).toBe('65.00');
+      expect(
+        (
+          await prisma.serviceRecord.findUniqueOrThrow({
+            where: { id: serviceId },
+          })
+        ).status,
+      ).toBe('COMPLETED');
+    } finally {
+      release();
+      await Promise.allSettled([holder, cost, fuel, complete]);
+    }
+  });
+
+  it('rolls back fuel and service completion when the project spend limit is exceeded', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Mixed spend overflow',
+        code: `X${randomUUID().slice(0, 8)}`,
+      });
+    expect(project.status).toBe(201);
+    const id = project.body.data.id as string;
+    const cost = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({
+        projectId: id,
+        category: 'MATERIAL',
+        date: '2026-11-05',
+        amount: '9999999999.99',
+      });
+    expect(cost.status).toBe(201);
+    const fuelMachine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Overflow fuel machine', type: 'LOADER' });
+    const serviceMachine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Overflow service machine', type: 'LOADER' });
+    expect(fuelMachine.status).toBe(201);
+    expect(serviceMachine.status).toBe(201);
+    const fuelMachineId = fuelMachine.body.data.id as string;
+    const serviceMachineId = serviceMachine.body.data.id as string;
+    const service = await request(app.getHttpServer())
+      .post('/api/services')
+      .set(auth(admin))
+      .send({ projectId: id, machineId: serviceMachineId });
+    expect(service.status).toBe(201);
+    const serviceId = service.body.data.id as string;
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post(`/api/services/${serviceId}/start`)
+          .set(auth(admin))
+      ).status,
+    ).toBe(201);
+    const fuelAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'FUEL_CREATED' },
+    });
+    const serviceAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'SERVICE_COMPLETED' },
+    });
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        projectId: id,
+        machineId: fuelMachineId,
+        liters: '1',
+        unitPrice: '1',
+      });
+    const complete = await request(app.getHttpServer())
+      .post(`/api/services/${serviceId}/complete`)
+      .set(auth(admin))
+      .send({ totalCost: '1' });
+    expect([fuel.status, complete.status]).toEqual([409, 409]);
+    expect([fuel.body.error.code, complete.body.error.code]).toEqual([
+      'CONFLICT',
+      'CONFLICT',
+    ]);
+    expect(await prisma.fuelEntry.count({ where: { projectId: id } })).toBe(0);
+    expect(
+      (
+        await prisma.serviceRecord.findUniqueOrThrow({
+          where: { id: serviceId },
+        })
+      ).status,
+    ).toBe('IN_PROGRESS');
+    expect(
+      (
+        await prisma.machine.findUniqueOrThrow({
+          where: { id: serviceMachineId },
+        })
+      ).status,
+    ).toBe('IN_SERVICE');
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'FUEL_CREATED' },
+      }),
+    ).toBe(fuelAudit);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'SERVICE_COMPLETED' },
+      }),
+    ).toBe(serviceAudit);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id } })
+      ).currentSpend.toFixed(2),
+    ).toBe('9999999999.99');
+  });
+
+  it('keeps opposite fuel moves and concurrent edits consistent across projects', async () => {
+    const createProject = async (name: string) => {
+      const response = await request(app.getHttpServer())
+        .post('/api/projects')
+        .set(auth(admin))
+        .send({ name, code: `P${randomUUID().slice(0, 8)}` });
+      expect(response.status).toBe(201);
+      return response.body.data.id as string;
+    };
+    const a = await createProject('Fuel move A');
+    const b = await createProject('Fuel move B');
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel move machine', type: 'LOADER' });
+    expect(machine.status).toBe(201);
+    const machineId = machine.body.data.id as string;
+    const createFuel = async (projectId: string, liters: string) => {
+      const response = await request(app.getHttpServer())
+        .post('/api/fuel')
+        .set(auth(admin))
+        .send({ projectId, machineId, liters, unitPrice: '2' });
+      expect(response.status).toBe(201);
+      return response.body.data.id as string;
+    };
+    const fuelA = await createFuel(a, '5');
+    const fuelB = await createFuel(b, '10');
+    const amend = (entityId: string, field: string, newValue: string) =>
+      request(app.getHttpServer())
+        .post('/api/amendments')
+        .set(auth(admin))
+        .send({
+          entityType: 'FUEL',
+          entityId,
+          field,
+          newValue,
+          reason: 'correct project or quantity',
+        });
+    const firstProject = [a, b].sort()[0];
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${firstProject} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let first: Promise<request.Response> | undefined;
+    let second: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      first = amend(fuelA, 'projectId', b).then((response) => response);
+      second = amend(fuelB, 'projectId', a).then((response) => response);
+      void first.catch(() => undefined);
+      void second.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 2);
+      expect(
+        (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: fuelA } }))
+          .projectId,
+      ).toBe(a);
+      expect(
+        (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: fuelB } }))
+          .projectId,
+      ).toBe(b);
+      release();
+      const [one, two] = await Promise.all([first, second]);
+      expect([one.status, two.status]).toEqual([201, 201]);
+    } finally {
+      release();
+      await Promise.allSettled([holder, first, second]);
+    }
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: a } })
+      ).currentSpend.toFixed(2),
+    ).toBe('20.00');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: b } })
+      ).currentSpend.toFixed(2),
+    ).toBe('10.00');
+    let releaseFuel!: () => void;
+    let readyFuel!: () => void;
+    const fuelGate = new Promise<void>((resolve) => {
+      releaseFuel = resolve;
+    });
+    const fuelLocked = new Promise<void>((resolve) => {
+      readyFuel = resolve;
+    });
+    const fuelHolder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "FuelEntry" WHERE "id" = ${fuelA} FOR NO KEY UPDATE`;
+        readyFuel();
+        await fuelGate;
+      },
+      { timeout: 15000 },
+    );
+    let litersPending: Promise<request.Response> | undefined;
+    let pricePending: Promise<request.Response> | undefined;
+    let liters!: request.Response;
+    let price!: request.Response;
+    try {
+      await Promise.race([fuelLocked, fuelHolder]);
+      litersPending = amend(fuelA, 'liters', '7').then((response) => response);
+      pricePending = amend(fuelA, 'unitPrice', '3').then(
+        (response) => response,
+      );
+      void litersPending.catch(() => undefined);
+      void pricePending.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 2, 'FuelEntry');
+      releaseFuel();
+      [liters, price] = await Promise.all([litersPending, pricePending]);
+      expect([liters.status, price.status]).toEqual([201, 201]);
+    } finally {
+      releaseFuel();
+      await Promise.allSettled([fuelHolder, litersPending, pricePending]);
+    }
+    const changed = await prisma.fuelEntry.findUniqueOrThrow({
+      where: { id: fuelA },
+    });
+    expect(changed.projectId).toBe(b);
+    expect(changed.liters.toString()).toBe('7');
+    expect(changed.unitPrice.toString()).toBe('3');
+    expect(changed.totalCost.toFixed(2)).toBe('21.00');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: b } })
+      ).currentSpend.toFixed(2),
+    ).toBe('21.00');
+    expect(liters.body.data.oldValue).toBe('5');
+    expect(price.body.data.oldValue).toBe('2');
+  });
+
+  it('rejects foreign and missing fuel amendment projects and rolls back overflowing moves', async () => {
+    const createProject = async (name: string) => {
+      const response = await request(app.getHttpServer())
+        .post('/api/projects')
+        .set(auth(admin))
+        .send({ name, code: `Q${randomUUID().slice(0, 8)}` });
+      expect(response.status).toBe(201);
+      return response.body.data.id as string;
+    };
+    const source = await createProject('Fuel amendment source');
+    const target = await createProject('Fuel amendment full target');
+    const cap = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({
+        projectId: target,
+        category: 'MATERIAL',
+        date: '2026-11-05',
+        amount: '9999999999.99',
+      });
+    expect(cap.status).toBe(201);
+    const foreignCompany = await prisma.company.create({
+      data: { name: 'Foreign fuel project company', slug: `f-${randomUUID()}` },
+    });
+    const foreign = await prisma.project.create({
+      data: {
+        companyId: foreignCompany.id,
+        name: 'Foreign fuel project',
+        geofenceRadius: 100,
+      },
+    });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel amendment machine', type: 'LOADER' });
+    expect(machine.status).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        projectId: source,
+        machineId: machine.body.data.id,
+        liters: '5',
+        unitPrice: '2',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const before = await prisma.amendment.count({
+      where: { companyId, entityType: 'FUEL', entityId: fuelId },
+    });
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+    });
+    for (const [targetId, status] of [
+      [foreign.id, 404],
+      ['missing-project-id', 404],
+      [target, 409],
+    ] as const) {
+      const result = await request(app.getHttpServer())
+        .post('/api/amendments')
+        .set(auth(admin))
+        .send({
+          entityType: 'FUEL',
+          entityId: fuelId,
+          field: 'projectId',
+          newValue: targetId,
+          reason: 'correct project',
+        });
+      expect(result.status).toBe(status);
+    }
+    expect(
+      (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: fuelId } }))
+        .projectId,
+    ).toBe(source);
+    expect(
+      await prisma.amendment.count({
+        where: { companyId, entityType: 'FUEL', entityId: fuelId },
+      }),
+    ).toBe(before);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+      }),
+    ).toBe(auditBefore);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: source } })
+      ).currentSpend.toFixed(2),
+    ).toBe('10.00');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: target } })
+      ).currentSpend.toFixed(2),
+    ).toBe('9999999999.99');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: foreign.id } })
+      ).currentSpend.toFixed(2),
+    ).toBe('0.00');
+    const clear = await request(app.getHttpServer())
+      .post('/api/amendments')
+      .set(auth(admin))
+      .send({
+        entityType: 'FUEL',
+        entityId: fuelId,
+        field: 'projectId',
+        newValue: '',
+        reason: 'remove project',
+      });
+    expect(clear.status).toBe(201);
+    expect(
+      (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: fuelId } }))
+        .projectId,
+    ).toBeNull();
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: source } })
+      ).currentSpend.toFixed(2),
+    ).toBe('0.00');
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')
@@ -1092,14 +1597,16 @@ describe('Phase 10 erp-lite (e2e)', () => {
 async function waitForCostProjectLock(
   prisma: PrismaService,
   minimum: number,
+  table: 'Project' | 'FuelEntry' = 'Project',
 ): Promise<void> {
+  const pattern = `%FROM "${table}"%FOR NO KEY UPDATE%`;
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
       SELECT count(*)::integer AS waiting FROM pg_stat_activity
       WHERE datname = current_database() AND pid <> pg_backend_pid()
-        AND wait_event_type = 'Lock' AND query LIKE ${'%FROM "Project"%FOR NO KEY UPDATE%'}`;
+        AND wait_event_type = 'Lock' AND query LIKE ${pattern}`;
     if (rows[0].waiting >= minimum) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  throw new Error('Expected project lock wait did not occur');
+  throw new Error('Expected spend lock wait did not occur');
 }
