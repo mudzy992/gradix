@@ -23,7 +23,8 @@ backend/prisma/migrations/20261103210000_be15_office_audit_actions/migration.sql
 backend/prisma/migrations/20261104120000_project_document_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-15: nullable ključ i unikatan indeks bez izmjene starih redova; E2E u CI,2026-11-04
 backend/prisma/migrations/20261104150000_refresh_token_family/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-35: nullable kolona i indeks bez izmjene postojećih redova,2026-11-04
 backend/prisma/migrations/20261104220000_project_document_tombstone/migration.sql,BE,migrations,BE-08,5,pregledano,CI-05 F-49: aditivna nullable kolona i indeks; PostgreSQL E2E čeka CI.,2026-11-04
-backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,103,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
+backend/prisma/migrations/20261105120000_stock_movement_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-61: nullable key i unique po firmi,2026-11-05
+backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,106,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri)",2026-11-03
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
 backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,334,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene; F-CI-05-35: nullable porodica refresh tokena i indeks po vlasniku",2026-11-04
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,411,pregledano,CI-05 F-49: tombstone projektnih dokumenata i indeks; ostali BE-08 FK indeksi zadržani.,2026-11-04
@@ -133,10 +134,11 @@ backend/src/modules/erp/partners.dto.ts,BE,erp,BE-14,64,pregledano,"BE-14: pregl
 backend/src/modules/erp/partners.service.ts,BE,erp,BE-14,104,pregledano,F-04: PARTNER_CREATED/PARTNER_UPDATED audit,2026-11-03
 backend/src/modules/erp/serialize-erp.ts,BE,erp,BE-14,82,pregledano,"BE-14: Decimal → string sa 2 decimale, bez curenja internih polja",2026-11-03
 backend/src/modules/erp/stock-balance.ts,BE,erp,BE-14,30,pregledano,F-01: prima TransactionClient (provjera+upis atomični),2026-11-03
+backend/src/modules/erp/stock-idempotency.spec.ts,BE,erp,BE-14,153,pokriveno-testom,F-CI-05-61: replay i konflikt,2026-11-05
 backend/src/modules/erp/stock.controller.ts,BE,erp,BE-14,27,pregledano,BE-14: pokreti zaliha pod erp.read/erp.write + tenant scope,2026-11-03
-backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,237,pregledano,"F-01/F-02: SERIALIZABLE transakcija, P2002 idempotentan",2026-11-03
+backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,304,pregledano,"F-01/F-02: SERIALIZABLE transakcija, P2002 idempotentan",2026-11-03
 backend/src/modules/erp/warehouses.controller.ts,BE,erp,BE-14,33,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
-backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,54,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
+backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,59,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
 backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,85,pregledano,F-04: WAREHOUSE_CREATED audit,2026-11-03
 backend/src/modules/files/detect-mime.ts,BE,files,BE-11,45,pregledano,"BE-11: MIME iz magic bytes (jpeg/png/webp/pdf/docx/xlsx), ne iz imena fajla",2026-11-03
 backend/src/modules/files/files.controller.ts,BE,files,BE-11,77,pregledano,"BE-11 (F-12): download šalje `Content-Type`/`Content-Length`/`nosniff`/`CSP sandbox`/`no-store`, greška streama uništi odgovor",2026-11-03
@@ -323,7 +325,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,286,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom; F-CI-05-37: atomska deaktivacija i ponovljeni timer cleanup; F-CI-05-40: revalidacija ciljnog tenanta i rola pod lockom pri resetu; F-CI-05-41: company lock i provjere prije izmjene rola/statusa",2026-11-04
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,828,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka; F-CI-05-36: DB rollback i kontrolisane utrke promjene lozinke; F-CI-05-37: DB rollback i rotacija; timer failure/retry; F-CI-05-40: promocija cilja i rollback admin reseta; F-CI-05-41: deactivation/rotation čeka company SHARE,2026-11-04
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,316,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,528,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03

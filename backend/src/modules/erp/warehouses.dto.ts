@@ -2,6 +2,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -30,6 +31,10 @@ export class CreateWarehouseDto {
 }
 
 export class CreateMovementDto {
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
+
   @IsString()
   warehouseId!: string;
 

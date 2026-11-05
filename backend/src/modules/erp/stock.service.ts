@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../../generated/client';
+import { createHash } from 'crypto';
+import { Prisma, StockMovement } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../common/types/auth-user';
@@ -50,37 +51,103 @@ export class StockService {
   async createMovement(actor: AuthUser, dto: CreateMovementDto) {
     const companyId = requireCompany(actor);
     const qty = parseNonZeroDecimal(dto.qty, 'qty');
+    const key = dto.idempotencyKey?.toLowerCase();
+    // Fingerprint the requested payload, not rounded DB qty or mutable warehouse defaults.
+    const fingerprint = key
+      ? createHash('sha256')
+          .update(
+            JSON.stringify([
+              dto.warehouseId,
+              dto.materialId,
+              qty.toString(),
+              dto.projectId ?? null,
+            ]),
+          )
+          .digest('hex')
+      : null;
+    if (key) {
+      const previous = await this.prisma.stockMovement.findFirst({
+        where: { companyId, idempotencyKey: key },
+      });
+      if (previous) return this.replayMovement(previous, fingerprint!);
+    }
     const warehouse = await this.loadWarehouse(companyId, dto.warehouseId);
     await this.loadMaterial(companyId, dto.materialId);
-    // BE-14 F-01: provjera stanja i upis pokreta su ranije bili odvojeni (check-then-insert),
-    // pa su dva paralelna izlaza mogla oba proći provjeru i stanje bi otišlo u minus.
-    // Sada su u jednoj SERIALIZABLE transakciji.
-    const row = await this.runStockTx(async (tx) => {
-      await this.assertNotNegative(
-        tx,
-        companyId,
-        warehouse.id,
-        dto.materialId,
-        qty,
-      );
-      return tx.stockMovement.create({
-        data: {
+    // Look up the key before checking balance: a retry must replay the committed
+    // movement even if applying it a second time would make stock negative.
+    let result: { row: StockMovement; created: boolean };
+    try {
+      result = await this.runStockTx(async (tx) => {
+        if (key) {
+          const previous = await tx.stockMovement.findFirst({
+            where: { companyId, idempotencyKey: key },
+          });
+          if (previous) {
+            this.assertMovementFingerprint(previous, fingerprint!);
+            return { row: previous, created: false };
+          }
+        }
+        await this.assertNotNegative(
+          tx,
           companyId,
-          warehouseId: warehouse.id,
-          materialId: dto.materialId,
+          warehouse.id,
+          dto.materialId,
           qty,
-          projectId: dto.projectId ?? warehouse.projectId,
-        },
+        );
+        const row = await tx.stockMovement.create({
+          data: {
+            companyId,
+            warehouseId: warehouse.id,
+            materialId: dto.materialId,
+            qty,
+            projectId: dto.projectId ?? warehouse.projectId,
+            idempotencyKey: key,
+            requestFingerprint: fingerprint,
+          },
+        });
+        return { row, created: true };
       });
-    });
-    await this.audit.write({
-      companyId,
-      actorId: actor.id,
-      action: 'STOCK_MOVEMENT',
-      entityType: 'StockMovement',
-      entityId: row.id,
-      payload: { qty: qty.toString() },
-    });
+    } catch (error) {
+      if (
+        !key ||
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2002'
+      )
+        throw error;
+      const previous = await this.prisma.stockMovement.findFirst({
+        where: { companyId, idempotencyKey: key },
+      });
+      if (!previous) throw error;
+      return this.replayMovement(previous, fingerprint!);
+    }
+    if (result.created) {
+      await this.audit.write({
+        companyId,
+        actorId: actor.id,
+        action: 'STOCK_MOVEMENT',
+        entityType: 'StockMovement',
+        entityId: result.row.id,
+        payload: { qty: qty.toString() },
+      });
+    }
+    return serializeMovement(result.row);
+  }
+
+  private assertMovementFingerprint(
+    row: StockMovement,
+    fingerprint: string,
+  ): void {
+    if (row.requestFingerprint !== fingerprint) {
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Idempotency key already used',
+        409,
+      );
+    }
+  }
+
+  private replayMovement(row: StockMovement, fingerprint: string) {
+    this.assertMovementFingerprint(row, fingerprint);
     return serializeMovement(row);
   }
 

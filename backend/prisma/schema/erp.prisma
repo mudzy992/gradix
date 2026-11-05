@@ -86,6 +86,8 @@ model StockMovement {
   qty         Decimal   @db.Decimal(12, 3)
   projectId   String?
   fuelEntryId String?   @unique
+  idempotencyKey String?
+  requestFingerprint String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   company     Company   @relation(fields: [companyId], references: [id])
@@ -94,6 +96,7 @@ model StockMovement {
   project     Project?  @relation(fields: [projectId], references: [id])
   fuelEntry   FuelEntry? @relation(fields: [fuelEntryId], references: [id])
 
+  @@unique([companyId, idempotencyKey])
   @@index([companyId, warehouseId, materialId])
   @@index([warehouseId])
   @@index([materialId])
