@@ -7,6 +7,7 @@ import type { ListUser } from '@/lib/api-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { UsersPage } from '@/pages/users-page'
+import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
 
 /**
  * FE-13 — korisnici. Drži: status u tabeli (prije nije postojao), reaktivaciju (prije je nije bilo),
@@ -142,6 +143,7 @@ describe('UsersPage', () => {
     renderPage()
     await userEvent.click(await screen.findByRole('button', { name: 'Reset lozinke' }))
     const dialog = await screen.findByRole('alertdialog')
+    expect(isSensitiveNavigationBlocked()).toBe(true)
     const confirm = within(dialog).getByRole('button', { name: 'Potvrdi' })
     // Two events before the pending render must not send two resets.
     act(() => { fireEvent.click(confirm); fireEvent.click(confirm) })
@@ -154,8 +156,10 @@ describe('UsersPage', () => {
     expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
     await act(async () => { resolve({ data: { temporaryPassword: 'Temp-1234' } }) })
     expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+    expect(isSensitiveNavigationBlocked()).toBe(true)
     expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
     await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Potvrdi' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
     act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
   })
 
@@ -239,8 +243,10 @@ describe('UsersPage', () => {
     expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
     await act(async () => { resolve({ data: { temporaryPassword: 'Temp-1234' } }) })
     expect(await screen.findByText('Temp-1234')).toBeInTheDocument()
+    expect(isSensitiveNavigationBlocked()).toBe(true)
     expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
     await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Potvrdi' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
     act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
   })
 

@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +26,7 @@ type Props = {
  */
 export function TempPasswordDialog({ password, onClose }: Props) {
   const { t } = useTranslation()
+  useSensitiveNavigationBlock(Boolean(password))
   const codeRef = useRef<HTMLElement>(null)
   const copy = async (): Promise<void> => {
     if (!password) {

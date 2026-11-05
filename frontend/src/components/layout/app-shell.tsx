@@ -10,6 +10,7 @@ import { UserMenu } from '@/components/layout/user-menu'
 import { navLabelKeyFor } from '@/components/layout/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { Bell } from '@/components/notifications/bell'
+import { useSensitiveNavigationGuard } from '@/hooks/use-sensitive-navigation'
 
 function Brand() {
   const { t } = useTranslation()
@@ -34,6 +35,7 @@ function BrandNav({ onNavigate }: { onNavigate?: () => void }) {
  *  4. reset skrola pri promjeni rute (bez toga nova stranica starta na staroj poziciji).
  */
 export function AppShell() {
+  useSensitiveNavigationGuard()
   const { t, i18n } = useTranslation()
   const locale = useAuthStore((state) => state.user?.locale)
   const { pathname } = useLocation()

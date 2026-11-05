@@ -10,6 +10,7 @@ import { ROLES, type AppRole } from '@/lib/constants'
 import type { ListUser } from '@/lib/api-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenantReady } from '@/hooks/use-tenant-ready'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +58,7 @@ export function UsersPage() {
   const [deactivate, setDeactivate] = useState<ListUser | null>(null)
   const [activate, setActivate] = useState<ListUser | null>(null)
   const [resetTarget, setResetTarget] = useState<ListUser | null>(null)
+  useSensitiveNavigationBlock(Boolean(resetTarget))
   // A synchronous latch closes the gap before React Query renders isPending.
   const resetInFlight = useRef(false)
   const query = useQuery({

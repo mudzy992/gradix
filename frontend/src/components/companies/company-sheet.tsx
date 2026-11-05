@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { toast } from 'sonner'
 import { createCompany, patchCompanyPlatform } from '@/lib/api'
 import { errorMessage } from '@/lib/error-message'
@@ -35,6 +36,7 @@ const SLUG = /^[a-z0-9-]{3,40}$/
  */
 export function CompanySheet({ company, open, onOpenChange, onCreated, onSaved }: Props) {
   const { t } = useTranslation()
+  useSensitiveNavigationBlock(open)
   const [saving, setSaving] = useState(false)
   const [uncertain, setUncertain] = useState(false)
   const savingRef = useRef(false)

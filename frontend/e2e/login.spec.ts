@@ -275,6 +275,14 @@ test('creating a user keeps the form open until the one-time result arrives', as
     await sheet.getByRole('button', { name: 'Zatvori' }).click()
     await page.keyboard.press('Escape')
     await expect(sheet).toBeVisible()
+    await page.evaluate(() => window.history.back())
+    await expect(page.getByText('Sačuvajte ili zatvorite obrazac, odnosno potvrdite jednokratnu lozinku prije napuštanja stranice.')).toBeVisible()
+    await expect(page).toHaveURL(/\/users$/)
+    expect(await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    })).toBe(true)
     expect(createCount).toBe(1)
     release()
     await expect(page.getByText('Temporary-example-456')).toBeVisible()

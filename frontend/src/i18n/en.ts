@@ -225,6 +225,7 @@ export const en = {
     markAll: 'Mark all read',
   },
   common: {
+    navigationProtected: 'Save or close the form, or confirm the one-time password before leaving the page.',
     createUnknown: 'Creation was not confirmed. The record and temporary password may already have been created; check the outcome before trying again.',
     enableRetry: 'I understand, enable another attempt',
     savingWait: 'Saving is in progress. Wait for the response and do not leave this page.',

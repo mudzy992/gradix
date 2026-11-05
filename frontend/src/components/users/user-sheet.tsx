@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { toast } from 'sonner'
 import { createUser, patchUser } from '@/lib/api'
 import { errorMessage } from '@/lib/error-message'
@@ -41,6 +42,7 @@ type Props = {
  */
 export function UserSheet({ user, open, onOpenChange, onCreated, onSaved }: Props) {
   const { t } = useTranslation()
+  useSensitiveNavigationBlock(open)
   const [saving, setSaving] = useState(false)
   const [uncertain, setUncertain] = useState(false)
   const savingRef = useRef(false)

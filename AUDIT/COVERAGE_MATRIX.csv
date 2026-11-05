@@ -353,7 +353,7 @@ frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prij
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
 frontend/e2e/flows.spec.ts,FE,e2e,FE-06,227,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
-frontend/e2e/login.spec.ts,FE,e2e,FE-06,288,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
+frontend/e2e/login.spec.ts,FE,e2e,FE-06,296,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
 frontend/e2e/session.ts,FE,e2e,FE-06,28,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
 frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: radnik vidi HSE prečicu (prije je test tvrdio suprotno),2026-11-03
@@ -368,12 +368,12 @@ frontend/src/components/auth/boot-gate.tsx,FE,ops-ui,FE-08,17,pregledano,CI-05 F
 frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI-05: pregled prekidača vidljivosti i aria-pressed; auth-pages.spec.tsx testira prikaz/skrivanje.,2026-11-04
 frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,21,pregledano,"CI-05 F-50: obje greške, naslov, alert i akcije.",2026-11-04
 frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,CI-05 F-50: pristupačna i prevedena ponuda recoveryja za 429/mrežu.,2026-11-04
-frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,181,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
+frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
 frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,163,pregledano,"FE-12: prevedene kategorije i izvori, formatAmount, odvojena forma „Iz obračuna“, labela datuma, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,98,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,167,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
-frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,120,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
+frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,122,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
 frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,156,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
 frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,64,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
 frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano,"FE-10: HSE stavka vidljiva uz hse.write bez hse.read, uz hse.read, i skrivena bez ijednog prava",2026-11-03
@@ -427,8 +427,8 @@ frontend/src/components/ui/table.tsx,FE,ui,FE-16,132,pregledano,"FE-03: TableHea
 frontend/src/components/ui/tabs.tsx,FE,ui,FE-16,95,pregledano,"FE-16: neaktivni tab `text-foreground/60` = 4,26:1 (ispod AA) → `text-muted-foreground` = 5,02:1; test čuva klasu",2026-11-04
 frontend/src/components/ui/textarea.tsx,FE,ui,FE-16,21,pregledano,FE-16: dodata `aria-invalid`/`disabled` stanja kao u `Input` (neispravno polje se nije videlo); pokriveno testom,2026-11-04
 frontend/src/components/users/temp-password-dialog.spec.tsx,TEST,fe-unit,FE-05,67,pregledano,"FE-13: 3 testa — kopiranje, fallback bez clipboarda, zatvaranje",2026-11-04
-frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,77,pregledano,FE-13: kopiranje bez neuhvaćene greške — fallback označavanje teksta + poruka,2026-11-04
-frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,202,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
+frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,79,pregledano,FE-13: kopiranje bez neuhvaćene greške — fallback označavanje teksta + poruka,2026-11-04
+frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,204,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,197,pregledano,"CI-05 F-50: 14 testova uključujući retry, profil, unmount i promjenu sesije.",2026-11-04
 frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,91,pregledano,"CI-05 F-50: vidljiv retry, ponovno čitanje profila bez dodatne rotacije i zaštita generacije.",2026-11-04
 frontend/src/hooks/use-company-switch-block.ts,FE,shared,FE-15,11,popravljeno,F-CI-05-52: layout lifecycle za više istovremenih modalnih blokada,2026-11-04
@@ -438,10 +438,12 @@ frontend/src/hooks/use-me.spec.tsx,TEST,fe-unit,FE-05,99,pregledano,"FE-15: 8 te
 frontend/src/hooks/use-me.ts,FE,shared,FE-15,31,pregledano,FE-15: pregledano — prava/role tolerantne na `me` bez nizova; `useMeQuery` upisuje profil u store; pokriveno testom,2026-11-04
 frontend/src/hooks/use-public-settings.spec.tsx,TEST,fe-unit,FE-05,95,pregledano,"FE-14: 5 testova — ispravne vrijednosti, nevalidna zona → fallback (bez RangeError), prazno/bez dd-MM → default, ne-string vrijednosti, bez slug-a nema poziva",2026-11-04
 frontend/src/hooks/use-public-settings.ts,FE,shared,FE-15,59,pregledano,FE-14: nevalidna/prazna `app.timezone` rušila Intl (RangeError) → validacija + fallback; format bez dd/MM → default; staleTime 5 min,2026-11-04
+frontend/src/hooks/use-sensitive-navigation.spec.tsx,TEST,fe-unit,FE-05,81,pokriveno-testom,F-CI-05-55: link back programatska ruta odjava unload i višestruke blokade,2026-11-05
+frontend/src/hooks/use-sensitive-navigation.ts,FE,shared,FE-15,25,popravljeno,F-CI-05-55: lifecycle osjetljivih radnji i router guard,2026-11-05
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,424,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,424,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,51,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
@@ -488,6 +490,7 @@ frontend/src/lib/query-client.spec.ts,TEST,fe-unit,FE-05,32,pregledano,"FE-15: 4
 frontend/src/lib/query-client.ts,FE,shared,FE-15,25,pregledano,FE-15: shouldRetry — ponavlja samo NETWORK_ERROR i 5xx (403/404/429 se ne ponavljaju),2026-11-04
 frontend/src/lib/roles.spec.ts,TEST,fe-unit,FE-05,50,pregledano,"FE-15: 5 testova — assignableRoles (PLATFORM_ADMIN nikad, SUPER_ADMIN samo za super/platform), nedostajući `roles`, displayName",2026-11-04
 frontend/src/lib/roles.ts,FE,shared,FE-15,18,pregledano,FE-15: assignableRoles tolerantan na `roles` koji nedostaje (FE-13 lekcija),2026-11-04
+frontend/src/lib/sensitive-navigation.ts,FE,shared,FE-15,26,popravljeno,F-CI-05-55: nezavisne blokade i unload uz sigurnosnu odjavu,2026-11-05
 frontend/src/lib/settings-keys.ts,FE,admin-ui,FE-13,28,pregledano,FE-13: spisak ključeva registra; test drži da svaki ima bs/en prijevod (D-052),2026-11-04
 frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,171,pregledano,"FE-15: 9 testova — local vs session po „zapamti me“, čišćenje, blokirana pohrana (memorijski fallback)",2026-11-04
 frontend/src/lib/storage.ts,FE,shared,FE-15,162,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
@@ -535,8 +538,8 @@ frontend/src/pages/tasks-page.spec.tsx,TEST,fe-unit,FE-05,216,pregledano,"CI-05:
 frontend/src/pages/tasks-page.tsx,FE,ops-pages,FE-08,118,pregledano,"FE-08: prevedene kolone sa brojem, skeleton po koloni, prazna kolona porukom, preveden prioritet sa tonom, role=region za horizontalni skrol, greška + retry",2026-11-03
 frontend/src/pages/tenders-page.spec.tsx,TEST,fe-unit,FE-05,152,pregledano,"FE-11: prevedene faze i iznosi, broj po fazi, prazna faza, skeleton, greška + retry, akcije (poslan→dobijen), obavezna polja i kreiranje",2026-11-03
 frontend/src/pages/tenders-page.tsx,FE,office-pages,FE-11,197,pregledano,"FE-11: broj i prazno stanje po fazi (region po fazi), skeleton + aria-busy, greška + retry, formatAmount (12.000,00), prevedene akcije („Označi kao dobijen“), labele i poruka za obavezna polja",2026-11-03
-frontend/src/pages/users-page.spec.tsx,TEST,fe-unit,FE-05,315,pregledano,"FE-13: 11 testova — status/„to ste vi“, reaktivacija, deaktivacija, reset uz potvrdu, greška + retry, prazno, labele, kreiranje, validacije, paginacija",2026-11-04
-frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,332,pregledano,CI-05 F-52: pregledano; lokalni state dijaloga i jednokratne lozinke nije scopeovan na firmu.,2026-11-04
+frontend/src/pages/users-page.spec.tsx,TEST,fe-unit,FE-05,321,pregledano,"FE-13: 11 testova — status/„to ste vi“, reaktivacija, deaktivacija, reset uz potvrdu, greška + retry, prazno, labele, kreiranje, validacije, paginacija",2026-11-04
+frontend/src/pages/users-page.tsx,FE,admin-pages,FE-13,334,pregledano,CI-05 F-52: pregledano; lokalni state dijaloga i jednokratne lozinke nije scopeovan na firmu.,2026-11-04
 frontend/src/routes/app-router.tsx,FE,app-shell,FE-02,230,pregledano,CI-05 F-50: izdvojen BootGate; javni sajt i auth rute zadržavaju postojeći raspored.,2026-11-04
 frontend/src/routes/guards.tsx,FE,app-shell,FE-02,84,pregledano,"FE-02: guardovi vraćaju Navigate (bez bijelog ekrana), jednokratni toast na 403; odlazak na /dashboard kao fallback",2026-11-03
 frontend/src/routes/lazy-pages.tsx,FE,app-shell,FE-02,53,pregledano,"FE-02: lazy fleet/map (Leaflet), javni sajt, obračun i ERP; Suspense fallback = ScreenLoader (D-015/D-041)",2026-11-03
