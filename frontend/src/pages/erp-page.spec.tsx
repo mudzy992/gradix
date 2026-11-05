@@ -316,6 +316,119 @@ describe('ErpPage', () => {
     expect(createCostEntry).toHaveBeenCalledTimes(1)
   })
 
+  it('obračun: promjena godine ili mjeseca štiti nacrt nezavisno od ručnog troška', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const year = screen.getByLabelText('Godina') as HTMLInputElement
+    const month = screen.getByLabelText('Mjesec') as HTMLInputElement
+    const initialYear = year.value
+    const initialMonth = month.value
+    const payrollForm = screen.getByRole('button', { name: 'Iz obračuna' }).closest('form')!
+    const manualForm = screen.getByRole('button', { name: 'Novi trošak' }).closest('form')!
+    fireEvent.change(year, { target: { value: initialYear === '2024' ? '2025' : '2024' } })
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(screen.getByRole('tab', { name: 'Troškovi' })).toHaveAttribute('aria-selected', 'true')
+    fireEvent.change(year, { target: { value: initialYear } })
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    fireEvent.change(month, { target: { value: initialMonth === '1' ? '2' : '1' } })
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.type(screen.getByLabelText('Iznos troška'), '10')
+    await userEvent.click(within(payrollForm).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(month).toHaveValue(Number(initialMonth))
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(within(manualForm).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('obračun: pending blokira karticu i ponavljanje, nepoznat ishod zahtijeva potvrdu prije retryja', async () => {
+    let reject!: (error: Error) => void
+    fromPayroll.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const year = screen.getByLabelText('Godina')
+    const month = screen.getByLabelText('Mjesec')
+    fireEvent.change(year, { target: { value: '2024' } })
+    fireEvent.change(month, { target: { value: '3' } })
+    const button = screen.getByRole('button', { name: 'Iz obračuna' })
+    const form = button.closest('form')!
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    expect(fromPayroll).toHaveBeenCalledTimes(1)
+    expect(fromPayroll).toHaveBeenCalledWith({ year: 2024, month: 3 })
+    expect(year).toBeDisabled()
+    expect(month).toBeDisabled()
+    expect(within(form).getByRole('button', { name: 'Odbaci nacrt' })).toBeDisabled()
+    expect(within(form).getByRole('status')).toHaveTextContent('Spremanje je u toku')
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(screen.getByRole('tab', { name: 'Partneri' }))
+    expect(screen.getByRole('tab', { name: 'Troškovi' })).toHaveAttribute('aria-selected', 'true')
+    await act(async () => { reject(new Error('offline')) })
+    expect(within(form).getByRole('alert')).toHaveTextContent('Trošak za odabrani period možda već postoji')
+    expect(year).toHaveValue(2024)
+    expect(month).toHaveValue(3)
+    expect(button).toBeDisabled()
+    fireEvent.submit(form)
+    expect(fromPayroll).toHaveBeenCalledTimes(1)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(button)
+    expect(fromPayroll).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
+    expect(year).toHaveValue(2024)
+    expect(month).toHaveValue(3)
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('obračun: greška za početni period ostaje zaštićena i može se odbaciti; prazna polja nisu validna', async () => {
+    fromPayroll.mockRejectedValueOnce(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const year = screen.getByLabelText('Godina') as HTMLInputElement
+    const month = screen.getByLabelText('Mjesec') as HTMLInputElement
+    const button = screen.getByRole('button', { name: 'Iz obračuna' })
+    const form = button.closest('form')!
+    await userEvent.click(button)
+    expect(await within(form).findByRole('alert')).toHaveTextContent('nije potvrđeno')
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(within(form).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    fireEvent.change(year, { target: { value: '' } })
+    expect(year.checkValidity()).toBe(false)
+    fireEvent.change(year, { target: { value: '2024' } })
+    fireEvent.change(month, { target: { value: '' } })
+    expect(month.checkValidity()).toBe(false)
+    fireEvent.change(month, { target: { value: '13' } })
+    expect(month.checkValidity()).toBe(false)
+    await userEvent.click(button)
+    expect(fromPayroll).toHaveBeenCalledTimes(1)
+  })
+
+  it('uspjeh jednog od dva paralelna ERP upisa ne oslobađa drugu radnju', async () => {
+    let finishManual!: (value: object) => void
+    let finishPayroll!: (value: object) => void
+    createCostEntry.mockReturnValueOnce(new Promise((resolve) => { finishManual = resolve }))
+    fromPayroll.mockReturnValueOnce(new Promise((resolve) => { finishPayroll = resolve }))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    await userEvent.type(screen.getByLabelText('Iznos troška'), '50')
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Iz obračuna' }))
+    expect(createCostEntry).toHaveBeenCalledTimes(1)
+    expect(fromPayroll).toHaveBeenCalledTimes(1)
+    await act(async () => { finishManual({}) })
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(screen.getByRole('tab', { name: 'Troškovi' })).toHaveAttribute('aria-selected', 'true')
+    await act(async () => { finishPayroll({}) })
+    await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
   it('troškovi: prazna lista ima poruku, a greška nudi ponovni pokušaj', async () => {
     listCostEntries.mockRejectedValueOnce(new Error('mreža'))
     listCostEntries.mockResolvedValueOnce({ data: [], meta: { total: 0 } })

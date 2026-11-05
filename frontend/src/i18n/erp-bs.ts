@@ -1,7 +1,8 @@
 export const erpBs = {
   erp: {
+    payrollUnknown: 'Kreiranje iz obračuna nije potvrđeno. Trošak za odabrani period možda već postoji; provjerite prije novog pokušaja.',
     costUnknown: 'Kreiranje nije potvrđeno. Trošak možda već postoji; provjerite prije novog pokušaja.',
-    costTabBlocked: 'Sačuvajte ili odbacite nacrt troška i sačekajte završetak upisa prije promjene kartice.',
+    costTabBlocked: 'Sačuvajte ili odbacite nacrt troška ili obračuna i sačekajte završetak upisa prije promjene kartice.',
     partnerUnknown: 'Kreiranje nije potvrđeno. Partner možda već postoji; provjerite prije novog pokušaja.',
     partnerTabBlocked: 'Sačuvajte ili odbacite nacrt partnera i sačekajte završetak upisa prije promjene kartice.',
     title: 'ERP-lite',

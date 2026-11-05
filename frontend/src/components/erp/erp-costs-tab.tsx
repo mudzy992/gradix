@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/field'
 
-const now = new Date()
 
 type Props = {
   canWrite: boolean
@@ -36,8 +35,20 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
   const [uncertain, setUncertain] = useState(false)
   const savingRef = useRef(false)
   const uncertainRef = useRef(false)
+  // Capture the defaults when this tab mounts, not when the module was loaded.
+  const [payrollBaseline, setPayrollBaseline] = useState(() => {
+    const now = new Date()
+    return { year: String(now.getFullYear()), month: String(now.getMonth() + 1) }
+  })
+  const [payrollYear, setPayrollYear] = useState(payrollBaseline.year)
+  const [payrollMonth, setPayrollMonth] = useState(payrollBaseline.month)
+  const [payrollSaving, setPayrollSaving] = useState(false)
+  const [payrollUncertain, setPayrollUncertain] = useState(false)
+  const payrollSavingRef = useRef(false)
+  const payrollUncertainRef = useRef(false)
   const dirty = amount !== '' || category !== 'MATERIAL' || date !== ''
-  const protectedDraft = (canWrite && (dirty || uncertain)) || saving
+  const payrollDirty = payrollYear !== payrollBaseline.year || payrollMonth !== payrollBaseline.month
+  const protectedDraft = (canWrite && (dirty || uncertain || payrollDirty || payrollUncertain)) || saving || payrollSaving
   useCompanySwitchBlock(protectedDraft)
   useSensitiveNavigationBlock(protectedDraft)
   useLayoutEffect(() => {
@@ -143,17 +154,23 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
       {canWrite ? (
         <form
           className="grid gap-2 rounded-md border p-3"
+          aria-busy={payrollSaving}
           onSubmit={async (event) => {
             event.preventDefault()
-            const data = new FormData(event.currentTarget)
+            if (payrollSavingRef.current || payrollUncertainRef.current) return
+            payrollSavingRef.current = true
+            setPayrollSaving(true)
             try {
-              await fromPayroll({
-                year: Number(data.get('year')),
-                month: Number(data.get('month')),
-              })
+              await fromPayroll({ year: Number(payrollYear), month: Number(payrollMonth) })
+              setPayrollBaseline({ year: payrollYear, month: payrollMonth })
               onChanged()
             } catch (error) {
+              payrollUncertainRef.current = true
+              setPayrollUncertain(true)
               toast.error(errorMessage(error))
+            } finally {
+              payrollSavingRef.current = false
+              setPayrollSaving(false)
             }
           }}
         >
@@ -166,7 +183,10 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
                 type="number"
                 min={2000}
                 max={2100}
-                defaultValue={now.getFullYear()}
+                required
+                disabled={payrollSaving}
+                value={payrollYear}
+                onChange={(event) => setPayrollYear(event.target.value)}
                 className="w-24"
               />
             </Field>
@@ -177,14 +197,35 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
                 type="number"
                 min={1}
                 max={12}
-                defaultValue={now.getMonth() + 1}
+                required
+                disabled={payrollSaving}
+                value={payrollMonth}
+                onChange={(event) => setPayrollMonth(event.target.value)}
                 className="w-20"
               />
             </Field>
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" disabled={payrollSaving || payrollUncertain}>
               {t('erp.fromPayroll')}
             </Button>
+            {payrollDirty || payrollUncertain ? (
+              <Button type="button" variant="outline" disabled={payrollSaving} onClick={() => {
+                setPayrollYear(payrollBaseline.year)
+                setPayrollMonth(payrollBaseline.month)
+                payrollUncertainRef.current = false
+                setPayrollUncertain(false)
+              }}>{t('common.discardDraft')}</Button>
+            ) : null}
           </div>
+          {payrollSaving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
+          {payrollUncertain ? (
+            <div className="grid gap-2">
+              <p role="alert" className="text-sm text-destructive">{t('erp.payrollUnknown')}</p>
+              <Button type="button" variant="outline" onClick={() => {
+                payrollUncertainRef.current = false
+                setPayrollUncertain(false)
+              }}>{t('common.enableRetry')}</Button>
+            </div>
+          ) : null}
         </form>
       ) : null}
 
