@@ -322,6 +322,265 @@ describe('Phase 10 erp-lite (e2e)', () => {
     );
   });
 
+  it('rolls back direct and payroll costs when the project spend exceeds its column', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Spend limit project',
+        code: `S${randomUUID().slice(0, 8)}`,
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    const base = { projectId: id, category: 'MATERIAL', date: '2026-11-05' };
+    const boundary = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({ ...base, amount: '9999999999.99' });
+    expect(boundary.status).toBe(201);
+    const adminUser = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    const task = await prisma.task.create({
+      data: { companyId, projectId: id, title: 'Spend payroll test' },
+    });
+    await prisma.timerSession.create({
+      data: {
+        companyId,
+        userId: adminUser.id,
+        taskId: task.id,
+        startedAt: new Date('2026-11-04T08:00:00Z'),
+        closedAt: new Date('2026-11-04T09:00:00Z'),
+        durationMinutes: 60,
+        hourlyRateSnapshot: '1.00',
+        approvalStatus: 'APPROVED',
+      },
+    });
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'COST_ENTRY_CREATED' },
+    });
+    const overflow = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({ ...base, amount: '0.01' });
+    expect(overflow.status).toBe(409);
+    expect(overflow.body.error.code).toBe('CONFLICT');
+    const payroll = await request(app.getHttpServer())
+      .post('/api/cost-entries/from-payroll')
+      .set(auth(admin))
+      .send({ projectId: id, year: 2026, month: 11 });
+    expect(payroll.status).toBe(409);
+    expect(payroll.body.error.code).toBe('CONFLICT');
+    expect(await prisma.costEntry.count({ where: { projectId: id } })).toBe(1);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'COST_ENTRY_CREATED' },
+      }),
+    ).toBe(auditBefore);
+    const row = await prisma.project.findUniqueOrThrow({ where: { id } });
+    expect(row.currentSpend.toFixed(2)).toBe('9999999999.99');
+  });
+
+  it('serializes project cost creates and removal before mutation', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Cost lock project',
+        code: `L${randomUUID().slice(0, 8)}`,
+      });
+    expect(created.status).toBe(201);
+    const id = created.body.data.id as string;
+    const base = { projectId: id, category: 'MATERIAL', date: '2026-11-05' };
+    const initial = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({ ...base, amount: '5.00' });
+    expect(initial.status).toBe(201);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${id} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let first: Promise<request.Response> | undefined;
+    let second: Promise<request.Response> | undefined;
+    let removal: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      first = request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({ ...base, amount: '7.00' })
+        .then((response) => response);
+      second = request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({ ...base, amount: '11.00' })
+        .then((response) => response);
+      removal = request(app.getHttpServer())
+        .delete(`/api/cost-entries/${initial.body.data.id as string}`)
+        .set(auth(admin))
+        .then((response) => response);
+      void first.catch(() => undefined);
+      void second.catch(() => undefined);
+      void removal.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 3);
+      expect(await prisma.costEntry.count({ where: { projectId: id } })).toBe(
+        1,
+      );
+      release();
+      const [a, b, c] = await Promise.all([first, second, removal]);
+      expect([a.status, b.status, c.status]).toEqual([201, 201, 204]);
+      expect(await prisma.costEntry.count({ where: { projectId: id } })).toBe(
+        2,
+      );
+      const row = await prisma.project.findUniqueOrThrow({ where: { id } });
+      expect(row.currentSpend.toFixed(2)).toBe('18.00');
+    } finally {
+      release();
+      await Promise.allSettled([holder, first, second, removal]);
+    }
+  });
+
+  it('allows only one concurrent removal of the same project cost', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Double remove project',
+        code: `D${randomUUID().slice(0, 8)}`,
+      });
+    expect(project.status).toBe(201);
+    const id = project.body.data.id as string;
+    const created = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({
+        projectId: id,
+        category: 'MATERIAL',
+        date: '2026-11-05',
+        amount: '7',
+      });
+    expect(created.status).toBe(201);
+    const costId = created.body.data.id as string;
+    const before = await prisma.auditEvent.count({
+      where: { companyId, action: 'COST_ENTRY_REMOVED', entityId: costId },
+    });
+    const [a, b] = await Promise.all([
+      request(app.getHttpServer())
+        .delete(`/api/cost-entries/${costId}`)
+        .set(auth(admin)),
+      request(app.getHttpServer())
+        .delete(`/api/cost-entries/${costId}`)
+        .set(auth(admin)),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([204, 404]);
+    expect(await prisma.costEntry.count({ where: { id: costId } })).toBe(0);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'COST_ENTRY_REMOVED', entityId: costId },
+      }),
+    ).toBe(before + 1);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id } })
+      ).currentSpend.toFixed(2),
+    ).toBe('0.00');
+  });
+
+  it('serializes payroll and direct costs competing for remaining project spend capacity', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({ name: 'Cost cap race', code: `R${randomUUID().slice(0, 8)}` });
+    expect(project.status).toBe(201);
+    const id = project.body.data.id as string;
+    const base = { projectId: id, category: 'MATERIAL', date: '2026-11-05' };
+    const initial = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({ ...base, amount: '9999999999.49' });
+    expect(initial.status).toBe(201);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    const task = await prisma.task.create({
+      data: { companyId, projectId: id, title: 'Payroll race' },
+    });
+    await prisma.timerSession.create({
+      data: {
+        companyId,
+        userId: user.id,
+        taskId: task.id,
+        startedAt: new Date('2026-11-04T08:00:00Z'),
+        closedAt: new Date('2026-11-04T09:00:00Z'),
+        durationMinutes: 60,
+        hourlyRateSnapshot: '0.50',
+        approvalStatus: 'APPROVED',
+      },
+    });
+    const [manual, payroll] = await Promise.all([
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({ ...base, amount: '0.50' }),
+      request(app.getHttpServer())
+        .post('/api/cost-entries/from-payroll')
+        .set(auth(admin))
+        .send({ projectId: id, year: 2026, month: 11 }),
+    ]);
+    expect([manual.status, payroll.status].sort()).toEqual([201, 409]);
+    expect(await prisma.costEntry.count({ where: { projectId: id } })).toBe(2);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id } })
+      ).currentSpend.toFixed(2),
+    ).toBe('9999999999.99');
+  });
+
+  it('does not create a cost for a project belonging to another company', async () => {
+    const other = await prisma.company.create({
+      data: { name: 'Other cost company', slug: `cost-${randomUUID()}` },
+    });
+    const project = await prisma.project.create({
+      data: {
+        companyId: other.id,
+        name: 'Other cost project',
+        geofenceRadius: 100,
+        code: `O${randomUUID().slice(0, 8)}`,
+      },
+    });
+    const result = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send({
+        projectId: project.id,
+        category: 'MATERIAL',
+        date: '2026-11-05',
+        amount: '1',
+      });
+    expect(result.status).toBe(404);
+    expect(
+      await prisma.costEntry.count({ where: { projectId: project.id } }),
+    ).toBe(0);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: project.id } })
+      ).currentSpend.toFixed(2),
+    ).toBe('0.00');
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')
@@ -828,3 +1087,19 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(movements).toBe(1);
   });
 });
+
+/** Observe database lock waits without logging SQL parameters or credentials. */
+async function waitForCostProjectLock(
+  prisma: PrismaService,
+  minimum: number,
+): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const rows = await prisma.$queryRaw<Array<{ waiting: number }>>`
+      SELECT count(*)::integer AS waiting FROM pg_stat_activity
+      WHERE datname = current_database() AND pid <> pg_backend_pid()
+        AND wait_event_type = 'Lock' AND query LIKE ${'%FROM "Project"%FOR NO KEY UPDATE%'}`;
+    if (rows[0].waiting >= minimum) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error('Expected project lock wait did not occur');
+}

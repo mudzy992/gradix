@@ -126,7 +126,7 @@ backend/src/modules/companies/default-settings.ts,BE,companies,BE-04,14,pregleda
 backend/src/modules/companies/tenant-company.controller.ts,BE,companies,BE-04,27,pregledano,"BE-04: GET /company traži settings.read (F-01), PATCH settings.write",2026-11-02
 backend/src/modules/erp/costs.controller.ts,BE,erp,BE-14,57,pregledano,F-03: DELETE troška sada auditan (COST_ENTRY_REMOVED),2026-11-03
 backend/src/modules/erp/costs.dto.ts,BE,erp,BE-14,72,pregledano,BE-14: validacija amount/category/date preko parseNonNegativeDecimal/parseDateOnly,2026-11-03
-backend/src/modules/erp/costs.service.ts,BE,erp,BE-14,189,pregledano,"F-03: brisanje + recalcSpend u transakciji, audit payload; F-CI-05-64: preciznost iznosa troška",2026-11-05
+backend/src/modules/erp/costs.service.ts,BE,erp,BE-14,215,pregledano,"F-03: brisanje + recalcSpend u transakciji, audit payload; F-CI-05-64: preciznost iznosa troška; F-CI-05-65: atomski cost i zbir projekta",2026-11-05
 backend/src/modules/erp/erp.module.ts,BE,erp,BE-14,23,pregledano,BE-14: modul koristi globalni AuditModule,2026-11-03
 backend/src/modules/erp/from-payroll.ts,BE,erp,BE-14,66,pregledano,"F-05/B12: iznos po snapshotu (payrollRate), ne trenutnoj satnici",2026-11-03
 backend/src/modules/erp/fuel-stock.controller.ts,BE,erp,BE-14,29,pregledano,"BE-14: apply-stock ruta (CISTERN, idempotentna po fuelEntryId)",2026-11-03
@@ -227,7 +227,8 @@ backend/src/modules/ops/serialize-machine.ts,BE,ops,BE-09,20,pregledano,"BE-09: 
 backend/src/modules/ops/serialize-task.ts,BE,ops,BE-06,23,pregledano,BE-06: serijalizacija bez tajni; assigneeIds samo kad su uključeni,2026-11-03
 backend/src/modules/ops/serialize-timer.spec.ts,BE,ops,BE-07,96,pregledano,"BE-07: 7 testova — self/crew ne izlažu uređaj ni firmu, crew elapsedMinutes",2026-11-03
 backend/src/modules/ops/serialize-timer.ts,BE,ops,BE-07,67,pregledano,"BE-07: tri ugovora — sync (puni red), self (bez deviceId/localId/companyId), crew (elapsedMinutes) (F-04)",2026-11-03
-backend/src/modules/ops/spend.ts,BE,ops,BE-05,50,pregledano,BE-10: pregledano — recalcSpend prima TransactionClient; isključuje gorivo/servise vezane na CostEntry,2026-11-03
+backend/src/modules/ops/spend.spec.ts,BE,ops,BE-05,50,pokriveno-testom,F-CI-05-65: granice zbirne potrošnje projekta,2026-11-05
+backend/src/modules/ops/spend.ts,BE,ops,BE-05,60,pregledano,BE-10: pregledano — recalcSpend prima TransactionClient; isključuje gorivo/servise vezane na CostEntry; F-CI-05-65: atomski cost i zbir projekta,2026-11-05
 backend/src/modules/ops/sync-catalog.service.ts,BE,ops,BE-17,78,pregledano,"BE-17: whitelist materijala (nema companyId/createdAt); katalog scoped (firma-wide vs dodjele), TTL 24h; veličina kataloga prihvaćena (F-17-07)",2026-11-03
 backend/src/modules/ops/sync-push-diary.ts,BE,ops,BE-17,84,pregledano,"BE-17: assertDiaryWrite; PHOTO prije DIARY = 404 Not synced yet (namjerno, klijent ponavlja)",2026-11-03
 backend/src/modules/ops/sync-push-fleet.ts,BE,ops,BE-17,102,pregledano,BE-17: per-item RBAC trips.write/fuel.write; offline identitet u jednom create (BE-10),2026-11-03
@@ -326,7 +327,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,286,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom; F-CI-05-37: atomska deaktivacija i ponovljeni timer cleanup; F-CI-05-40: revalidacija ciljnog tenanta i rola pod lockom pri resetu; F-CI-05-41: company lock i provjere prije izmjene rola/statusa",2026-11-04
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,828,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka; F-CI-05-36: DB rollback i kontrolisane utrke promjene lozinke; F-CI-05-37: DB rollback i rotacija; timer failure/retry; F-CI-05-40: promocija cilja i rollback admin reseta; F-CI-05-41: deactivation/rotation čeka company SHARE,2026-11-04
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,831,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška,2026-11-05
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,1106,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška; F-CI-05-65: atomski cost i zbir projekta,2026-11-05
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03

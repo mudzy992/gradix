@@ -1,5 +1,7 @@
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../../modules/prisma/prisma.service';
+import { AppError } from '../../common/errors/app-error';
+import { ERROR_CODES } from '../../common/errors/error-codes';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -28,6 +30,14 @@ export async function recalcSpend(tx: Tx, projectId: string): Promise<void> {
   const spend = new Prisma.Decimal(fuel._sum.totalCost ?? 0)
     .plus(service._sum.totalCost ?? 0)
     .plus(costs._sum.amount ?? 0);
+  // All summands are stored at scale 2, but their sum can exceed the project column.
+  if (spend.abs().gte('10000000000')) {
+    throw new AppError(
+      ERROR_CODES.CONFLICT,
+      'Project spend exceeds supported range',
+      409,
+    );
+  }
   await tx.project.update({
     where: { id: projectId },
     data: { currentSpend: spend },

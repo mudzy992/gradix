@@ -58,25 +58,26 @@ export class CostsService {
         400,
       );
     }
-    if (dto.projectId) {
-      await this.assertProject(companyId, dto.projectId);
-    }
+    const amount = parseNonNegativeMoney(dto.amount, 'amount');
+    const date = parseDateOnly(dto.date);
     try {
-      const row = await this.prisma.costEntry.create({
-        data: {
-          companyId,
-          amount: parseNonNegativeMoney(dto.amount, 'amount'),
-          category: dto.category,
-          date: parseDateOnly(dto.date),
-          note: dto.note,
-          source,
-          sourceId: dto.sourceId ?? null,
-          projectId: dto.projectId ?? null,
-        },
+      const row = await this.prisma.$transaction(async (tx) => {
+        if (dto.projectId) await this.lockProject(tx, companyId, dto.projectId);
+        const created = await tx.costEntry.create({
+          data: {
+            companyId,
+            amount,
+            category: dto.category,
+            date,
+            note: dto.note,
+            source,
+            sourceId: dto.sourceId ?? null,
+            projectId: dto.projectId ?? null,
+          },
+        });
+        if (created.projectId) await recalcSpend(tx, created.projectId);
+        return created;
       });
-      if (row.projectId) {
-        await recalcSpend(this.prisma, row.projectId);
-      }
       await this.audit.write({
         companyId,
         actorId: actor.id,
@@ -102,20 +103,23 @@ export class CostsService {
       dto,
     });
     try {
-      const row = await this.prisma.costEntry.create({
-        data: {
-          companyId,
-          amount: built.amount,
-          category: 'LABOR',
-          date: built.date,
-          source: 'PAYROLL',
-          sourceId: built.sourceId,
-          projectId: built.projectId,
-        },
+      const row = await this.prisma.$transaction(async (tx) => {
+        if (built.projectId)
+          await this.lockProject(tx, companyId, built.projectId);
+        const created = await tx.costEntry.create({
+          data: {
+            companyId,
+            amount: built.amount,
+            category: 'LABOR',
+            date: built.date,
+            source: 'PAYROLL',
+            sourceId: built.sourceId,
+            projectId: built.projectId,
+          },
+        });
+        if (created.projectId) await recalcSpend(tx, created.projectId);
+        return created;
       });
-      if (row.projectId) {
-        await recalcSpend(this.prisma, row.projectId);
-      }
       await this.audit.write({
         companyId,
         actorId: actor.id,
@@ -152,10 +156,16 @@ export class CostsService {
     // destruktivna ERP operacija koja nije ostavljala trag. Sada se briše i preračunava
     // u transakciji, a `COST_ENTRY_REMOVED` nosi dovoljno podataka za rekonstrukciju.
     await this.prisma.$transaction(async (tx) => {
-      await tx.costEntry.delete({ where: { id } });
-      if (row.projectId) {
-        await recalcSpend(tx, row.projectId);
+      if (row.projectId) await this.lockProject(tx, companyId, row.projectId);
+      // Another removal may have completed while waiting for the project lock.
+      const current = await tx.costEntry.findFirst({
+        where: { id, companyId },
+      });
+      if (!current) {
+        throw new AppError(ERROR_CODES.NOT_FOUND, 'Cost entry not found', 404);
       }
+      await tx.costEntry.delete({ where: { id } });
+      if (current.projectId) await recalcSpend(tx, current.projectId);
     });
     await this.audit.write({
       companyId,
@@ -172,6 +182,22 @@ export class CostsService {
         projectId: row.projectId,
       },
     });
+  }
+
+  private async lockProject(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    projectId: string,
+  ): Promise<void> {
+    // Serialize cooperating cost operations before mutation; NO KEY UPDATE stays
+    // compatible with FK KEY SHARE locks acquired by inserts for this project.
+    const rows = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "Project"
+      WHERE "id" = ${projectId} AND "companyId" = ${companyId}
+      FOR NO KEY UPDATE`;
+    if (rows.length === 0) {
+      throw new AppError(ERROR_CODES.NOT_FOUND, 'Project not found', 404);
+    }
   }
 
   private async assertProject(
