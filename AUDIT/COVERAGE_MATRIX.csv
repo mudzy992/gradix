@@ -353,7 +353,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,227,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,286,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma",2026-11-03
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,345,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04

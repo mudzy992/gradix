@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import type { BrowserContext, Page } from '@playwright/test'
 import { openSession, waitForAuthenticatedShell } from './session'
 
@@ -223,4 +224,62 @@ test.describe('FE-06 — admin tok', () => {
     )
     expect(overflow).toBeLessThanOrEqual(1)
   })
+  test('lager: izgubljeni odgovor stvarnog servera i retry knjiže samo jedno kretanje', async () => {
+    // Namjenski objekat ne dira postojeće zalihe; CI baza je seedovana demo baza.
+    // Prefiks osigurava da se nađe među prvih 100 skladišta sortiranih po nazivu.
+    const warehouseName = `! E2E retry ${randomUUID()}`
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/erp')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/erp-lite/i)
+    await page.getByRole('tab', { name: 'Lager' }).click()
+    await page.getByLabel('Naziv skladišta').fill(warehouseName)
+    await page.getByRole('button', { name: 'Novo skladište' }).click()
+    const warehouse = page.getByLabel('Skladište', { exact: true })
+    await expect(warehouse.locator('option', { hasText: warehouseName })).toHaveCount(1, { timeout: 15_000 })
+    await warehouse.selectOption({ label: warehouseName })
+    await page.getByLabel('Materijal', { exact: true }).selectOption({ label: 'Šljunak' })
+    const qty = page.getByLabel('Količina', { exact: true })
+    await qty.fill('10')
+
+    const attempts: Array<{ body: Record<string, unknown>; status: number; data: { id: string; qty: string } }> = []
+    const pattern = '**/api/stock-movements'
+    await page.route(pattern, async (route) => {
+      const request = route.request()
+      const response = await route.fetch({ maxRetries: 0 })
+      const result = await response.json() as { data: { id: string; qty: string } }
+      attempts.push({ body: request.postDataJSON() as Record<string, unknown>, status: response.status(), data: result.data })
+      if (attempts.length === 1) {
+        // Server je odgovorio nakon upisa, ali browser ne dobija odgovor.
+        await route.abort('failed')
+      } else {
+        await route.fulfill({ response })
+      }
+    })
+    try {
+      await page.getByRole('button', { name: 'Knjiži' }).click()
+      const unknown = page.getByRole('alert').filter({ hasText: 'Knjiženje nije potvrđeno' })
+      await expect(unknown).toBeVisible()
+      await expect(qty).toBeDisabled()
+      await page.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }).click()
+      await expect(qty).toBeDisabled()
+      await page.getByRole('button', { name: 'Knjiži' }).click()
+      await expect(qty).toHaveValue('')
+      await expect(unknown).toHaveCount(0)
+
+      expect(attempts).toHaveLength(2)
+      expect(attempts.map((item) => item.status)).toEqual([201, 201])
+      expect(attempts[0].body).toEqual(attempts[1].body)
+      expect(attempts[0].body.idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+      expect(attempts[0].data.id).toBeTruthy()
+      expect(attempts[1].data.id).toBe(attempts[0].data.id)
+      expect(Number(attempts[0].data.qty)).toBe(10)
+      const row = page.getByRole('listitem').filter({ hasText: `${warehouseName} · Šljunak` })
+      await expect(row).toBeVisible()
+      // Novo skladište nije imalo zalihe: zbir 10, ne 20, dodatno potvrđuje jedan upis.
+      await expect(row.locator('span').last()).toHaveText('10')
+    } finally {
+      await page.unroute(pattern)
+    }
+  })
+
 })
