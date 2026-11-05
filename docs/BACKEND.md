@@ -486,6 +486,13 @@ Ispravka nema idempotency ključ: ponovljen zahtjev može stvoriti dodatni zapis
 
 ### Troškovi povezani s gorivom (F-CI-05-71)
 
-Novi `CostEntry` sa `source=FUEL` traži gorivo iste firme i isti projekt kao izvor, uključujući slučaj bez projekta. Nepronađen ili strani izvor vraća 404, neslaganje projekta 409; provjera i upis su SERIALIZABLE i uzimaju fuel lock prije projekta. Već pohranjeni keyed replay se vraća prije te nove provjere. Za SERVICE i PAYROLL izvore ovo pravilo još ne važi.
+Novi `CostEntry` sa `source=FUEL` traži gorivo iste firme i isti projekt kao izvor, uključujući slučaj bez projekta. Nepronađen ili strani izvor vraća 404, neslaganje projekta 409; provjera i upis su SERIALIZABLE i uzimaju fuel lock prije projekta. Već pohranjeni keyed replay se vraća prije te nove provjere. SERVICE source je zasebno obrađen u F-CI-05-72; za PAYROLL ovo pravilo još ne važi.
 
 Vezani cost ostaje nezavisan, ručno uneseni iznos i ima prednost u projektnom zbiru nad izvornim troškom goriva. Ispravke litara ili jedinične cijene ne mijenjaju taj iznos. Stvarna promjena projekta goriva s vezanim FUEL troškom vraća 409 dok se postojeća veza ne razriješi; trošak se ne briše niti premješta automatski. Postojeći endpoint za brisanje troška je fizičko brisanje, pa njegovo korištenje nije automatsko i podliježe postojećem auditu/tombstone pravilima. Historijske neispravne veze, miješani/stari serveri, vanjski pisci i nepoznat ishod post-commit efekata nisu popravljeni.
+
+
+### Troškovi povezani sa servisom (F-CI-05-72)
+
+Novi `CostEntry` sa `source=SERVICE` mora referencirati servis iste firme i njegov projekt, uključujući nepostojanje projekta na obje strane. Strani ili nedostajući servis daje 404, a neslaganje projekta 409. Projekt se zaključava prije `ServiceRecord FOR SHARE`, kao i pri završetku servisa, unutar postojeće READ COMMITTED transakcije. Već pohranjeni keyed replay ostaje ispred novih provjera.
+
+Status servisa se ovim ne ograničava: trošak se može unijeti i prije završetka. Ručno uneseni iznos ostaje override u projektnom zbiru, ne automatski kopiran `totalCost`; završetak servisa ne treba brojati isti izvor dvaput. PAYROLL izvor, historijski neispravni redovi, promjene vanjskih/starih servera i post-commit efekti nisu obuhvaćeni.

@@ -82,5 +82,15 @@ describe('fuel cost serialization retry', () => {
       }),
     ).rejects.toMatchObject({ code: 'P2010' });
     expect(manual.transaction).toHaveBeenCalledTimes(1);
+    const service = fixture();
+    service.transaction.mockRejectedValueOnce(serialization());
+    await expect(
+      service.service.create(actor, {
+        ...dto,
+        source: 'SERVICE',
+        sourceId: 'service',
+      }),
+    ).rejects.toMatchObject({ code: 'P2010' });
+    expect(service.transaction).toHaveBeenCalledTimes(1);
   });
 });

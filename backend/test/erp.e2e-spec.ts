@@ -457,6 +457,289 @@ describe('Phase 10 erp-lite (e2e)', () => {
     }
   });
 
+  async function setupServiceCost() {
+    const project = await prisma.project.create({
+      data: { companyId, name: 'Linked service project', geofenceRadius: 100 },
+    });
+    const otherProject = await prisma.project.create({
+      data: { companyId, name: 'Other service project', geofenceRadius: 100 },
+    });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Linked service machine', type: 'TRUCK' });
+    expect(machine.status).toBe(201);
+    const machineId = machine.body.data.id as string;
+    const service = await request(app.getHttpServer())
+      .post('/api/services')
+      .set(auth(admin))
+      .send({ machineId, projectId: project.id });
+    expect(service.status).toBe(201);
+    const serviceId = service.body.data.id as string;
+    const cost = (body: object) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          source: 'SERVICE',
+          sourceId: serviceId,
+          amount: '15',
+          category: 'SERVICE',
+          date: '2026-11-05',
+          ...body,
+        });
+    return { project, otherProject, machineId, serviceId, cost };
+  }
+
+  it('checks service source tenant and project while keeping existing replay and override semantics', async () => {
+    const f = await setupServiceCost();
+    const otherCompany = await prisma.company.create({
+      data: {
+        name: 'Foreign service cost',
+        slug: `foreign-service-${randomUUID()}`,
+      },
+    });
+    const foreignMachine = await prisma.machine.create({
+      data: {
+        companyId: otherCompany.id,
+        name: 'Foreign service machine',
+        type: 'TRUCK',
+      },
+    });
+    const foreignService = await prisma.serviceRecord.create({
+      data: { companyId: otherCompany.id, machineId: foreignMachine.id },
+    });
+    const key = randomUUID();
+    const beforeAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'COST_ENTRY_CREATED' },
+    });
+    expect(
+      (
+        await f.cost({
+          sourceId: 'missing-service',
+          projectId: f.project.id,
+          idempotencyKey: key,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await f.cost({
+          sourceId: foreignService.id,
+          projectId: f.project.id,
+          idempotencyKey: key,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (await f.cost({ projectId: f.otherProject.id, idempotencyKey: key }))
+        .status,
+    ).toBe(409);
+    expect((await f.cost({ idempotencyKey: key })).status).toBe(409);
+    expect(
+      await prisma.costRequest.count({
+        where: { companyId, idempotencyKey: key },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'COST_ENTRY_CREATED' },
+      }),
+    ).toBe(beforeAudit);
+    const created = await f.cost({
+      projectId: f.project.id,
+      idempotencyKey: key,
+    });
+    expect(created.status).toBe(201);
+    expect(
+      (
+        await prisma.serviceRecord.findUniqueOrThrow({
+          where: { id: f.serviceId },
+        })
+      ).status,
+    ).toBe('PLANNED');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.project.id } })
+      ).currentSpend.toString(),
+    ).toBe('15');
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post(`/api/services/${f.serviceId}/start`)
+          .set(auth(admin))
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post(`/api/services/${f.serviceId}/complete`)
+          .set(auth(admin))
+          .send({ totalCost: '30' })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.project.id } })
+      ).currentSpend.toString(),
+    ).toBe('15');
+    expect(
+      (
+        await prisma.costEntry.findUniqueOrThrow({
+          where: { id: created.body.data.id as string },
+        })
+      ).amount.toString(),
+    ).toBe('15');
+    // Simulate a legacy/external edit to prove replay remains before the new validation.
+    await prisma.serviceRecord.update({
+      where: { id: f.serviceId },
+      data: { projectId: f.otherProject.id },
+    });
+    const replay = await f.cost({
+      projectId: f.project.id,
+      idempotencyKey: key,
+    });
+    expect(replay.status).toBe(201);
+    expect(replay.body.data.id).toBe(created.body.data.id);
+  });
+
+  it('links an unassigned service only to an unassigned cost', async () => {
+    const f = await setupServiceCost();
+    const unassigned = await prisma.serviceRecord.create({
+      data: { companyId, machineId: f.machineId },
+    });
+    expect(
+      (await f.cost({ sourceId: unassigned.id, projectId: f.project.id }))
+        .status,
+    ).toBe(409);
+    const created = await f.cost({ sourceId: unassigned.id });
+    expect(created.status).toBe(201);
+    expect(created.body.data.projectId).toBeNull();
+  });
+
+  it('revalidates the service project after a concurrent update and rolls back the cost key', async () => {
+    const f = await setupServiceCost();
+    const key = randomUUID();
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "ServiceRecord" WHERE "id" = ${f.serviceId} FOR NO KEY UPDATE`;
+        await tx.serviceRecord.update({
+          where: { id: f.serviceId },
+          data: { projectId: f.otherProject.id },
+        });
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = f
+        .cost({ projectId: f.project.id, idempotencyKey: key })
+        .then((r) => r);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'ServiceRecord', 'FOR SHARE');
+      release();
+      await holder;
+      expect((await posting).status).toBe(409);
+      expect(
+        await prisma.costEntry.count({
+          where: { companyId, source: 'SERVICE', sourceId: f.serviceId },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.costRequest.count({
+          where: { companyId, idempotencyKey: key },
+        }),
+      ).toBe(0);
+      expect(
+        (await f.cost({ projectId: f.otherProject.id, idempotencyKey: key }))
+          .status,
+      ).toBe(201);
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting]);
+    }
+  });
+
+  it('serializes a linked cost with service completion and counts the source once', async () => {
+    const f = await setupServiceCost();
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post(`/api/services/${f.serviceId}/start`)
+          .set(auth(admin))
+      ).status,
+    ).toBe(201);
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${f.project.id} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    let completion: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = f
+        .cost({ projectId: f.project.id, idempotencyKey: randomUUID() })
+        .then((r) => r);
+      completion = request(app.getHttpServer())
+        .post(`/api/services/${f.serviceId}/complete`)
+        .set(auth(admin))
+        .send({ totalCost: '30' })
+        .then((r) => r);
+      void posting.catch(() => undefined);
+      void completion.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 2);
+      release();
+      await holder;
+      expect((await posting).status).toBe(201);
+      expect((await completion).status).toBe(201);
+      expect(
+        (
+          await prisma.serviceRecord.findUniqueOrThrow({
+            where: { id: f.serviceId },
+          })
+        ).totalCost?.toString(),
+      ).toBe('30');
+      expect(
+        (
+          await prisma.project.findUniqueOrThrow({
+            where: { id: f.project.id },
+          })
+        ).currentSpend.toString(),
+      ).toBe('15');
+      expect(
+        await prisma.costEntry.count({
+          where: { companyId, source: 'SERVICE', sourceId: f.serviceId },
+        }),
+      ).toBe(1);
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting, completion]);
+    }
+  });
+
   it('replays concurrent keyed costs, rejects changed payload and retains the key after deletion', async () => {
     const idempotencyKey = randomUUID();
     const body = {
@@ -565,7 +848,14 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(
       (await post({ ...base, amount: '0', idempotencyKey: key })).status,
     ).toBe(201);
-    const uniqueSource = `source-${randomUUID()}`;
+    const sourceMachine = await prisma.machine.create({
+      data: { companyId, name: 'Receipt service machine', type: 'TRUCK' },
+    });
+    const uniqueSource = (
+      await prisma.serviceRecord.create({
+        data: { companyId, machineId: sourceMachine.id },
+      })
+    ).id;
     const sourceBody = {
       amount: '1',
       category: 'OTHER',
@@ -3308,7 +3598,7 @@ describe('Phase 10 erp-lite (e2e)', () => {
 async function waitForCostProjectLock(
   prisma: PrismaService,
   minimum: number,
-  table: 'Project' | 'FuelEntry' = 'Project',
+  table: 'Project' | 'FuelEntry' | 'ServiceRecord' = 'Project',
   lock = 'FOR NO KEY UPDATE',
 ): Promise<void> {
   const pattern = `%FROM "${table}"%${lock}%`;

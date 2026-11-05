@@ -118,6 +118,30 @@ export class CostsService {
           }
         }
         if (dto.projectId) await lockSpendProject(tx, companyId, dto.projectId);
+        if (source === 'SERVICE') {
+          // Service completion locks project first, then updates the service.
+          // READ COMMITTED sees the latest committed row after waiting here.
+          const service = await tx.$queryRaw<
+            Array<{ projectId: string | null }>
+          >`
+            SELECT "projectId" FROM "ServiceRecord"
+            WHERE "id" = ${dto.sourceId!} AND "companyId" = ${companyId}
+            FOR SHARE`;
+          if (!service.length) {
+            throw new AppError(
+              ERROR_CODES.NOT_FOUND,
+              'Service record not found',
+              404,
+            );
+          }
+          if (service[0].projectId !== (dto.projectId ?? null)) {
+            throw new AppError(
+              ERROR_CODES.CONFLICT,
+              'Service source project does not match cost',
+              409,
+            );
+          }
+        }
         const created = await tx.costEntry.create({
           data: {
             companyId,
