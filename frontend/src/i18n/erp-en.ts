@@ -1,5 +1,7 @@
 export const erpEn = {
   erp: {
+    costUnknown: 'Creation was not confirmed. The cost entry may already exist; check before trying again.',
+    costTabBlocked: 'Save or discard the cost draft and wait for the operation to finish before changing tabs.',
     partnerUnknown: 'Creation was not confirmed. The partner may already exist; check before trying again.',
     partnerTabBlocked: 'Save or discard the partner draft and wait for the operation to finish before changing tabs.',
     title: 'ERP-lite',
