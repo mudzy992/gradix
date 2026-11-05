@@ -71,6 +71,15 @@ export class StockService {
       });
       if (previous) return this.replayMovement(previous, fingerprint!);
     }
+    // PostgreSQL numeric(12,3) otherwise silently rounds or rejects overflow.
+    // Apply only to new writes: earlier keyed rows may contain rounded legacy qty.
+    if (qty.decimalPlaces() > 3 || qty.abs().gte('1000000000')) {
+      throw new AppError(
+        ERROR_CODES.VALIDATION_FAILED,
+        'qty must fit numeric(12,3) without rounding',
+        400,
+      );
+    }
     const warehouse = await this.loadWarehouse(companyId, dto.warehouseId);
     await this.loadMaterial(companyId, dto.materialId);
     // Look up the key before checking balance: a retry must replay the committed

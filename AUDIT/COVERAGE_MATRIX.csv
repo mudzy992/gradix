@@ -135,9 +135,9 @@ backend/src/modules/erp/partners.dto.ts,BE,erp,BE-14,64,pregledano,"BE-14: pregl
 backend/src/modules/erp/partners.service.ts,BE,erp,BE-14,104,pregledano,F-04: PARTNER_CREATED/PARTNER_UPDATED audit,2026-11-03
 backend/src/modules/erp/serialize-erp.ts,BE,erp,BE-14,82,pregledano,"BE-14: Decimal → string sa 2 decimale, bez curenja internih polja",2026-11-03
 backend/src/modules/erp/stock-balance.ts,BE,erp,BE-14,30,pregledano,F-01: prima TransactionClient (provjera+upis atomični),2026-11-03
-backend/src/modules/erp/stock-idempotency.spec.ts,BE,erp,BE-14,153,pokriveno-testom,F-CI-05-61: replay i konflikt,2026-11-05
+backend/src/modules/erp/stock-idempotency.spec.ts,BE,erp,BE-14,213,pokriveno-testom,F-CI-05-61: replay i konflikt; F-CI-05-64: stock preciznost i legacy retry,2026-11-05
 backend/src/modules/erp/stock.controller.ts,BE,erp,BE-14,27,pregledano,BE-14: pokreti zaliha pod erp.read/erp.write + tenant scope,2026-11-03
-backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,304,pregledano,"F-01/F-02: SERIALIZABLE transakcija, P2002 idempotentan",2026-11-03
+backend/src/modules/erp/stock.service.ts,BE,erp,BE-14,313,pregledano,"F-01/F-02: SERIALIZABLE transakcija, P2002 idempotentan; F-CI-05-64: stock preciznost i legacy retry",2026-11-05
 backend/src/modules/erp/warehouses.controller.ts,BE,erp,BE-14,33,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
 backend/src/modules/erp/warehouses.dto.ts,BE,erp,BE-14,59,pregledano,"BE-14: pregledano, nema nalaza (scope/RBAC/DTO validacija u redu)",2026-11-03
 backend/src/modules/erp/warehouses.service.ts,BE,erp,BE-14,85,pregledano,F-04: WAREHOUSE_CREATED audit,2026-11-03
@@ -326,7 +326,7 @@ backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,286,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom; F-CI-05-37: atomska deaktivacija i ponovljeni timer cleanup; F-CI-05-40: revalidacija ciljnog tenanta i rola pod lockom pri resetu; F-CI-05-41: company lock i provjere prije izmjene rola/statusa",2026-11-04
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,828,pregledano,CI-05: pregled auth E2E; dodana provjera da ponovna upotreba tokena opoziva i rotirani token; E2E u CI.; F-CI-05-35: potomci i nezavisna sesija; legacy i tuđi token; kontrolisana DB utrka; F-CI-05-36: DB rollback i kontrolisane utrke promjene lozinke; F-CI-05-37: DB rollback i rotacija; timer failure/retry; F-CI-05-40: promocija cilja i rollback admin reseta; F-CI-05-41: deactivation/rotation čeka company SHARE,2026-11-04
-backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,646,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija,2026-11-05
+backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,757,pregledano,BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija; F-CI-05-64: stock preciznost i legacy retry,2026-11-05
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
@@ -374,7 +374,7 @@ frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
 frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,267,pregledano,"FE-12: prevedene kategorije i izvori, formatAmount, odvojena forma „Iz obračuna“, labela datuma, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,149,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
-frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,466,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta",2026-11-04
+frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,476,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta; F-CI-05-64: stock preciznost i legacy retry",2026-11-05
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
 frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,122,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
 frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,156,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
@@ -447,8 +447,8 @@ frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledan
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
 frontend/src/i18n/bs.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/en.ts,FE,shared,FE-15,425,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,64,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
-frontend/src/i18n/erp-en.ts,FE,shared,FE-15,64,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
+frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,65,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry,2026-11-05
+frontend/src/i18n/erp-en.ts,FE,shared,FE-15,65,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry,2026-11-05
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
 frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa engleskim.,2026-11-04
@@ -495,6 +495,8 @@ frontend/src/lib/roles.spec.ts,TEST,fe-unit,FE-05,50,pregledano,"FE-15: 5 testov
 frontend/src/lib/roles.ts,FE,shared,FE-15,18,pregledano,FE-15: assignableRoles tolerantan na `roles` koji nedostaje (FE-13 lekcija),2026-11-04
 frontend/src/lib/sensitive-navigation.ts,FE,shared,FE-15,26,popravljeno,F-CI-05-55: nezavisne blokade i unload uz sigurnosnu odjavu,2026-11-05
 frontend/src/lib/settings-keys.ts,FE,admin-ui,FE-13,28,pregledano,FE-13: spisak ključeva registra; test drži da svaki ima bs/en prijevod (D-052),2026-11-04
+frontend/src/lib/stock-quantity.spec.ts,TEST,fe-unit,FE-05,23,pokriveno-testom,F-CI-05-64: granice decimalnog zapisa i eksponenti,2026-11-05
+frontend/src/lib/stock-quantity.ts,FE,shared,FE-15,20,popravljeno,F-CI-05-64: tačna validacija količine kretanja,2026-11-05
 frontend/src/lib/storage.spec.ts,TEST,fe-unit,FE-05,171,pregledano,"FE-15: 9 testova — local vs session po „zapamti me“, čišćenje, blokirana pohrana (memorijski fallback)",2026-11-04
 frontend/src/lib/storage.ts,FE,shared,FE-15,162,pregledano,FE-15: blokirana pohrana (Safari privatni režim) ne ruši app — zaštita + memorijski fallback; „zapamti me“ bira local/session storage,2026-11-04
 frontend/src/lib/utils.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `cn` (clsx + tailwind-merge); bez nalaza,2026-11-04
@@ -509,7 +511,7 @@ frontend/src/pages/diary-page.spec.tsx,TEST,fe-unit,FE-05,173,pregledano,"FE-10:
 frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,186,pregledano,"FE-10: označen mjesec, izbor projekta sa labelom i opcijom „Svi projekti“, kalendar sa zaglavljem dana i offsetom, dan kao ćelija sa punim imenom (bez lažnih dugmadi), broj/prazno/greška + retry, lista unosa i link na projekat | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
 frontend/src/pages/documents-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-10: istekao/ističe/vrijedi/bez roka, relativni pomak, broj, skeleton, prazno, greška + retry, upload + kreiranje po kategoriji (radnik/mašina)",2026-11-03
 frontend/src/pages/documents-page.tsx,FE,site-pages,FE-10,226,pregledano,"FE-10: stanje roka (Istekao/Ističe/Vrijedi/Bez roka) + „ističe za N d“ kroz documentState/daysUntil (30/15/5), broj/prazno/greška + retry, skeleton, hint uz fajl, poruka kad fajl nedostaje",2026-11-03
-frontend/src/pages/erp-page.spec.tsx,TEST,fe-unit,FE-05,1189,pregledano,"FE-12: 7 testova — prevedene oznake, iznosi, labele, prazna stanja, greška + retry, lager bez skladišta, kreiranje partnera",2026-11-04
+frontend/src/pages/erp-page.spec.tsx,TEST,fe-unit,FE-05,1233,pregledano,"FE-12: 7 testova — prevedene oznake, iznosi, labele, prazna stanja, greška + retry, lager bez skladišta, kreiranje partnera; F-CI-05-64: stock preciznost i legacy retry",2026-11-05
 frontend/src/pages/erp-page.tsx,FE,money-pages,FE-12,140,pregledano,"FE-12: upit po aktivnom tabu (`enabled`), trajna greška sa ponovnim pokušajem, `isLoading` proslijeđen tabovima",2026-11-04
 frontend/src/pages/fleet-map-page.spec.tsx,TEST,fe-unit,FE-05,119,pregledano,"FE-09: preveden status i izvor GPS-a, tekstualna lista kao region, mašina bez GPS-a ne pravi pin, greška + retry (react-leaflet mockovan u jsdom-u)",2026-11-03
 frontend/src/pages/fleet-map-page.tsx,FE,fleet-pages,FE-09,112,pregledano,"FE-09: preveden status i izvor GPS-a u balončiću, paleta C umjesto starih boja, skeleton, greška + retry, prazno stanje i tekstualna lista mašina (mapa nije čitljiva čitaču ekrana)",2026-11-03

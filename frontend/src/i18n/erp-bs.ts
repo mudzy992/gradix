@@ -1,5 +1,6 @@
 export const erpBs = {
   erp: {
+    movementQtyInvalid: 'Unesite nenultu količinu s najviše tri decimale i apsolutnom vrijednošću do 999999999.999. Koristite decimalnu tačku; završne nule su dozvoljene.',
     movementKeyUnavailable: 'Sigurni identifikator nije dostupan. Knjiženje nije poslano; pokušajte u sigurnom pregledniku.',
     movementScopeChanged: 'Sesija ili firma su se promijenile. Ponovni pokušaj ovog knjiženja nije dozvoljen; provjerite ishod u izvornoj firmi.',
     movementUnknown: 'Knjiženje nije potvrđeno. Kretanje je možda već upisano; provjerite prije novog pokušaja. Ponovni pokušaj sačuvanog unosa koristi isti ključ u ovoj sesiji; ponovno učitavanje stranice briše ključ. Odbacivanje ne otkazuje moguće već izvršeno knjiženje i gubi ključ za ponavljanje.',

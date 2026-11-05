@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { ErpPage } from '@/pages/erp-page'
 import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
-import { clearRefreshToken } from '@/lib/storage'
+import { clearRefreshToken, getSessionGeneration } from '@/lib/storage'
 import { STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
 import { toast } from 'sonner'
 
@@ -733,6 +733,50 @@ describe('ErpPage', () => {
     await waitFor(() => expect(createStockMovement).toHaveBeenCalledTimes(3))
     const third = createStockMovement.mock.calls[2][0] as { idempotencyKey: string }
     expect(third.idempotencyKey).not.toBe(second.idempotencyKey)
+  })
+
+  it('kretanje validira preciznost i granice prije slanja, uz pristupačnu grešku', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    for (const invalid of ['0', '0.0005', '1000000000', '1,5', '1e-9999999999999999999999']) {
+      fireEvent.change(qty, { target: { value: invalid } })
+      await userEvent.click(button)
+      expect(screen.getByRole('alert')).toHaveTextContent('Unesite nenultu količinu')
+      expect(qty).toHaveAttribute('aria-invalid', 'true')
+      expect(qty).toHaveAttribute('aria-describedby', 'movement-qty-error')
+      expect(createStockMovement).not.toHaveBeenCalled()
+      expect(qty).toHaveValue(invalid)
+    }
+    fireEvent.change(qty, { target: { value: '1e-3' } })
+    expect(qty).not.toHaveAttribute('aria-invalid')
+    await userEvent.click(button)
+    await waitFor(() => expect(createStockMovement).toHaveBeenCalledOnce())
+    expect(createStockMovement.mock.calls[0][0]).toMatchObject({ qty: '1e-3', idempotencyKey: expect.any(String) })
+  })
+
+  it('ranije sačuvano kretanje s dodatnom preciznošću i dalje može koristiti stari ključ', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const generation = getSessionGeneration()
+    const cacheScope = JSON.stringify([generation, 'u1', 'c1'])
+    const operation = {
+      scope: JSON.stringify([generation, 'u1', 'c1', null]),
+      warehouseId: 'w1', materialId: 'm1', qty: '0.0005',
+      idempotencyKey: '00000000-0000-4000-8000-000000000001',
+    }
+    client.setQueryData([STOCK_MOVEMENT_PENDING_QUERY, cacheScope], { cacheScope, operation, inFlight: false, attempt: 1 })
+    renderPage(client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    expect(await screen.findByText(/Knjiženje nije potvrđeno/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Količina')).toHaveValue('0.0005')
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await waitFor(() => expect(createStockMovement).toHaveBeenCalledOnce())
+    expect(createStockMovement).toHaveBeenCalledWith({
+      warehouseId: operation.warehouseId, materialId: operation.materialId,
+      qty: operation.qty, idempotencyKey: operation.idempotencyKey,
+    })
   })
 
   it('kretanje ne šalje ništa ako siguran UUID nije dostupan', async () => {

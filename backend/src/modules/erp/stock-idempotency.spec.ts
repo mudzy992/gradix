@@ -24,7 +24,7 @@ function fixture() {
     createdAt: new Date('2026-11-05T00:00:00Z'),
     updatedAt: new Date('2026-11-05T00:00:00Z'),
     idempotencyKey: key,
-    requestFingerprint: fingerprint('0.0005'),
+    requestFingerprint: fingerprint('0.001'),
   };
   const findFirst = jest.fn().mockResolvedValue(null);
   const create = jest.fn().mockResolvedValue(movement);
@@ -57,13 +57,14 @@ function fixture() {
 const body = {
   warehouseId: 'warehouse-1',
   materialId: 'material-1',
-  qty: '0.0005',
+  qty: '0.001',
   idempotencyKey: key,
 };
 
 describe('stock movement idempotency', () => {
   it('replays the same canonical request before loading resources or checking balance', async () => {
     const f = fixture();
+    f.movement.requestFingerprint = fingerprint('0.0005');
     f.findFirst.mockResolvedValue(f.movement);
     const result = await f.service.createMovement(actor, {
       ...body,
@@ -82,7 +83,7 @@ describe('stock movement idempotency', () => {
     const f = fixture();
     f.findFirst.mockResolvedValue(f.movement);
     await expect(
-      f.service.createMovement(actor, { ...body, qty: '0.001' }),
+      f.service.createMovement(actor, { ...body, qty: '0.0005' }),
     ).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
     await expect(
       f.service.createMovement(actor, { ...body, projectId: 'project-2' }),
@@ -105,9 +106,68 @@ describe('stock movement idempotency', () => {
     >;
     const input = calls[0][0];
     expect(input.data.idempotencyKey).toBe(key);
-    expect(input.data.requestFingerprint).toBe(fingerprint('0.0005'));
+    expect(input.data.requestFingerprint).toBe(fingerprint('0.001'));
     expect(f.aggregate).toHaveBeenCalledTimes(1);
     expect(f.audit.write).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    '0.0001',
+    '0.0005',
+    '-0.0005',
+    '1e-4',
+    '999999999.9999',
+    '1000000000',
+    '-1000000000',
+  ])(
+    'rejects unrepresentable new qty %s before resources or a transaction',
+    async (qty) => {
+      const f = fixture();
+      await expect(
+        f.service.createMovement(actor, { ...body, qty }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION_FAILED',
+        status: 400,
+      });
+      expect(f.prisma.warehouse.findFirst).not.toHaveBeenCalled();
+      expect(f.prisma.$transaction).not.toHaveBeenCalled();
+      expect(f.audit.write).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    '0.001',
+    '-0.001',
+    '0.001000',
+    '1e-3',
+    '999999999.999',
+    '-999999999.999',
+  ])('accepts exactly representable qty %s', async (qty) => {
+    const f = fixture();
+    f.aggregate.mockResolvedValue({
+      _sum: { qty: new Prisma.Decimal('999999999.999') },
+    });
+    const result = await f.service.createMovement(actor, { ...body, qty });
+    expect(result.id).toBe(f.movement.id);
+    expect(f.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects legacy payload with a new key but replays an already persisted legacy key', async () => {
+    const f = fixture();
+    const legacy = { ...f.movement, requestFingerprint: fingerprint('0.0005') };
+    f.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(legacy);
+    await expect(
+      f.service.createMovement(actor, { ...body, qty: '0.0005' }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+      status: 400,
+    });
+    const replay = await f.service.createMovement(actor, {
+      ...body,
+      qty: '0.000500',
+    });
+    expect(replay.id).toBe(legacy.id);
+    expect(f.create).not.toHaveBeenCalled();
   });
 
   it('checks the key again inside the transaction and skips a duplicate audit', async () => {

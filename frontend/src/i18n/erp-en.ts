@@ -1,5 +1,6 @@
 export const erpEn = {
   erp: {
+    movementQtyInvalid: 'Enter a nonzero quantity with at most three decimal places and an absolute value up to 999999999.999. Use a decimal point; trailing zeroes are allowed.',
     movementKeyUnavailable: 'A secure identifier is unavailable. Nothing was posted; try using a secure browser.',
     movementScopeChanged: 'The session or company has changed. This movement cannot be retried; check its outcome in the original company.',
     movementUnknown: 'Posting was not confirmed. The movement may already have been recorded; check before trying again. Retrying the retained entry uses the same key during this session; reloading the page loses the key. Discarding cannot cancel a posting that may already have completed and loses the retry key.',

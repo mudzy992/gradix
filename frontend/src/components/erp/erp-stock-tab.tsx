@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { getSessionGeneration } from '@/lib/storage'
 import { STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
+import { isValidStockQuantity } from '@/lib/stock-quantity'
 import { warehouseType } from '@/lib/labels'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,7 +77,7 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
   const [movementSaving, setMovementSaving] = useState(false)
   const [movementUncertain, setMovementUncertain] = useState(false)
   const [movementRetryEnabled, setMovementRetryEnabled] = useState(false)
-  const [movementProblem, setMovementProblem] = useState<'key' | 'scope' | null>(null)
+  const [movementProblem, setMovementProblem] = useState<'key' | 'scope' | 'qty' | null>(null)
   const movementSavingRef = useRef(false)
   const movementUncertainRef = useRef(false)
   const movementRetryEnabledRef = useRef(false)
@@ -274,6 +275,10 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
             // Cache is the synchronous lock across mounted views and remounts.
             if (shared?.inFlight || (shared && shared.operation.idempotencyKey !== pendingMovement.current?.idempotencyKey) || (!shared && pendingMovement.current)) return
             if (!pendingMovement.current) {
+              if (!isValidStockQuantity(qty)) {
+                setMovementProblem('qty')
+                return
+              }
               try {
                 pendingMovement.current = { idempotencyKey: crypto.randomUUID(), warehouseId, materialId, qty, scope }
               } catch {
@@ -379,8 +384,13 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                 inputMode="decimal"
                 className="w-24"
                 disabled={movementSaving || movementUncertain}
+                aria-invalid={movementProblem === 'qty' || undefined}
+                aria-describedby={movementProblem === 'qty' ? 'movement-qty-error' : undefined}
                 value={qty}
-                onChange={(event) => setQty(event.target.value)}
+                onChange={(event) => {
+                  setQty(event.target.value)
+                  if (movementProblem === 'qty') setMovementProblem(null)
+                }}
               />
             </Field>
             <Button type="submit" variant="outline" disabled={movementSaving || (movementUncertain && !movementRetryEnabled) || !hasWarehouse || !hasMaterial}>
@@ -416,7 +426,7 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
           </div>
           {!hasWarehouse || !hasMaterial ? <p role="alert" className="text-sm text-destructive">{t(movementUncertain ? 'erp.movementSelectionMissingUncertain' : 'erp.movementSelectionMissing')}</p> : null}
           {movementSaving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
-          {movementProblem ? <p role="alert" className="text-sm text-destructive">{t(movementProblem === 'key' ? 'erp.movementKeyUnavailable' : 'erp.movementScopeChanged')}</p> : null}
+          {movementProblem ? <p id={movementProblem === 'qty' ? 'movement-qty-error' : undefined} role="alert" className="text-sm text-destructive">{t(movementProblem === 'key' ? 'erp.movementKeyUnavailable' : movementProblem === 'qty' ? 'erp.movementQtyInvalid' : 'erp.movementScopeChanged')}</p> : null}
           {movementUncertain ? (
             <div className="grid gap-2">
               <p role="alert" className="text-sm text-destructive">{t('erp.movementUnknown')}</p>

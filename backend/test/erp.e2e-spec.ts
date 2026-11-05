@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -7,6 +7,7 @@ import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { Prisma } from '../generated/client';
 
 describe('Phase 10 erp-lite (e2e)', () => {
   let app: INestApplication<App>;
@@ -311,6 +312,116 @@ describe('Phase 10 erp-lite (e2e)', () => {
       .set(auth(admin))
       .send({ warehouseId: empty.body.data.id, materialId, qty: '-1' });
     expect(allowed.status).toBe(201);
+  });
+
+  it('validates stock numeric(12,3) exactly while replaying old rounded keyed rows', async () => {
+    const setting = await request(app.getHttpServer())
+      .put('/api/settings')
+      .set(auth(admin))
+      .send({ 'erp.allowNegativeStock': false });
+    expect(setting.status).toBe(200);
+    const warehouse = await request(app.getHttpServer())
+      .post('/api/warehouses')
+      .set(auth(admin))
+      .send({ name: 'Exact stock precision warehouse', type: 'YARD' });
+    const material = await request(app.getHttpServer())
+      .post('/api/materials')
+      .set(auth(admin))
+      .send({ name: 'Exact stock precision material', unit: 'L' });
+    expect(warehouse.status).toBe(201);
+    expect(material.status).toBe(201);
+    const warehouseId = warehouse.body.data.id as string;
+    const materialId = material.body.data.id as string;
+    const post = (qty: string, idempotencyKey?: string) =>
+      request(app.getHttpServer())
+        .post('/api/stock-movements')
+        .set(auth(admin))
+        .send({
+          warehouseId,
+          materialId,
+          qty,
+          ...(idempotencyKey ? { idempotencyKey } : {}),
+        });
+
+    // Exactly representable quantities retain their value, including trailing zeroes and exponents.
+    for (const qty of [
+      '0.001000',
+      '-1e-3',
+      '999999999.999',
+      '-999999999.999',
+    ]) {
+      const result = await post(qty, randomUUID());
+      expect(result.status).toBe(201);
+      expect(result.body.data.qty).toBe(new Prisma.Decimal(qty).toString());
+    }
+    const before = await prisma.stockMovement.count({
+      where: { companyId, warehouseId, materialId },
+    });
+    expect(before).toBe(4);
+    const auditsBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'STOCK_MOVEMENT' },
+    });
+    for (const qty of [
+      '0.0001',
+      '0.0005',
+      '-0.0005',
+      '1e-4',
+      '999999999.9999',
+      '1000000000',
+      '-1000000000',
+      '1e-999999999999999999',
+    ]) {
+      for (const key of [undefined, randomUUID()]) {
+        const result = await post(qty, key);
+        expect(result.status).toBe(400);
+        expect(result.body.error.code).toBe('VALIDATION_FAILED');
+      }
+    }
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, warehouseId, materialId },
+      }),
+    ).toBe(before);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'STOCK_MOVEMENT' },
+      }),
+    ).toBe(auditsBefore);
+
+    // Emulate an old server: fingerprint is original 0.0005, DB stored rounded 0.001.
+    const key = randomUUID();
+    const fingerprint = createHash('sha256')
+      .update(JSON.stringify([warehouseId, materialId, '0.0005', null]))
+      .digest('hex');
+    const legacy = await prisma.stockMovement.create({
+      data: {
+        companyId,
+        warehouseId,
+        materialId,
+        qty: '0.001',
+        idempotencyKey: key,
+        requestFingerprint: fingerprint,
+      },
+    });
+    const replay = await post('0.0005000', key);
+    expect(replay.status).toBe(201);
+    expect(replay.body.data.id).toBe(legacy.id);
+    expect(replay.body.data.qty).toBe('0.001');
+    const conflict = await post('0.001', key);
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.error.code).toBe('CONFLICT');
+    const fresh = await post('0.0005', randomUUID());
+    expect(fresh.status).toBe(400);
+    expect(
+      await prisma.stockMovement.count({
+        where: { companyId, warehouseId, materialId },
+      }),
+    ).toBe(before + 1);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'STOCK_MOVEMENT' },
+      }),
+    ).toBe(auditsBefore);
   });
 
   it('keyed movement replays after concurrent requests, before the negative-balance check', async () => {
