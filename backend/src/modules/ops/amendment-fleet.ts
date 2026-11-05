@@ -3,7 +3,8 @@ import { PrismaService } from '../../modules/prisma/prisma.service';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import {
-  parseNonNegativeDecimal,
+  parseNonNegativeMoney,
+  parsePositiveQuantity,
   parsePositiveDecimal,
 } from '../../common/utils/decimal-input';
 import { fuelTotalCost } from './serialize-fleet';
@@ -104,10 +105,10 @@ export async function applyFuelAmendment(
   }
   const oldValue = readFuelField(row, field);
   const liters =
-    field === 'liters' ? parsePositiveDecimal(newValue, 'liters') : row.liters;
+    field === 'liters' ? parsePositiveQuantity(newValue, 'liters') : row.liters;
   const unitPrice =
     field === 'unitPrice'
-      ? parseNonNegativeDecimal(newValue, 'unitPrice')
+      ? parseNonNegativeMoney(newValue, 'unitPrice')
       : row.unitPrice;
   const nextProjectId =
     field === 'projectId' ? newValue || null : row.projectId;

@@ -75,6 +75,46 @@ describe('Sync push pull catalog (e2e)', () => {
     await app?.close();
   });
 
+  it('validates new fuel precision but preserves already-persisted sync replay', async () => {
+    const item = {
+      type: 'FUEL',
+      localId: `fuel-precision-${Date.now()}`,
+      deviceId: 'e2e-phone',
+      payload: {
+        machineId: truckId,
+        projectId,
+        liters: '0.0005',
+        unitPrice: '1',
+      },
+    };
+    const send = (body: typeof item) =>
+      request(app.getHttpServer())
+        .post('/api/sync/push')
+        .set(auth(admin))
+        .send({ items: [body] });
+    const rejected = await send(item);
+    expect(rejected.status).toBe(200);
+    expect(rejected.body.data.results[0]).toMatchObject({
+      ok: false,
+      code: 'VALIDATION_FAILED',
+    });
+    const accepted = await send({
+      ...item,
+      payload: { ...item.payload, liters: '0.001' },
+    });
+    expect(accepted.body.data.results[0].ok).toBe(true);
+    const replay = await send(item);
+    expect(replay.body.data.results[0]).toMatchObject({
+      ok: true,
+      serverId: accepted.body.data.results[0].serverId,
+    });
+    expect(
+      await prisma.fuelEntry.count({
+        where: { localId: item.localId, deviceId: item.deviceId },
+      }),
+    ).toBe(1);
+  });
+
   it('online timer startedAt 400; offline push accepts client clock and rejects +10min', async () => {
     const online = await request(app.getHttpServer())
       .post('/api/timer/start')

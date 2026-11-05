@@ -88,3 +88,19 @@ export function parseNonNegativeMoney(
   }
   return parsed;
 }
+
+/** Positive amount supplied to numeric(12,3), with no implicit rounding. */
+export function parsePositiveQuantity(
+  value: string,
+  field: string,
+): Prisma.Decimal {
+  const parsed = parsePositiveDecimal(value, field);
+  if (parsed.decimalPlaces() > 3 || parsed.gte('1000000000')) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      `${field} must fit positive numeric(12,3) without rounding`,
+      400,
+    );
+  }
+  return parsed;
+}

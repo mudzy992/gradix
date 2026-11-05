@@ -1148,6 +1148,156 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(price.body.data.oldValue).toBe('2');
   });
 
+  it('validates exact fuel values and total cost without partial writes on create or amendment', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Fuel precision project',
+        code: `FP${randomUUID().slice(0, 8)}`,
+      });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Fuel precision machine', type: 'LOADER' });
+    expect(project.status).toBe(201);
+    expect(machine.status).toBe(201);
+    const ownProject = project.body.data.id as string;
+    const machineId = machine.body.data.id as string;
+    const create = (liters: string, unitPrice: string) =>
+      request(app.getHttpServer())
+        .post('/api/fuel')
+        .set(auth(admin))
+        .send({ machineId, projectId: ownProject, liters, unitPrice });
+    const initialCount = await prisma.fuelEntry.count({
+      where: { companyId, machineId },
+    });
+    const initialAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'FUEL_CREATED' },
+    });
+    for (const [liters, price] of [
+      ['0.0005', '1'],
+      ['1e-999999999999999999', '1'],
+      ['1000000000', '1'],
+      ['1', '0.005'],
+      ['1', '1e-999999999999999999'],
+      ['1', '10000000000'],
+      ['1.001', '9999999999.99'],
+    ]) {
+      const result = await create(liters, price);
+      expect(result.status).toBe(400);
+      expect(result.body.error.code).toBe('VALIDATION_FAILED');
+    }
+    expect(
+      await prisma.fuelEntry.count({ where: { companyId, machineId } }),
+    ).toBe(initialCount);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'FUEL_CREATED' },
+      }),
+    ).toBe(initialAudit);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: ownProject } })
+      ).currentSpend.toString(),
+    ).toBe('0');
+    const created = await create('0.00100', '5.000');
+    expect(created.status).toBe(201);
+    expect(created.body.data.liters).toBe('0.001');
+    expect(created.body.data.unitPrice).toBe('5');
+    expect(created.body.data.totalCost).toBe('0.01');
+    const fuelId = created.body.data.id as string;
+    const amend = (field: string, newValue: string) =>
+      request(app.getHttpServer())
+        .post('/api/amendments')
+        .set(auth(admin))
+        .send({
+          entityType: 'FUEL',
+          entityId: fuelId,
+          field,
+          newValue,
+          reason: 'precision test',
+        });
+    const amendmentsBefore = await prisma.amendment.count({
+      where: { companyId, entityType: 'FUEL', entityId: fuelId },
+    });
+    const auditBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+    });
+    for (const [field, value] of [
+      ['liters', '0.0005'],
+      ['liters', '1000000000'],
+      ['unitPrice', '0.001'],
+      ['unitPrice', '1e-999999999999999999'],
+      ['unitPrice', '10000000000'],
+    ]) {
+      const result = await amend(field, value);
+      expect(result.status).toBe(400);
+      expect(result.body.error.code).toBe('VALIDATION_FAILED');
+    }
+    expect(
+      await prisma.amendment.count({
+        where: { companyId, entityType: 'FUEL', entityId: fuelId },
+      }),
+    ).toBe(amendmentsBefore);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+      }),
+    ).toBe(auditBefore);
+    const first = await amend('liters', '2.500');
+    expect(first.status).toBe(201);
+    const second = await amend('unitPrice', '1.230');
+    expect(second.status).toBe(201);
+    const after = await prisma.fuelEntry.findUniqueOrThrow({
+      where: { id: fuelId },
+    });
+    expect(after.liters.toString()).toBe('2.5');
+    expect(after.unitPrice.toString()).toBe('1.23');
+    expect(after.totalCost.toFixed(2)).toBe('3.08');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: ownProject } })
+      ).currentSpend.toFixed(2),
+    ).toBe('3.08');
+    const beforeOverflow = await prisma.amendment.count({
+      where: { companyId, entityType: 'FUEL', entityId: fuelId },
+    });
+    const beforeOverflowAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+    });
+    expect((await amend('unitPrice', '9999999999.99')).status).toBe(400);
+    expect(
+      await prisma.amendment.count({
+        where: { companyId, entityType: 'FUEL', entityId: fuelId },
+      }),
+    ).toBe(beforeOverflow);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'FUEL_AMENDED', entityId: fuelId },
+      }),
+    ).toBe(beforeOverflowAudit);
+    expect(
+      (
+        await prisma.fuelEntry.findUniqueOrThrow({ where: { id: fuelId } })
+      ).totalCost.toFixed(2),
+    ).toBe('3.08');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: ownProject } })
+      ).currentSpend.toFixed(2),
+    ).toBe('3.08');
+    const bound = await create('1', '9999999999.99');
+    // Project aggregate has other fuel; use an unassigned entry for column boundary instead.
+    expect(bound.status).toBe(409);
+    const unassigned = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({ machineId, liters: '1', unitPrice: '9999999999.99' });
+    expect(unassigned.status).toBe(201);
+    expect(unassigned.body.data.totalCost).toBe('9999999999.99');
+  });
+
   it('rejects foreign and missing fuel amendment projects and rolls back overflowing moves', async () => {
     const createProject = async (name: string) => {
       const response = await request(app.getHttpServer())

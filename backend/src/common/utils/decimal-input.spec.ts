@@ -4,6 +4,7 @@ import {
   parseNonNegativeMoney,
   parseNonZeroDecimal,
   parsePositiveDecimal,
+  parsePositiveQuantity,
 } from './decimal-input';
 
 function errorFrom(run: () => unknown): unknown {
@@ -22,6 +23,7 @@ describe('decimal input', () => {
     parseNonNegativeMoney,
     parseNonZeroDecimal,
     parsePositiveDecimal,
+    parsePositiveQuantity,
   ];
 
   it.each([
@@ -107,4 +109,20 @@ describe('decimal input', () => {
       status: 400,
     });
   });
+  it.each([
+    ['0.001', '0.001'],
+    ['1e-3', '0.001'],
+    ['1.23000', '1.23'],
+    ['999999999.999', '999999999.999'],
+  ])('accepts exact positive quantity %s', (value, expected) => {
+    expect(parsePositiveQuantity(value, 'liters').toString()).toBe(expected);
+  });
+  it.each(['0', '-1', '0.0005', '1e-4', '1e-999999999999999999', '1000000000'])(
+    'rejects invalid or inexact positive quantity %s',
+    (value) => {
+      expect(
+        errorFrom(() => parsePositiveQuantity(value, 'liters')),
+      ).toMatchObject({ code: 'VALIDATION_FAILED', status: 400 });
+    },
+  );
 });

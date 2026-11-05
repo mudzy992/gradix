@@ -1,4 +1,6 @@
 import { FuelEntry, Prisma, Trip } from '../../../generated/client';
+import { AppError } from '../../common/errors/app-error';
+import { ERROR_CODES } from '../../common/errors/error-codes';
 
 export function serializeTrip(row: Trip) {
   return {
@@ -50,5 +52,13 @@ export function fuelTotalCost(
   liters: Prisma.Decimal,
   unitPrice: Prisma.Decimal,
 ): Prisma.Decimal {
-  return liters.mul(unitPrice).toDecimalPlaces(2);
+  const total = liters.mul(unitPrice).toDecimalPlaces(2);
+  if (total.gte('10000000000')) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      'Fuel totalCost must fit numeric(12,2)',
+      400,
+    );
+  }
+  return total;
 }

@@ -7,8 +7,8 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import {
-  parseNonNegativeDecimal,
-  parsePositiveDecimal,
+  parseNonNegativeMoney,
+  parsePositiveQuantity,
 } from '../../common/utils/decimal-input';
 import { assertStoragePath } from '../../common/utils/storage-path';
 import { hasRole, isCompanyWide } from '../../common/scope/ops-roles';
@@ -76,8 +76,9 @@ export class FuelService {
     if (dto.receiptPath) {
       assertStoragePath(dto.receiptPath, companyId);
     }
-    const liters = parsePositiveDecimal(dto.liters, 'liters');
-    const unitPrice = parseNonNegativeDecimal(dto.unitPrice, 'unitPrice');
+    const liters = parsePositiveQuantity(dto.liters, 'liters');
+    const unitPrice = parseNonNegativeMoney(dto.unitPrice, 'unitPrice');
+    const totalCost = fuelTotalCost(liters, unitPrice);
     // BE-10 (F-01): upis goriva i ponovni obračun potrošnje projekta su jedna transakcija.
     const row = await this.prisma.$transaction(async (tx) => {
       if (projectId) await lockSpendProject(tx, companyId, projectId);
@@ -89,7 +90,7 @@ export class FuelService {
           projectId,
           liters,
           unitPrice,
-          totalCost: fuelTotalCost(liters, unitPrice),
+          totalCost,
           notes: dto.notes,
           receiptPath: dto.receiptPath,
           // BE-10 (F-06): isto kao kod tura — identitet uređaja u istom upisu.

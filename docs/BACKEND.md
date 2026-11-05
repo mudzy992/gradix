@@ -466,3 +466,10 @@ Novi `POST /api/stock-movements` koristi eksplicitni `projectId`, ili ako nije p
 `POST /api/fuel/:id/apply-stock` za novi pokret ponovo provjerava prethodni upis unutar svakog SERIALIZABLE pokušaja prije provjere negativne zalihe. Zaključava tenant fuel red (`FOR SHARE`), čita aktualne litre i projekt, zatim zaključava projekt iste firme i upisuje kretanje. Tuđi ili nedostajući projekt odbija se sa 404 bez kretanja. Ovaj redoslijed fuel → projekt prati aplikacijske ispravke goriva. P2002 se obrađuje traženjem već kreiranog pokreta, a serialization retry ostaje ograničen postojećim pravilima.
 
 Postojeći pokret se i dalje vraća sa 200 čak i ako se skladište ili materijal u ponovljenom tijelu razlikuju: ovo nije fingerprint idempotency. Prethodna validacija skladišta/materijala ostaje izvan transakcije. Naknadna ispravka goriva ne prilagođava već proknjiženi pokret; raniji loši podaci, vanjski i stari/miješani serveri nisu popravljeni. Audit nakon commita je best-effort i može izostati nakon kvara.
+
+
+### Preciznost goriva (F-CI-05-69)
+
+Novi unos goriva i ispravke litara/cijene zahtijevaju pozitivne litre tačno predstavljive u `numeric(12,3)` i nenegativnu jediničnu cijenu tačno predstavljivu u `numeric(12,2)`. Ukupni trošak se i dalje zaokružuje na dvije decimale, ali se proizvod izvan raspona `numeric(12,2)` odbija sa 400 prije upisa. Naknadni projektni zbir zasebno ima ograničenje i može vratiti 409. Sync za već pohranjeni identitet ostaje replay prije nove validacije, bez poređenja payloada.
+
+Ovo ne popravlja historijske podatke niti ostala decimalna polja, ne štiti stare/miješane servere i ne usklađuje stock pokret s kasnijim ispravkama goriva. Postojeće nepodudarne legacy vrijednosti pri drugim ispravkama i dalje mogu uzrokovati odbijanje ako preračunati proizvod prelazi raspon.
