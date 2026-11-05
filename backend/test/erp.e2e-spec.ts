@@ -130,6 +130,189 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(payrollDup.status).toBe(409);
   });
 
+  it('replays concurrent keyed costs, rejects changed payload and retains the key after deletion', async () => {
+    const idempotencyKey = randomUUID();
+    const body = {
+      idempotencyKey,
+      amount: '12.50',
+      category: 'OTHER',
+      date: '2026-11-05',
+      projectId,
+      note: 'retry',
+    };
+    const post = (payload: object) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send(payload);
+    const before = await prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    const result = await Promise.all(
+      Array.from({ length: 4 }, () => post(body)),
+    );
+    expect(result.map((r) => r.status)).toEqual([201, 201, 201, 201]);
+    const id = result[0].body.data.id as string;
+    expect(result.every((r) => r.body.data.id === id)).toBe(true);
+    const replay = await post({
+      ...body,
+      amount: '12.500',
+      idempotencyKey: idempotencyKey.toUpperCase(),
+    });
+    expect(replay.status).toBe(201);
+    expect(replay.body.data.id).toBe(id);
+    for (const change of [
+      { amount: '12.51' },
+      { note: 'other' },
+      { date: '2026-11-04' },
+      { category: 'MATERIAL' },
+      { projectId: null },
+    ]) {
+      expect((await post({ ...body, ...change })).status).toBe(409);
+    }
+    expect((await post({ ...body, idempotencyKey: 'invalid' })).status).toBe(
+      400,
+    );
+    const after = await prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    expect(after.currentSpend.minus(before.currentSpend).toFixed(2)).toBe(
+      '12.50',
+    );
+    const deleted = await request(app.getHttpServer())
+      .delete(`/api/cost-entries/${id}`)
+      .set(auth(admin));
+    expect(deleted.status).toBe(204);
+    expect((await post(body)).status).toBe(409);
+    const receipt = await prisma.costRequest.findUniqueOrThrow({
+      where: { companyId_idempotencyKey: { companyId, idempotencyKey } },
+    });
+    expect(receipt.costEntryId).toBeNull();
+  });
+
+  it('serializes different concurrent cost payloads using the same key', async () => {
+    const idempotencyKey = randomUUID();
+    const post = (amount: string) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          idempotencyKey,
+          amount,
+          category: 'OTHER',
+          date: '2026-11-05',
+        });
+    const results = await Promise.all([post('2'), post('3')]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    const receipt = await prisma.costRequest.findUniqueOrThrow({
+      where: { companyId_idempotencyKey: { companyId, idempotencyKey } },
+    });
+    expect(receipt.costEntryId).toBe(
+      results.find((r) => r.status === 201)!.body.data.id,
+    );
+  });
+
+  it('rolls back key claims on failure, preserves source conflicts and allows retry after lost response', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({ name: 'Key rollback', code: `K${randomUUID().slice(0, 8)}` });
+    expect(project.status).toBe(201);
+    const id = project.body.data.id as string;
+    const post = (payload: object) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send(payload);
+    const base = { projectId: id, category: 'OTHER', date: '2026-11-05' };
+    expect((await post({ ...base, amount: '9999999999.99' })).status).toBe(201);
+    const key = randomUUID();
+    expect(
+      (await post({ ...base, amount: '0.01', idempotencyKey: key })).status,
+    ).toBe(409);
+    expect(
+      await prisma.costRequest.findUnique({
+        where: { companyId_idempotencyKey: { companyId, idempotencyKey: key } },
+      }),
+    ).toBeNull();
+    expect(
+      (await post({ ...base, amount: '0', idempotencyKey: key })).status,
+    ).toBe(201);
+    const uniqueSource = `source-${randomUUID()}`;
+    const sourceBody = {
+      amount: '1',
+      category: 'OTHER',
+      date: '2026-11-05',
+      source: 'SERVICE',
+      sourceId: uniqueSource,
+    };
+    expect((await post(sourceBody)).status).toBe(201);
+    const conflictKey = randomUUID();
+    expect(
+      (await post({ ...sourceBody, idempotencyKey: conflictKey })).status,
+    ).toBe(409);
+    expect(
+      await prisma.costRequest.findUnique({
+        where: {
+          companyId_idempotencyKey: { companyId, idempotencyKey: conflictKey },
+        },
+      }),
+    ).toBeNull();
+    const lost = {
+      amount: '1',
+      category: 'OTHER',
+      date: '2026-11-05',
+      idempotencyKey: randomUUID(),
+    };
+    const audit = jest
+      .spyOn(app.get(AuditService), 'write')
+      .mockRejectedValueOnce(new Error('simulated post-commit failure'));
+    try {
+      expect((await post(lost)).status).toBe(500);
+      const retry = await post(lost);
+      expect(retry.status).toBe(201);
+      expect(
+        await prisma.costEntry.count({
+          where: { id: retry.body.data.id as string, companyId },
+        }),
+      ).toBe(1);
+      expect(audit).toHaveBeenCalledTimes(1);
+    } finally {
+      audit.mockRestore();
+    }
+  });
+
+  it('scopes cost idempotency keys to the selected company', async () => {
+    const other = await prisma.company.create({
+      data: { name: 'Cost isolation', slug: `cost-${randomUUID()}` },
+    });
+    const platform = await login(app, 'platform@gradix.local');
+    expect(platform.status).toBe(200);
+    const body = {
+      amount: '1',
+      category: 'OTHER',
+      date: '2026-11-05',
+      idempotencyKey: randomUUID(),
+    };
+    const first = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(admin))
+      .send(body);
+    const second = await request(app.getHttpServer())
+      .post('/api/cost-entries')
+      .set(auth(platform.body.data.accessToken as string))
+      .set('X-Company-Id', other.id)
+      .send(body);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(first.body.data.id).not.toBe(second.body.data.id);
+    expect(
+      await prisma.costRequest.count({
+        where: { idempotencyKey: body.idempotencyKey },
+      }),
+    ).toBe(2);
+  });
+
   it('rejects non-finite decimal inputs across stock, costs, projects, fuel and quantities without writing', async () => {
     const warehouse = await request(app.getHttpServer())
       .post('/api/warehouses')

@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export const COST_CATEGORIES = [
@@ -29,6 +36,10 @@ export class CostQueryDto extends PaginationQueryDto {
 }
 
 export class CreateCostDto {
+  @IsOptional()
+  @IsUUID('4')
+  idempotencyKey?: string;
+
   @IsString()
   amount!: string;
 

@@ -194,6 +194,7 @@ model Company {
   publicAssets       PublicAsset[]
   partners           Partner[]
   costEntries        CostEntry[]
+  costRequests       CostRequest[]
   warehouses         Warehouse[]
   stockMovements     StockMovement[]
   gpsDevices         GpsDevice[]

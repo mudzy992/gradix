@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -60,8 +61,39 @@ export class CostsService {
     }
     const amount = parseNonNegativeMoney(dto.amount, 'amount');
     const date = parseDateOnly(dto.date);
+    const key = dto.idempotencyKey?.toLowerCase();
+    const fingerprint = key
+      ? createHash('sha256')
+          .update(
+            JSON.stringify([
+              amount.toString(),
+              dto.category,
+              date.toISOString(),
+              dto.note ?? null,
+              source,
+              dto.sourceId ?? null,
+              dto.projectId ?? null,
+            ]),
+          )
+          .digest('hex')
+      : null;
+    if (key) {
+      const previous = await this.findCostRequest(companyId, key);
+      if (previous) return this.replayCost(previous, fingerprint!, companyId);
+    }
     try {
       const row = await this.prisma.$transaction(async (tx) => {
+        // Claim the key first. Competing requests block at the unique index and
+        // can only observe a fully committed receipt, cost and project spend.
+        const receipt = key
+          ? await tx.costRequest.create({
+              data: {
+                companyId,
+                idempotencyKey: key,
+                fingerprint: fingerprint!,
+              },
+            })
+          : null;
         if (dto.projectId) await lockSpendProject(tx, companyId, dto.projectId);
         const created = await tx.costEntry.create({
           data: {
@@ -76,6 +108,12 @@ export class CostsService {
           },
         });
         if (created.projectId) await recalcSpend(tx, created.projectId);
+        if (receipt) {
+          await tx.costRequest.update({
+            where: { id: receipt.id },
+            data: { costEntryId: created.id },
+          });
+        }
         return created;
       });
       await this.audit.write({
@@ -88,8 +126,42 @@ export class CostsService {
       });
       return serializeCostEntry(row);
     } catch (error) {
+      if (
+        key &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const previous = await this.findCostRequest(companyId, key);
+        if (previous) return this.replayCost(previous, fingerprint!, companyId);
+      }
       mapCostConflict(error);
     }
+  }
+
+  private findCostRequest(companyId: string, idempotencyKey: string) {
+    return this.prisma.costRequest.findUnique({
+      where: { companyId_idempotencyKey: { companyId, idempotencyKey } },
+      include: { costEntry: true },
+    });
+  }
+
+  private replayCost(
+    receipt: Prisma.CostRequestGetPayload<{ include: { costEntry: true } }>,
+    fingerprint: string,
+    companyId: string,
+  ) {
+    if (
+      receipt.fingerprint !== fingerprint ||
+      !receipt.costEntry ||
+      receipt.costEntry.companyId !== companyId
+    ) {
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Idempotency key already used or cost deleted',
+        409,
+      );
+    }
+    return serializeCostEntry(receipt.costEntry);
   }
 
   async fromPayroll(actor: AuthUser, dto: FromPayrollDto) {

@@ -55,11 +55,27 @@ model CostEntry {
   updatedAt DateTime     @updatedAt
   company   Company      @relation(fields: [companyId], references: [id])
   project   Project?     @relation(fields: [projectId], references: [id])
+  request   CostRequest?
 
   @@unique([companyId, source, sourceId])
   @@index([companyId, projectId])
   @@index([sourceId])
   @@index([projectId])
+}
+
+// Durable retry receipt survives physical cost deletion (costEntryId becomes NULL).
+model CostRequest {
+  id             String     @id @default(cuid())
+  companyId      String
+  idempotencyKey String
+  fingerprint    String
+  costEntryId    String?
+  createdAt      DateTime   @default(now())
+  company        Company    @relation(fields: [companyId], references: [id])
+  costEntry      CostEntry? @relation(fields: [costEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, idempotencyKey])
+  @@unique([costEntryId])
 }
 
 model Warehouse {
