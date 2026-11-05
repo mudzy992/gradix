@@ -445,6 +445,8 @@ Obuhvat: svih 72 nalaza iz [izvještaja CI-05](segments/CI-05.md#5-nalazi); izvo
 
 ## F-CI-05-64
 
+**Dopuna BE-01 (u radu):** zajednički parser odbija podlijevanje nenultih ulaza; unit regresija i PG E2E, a ostala polja/skale i stari podaci ostaju otvoreni (BL-001). Commit i CI ove dopune još nisu potvrđeni.
+
 - **Težina:** visoko. **Status:** djelimično / daljnja trijaža. **Commit:** da68931, 5e9a4cd.
 - **Scenarij:** Konačan Decimal može preći opseg DB kolone, tiho se zaokružiti ili se ekstremno mali eksponent podliti u nulu; neka polja uopće ne koriste zajednički parser
 - **Modul/dokaz:** `backend/src/common/utils/decimal-input.ts`, `backend/src/modules/erp/stock.service.ts`, decimalna polja u Prisma šemi i servisi. Testovi i rezultati: [CI-05 §7](segments/CI-05.md#7-testovi); navedeni testovi unutar odluke ispod.

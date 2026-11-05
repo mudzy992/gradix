@@ -49,6 +49,29 @@ describe('decimal input', () => {
     },
   );
 
+  it.each([
+    '1e-999999999999999999',
+    '-1e-999999999999999999',
+    '0x1p-999999999999999999',
+    '-0b1p-999999999999999999',
+    '0o1p-999999999999999999',
+  ])(
+    'rejects nonzero values underflowing to zero in every decimal helper: %s',
+    (value) => {
+      for (const parse of parsers) {
+        expect(errorFrom(() => parse(value, 'amount'))).toMatchObject({
+          code: 'VALIDATION_FAILED',
+          status: 400,
+        });
+      }
+    },
+  );
+
+  it.each(['0', '-0', '0e-999999999999999999', '0x0p-999999999999999999'])(
+    'still accepts true zero in the general parser: %s',
+    (value) => expect(parseDecimal(value, 'amount').isZero()).toBe(true),
+  );
+
   it('keeps finite decimal precision and supported exponent notation', () => {
     expect(parseDecimal('-123456789.00100', 'qty').toString()).toBe(
       '-123456789.001',

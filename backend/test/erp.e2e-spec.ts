@@ -967,6 +967,8 @@ describe('Phase 10 erp-lite (e2e)', () => {
       '-Infinity',
       'NaN',
       '1e999999999999999999',
+      '1e-999999999999999999',
+      '-1e-999999999999999999',
     ]) {
       const movement = await request(app.getHttpServer())
         .post('/api/stock-movements')

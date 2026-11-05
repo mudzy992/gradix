@@ -100,7 +100,7 @@ backend/src/
 - **Pisanje po projektu:** vidjeti projekat (npr. preko dodjele na zadatak) nije isto kao
   pisati po njemu — svaka izmjena traži `assertScopedWrite` (dodjela na projekat ili
   company-wide rola). Količine (`executedQty`) su do BE-05 bile izuzetak.
-- **Decimalni unos koji koristi `common/utils/decimal-input.ts`** odbija neispravne i ne-finite vrijednosti (`NaN`, ±`Infinity`, eksponent koji pređe opseg Decimal-a) kao `400 VALIDATION_FAILED`. Pozitivni/nenegativni/nenulti pomoćnici dodatno provjeravaju predznak; konačan broj sam po sebi ne garantuje da odgovara opsegu ili skali DB kolone. Pretjerano mali eksponent može se podliti u nulu, a PostgreSQL zaokružiti višak decimala; neka polja prolaze mimo ovog pomoćnika. Ti preostali slučajevi traže zasebnu provjeru (F-CI-05-63/64).
+- **Decimalni unos koji koristi `common/utils/decimal-input.ts`** odbija neispravne i ne-finite vrijednosti (`NaN`, ±`Infinity`, eksponent koji pređe opseg Decimal-a) kao `400 VALIDATION_FAILED`. Pozitivni/nenegativni/nenulti pomoćnici dodatno provjeravaju predznak; konačan broj sam po sebi ne garantuje da odgovara opsegu ili skali DB kolone. Nenulti ulaz koji Decimal podlije u nulu odbija se prije upisa, uključujući decimalne i podržane prefiksne zapise; stvarna nula ostaje dozvoljena gdje poslovno pravilo dozvoljava. PostgreSQL i dalje može zaokružiti višak decimala, a neka polja prolaze mimo ovog pomoćnika. Ti preostali slučajevi traže zasebnu provjeru (F-CI-05-63/64).
 - **Hijerarhija (D-030):** `users.write` ne dozvoljava upravljanje nalogom sa višom rolom — samo
   `SUPER_ADMIN`/`PLATFORM_ADMIN` diraju SUPER_ADMIN naloge, a `PLATFORM_ADMIN` se ne dodjeljuje
   kroz tenant rute (`common/rbac/role-hierarchy.ts`). Posljednjem aktivnom SUPER_ADMIN-u

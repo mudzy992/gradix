@@ -8,11 +8,11 @@ dati svakom stvarnom preostalom scenariju ID, težinu, dokaz i prijedlog prije z
 
 ## Novac i decimalne vrijednosti
 
-- **BL-001 — visoko, otvoreno, F-CI-05-64:** zajednički `parseDecimal` provjerava konačnost,
-  ali `Decimal` može podliti nenultu vrijednost na nulu; drugi tokovi zaobilaze ograničenja
-  skale/opsega. Dokaz: `backend/src/common/utils/decimal-input.ts`, F-CI-05-64 i historijski
-  STATE (2026-11-05). Prijedlog: test-first validacija ulaza prije konverzije i posebno
-  sistematska inventura skale/opsega po polju; ne tvrditi da postojeći podaci popravljeni.
+- **BL-001 — visoko, djelimično, F-CI-05-64:** zajednički `parseDecimal` sada odbija
+  nenulti ulaz podliven u nulu; druge skale/opsezi i tokovi koji zaobilaze helper ostaju
+  otvoreni. Dokaz: `backend/src/common/utils/decimal-input.spec.ts`, `backend/test/erp.e2e-spec.ts`
+  i [BE-01](segments/BE-01.md). Prijedlog: sistematska inventura skale/opsega po polju;
+  postojeći podaci i stari serveri nisu popravljeni.
 
 ## Sesije i autentifikacija
 
