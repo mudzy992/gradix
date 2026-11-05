@@ -860,6 +860,23 @@ bi kompilaciju na svakom mestu upotrebe bez stvarne koristi; (c) uklanjanje `dar
 inertan, ali tokeni su pripremljeni (D-008); (d) normalizacija navodnika u četiri generisana fajla —
 kozmetika bez uticaja na ponašanje.
 
+
+### D-057 — Dashboard v2: aditivna analitika i admin checkpoint
+**Datum:** 2026-11-05 · **Status:** odobren smjer; admin checkpoint K2 čeka realizaciju
+
+Dopunjuje D-043: tri pitanja i role ostaju, ali se dozvoljavaju novi read-only,
+tenant/role-scopeovani podaci kroz BE-19 za trend, hitnost, projekte, prisustvo i aktivnost.
+Postojeći endpoint/ugovor ostaje kompatibilan; podaci se ograničavaju i prikazuju samo uz
+odgovarajuća prava. FE-17 ima nezavisne sekcije sa loading/error/empty/retry, pristupačne
+tekstualne alternative SVG grafovima i mapu koja se učitava lijeno. Prečice/paleta koriste
+istu provjeru prava kao navigacija. BS/EN, reduced motion i WCAG AA su obavezni.
+
+Bez nove zavisnosti bez K3, bez destruktivne migracije i bez izmjena mobile. Nakon admin
+izvedbe sa realističnim demo podacima slijede light/dark desktop/mobile screenshotovi i
+zaustavljanje za vlasnikovu K2 potvrdu prije ostalih rola. Rizici S-01/S-02/S-03 koji
+zaista utiču na nove putanje razrješavaju se ili se dokazuje neprimjenjivost prije upotrebe;
+nepovezani High nalazi idu paralelno u S-red.
+
 ---
 
 ## Zamijenjene / povučene odluke

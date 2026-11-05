@@ -115,6 +115,7 @@ dva puta; (e) admin dashboard redizajn **nakon** tokena i a11y pravila i **nakon
 | **BE-16** | Javni sajt, notifikacije, email | `modules/public/**`, `notifications/**`, `mail/**`, `common/notify/**` | srednji | DTO whitelist; email stub → odluka |
 | **BE-17** | Sync (serverska strana) | `ops/sync*` | srednji | idempotentnost; TTL katalog |
 | **BE-18** | Health | `modules/health/**` | nizak | pokriveno u INF-05, ovdje samo API ugovor |
+| **BE-19** | Dashboard analytics API v2 | `ops/dashboard*` | visok | aditivne ograničene read-only sekcije s tenant/role testovima i Swaggerom |
 
 ### 4.5 Frontend (FE)
 
@@ -136,6 +137,7 @@ dva puta; (e) admin dashboard redizajn **nakon** tokena i a11y pravila i **nakon
 | **FE-14** | Javni sajt | `public-site-page`, `public-brand-fields`, `use-public-settings` | nizak | whitelisted prikaz, SEO meta |
 | **FE-15** | i18n, store, helperi, hookovi | `i18n/**`, `stores/**`, `hooks/**`, `lib/**` | nizak | bs/en paritet; helperi testirani |
 | **FE-16** | UI primitive | `components/ui/**` | nizak | varijante + a11y + dokumentovani tokeni |
+| **FE-17** | Dashboard v2 | `pages/dashboard-page`, dashboard komponente | visok | admin K2 screenshot checkpoint pa ostale role; a11y, lokalizacija i budžet |
 
 ### 4.6 Mobile (MOB)
 

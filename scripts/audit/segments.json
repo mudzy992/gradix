@@ -51,7 +51,7 @@
       "id": "CI-05",
       "layer": "CI",
       "title": "Audit gate (matrica + docs)",
-      "status": "in-progress",
+      "status": "done",
       "scope": "process",
       "scopeReason": "Audit gate poziva scripts/audit/* (vlasništvo STD-01); ovdje se dodaje korak u ci.yml."
     },
@@ -251,6 +251,14 @@
       "scope": "files"
     },
     {
+      "id": "BE-19",
+      "layer": "BE",
+      "title": "Dashboard analytics API v2",
+      "status": "in-progress",
+      "scope": "process",
+      "scopeReason": "Aditivna analitika u ops dashboard modulu; postojeći fajlovi ostaju BE-12, novi fajlovi će biti klasifikovani prije upisa."
+    },
+    {
       "id": "FE-01",
       "layer": "FE",
       "title": "Design tokeni + paleta (kombinacija A+B)",
@@ -366,6 +374,14 @@
       "title": "UI primitive",
       "status": "done",
       "scope": "files"
+    },
+    {
+      "id": "FE-17",
+      "layer": "FE",
+      "title": "Dashboard v2 po rolama",
+      "status": "in-progress",
+      "scope": "process",
+      "scopeReason": "Nadogradnja postojećeg dashboarda FE-04 i dijeljenih primitiva; novi fajlovi se inventarišu i klasifikuju prije zatvaranja."
     },
     {
       "id": "MOB-01",

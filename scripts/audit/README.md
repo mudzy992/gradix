@@ -69,11 +69,11 @@ auditiraju. Sve ostalo **mora** biti u matrici.
 
 ## Process segmenti
 
-17 segmenata je poprečno (npr. CI-02…CI-07 dijele jedan `ci.yml`, FE-03 je a11y kroz sve ekrane,
+19 segmenata je poprečno (npr. CI-02…CI-07 dijele jedan `ci.yml`, FE-03 je a11y kroz sve ekrane,
 MOB-07 je EAS profil koji još ne postoji). Oni u `segments.json` imaju `scope: "process"` i
 `scopeReason`; gate za njih ne traži redove u matrici; nedostajući razlog je upozorenje, ne greška.
 
-Prototip `check-audit-gate.mjs` najprije izvršava `check-coverage.mjs` i pada ako matrica/inventar nisu usklađeni. Ostaje van CI gatea dok postoje nepregledani zapisi u `done` segmentima. Provjerava i prisustvo izvještaja svih segmenata te status u zaglavlju i zapisu izvršavanja prema registru; format izvještaja je ograničen na postojeći obrazac. Njegova CI provjera je tekstualna, ne parsira proizvoljan YAML: neke alternativne `uses` ključeve i inline korake odbija, ali ne dokazuje sigurnost drugih oblika, aliasa ni lokalnih akcija; provjerava i tačnu dokumentovanu suite matricu šest poslova. Promjena formata ili dodavanje posla zahtijeva usklađivanje provjere; testovi prototipa pokreću se u izolovanom repou.
+Strogi `check-audit-gate.mjs` izvršava `check-coverage.mjs` prije dodatnih provjera i obavezan je u CI audit poslu. Workflow sken je ograničen na dokumentovani tekstualni format, ne dokazuje svu YAML semantiku.
 
 ## Strogi audit gate
 
@@ -82,9 +82,10 @@ izvještaje i njihove statuse, te za `done` segmente traži isključivo pregleda
 jedan `Potvrđeni puni CI` link s ID-om i `success` u zaglavlju izvještaja. Nedovršeni
 segmenti mogu imati `nepregledano` i `u-toku`, ali integritet matrice i dalje važi za sve.
 U CI-ju `--verify-ci` uz `GITHUB_TOKEN` i `actions: read` provjerava GitHub API: isti
-repozitorij, završeni uspješni CI workflow i svih šest uspješnih poslova. Greška API-ja,
-nedostupan token, nedostajući ili preskočen posao ruše gate. Lokalni poziv bez opcije
-provjerava samo format tvrdnje, **ne** provjerava GitHub. Referenca je dokaz punog CI-ja
+repozitorij, završeni uspješni CI workflow i svih šest uspješnih poslova. Nedostupan token/mreža, HTTP 401/403/429 ili server greška 5xx daju upozorenje i online
+provjera se preskače: tvrdnja tada **nije potvrđena**. Dostupan API mora potvrditi uspjeh
+svih poslova; nepostojeći run (404), neuspješan ili preskočen posao ruše gate. Lokalni
+poziv bez opcije jasno prijavljuje preskočenu online provjeru i provjerava samo format. Referenca je dokaz punog CI-ja
 za snimljeni kod, ne sama po sebi dokaz kvaliteta pregleda niti da je to završni commit
 segmenta. Po završetku promjene sačekati puni CI prije tvrdnje da je nova revizija zelena.
 Parser workflowa je namjerno ograničena tekstualna provjera, ne opšti YAML parser.

@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT, PLAN_PATH, readMatrix, readSegments, REVIEWED } from './lib.mjs';
-import { githubRequest, verifyRun } from './verify-ci-evidence.mjs';
+import { githubRequest, verifyEvidenceBatch } from './verify-ci-evidence.mjs';
 
 const verbose = process.argv.includes('--verbose');
 const CI_PATH = path.join(ROOT, '.github/workflows/ci.yml');
@@ -118,13 +118,13 @@ for (const id of reports) {
   // (skeleton izvještaj za svih 59 segmenata je pravilo, ne problem)
 }
 
-// CI makes the documented claim verifiable rather than trusting a fabricated link.
+// An unreachable API cannot attest success; a reachable API's negative evidence fails closed.
 if (process.argv.includes('--verify-ci')) {
-  for (const evidence of ciEvidence) {
-    const [repo, id] = evidence.split('#');
-    try { await verifyRun(repo, id, githubRequest); }
-    catch (e) { fail(`CI dokaz ${repo}#${id}: ${e.message}`); }
-  }
+  const verification = await verifyEvidenceBatch(ciEvidence, githubRequest);
+  for (const message of verification.errors) fail(message);
+  for (const message of verification.warnings) warn(message);
+} else {
+  warn('online CI provjera preskočena (lokalni režim); CI dokaz nije potvrđen preko API-ja');
 }
 
 // --- 3. done segment vs matrica ---------------------------------------------------------------

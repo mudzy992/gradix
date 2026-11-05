@@ -176,8 +176,8 @@ backend/src/modules/ops/dashboard-presence.ts,BE,ops,BE-12,129,pregledano,BE-12 
 backend/src/modules/ops/dashboard-role.spec.ts,BE,ops,BE-12,65,pregledano,BE-12: 5 testova prioriteta rola (više rola = širi dashboard),2026-11-03
 backend/src/modules/ops/dashboard-role.ts,BE,ops,BE-12,35,pregledano,BE-12 (novo): prioritet rola za dashboard (firma → PM/SS → DRIVER → WORKER → MECHANIC),2026-11-03
 backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,pregledano,BE-12: tipovi kartica/prisustva/isteka; `presence` može biti `null` (terenske role),2026-11-03
-backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,17,pregledano,BE-12: `GET /api/dashboard` bez posebne permisije — verzija zavisi od rola (D-034),2026-11-03
-backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,159,pregledano,"BE-12 (F-01/02): grananje po `resolveDashboardView` (najširi scope prvi), uklonjen mrtav `spend: null`",2026-11-03
+backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,17,pregledano,BE-12: `GET /api/dashboard` bez posebne permisije — verzija zavisi od rola (D-034) | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057.,2026-11-03
+backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,159,pregledano,"BE-12 (F-01/02): grananje po `resolveDashboardView` (najširi scope prvi), uklonjen mrtav `spend: null` | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057.",2026-11-03
 backend/src/modules/ops/depots.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — depoi kroz isti CatalogService,2026-11-03
 backend/src/modules/ops/diary-access.ts,BE,ops,BE-11,112,pregledano,"BE-11 (F-03): `parseDiaryTemp` (−100…100, `400`); scope pravila dnevnika",2026-11-03
 backend/src/modules/ops/diary-conflict.service.ts,BE,ops,BE-11,87,pregledano,BE-11: resolve A/B/MERGE traži `diary.write` + scoped write; merge čuva oba teksta,2026-11-03
@@ -512,8 +512,8 @@ frontend/src/pages/auth-pages.spec.tsx,TEST,fe-unit,FE-05,240,pregledano,"CI-05:
 frontend/src/pages/change-password-page.tsx,FE,auth-pages,FE-07,104,pregledano,FE-15: odjava poslije promjene lozinke ide kroz `clearSession()`,2026-11-04
 frontend/src/pages/companies-page.spec.tsx,TEST,fe-unit,FE-05,210,pregledano,"FE-13: 8 testova — zaglavlje statusa, reaktivacija, deaktivacija, greška + retry, slug validacija, kreiranje sa adminom, izmjena samo naziva, prazno",2026-11-04
 frontend/src/pages/companies-page.tsx,FE,admin-pages,FE-13,210,pregledano,"FE-13: zaglavlje kolone statusa (prije prazno `<th />`), reaktivacija firme, caption/broj, skeleton, greška + retry, prazno stanje, toast na ishod | FE-16: tabela dobila `label` (imenovan region za skrol)",2026-11-04
-frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme",2026-11-03
-frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,279,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); FE-05: stanje „izaberite firmu“/„nema pokazatelja“, dash() sa defaultValue",2026-11-03
+frontend/src/pages/dashboard-page.spec.tsx,TEST,fe-unit,FE-05,203,pregledano,"FE-05: prečice po pravima + tenant, KPI linkovi, hitnost rokova, prisustvo (null/prazno/osobe), greška + retry, stanje bez firme | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057.",2026-11-03
+frontend/src/pages/dashboard-page.tsx,FE,dashboard,FE-04,279,pregledano,"FE-04: zone A–F (zaglavlje, prečice filtrirane isNavItemVisible, KPI sa linkovima, rokovi sa hitnošću boja+tekst, prisustvo sa avatarima, skeleton/greška/retry); FE-05: stanje „izaberite firmu“/„nema pokazatelja“, dash() sa defaultValue | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057.",2026-11-03
 frontend/src/pages/diary-page.spec.tsx,TEST,fe-unit,FE-05,173,pregledano,"FE-10: labela mjeseca, opcija „Svi projekti“, dan sa/bez unosa (puno ime), prazan mjesec, greška + retry, opseg upita pri promjeni mjeseca, tab projekta i link | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
 frontend/src/pages/diary-page.tsx,FE,site-pages,FE-10,186,pregledano,"FE-10: označen mjesec, izbor projekta sa labelom i opcijom „Svi projekti“, kalendar sa zaglavljem dana i offsetom, dan kao ćelija sa punim imenom (bez lažnih dugmadi), broj/prazno/greška + retry, lista unosa i link na projekat | CI-05: početni mjesec prema vremenskoj zoni firme, regresijski test.",2026-11-04
 frontend/src/pages/documents-page.spec.tsx,TEST,fe-unit,FE-05,191,pregledano,"FE-10: istekao/ističe/vrijedi/bez roka, relativni pomak, broj, skeleton, prazno, greška + retry, upload + kreiranje po kategoriji (radnik/mašina)",2026-11-03
@@ -613,7 +613,7 @@ mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
 package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,255,pokriveno-testom,STD-01 pregled: integritet matrice status izvještaja CI invarijante i online dokaz; izolovani negativni node testovi. YAML provjera ostaje ograničena.,2026-11-05
-scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,244,pokriveno-testom,F-CI-05-42/44: regresije statusa izvještaja i alternativnih uses oblika; prototip nije CI gate.,2026-11-04
+scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,281,pokriveno-testom,F-CI-05-42/44: strogi gate i regresije; online dostupnost jasno prijavljena.,2026-11-04
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,144,pregledano,F-CI-05-43: kalendarska validacija ISO datuma za pregledane redove.,2026-11-04
 scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,109,pregledano,F-CI-05-43: regresije prestupne godine i nepostojećih datuma uz ranije testove matrice.,2026-11-04
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
@@ -622,8 +622,8 @@ scripts/audit/lib.mjs,STD,audit-tools,STD-01,296,pregledano,"CI-05: pregled inve
 scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,52,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,67,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
-scripts/audit/segments.json,STD,audit-tools,STD-01,439,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 dug statusa done ostaje otvoren,2026-11-04
-scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,35,pokriveno-testom,STD-01: GitHub dokaz punog CI; test neuspjeha nekompletnog runa preskočenog posla i greške API.,2026-11-05
+scripts/audit/segments.json,STD,audit-tools,STD-01,455,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 proces zatvoren uz CI dokaz,2026-11-04
+scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,60,pokriveno-testom,STD-01: GitHub dokaz; nedostupan API upozorava a dostupan negativan dokaz ruši gate.,2026-11-05
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03

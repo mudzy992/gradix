@@ -241,3 +241,40 @@ test('GitHub provjera odbija neuspješan ili nepotpun run i prihvata samo šest 
   }
   await assert.rejects(() => verifyRun('example/repo', '12345678', async () => { throw new Error('API nedostupan') }))
 })
+
+test('lokalni gate jasno prijavljuje da online provjera nije izvršena', (t) => {
+  const f = fixture(t)
+  const result = f.run()
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.match(result.stdout, /online CI provjera preskočena/i)
+})
+
+test('nedostupan token, mreža i rate limit razlikuju se od neuspjelog CI dokaza', async () => {
+  const { githubRequest, CiVerificationUnavailable } = await import('./verify-ci-evidence.mjs')
+  const previous = process.env.GITHUB_TOKEN
+  try {
+    delete process.env.GITHUB_TOKEN
+    await assert.rejects(() => githubRequest('/x'), CiVerificationUnavailable)
+    process.env.GITHUB_TOKEN = 'test-only-token'
+    await assert.rejects(() => githubRequest('/x', async () => { throw new Error('network down') }), CiVerificationUnavailable)
+    await assert.rejects(() => githubRequest('/x', async () => { throw new DOMException('timeout', 'TimeoutError') }), CiVerificationUnavailable)
+    for (const status of [401, 403, 429, 500, 503]) {
+      await assert.rejects(() => githubRequest('/x', async () => ({ ok: false, status })), CiVerificationUnavailable)
+    }
+    await assert.rejects(() => githubRequest('/x', async () => ({ ok: false, status: 404 })), (e) => !(e instanceof CiVerificationUnavailable))
+    assert.deepEqual(await githubRequest('/x', async () => ({ ok: true, json: async () => ({ ok: true }) })), { ok: true })
+  } finally {
+    if (previous === undefined) delete process.env.GITHUB_TOKEN
+    else process.env.GITHUB_TOKEN = previous
+  }
+})
+
+test('CI uz nedostupan API upozorava, a dostupan API odbija pogrešan dokaz', async () => {
+  const { verifyEvidenceBatch, CiVerificationUnavailable } = await import('./verify-ci-evidence.mjs')
+  const unavailable = await verifyEvidenceBatch(['example/repo#123'], async () => { throw new CiVerificationUnavailable('rate limit') })
+  assert.equal(unavailable.warnings.length, 1)
+  assert.equal(unavailable.errors.length, 0)
+  const failed = await verifyEvidenceBatch(['example/repo#123'], async () => ({ status: 'completed', conclusion: 'failure', path: '.github/workflows/ci.yml' }))
+  assert.equal(failed.errors.length, 1)
+  assert.equal(failed.warnings.length, 0)
+})

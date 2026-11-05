@@ -135,6 +135,6 @@ ponavlja kao izvor istine.
 Prije oznake `done` pregledati sve fajlove segmenta, ažurirati matricu i izvještaj.
 U zaglavlju izvještaja navesti `| Potvrđeni puni CI | [ID](https://github.com/mudzy992/gradix/actions/runs/ID) — success |`
 sa stvarnim istim numeričkim ID-om u linku i naslovu, nakon provjere svih šest poslova.
-Strogi gate je obavezan u CI; lokalni gate bez `--verify-ci` ne provjerava GitHub.
+Strogi gate je obavezan u CI; lokalni gate bez `--verify-ci` jasno prijavljuje da ne provjerava GitHub. Nedostupna mreža/token, rate limit i 5xx daju upozorenje, ne potvrdu runa; dostupan API odbija neuspješan ili nepotpun run.
 Planirani i aktivni segmenti mogu sadržati nepregledane redove, ali ne i neispravnu matricu.
 Puni CI na kasnijoj reviziji mora se zasebno sačekati; ne upisivati budući run kao zelen.

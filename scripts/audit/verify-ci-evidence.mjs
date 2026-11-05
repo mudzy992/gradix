@@ -22,13 +22,38 @@ export async function verifyRun(repo, id, request) {
   }
 }
 
-export async function githubRequest(path) {
+export class CiVerificationUnavailable extends Error {}
+
+export async function verifyEvidenceBatch(entries, request) {
+  const errors = [];
+  const warnings = [];
+  for (const evidence of entries) {
+    const [repo, id] = evidence.split('#');
+    try { await verifyRun(repo, id, request); }
+    catch (e) {
+      const message = `CI dokaz ${repo}#${id}: ${e.message}`;
+      if (e instanceof CiVerificationUnavailable) warnings.push(`${message}; online provjera preskočena, tvrdnja nije potvrđena`);
+      else errors.push(message);
+    }
+  }
+  return { errors, warnings };
+}
+
+export async function githubRequest(path, fetchImpl = fetch) {
   const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('GITHUB_TOKEN je obavezan za online CI provjeru');
-  const response = await fetch(`https://api.github.com${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'gradix-audit-gate' },
-    signal: AbortSignal.timeout(10000),
-  });
+  if (!token) throw new CiVerificationUnavailable('GITHUB_TOKEN nije dostupan');
+  let response;
+  try {
+    response = await fetchImpl(`https://api.github.com${path}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'gradix-audit-gate' },
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch {
+    throw new CiVerificationUnavailable('mreža ili GitHub API nisu dostupni');
+  }
+  if ([401, 403, 429].includes(response.status) || response.status >= 500) {
+    throw new CiVerificationUnavailable(`GitHub API status ${response.status}`);
+  }
   if (!response.ok) throw new Error(`GitHub API status ${response.status}`);
   return response.json();
 }
