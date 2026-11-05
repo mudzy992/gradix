@@ -62,3 +62,29 @@ export function parseNonZeroDecimal(
   }
   return parsed;
 }
+
+/** Amount supplied to a numeric(12,2) column, without implicit rounding or underflow. */
+export function parseNonNegativeMoney(
+  value: string,
+  field: string,
+): Prisma.Decimal {
+  const parsed = parseNonNegativeDecimal(value, field);
+  // Decimal.js underflows extreme exponents to signed zero. Detect a non-zero
+  // original significand, including the base-prefixed syntax Decimal.js accepts.
+  const unsigned = value.replace(/^[+-]/, '');
+  const isBasePrefixed = /^0[xob]/i.test(unsigned);
+  const significand = isBasePrefixed
+    ? unsigned.slice(2).split(/p/i)[0]
+    : unsigned.split(/e/i)[0];
+  const underflow =
+    parsed.isZero() &&
+    (isBasePrefixed ? /[1-9a-f]/i : /[1-9]/).test(significand);
+  if (underflow || parsed.decimalPlaces() > 2 || parsed.gte('10000000000')) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      `${field} must fit nonnegative numeric(12,2) without rounding`,
+      400,
+    );
+  }
+  return parsed;
+}

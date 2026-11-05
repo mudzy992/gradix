@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { createCostEntry, fromPayroll, type CostRow } from '@/lib/api-erp'
 import { errorMessage } from '@/lib/error-message'
+import { isValidFixedDecimal } from '@/lib/decimal-input'
 import { useCompanySwitchBlock } from '@/hooks/use-company-switch-block'
 import { useSensitiveNavigationBlock } from '@/hooks/use-sensitive-navigation'
 import { costCategory, costSource, formatAmount } from '@/lib/labels'
@@ -29,6 +30,7 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
   const { t } = useTranslation()
   const CATEGORIES = ['FUEL', 'SERVICE', 'MATERIAL', 'LABOR', 'OTHER']
   const [amount, setAmount] = useState('')
+  const [amountInvalid, setAmountInvalid] = useState(false)
   const [category, setCategory] = useState('MATERIAL')
   const [date, setDate] = useState('')
   const [saving, setSaving] = useState(false)
@@ -64,6 +66,11 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
           onSubmit={async (event) => {
             event.preventDefault()
             if (savingRef.current || uncertainRef.current) return
+            if (!isValidFixedDecimal(amount, 10, 2, true, false)) {
+              setAmountInvalid(true)
+              return
+            }
+            setAmountInvalid(false)
             savingRef.current = true
             setSaving(true)
             try {
@@ -84,7 +91,7 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
         >
           <h2 className="text-sm font-medium">{t('erp.createCost')}</h2>
           <div className="flex flex-wrap items-end gap-2">
-            <Field label={t('erp.costAmount')} htmlFor="cost-amount">
+            <Field label={t('erp.costAmount')} htmlFor="cost-amount" error={amountInvalid ? t('erp.costAmountInvalid') : undefined}>
               <Input
                 id="cost-amount"
                 name="amount"
@@ -93,7 +100,7 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
                 className="w-32"
                 disabled={saving}
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => { setAmount(event.target.value); setAmountInvalid(false) }}
               />
             </Field>
             <Field label={t('erp.categoryLabel')} htmlFor="cost-category">
@@ -131,6 +138,7 @@ export function ErpCostsTab({ canWrite, rows, isLoading, onChanged, onProtectedC
             {dirty || uncertain ? (
               <Button type="button" variant="outline" disabled={saving} onClick={() => {
                 setAmount('')
+                setAmountInvalid(false)
                 setCategory('MATERIAL')
                 setDate('')
                 uncertainRef.current = false

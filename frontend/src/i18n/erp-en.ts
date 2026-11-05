@@ -10,6 +10,7 @@ export const erpEn = {
     warehouseUnknown: 'Creation was not confirmed. The warehouse may already exist; check before trying again.',
     stockTabBlocked: 'Save or discard the warehouse or movement draft and wait for the operation to finish before changing tabs.',
     payrollUnknown: 'Creation from payroll was not confirmed. A cost for the selected period may already exist; check before trying again.',
+    costAmountInvalid: 'Enter a nonnegative amount up to 9999999999.99 with at most two decimal places. Use a decimal point; trailing zeroes are allowed.',
     costUnknown: 'Creation was not confirmed. The cost entry may already exist; check before trying again.',
     costTabBlocked: 'Save or discard the cost or payroll draft and wait for the operation to finish before changing tabs.',
     partnerUnknown: 'Creation was not confirmed. The partner may already exist; check before trying again.',

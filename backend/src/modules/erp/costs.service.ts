@@ -6,7 +6,7 @@ import { AuthUser } from '../../common/types/auth-user';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
-import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
+import { parseNonNegativeMoney } from '../../common/utils/decimal-input';
 import { parseDateOnly } from '../../common/scope/company-tz';
 import { requireCompany } from '../users/users-helpers';
 import { recalcSpend } from '../ops/spend';
@@ -65,7 +65,7 @@ export class CostsService {
       const row = await this.prisma.costEntry.create({
         data: {
           companyId,
-          amount: parseNonNegativeDecimal(dto.amount, 'amount'),
+          amount: parseNonNegativeMoney(dto.amount, 'amount'),
           category: dto.category,
           date: parseDateOnly(dto.date),
           note: dto.note,

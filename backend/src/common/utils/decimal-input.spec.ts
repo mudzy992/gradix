@@ -1,6 +1,7 @@
 import {
   parseDecimal,
   parseNonNegativeDecimal,
+  parseNonNegativeMoney,
   parseNonZeroDecimal,
   parsePositiveDecimal,
 } from './decimal-input';
@@ -18,6 +19,7 @@ describe('decimal input', () => {
   const parsers = [
     parseDecimal,
     parseNonNegativeDecimal,
+    parseNonNegativeMoney,
     parseNonZeroDecimal,
     parsePositiveDecimal,
   ];
@@ -66,5 +68,43 @@ describe('decimal input', () => {
     expect(
       errorFrom(() => parseNonNegativeDecimal('-0.1', 'qty')),
     ).toMatchObject({ code: 'VALIDATION_FAILED', status: 400 });
+  });
+  it.each([
+    ['0', '0'],
+    ['-0', '0'],
+    ['0e-999999999999999999', '0'],
+    ['0x0p-999999999999999999', '0'],
+    ['0.0100', '0.01'],
+    ['1e-2', '0.01'],
+    ['9999999999.990', '9999999999.99'],
+    ['1_000.00', '1000'],
+    ['0x1', '1'],
+  ])('accepts exact nonnegative money %s', (value, expected) => {
+    expect(parseNonNegativeMoney(value, 'amount').toString()).toBe(expected);
+  });
+
+  it.each([
+    '-0.01',
+    '-1e-999999999999999999',
+    '1e-999999999999999999',
+    '0x1p-999999999999999999',
+    '-0b1p-999999999999999999',
+    '0o1p-999999999999999999',
+    '0x0.ep-999999999999999999',
+    '0.001',
+    '0.005',
+    '1e-3',
+    '9999999999.999',
+    '10000000000',
+    '1e999999999999999999',
+    'NaN',
+    'Infinity',
+  ])('rejects negative, underflow, inexact or oversized money %s', (value) => {
+    expect(
+      errorFrom(() => parseNonNegativeMoney(value, 'amount')),
+    ).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      status: 400,
+    });
   });
 });

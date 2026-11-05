@@ -10,6 +10,7 @@ export const erpBs = {
     warehouseUnknown: 'Kreiranje nije potvrđeno. Skladište možda već postoji; provjerite prije novog pokušaja.',
     stockTabBlocked: 'Sačuvajte ili odbacite nacrt skladišta ili kretanja i sačekajte završetak upisa prije promjene kartice.',
     payrollUnknown: 'Kreiranje iz obračuna nije potvrđeno. Trošak za odabrani period možda već postoji; provjerite prije novog pokušaja.',
+    costAmountInvalid: 'Unesite nenegativan iznos do 9999999999.99 s najviše dvije decimale. Koristite decimalnu tačku; završne nule su dozvoljene.',
     costUnknown: 'Kreiranje nije potvrđeno. Trošak možda već postoji; provjerite prije novog pokušaja.',
     costTabBlocked: 'Sačuvajte ili odbacite nacrt troška ili obračuna i sačekajte završetak upisa prije promjene kartice.',
     partnerUnknown: 'Kreiranje nije potvrđeno. Partner možda već postoji; provjerite prije novog pokušaja.',

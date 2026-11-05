@@ -261,6 +261,40 @@ describe('ErpPage', () => {
     } finally { error.mockRestore() }
   })
 
+  it('ručni trošak odbija neispravan iznos bez slanja i čuva nacrt za ispravku', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const amount = await screen.findByLabelText('Iznos troška')
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    const button = screen.getByRole('button', { name: 'Novi trošak' })
+    for (const invalid of ['-1', '0.001', '10000000000', '1,5', '1e-999999999999999999']) {
+      fireEvent.change(amount, { target: { value: invalid } })
+      await userEvent.click(button)
+      expect(screen.getByRole('alert')).toHaveTextContent('Unesite nenegativan iznos')
+      expect(amount).toHaveAttribute('aria-invalid', 'true')
+      expect(amount).toHaveAttribute('aria-describedby', 'cost-amount-error')
+      expect(amount).toHaveValue(invalid)
+      expect(createCostEntry).not.toHaveBeenCalled()
+    }
+    fireEvent.change(amount, { target: { value: '1e-2' } })
+    expect(amount).not.toHaveAttribute('aria-invalid')
+    await userEvent.click(button)
+    await waitFor(() => expect(createCostEntry).toHaveBeenCalledWith({ amount: '1e-2', category: 'MATERIAL', date: '2026-11-05' }))
+  })
+
+  it('odbacivanje nacrta troška uklanja i poruku o iznosu', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const amount = await screen.findByLabelText('Iznos troška')
+    fireEvent.change(amount, { target: { value: '0.001' } })
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    expect(amount).toHaveAttribute('aria-invalid', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(amount).toHaveValue('')
+    expect(amount).not.toHaveAttribute('aria-invalid')
+  })
+
   it('ručni trošak: pending i nepoznat ishod blokiraju dupli upis; svjestan retry čisti tek nakon uspjeha', async () => {
     let reject!: (error: Error) => void
     createCostEntry.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})

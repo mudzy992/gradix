@@ -248,6 +248,80 @@ describe('Phase 10 erp-lite (e2e)', () => {
     );
   });
 
+  it('accepts exact cost amounts and rejects rounding, overflow and underflow without writes', async () => {
+    const project = await request(app.getHttpServer())
+      .post('/api/projects')
+      .set(auth(admin))
+      .send({
+        name: 'Exact cost project',
+        code: `C${randomUUID().slice(0, 8)}`,
+      });
+    expect(project.status).toBe(201);
+    const costProjectId = project.body.data.id as string;
+    const post = (amount: string, linked: boolean) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          amount,
+          category: 'MATERIAL',
+          date: '2026-11-05',
+          ...(linked ? { projectId: costProjectId } : {}),
+        });
+    for (const [amount, expected] of [
+      ['0', '0.00'],
+      ['0e-999999999999999999', '0.00'],
+      ['1e-2', '0.01'],
+      ['1.2300', '1.23'],
+    ]) {
+      const result = await post(amount, true);
+      expect(result.status).toBe(201);
+      expect(result.body.data.amount).toBe(expected);
+    }
+    const boundary = await post('9999999999.990', false);
+    expect(boundary.status).toBe(201);
+    expect(boundary.body.data.amount).toBe('9999999999.99');
+    const before = await prisma.costEntry.count({ where: { companyId } });
+    const auditsBefore = await prisma.auditEvent.count({
+      where: { companyId, action: 'COST_ENTRY_CREATED' },
+    });
+    const spendBefore = await prisma.project.findUniqueOrThrow({
+      where: { id: costProjectId },
+      select: { currentSpend: true },
+    });
+    expect(spendBefore.currentSpend.toFixed(2)).toBe('1.24');
+    for (const amount of [
+      '-0.01',
+      '0.001',
+      '0.005',
+      '1e-3',
+      '9999999999.999',
+      '10000000000',
+      '1e-999999999999999999',
+      '-1e-999999999999999999',
+      '0x1p-999999999999999999',
+    ]) {
+      for (const linked of [false, true]) {
+        const result = await post(amount, linked);
+        expect(result.status).toBe(400);
+        expect(result.body.error.code).toBe('VALIDATION_FAILED');
+      }
+    }
+    expect(await prisma.costEntry.count({ where: { companyId } })).toBe(before);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'COST_ENTRY_CREATED' },
+      }),
+    ).toBe(auditsBefore);
+    const spendAfter = await prisma.project.findUniqueOrThrow({
+      where: { id: costProjectId },
+      select: { currentSpend: true },
+    });
+    expect(spendAfter.currentSpend.toString()).toBe(
+      spendBefore.currentSpend.toString(),
+    );
+  });
+
   it('TRUCK warehouse 400; apply-stock idempotent; negative 409 then flag 201', async () => {
     const truck = await request(app.getHttpServer())
       .post('/api/warehouses')
