@@ -281,5 +281,48 @@ test.describe('FE-06 — admin tok', () => {
       await page.unroute(pattern)
     }
   })
+  test('trošak: izgubljeni odgovor stvarnog servera i retry kreiraju jedan zapis', async () => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto('/erp')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/erp-lite/i)
+    await page.getByRole('tab', { name: 'Troškovi' }).click()
+    const amount = page.getByLabel('Iznos troška')
+    const date = page.getByLabel('Datum troška')
+    const whole = 100000 + parseInt(randomUUID().slice(0, 6), 16)
+    const displayed = `${String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, '.')},67`
+    await amount.fill(`${whole}.67`)
+    await date.fill('2099-11-05')
+    const attempts: Array<{ body: Record<string, unknown>; status: number; data: { id: string } }> = []
+    const pattern = '**/api/cost-entries'
+    await page.route(pattern, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      const response = await route.fetch({ maxRetries: 0 })
+      const result = await response.json() as { data: { id: string } }
+      attempts.push({ body: route.request().postDataJSON() as Record<string, unknown>, status: response.status(), data: result.data })
+      if (attempts.length === 1) await route.abort('failed')
+      else await route.fulfill({ response })
+    })
+    try {
+      await page.getByRole('button', { name: 'Novi trošak' }).click()
+      const unknown = page.getByRole('alert').filter({ hasText: 'Kreiranje nije potvrđeno' })
+      await expect(unknown).toBeVisible()
+      await expect(amount).toBeDisabled()
+      await page.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }).click()
+      await expect(amount).toBeDisabled()
+      await page.getByRole('button', { name: 'Novi trošak' }).click()
+      await expect(amount).toHaveValue('')
+      await expect(unknown).toHaveCount(0)
+      expect(attempts).toHaveLength(2)
+      expect(attempts.map((item) => item.status)).toEqual([201, 201])
+      expect(attempts[0].body).toEqual(attempts[1].body)
+      expect(attempts[0].body.idempotencyKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+      expect(attempts[0].data.id).toBeTruthy()
+      expect(attempts[1].data.id).toBe(attempts[0].data.id)
+      const row = page.getByRole('listitem').filter({ hasText: '2099-11-05' }).filter({ hasText: displayed })
+      await expect(row).toHaveCount(1)
+    } finally {
+      await page.unroute(pattern)
+    }
+  })
 
 })

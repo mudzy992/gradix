@@ -9,7 +9,7 @@ import { useCompanyStore } from '@/stores/company-store'
 import { ErpPage } from '@/pages/erp-page'
 import { isSensitiveNavigationBlocked } from '@/lib/sensitive-navigation'
 import { clearRefreshToken, getSessionGeneration } from '@/lib/storage'
-import { STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
+import { COST_ENTRY_PENDING_QUERY, STOCK_MOVEMENT_PENDING_QUERY } from '@/lib/constants'
 import { toast } from 'sonner'
 
 /**
@@ -279,7 +279,190 @@ describe('ErpPage', () => {
     fireEvent.change(amount, { target: { value: '1e-2' } })
     expect(amount).not.toHaveAttribute('aria-invalid')
     await userEvent.click(button)
-    await waitFor(() => expect(createCostEntry).toHaveBeenCalledWith({ amount: '1e-2', category: 'MATERIAL', date: '2026-11-05' }))
+    await waitFor(() => expect(createCostEntry).toHaveBeenCalledWith({ amount: '1e-2', category: 'MATERIAL', date: '2026-11-05', idempotencyKey: expect.any(String) }))
+  })
+
+  it('trošak bez sigurnog UUID-a ne šalje zahtjev i čuva nacrt', async () => {
+    const uuid = vi.spyOn(crypto, 'randomUUID').mockImplementation(() => { throw new Error('unavailable') })
+    try {
+      renderPage()
+      await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+      fireEvent.change(screen.getByLabelText('Iznos troška'), { target: { value: '8' } })
+      fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+      await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+      expect(screen.getByRole('alert')).toHaveTextContent('Sigurni identifikator nije dostupan')
+      expect(screen.getByLabelText('Iznos troška')).toHaveValue('8')
+      expect(createCostEntry).not.toHaveBeenCalled()
+    } finally { uuid.mockRestore() }
+  })
+
+  it('oporavlja trošak nakon remounta tokom upisa i koristi originalni payload nakon greške', async () => {
+    let reject!: (error: Error) => void
+    createCostEntry.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    fireEvent.change(screen.getByLabelText('Iznos troška'), { target: { value: '7.50' } })
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    first.unmount()
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    expect(await screen.findByLabelText('Iznos troška')).toHaveValue('7.50')
+    expect(screen.getByLabelText('Iznos troška')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Novi trošak' })).toBeDisabled()
+    await act(async () => reject(new Error('offline')))
+    await screen.findByText(/Kreiranje nije potvrđeno/)
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    expect(screen.getByLabelText('Iznos troška')).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await waitFor(() => expect(screen.getByLabelText('Iznos troška')).toHaveValue(''))
+    expect(createCostEntry).toHaveBeenCalledTimes(2)
+    expect(createCostEntry.mock.calls[1][0]).toEqual(createCostEntry.mock.calls[0][0])
+  })
+
+  it('istovremeni prikazi dijele bravu troška i vraćaju odvojeni parkirani nacrt', async () => {
+    let reject!: (error: Error) => void
+    let resolve!: (value: object) => void
+    createCostEntry.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockReturnValueOnce(new Promise((done) => { resolve = done }))
+    const first = renderPage()
+    const second = renderPage(first.client)
+    const a = within(first.container)
+    const b = within(second.container)
+    await userEvent.click(a.getByRole('tab', { name: 'Troškovi' }))
+    await userEvent.click(b.getByRole('tab', { name: 'Troškovi' }))
+    const firstAmount = first.container.querySelector<HTMLInputElement>('#cost-amount')!
+    const secondAmount = second.container.querySelector<HTMLInputElement>('#cost-amount')!
+    fireEvent.change(firstAmount, { target: { value: '5' } })
+    fireEvent.change(first.container.querySelector('#cost-date')!, { target: { value: '2026-11-05' } })
+    fireEvent.change(secondAmount, { target: { value: '12' } })
+    fireEvent.change(second.container.querySelector('#cost-date')!, { target: { value: '2026-11-06' } })
+    act(() => {
+      fireEvent.submit(a.getByRole('button', { name: 'Novi trošak' }).closest('form')!)
+      fireEvent.submit(b.getByRole('button', { name: 'Novi trošak' }).closest('form')!)
+    })
+    expect(createCostEntry).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(secondAmount).toHaveValue('5'))
+    expect(secondAmount).toBeDisabled()
+    await act(async () => reject(new Error('offline')))
+    await b.findByText(/Kreiranje nije potvrđeno/)
+    await userEvent.click(b.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(b.getByRole('button', { name: 'Novi trošak' }))
+    await act(async () => resolve({}))
+    await waitFor(() => expect(secondAmount).toHaveValue('12'))
+    expect(second.container.querySelector('#cost-date')).toHaveValue('2026-11-06')
+    expect(secondAmount).toBeEnabled()
+    expect(createCostEntry.mock.calls[1][0]).toEqual(createCostEntry.mock.calls[0][0])
+  })
+
+  it('oporavak troška ne prelazi u drugu firmu i ne ponavlja se nakon povratka na staru reviziju', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    createCostEntry.mockRejectedValue(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    fireEvent.change(screen.getByLabelText('Iznos troška'), { target: { value: '5' } })
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await screen.findByText(/Kreiranje nije potvrđeno/)
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c2', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Iznos troška')).toHaveValue(''))
+    expect(screen.queryByText(/Kreiranje nije potvrđeno/)).not.toBeInTheDocument()
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c1', revision: state.revision + 1 })))
+    await waitFor(() => expect(screen.getByLabelText('Iznos troška')).toHaveValue('5'))
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    expect(screen.getByText(/Sesija ili firma su se promijenile/)).toBeInTheDocument()
+    expect(createCostEntry).toHaveBeenCalledTimes(1)
+  })
+
+  it('izbrisani keš ne vraća oporavak troška pri zakašnjeloj grešci', async () => {
+    let reject!: (error: Error) => void
+    createCostEntry.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+    const first = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    fireEvent.change(screen.getByLabelText('Iznos troška'), { target: { value: '3' } })
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    expect(first.client.getQueriesData({ queryKey: [COST_ENTRY_PENDING_QUERY] }).some(([, value]) => value)).toBe(true)
+    first.unmount()
+    first.client.clear()
+    clearRefreshToken()
+    await act(async () => reject(new Error('offline')))
+    expect(first.client.getQueriesData({ queryKey: [COST_ENTRY_PENDING_QUERY] })).toHaveLength(0)
+    renderPage(first.client)
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    expect(screen.getByLabelText('Iznos troška')).toHaveValue('')
+    expect(screen.queryByText(/Kreiranje nije potvrđeno/)).not.toBeInTheDocument()
+  })
+
+  it('trošak koristi novi ključ nakon uspjeha i nakon svjesnog odbacivanja', async () => {
+    createCostEntry.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({})
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const amount = screen.getByLabelText('Iznos troška')
+    const date = screen.getByLabelText('Datum troška')
+    const fill = () => {
+      fireEvent.change(amount, { target: { value: '2' } })
+      fireEvent.change(date, { target: { value: '2026-11-05' } })
+    }
+    fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await screen.findByText(/Kreiranje nije potvrđeno/)
+    await userEvent.click(screen.getByRole('button', { name: 'Odbaci nacrt' }))
+    fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await waitFor(() => expect(amount).toHaveValue(''))
+    fill()
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await waitFor(() => expect(createCostEntry).toHaveBeenCalledTimes(3))
+    const keys = createCostEntry.mock.calls.map(([body]) => body.idempotencyKey)
+    expect(new Set(keys).size).toBe(3)
+  })
+
+  it('promjena generacije sesije sprečava retry zadržanog troška', async () => {
+    createCostEntry.mockRejectedValueOnce(new Error('offline'))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    fireEvent.change(screen.getByLabelText('Iznos troška'), { target: { value: '4' } })
+    fireEvent.change(screen.getByLabelText('Datum troška'), { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    await screen.findByText(/Kreiranje nije potvrđeno/)
+    clearRefreshToken()
+    await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    await waitFor(() => expect(screen.getByLabelText('Iznos troška')).toHaveValue(''))
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    expect(screen.queryByText(/Kreiranje nije potvrđeno/)).not.toBeInTheDocument()
+    expect(createCostEntry).toHaveBeenCalledOnce()
+  })
+
+  it('zakašnjeli odgovor firme A ne otključava trošak u firmi B', async () => {
+    const user = useAuthStore.getState().user!
+    useAuthStore.setState({ user: { ...user, roles: ['PLATFORM_ADMIN'] } })
+    let resolveA!: (value: object) => void
+    let resolveB!: (value: object) => void
+    createCostEntry.mockReturnValueOnce(new Promise((done) => { resolveA = done })).mockReturnValueOnce(new Promise((done) => { resolveB = done }))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    const amount = screen.getByLabelText('Iznos troška')
+    const date = screen.getByLabelText('Datum troška')
+    fireEvent.change(amount, { target: { value: '5' } })
+    fireEvent.change(date, { target: { value: '2026-11-05' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c2', revision: state.revision + 1 })))
+    await waitFor(() => expect(amount).toHaveValue(''))
+    fireEvent.change(amount, { target: { value: '9' } })
+    fireEvent.change(date, { target: { value: '2026-11-06' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
+    expect(createCostEntry).toHaveBeenCalledTimes(2)
+    await act(async () => resolveA({}))
+    expect(amount).toHaveValue('9')
+    expect(amount).toBeDisabled()
+    await act(async () => resolveB({}))
+    await waitFor(() => expect(amount).toHaveValue(''))
+    expect(amount).toBeEnabled()
+    act(() => useCompanyStore.setState((state) => ({ selectedId: 'c1', revision: state.revision + 1 })))
+    await waitFor(() => expect(amount).toHaveValue('5'))
+    expect(screen.getByText(/Kreiranje nije potvrđeno/)).toBeInTheDocument()
   })
 
   it('odbacivanje nacrta troška uklanja i poruku o iznosu', async () => {
@@ -310,7 +493,7 @@ describe('ErpPage', () => {
     const form = button.closest('form')!
     act(() => { fireEvent.submit(form); fireEvent.submit(form) })
     expect(createCostEntry).toHaveBeenCalledTimes(1)
-    expect(createCostEntry).toHaveBeenCalledWith({ amount: '450.50', category: 'FUEL', date: '2026-11-05' })
+    expect(createCostEntry).toHaveBeenCalledWith({ amount: '450.50', category: 'FUEL', date: '2026-11-05', idempotencyKey: expect.any(String) })
     expect(amount).toBeDisabled()
     expect(category).toBeDisabled()
     expect(date).toBeDisabled()
@@ -325,12 +508,17 @@ describe('ErpPage', () => {
     expect(category).toHaveValue('FUEL')
     expect(date).toHaveValue('2026-11-05')
     expect(button).toBeDisabled()
+    expect(amount).toBeDisabled()
+    expect(category).toBeDisabled()
+    expect(date).toBeDisabled()
     fireEvent.submit(form)
     expect(createCostEntry).toHaveBeenCalledTimes(1)
     expect(isSensitiveNavigationBlocked()).toBe(true)
     await userEvent.click(screen.getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
     await userEvent.click(button)
     expect(createCostEntry).toHaveBeenCalledTimes(2)
+    expect(createCostEntry.mock.calls[1][0]).toEqual(createCostEntry.mock.calls[0][0])
+    expect(createCostEntry.mock.calls[0][0].idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i)
     await waitFor(() => expect(amount).toHaveValue(''))
     expect(category).toHaveValue('MATERIAL')
     expect(date).toHaveValue('')
@@ -1184,7 +1372,7 @@ describe('ErpPage', () => {
     await userEvent.type(screen.getByLabelText('Datum troška'), '2026-11-02')
     await userEvent.click(screen.getByRole('button', { name: 'Novi trošak' }))
 
-    expect(createCostEntry).toHaveBeenCalledWith({ amount: '450.50', category: 'FUEL', date: '2026-11-02' })
+    expect(createCostEntry).toHaveBeenCalledWith({ amount: '450.50', category: 'FUEL', date: '2026-11-02', idempotencyKey: expect.any(String) })
   })
 
   it('„Iz obračuna“ šalje godinu i mjesec', async () => {

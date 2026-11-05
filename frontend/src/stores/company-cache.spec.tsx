@@ -35,12 +35,15 @@ describe('tenant query cache on company switch', () => {
     queryClient.setQueryData(['project-document-pending', 'scope-a'], recovery)
     const movement = { operation: { idempotencyKey: 'movement-a' }, inFlight: true, attempt: 1 }
     queryClient.setQueryData(['stock-movement-pending', 'scope-a'], movement)
+    const cost = { operation: { idempotencyKey: 'cost-a' }, inFlight: false, attempt: 1 }
+    queryClient.setQueryData(['cost-entry-pending', 'scope-a'], cost)
     mount()
     expect(await screen.findByText('A povjerljivo')).toBeInTheDocument()
     act(() => useCompanyStore.getState().setSelectedId('b'))
     expect(queryClient.getQueryData(['inactive-list'])).toBeUndefined()
     expect(queryClient.getQueryData(['project-document-pending', 'scope-a'])).toEqual(recovery)
     expect(queryClient.getQueryData(['stock-movement-pending', 'scope-a'])).toEqual(movement)
+    expect(queryClient.getQueryData(['cost-entry-pending', 'scope-a'])).toEqual(cost)
     await waitFor(() => expect(screen.queryByText('A povjerljivo')).not.toBeInTheDocument())
     expect(screen.getByText('Učitavanje')).toBeInTheDocument()
     await act(async () => b.reject(new Error('offline')))
