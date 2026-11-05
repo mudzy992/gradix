@@ -1,7 +1,10 @@
 export const erpBs = {
   erp: {
+    movementUnknown: 'Knjiženje nije potvrđeno. Kretanje je možda već upisano; provjerite prije novog pokušaja.',
+    movementSelectionMissing: 'Odabrano skladište ili materijal više nije dostupno. Izaberite dostupnu stavku ili odbacite nacrt.',
+    movementSelectionUnavailable: 'Odabrana stavka nije dostupna',
     warehouseUnknown: 'Kreiranje nije potvrđeno. Skladište možda već postoji; provjerite prije novog pokušaja.',
-    stockTabBlocked: 'Sačuvajte ili odbacite nacrt skladišta i sačekajte završetak upisa prije promjene kartice.',
+    stockTabBlocked: 'Sačuvajte ili odbacite nacrt skladišta ili kretanja i sačekajte završetak upisa prije promjene kartice.',
     payrollUnknown: 'Kreiranje iz obračuna nije potvrđeno. Trošak za odabrani period možda već postoji; provjerite prije novog pokušaja.',
     costUnknown: 'Kreiranje nije potvrđeno. Trošak možda već postoji; provjerite prije novog pokušaja.',
     costTabBlocked: 'Sačuvajte ili odbacite nacrt troška ili obračuna i sačekajte završetak upisa prije promjene kartice.',

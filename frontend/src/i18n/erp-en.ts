@@ -1,7 +1,10 @@
 export const erpEn = {
   erp: {
+    movementUnknown: 'Posting was not confirmed. The movement may already have been recorded; check before trying again.',
+    movementSelectionMissing: 'The selected warehouse or material is no longer available. Choose an available item or discard the draft.',
+    movementSelectionUnavailable: 'Selected item is unavailable',
     warehouseUnknown: 'Creation was not confirmed. The warehouse may already exist; check before trying again.',
-    stockTabBlocked: 'Save or discard the warehouse draft and wait for the operation to finish before changing tabs.',
+    stockTabBlocked: 'Save or discard the warehouse or movement draft and wait for the operation to finish before changing tabs.',
     payrollUnknown: 'Creation from payroll was not confirmed. A cost for the selected period may already exist; check before trying again.',
     costUnknown: 'Creation was not confirmed. The cost entry may already exist; check before trying again.',
     costTabBlocked: 'Save or discard the cost or payroll draft and wait for the operation to finish before changing tabs.',

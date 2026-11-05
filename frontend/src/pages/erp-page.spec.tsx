@@ -94,13 +94,14 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <ErpPage />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...view, client }
 }
 
 beforeEach(() => {
@@ -536,6 +537,172 @@ describe('ErpPage', () => {
     expect(screen.getByLabelText('Naziv skladišta')).toHaveValue('')
     expect(isSensitiveNavigationBlocked()).toBe(false)
     expect(createWarehouse).toHaveBeenCalledTimes(1)
+  })
+
+  it('kretanje: samostalan izbor i količina štite firmu i karticu; odbacivanje ne dira nacrt skladišta', async () => {
+    listWarehouses.mockResolvedValue({ data: [warehouse(), warehouse({ id: 'w2', name: 'Depo Vogošća' })] })
+    listMaterials.mockResolvedValue({ data: [{ id: 'm1', name: 'Šljunak' }, { id: 'm2', name: 'Pijesak' }] })
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const warehouseSelect = await screen.findByLabelText('Skladište')
+    const materialSelect = screen.getByLabelText('Materijal')
+    const movementForm = screen.getByRole('button', { name: 'Knjiži' }).closest('form')!
+    const warehouseForm = screen.getByRole('button', { name: 'Novo skladište' }).closest('form')!
+    await userEvent.selectOptions(warehouseSelect, 'w2')
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.selectOptions(warehouseSelect, 'w1')
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    await userEvent.selectOptions(materialSelect, 'm2')
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.type(screen.getByLabelText('Količina'), '15.25')
+    await userEvent.type(screen.getByLabelText('Naziv skladišta'), 'Drugi nacrt')
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    expect(screen.getByRole('tab', { name: 'Lager' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(within(movementForm).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(materialSelect).toHaveValue('m1')
+    expect(screen.getByLabelText('Količina')).toHaveValue('')
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(within(warehouseForm).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('kretanje: pending i nepoznat ishod ne dozvoljavaju duplo knjiženje bez svjesne potvrde', async () => {
+    let reject!: (error: Error) => void
+    createStockMovement.mockReturnValueOnce(new Promise((_, fail) => { reject = fail })).mockResolvedValueOnce({})
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    const warehouseSelect = screen.getByLabelText('Skladište')
+    const materialSelect = screen.getByLabelText('Materijal')
+    await userEvent.type(qty, '-5')
+    const button = screen.getByRole('button', { name: 'Knjiži' })
+    const form = button.closest('form')!
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    expect(createStockMovement).toHaveBeenCalledWith({ warehouseId: 'w1', materialId: 'm1', qty: '-5' })
+    expect(qty).toBeDisabled()
+    expect(warehouseSelect).toBeDisabled()
+    expect(materialSelect).toBeDisabled()
+    expect(within(form).getByRole('status')).toHaveTextContent('Spremanje je u toku')
+    expect(within(form).getByRole('button', { name: 'Odbaci nacrt' })).toBeDisabled()
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    await userEvent.click(screen.getByRole('tab', { name: 'Partneri' }))
+    expect(screen.getByRole('tab', { name: 'Lager' })).toHaveAttribute('aria-selected', 'true')
+    await act(async () => { reject(new Error('offline')) })
+    expect(within(form).getByRole('alert')).toHaveTextContent('Kretanje je možda već upisano')
+    expect(qty).toHaveValue('-5')
+    expect(qty).toBeDisabled()
+    expect(button).toBeDisabled()
+    fireEvent.submit(form)
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(within(form).getByRole('button', { name: 'Razumijem, omogući novi pokušaj' }))
+    expect(qty).toBeEnabled()
+    await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(qty).toHaveValue(''))
+    await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
+    expect(button).toBeEnabled()
+    await userEvent.click(button)
+    expect(createStockMovement).toHaveBeenCalledTimes(2)
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
+  })
+
+  it('kretanje čuva izabrane ID-e pri osvježavanju i ne šalje zamjenski ID ako odabir nestane', async () => {
+    const w1 = warehouse()
+    const w2 = warehouse({ id: 'w2', name: 'Depo Vogošća' })
+    const m1 = { id: 'm1', name: 'Šljunak', unit: 'M3' }
+    const m2 = { id: 'm2', name: 'Pijesak', unit: 'M3' }
+    listWarehouses.mockResolvedValue({ data: [w1, w2] })
+    listMaterials.mockResolvedValue({ data: [m1, m2] })
+    const { client } = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const warehouseSelect = await screen.findByLabelText('Skladište')
+    const materialSelect = screen.getByLabelText('Materijal')
+    await userEvent.selectOptions(warehouseSelect, 'w2')
+    await userEvent.selectOptions(materialSelect, 'm2')
+    await userEvent.type(screen.getByLabelText('Količina'), '15')
+    const form = screen.getByRole('button', { name: 'Knjiži' }).closest('form')!
+    act(() => {
+      client.setQueryData(['erp-warehouses'], [w2, w1])
+      client.setQueryData(['materials'], [m2, m1])
+    })
+    expect(warehouseSelect).toHaveValue('w2')
+    expect(materialSelect).toHaveValue('m2')
+    act(() => {
+      client.setQueryData(['erp-warehouses'], [])
+      client.setQueryData(['materials'], [m1])
+    })
+    expect(await within(form).findByRole('alert')).toHaveTextContent('više nije dostupno')
+    expect(warehouseSelect).toHaveValue('w2')
+    expect(materialSelect).toHaveValue('m2')
+    expect(screen.getByLabelText('Količina')).toHaveValue('15')
+    expect(within(form).getByRole('button', { name: 'Knjiži' })).toBeDisabled()
+    fireEvent.submit(form)
+    expect(createStockMovement).not.toHaveBeenCalled()
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    act(() => { client.setQueryData(['erp-warehouses'], [w1]) })
+    await within(warehouseSelect).findByRole('option', { name: 'Depo Ilidža' })
+    await userEvent.selectOptions(warehouseSelect, 'w1')
+    await userEvent.selectOptions(materialSelect, 'm1')
+    expect(within(form).queryByRole('alert')).not.toBeInTheDocument()
+    await userEvent.click(within(form).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    expect(warehouseSelect).toHaveValue('w1')
+    expect(materialSelect).toHaveValue('m1')
+  })
+
+  it('kretanje zadržava nepoznat ishod ako obje liste nestanu tokom upisa i dozvoljava odbacivanje', async () => {
+    let reject!: (error: Error) => void
+    createStockMovement.mockReturnValueOnce(new Promise((_, fail) => { reject = fail }))
+    const { client } = renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    const qty = await screen.findByLabelText('Količina')
+    await userEvent.type(qty, '5')
+    const form = screen.getByRole('button', { name: 'Knjiži' }).closest('form')!
+    await userEvent.click(within(form).getByRole('button', { name: 'Knjiži' }))
+    act(() => {
+      client.setQueryData(['erp-warehouses'], [])
+      client.setQueryData(['materials'], [])
+    })
+    expect(await within(form).findByText(/više nije dostupno/)).toBeInTheDocument()
+    await act(async () => { reject(new Error('offline')) })
+    expect(within(form).getByText(/Kretanje je možda već upisano/)).toBeInTheDocument()
+    expect(qty).toHaveValue('5')
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(within(form).getByRole('button', { name: 'Odbaci nacrt' }))
+    expect(screen.queryByRole('button', { name: 'Knjiži' })).not.toBeInTheDocument()
+    expect(isSensitiveNavigationBlocked()).toBe(false)
+    act(() => {
+      client.setQueryData(['erp-warehouses'], [warehouse()])
+      client.setQueryData(['materials'], [{ id: 'm1', name: 'Šljunak', unit: 'M3' }])
+    })
+    expect(await screen.findByLabelText('Količina')).toHaveValue('')
+    expect(screen.getByLabelText('Skladište')).toHaveValue('w1')
+    expect(createStockMovement).toHaveBeenCalledTimes(1)
+  })
+
+  it('paralelna kreiranja skladišta i kretanja ne otključavaju jedno drugo', async () => {
+    let finishWarehouse!: (value: object) => void
+    let finishMovement!: (value: object) => void
+    createWarehouse.mockReturnValueOnce(new Promise((resolve) => { finishWarehouse = resolve }))
+    createStockMovement.mockReturnValueOnce(new Promise((resolve) => { finishMovement = resolve }))
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Lager' }))
+    await userEvent.type(screen.getByLabelText('Naziv skladišta'), 'Novi depo')
+    await userEvent.type(await screen.findByLabelText('Količina'), '5')
+    await userEvent.click(screen.getByRole('button', { name: 'Novo skladište' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Knjiži' }))
+    await act(async () => { finishWarehouse({}) })
+    expect(useCompanyStore.getState().setSelectedId('c2')).toBe(false)
+    expect(isSensitiveNavigationBlocked()).toBe(true)
+    await userEvent.click(screen.getByRole('tab', { name: 'Troškovi' }))
+    expect(screen.getByRole('tab', { name: 'Lager' })).toHaveAttribute('aria-selected', 'true')
+    await act(async () => { finishMovement({}) })
+    await waitFor(() => expect(isSensitiveNavigationBlocked()).toBe(false))
+    act(() => { expect(useCompanyStore.getState().setSelectedId('c2')).toBe(true) })
   })
 
   it('lager: bez skladišta objašnjava šta nedostaje i ne nudi knjiženje', async () => {

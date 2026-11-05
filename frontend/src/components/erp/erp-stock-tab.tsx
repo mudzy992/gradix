@@ -35,15 +35,38 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
   const [uncertain, setUncertain] = useState(false)
   const savingRef = useRef(false)
   const uncertainRef = useRef(false)
+  const [movementBaseline, setMovementBaseline] = useState<{ warehouseId: string; materialId: string } | null>(null)
+  const [warehouseId, setWarehouseId] = useState('')
+  const [materialId, setMaterialId] = useState('')
+  const [qty, setQty] = useState('')
+  const [movementSaving, setMovementSaving] = useState(false)
+  const [movementUncertain, setMovementUncertain] = useState(false)
+  const movementSavingRef = useRef(false)
+  const movementUncertainRef = useRef(false)
+  useLayoutEffect(() => {
+    if (movementBaseline || !warehouses.length || !materials.length) return
+    const initial = { warehouseId: warehouses[0].id, materialId: materials[0].id }
+    setMovementBaseline(initial)
+    setWarehouseId(initial.warehouseId)
+    setMaterialId(initial.materialId)
+  }, [movementBaseline, warehouses, materials])
   const dirty = name !== '' || type !== 'SITE'
-  const protectedDraft = (canWrite && (dirty || uncertain)) || saving
+  const movementDirty = !!movementBaseline && (
+    qty !== '' || warehouseId !== movementBaseline.warehouseId || materialId !== movementBaseline.materialId
+  )
+  const protectedDraft = (canWrite && (dirty || uncertain || movementDirty || movementUncertain)) || saving || movementSaving
   useCompanySwitchBlock(protectedDraft)
   useSensitiveNavigationBlock(protectedDraft)
   useLayoutEffect(() => {
     onProtectedChange(protectedDraft)
     return () => onProtectedChange(false)
   }, [onProtectedChange, protectedDraft])
-  const canMove = canWrite && warehouses.length > 0 && materials.length > 0
+  const hasWarehouse = warehouses.some((row) => row.id === warehouseId)
+  const hasMaterial = materials.some((row) => row.id === materialId)
+  // Retain an active draft even if a background refresh removes its selected option.
+  const canMove = canWrite && !!movementBaseline && (
+    (warehouses.length > 0 && materials.length > 0) || movementDirty || movementSaving || movementUncertain
+  )
   return (
     <div className="grid gap-3" aria-busy={isLoading}>
       {canWrite ? (
@@ -128,18 +151,24 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
       {canMove ? (
         <form
           className="grid gap-2 rounded-md border p-3"
+          aria-busy={movementSaving}
           onSubmit={async (event) => {
             event.preventDefault()
-            const data = new FormData(event.currentTarget)
+            if (movementSavingRef.current || movementUncertainRef.current || !hasWarehouse || !hasMaterial) return
+            movementSavingRef.current = true
+            setMovementSaving(true)
             try {
-              await createStockMovement({
-                warehouseId: String(data.get('warehouseId')),
-                materialId: String(data.get('materialId')),
-                qty: String(data.get('qty')),
-              })
+              await createStockMovement({ warehouseId, materialId, qty })
+              setQty('')
+              setMovementBaseline({ warehouseId, materialId })
               onChanged()
             } catch (error) {
+              movementUncertainRef.current = true
+              setMovementUncertain(true)
               toast.error(errorMessage(error))
+            } finally {
+              movementSavingRef.current = false
+              setMovementSaving(false)
             }
           }}
         >
@@ -150,7 +179,11 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                 id="movement-warehouse"
                 name="warehouseId"
                 className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                disabled={movementSaving || movementUncertain}
+                value={warehouseId}
+                onChange={(event) => setWarehouseId(event.target.value)}
               >
+                {!hasWarehouse ? <option value={warehouseId} disabled>{t('erp.movementSelectionUnavailable')}</option> : null}
                 {warehouses.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.name}
@@ -163,7 +196,11 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
                 id="movement-material"
                 name="materialId"
                 className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                disabled={movementSaving || movementUncertain}
+                value={materialId}
+                onChange={(event) => setMaterialId(event.target.value)}
               >
+                {!hasMaterial ? <option value={materialId} disabled>{t('erp.movementSelectionUnavailable')}</option> : null}
                 {materials.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.name}
@@ -172,12 +209,50 @@ export function ErpStockTab({ canWrite, warehouses, materials, stock, isLoading,
               </select>
             </Field>
             <Field label={t('erp.stockQty')} htmlFor="movement-qty">
-              <Input id="movement-qty" name="qty" required inputMode="decimal" className="w-24" />
+              <Input
+                id="movement-qty"
+                name="qty"
+                required
+                inputMode="decimal"
+                className="w-24"
+                disabled={movementSaving || movementUncertain}
+                value={qty}
+                onChange={(event) => setQty(event.target.value)}
+              />
             </Field>
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" disabled={movementSaving || movementUncertain || !hasWarehouse || !hasMaterial}>
               {t('erp.moveStock')}
             </Button>
+            {movementDirty || movementUncertain ? (
+              <Button type="button" variant="outline" disabled={movementSaving} onClick={() => {
+                const initial = warehouses.length && materials.length
+                  ? {
+                      warehouseId: warehouses.some((row) => row.id === movementBaseline?.warehouseId)
+                        ? movementBaseline!.warehouseId : warehouses[0].id,
+                      materialId: materials.some((row) => row.id === movementBaseline?.materialId)
+                        ? movementBaseline!.materialId : materials[0].id,
+                    }
+                  : null
+                setMovementBaseline(initial)
+                setWarehouseId(initial?.warehouseId ?? '')
+                setMaterialId(initial?.materialId ?? '')
+                setQty('')
+                movementUncertainRef.current = false
+                setMovementUncertain(false)
+              }}>{t('common.discardDraft')}</Button>
+            ) : null}
           </div>
+          {!hasWarehouse || !hasMaterial ? <p role="alert" className="text-sm text-destructive">{t('erp.movementSelectionMissing')}</p> : null}
+          {movementSaving ? <p role="status" className="text-sm">{t('common.savingWait')}</p> : null}
+          {movementUncertain ? (
+            <div className="grid gap-2">
+              <p role="alert" className="text-sm text-destructive">{t('erp.movementUnknown')}</p>
+              <Button type="button" variant="outline" onClick={() => {
+                movementUncertainRef.current = false
+                setMovementUncertain(false)
+              }}>{t('common.enableRetry')}</Button>
+            </div>
+          ) : null}
         </form>
       ) : null}
 
