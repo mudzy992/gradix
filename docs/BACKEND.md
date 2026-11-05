@@ -481,4 +481,11 @@ Ispravke goriva koriste SERIALIZABLE transakciju i do tri pokušaja za serializa
 
 Ako postojeći pokret ne odgovara ranijim litrima/projektu goriva ili je njegova tenant/skladišna veza neispravna, promjena litara/projekta vraća 409 radi usklađivanja, bez automatskog popravljanja historije. Ispravka cijene i bilješke nije stock promjena. **Pokret se ažurira**, a ne pravi se zaseban storno: historija izmjene je u `Amendment`; ponovljeni `apply-stock` vraća trenutni pokret, ne prvobitni snapshot.
 
-Ispravka nema idempotency ključ: ponovljen zahtjev može stvoriti dodatni zapis i obavijest, premda se apsolutna količina ne oduzima dvaput. Historijski nesklad, vezani `CostEntry`, vanjski/stari serveri, promjene prava/postavki tokom čekanja te audit i obavijesti poslije commita nisu riješeni ovim korakom.
+Ispravka nema idempotency ključ: ponovljen zahtjev može stvoriti dodatni zapis i obavijest, premda se apsolutna količina ne oduzima dvaput. Historijski nesklad, vanjski/stari serveri, promjene prava/postavki tokom čekanja te audit i obavijesti poslije commita nisu riješeni ovim korakom; vezani FUEL cost dodatno je obrađen u F-CI-05-71.
+
+
+### Troškovi povezani s gorivom (F-CI-05-71)
+
+Novi `CostEntry` sa `source=FUEL` traži gorivo iste firme i isti projekt kao izvor, uključujući slučaj bez projekta. Nepronađen ili strani izvor vraća 404, neslaganje projekta 409; provjera i upis su SERIALIZABLE i uzimaju fuel lock prije projekta. Već pohranjeni keyed replay se vraća prije te nove provjere. Za SERVICE i PAYROLL izvore ovo pravilo još ne važi.
+
+Vezani cost ostaje nezavisan, ručno uneseni iznos i ima prednost u projektnom zbiru nad izvornim troškom goriva. Ispravke litara ili jedinične cijene ne mijenjaju taj iznos. Stvarna promjena projekta goriva s vezanim FUEL troškom vraća 409 dok se postojeća veza ne razriješi; trošak se ne briše niti premješta automatski. Postojeći endpoint za brisanje troška je fizičko brisanje, pa njegovo korištenje nije automatsko i podliježe postojećem auditu/tombstone pravilima. Historijske neispravne veze, miješani/stari serveri, vanjski pisci i nepoznat ishod post-commit efekata nisu popravljeni.

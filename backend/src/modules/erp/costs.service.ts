@@ -8,6 +8,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import { listResult, parsePagination } from '../../common/utils/pagination';
 import { parseNonNegativeMoney } from '../../common/utils/decimal-input';
+import { isSerializationFailure } from '../../common/utils/serialization-retry';
 import { parseDateOnly } from '../../common/scope/company-tz';
 import { requireCompany } from '../users/users-helpers';
 import { lockSpendProject, recalcSpend } from '../ops/spend';
@@ -82,7 +83,7 @@ export class CostsService {
       if (previous) return this.replayCost(previous, fingerprint!, companyId);
     }
     try {
-      const row = await this.prisma.$transaction(async (tx) => {
+      const operation = async (tx: Prisma.TransactionClient) => {
         // Claim the key first. Competing requests block at the unique index and
         // can only observe a fully committed receipt, cost and project spend.
         const receipt = key
@@ -94,6 +95,28 @@ export class CostsService {
               },
             })
           : null;
+        if (source === 'FUEL') {
+          // Match fuel amendments' lock order: fuel first, then project. A
+          // linked cost must follow the source's tenant and current project.
+          const fuel = await tx.$queryRaw<Array<{ projectId: string | null }>>`
+            SELECT "projectId" FROM "FuelEntry"
+            WHERE "id" = ${dto.sourceId!} AND "companyId" = ${companyId}
+            FOR SHARE`;
+          if (!fuel.length) {
+            throw new AppError(
+              ERROR_CODES.NOT_FOUND,
+              'Fuel entry not found',
+              404,
+            );
+          }
+          if (fuel[0].projectId !== (dto.projectId ?? null)) {
+            throw new AppError(
+              ERROR_CODES.CONFLICT,
+              'Fuel source project does not match cost',
+              409,
+            );
+          }
+        }
         if (dto.projectId) await lockSpendProject(tx, companyId, dto.projectId);
         const created = await tx.costEntry.create({
           data: {
@@ -115,7 +138,13 @@ export class CostsService {
           });
         }
         return created;
-      });
+      };
+      // Fuel amendments are SERIALIZABLE too: a waiter that began before a
+      // cost commit must not miss that cost in an earlier snapshot.
+      const row =
+        source === 'FUEL'
+          ? await this.runFuelCostTx(operation)
+          : await this.prisma.$transaction(operation);
       await this.audit.write({
         companyId,
         actorId: actor.id,
@@ -135,6 +164,26 @@ export class CostsService {
         if (previous) return this.replayCost(previous, fingerprint!, companyId);
       }
       mapCostConflict(error);
+    }
+  }
+
+  private async runFuelCostTx<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (!isSerializationFailure(error)) throw error;
+        if (attempt >= 3)
+          throw new AppError(
+            ERROR_CODES.CONFLICT,
+            'Fuel or cost is being updated concurrently, retry',
+            409,
+          );
+      }
     }
   }
 

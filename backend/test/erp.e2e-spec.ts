@@ -130,6 +130,333 @@ describe('Phase 10 erp-lite (e2e)', () => {
     expect(payrollDup.status).toBe(409);
   });
 
+  async function setupFuelLinkedCost() {
+    const source = await prisma.project.create({
+      data: { companyId, name: 'Linked fuel source', geofenceRadius: 100 },
+    });
+    const target = await prisma.project.create({
+      data: { companyId, name: 'Linked fuel target', geofenceRadius: 100 },
+    });
+    const machine = await request(app.getHttpServer())
+      .post('/api/machines')
+      .set(auth(admin))
+      .send({ name: 'Linked fuel machine', type: 'TRUCK' });
+    expect(machine.status).toBe(201);
+    const fuel = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({
+        machineId: machine.body.data.id,
+        projectId: source.id,
+        liters: '5',
+        unitPrice: '2',
+      });
+    expect(fuel.status).toBe(201);
+    const fuelId = fuel.body.data.id as string;
+    const cost = (body: object) =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send({
+          source: 'FUEL',
+          sourceId: fuelId,
+          amount: '15',
+          category: 'FUEL',
+          date: '2026-11-05',
+          ...body,
+        });
+    const amend = (field: string, newValue: string) =>
+      request(app.getHttpServer())
+        .post('/api/amendments')
+        .set(auth(admin))
+        .send({
+          entityType: 'FUEL',
+          entityId: fuelId,
+          field,
+          newValue,
+          reason: 'correct linked fuel',
+        });
+    return {
+      source,
+      target,
+      fuelId,
+      cost,
+      amend,
+      machineId: machine.body.data.id as string,
+    };
+  }
+
+  it('validates fuel cost source, tenant and project and keeps entered cost as override', async () => {
+    const f = await setupFuelLinkedCost();
+    const other = await prisma.company.create({
+      data: {
+        name: 'Foreign fuel cost',
+        slug: `foreign-fuel-cost-${randomUUID()}`,
+      },
+    });
+    const key = randomUUID();
+    const beforeAudit = await prisma.auditEvent.count({
+      where: { companyId, action: 'COST_ENTRY_CREATED' },
+    });
+    const post = (body: object) => f.cost({ idempotencyKey: key, ...body });
+    expect((await post({ projectId: f.target.id })).status).toBe(409);
+    expect(
+      (await post({ projectId: f.source.id, sourceId: 'missing-fuel-id' }))
+        .status,
+    ).toBe(404);
+    const foreignMachine = await prisma.machine.create({
+      data: {
+        companyId: other.id,
+        name: 'Foreign source machine',
+        type: 'TRUCK',
+      },
+    });
+    const foreignUser = await prisma.user.findFirstOrThrow({
+      where: { companyId },
+    });
+    const foreignFuel = await prisma.fuelEntry.create({
+      data: {
+        companyId: other.id,
+        machineId: foreignMachine.id,
+        userId: foreignUser.id,
+        liters: '1',
+        unitPrice: '1',
+        totalCost: '1',
+      },
+    });
+    expect(
+      (await post({ projectId: f.source.id, sourceId: foreignFuel.id })).status,
+    ).toBe(404);
+    expect(
+      await prisma.costRequest.count({
+        where: { companyId, idempotencyKey: key },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.auditEvent.count({
+        where: { companyId, action: 'COST_ENTRY_CREATED' },
+      }),
+    ).toBe(beforeAudit);
+    const created = await post({ projectId: f.source.id });
+    expect(created.status).toBe(201);
+    const costId = created.body.data.id as string;
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.source.id } })
+      ).currentSpend.toString(),
+    ).toBe('15');
+    expect((await f.amend('unitPrice', '4')).status).toBe(201);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.source.id } })
+      ).currentSpend.toString(),
+    ).toBe('15');
+    expect(
+      (
+        await prisma.costEntry.findUniqueOrThrow({ where: { id: costId } })
+      ).amount.toString(),
+    ).toBe('15');
+    expect((await f.amend('projectId', f.source.id)).status).toBe(201);
+    const amendmentCount = await prisma.amendment.count({
+      where: { companyId, entityType: 'FUEL', entityId: f.fuelId },
+    });
+    expect((await f.amend('projectId', f.target.id)).status).toBe(409);
+    expect((await f.amend('projectId', '')).status).toBe(409);
+    expect(
+      await prisma.amendment.count({
+        where: { companyId, entityType: 'FUEL', entityId: f.fuelId },
+      }),
+    ).toBe(amendmentCount);
+    expect(
+      (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: f.fuelId } }))
+        .projectId,
+    ).toBe(f.source.id);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.target.id } })
+      ).currentSpend.toString(),
+    ).toBe('0');
+    expect(
+      (
+        await request(app.getHttpServer())
+          .delete(`/api/cost-entries/${costId}`)
+          .set(auth(admin))
+      ).status,
+    ).toBe(204);
+    expect((await f.amend('projectId', f.target.id)).status).toBe(201);
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.source.id } })
+      ).currentSpend.toString(),
+    ).toBe('0');
+    expect(
+      (
+        await prisma.project.findUniqueOrThrow({ where: { id: f.target.id } })
+      ).currentSpend.toString(),
+    ).toBe('20');
+  });
+
+  it('supports fuel cost without project and replays an existing key without revalidation', async () => {
+    const f = await setupFuelLinkedCost();
+    const withoutProject = await request(app.getHttpServer())
+      .post('/api/fuel')
+      .set(auth(admin))
+      .send({ machineId: f.machineId, liters: '3', unitPrice: '2' });
+    expect(withoutProject.status).toBe(201);
+    const fuelId = withoutProject.body.data.id as string;
+    const key = randomUUID();
+    const body = {
+      source: 'FUEL',
+      sourceId: fuelId,
+      amount: '6',
+      category: 'FUEL',
+      date: '2026-11-05',
+      idempotencyKey: key,
+    };
+    const post = () =>
+      request(app.getHttpServer())
+        .post('/api/cost-entries')
+        .set(auth(admin))
+        .send(body);
+    expect(
+      (await f.cost({ sourceId: fuelId, projectId: f.source.id })).status,
+    ).toBe(409);
+    const created = await post();
+    expect(created.status).toBe(201);
+    const blocked = await request(app.getHttpServer())
+      .post('/api/amendments')
+      .set(auth(admin))
+      .send({
+        entityType: 'FUEL',
+        entityId: fuelId,
+        field: 'projectId',
+        newValue: f.source.id,
+        reason: 'move linked fuel',
+      });
+    expect(blocked.status).toBe(409);
+    // Simulate a legacy/external mutation. Existing receipt remains replayable.
+    await prisma.fuelEntry.update({
+      where: { id: fuelId },
+      data: { projectId: f.source.id },
+    });
+    const replay = await post();
+    expect(replay.status).toBe(201);
+    expect(replay.body.data.id).toBe(created.body.data.id);
+    expect(replay.body.data.projectId).toBeNull();
+  });
+
+  it('revalidates the fuel project after a concurrent update and rolls back the cost key', async () => {
+    const f = await setupFuelLinkedCost();
+    const key = randomUUID();
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "FuelEntry" WHERE "id" = ${f.fuelId} FOR NO KEY UPDATE`;
+        await tx.fuelEntry.update({
+          where: { id: f.fuelId },
+          data: { projectId: f.target.id },
+        });
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = f
+        .cost({ projectId: f.source.id, idempotencyKey: key })
+        .then((r) => r);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'FuelEntry', 'FOR SHARE');
+      release();
+      await holder;
+      expect((await posting).status).toBe(409);
+      expect(
+        await prisma.costEntry.count({
+          where: { companyId, source: 'FUEL', sourceId: f.fuelId },
+        }),
+      ).toBe(0);
+      expect(
+        await prisma.costRequest.count({
+          where: { companyId, idempotencyKey: key },
+        }),
+      ).toBe(0);
+      expect(
+        (await f.cost({ projectId: f.target.id, idempotencyKey: key })).status,
+      ).toBe(201);
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting]);
+    }
+  });
+
+  it('serializes linked fuel cost creation before a concurrent project amendment', async () => {
+    const f = await setupFuelLinkedCost();
+    let release!: () => void;
+    let ready!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const locked = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    const holder = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Project" WHERE "id" = ${f.source.id} FOR NO KEY UPDATE`;
+        ready();
+        await gate;
+      },
+      { timeout: 15000 },
+    );
+    let posting: Promise<request.Response> | undefined;
+    let amendment: Promise<request.Response> | undefined;
+    try {
+      await Promise.race([locked, holder]);
+      posting = f
+        .cost({ projectId: f.source.id, idempotencyKey: randomUUID() })
+        .then((r) => r);
+      void posting.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'Project', 'FOR NO KEY UPDATE');
+      amendment = f.amend('projectId', f.target.id).then((r) => r);
+      void amendment.catch(() => undefined);
+      await waitForCostProjectLock(prisma, 1, 'FuelEntry', 'FOR NO KEY UPDATE');
+      release();
+      await holder;
+      expect((await posting).status).toBe(201);
+      expect((await amendment).status).toBe(409);
+      expect(
+        (await prisma.fuelEntry.findUniqueOrThrow({ where: { id: f.fuelId } }))
+          .projectId,
+      ).toBe(f.source.id);
+      expect(
+        await prisma.amendment.count({
+          where: { companyId, entityType: 'FUEL', entityId: f.fuelId },
+        }),
+      ).toBe(0);
+      expect(
+        (
+          await prisma.project.findUniqueOrThrow({ where: { id: f.source.id } })
+        ).currentSpend.toString(),
+      ).toBe('15');
+      expect(
+        (
+          await prisma.project.findUniqueOrThrow({ where: { id: f.target.id } })
+        ).currentSpend.toString(),
+      ).toBe('0');
+    } finally {
+      release();
+      await Promise.allSettled([holder, posting, amendment]);
+    }
+  });
+
   it('replays concurrent keyed costs, rejects changed payload and retains the key after deletion', async () => {
     const idempotencyKey = randomUUID();
     const body = {

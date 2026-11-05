@@ -113,6 +113,21 @@ export async function applyFuelAmendment(
       : row.unitPrice;
   const nextProjectId =
     field === 'projectId' ? newValue || null : row.projectId;
+  if (field === 'projectId' && nextProjectId !== row.projectId) {
+    // A linked cost is an independently entered amount. Moving only fuel would
+    // leave that cost on the old project and double-count the source globally.
+    const linked = await prisma.costEntry.findFirst({
+      where: { companyId, source: 'FUEL', sourceId: row.id },
+      select: { id: true },
+    });
+    if (linked) {
+      throw new AppError(
+        ERROR_CODES.CONFLICT,
+        'Remove the linked fuel cost before changing project',
+        409,
+      );
+    }
+  }
   // Sort to avoid opposite-direction moves acquiring project locks in opposite
   // orders. Tenant-scoped locks also reject foreign/nonexistent destinations.
   const projects = [
