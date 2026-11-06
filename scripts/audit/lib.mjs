@@ -30,7 +30,7 @@ const INCLUDE_DIRS = [
   'frontend/src', 'frontend/e2e',
   'mobile/app', 'mobile/components', 'mobile/lib', 'mobile/db', 'mobile/sync',
   'mobile/hooks', 'mobile/i18n', 'mobile/constants',
-  'scripts/audit', 'scripts/standards', 'scripts/ops', '.github/workflows',
+  'scripts/audit', 'scripts/standards', 'scripts/ops', 'scripts/dev', '.github/workflows',
 ];
 
 const INCLUDE_FILES = [
@@ -98,6 +98,7 @@ export function countLoc(rel) {
 const RULES = [
   // --- standardi / audit alati ---
   { re: /^scripts\/standards\//, layer: 'STD', module: 'standards', segment: 'STD-01' },
+  { re: /^scripts\/dev\//, layer: 'STD', module: 'dev-tools', segment: 'STD-01' },
   { re: /^package\.json$/, layer: 'STD', module: 'standards', segment: 'STD-01' },
   { re: /^scripts\/audit\//, layer: 'STD', module: 'audit-tools', segment: 'STD-01' },
   // INF-07: ACL linija za Redis korisnika.

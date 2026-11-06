@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `45637da`: CI `42178292321` 6/6; decimal inventura i guard.
 - `609450e`: CI `42171067680` 6/6; B1 status.
 - `d8d3512`: CI `42170687717` 6/6; B1 projects API.
-- `f7e379b`: dokumentovano CI-05 zatvaranje na bazi zelenog CI-ja.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -34,11 +34,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 - B0: plan i D-057 dopunjuju D-043; B1 djelimično: novi ograničeni projects API, bez promjene postojećeg ugovora.
 - B1 test-first: unit 3/3, PG E2E 8/8 (12 SQL migracija ručno + demo seed), backend 44/335; CI 6/6. Admin UI još nije počeo.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
-- BL-001: [radna inventura](DECIMAL-INVENTORY.md), 60 parser testova; direktni Prisma upisi i HTTP/PG karakterizacija ostaju otvoreni. Trip >3 decimale nepromijenjen, K1 A/B čeka vlasnika.
+- BL-001: [radna inventura](DECIMAL-INVENTORY.md), 60 parser testova; direktni Prisma upisi i HTTP/PG karakterizacija ostaju otvoreni. Vlasnik izabrao K1 A: test-first stroga skala za polja u inventuri, implementacija slijedi.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; K2 vlasnika čeka admin screenshotove.
 
 ## Sljedeći korak
 
-Započeti B1 dashboard v2 i raditi S-red paralelno; dashboard blokiraju samo Critical ili nalazi
-koji zaista utiču na njegove podatke/tenant/prisutnost/auth. Prije UI realizacije razjasniti
-S-01/S-02/S-03 za korištene putanje. Nakon admin screenshot checkpointa obavezna je K2 odluka.
+Raditi K1 A, zatim BE-19 / FE-17 do admin screenshotova. Nakon K2 nastaviti TEST-01, S-red i TEST-02 dok vlasnik pregleda. Detalji u [handoffu](HANDOFF.md).

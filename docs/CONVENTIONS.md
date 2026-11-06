@@ -138,3 +138,7 @@ sa stvarnim istim numeričkim ID-om u linku i naslovu, nakon provjere svih šest
 Strogi gate je obavezan u CI; lokalni gate bez `--verify-ci` jasno prijavljuje da ne provjerava GitHub. Nedostupna mreža/token, rate limit i 5xx daju upozorenje, ne potvrdu runa; dostupan API odbija neuspješan ili nepotpun run.
 Planirani i aktivni segmenti mogu sadržati nepregledane redove, ali ne i neispravnu matricu.
 Puni CI na kasnijoj reviziji mora se zasebno sačekati; ne upisivati budući run kao zelen.
+
+### Početak Arena sesije
+
+Na početku pokrenuti `scripts/dev/session-preflight.sh`: dohvat aktivne grane, prikaz HEAD/remote/diff, sigurnosni patch i reset kada lokalni commitovi ne postoje, odnosno fast-forward push kada postoje. Ne briše untracked fajlove i nikad ne koristi force push. Nastavak je u `AUDIT/HANDOFF.md`.

@@ -622,7 +622,7 @@ scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,144,pregledano,F-CI-05-4
 scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,109,pregledano,F-CI-05-43: regresije prestupne godine i nepostojećih datuma uz ranije testove matrice.,2026-11-04
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,113,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
-scripts/audit/lib.mjs,STD,audit-tools,STD-01,296,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
+scripts/audit/lib.mjs,STD,audit-tools,STD-01,297,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
 scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,52,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,67,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/report-unit.mjs,STD,audit-tools,STD-01,72,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije. | CI-05 BL-011: API anotacija statusa i coverage-a, ne zahtijeva raw log.",2026-11-06
@@ -630,6 +630,7 @@ scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,62,pokriveno-testom,"C
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,455,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 proces zatvoren uz CI dokaz,2026-11-04
 scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,60,pokriveno-testom,STD-01: GitHub dokaz; nedostupan API upozorava a dostupan negativan dokaz ruši gate.,2026-11-05
+scripts/dev/session-preflight.sh,STD,dev-tools,STD-01,32,pregledano,"Početni fetch, backup diffa, reset bez lokalnih commitova ili fast-forward push; testirano u privremenim git repozitorijima",2026-11-06
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
