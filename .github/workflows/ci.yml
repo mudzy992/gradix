@@ -116,6 +116,11 @@ jobs:
       - name: Prisma client
         run: npx prisma generate
 
+      - name: Tenant query AST ratchet
+        run: |
+          node --test ../scripts/standards/check-tenant.test.mjs
+          node ../scripts/standards/check-tenant.mjs
+
       - name: Lint
         run: npx eslint "{src,apps,libs,test}/**/*.ts"
 
@@ -230,6 +235,9 @@ jobs:
 
       - name: Seed
         run: npx prisma db seed
+
+      - name: Strict tenant detector test
+        run: TENANT_STRICT=1 node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand --runTestsByPath test/tenant-strict.e2e-spec.ts
 
       - name: E2E testovi
         run: |

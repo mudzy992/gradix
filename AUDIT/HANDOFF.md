@@ -14,5 +14,6 @@
 - E2E izlaz dijagnoza `d05a35d`, CI 42216260784 6/6; uzrok prvobitnog izlaza 1 ostaje nepoznat.
 - S-01 provjere: fresh PG 14 migracija, puni E2E 23/211 bez forceExit, backend 55/448 + build/lint, frontend 66/650, `check:all` 0/3 skip; startup bez replay tajne exit 1.
 - D-059 `2772a0e` CI 42219098138 6/6; TEST-01 `25e9931` CI https://github.com/mudzy992/gradix/actions/runs/42272490494 6/6 uključujući Web E2E. Coolify auto-deploy ove grane nije potvrđen: nema GitHub deployment zapisa a pristup hooks API vraća 403.
-- S-01 `6e617cf`: CI 42275204800 5/6; backend E2E reporter navodi `erp.e2e-spec.ts`, log EOF, uzrok nepoznat; lokalni E2E 21/206 exit 0. Dijagnostički reporter `0d6f834` CI 42276252687 6/6; naknadni prolaz nije dokaz uzroka/popravke.
+- S-01 `970344d` CI 42282351096 6/6; prethodni CI 42275204800 je pao u `erp.e2e-spec.ts`, uzrok nepoznat, naknadni prolaz nije dokaz popravke.
 - OpenAPI `b3e9b12`, CI https://github.com/mudzy992/gradix/actions/runs/42278341873 6/6 uključujući Web E2E: djelimični gate, runtime rute imaju operaciju/response, dokument je `docs/openapi.json` i drift ruši CI; strogi DTO/error/cursor gate nedostaje (171/171 nemaju sve četiri greške, 33 `list*` nemaju cursor/limit; 18 bodyless uključuje namjerne). BL-OPENAPI-01; potom TEST-02.
+- TEST-01 strict: 41 model; 64 provjerena poziva (63 denied, uključujući selftest), 197/214 testova palo pri login/fixture; ostatak nedosegnut, težine neocijenjene. Samo strict selftest u CI; AST ratchet 234 kandidata u nepregledanom baselineu, nova pojava pada CI. BL-TEST-01-STRICT/STATIC/RAW.

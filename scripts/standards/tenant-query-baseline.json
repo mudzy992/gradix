@@ -1,0 +1,2090 @@
+[
+  {
+    "file": "backend/src/common/scope/company-tz.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "fdd94bcff0444271a2d03f8b382df43920f11bcc21fa3078d322405c4e206a83",
+    "line": 12,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/audit/audit.service.ts",
+    "model": "AuditEvent",
+    "operation": "create",
+    "fingerprint": "1ff50c5bba5b457ed4512ba9a69aeaef9a7b6c4b79ca6df8c1bb0f877ed44056",
+    "line": 27,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth-tokens.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "cd7f8c466ef0c99096a6dccc0289b2fbe40010d75e552c6f8f0b35c9157455c4",
+    "line": 77,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth-tokens.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "e8c4739417471b09e538e936c2d252f59d3edda1db035b1d6a5496b43f7e8727",
+    "line": 91,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth-tokens.service.ts",
+    "model": "User",
+    "operation": "updateMany",
+    "fingerprint": "e62af883b9b8eac0a8c371a275092e9699ec773222231c0142dd708ea12f1202",
+    "line": 335,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "0be580629cd31db7b8532dfa58fa7f6a5e90d6db10fe4482fff16b54edb2a85c",
+    "line": 60,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth.service.ts",
+    "model": "User",
+    "operation": "update",
+    "fingerprint": "ffc070ad43ca4742087d5967cb90534f6268de9d7cbbac8ceeb9a26b671b0c42",
+    "line": 98,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "22b0b9c5553038e50374f2e5b7096f689d82397673db2b7dcf4d44c469d0efdf",
+    "line": 125,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "6784d4a74d8e5bf08aa2d10bafb7718d35fd0c66058dbd3a78f4555fc556c8f2",
+    "line": 156,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/auth.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "c5467adeed3676e9b8c5bb8b30b2b26323866da3dd2c32d951a3b889a419087e",
+    "line": 162,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/auth/jwt.strategy.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "7b953138e677a3f6f8a26cadd9c4c55351f78b82bfa5a87fd13e59531d1072db",
+    "line": 29,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/companies/companies.service.ts",
+    "model": "Setting",
+    "operation": "createMany",
+    "fingerprint": "3664e066932f6e5de7b79bf81ac967b3a68356ad0bfa9cacfa31773c277284a6",
+    "line": 82,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/costs.service.ts",
+    "model": "CostEntry",
+    "operation": "findMany",
+    "fingerprint": "bf42d8a61337ca508661c786fa115c6e1549e75bdd929a7c23f26373d31eceea",
+    "line": 35,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/costs.service.ts",
+    "model": "CostEntry",
+    "operation": "count",
+    "fingerprint": "6ff62e4ee7fc5beac4a6954a3935522da09503a3e01c5444fc44da6457841779",
+    "line": 41,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/costs.service.ts",
+    "model": "CostRequest",
+    "operation": "update",
+    "fingerprint": "d915bc3b11efe88a3a762c334a54c2fa7d50c159068c26fbf24225d6445b2b62",
+    "line": 159,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/costs.service.ts",
+    "model": "CostRequest",
+    "operation": "findUnique",
+    "fingerprint": "5f43e239cb9afcde14c532a57f089d7b0af352b3464f1df535c27d044757f6f3",
+    "line": 215,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/costs.service.ts",
+    "model": "CostEntry",
+    "operation": "delete",
+    "fingerprint": "9d7def1c33c259c882bbbc566d74edcd9510f904c9d330e5f7bef22753182a52",
+    "line": 312,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/partners.service.ts",
+    "model": "Partner",
+    "operation": "findMany",
+    "fingerprint": "de617df9b2e870f56dffd6f2061dc6c5cb6290050758ebc5e138b473a046f18c",
+    "line": 33,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/partners.service.ts",
+    "model": "Partner",
+    "operation": "count",
+    "fingerprint": "77f4fb25955bc4b4188a5a57039558b0f2a45d92599f4b7b4a60039449302b45",
+    "line": 39,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/partners.service.ts",
+    "model": "Partner",
+    "operation": "update",
+    "fingerprint": "d6f8b1f4661a0ef599c9774c5ea7f9faf88e1d9c8202b28f2238aae688e84363",
+    "line": 73,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/stock-balance.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "7808150abff964c8bb1ad2b1e28a15226cd9b2e739556b08447e4d3652715b4b",
+    "line": 13,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/stock-balance.ts",
+    "model": "StockMovement",
+    "operation": "aggregate",
+    "fingerprint": "9bb0d667c66673972393bf5de8fa0000ed076e26eec42cb62d4096aa6a2d860a",
+    "line": 24,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/stock.service.ts",
+    "model": "Warehouse",
+    "operation": "findMany",
+    "fingerprint": "3b1c03b22b858a4db97c9f9d8814baa8152b797ae283f9df0ba53c96de84a6ce",
+    "line": 33,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/stock.service.ts",
+    "model": "Material",
+    "operation": "findMany",
+    "fingerprint": "6c87581297111e09a951bf79faae7c0d8713f28a2b1f2f0bf6891cd9c9f7d718",
+    "line": 34,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/warehouses.service.ts",
+    "model": "Warehouse",
+    "operation": "findMany",
+    "fingerprint": "d934a50a4a385e9434a9dc72e7448cc1f4829f8340721e743daff8c4f575c7de",
+    "line": 28,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/erp/warehouses.service.ts",
+    "model": "Warehouse",
+    "operation": "count",
+    "fingerprint": "2f6656ac26f456b0511e4ce73d302a200b4b82d058bbc230c7f1637b8d0f32a6",
+    "line": 34,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/mail/email.service.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "6b6c76d62fe4497595e038dafed12346d2915c6d3e4d36c4ca8c719581aff4db",
+    "line": 19,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "findMany",
+    "fingerprint": "2b44513d0f6d968514429f842f4c844964a99b2d094718eeb22df256bfc86240",
+    "line": 25,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "count",
+    "fingerprint": "55080a9f8d217bc285d22a15643347f2fbb1bca5d1c90e43196a6689d1e5ae0a",
+    "line": 31,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "findFirst",
+    "fingerprint": "644d03f7e9acafaebc447586658c61b4422d97289182d58292cd318fe2093fe7",
+    "line": 37,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "update",
+    "fingerprint": "1898e4d275936c1714a74bd647a4b6536faaa12cca635a19eefce7c1be9e8f58",
+    "line": 43,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "updateMany",
+    "fingerprint": "502e4ea47e702e729564f9f4e891676d49b193dc332f23df4e6b0691f3c02f00",
+    "line": 50,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/notifications/notifications.service.ts",
+    "model": "Notification",
+    "operation": "createManyAndReturn",
+    "fingerprint": "2e5c14820f01e909293fbdc91eb7fbea9a4855038a4249668d57c6289847261c",
+    "line": 97,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "Trip",
+    "operation": "update",
+    "fingerprint": "749e84e6542abc357851ab92dccab84275b5eba948f6ed715eb292873d18e8f1",
+    "line": 41,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "Trip",
+    "operation": "update",
+    "fingerprint": "dece723cd6634add7d1fe75af1fc1d4152d178c4f23585c3e69980d1fc7f7e4f",
+    "line": 46,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "Trip",
+    "operation": "update",
+    "fingerprint": "135c363c1ace76004e53d952866a95f96e56cac69302b14f584d4fa6fab4d59f",
+    "line": 51,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "Trip",
+    "operation": "update",
+    "fingerprint": "3c31737118d25c9ea69c4f1b42903fa3754ce1b46c647e6f56198632d2eb1c33",
+    "line": 66,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "StockMovement",
+    "operation": "findUnique",
+    "fingerprint": "54b671513c31a5f168837b1f3403877966d35224dd6c1e453d4b57add601d655",
+    "line": 144,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "StockMovement",
+    "operation": "update",
+    "fingerprint": "977a0ce9dc2019b47952589d8705b3fbe14866bd43611fecc1c9959aa01169d4",
+    "line": 189,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendment-fleet.ts",
+    "model": "FuelEntry",
+    "operation": "update",
+    "fingerprint": "e090800f476da294818b116ac2b23c216ebadef96625a5200e546acb9a81d0e8",
+    "line": 195,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendments.service.ts",
+    "model": "Amendment",
+    "operation": "findMany",
+    "fingerprint": "4c4d9c559999644f560ad55085ef419d4c9442d0a448b2aebbc6ea8fb83cec23",
+    "line": 44,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendments.service.ts",
+    "model": "Amendment",
+    "operation": "count",
+    "fingerprint": "5c1712801235002d89aa7f725653da381a76365b7d288a7c29f36b7787c9f5d5",
+    "line": 50,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendments.service.ts",
+    "model": "TimerSession",
+    "operation": "update",
+    "fingerprint": "c776563b79ef232bc5117b35fb1c6d628139b2a09169bf359e174a85d61a95ce",
+    "line": 175,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/amendments.service.ts",
+    "model": "Task",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "6674619154f99532efa02b1b4ada7b6b4728596857c55c804075b044b8f4e04b",
+    "line": 186,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/assignments.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "498b71209045af3abb73197174ee587b1601884a57bfad5b559c9c20cb71b095",
+    "line": 22,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/assignments.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "2cc5511e727afb9afc4684c22de60442527b2fe1cb7ed304150d71e7923cde68",
+    "line": 70,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/assignments.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "delete",
+    "fingerprint": "8b668717f5266289ac2a26b9914dfb9d638bf030eb4df0cef706149ad44cf635",
+    "line": 76,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/assignments.service.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "63382c3704e5c4542d7d3d0c14d478db8abe644967f01bf96e329d8445d7c8d4",
+    "line": 77,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Material",
+    "operation": "update",
+    "fingerprint": "be8129bad18a55cc4e5ed36375958f4f711ca241dcf95a6ef6664982a76f28ea",
+    "line": 61,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Trip",
+    "operation": "count",
+    "fingerprint": "a6854ccbdeb7a4142e1c9fa4efd5b6fc31e8df16d32e6e4962b6b604e99140f4",
+    "line": 82,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Material",
+    "operation": "update",
+    "fingerprint": "2160c4f369d0ce48be15dfae0747c4ef0fbcc0aa9718c76db88e7daa7bf80714",
+    "line": 87,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Material",
+    "operation": "delete",
+    "fingerprint": "493d2649b53f37d45520dddbdad108b4441e73ac97def92e8fd870b45b5c2007",
+    "line": 92,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Depot",
+    "operation": "update",
+    "fingerprint": "33b2bb63787ee6e35efe5b1ba4462ba8d3605da9ce6b081a809e1c8c3c5a09f8",
+    "line": 156,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Trip",
+    "operation": "count",
+    "fingerprint": "101c519c48478e0e93e589260fdcbb957d595245cf3188c5422c71ba050b877c",
+    "line": 193,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Depot",
+    "operation": "update",
+    "fingerprint": "514bce00df3f46129aa8fc4210131fb1e084df5533c112e8af1bbf9707c10157",
+    "line": 198,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/catalog.service.ts",
+    "model": "Depot",
+    "operation": "delete",
+    "fingerprint": "f1be5ab8b30647f4643c58473c58da18753504f9606b88dc3c28483a2016845c",
+    "line": 204,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard-projects.service.ts",
+    "model": "Project",
+    "operation": "findFirst",
+    "fingerprint": "212b6e30b44dbe41882d7471cf1e61c0c66aef6a2ae8b409959a71963874c034",
+    "line": 29,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard-projects.service.ts",
+    "model": "Project",
+    "operation": "findMany",
+    "fingerprint": "b9e3f36e19611627be63d75aaf8ff325d8f0e8308a75f4bbfd5cd4a0b97a3202",
+    "line": 40,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard-summary.service.ts",
+    "model": "Project",
+    "operation": "aggregate",
+    "fingerprint": "2ad854de2cc9c1200548a68d6bc3150c99ed310c6660336823ac6dc53fd76b7c",
+    "line": 28,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard-task-alerts.service.ts",
+    "model": "Task",
+    "operation": "findFirst",
+    "fingerprint": "054e34f1f07b0d57cf76ce529177aa8bd4861b3743dfec1ef2a597aa9977f560",
+    "line": 47,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard-task-alerts.service.ts",
+    "model": "Task",
+    "operation": "findMany",
+    "fingerprint": "40f63f1c84724bef237faf046cee70bc72eda540362bb75d8f7d086b77eedf24",
+    "line": 58,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard.service.ts",
+    "model": "Notification",
+    "operation": "count",
+    "fingerprint": "897dfebd03470f74576b34bef3a15fdda5b20bd9bc693ac8bf93fa8f7f0dc1ce",
+    "line": 24,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard.service.ts",
+    "model": "TaskAssignment",
+    "operation": "count",
+    "fingerprint": "0bd63cfcf03bf073583613bc9854467486635ccf2090253556250a57a6bd83d9",
+    "line": 96,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/dashboard.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "76de6e6fc0e76cf40bb7f1c72afbd54e3b7c06b3c718dbb040adbaaa3a796af9",
+    "line": 102,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary-conflict.service.ts",
+    "model": "DiaryEntry",
+    "operation": "update",
+    "fingerprint": "0cdb7b70b36313a12d940adcb60b72ebdde40ff1a8097a6b515a7980f2d1c603",
+    "line": 51,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary-conflict.service.ts",
+    "model": "DiaryEntry",
+    "operation": "update",
+    "fingerprint": "ad41540786610d9d0cfe6c16da914e2366f3d7ce524c5a2d2a0d72eafaed8c88",
+    "line": 66,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary-pdf.service.ts",
+    "model": "DiaryEntry",
+    "operation": "update",
+    "fingerprint": "c73ab1f33c313f37869660cc3682a30ee55c9e53d6083c5cd5c6093c750848e7",
+    "line": 102,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "DiaryEntry",
+    "operation": "findMany",
+    "fingerprint": "8f0b9f4ad9c6e8422d7799f60a120687ead1c176d9715a682ca5bb16ffaee758",
+    "line": 65,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "DiaryEntry",
+    "operation": "count",
+    "fingerprint": "7a4aa78c2db9e666b813e984f31dfc4c1a1f1c11a7da933efc524ab9aa8d173e",
+    "line": 72,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "DiaryEntry",
+    "operation": "update",
+    "fingerprint": "48f61c572a6ad6c074fbc1a07602d796bab0e4a6e4d36c7fba6dfd4c926e32d7",
+    "line": 148,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "DiaryPhoto",
+    "operation": "findFirst",
+    "fingerprint": "22d0307102ea8994831679d8db82d28891c97c828a2df5edf975b5acaa1d692b",
+    "line": 174,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "DiaryPhoto",
+    "operation": "count",
+    "fingerprint": "c11e55aa6dfb89f1d8c518670c27edac544476c3642125d872e15a1571c5e34e",
+    "line": 180,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/diary.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "97eef6d7bebcd8a2e776bad808728d0a4a3436bf3efd90057a37b55f6cb1a5cf",
+    "line": 245,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/documents.service.ts",
+    "model": "ProjectDocument",
+    "operation": "findMany",
+    "fingerprint": "4af4263af0c92a4399866b4af3927eff9099d4223eca4b58b82c85f6f5e65460",
+    "line": 34,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/documents.service.ts",
+    "model": "ProjectDocument",
+    "operation": "findFirst",
+    "fingerprint": "0c9fec942f53870d8a255ccccd08a37f32eb1712484ba473be22f58bb5f86ba8",
+    "line": 75,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/documents.service.ts",
+    "model": "ProjectDocument",
+    "operation": "findFirst",
+    "fingerprint": "3712e8ff52346c1a7d63e01ef5b3c1b9bdcce2f94c138e161ea9b3b263f68396",
+    "line": 112,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/documents.service.ts",
+    "model": "ProjectDocument",
+    "operation": "updateMany",
+    "fingerprint": "4d323da60f47bfe31b2c832894d329bd5fa5547c1b982e2016b71526505d1077",
+    "line": 119,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/fuel.service.ts",
+    "model": "FuelEntry",
+    "operation": "findMany",
+    "fingerprint": "72521f0faf2665b5525b0303d018eb08e66a4fe5dc43df7fbd8ca747f988d6fe",
+    "line": 47,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/fuel.service.ts",
+    "model": "FuelEntry",
+    "operation": "count",
+    "fingerprint": "183624fe92d55cda28529f7c5642a0c3b00fbbd7566f199a48c87f3a942f8fd1",
+    "line": 53,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/fuel.service.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "2435532d9c3d1c177facd8271cc82b3034920cd7c8da8974a0d7903390b92ac2",
+    "line": 135,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/fuel.service.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "09fd88ca96ace4ab18678fcca25e26e25210da95e0639e7f2cd8a3729bd63645",
+    "line": 189,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/fuel.service.ts",
+    "model": "Trip",
+    "operation": "findFirst",
+    "fingerprint": "4022c99a5e4aa8a2c2688c8af9d153a07203f31e531ad3e06e56d364f1df9555",
+    "line": 195,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/gps-devices.service.ts",
+    "model": "GpsDevice",
+    "operation": "findMany",
+    "fingerprint": "9368f3539653b8cf086191c7ec6e83288a92abec98dedf2edf761e6462411792",
+    "line": 23,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/gps-devices.service.ts",
+    "model": "GpsDevice",
+    "operation": "update",
+    "fingerprint": "de2d81f0a85e1920b6b7967b11000f2bddac78f4d3257bef6f2ab2e8bfac0c75",
+    "line": 72,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/gps-devices.service.ts",
+    "model": "GpsDevice",
+    "operation": "update",
+    "fingerprint": "185414414b7bb2bb7000461345352f538a568b2b1a981fffed904fb9dd67ac7f",
+    "line": 91,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/gps-devices.service.ts",
+    "model": "GpsDevice",
+    "operation": "findFirst",
+    "fingerprint": "86ef39a97ea3d9d440686bb41b4479115c0899bd3f08b9f18ee8eb9197156bc1",
+    "line": 134,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/incidents.service.ts",
+    "model": "Incident",
+    "operation": "findMany",
+    "fingerprint": "6d79f471d37c5375625abee3c8e1ac34bd9d3812654ee802f2906d99220ae217",
+    "line": 45,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/incidents.service.ts",
+    "model": "Incident",
+    "operation": "count",
+    "fingerprint": "e4d53bc63f521f87a371202af681c142576e6adcd7b93e106f36883384310b9c",
+    "line": 52,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/incidents.service.ts",
+    "model": "Incident",
+    "operation": "update",
+    "fingerprint": "63cd24f0f3248179e1a7e6a52184267d9dcac44295a789e04a34514e07d00d6e",
+    "line": 135,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/iot.service.ts",
+    "model": "GpsDevice",
+    "operation": "update",
+    "fingerprint": "d259a16c50845aa22f9ff9b76d7579cba1888339feb8f19a4b5d42b5e3054265",
+    "line": 41,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/iot.service.ts",
+    "model": "GpsDevice",
+    "operation": "findUnique",
+    "fingerprint": "126397453a857931f0a0694a324cbfc993b32af5d6d89f94417d34d4abaf0b4c",
+    "line": 62,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/locations.service.ts",
+    "model": "UserLocation",
+    "operation": "findFirst",
+    "fingerprint": "556b877d7054f7437dd3c8d372587304c17aff1427ae21f8a4af19910ed3f7a9",
+    "line": 34,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/locations.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "28eb26caaebf9e5859ae5033897440fa669a92a36487a8b666ddfe51c80f71e3",
+    "line": 83,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/locations.service.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "09fd88ca96ace4ab18678fcca25e26e25210da95e0639e7f2cd8a3729bd63645",
+    "line": 175,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/locations.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "a079ceec3e4e48d0d75c040d6e263fbbfdbac21d9b85f8e86ddb1665a9758b3f",
+    "line": 181,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machine-hours.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "7bb6499d2eb470951a0d36d29c421a4518390cf5ffe4a35590a91d738f406049",
+    "line": 15,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "findMany",
+    "fingerprint": "83899abb9ea7f06aa8098ea2cfb18fcd14a71305d5d2e14db5461689f08600f3",
+    "line": 51,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "count",
+    "fingerprint": "5cb904d40ccf4b65d373b6b0e424b77973daf0aef5206c22e50e240c8dbc8536",
+    "line": 57,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "653bc3887e82248e7cc2c17a13dcad8b91e2cb50cd61b94b5a19dbf19d297824",
+    "line": 90,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "ec952ce53989dd887fb25f082d9f4a89fc2e815e1012939aaa38cb7104da90ce",
+    "line": 120,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "GpsDevice",
+    "operation": "updateMany",
+    "fingerprint": "cbaa2c7754d07543c1ef8136b951cf7b497a5af44cb13f901485b1443ffa695e",
+    "line": 124,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "f4fa8bfbe21a5d63e2c6f0a691b2eb022db0b293cb1317412a42285916423ea1",
+    "line": 162,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "6aa167c86e573f6a4a62ffd0464611713061d36fc84014d80339d0954ab08723",
+    "line": 180,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "0fed0effc7247cf8e2bd42ebac676d3cf365e53e0065440b0558771c82f1db6c",
+    "line": 212,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "MachineAssignment",
+    "operation": "update",
+    "fingerprint": "8f315e934e096424caf28dbcd4d90b505e673b7ce0634e5ca09e07e6357d1bee",
+    "line": 221,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "031f769ddbc484c80d0098875124714f4d9c2e07d5849b30b53dbfa1a8e61b23",
+    "line": 225,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/machines.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "988d1d4b5bb1472a1b3981f1558d4fa34bd086f9603bd926f243e0baa42a2816",
+    "line": 270,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findMany",
+    "fingerprint": "1ff24e3d8e19cae986c0cb065b2f46f3aaf3eece265798017f62b7bf14339f8d",
+    "line": 24,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findFirst",
+    "fingerprint": "8a6135d61d649db2b522275cd6c6231600784684ef4d990a551db8503206412d",
+    "line": 36,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "ProjectPhase",
+    "operation": "update",
+    "fingerprint": "532bf4aa28cd495ea8b4c16682dd2cc297c5eaefb555e9bb7f2e39680448db9e",
+    "line": 79,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "Task",
+    "operation": "count",
+    "fingerprint": "ac07e2612c031f89ba4282d0719a4708ed476c5b6315d1b99bed92a293556181",
+    "line": 103,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "ProjectPhase",
+    "operation": "delete",
+    "fingerprint": "fe75985b1633eca15f92dc785ea056a676b6f897b61759bb1633b80bc3fa91fa",
+    "line": 107,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/phases.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findFirst",
+    "fingerprint": "0ecb892091e171bda4e864c19f6c6d8e6840370638b8ade26282b37da046ef2a",
+    "line": 111,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "ProjectPhase",
+    "operation": "findMany",
+    "fingerprint": "e7feb1ba771a7fdfecb4302cb7ff6c44363c37cf6405ce3e0d5f7a0db3c6583c",
+    "line": 32,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "Task",
+    "operation": "findMany",
+    "fingerprint": "896a8c5fd3b178125cfd434e545da41d86f9da6521e05701461b1931919d880d",
+    "line": 38,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "f728c40e9a4cce6ea37e64012d9aa730c35bfec328f3df5e763ef5d02e1ab89f",
+    "line": 42,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "Task",
+    "operation": "findMany",
+    "fingerprint": "808e42f4dc5e3e5184d63429e2acb77add550c7dfc9cf5501d5c0fe5a42fc8ce",
+    "line": 50,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "ProjectPhase",
+    "operation": "update",
+    "fingerprint": "f307f2cc9ebc442edc10fe3e53ab62e4b5d3ce048d6c277d9cb4e23381e69758",
+    "line": 68,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/progress.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "07a0671a203e2cb35157de4258501bba51fe7dcabe0d8052061b0b03787207d9",
+    "line": 75,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/project-access.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "9a073e678127afa34378013f7e0a6cb7abe13c392f9f3c51599d6878241a2f6f",
+    "line": 77,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/project-access.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "2cc5511e727afb9afc4684c22de60442527b2fe1cb7ed304150d71e7923cde68",
+    "line": 94,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/project-access.service.ts",
+    "model": "TaskAssignment",
+    "operation": "findFirst",
+    "fingerprint": "78594b2adc8df89b06d79b540f0ac71c99dfe768ffd0e1d8ce910540686f999c",
+    "line": 100,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/project-access.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "84f7e470f31bfa1c75100b8c59008bffb2a5bf62480de84eadc4efb5b780a2de",
+    "line": 110,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Project",
+    "operation": "findMany",
+    "fingerprint": "dde8840abfb70f2941c64bbae428da0bb5f99527fef699f59a309c9e1b045551",
+    "line": 65,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Project",
+    "operation": "count",
+    "fingerprint": "762d889a5af4cdf18fbcb1e355ba63acedf94bddd8d3a817cc26b41b65f9d71f",
+    "line": 71,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "f27afe615cdecc20230f79c4d2e2c1d722f0be53805cc8e70f79d913e142ebcb",
+    "line": 198,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "8ff03271b979ba761a03ff162b647f7d616286c8d437e6ee145714800e1b3033",
+    "line": 237,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "80d6c8c461d6bf16580d8ee695dc37c4a9a81aef3e2f75f42ff370c5e629ff81",
+    "line": 255,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/projects.service.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "568218cc524eed15463b50781c1dc14f0a28ccc374d9bd37b0a30dcb8d0a4764",
+    "line": 270,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/quantities.service.ts",
+    "model": "QuantityItem",
+    "operation": "findMany",
+    "fingerprint": "98d5dd91d629cd6aad6c99131e2c0131b8a83ddcae06d64d285daef04cd42c2e",
+    "line": 27,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/quantities.service.ts",
+    "model": "QuantityItem",
+    "operation": "findFirst",
+    "fingerprint": "5338b00bfa38c4162a16c99432f3bcea3dbd441e8b38c9d822715b723d129544",
+    "line": 83,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/quantities.service.ts",
+    "model": "QuantityItem",
+    "operation": "update",
+    "fingerprint": "64634b85e84c097ad555a2467a107646996f3f6d5c2237c100e159d13f387c56",
+    "line": 107,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/quantities.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findFirst",
+    "fingerprint": "9b44a5b65c2e6e8210a0e3873078baa379069c83221ccd1b9b7e52f350952f65",
+    "line": 155,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/spend.ts",
+    "model": "FuelEntry",
+    "operation": "aggregate",
+    "fingerprint": "a82d55d8a7e5c779d8e59ef7d517b44cf7c0d29d7691877b0f1bbb82d9c7c91a",
+    "line": 27,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/spend.ts",
+    "model": "ServiceRecord",
+    "operation": "aggregate",
+    "fingerprint": "e92dff517341cae38772dbaf3c11e69fb9d8141a66e8af6e297dd506b905527d",
+    "line": 34,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/spend.ts",
+    "model": "CostEntry",
+    "operation": "aggregate",
+    "fingerprint": "21d9721f11d86c2a01fa5241a2aabc2cf00cf55f0b7ce55f45fce86d638f03ed",
+    "line": 42,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/spend.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "a0256fed1d7a400a5b4acb750441b2544d2725b52dd6fb633d4c175ae86a0523",
+    "line": 57,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/spend.ts",
+    "model": "CostEntry",
+    "operation": "findMany",
+    "fingerprint": "6946b743e67861d7a867171108ab7575d3981e2a4e39d6ea1eed73c8abbf7a05",
+    "line": 68,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/sync-catalog.service.ts",
+    "model": "Project",
+    "operation": "findMany",
+    "fingerprint": "b50e5e8aa04869b710e89a992eec63c4a119ba14c23195a1e7079c7c9e77b65f",
+    "line": 21,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TaskAssignment",
+    "operation": "findFirst",
+    "fingerprint": "1ee7b46ded96a64612307c82e634fb7d1ff4d215fa1ef6bf5603a2df73a65151",
+    "line": 43,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "706e9acb7684c370f9701aba011f827bc3a38c336d3a76c6c42772d00051e1d2",
+    "line": 85,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TaskAssignment",
+    "operation": "findFirst",
+    "fingerprint": "a2824b20418fd25ed4541599e185cddb1646ffbb418092b57d77de8c2f3be406",
+    "line": 95,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TaskAssignment",
+    "operation": "delete",
+    "fingerprint": "c4d1a4265480d8e74444d917e188c129555c55595dc20eb0e7af20fb35a82757",
+    "line": 101,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TaskAttachment",
+    "operation": "findFirst",
+    "fingerprint": "9a0d23623da59c5be2f84131cc4ad7a466fb6a3e91cf41e795ac72d048706c77",
+    "line": 145,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-assignees.service.ts",
+    "model": "TaskAttachment",
+    "operation": "delete",
+    "fingerprint": "297d79a398638443fdefc7001c64cb5d8e4dcf26b1afec1258350afe9dfcddcc",
+    "line": 151,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "Task",
+    "operation": "findFirst",
+    "fingerprint": "f9ce4a4023f1223445d3aeaf32d362b04c83cf0f5eaee2f721346c2d83325d2a",
+    "line": 26,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "Task",
+    "operation": "findFirst",
+    "fingerprint": "947fdb8b54f2e55b69267a08dad77dbdef17af32edf09a693c4056c3c5d57ace",
+    "line": 29,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "TaskDependency",
+    "operation": "findFirst",
+    "fingerprint": "8a2d1ecc913bad207dfec0733f070e12727c1b820a056c784467543fddeeed43",
+    "line": 40,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "TaskDependency",
+    "operation": "findFirst",
+    "fingerprint": "af7023ae9efb3d16f177b64391dbc8e07109823e647c9985c8229a151c0ee7c3",
+    "line": 75,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "TaskDependency",
+    "operation": "delete",
+    "fingerprint": "382337228ed11fc5065440ffd83562914e0065e3a4828fe0b80d7c7b2de61d52",
+    "line": 81,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-dependencies.service.ts",
+    "model": "TaskDependency",
+    "operation": "findMany",
+    "fingerprint": "72fefb64e9a74460f62d3b451afe70534fe964084e03d196d9f0e07c50172b65",
+    "line": 104,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-lifecycle.service.ts",
+    "model": "Task",
+    "operation": "update",
+    "fingerprint": "05978382d551bd96957c8ef5032eb7608bb589e38a42c55406f49aa9a3c03ac5",
+    "line": 42,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-lifecycle.service.ts",
+    "model": "Task",
+    "operation": "update",
+    "fingerprint": "fe3b82d5065e2833ecacc9c6118fb716332ab1d87352d742b08f7357ab6772bb",
+    "line": 82,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-status.ts",
+    "model": "Task",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "aeb9380d49d568446305610673c4521f183640c5f7cd73e552365f35b4b5d73c",
+    "line": 32,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-status.ts",
+    "model": "Task",
+    "operation": "update",
+    "fingerprint": "d18501e9fab7baa343a65146193a46deec80e6b6318ff43852e8c6b813387905",
+    "line": 45,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/task-status.ts",
+    "model": "Task",
+    "operation": "update",
+    "fingerprint": "9091ab2bc8591ab49f2a9652cf30f6dbfcf3e950f84e608e9cba47fe344b5036",
+    "line": 55,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/tasks.service.ts",
+    "model": "Task",
+    "operation": "findMany",
+    "fingerprint": "ba7db09f1e5ba213153dd6c418ef0b5a398c42053125f7d5d62c7e8dfac11c10",
+    "line": 48,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/tasks.service.ts",
+    "model": "Task",
+    "operation": "count",
+    "fingerprint": "b41405338c356091368e36ee5fb6f7a72d50ce846439aee855d397ed9bd1651b",
+    "line": 55,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/tasks.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findFirst",
+    "fingerprint": "5771f213252828394fac12ecb8ae04941928cea552b88a531d029336ace41049",
+    "line": 72,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/tasks.service.ts",
+    "model": "ProjectPhase",
+    "operation": "findFirst",
+    "fingerprint": "a5730eba8bec2dc19fe91cd3ebc30c8662f87449b5c17ce5d51a8679cd1b49ba",
+    "line": 148,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/tasks.service.ts",
+    "model": "Task",
+    "operation": "update",
+    "fingerprint": "9e9c2ab73916b24ccb318b9dd0ab182998cd70d08ceaffa1aa1f411f63de77e6",
+    "line": 159,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-create.ts",
+    "model": "TaskAssignment",
+    "operation": "count",
+    "fingerprint": "379862c16965146bc4db8a5b81012b0f680bd74c876ea548fa94d933a593a185",
+    "line": 48,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-create.ts",
+    "model": "TaskAssignment",
+    "operation": "findFirst",
+    "fingerprint": "e9da6c3024346143b63ff701ea2e3957057f0f7a2b7d06dcefc7c6ad1b6640e5",
+    "line": 108,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-create.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "c02a7aa938676dd35693707b591f580c1d35d62029ac02bd0b1aa97e8005c633",
+    "line": 117,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-create.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "1a5141bd6f324d4a228142d1e3692f651ff0f2a1d2e0e92e224a5cf4281d2cdf",
+    "line": 135,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-cron.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "33b5a98914b4cd2ab107cfc79a5f5a954cd601deeb39cbf9332864d2a927aa83",
+    "line": 19,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "User",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "9512cdb6cf88c1e97e756b15d7a6a0cab9b1a28e3ee0cc4e16b0de414a1fe384",
+    "line": 43,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "TimerSession",
+    "operation": "update",
+    "fingerprint": "b8ae4b671e11e569d1710c3f5b6aa2c7b90ebd17432665206babec459656a09f",
+    "line": 47,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "Task",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "df73d0fd7d9cd7d8e69c7c09b1f10d582fd5aa706a3c6368bdc70bf2e52b561e",
+    "line": 59,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "465ad90aea87d168a1698e611c833d929ee06e0b12ddcb803c4515b1c6a6cfb0",
+    "line": 102,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "2c73352349ea6a1b6be97cb516544c1992e9d31cccf81237f0c8b296ea6ec8cd",
+    "line": 111,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-force-close.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "0875f92f18a4cbc03b2f4bada9d77fd8505b7f890cb4fd8d846a86b9863aec5e",
+    "line": 120,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-machine.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "5f5e4db0947d84adbd3ee639eb1a8c2ccabeb7f3d612bddf86f44c1782039847",
+    "line": 30,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer-settings.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "c1b6b80e57090ea150967662370cf32911563fd7e9a38642f47e80041bee1fd0",
+    "line": 7,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "update",
+    "fingerprint": "d24bd02c58c0c98c350ac7096b0c3c4880fc1c8a22af0a8dab96809f31118105",
+    "line": 81,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "Task",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "df73d0fd7d9cd7d8e69c7c09b1f10d582fd5aa706a3c6368bdc70bf2e52b561e",
+    "line": 86,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "update",
+    "fingerprint": "2093bc75e1495ee1f44d1c6c7900c3202e3f7db99dc5960d3999bc383747d061",
+    "line": 112,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "cb7feefa1c41c4fdbf5441ebe78c8f67b3037006b1e54f3def06c3b019fba876",
+    "line": 138,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "40afbfd1f011240e5f2720b1573a47d59136e393f9ba1f5f192026cf818a7513",
+    "line": 152,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirst",
+    "fingerprint": "76de6e6fc0e76cf40bb7f1c72afbd54e3b7c06b3c718dbb040adbaaa3a796af9",
+    "line": 166,
+    "count": 2,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/timer.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "19cea421e3b67ad6de0820979ff045c239cd1259ba504bf5a99531d6b2ba3db1",
+    "line": 194,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trip-rules.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "420dee080fd8d3b25bcbacc306c2d3503556ba45aaec793e4f75932598098eb7",
+    "line": 22,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trip-rules.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "fbf039a01d6bc9434a1ee563f060cef09ac4c45efeab6b12bcb41dd04cf9c03b",
+    "line": 31,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trips.service.ts",
+    "model": "Trip",
+    "operation": "findMany",
+    "fingerprint": "a83d39eb5ab602722d48f901fbbd8404a5ba4619251117d7f4cbb2c7130c94b9",
+    "line": 41,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trips.service.ts",
+    "model": "Trip",
+    "operation": "count",
+    "fingerprint": "a242bdbd4f44e8aa74c45a3fe88666d0fb5e90dd11a718e57f99977a80cbd57a",
+    "line": 47,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trips.service.ts",
+    "model": "Depot",
+    "operation": "findFirst",
+    "fingerprint": "186e90dbee09c5719f3a1a0b315d6b18b07c515483aab6480171789bfcae880b",
+    "line": 153,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trips.service.ts",
+    "model": "Trip",
+    "operation": "update",
+    "fingerprint": "39646c97865555636e3377fcbc74c6ef0cb54dc31ceec534e741824481a1ed15",
+    "line": 159,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/trips.service.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "988d1d4b5bb1472a1b3981f1558d4fa34bd086f9603bd926f243e0baa42a2816",
+    "line": 200,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/ops/write-machine-gps.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "8b435ae7ea1c489b9ae0082d485210ee69bad29c1b1a7dd625642f46a004470e",
+    "line": 42,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll-access.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "b476fd051bc8e55268b884511437f781c46bcb9fa32d2a4b72bdbb7c800828a1",
+    "line": 40,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll-access.ts",
+    "model": "ProjectAssignment",
+    "operation": "findFirst",
+    "fingerprint": "7fd55815023054eb4420f8884fc20a139319216e9cc204652b13dac9ea978fb7",
+    "line": 72,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "029447b99786d2648b14da063a4288026be2a1aca6eef15d671ea78c46080dcf",
+    "line": 81,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll.service.ts",
+    "model": "TimerSession",
+    "operation": "count",
+    "fingerprint": "0cb890f638ce9e333565c3e2950427922e73909bfe80a644da9ffacc52623b89",
+    "line": 88,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll.service.ts",
+    "model": "TimerSession",
+    "operation": "findMany",
+    "fingerprint": "72a3d913684192979d8e34131e51f911f307164e0423e0f27e933551057ba1b5",
+    "line": 95,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll.service.ts",
+    "model": "TimerSession",
+    "operation": "findFirstOrThrow",
+    "fingerprint": "9901c08f9c2d752055edda6f0fe2129b43ef7747b822726b1d0a9761a55fa2ac",
+    "line": 150,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/payroll/payroll.service.ts",
+    "model": "User",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "0a44b8db4c81b85db91ea4038b55505701700a92b0ce63d918060b3d63202b10",
+    "line": 191,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/docs.service.ts",
+    "model": "CompanyDocument",
+    "operation": "update",
+    "fingerprint": "e96392fadd95a2c0463ebe325fbd0d6018d21ad679123877368ef6fb58024415",
+    "line": 78,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/gps-cleanup.cron.ts",
+    "model": "GpsRecord",
+    "operation": "findMany",
+    "fingerprint": "f99170b57f056e22b95d3d4f297af4fe1dc424fd92e4e1b8d76a8be0e1be4dd8",
+    "line": 22,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/gps-cleanup.cron.ts",
+    "model": "GpsRecord",
+    "operation": "deleteMany",
+    "fingerprint": "a46be49c2a6357ed30ea10e72a43951774440a0a13b0a1b6e248358abdb235c9",
+    "line": 30,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/report-queries.ts",
+    "model": "FuelEntry",
+    "operation": "groupBy",
+    "fingerprint": "b3695d3a80fd13041fc55bf9ed4a9fb840540be0acd0709d426829ebb58e11ee",
+    "line": 104,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-cron.service.ts",
+    "model": "ServiceTemplate",
+    "operation": "findMany",
+    "fingerprint": "57b0e716303f2a72c7bd8765f01a24e165ba20706b21dfc27b3c645ddf4c875b",
+    "line": 20,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-cron.service.ts",
+    "model": "ServiceRecord",
+    "operation": "findFirst",
+    "fingerprint": "e9f64aac4e8af0160c8452faecc18d911b6228286ddca32b6b97b3dabc6be77c",
+    "line": 44,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-cron.service.ts",
+    "model": "ServiceRecord",
+    "operation": "findFirst",
+    "fingerprint": "06a7efefed014c15fabdc7cb396229978cab495c558b207f5ef4021491c27f58",
+    "line": 59,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-cron.service.ts",
+    "model": "TimerSession",
+    "operation": "aggregate",
+    "fingerprint": "bb3f9c18b8899c7bee854baf3b1758f6b4f4b9afd1da6ad01ad73c753293b55c",
+    "line": 106,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-start.ts",
+    "model": "Machine",
+    "operation": "updateMany",
+    "fingerprint": "64e5e34b90b3a8e3c209752348b7f407bd78486c36f3656a99d8266e306bdbc7",
+    "line": 59,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-start.ts",
+    "model": "ServiceRecord",
+    "operation": "updateMany",
+    "fingerprint": "36322a349a0b407662f3690e6a55039571529c0921f1b74968bd26dd87e6ccbb",
+    "line": 73,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-start.ts",
+    "model": "ServiceRecord",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "3a67ac975c332b6f8daeb7073075d9c027056a25aa50cd2ca62c8f2122e54c99",
+    "line": 88,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-start.ts",
+    "model": "MachineAssignment",
+    "operation": "findFirst",
+    "fingerprint": "06e6c9f2822cf1392f1264aecadf5aa1f73e1046163ca378f552d82f5378e9d4",
+    "line": 100,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/service-start.ts",
+    "model": "Machine",
+    "operation": "update",
+    "fingerprint": "d11248ed0e848d2b10a03157af73373b286caad52a8d6f3c21842d56ee4a4c28",
+    "line": 103,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/services.service.ts",
+    "model": "ServiceTemplate",
+    "operation": "update",
+    "fingerprint": "0f8871addb2ded707aca88c3cc526b2ce5ab4795a8ba7fe074cddf82dadc5912",
+    "line": 69,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/services.service.ts",
+    "model": "ServiceRecord",
+    "operation": "findMany",
+    "fingerprint": "fd3b576b00ff27134517f4ff7e95a26e8b80b8db974144d1d1c2c18d81372413",
+    "line": 93,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/services.service.ts",
+    "model": "ServiceRecord",
+    "operation": "count",
+    "fingerprint": "837aee7c11de76f628e343166882742548baba3480112f003cd870862b1e6e36",
+    "line": 99,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/services.service.ts",
+    "model": "ServiceRecord",
+    "operation": "findUniqueOrThrow",
+    "fingerprint": "7cea11206afae793ab2d561cebb86208f1a21ac8b58460c4235b705a7e4a0e0e",
+    "line": 205,
+    "count": 2,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/services.service.ts",
+    "model": "Machine",
+    "operation": "findFirstOrThrow",
+    "fingerprint": "df019533c01b1d770e2a6d8482363d05ba94fee7d5358a533d8fb8ea0ad44064",
+    "line": 292,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/tenders.service.ts",
+    "model": "Tender",
+    "operation": "findMany",
+    "fingerprint": "8f30c723c395ad4d0f205e57c540dc4e161d86f40806e04b9a64cd5d209330ef",
+    "line": 45,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/tenders.service.ts",
+    "model": "Tender",
+    "operation": "count",
+    "fingerprint": "37c882ca38e4a66f030a9fbf7e3a0c9bd9503fb89b5e7906cc5bc6afc2203d0a",
+    "line": 52,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/tenders.service.ts",
+    "model": "Tender",
+    "operation": "update",
+    "fingerprint": "b9fe36b0f79e1fbd078e84baacbf5b07cc03ee1a6348820e2b0639de8115c2d8",
+    "line": 104,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/polish/tenders.service.ts",
+    "model": "Setting",
+    "operation": "findUnique",
+    "fingerprint": "568218cc524eed15463b50781c1dc14f0a28ccc374d9bd37b0a30dcb8d0a4764",
+    "line": 251,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/public/public.service.ts",
+    "model": "Project",
+    "operation": "findMany",
+    "fingerprint": "2a7d3538fdafaf6acd84b6b3ac4822478a585ad01da72129a55382b8dd510189",
+    "line": 38,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/public/public.service.ts",
+    "model": "Project",
+    "operation": "count",
+    "fingerprint": "762d889a5af4cdf18fbcb1e355ba63acedf94bddd8d3a817cc26b41b65f9d71f",
+    "line": 44,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/public/public.service.ts",
+    "model": "PublicAsset",
+    "operation": "findUnique",
+    "fingerprint": "600411936133ca18185e95b233a939540f32d1cbab2ed838222e7adb0bc7a608",
+    "line": 55,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/public/public.service.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "5c5b72a39593dab4a8d115169276f882b15ee8fa6969920ab16a428c55d23852",
+    "line": 118,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/public/public.service.ts",
+    "model": "Project",
+    "operation": "update",
+    "fingerprint": "5aeed0c1825fab3948c3ba5188837fc587cab55ecf2d919688cae8afb6a43231",
+    "line": 141,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/realtime/app.gateway.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "1bded668897c6db87649a952026d40d792071439668f21ee2d2bbd87d0721a0d",
+    "line": 51,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/realtime/join-project-rooms.ts",
+    "model": "ProjectAssignment",
+    "operation": "findMany",
+    "fingerprint": "53f8b4673649406f9e62306ec4eddbf786b00ad8642a473cb164f47184a181f5",
+    "line": 41,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/realtime/join-project-rooms.ts",
+    "model": "TaskAssignment",
+    "operation": "findMany",
+    "fingerprint": "1843cda1be800651e46c6eaa42c3ebfe1b7d2a9dccf0a4181076d6c9ed62f0a6",
+    "line": 45,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/settings/settings.service.ts",
+    "model": "Setting",
+    "operation": "upsert",
+    "fingerprint": "b2cbacc8dce5c8efa0b3b0b5184e02f7d27acdaeb8fd4b6c1b6e94f39f477d87",
+    "line": 52,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/users/role-escalation.ts",
+    "model": "User",
+    "operation": "findUnique",
+    "fingerprint": "7078986c5f25b4d2c260f5feb9bce592a76f40c25ee6b8041c75586fbaad345a",
+    "line": 71,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/users/users.service.ts",
+    "model": "User",
+    "operation": "findMany",
+    "fingerprint": "8e4279fd1571322376b650e6e8ad0f3026922aef3afbea116fa335f9d16f90d8",
+    "line": 61,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/users/users.service.ts",
+    "model": "User",
+    "operation": "count",
+    "fingerprint": "b23a5ba3592fedad9ea48a80292cb7c3f002da23f60cfc43ca26288ee6620ec7",
+    "line": 68,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/users/users.service.ts",
+    "model": "User",
+    "operation": "update",
+    "fingerprint": "0b815223ee966b393fc0f6f02386b2fcda67e1b30fb857afbef357d2dc0c4cb4",
+    "line": 185,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  },
+  {
+    "file": "backend/src/modules/users/users.service.ts",
+    "model": "User",
+    "operation": "update",
+    "fingerprint": "1b61caf8e04018db18fb7cb7e957429c92353de6beb53bf5ee2d5370a40710b0",
+    "line": 276,
+    "count": 1,
+    "reason": "BL-TEST-01-STATIC: pre-existing candidate; scope/ownership not yet reviewed"
+  }
+]

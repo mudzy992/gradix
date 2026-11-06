@@ -54,6 +54,12 @@ const STEPS = [
     cmd: node('scripts/standards/check-decimal-mocks.mjs'),
   },
   {
+    id: 'tenant-static',
+    name: 'Tenant Prisma AST ratchet (postojeći kandidati nisu pregledani)',
+    cmd: node('scripts/standards/check-tenant.mjs'),
+    needs: 'backend/node_modules/typescript',
+  },
+  {
     id: 'schema',
     name: 'Prisma šema: nema novih FK bez indeksa',
     cmd: node('scripts/standards/check-schema.mjs'),
