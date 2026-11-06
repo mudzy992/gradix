@@ -1,0 +1,172 @@
+method,path,status,reason
+GET,/api/activity/events,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/alerts/documents,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/alerts/tasks,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/amendments,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/amendments,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/analytics/summary,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/analytics/tasks/created,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/analytics/timers/closed,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/auth/change-password,pending,Non tenant route needs identity or platform scope specific test
+POST,/api/auth/forgot,exception,Anonymous password recovery
+POST,/api/auth/login,exception,Anonymous credential exchange
+POST,/api/auth/logout,pending,Non tenant route needs identity or platform scope specific test
+POST,/api/auth/logout-all,pending,Non tenant route needs identity or platform scope specific test
+POST,/api/auth/refresh,exception,Refresh token authenticates operation
+POST,/api/auth/reset,exception,Password reset token authenticates operation
+GET,/api/companies,pending,Non tenant route needs identity or platform scope specific test
+POST,/api/companies,pending,Non tenant route needs identity or platform scope specific test
+PATCH,/api/companies/:id,pending,Non tenant route needs identity or platform scope specific test
+GET,/api/company,pending,List or aggregate filters pagination and search isolation not yet implemented
+PATCH,/api/company,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/cost-entries,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/cost-entries,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/cost-entries/:id,covered,Foreign ID both tenants and explicit allowed roles with positive delete and unchanged foreign row
+GET,/api/cost-entries/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+POST,/api/cost-entries/from-payroll,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/dashboard,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/dashboard/projects,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/depots,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/depots,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/depots/:id,pending,Real path fixture and positive control not yet implemented
+PATCH,/api/depots/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/diary,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/diary,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/diary/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/diary/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/diary/:id/pdf,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/diary/:id/photos,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/documents/company,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/documents/company,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/documents/company/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/documents/machine,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/documents/machine,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/documents/worker,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/documents/worker,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/files,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/files,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/fuel,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/fuel,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/fuel/:id,pending,Real path fixture and positive control not yet implemented
+POST,/api/fuel/:id/apply-stock,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/health,exception,Public liveness
+GET,/api/incidents,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/incidents,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/incidents/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/iot/gps,exception,Device key authentication
+GET,/api/locations/geofence-check,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/locations/me,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/machines,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/machines,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/machines/:id,covered,Foreign ID both tenants and explicit allowed roles with positive delete and unchanged foreign row
+GET,/api/machines/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/machines/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/machines/:id/assign,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/machines/:id/location,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/machines/:id/unassign,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/machines/:machineId/devices,pending,Real path fixture and positive control not yet implemented
+POST,/api/machines/:machineId/devices,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/machines/:machineId/devices/:deviceId,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/machines/:machineId/devices/:deviceId/rotate,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/materials,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/materials,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/materials/:id,pending,Real path fixture and positive control not yet implemented
+PATCH,/api/materials/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/me,pending,Non tenant route needs identity or platform scope specific test
+PATCH,/api/me,pending,Non tenant route needs identity or platform scope specific test
+PUT,/api/me/fcm-token,pending,Non tenant route needs identity or platform scope specific test
+GET,/api/notifications,pending,List or aggregate filters pagination and search isolation not yet implemented
+PATCH,/api/notifications/:id/read,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/notifications/read-all,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/partners,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/partners,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/partners/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/partners/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/payroll/export,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/payroll/sessions,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/payroll/sessions/:id/approve,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/payroll/sessions/:id/reject,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/payroll/summary,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/presence/people,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/projects,partial,Real tenant list pages and sort direction plus selected filters only
+POST,/api/projects,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/projects/:id,covered,Foreign ID both tenants and explicit allowed roles with positive delete and unchanged foreign row
+GET,/api/projects/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/projects/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/projects/:id/assignments,pending,Real path fixture and positive control not yet implemented
+POST,/api/projects/:id/assignments,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/projects/:id/assignments/:userId,pending,Real path fixture and positive control not yet implemented
+GET,/api/projects/:id/documents,pending,Real path fixture and positive control not yet implemented
+POST,/api/projects/:id/documents,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/projects/:id/documents/:docId,pending,Real path fixture and positive control not yet implemented
+GET,/api/projects/:id/phases,pending,Real path fixture and positive control not yet implemented
+POST,/api/projects/:id/phases,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/projects/:id/phases/:phaseId,pending,Real path fixture and positive control not yet implemented
+PATCH,/api/projects/:id/phases/:phaseId,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/projects/:id/presence,pending,Real path fixture and positive control not yet implemented
+PATCH,/api/projects/:id/public,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/projects/:id/quantities,pending,Real path fixture and positive control not yet implemented
+POST,/api/projects/:id/quantities,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/projects/:id/quantities/:qtyId,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/projects/:id/status,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/projects/picker,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/public/:slug,exception,Public company profile
+GET,/api/public/:slug/projects,exception,Published project list
+POST,/api/public/assets,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/public/assets/:id,exception,Public asset
+GET,/api/ready,exception,Public readiness
+GET,/api/reports/:slug,pending,Real path fixture and positive control not yet implemented
+GET,/api/reports/:slug/export,pending,Real path fixture and positive control not yet implemented
+GET,/api/service-templates,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/service-templates,pending,Valid mutation fixture and side effect checks not yet implemented
+PATCH,/api/service-templates/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/services,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/services,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/services/:id/cancel,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/services/:id/complete,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/services/:id/start,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/settings,pending,List or aggregate filters pagination and search isolation not yet implemented
+PUT,/api/settings,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/settings/public,exception,Public company settings
+GET,/api/stock,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/stock-movements,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/sync/catalog,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/sync/pull,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/sync/push,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/sync/resolve-conflict,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/tasks,partial,Real tenant list pages and sort direction plus selected filters only
+POST,/api/tasks,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/tasks/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/tasks/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/tasks/:id/assignees,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/tasks/:id/assignees/:userId,pending,Real path fixture and positive control not yet implemented
+POST,/api/tasks/:id/attachments,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/tasks/:id/attachments/:attId,pending,Real path fixture and positive control not yet implemented
+POST,/api/tasks/:id/cancel,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/tasks/:id/complete,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/tasks/:id/dependencies,pending,Valid mutation fixture and side effect checks not yet implemented
+DELETE,/api/tasks/:id/dependencies/:depId,pending,Real path fixture and positive control not yet implemented
+GET,/api/tenders,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/tenders,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/tenders/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+PATCH,/api/tenders/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/tenders/:id/attachments,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/tenders/:id/convert,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/timer,pending,List or aggregate filters pagination and search isolation not yet implemented
+GET,/api/timer/me,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/timer/pause,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/timer/resume,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/timer/start,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/timer/stop,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/trips,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/trips,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/trips/:id,covered,Real ID both tenants and explicit allowed roles with positive controls
+POST,/api/trips/:id/complete,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/users,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/users,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/users/:id,pending,Real path fixture and positive control not yet implemented
+PATCH,/api/users/:id,pending,Valid mutation fixture and side effect checks not yet implemented
+POST,/api/users/:id/reset-password,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/warehouses,pending,List or aggregate filters pagination and search isolation not yet implemented
+POST,/api/warehouses,pending,Valid mutation fixture and side effect checks not yet implemented
+GET,/api/warehouses/:id,covered,Real ID both tenants and explicit allowed roles with positive controls

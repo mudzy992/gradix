@@ -373,6 +373,7 @@ backend/test/helpers/decimal.ts,TEST,e2e-helpers,TEST-01,7,pregledano,CI-05: zaj
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/helpers/route-inventory.e2e-spec.ts,TEST,e2e-helpers,TEST-01,377,pokriveno-testom,"TEST-01: Nest/Express parity, public exceptions, anonymous/header i 593 permission-negative uzorka",2026-11-06
 backend/test/helpers/route-inventory.ts,TEST,e2e-helpers,TEST-01,173,pregledano,TEST-01: runtime metapodaci i deterministički route × role × tenant generator,2026-11-06
+backend/test/helpers/tenant-fixtures.ts,TEST,e2e-helpers,TEST-01,269,pregledano,TEST-01: A/B factory registry and tenant roles,2026-11-06
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
@@ -383,6 +384,7 @@ backend/test/project-isolation.e2e-spec.ts,TEST,e2e,TEST-01,137,pokriveno-testom
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,439,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom | F-CI-05-69: preciznost goriva i overflow proizvoda; CI 42096898797 prošao.",2026-11-05
+backend/test/tenant-resource-isolation.e2e-spec.ts,TEST,e2e,TEST-01,383,pokriveno-testom,TEST-01: real resource isolation ledger and positive controls,2026-11-06
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,568,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401; F-CI-05-38: greške opoziva i timera; ponovljena deaktivacija; F-CI-05-39: rollback i DB utrke firma/rotacija/izdavanje/insert; F-CI-05-41: konkurentna democija i deaktivacija; posljednji/neaktivni super",2026-11-04
 backend/test/users-rbac.e2e-spec.ts,TEST,e2e,BE-03,177,pregledano,"BE-03: pregledano — WORKER/ADMIN matrica, payroll.write gate, reset-password; F-CI-05-36: admin reset mijenja lozinku i opoziva refresh",2026-11-04
 backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano — 5 scenarija (validacija, temp lozinka, pagination limit)",2026-11-02

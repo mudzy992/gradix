@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `93fe880`: CI `42217587567` 6/6; D-059 plan prije koda.
 - `2772a0e`: CI [42219098138](https://github.com/mudzy992/gradix/actions/runs/42219098138) 6/6; D-059 server replay.
-- Tekući commit: prijedlog rola bez UI implementacije; CI čeka push.
+- `77ca0f4`: CI [42267832249](https://github.com/mudzy992/gradix/actions/runs/42267832249) 6/6; prijedlog rola bez UI izmjena.
+- Tekući commit: stvarni tenant fixturei i početni TEST-01 resource gate; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -45,6 +45,6 @@ Prvo TEST-01 stvarni resursi i list filteri; zatim S-01 retry/lifetime, backend 
 
 - E2E: 20 serijskih prolaza exit 0, detectOpenHandles bez prijavljenih handleova, test PG konekcije 0; izvorni exit 1 nije reproduciran. Dokazi i ograničenja: `evidence/e2e-exit-2026-11-06.txt`, TEST-01 i `docs/TESTING.md`.
 
-- TEST-01: 593 permission-negative uzorka, 103/171 rute; 0/171 potpuno pokrivenih generičkim cross-tenant fixtureima. Ostalo i ograničenja u TEST-01.
+- TEST-01: 12/171 stvarnih GET/DELETE slučajeva u oba smjera s pozitivnim kontrolama; 2 liste djelimično, 146 pending, 11 public izuzetaka. Cilj 95% nije dostignut; granice i ledger u TEST-01. Raniji permission-negative uzorci nisu dokaz izolacije.
 
 - S-01: D-059 implementira serverski replay i family-scope reuse; grace kompromis i rollout rizici izričito zapisani. Web i dalje traži novu prijavu.
