@@ -96,8 +96,10 @@ treba iscrpno inventarisati i tabelarno testirati; ovaj primjer nije dokaz cjelo
 
 - **BL-011 — srednje, djelimično, CI:** push runovi `42109948886` (`c7bf610`) i `42111636754` (`e002b19`) pali su
   u backend unit/coverage; annotation sadrži samo exit 1 a čitanje loga završava EOF.
-  Isti CI env i komanda lokalno 43/330 PASS. Pribaviti puni log palog posla, utvrditi uzrok,
-  ispraviti prema potrebi i potvrditi puni CI; uzrok nije poznat.
+  Isti CI env i komanda lokalno, datum 2026-11-06 u UTC i Europe/Sarajevo: 43/330 PASS;
+  coverage je iznad svih globalnih pragova. Diff `8cac43d..c7bf610` sadrži samo tri
+  AUDIT dokumenta, pa prethodni backend kod nije promijenjen. Dijagnostički reporter sada
+  daje summary/anotacije i artefakt i na padu; sačekati rezultate prije tvrdnje o uzroku.
 
 ## S-red
 

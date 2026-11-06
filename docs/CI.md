@@ -84,7 +84,7 @@ broja primijenjenih migracija → dump kao artefakt 7 dana. SQL/pipeline greška
 | Job | Šta radi | Trajanje* |
 |---|---|---|
 | `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice, zaštite izvještaja i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
-| `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov` → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
+| `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov -- --passWithNoTests --json` → dijagnostički summary/anotacije i artefakt `backend-unit-diagnostics` čak i na padu → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` (Frontend lint + typecheck + test + build) | `npm ci` → `oxlint` → `tsc -b` → **`npm run test:cov`** (Vitest + Testing Library, jsdom) → `vite build` → artefakt `frontend-coverage` | ~45 s |
 | `web-e2e` | živi backend (`dist/src/main.js`) + seed iz builda (`SEED_DEMO=true`) + `vite preview` → Playwright (chromium): **31 testova** — prijava, a11y (fokus, reflow, `h1`, auth ekrani FE-07), **javni sajt bez prijave** (`/p/:slug`: firma, projekti, SEO meta, `<html lang>`, nepostojeći slug), admin tok (dashboard → prečica → projekti → detalj, zadatak, obračun sati, ERP tabovi, korisnici, postavke, `aria-current`) i **tok radnika** (rola-based dashboard, prečice po pravima, timer start → pauza → stop); retry 1 u CI-ju, projekti se izvršavaju **serijski** (`workers: 1`, D-053 — `admin` i `worker` dijele isti seed), throttle limiti podignuti samo u E2E poslu (`THROTTLE_LIMIT=1000`, `AUTH_LOGIN_LIMIT=30`), trace/screenshot na pad, a padovi se dodatno ispisuju kao `::error::` anotacije (jedna po testu) — artefakti nisu uvijek dostupni | ~2 m |
@@ -229,3 +229,13 @@ provjerava samo format CI dokaza. `planned` i `in-progress` smiju imati
 nezavršene redove; nedostajući/stari fajlovi u matrici uvijek ruše gate. CI run
 izvještaja opisuje provjerenu reviziju, a ne dokazuje automatski noviji commit.
 Više o formatu i ograničenjima: `scripts/audit/README.md`.
+
+### Dijagnostika backend unit testova
+
+`npm run test:cov -- --passWithNoTests --json --outputFile=…` zadržava Jest izlazni
+status, dok `scripts/audit/report-unit.mjs` piše step summary, ograničene anotacije
+(dostupne preko GitHub check-runs API-ja) i `backend-unit-diagnostics` artefakt.
+Prikazuje samo pale testove/suiteove, do 20 redova poruke i tabelu coverage vs baseline;
+nedostajući JSON ili neuspješan proces nisu uspjeh. Sirovi JSON ne upload-a se i briše se
+nakon obrade. Poznati oblici tokena/lozinki rediguju se, ali testovi i dalje ne smiju u
+poruke uključivati tajne: heuristička redakcija nije garancija. Test reportera radi u audit poslu.
