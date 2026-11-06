@@ -149,6 +149,193 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('task creation metrics apply tenant and project scope with bounded cursor paging', async () => {
+    const endpoint = '/api/analytics/tasks/created?limit=3&cursor=2025-01-08';
+    const beforeAdmin = await request(app.getHttpServer())
+      .get(endpoint)
+      .set(auth(admin));
+    const beforeScoped = await request(app.getHttpServer())
+      .get(endpoint)
+      .set(auth(ss));
+    expect(beforeAdmin.status).toBe(200);
+    expect(beforeScoped.status).toBe(200);
+    const own = await prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    const foreign = await prisma.company.create({
+      data: { name: 'Metrics foreign', slug: `metrics-${Date.now()}` },
+    });
+    const foreignProject = await prisma.project.create({
+      data: {
+        companyId: foreign.id,
+        name: 'Metrics foreign project',
+        geofenceRadius: 100,
+      },
+    });
+    const unassigned = await prisma.project.create({
+      data: {
+        companyId: own.companyId,
+        name: 'Metrics unassigned',
+        geofenceRadius: 100,
+      },
+    });
+    const currentDate = new Date('2025-01-07T12:00:00.000Z');
+    const previousDate = new Date('2025-01-04T12:00:00.000Z');
+    const created = await Promise.all([
+      prisma.task.create({
+        data: {
+          companyId: own.companyId,
+          projectId,
+          title: 'Visible current',
+          createdAt: currentDate,
+        },
+      }),
+      prisma.task.create({
+        data: {
+          companyId: own.companyId,
+          projectId,
+          title: 'Visible previous',
+          createdAt: previousDate,
+        },
+      }),
+      prisma.task.create({
+        data: {
+          companyId: own.companyId,
+          projectId: unassigned.id,
+          title: 'Unassigned',
+          createdAt: currentDate,
+        },
+      }),
+      prisma.task.create({
+        data: {
+          companyId: foreign.id,
+          projectId: foreignProject.id,
+          title: 'Foreign',
+          createdAt: currentDate,
+        },
+      }),
+    ]);
+    try {
+      const all = await request(app.getHttpServer())
+        .get(endpoint)
+        .set(auth(admin));
+      const scoped = await request(app.getHttpServer())
+        .get(endpoint)
+        .set(auth(ss));
+      expect(all.status).toBe(200);
+      expect(scoped.status).toBe(200);
+      expect(all.body.data.current - beforeAdmin.body.data.current).toBe(2);
+      expect(all.body.data.previous - beforeAdmin.body.data.previous).toBe(1);
+      expect(scoped.body.data.current - beforeScoped.body.data.current).toBe(1);
+      expect(scoped.body.data.previous - beforeScoped.body.data.previous).toBe(
+        1,
+      );
+      expect(scoped.body.data.series).toHaveLength(3);
+      expect(scoped.body.data.nextCursor).toBe('2025-01-05');
+      expect(new Date(scoped.body.data.series[0].startAt).toISOString()).toBe(
+        scoped.body.data.series[0].startAt,
+      );
+      const accountant = (await login(app, 'accountant@gradix.local')).body.data
+        .accessToken as string;
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(accountant)))
+          .status,
+      ).toBe(403);
+      const ssId = (
+        await request(app.getHttpServer()).get('/api/me').set(auth(ss))
+      ).body.data.id as string;
+      const extraRole = await prisma.userRoleAssignment.create({
+        data: { userId: ssId, role: 'ACCOUNTANT' },
+      });
+      try {
+        const mixed = await request(app.getHttpServer())
+          .get(endpoint)
+          .set(auth(ss));
+        expect(mixed.status).toBe(200);
+        expect(mixed.body.data.current).toBe(scoped.body.data.current);
+        expect(mixed.body.data.previous).toBe(scoped.body.data.previous);
+      } finally {
+        await prisma.userRoleAssignment.delete({ where: { id: extraRole.id } });
+      }
+      const openapi = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(openapi.status).toBe(200);
+      expect(
+        openapi.body.paths['/api/analytics/tasks/created'].get.parameters,
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+      const page = await request(app.getHttpServer())
+        .get(
+          `/api/analytics/tasks/created?limit=3&cursor=${scoped.body.data.nextCursor}`,
+        )
+        .set(auth(ss));
+      expect(page.status).toBe(200);
+      expect(page.body.data.nextCursor).toBe('2025-01-02');
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(worker)))
+          .status,
+      ).toBe(403);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(endpoint)
+            .set(auth(admin))
+            .set('X-Company-Id', foreign.id)
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/analytics/tasks/created?limit=31')
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/analytics/tasks/created?cursor=2025-02-30')
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      const platform = (await login(app, 'platform@gradix.local')).body.data
+        .accessToken as string;
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(platform)))
+          .status,
+      ).toBe(403);
+      const foreignResult = await request(app.getHttpServer())
+        .get(endpoint)
+        .set(auth(platform))
+        .set('X-Company-Id', foreign.id);
+      expect(foreignResult.status).toBe(200);
+      expect(foreignResult.body.data.current).toBe(1);
+      expect(foreignResult.body.data.previous).toBe(0);
+      expect(foreignResult.body.data.deltaPercent).toBeNull();
+      const dst = await request(app.getHttpServer())
+        .get('/api/analytics/tasks/created?limit=1&cursor=2025-03-31')
+        .set(auth(platform))
+        .set('X-Company-Id', foreign.id);
+      expect(dst.status).toBe(200);
+      expect(dst.body.data.timezone).toBe('Europe/Sarajevo');
+      expect(dst.body.data.series[0]).toMatchObject({
+        startAt: '2025-03-29T23:00:00.000Z',
+        endAt: '2025-03-30T22:00:00.000Z',
+        count: 0,
+      });
+    } finally {
+      await prisma.task.deleteMany({
+        where: { id: { in: created.map((row) => row.id) } },
+      });
+      await prisma.project.deleteMany({
+        where: { id: { in: [foreignProject.id, unassigned.id] } },
+      });
+      await prisma.company.delete({ where: { id: foreign.id } });
+    }
+  });
+
   it('second diary create same day returns DIARY_CONFLICT; resolve B', async () => {
     const first = await request(app.getHttpServer())
       .post('/api/diary')

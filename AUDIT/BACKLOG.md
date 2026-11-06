@@ -1279,3 +1279,5 @@ Radi potpunosti, **svaki neprazan red** arhiviranog STATE-a ima ID i okvirnu kla
 | BL-H-1134 | legacy/infrastruktura | [STATE red 1351](history/STATE-2026-11-05.md#L1351) |
 | BL-H-1135 | ostalo / historijski kontekst | [STATE red 1352](history/STATE-2026-11-05.md#L1352) |
 | BL-H-1136 | ostalo / historijski kontekst | [STATE red 1353](history/STATE-2026-11-05.md#L1353) |
+
+- **BE-19:** postojeći `/dashboard/projects` još nema cursor/limit ugovor tražen novim pravilima; dopuniti kompatibilno pri nastavku B1.

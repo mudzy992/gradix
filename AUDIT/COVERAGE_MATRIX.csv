@@ -178,6 +178,8 @@ backend/src/modules/ops/dashboard-projects.service.ts,BE,ops,BE-12,36,pokriveno-
 backend/src/modules/ops/dashboard-projects.spec.ts,BE,ops,BE-12,111,pokriveno-testom,"BE-19 B1: unit test limita, tenanta, assignment scope i decimalne serijalizacije.",2026-11-06
 backend/src/modules/ops/dashboard-role.spec.ts,BE,ops,BE-12,65,pregledano,BE-12: 5 testova prioriteta rola (više rola = širi dashboard),2026-11-03
 backend/src/modules/ops/dashboard-role.ts,BE,ops,BE-12,35,pregledano,BE-12 (novo): prioritet rola za dashboard (firma → PM/SS → DRIVER → WORKER → MECHANIC),2026-11-03
+backend/src/modules/ops/dashboard-task-metrics.service.ts,BE,ops,BE-12,103,pregledano,"BE-19: ograničeni dnevni brojevi uz tenant, assignment i DST",2026-11-06
+backend/src/modules/ops/dashboard-task-metrics.spec.ts,BE,ops,BE-12,117,pregledano,"BE-19: scope, periodi, procenat iz nule i cursor",2026-11-06
 backend/src/modules/ops/dashboard-types.ts,BE,ops,BE-12,26,pregledano,BE-12: tipovi kartica/prisustva/isteka; `presence` može biti `null` (terenske role),2026-11-03
 backend/src/modules/ops/dashboard.controller.ts,BE,ops,BE-12,60,pregledano,"BE-12: `GET /api/dashboard` bez posebne permisije — verzija zavisi od rola (D-034) | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057. | BE-19 B1: projects.read guard, Swagger i aditivna ruta.",2026-11-06
 backend/src/modules/ops/dashboard.service.ts,BE,ops,BE-12,159,pregledano,"BE-12 (F-01/02): grananje po `resolveDashboardView` (najširi scope prvi), uklonjen mrtav `spend: null` | BE-19/FE-17 B0: postojeći ulaz i vlasništvo; v2 plan u D-057.",2026-11-03
@@ -215,7 +217,7 @@ backend/src/modules/ops/machine-status.ts,BE,ops,BE-09,18,pregledano,BE-09: preg
 backend/src/modules/ops/machines.controller.ts,BE,ops,BE-09,87,pregledano,"BE-09: pregledano — fleet.* permisije, @Throttle na /location, DELETE = decommission",2026-11-03
 backend/src/modules/ops/machines.dto.ts,BE,ops,BE-09,74,pregledano,BE-09: pregledano — tipovi mašina kroz IsIn; MachineLocationDto nosi stringove (validacija u geo.ts),2026-11-03
 backend/src/modules/ops/machines.service.ts,BE,ops,BE-09,302,pregledano,"BE-09: assign/unassign/decommission u transakcijama (F-02), jedna otvorena dodjela + IN_SERVICE 409 (F-03,F-05), status se ne pregazi (F-06)",2026-11-03
-backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,114,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri) | BE-19 B1: registracija read-only dashboard servisa.,2026-11-06
+backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,118,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri) | BE-19 B1: registracija read-only dashboard servisa.,2026-11-06
 backend/src/modules/ops/phases.service.ts,BE,ops,BE-05,120,pregledano,BE-08: PROJECT_PHASE_CREATED / PROJECT_PHASE_UPDATED u audit (B8),2026-11-03
 backend/src/modules/ops/progress.spec.ts,BE,ops,BE-05,33,pregledano,"BE-05: 5 testova procenta (otkazani ne ulaze u imenilac, zaokruživanje)",2026-11-02
 backend/src/modules/ops/progress.ts,BE,ops,BE-05,80,pregledano,BE-05: dva upita umjesto 1+2N; čiste funkcije taskPercent/averagePercent (F-04),2026-11-02
@@ -251,6 +253,7 @@ backend/src/modules/ops/sync.service.ts,BE,ops,BE-17,218,pregledano,"BE-17: push
 backend/src/modules/ops/task-assignees.service.ts,BE,ops,BE-06,162,pregledano,BE-08: TASK_ASSIGNED/UNASSIGNED + ATTACHMENT_ADDED/REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/task-dependencies.service.ts,BE,ops,BE-06,114,pregledano,BE-08: TASK_DEPENDENCY_ADDED / TASK_DEPENDENCY_REMOVED u audit (B8),2026-11-03
 backend/src/modules/ops/task-lifecycle.service.ts,BE,ops,BE-06,104,pregledano,"BE-06: complete/cancel gase timere, audit + notifikacije; bez assertProjectWritable (F-09, namjerno)",2026-11-03
+backend/src/modules/ops/task-metrics.controller.ts,BE,ops,BE-06,115,pregledano,"BE-19: prava, DTO, cursor/limit i OpenAPI",2026-11-06
 backend/src/modules/ops/task-status.spec.ts,BE,ops,BE-06,42,pregledano,BE-06: 6 testova nextTaskStatus (IN_PROGRESS/PAUSED/ASSIGNED/terminalni),2026-11-03
 backend/src/modules/ops/task-status.ts,BE,ops,BE-06,60,pregledano,BE-06: nextTaskStatus izvučen u čistu funkciju (F-06); syncTaskStatus samo primjenjuje odluku,2026-11-03
 backend/src/modules/ops/task-statuses.ts,BE,ops,BE-06,18,pregledano,BE-06: novo — zatvorena lista TASK_STATUSES za DTO (F-01),2026-11-03
@@ -348,7 +351,7 @@ backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,378,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,565,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
