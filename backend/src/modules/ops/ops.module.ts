@@ -29,6 +29,8 @@ import { LocationsController } from './locations.controller';
 import { IotController } from './iot.controller';
 import { MachineDevicesController } from './machine-devices.controller';
 import { DashboardController } from './dashboard.controller';
+import { AnalyticsSummaryController } from './analytics-summary.controller';
+import { DashboardSummaryService } from './dashboard-summary.service';
 import { LivePresenceController } from './live-presence.controller';
 import { LivePresenceService } from './dashboard-live-presence.service';
 import { DocumentAlertsController } from './document-alerts.controller';
@@ -78,6 +80,7 @@ import { FilesModule } from '../files/files.module';
     LocationsController,
     IotController,
     DashboardController,
+    AnalyticsSummaryController,
     LivePresenceController,
     DocumentAlertsController,
     TaskMetricsController,
@@ -109,6 +112,7 @@ import { FilesModule } from '../files/files.module';
     CatalogService,
     LocationsService,
     DashboardService,
+    DashboardSummaryService,
     LivePresenceService,
     DocumentAlertsService,
     DashboardProjectsService,

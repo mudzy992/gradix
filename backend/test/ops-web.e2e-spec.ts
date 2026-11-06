@@ -288,6 +288,159 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('analytics summary is an exact tenant-admin scalar aggregate with budget coverage', async () => {
+    const platform = (await login(app, 'platform@gradix.local')).body.data
+      .accessToken as string;
+    const accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken as string;
+    const a = await prisma.company.create({
+      data: { name: 'Summary A', slug: `summary-a-${Date.now()}` },
+    });
+    const b = await prisma.company.create({
+      data: { name: 'Summary B', slug: `summary-b-${Date.now()}` },
+    });
+    const p1 = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'Budgeted',
+        geofenceRadius: 100,
+        plannedBudget: '100.10',
+        currentSpend: '12.34',
+      },
+    });
+    const p2 = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'No budget',
+        geofenceRadius: 100,
+        currentSpend: '1.02',
+      },
+    });
+    const held = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'On hold',
+        status: 'ON_HOLD',
+        geofenceRadius: 100,
+        plannedBudget: '999.99',
+      },
+    });
+    const archived = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'Archived',
+        archivedAt: new Date(),
+        geofenceRadius: 100,
+        plannedBudget: '999.99',
+      },
+    });
+    const other = await prisma.project.create({
+      data: {
+        companyId: b.id,
+        name: 'Foreign',
+        geofenceRadius: 100,
+        plannedBudget: '987.65',
+      },
+    });
+    const person = await prisma.user.create({
+      data: {
+        companyId: a.id,
+        firstName: 'Summary',
+        lastName: 'User',
+        email: `summary-user-${Date.now()}@example.test`,
+        passwordHash: 'fixture-not-used',
+      },
+    });
+    const person2 = await prisma.user.create({
+      data: {
+        companyId: a.id,
+        firstName: 'Summary',
+        lastName: 'Other',
+        email: `summary-other-${Date.now()}@example.test`,
+        passwordHash: 'fixture-not-used',
+      },
+    });
+    const task = await prisma.task.create({
+      data: { companyId: a.id, projectId: p1.id, title: 'Open' },
+    });
+    const done = await prisma.task.create({
+      data: {
+        companyId: a.id,
+        projectId: p1.id,
+        title: 'Done',
+        status: 'COMPLETED',
+      },
+    });
+    const heldTask = await prisma.task.create({
+      data: { companyId: a.id, projectId: held.id, title: 'On hold' },
+    });
+    try {
+      await prisma.timerSession.createMany({
+        data: [
+          {
+            companyId: a.id,
+            userId: person.id,
+            taskId: task.id,
+            startedAt: new Date(),
+          },
+          {
+            companyId: a.id,
+            userId: person2.id,
+            taskId: heldTask.id,
+            startedAt: new Date(),
+          },
+        ],
+      });
+      const url = '/api/analytics/summary';
+      const first = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', a.id);
+      expect(first.status).toBe(200);
+      expect(first.body.data).toEqual({
+        activeProjects: 2,
+        openTasks: 1,
+        openTimers: 1,
+        projectsWithBudget: 1,
+        knownPlannedBudget: '100.10',
+        currentSpend: '13.36',
+      });
+      const second = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', b.id);
+      expect(second.status).toBe(200);
+      expect(second.body.data).toEqual({
+        activeProjects: 1,
+        openTasks: 0,
+        openTimers: 0,
+        projectsWithBudget: 1,
+        knownPlannedBudget: '987.65',
+        currentSpend: '0.00',
+      });
+      for (const token of [ss, worker, accountant, platform])
+        expect(
+          (await request(app.getHttpServer()).get(url).set(auth(token))).status,
+        ).toBe(403);
+      const api = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(api.body.paths['/api/analytics/summary'].get).toBeDefined();
+    } finally {
+      await prisma.timerSession.deleteMany({
+        where: { taskId: { in: [task.id, done.id, heldTask.id] } },
+      });
+      await prisma.task.deleteMany({
+        where: { id: { in: [task.id, done.id, heldTask.id] } },
+      });
+      await prisma.user.deleteMany({
+        where: { id: { in: [person.id, person2.id] } },
+      });
+      await prisma.project.deleteMany({
+        where: { id: { in: [p1.id, p2.id, held.id, archived.id, other.id] } },
+      });
+      await prisma.company.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    }
+  });
+
   it('live presence is paged, tenant-scoped, recent, geofenced and excludes coordinates', async () => {
     const platform = (await login(app, 'platform@gradix.local')).body.data
       .accessToken as string;
