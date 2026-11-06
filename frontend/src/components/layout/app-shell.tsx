@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { CommandPalette } from '@/components/layout/command-palette'
 import { CompanySwitcher } from '@/components/layout/company-switcher'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { UserMenu } from '@/components/layout/user-menu'
@@ -97,6 +98,7 @@ export function AppShell() {
             <MenuIcon aria-hidden="true" />
           </Button>
           <div className="ml-auto flex items-center gap-2">
+            <CommandPalette />
             <Bell />
             <UserMenu />
           </div>

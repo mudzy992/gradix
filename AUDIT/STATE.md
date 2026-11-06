@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `cb5e54f`: CI `42195850119` 6/6; admin dashboard v2.
 - `1973411`: CI `42192513164` 6/6; tipizirani dashboard klijenti.
 - `0d3980a`: CI `42191902452` 6/6; pristupačni SVG primitivi.
-- `b82c4e1`: CI `42190518141` 6/6; projektne koordinate.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -35,7 +35,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 - Admin v2: nezavisni tenant-keyed upiti, tačan decimalni prikaz, lazy mapa sa fallbackom, pristupačni SVG grafikoni, dark/light, BS/EN; ostale role ostaju na starom dashboardu.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: [inventura](DECIMAL-INVENTORY.md), D-058 K1 A; 70 parser slučajeva, PG E2E 17/170. Preostali HTTP/PG i DB opsezi idu u TEST-01.
-- Bez novih zavisnosti bez K3 i bez mobile promjena; K2 vlasnika čeka paletu komandi i admin screenshotove.
+- Bez novih zavisnosti bez K3 i bez mobile promjena; Paleta Ctrl/Cmd+K po pravima je integrisana; K2 vlasnika čeka admin screenshotove.
 
 ## Sljedeći korak
 

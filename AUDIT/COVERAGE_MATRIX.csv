@@ -389,7 +389,7 @@ frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren �
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03
 frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prijave — h1, aria-invalid + poruka, vidljiv fokus, reflow na 320 px",2026-11-03
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
-frontend/e2e/flows.spec.ts,FE,e2e,FE-06,334,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma | F-CI-05-57: stvarni lost-response retry troška, CI 42080762248 prošao.",2026-11-05
+frontend/e2e/flows.spec.ts,FE,e2e,FE-06,347,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma | F-CI-05-57: stvarni lost-response retry troška, CI 42080762248 prošao.",2026-11-05
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
 frontend/e2e/login.spec.ts,FE,e2e,FE-06,345,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
@@ -417,7 +417,9 @@ frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,435,pregledano,"FE
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,149,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,476,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta; F-CI-05-64: stock preciznost i legacy retry",2026-11-05
 frontend/src/components/field.tsx,FE,ops-ui,FE-08,52,pregledano,"FE-03: label↔polje↔greška (aria-describedby), greška u role=""alert"", polje dobija aria-invalid preko cloneElement",2026-11-03
-frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,122,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
+frontend/src/components/layout/app-shell.tsx,FE,layout,FE-02,124,pregledano,"FE-02: skip-link, main#main sa fokusom, naslov taba po ruti, reset skrola, sync jezika iz /me.locale + <html lang>, sticky header/sidebar, mobilni Sheet",2026-11-03
+frontend/src/components/layout/command-palette.spec.tsx,FE,layout,FE-02,87,pregledano,"FE-17: prava, tenant, tastatura, fokus i modalne zaštite",2026-11-06
+frontend/src/components/layout/command-palette.tsx,FE,layout,FE-02,73,pregledano,FE-17: role-aware navigacija i tastaturna paleta,2026-11-06
 frontend/src/components/layout/company-switcher.spec.tsx,FE,layout,FE-02,156,pregledano,CI-05 F-51: 5 testova uključujući reset stvarnog QueryClienta i sačuvan izbor.,2026-11-04
 frontend/src/components/layout/company-switcher.tsx,FE,admin-ui,FE-13,64,pregledano,"FE-13: greška liste vidljiva, izbor blokiran dok se ne učita, neuspjeh `getMe` se prijavljuje (prije tiho odustajanje)",2026-11-04
 frontend/src/components/layout/navigation.spec.ts,FE,layout,FE-02,121,pregledano,"FE-10: HSE stavka vidljiva uz hse.write bez hse.read, uz hse.read, i skrivena bez ijednog prava",2026-11-03
@@ -486,8 +488,8 @@ frontend/src/hooks/use-sensitive-navigation.spec.tsx,TEST,fe-unit,FE-05,81,pokri
 frontend/src/hooks/use-sensitive-navigation.ts,FE,shared,FE-15,25,popravljeno,F-CI-05-55: lifecycle osjetljivih radnji i router guard,2026-11-05
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,438,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,438,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,439,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/en.ts,FE,shared,FE-15,439,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: poruke nepoznatog ishoda i scopea.,2026-11-05
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: lokalizovane poruke retryja i scopea.,2026-11-05
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03

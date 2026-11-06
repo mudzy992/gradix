@@ -63,6 +63,19 @@ test.describe('FE-06 — admin tok', () => {
     await expect(page.getByText(/dash\./)).toHaveCount(0)
   })
 
+  test('Ctrl+K otvara paletu i vodi samo na dostupnu stranicu', async () => {
+    await page.keyboard.press('Control+k')
+    const dialog = page.getByRole('dialog', { name: 'Brza navigacija' })
+    await expect(dialog).toBeVisible()
+    const search = dialog.getByRole('combobox', { name: 'Pretraži stranice' })
+    await expect(search).toBeFocused()
+    await search.fill('zadaci')
+    await expect(dialog.getByRole('option', { name: 'Zadaci' })).toBeVisible()
+    await search.press('Enter')
+    await expect(page).toHaveURL(/\/tasks$/)
+    await expect(dialog).toHaveCount(0)
+  })
+
   test('prečica vodi na projekte, red otvara detalj sa fazama', async () => {
     // Prečica (zona B), ne sidebar — ista prava, drugi put do ekrana.
     const quick = page.getByRole('region', { name: /brze radnje|quick actions/i })
