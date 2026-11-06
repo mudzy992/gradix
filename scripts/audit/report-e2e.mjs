@@ -2,6 +2,7 @@
 // reporter inspected assertions only, missing setup/teardown and compile errors.
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const [file, status] = process.argv.slice(2);
 function fail(message) {
@@ -33,6 +34,12 @@ for (const suite of report.testResults) {
       fail('Jest izvještaj sadrži neispravan test.');
     }
     if (assertion.status === 'passed') passedAssertions += 1;
+    if (assertion.status === 'failed' && typeof assertion.fullName === 'string') {
+      // Stable fingerprint allows matching a failed test against a local Jest
+      // report, without emitting arbitrary titles, stack traces or credentials.
+      const fingerprint = createHash('sha256').update(assertion.fullName).digest('hex');
+      console.error(`::error::Pali test SHA-256(fullName): ${fingerprint}`);
+    }
   }
   if (suite.status === 'failed') {
     // Never print arbitrary test output here: it may contain credentials or tokens.

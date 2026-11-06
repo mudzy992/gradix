@@ -5,6 +5,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const reporter = fileURLToPath(new URL('./report-e2e.mjs', import.meta.url));
 const clean = () => ({
@@ -61,6 +62,21 @@ test('pada na assertion, inkonzistentan suite i prijavljen pad', (t) => {
   const unknown = clean();
   unknown.testResults[0].assertionResults[0].status = 'unknown';
   assert.notEqual(run(t, unknown).status, 0);
+});
+
+test('identificira pali test hashom imena bez ispisa osjetljivog sadržaja', (t) => {
+  const report = clean();
+  report.success = false;
+  report.numPassedTests = 0;
+  report.numFailedTests = 1;
+  report.numFailedTestSuites = 1;
+  report.testResults[0].status = 'failed';
+  report.testResults[0].assertionResults[0] = { status: 'failed', fullName: 'suite PRIVATE-CREDENTIAL example' };
+  const result = run(t, report, '1');
+  const digest = createHash('sha256').update('suite PRIVATE-CREDENTIAL example').digest('hex');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, new RegExp(digest));
+  assert.doesNotMatch(result.stderr + result.stdout, /PRIVATE-CREDENTIAL/);
 });
 
 test('nedostajući, oštećen ili nepotpun izvještaj odbija bez ispisa sadržaja', (t) => {

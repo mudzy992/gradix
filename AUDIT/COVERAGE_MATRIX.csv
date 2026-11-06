@@ -670,8 +670,8 @@ scripts/audit/check-coverage.test.mjs,STD,audit-tools,STD-01,109,pregledano,F-CI
 scripts/audit/inventory-scaffold.test.mjs,STD,audit-tools,STD-01,83,pregledano,CI-05: šest testova zaštite inventara i izvještaja u izolovanom workspaceu.,2026-11-04
 scripts/audit/inventory.mjs,STD,audit-tools,STD-01,113,pregledano,"CI-05: preflight odbija oštećene podatke i stale redove, piše atomarno; regresijski testovi.",2026-11-04
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,298,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
-scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,55,pregledano,Fail-closed reporter eksplicitno prijavljuje numerički procesni status i bez JSON-a,2026-11-06
-scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,77,pokriveno-testom,"Regresije zelen JSON/status 1 i nedostajući JSON/status 137, bez curenja sadržaja",2026-11-06
+scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,62,pregledano,Fail-closed reporter eksplicitno prijavljuje numerički procesni status i bez JSON-a,2026-11-06
+scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,93,pokriveno-testom,"Regresije zelen JSON/status 1 i nedostajući JSON/status 137, bez curenja sadržaja",2026-11-06
 scripts/audit/report-unit.mjs,STD,audit-tools,STD-01,72,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije. | CI-05 BL-011: API anotacija statusa i coverage-a, ne zahtijeva raw log.",2026-11-06
 scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,62,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije. | BL-011: test-first regresije za JSON, pogreške, redakciju, workflow i API anotaciju.",2026-11-06
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04

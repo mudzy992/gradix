@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `77ca0f4`: CI [42267832249](https://github.com/mudzy992/gradix/actions/runs/42267832249) 6/6; prijedlog rola bez UI izmjena.
 - `25e9931`: CI [42272490494](https://github.com/mudzy992/gradix/actions/runs/42272490494) 6/6 uključujući Web E2E.
-- Tekući commit: S-01 ograničen replay i rok; CI čeka push.
+- `6e617cf`: CI [42275204800](https://github.com/mudzy992/gradix/actions/runs/42275204800) 5/6; backend E2E `erp.e2e-spec.ts` pad; uzrok nepoznat (log EOF), lokalni fresh E2E 21/206 exit 0.
+- Tekući commit: fail-closed reporter fingerprint dijagnostika; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 

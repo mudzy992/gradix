@@ -14,4 +14,4 @@
 - E2E izlaz dijagnoza `d05a35d`, CI 42216260784 6/6; uzrok prvobitnog izlaza 1 ostaje nepoznat.
 - TEST-01 aktuelne provjere: fresh PG E2E 13/13, backend 55/446 + lint/build, frontend 66/650, `check:all` 0/3 skip; prethodni public gate i novi ledger gate red-first.
 - D-059 `2772a0e` CI 42219098138 6/6; TEST-01 `25e9931` CI https://github.com/mudzy992/gradix/actions/runs/42272490494 6/6 uključujući Web E2E. Coolify auto-deploy ove grane nije potvrđen: nema GitHub deployment zapisa a pristup hooks API vraća 403.
-- D-059 provjere: red-first PG 6 slučajeva + OpenAPI/unit; fresh PG auth/tenant 46/46, backend 55/446 + lint/build, frontend 66/650, browser login 12/12, `check:all` 0/2 skip.
+- S-01 `6e617cf`: CI 42275204800 5/6; backend E2E reporter navodi pali `test/erp.e2e-spec.ts`, detaljni log EOF i nema E2E artefakta; fresh lokalni puni E2E 21/206 exit 0 bez forceExit, uzrok ostaje nepoznat. Reporter sada daje hash imena palog testa bez sadržaja.
