@@ -192,6 +192,101 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('activity events are admin-only, tenant-scoped, payload-free and cursor-paged', async () => {
+    const admin = (await login(app, 'admin@gradix.local')).body.data
+      .accessToken as string;
+    const ss = (await login(app, 'ss@gradix.local')).body.data
+      .accessToken as string;
+    const worker = (await login(app, 'worker@gradix.local')).body.data
+      .accessToken as string;
+    const accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken as string;
+    const platform = (await login(app, 'platform@gradix.local')).body.data
+      .accessToken as string;
+    const me = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(admin))
+    ).body.data as { id: string; companyId: string };
+    const other = await prisma.company.create({
+      data: { name: 'Other activity', slug: `other-activity-${Date.now()}` },
+    });
+    const ids = Array.from(
+      { length: 23 },
+      (_, i) => `activity-test-${Date.now()}-${i}`,
+    );
+    try {
+      await prisma.auditEvent.createMany({
+        data: ids.map((id, i) => ({
+          id,
+          companyId: i === 22 ? other.id : me.companyId,
+          actorId: me.id,
+          action: 'PROJECT_CREATED',
+          entityType: 'Project',
+          entityId: id,
+          payload: { privateProbe: 'must-not-be-returned' },
+          createdAt: new Date(Date.UTC(2030, 0, 1, 0, 0, i)),
+        })),
+      });
+      const url = '/api/activity/events';
+      const first = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(admin));
+      expect(first.status).toBe(200);
+      expect(first.body.data).toHaveLength(20);
+      expect(
+        first.body.data.map((row: { id: string }) => row.id),
+      ).not.toContain(ids[22]);
+      expect(JSON.stringify(first.body)).not.toContain('privateProbe');
+      expect(first.body.data[0].createdAt).toMatch(/Z$/);
+      const next = await request(app.getHttpServer())
+        .get(`${url}?cursor=${first.body.meta.nextCursor}`)
+        .set(auth(admin));
+      expect(next.status).toBe(200);
+      expect(next.body.data.map((row: { id: string }) => row.id)).toContain(
+        ids[0],
+      );
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`${url}?cursor=${ids[22]}`)
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`${url}?limit=21`)
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      for (const token of [ss, worker, accountant])
+        expect(
+          (await request(app.getHttpServer()).get(url).set(auth(token))).status,
+        ).toBe(403);
+      expect(
+        (await request(app.getHttpServer()).get(url).set(auth(platform)))
+          .status,
+      ).toBe(403);
+      const scoped = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', other.id);
+      expect(scoped.status).toBe(200);
+      expect(scoped.body.data.map((row: { id: string }) => row.id)).toEqual([
+        ids[22],
+      ]);
+      const openapi = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(openapi.body.paths['/api/activity/events'].get.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+    } finally {
+      await prisma.auditEvent.deleteMany({ where: { id: { in: ids } } });
+      await prisma.company.delete({ where: { id: other.id } });
+    }
+  });
+
   it('task creation metrics apply tenant and project scope with bounded cursor paging', async () => {
     const endpoint = '/api/analytics/tasks/created?limit=3&cursor=2025-01-08';
     const beforeAdmin = await request(app.getHttpServer())
