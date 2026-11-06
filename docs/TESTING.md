@@ -161,3 +161,5 @@ Prva komanda namjerno regeneriše oba CSV-a; druga samo provjerava drift. Testov
 Dodatni generisani negativni uzorci: svih devet firmnih rola s tuđim tenant headerom na svakoj non-public ruti dobijaju `TENANT_HEADER_FORBIDDEN`; platform admin na tenant rutama bez izbora dobija `TENANT_HEADER_REQUIRED`, a za nepoznat ID `NOT_FOUND`. To nije dokaz da odabrani tenant ne može čitati tuđe resurse; pojedinačne ćelije matrice i dalje zahtijevaju pregled i kontekstualne fixture slučajeve.
 
 S-01 auth E2E modelira dvije nezavisne prijave i konkurentnu rotaciju, a izgubljeni odgovor modelira odbacivanjem uspješnog HTTP odgovora (ne simulira stvarni mrežni prekid/browser); ponavljanje prethodnog tokena opoziva i drugu refresh sesiju, dok već izdati access JWT ostaje važeći. Rizik i granice su u `AUDIT/segments/BE-02.md`.
+
+S-01 web regresije: simuliran `fetch` gubitak nakon stvarnog serverskog commita, dvije nezavisne browser sesije i dva koordinisana taba; prva sesija traži novu prijavu bez retryja, druga se može osvježiti. Testovi ne dokazuju crash prije obrade greške, blokirani storage, stare klijente ili prekid stvarne mreže.

@@ -46,6 +46,7 @@ export const en = {
   auth: {
     recoveryTitle: 'Session recovery was unsuccessful',
     recoveryHint: 'Wait before retrying, or continue without recovering the session.',
+    recoveryUncertainHint: 'Continue to sign in when your connection is available again.',
     recoveryRetry: 'Retry recovery',
     recoveryContinue: 'Continue without recovery',
     login: 'Sign in',
@@ -427,6 +428,7 @@ export const en = {
     INTERNAL_ERROR: 'Internal error.',
     SESSION_CHANGED: 'The session or company changed. Check the account, reload the page, and retry the action.',
     NETWORK_ERROR: 'No connection to the server. Check your internet and try again.',
+    AUTH_REFRESH_UNCERTAIN: 'The session refresh outcome is unknown. For safety, please sign in again.',
     RATE_LIMITED: 'Too many requests in a short time. Wait a moment and try again.',
     SERVICE_UNAVAILABLE: 'The service is temporarily unavailable.',
     AUTH_RESET_NOT_AVAILABLE: 'Password reset is currently unavailable.',

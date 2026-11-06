@@ -393,7 +393,7 @@ frontend/e2e/a11y.spec.ts,FE,e2e,FE-06,79,pregledano,"FE-03: 4 provjere bez prij
 frontend/e2e/auth-pages.spec.ts,FE,e2e,FE-06,41,pregledano,"CI-05: pregled 3 browser testa auth ekrana; reflow i validacija, izvode se u Web E2E CI.",2026-11-04
 frontend/e2e/flows.spec.ts,FE,e2e,FE-06,347,pregledano,"FE-11: tenderi — prevedene faze (Nacrt…Povučen), prazno stanje, bez sirovih enuma | F-CI-05-57: stvarni lost-response retry troška, CI 42080762248 prošao.",2026-11-05
 frontend/e2e/guards.spec.ts,FE,e2e,FE-06,19,pregledano,CI-05: pregled 2 browser testa za anonimne rute; ispravljen netačan komentar o storageState.,2026-11-04
-frontend/e2e/login.spec.ts,FE,e2e,FE-06,345,pregledano,CI-05 F-50/51: browser refresh retry i simulacija promjene firme sa zakašnjelom greškom; F-51 čeka CI.,2026-11-04
+frontend/e2e/login.spec.ts,FE,e2e,FE-06,428,pregledano,"S-01: dva browser konteksta i koordinisana taba, izgubljen odgovor, 429 i očuvanje druge sesije",2026-11-06
 frontend/e2e/public-site.spec.ts,FE,e2e,FE-06,44,pregledano,"FE-14: 3 E2E bez prijave (guest projekat) — firma+projekti+SEO meta, prebacivanje jezika i `<html lang>`, nepostojeći slug → „nije pronađena“ bez alerta",2026-11-04
 frontend/e2e/session.ts,FE,e2e,FE-06,34,pregledano,"FE-06: jedna prijava po spec fajlu u deljenom kontekstu — backend rotira refresh token i reuse tretira kao krađu (revokeAll), pa storageState po testu odjavljuje sesije (F-FE-06-06); ujedno štiti rate-limit prijave 5/min",2026-11-03
 frontend/e2e/worker-flow.spec.ts,FE,e2e,FE-06,81,pregledano,FE-10/F-FE-06-01: radnik vidi HSE prečicu (prije je test tvrdio suprotno),2026-11-03
@@ -406,8 +406,8 @@ frontend/src/components/auth/auth-card.tsx,FE,ops-ui,FE-08,36,pregledano,CI-05: 
 frontend/src/components/auth/boot-gate.spec.tsx,TEST,fe-unit,FE-05,63,pregledano,"CI-05 F-50: komponentni testovi recovery retryja, nastavka i nevažeće sesije.",2026-11-04
 frontend/src/components/auth/boot-gate.tsx,FE,ops-ui,FE-08,17,pregledano,CI-05 F-50: prijava/učitavanje/recovery grana uz stvarni bootstrap hook.,2026-11-04
 frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI-05: pregled prekidača vidljivosti i aria-pressed; auth-pages.spec.tsx testira prikaz/skrivanje.,2026-11-04
-frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,21,pregledano,"CI-05 F-50: obje greške, naslov, alert i akcije.",2026-11-04
-frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,CI-05 F-50: pristupačna i prevedena ponuda recoveryja za 429/mrežu.,2026-11-04
+frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,29,pregledano,S-01: nepoznat ishod bez retryja i postojeći retry za 429/mrežu,2026-11-06
+frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,S-01: lokalizovano objašnjenje nepoznatog ishoda i siguran nastavak,2026-11-06
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
 frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,146,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
 frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,135,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
@@ -477,8 +477,8 @@ frontend/src/components/ui/textarea.tsx,FE,ui,FE-16,21,pregledano,FE-16: dodata 
 frontend/src/components/users/temp-password-dialog.spec.tsx,TEST,fe-unit,FE-05,67,pregledano,"FE-13: 3 testa — kopiranje, fallback bez clipboarda, zatvaranje",2026-11-04
 frontend/src/components/users/temp-password-dialog.tsx,FE,admin-ui,FE-13,79,pregledano,FE-13: kopiranje bez neuhvaćene greške — fallback označavanje teksta + poruka,2026-11-04
 frontend/src/components/users/user-sheet.tsx,FE,admin-ui,FE-13,204,pregledano,"FE-13: validacija satnice uz polje, poruka kad nema uloge, hint za zaključan email, `shouldUnregister` (pravila odmontiranih polja)",2026-11-04
-frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,197,pregledano,"CI-05 F-50: 14 testova uključujući retry, profil, unmount i promjenu sesije.",2026-11-04
-frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,91,pregledano,"CI-05 F-50: vidljiv retry, ponovno čitanje profila bez dodatne rotacije i zaštita generacije.",2026-11-04
+frontend/src/hooks/use-auth-bootstrap.spec.tsx,TEST,fe-unit,FE-05,209,pregledano,S-01: generacija i objašnjenje nepoznatog ishoda plus retry profila,2026-11-06
+frontend/src/hooks/use-auth-bootstrap.ts,FE,shared,FE-15,91,pregledano,S-01: nepoznat ishod prikazan bez retryja refresh tokena,2026-11-06
 frontend/src/hooks/use-company-switch-block.ts,FE,shared,FE-15,11,popravljeno,F-CI-05-52: layout lifecycle za više istovremenih modalnih blokada,2026-11-04
 frontend/src/hooks/use-logout-sync.spec.tsx,TEST,fe-unit,FE-05,84,pregledano,FE-15: 2 testa — odjava iz drugog taba zove clearSession i vodi na prijavu; ostale promjene se ignorišu,2026-11-04
 frontend/src/hooks/use-logout-sync.ts,FE,shared,FE-15,25,pregledano,"FE-15: odjava u drugom tabu sada čisti i keš upita (`clearSession`), ne samo store/token",2026-11-04
@@ -490,15 +490,15 @@ frontend/src/hooks/use-sensitive-navigation.spec.tsx,TEST,fe-unit,FE-05,81,pokri
 frontend/src/hooks/use-sensitive-navigation.ts,FE,shared,FE-15,25,popravljeno,F-CI-05-55: lifecycle osjetljivih radnji i router guard,2026-11-05
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,439,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
-frontend/src/i18n/en.ts,FE,shared,FE-15,439,pregledano,CI-05 F-50: preveden ekran oporavka; zadržan paritet ključeva.,2026-11-04
+frontend/src/i18n/bs.ts,FE,shared,FE-15,441,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
+frontend/src/i18n/en.ts,FE,shared,FE-15,441,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: poruke nepoznatog ishoda i scopea.,2026-11-05
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: lokalizovane poruke retryja i scopea.,2026-11-05
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03
 frontend/src/i18n/index.ts,FE,shared,FE-15,27,pregledano,FE-15: pregledano — spread modula; paritet bs/en i vlasništvo sekcija sada čuva `i18n/parity.spec.ts`,2026-11-04
 frontend/src/i18n/ops-bs.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa engleskim.,2026-11-04
 frontend/src/i18n/ops-en.ts,FE,shared,FE-15,190,pregledano,CI-05: prijevodi kartica projekta i upload statusa; paritet sa bosanskim.,2026-11-04
-frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,"FE-15: 5 testova — bs/en paritet ključeva, nijedna sekcija u dva modula, nema praznih prijevoda, svaki backend ERROR_CODE preveden",2026-11-04
+frontend/src/i18n/parity.spec.ts,TEST,fe-unit,FE-05,120,pregledano,S-01: BS/EN i lokalni auth error paritet,2026-11-06
 frontend/src/i18n/payroll-bs.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/payroll-en.ts,FE,shared,FE-15,37,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
@@ -506,8 +506,8 @@ frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/en potvrđen testom; dodati ključevi iz FE-14 (loadError*, projectsError, logoSet)",2026-11-04
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
 frontend/src/index.css,FE,design,FE-01,139,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
-frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,512,pregledano,"CI-05 F-50: 43 testa uključujući JSON/ne-JSON 429, API/Blob, cache, single-flight i novu sesiju.",2026-11-04
-frontend/src/lib/api-client.ts,FE,shared,FE-15,293,pregledano,CI-05 F-50: refresh 429 čuva sesiju i keš; odbijeni token se i dalje čisti.,2026-11-04
+frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,541,pregledano,"S-01: nepoznat ishod, storage, single-flight, 429, keš i promjena sesije",2026-11-06
+frontend/src/lib/api-client.ts,FE,shared,FE-15,296,pregledano,S-01: odbacuje vezani refresh poslije nepoznatog fetch ishoda; 429 ostaje retryable,2026-11-06
 frontend/src/lib/api-dashboard.spec.ts,TEST,fe-unit,FE-05,30,pregledano,"FE-17: odvojeni endpoints, ograničenje i cursor meta",2026-11-06
 frontend/src/lib/api-dashboard.ts,FE,shared,FE-15,23,pregledano,FE-17: tipizirani zasebni dashboard API i cursor meta,2026-11-06
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04

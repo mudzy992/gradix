@@ -6,7 +6,7 @@ import { forceLogin, refreshSession } from '@/lib/api-client'
 import { getSessionGeneration, readRefreshToken } from '@/lib/storage'
 import { useAuthStore } from '@/stores/auth-store'
 
-type RecoverableError = 'RATE_LIMITED' | 'NETWORK_ERROR'
+type RecoverableError = 'RATE_LIMITED' | 'NETWORK_ERROR' | 'AUTH_REFRESH_UNCERTAIN'
 
 export function useAuthBootstrap() {
   const [error, setError] = useState<RecoverableError | null>(null)
@@ -22,7 +22,7 @@ export function useAuthBootstrap() {
   useEffect(() => {
     let cancelled = false
     const recordRecoverableError = (caught: unknown) => {
-      if (!cancelled && !useAuthStore.getState().user && caught instanceof ApiError && (caught.code === 'RATE_LIMITED' || caught.code === 'NETWORK_ERROR')) {
+      if (!cancelled && !useAuthStore.getState().user && caught instanceof ApiError && (caught.code === 'RATE_LIMITED' || caught.code === 'NETWORK_ERROR' || caught.code === 'AUTH_REFRESH_UNCERTAIN')) {
         setError(caught.code)
       }
     }
@@ -34,7 +34,7 @@ export function useAuthBootstrap() {
         }
         return
       }
-      // A temporary failure is recoverable without throwing away the credential.
+      // Rate limits and profile failures are retryable; an uncertain refresh is not.
       const hasCurrentAccess = refreshedGeneration.current === getSessionGeneration() && Boolean(useAuthStore.getState().accessToken)
       if (!hasCurrentAccess) {
         const refreshGeneration = getSessionGeneration()

@@ -46,6 +46,7 @@ export const bs = {
   auth: {
     recoveryTitle: 'Obnova sesije nije uspjela',
     recoveryHint: 'Sačekajte prije ponovnog pokušaja ili nastavite bez obnove sesije.',
+    recoveryUncertainHint: 'Nastavite na prijavu kada veza ponovo bude dostupna.',
     recoveryRetry: 'Ponovi obnovu',
     recoveryContinue: 'Nastavi bez obnove',
     login: 'Prijava',
@@ -427,6 +428,7 @@ export const bs = {
     INTERNAL_ERROR: 'Interna greška.',
     SESSION_CHANGED: 'Sesija ili firma je promijenjena. Provjerite nalog, osvježite stranicu i ponovite radnju.',
     NETWORK_ERROR: 'Nema veze sa serverom. Provjerite internet i pokušajte ponovo.',
+    AUTH_REFRESH_UNCERTAIN: 'Ishod obnove sesije nije poznat. Radi sigurnosti ponovo se prijavite.',
     RATE_LIMITED: 'Previše zahtjeva u kratkom roku. Sačekajte pa pokušajte ponovo.',
     SERVICE_UNAVAILABLE: 'Servis je privremeno nedostupan.',
     AUTH_RESET_NOT_AVAILABLE: 'Reset lozinke trenutno nije dostupan.',

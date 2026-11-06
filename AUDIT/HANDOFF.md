@@ -7,6 +7,7 @@
 - K1 `d6b3095`: CI 42183403541 6/6, backend 46/418, frontend 59/599, PG E2E 17/170 (12 SQL migracija + readiness ručno).
 - TEST-01: runtime inventar 171 ruta, 7.524 role × tenant kombinacija `unassessed`, anonimni uzorci 160/160, firmne role × strani header 1.440/1.440 i platform tenant bez/nepostojećeg headera 302/302 odbijeni; `d6c1fa0`, CI 42200813899 6/6; sljedeće: cross-tenant resursi i S-red; BE-19 izvori i ograničenja u segmentu (GPS nije potvrđeno/historijsko prisustvo).
 - Admin v2: `dashboard:shots` (desktop/mobile, light/dark, paleta, prije i simulirana prazna firma); axe A/AA 0 ozbiljnih/kritičnih, lokalni LCP/CLS u `docs/design/FE-17-screenshots/measurements.json`; OSM pločice blokirane, fallback vidljiv.
-- S-01: HTTP/PG dvije prijave i simulirano odbacivanje odgovora pokazuju globalni refresh opoziv i još važeći access JWT; nije popravljeno. Sljedeće test-first sigurno ublažavanje bez slabljenja reuse detekcije.
+- S-01: `72c4e7c` CI 42209374216 6/6 potvrđuje globalni refresh opoziv i još važeći access JWT; web djelimično odbacuje refresh nakon nepoznatog fetch ishoda (FE-15), bez slabljenja servera. Crash/storage/stari klijenti i siguran replay ostaju otvoreni.
 - Privremeni PG `s01_auth_e2e` ima 12 ručno primijenjenih SQL migracija, test-only readiness i demo seed; TEST-01 treba preostalu HTTP/PG karakterizaciju decimalnih i direktnih Prisma putanja. Ostale dashboard role čekaju potvrdu vlasnika.
-- Zadnja provjera: `check:all` 0 grešaka/2 skip, backend 54/439, frontend 66/645, fresh PG auth E2E 21/21 (12 ručnih migracija i test-only readiness), backend lint/build prošli; CI nakon pusha.
+- Sljedeće: dovršiti TEST-01 cross-tenant resurse, S-red High i TEST-02; ostale dashboard role/vizuelne promjene čekaju vlasnika.
+- Provjere: `check:all` 0 grešaka/2 skip, backend 54/439, frontend 66/650, fresh PG auth 21/21 (12 ručnih migracija, test-only readiness), Playwright login 12/12; frontend lint/type/build prolaze.

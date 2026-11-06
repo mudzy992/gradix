@@ -112,10 +112,13 @@ async function rotateRefresh(refreshToken: string, generation: number): Promise<
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     })
-  } catch (error) {
+  } catch {
     ensureRefreshCurrent(generation, refreshToken)
-    // Mreža je pala: sesija (refresh token) ostaje, sljedeći pokušaj ide ponovo.
-    throw networkError(error)
+    // The server may already have rotated the token. Reusing it can revoke all
+    // of this user's sessions, so discard only this credential and require a
+    // new login. Keep the current access token and drafts until then.
+    clearRefreshToken()
+    throw new ApiError('AUTH_REFRESH_UNCERTAIN', 'Refresh outcome is unknown; sign in again', 0)
   }
   const body = await readBody<{ accessToken: string; refreshToken: string }>(response)
   // Never let a response for an older login replace or clear a newer session.

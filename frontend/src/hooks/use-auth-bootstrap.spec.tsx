@@ -122,6 +122,18 @@ describe('useAuthBootstrap', () => {
     expect(refreshSession).toHaveBeenCalledTimes(2)
   })
 
+  it('prikazuje nepoznat ishod refresh-a i nakon promjene generacije sesije', async () => {
+    refreshSession.mockImplementation(async () => {
+      getSessionGeneration.mockReturnValue(2)
+      throw new ApiError('AUTH_REFRESH_UNCERTAIN', 'unknown outcome', 0)
+    })
+    const { result } = renderHook(() => useAuthBootstrap())
+    await waitFor(() => expect(result.current.error).toBe('AUTH_REFRESH_UNCERTAIN'))
+    expect(useAuthStore.getState().ready).toBe(true)
+    expect(getMe).not.toHaveBeenCalled()
+    expect(forceLogin).not.toHaveBeenCalled()
+  })
+
   it('limit pri učitavanju profila također omogućava retry ili nastavak bez obnove', async () => {
     refreshSession.mockResolvedValue(true)
     getMe.mockRejectedValue(new ApiError('RATE_LIMITED', 'limit', 429))

@@ -144,13 +144,15 @@ describe('api()', () => {
     expect(readRefreshToken()).toBeNull()
   })
 
-  it('mrežni prekid tokom osvježavanja ne briše refresh token (sesija preživi)', async () => {
-    writeRefreshToken('refresh-1', false)
+  it.each([false, true])('ne ponavlja refresh nakon nepoznatog mrežnog ishoda (remember=%s)', async (remember) => {
+    writeRefreshToken('refresh-1', remember)
     fetchMock.mockResolvedValueOnce(json({ success: false, error: { code: 'X', message: 'x' } }, 401))
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-
-    await expect(api('/api/me')).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
-    expect(readRefreshToken()).toBe('refresh-1')
+    await expect(api('/api/me')).rejects.toMatchObject({ code: 'AUTH_REFRESH_UNCERTAIN' })
+    expect(readRefreshToken()).toBeNull()
+    expect(useAuthStore.getState().user?.id).toBe('u1')
+    await expect(refreshSession()).resolves.toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('ne-JSON odgovor na osvježavanje ne ostavlja sesiju „otvorenu“', async () => {
@@ -255,11 +257,26 @@ describe('refreshSession() cache isolation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('mrežni prekid tokom direktnog refresh-a ne briše korisnički keš', async () => {
+  it('istovremeni pozivi dijele nepoznat ishod bez ponavljanja refresh-a', async () => {
+    writeRefreshToken('refresh-1', false)
+    let reject!: (error: unknown) => void
+    fetchMock.mockReturnValueOnce(new Promise<Response>((_resolve, fail) => { reject = fail }))
+    const first = refreshSession().catch((error: unknown) => error)
+    const second = refreshSession().catch((error: unknown) => error)
+    reject(new TypeError('lost response'))
+    expect(await Promise.all([first, second])).toEqual([
+      expect.objectContaining({ code: 'AUTH_REFRESH_UNCERTAIN' }), expect.objectContaining({ code: 'AUTH_REFRESH_UNCERTAIN' }),
+    ])
+    expect(readRefreshToken()).toBeNull()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('nepoznat ishod refresh-a ne briše korisnički keš', async () => {
     writeRefreshToken('refresh-1', false)
     queryClient.setQueryData(['project-document-pending', 'active'], { fileName: 'plan.pdf' })
     fetchMock.mockRejectedValueOnce(new TypeError('offline'))
-    await expect(refreshSession()).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+    await expect(refreshSession()).rejects.toMatchObject({ code: 'AUTH_REFRESH_UNCERTAIN' })
+    expect(readRefreshToken()).toBeNull()
     expect(queryClient.getQueryData(['project-document-pending', 'active'])).toEqual({ fileName: 'plan.pdf' })
     queryClient.clear()
   })
@@ -295,8 +312,9 @@ describe('forceLogin()', () => {
 describe('session and company changes during requests', () => {
   function deferred() {
     let resolve!: (value: Response) => void
-    const promise = new Promise<Response>((done) => { resolve = done })
-    return { promise, resolve }
+    let reject!: (error: unknown) => void
+    const promise = new Promise<Response>((done, fail) => { resolve = done; reject = fail })
+    return { promise, resolve, reject }
   }
 
   function loginAsSecondUser() {
@@ -372,6 +390,17 @@ describe('session and company changes during requests', () => {
     expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
     expect(readRefreshToken()).toBe('external-token')
     expect(useAuthStore.getState().accessToken).toBe('token-1')
+  })
+
+  it('late uncertain response never clears a newer login', async () => {
+    writeRefreshToken('refresh-old', true)
+    const pending = deferred()
+    fetchMock.mockReturnValueOnce(pending.promise)
+    const result = refreshSession().catch((error: unknown) => error)
+    writeRefreshToken('refresh-new', true)
+    pending.reject(new TypeError('offline'))
+    expect(await result).toMatchObject({ code: 'SESSION_CHANGED' })
+    expect(readRefreshToken()).toBe('refresh-new')
   })
 
   it('does not adopt a different account token written by another tab before refresh', async () => {

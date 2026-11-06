@@ -89,6 +89,89 @@ test('refresh rate limit keeps the session and offers a deliberate retry', async
   }
 })
 
+for (const remember of [false, true]) test(`lost refresh response is not replayed and another session survives (remember=${remember})`, async ({ page, browser, baseURL }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  const otherContext = await browser.newContext({ baseURL })
+  const otherPage = await otherContext.newPage()
+  const signIn = async (target: typeof page) => {
+    await target.goto('/login')
+    await target.locator('#identifier').fill(email!)
+    await target.locator('#password').fill(password!)
+    if (target === page && remember) await target.getByRole('checkbox', { name: /zapamti|remember/i }).check()
+    await target.getByRole('button', { name: /prijavi|sign in/i }).click()
+    await waitForAuthenticatedShell(target)
+  }
+  let attempts = 0
+  try {
+    await signIn(page)
+    await signIn(otherPage)
+    await page.route('**/api/auth/refresh', async (route) => {
+      attempts += 1
+      const response = await route.fetch()
+      expect(response.status()).toBe(200)
+      // The backend committed, but this browser never receives the response.
+      await route.abort('failed')
+    })
+    await page.reload()
+    await expect(page.getByRole('alert')).toContainText(/ponovo se prijavite|sign in again/i)
+    await expect(page.getByRole('button', { name: /ponovi obnovu|retry recovery/i })).toHaveCount(0)
+    expect(await page.evaluate((remembered) => (remembered ? localStorage : sessionStorage).getItem('gradix:refresh'), remember)).toBeNull()
+    await page.reload()
+    await expect(page).toHaveURL(/\/login$/)
+    expect(attempts).toBe(1)
+    await otherPage.reload()
+    await waitForAuthenticatedShell(otherPage)
+  } finally {
+    await page.unroute('**/api/auth/refresh')
+    await otherContext.close()
+  }
+})
+
+test('remembered tabs do not replay an uncertain refresh after waiting on the lock', async ({ page, context }) => {
+  const email = process.env.E2E_LOGIN_EMAIL
+  const password = process.env.E2E_LOGIN_PASSWORD
+  test.skip(!email || !password, 'E2E login credentials not set')
+  await page.goto('/login')
+  await page.locator('#identifier').fill(email!)
+  await page.locator('#password').fill(password!)
+  await page.getByRole('checkbox', { name: /zapamti|remember/i }).check()
+  await page.getByRole('button', { name: /prijavi|sign in/i }).click()
+  await waitForAuthenticatedShell(page)
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let attempts = 0
+  await context.route('**/api/auth/refresh', async (route) => {
+    attempts += 1
+    const response = await route.fetch()
+    expect(response.status()).toBe(200)
+    await gate
+    await route.abort('failed')
+  })
+  const first = await context.newPage()
+  const second = await context.newPage()
+  try {
+    await first.goto('/dashboard')
+    await expect.poll(() => attempts).toBe(1)
+    await second.goto('/dashboard')
+    await expect.poll(async () => first.evaluate(async () => {
+      const snapshot = await navigator.locks.query()
+      return snapshot.pending?.filter((lock) => lock.name === 'gradix:remembered-refresh').length ?? 0
+    })).toBe(1)
+    release()
+    await expect(first.getByRole('alert')).toContainText(/ponovo se prijavite|sign in again/i)
+    await expect(second).toHaveURL(/\/login$/)
+    expect(attempts).toBe(1)
+    expect(await first.evaluate(() => localStorage.getItem('gradix:refresh'))).toBeNull()
+  } finally {
+    release()
+    await context.unroute('**/api/auth/refresh')
+    await first.close()
+    await second.close()
+  }
+})
+
 test('remembered refresh is serialized across tabs without adopting an unknown session', async ({ page, context }) => {
   const email = process.env.E2E_LOGIN_EMAIL
   const password = process.env.E2E_LOGIN_PASSWORD

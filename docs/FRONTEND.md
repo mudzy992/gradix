@@ -83,13 +83,15 @@ Zapamćeni token osvježavaju kooperativne kartice kroz Web Locks kada su dostup
 preuzima promijenjeni token automatski: druga prijava može pripadati drugom nalogu. Pri konfliktu
 provjeriti nalog i osvježiti stranicu; ako se to desi pri početnom učitavanju, kartica ostaje na
 prijavi. Ova zaštita ne obuhvata stare tabove, preglednike bez Web Locks, kopirane sessionStorage
-tokene, blokiranu pohranu ni izgubljen odgovor nakon serverske rotacije. Logout-all/reuse signal sada sadrži ID korisnika, ne refresh token; nepoznati/legacy signali se
+tokene ni blokiranu pohranu; izgubljeni odgovor se dodatno djelimično ublažava ispod. Logout-all/reuse signal sada sadrži ID korisnika, ne refresh token; nepoznati/legacy signali se
 ignorišu. To nije puni session-ID protokol: stari tabovi mogu reagovati globalno, više odgođenih
 signala istog korisnika nije potpuno uređeno, a bootstrap bez poznatog korisnika ne šalje signal.
 Lokalno brisanje čuva očigledno različit zajednički token, ali provjera i brisanje nisu atomski.
 Serverska detekcija ponovne upotrebe ostaje uključena.
 
-Refresh `429` nije dokaz nevažeće sesije: token, korisnik i keš ostaju sačuvani, bez automatskog ponavljanja. Pretpostavka je da naš throttler odbija zahtjev **prije** rotacije; posrednik koji naknadno zamijeni uspješan odgovor sa 429 može ostaviti nepoznat ishod. Pri početnom učitavanju `429` ili mrežni prekid pokazuju pristupačan ekran sa izborom ponovnog pokušaja ili nastavka bez obnove; pri grešci profila nakon uspješne rotacije retry najprije ponavlja profil bez nepotrebne nove rotacije. Odabirom nastavka token se ne briše, ali kasnija nova prijava može ga zamijeniti. Neispravni/opozvani token i dalje briše sesiju i keš. Drugi neuspješni refresh odgovori (npr. 5xx) za sada zadržavaju ranije ponašanje odjave; izgubljen odgovor nakon uspješne rotacije i dalje može aktivirati reuse zaštitu.
+Refresh `429` nije dokaz nevažeće sesije: token, korisnik i keš ostaju sačuvani, bez automatskog ponavljanja. Pretpostavka je da naš throttler odbija zahtjev **prije** rotacije; posrednik koji naknadno zamijeni uspješan odgovor sa 429 može ostaviti nepoznat ishod. Mrežni pad tokom slanja refresh zahtjeva ima **nepoznat ishod**: klijent odbacuje samo vlastiti refresh token i javlja lokalni `AUTH_REFRESH_UNCERTAIN` (nije API kod); ne nudi retry istog tokena već novu prijavu kad je veza dostupna. To može zahtijevati novu prijavu i kad zahtjev nije stigao do servera. Trenutni access token i memorijski keš se pri toj grešci ne brišu, ali kasnija odjava/reload i dalje mogu izgubiti nacrte. Mrežni pad običnog API/getMe poziva ostaje `NETWORK_ERROR` i može se ponoviti; nakon uspješne rotacije bootstrap retry prvo ponavlja profil. Neispravni/opozvani token i drugi neuspješni refresh odgovori (npr. 5xx) zadržavaju ranije ponašanje odjave.
+
+Ovo je **djelimično** ublažavanje: prekid taba/procesa prije obrade greške, kopirani `sessionStorage`, nekooperativni/stari klijenti, utrke bez Web Locks ili neuspješno trajno brisanje pohrane mogu i dalje ponoviti token. Klijent ne može utvrditi je li server primio zahtjev, opozvati nepoznati nasljedni token ni opozvati već izdan access JWT. Pohrana se briše best-effort uz postojeću provjeru generacije/tokena, koja nije atomski compare-and-delete. Server i detekcija reuse ostaju nepromijenjeni; više tabova/uređaja i siguran serverski retry protokol i dalje se prate u BL-002/S-01.
 
 ## 3. State i podaci
 
@@ -106,7 +108,7 @@ Refresh `429` nije dokaz nevažeće sesije: token, korisnik i keš ostaju sačuv
 
 **Zajednički sloj (D-055):**
 
-- **Greške:** svaki pad mrežnog sloja je `ApiError` — mrežni prekid `NETWORK_ERROR` (status `0`),
+- **Greške:** svaki pad mrežnog sloja je `ApiError` — mrežni prekid `NETWORK_ERROR` (status `0`), osim nepoznatog ishoda refresh-a `AUTH_REFRESH_UNCERTAIN`,
   ne-JSON odgovor `INTERNAL_ERROR`/`RATE_LIMITED` po statusu, 401 → jedan pokušaj osvježavanja pa
   ponovni zahtjev (važi i za izvoz kroz `apiBlob`). `errorMessage()` prevodi kod, a nepoznat kod
   prikazuje poruku servera (nikad sirov ključ).

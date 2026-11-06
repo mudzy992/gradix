@@ -111,7 +111,7 @@ describe('i18n paritet bs/en', () => {
   })
 
   it('kodovi koje dodaje klijent (mreža, ne-JSON odgovor) su takođe prevedeni', () => {
-    for (const code of ['NETWORK_ERROR', 'RATE_LIMITED', 'REPORT_UNKNOWN', 'INTERNAL_ERROR', 'HTTP_ERROR']) {
+    for (const code of ['NETWORK_ERROR', 'AUTH_REFRESH_UNCERTAIN', 'RATE_LIMITED', 'REPORT_UNKNOWN', 'INTERNAL_ERROR', 'HTTP_ERROR']) {
       expect(bsFlat[`errors.${code}`], `bs: ${code}`).toBeTruthy()
       expect(enFlat[`errors.${code}`], `en: ${code}`).toBeTruthy()
     }
