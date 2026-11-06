@@ -83,7 +83,7 @@ broja primijenjenih migracija → dump kao artefakt 7 dana. SQL/pipeline greška
 
 | Job | Šta radi | Trajanje* |
 |---|---|---|
-| `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice, zaštite izvještaja i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
+| `audit` | `node --test scripts/audit/check-coverage.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs` (regresije matrice, zaštite izvještaja i SQL provjere drilla), zatim `npm run check:all -- --only=coverage,segments,docs,secrets,logs,decimal-mocks,schema,image,env,compose` (matrica pokrivenosti, 59 skeletona, docs linkovi/baneri/indeksi, tajne, `console.log`, konzervativni Decimal mock guard, compose invarijante) → `inventory` + `git diff --exit-code` (matrica mora biti regenerabilna) | ~15 s |
 | `backend` (Backend lint + unit + build) | `npm ci` → `prisma generate` → `eslint` → `npm run test:cov -- --passWithNoTests --json` → dijagnostički summary/anotacije i artefakt `backend-unit-diagnostics` čak i na padu → **coverage ratchet** → `nest build` → artefakt `backend-coverage` (lcov + json-summary, 7 dana) → provjera `dist/src/main.js` i `dist/prisma/seed.js` | ~55 s |
 | `backend-e2e` | Postgres 16 servis → `migrate deploy` → seed → **16** e2e spec-a (+ JSON report parser koji ispiše `::error` po palom testu) | ~1 m 19 s |
 | `frontend` (Frontend lint + typecheck + test + build) | `npm ci` → `oxlint` → `tsc -b` → **`npm run test:cov`** (Vitest + Testing Library, jsdom) → `vite build` → artefakt `frontend-coverage` | ~45 s |
@@ -239,3 +239,5 @@ Prikazuje samo pale testove/suiteove, do 20 redova poruke i tabelu coverage vs b
 nedostajući JSON ili neuspješan proces nisu uspjeh. Sirovi JSON ne upload-a se i briše se
 nakon obrade. Poznati oblici tokena/lozinki rediguju se, ali testovi i dalje ne smiju u
 poruke uključivati tajne: heuristička redakcija nije garancija. Test reportera radi u audit poslu.
+
+Backend specovi koriste stvarni `Prisma.Decimal` (po potrebi `backend/test/helpers/decimal.ts`). `check-decimal-mocks` konzervativnim regexima odbija uobičajene ručne Decimal fake/mock implementacije; nije potpuna semantička analiza.

@@ -92,6 +92,7 @@ backend/src/common/settings/registry.ts,BE,common,BE-04,164,pregledano,"BE-04: +
 backend/src/common/types/auth-user.ts,BE,common,BE-01,26,pregledano,BE-01: pregledano — AuthUser nosi permisije i tenantCompanyId (koristi se u guardovima),2026-11-02
 backend/src/common/utils/date-input.spec.ts,BE,common,BE-01,48,pregledano,CI-05: dodan regresijski test za nepostojeći datum u timestampu i prijestupnu godinu sa offsetom.,2026-11-04
 backend/src/common/utils/date-input.ts,BE,common,BE-01,40,pregledano,"CI-05: timestamp sa nepostojećim datumom se normalizovao; provjera kalendara prije parsiranja, regresijski test.",2026-11-04
+backend/src/common/utils/decimal-fields.spec.ts,BE,common,BE-01,222,pregledano,CI-05: parser karakterizacije 60 polja; direktni upisi ostaju otvoreni,2026-11-06
 backend/src/common/utils/decimal-input.spec.ts,BE,common,BE-01,152,pokriveno-testom,"CI-05 F-63: stvarni Decimal; finite i pravila predznaka; F-CI-05-64: preciznost iznosa troška | F-CI-05-69: preciznost goriva, overflow proizvoda i odgovarajuće regresije. | F-CI-05-64: podlijevanje zajedničkog parsera i regresije BE-01.",2026-11-05
 backend/src/common/utils/decimal-input.ts,BE,common,BE-01,110,popravljeno,"BE-01 pregledano; BE-05: konačno korišten u projektima/količinama (F-02) | CI-05 F-63: odbij ne-finite vrijednosti; F-CI-05-64: preciznost iznosa troška | F-CI-05-69: preciznost goriva, overflow proizvoda i odgovarajuće regresije. | F-CI-05-64: podlijevanje zajedničkog parsera i regresije BE-01.",2026-11-05
 backend/src/common/utils/geo.spec.ts,BE,common,BE-01,81,pokriveno-testom,"BE-09/10: 9 testova — granice, smeće, par koordinata | CI-05 F-63: finite decimal regresija | F-CI-05-73: stvarni Prisma Decimal; izolacija i nulte koordinate.",2026-11-06
@@ -258,7 +259,7 @@ backend/src/modules/ops/tasks.service.ts,BE,ops,BE-06,253,pregledano,BE-08: TASK
 backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,pregledano,"BE-07: online sat se odbija; offline startedAt/closedAt validacija (budućnost, maxOpenHours)",2026-11-03
 backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,pregledano,BE-07: vidljiv zadatak + zapisiv projekat + dodjela/SS + mašina; P2002 mapiran na TIMER_ALREADY_OPEN/MACHINE_IN_USE,2026-11-03
 backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,39,pregledano,BE-07: timer.maxOpenHours se čita jednom po firmi (F-03),2026-11-03
-backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,93,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours | BL-011: fiksni sat i granica starosti timera; bez zavisnosti od realnog sata.",2026-11-06
+backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,88,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours | BL-011: fiksni sat i granica starosti timera; bez zavisnosti od realnog sata.",2026-11-06
 backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,137,pregledano,BE-07: zatvaranje timera u jednoj $transaction (F-01); audit/notifikacije/realtime poslije,2026-11-03
 backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,pregledano,"BE-07: mašina iz firme, DECOMMISSIONED/IN_SERVICE 409, ACTIVE samo na svom projektu",2026-11-03
 backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,pregledano,BE-07: pregledano — pauze i trajanje,2026-11-03
@@ -340,6 +341,7 @@ backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo p
 backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 200 bez envelope-a (data/success odsutni), readiness 200 + checks.postgres.status/latencyMs",2026-11-03
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
+backend/test/helpers/decimal.ts,TEST,e2e-helpers,TEST-01,7,pregledano,CI-05: zajednički stvarni Prisma Decimal za testove,2026-11-06
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
@@ -633,10 +635,12 @@ scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump cust
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
 scripts/ops/restore.sh,INF,ops-scripts,INF-06,105,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
-scripts/standards/check-all.mjs,STD,standards,STD-01,171,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
+scripts/standards/check-all.mjs,STD,standards,STD-01,176,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
 scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02
 scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
+scripts/standards/check-decimal-mocks.mjs,STD,standards,STD-01,36,pregledano,CI-05: konzervativni regex guard; nije semantički potpun,2026-11-06
+scripts/standards/check-decimal-mocks.test.mjs,STD,standards,STD-01,40,pregledano,CI-05: regresije za uobičajene fake i mock oblike,2026-11-06
 scripts/standards/check-docs.mjs,STD,standards,STD-01,78,pregledano,"linkovi, baneri, indeksi, zabrana linkovanja u _retired (STD-02)",2026-11-02
 scripts/standards/check-env.mjs,STD,standards,STD-01,146,popravljeno,F-CI-05-20: guard i heuristička ograničenja,2026-11-04
 scripts/standards/check-env.test.mjs,STD,standards,STD-01,70,pokriveno-testom,F-CI-05-20: izolovane regresije env guarda,2026-11-04

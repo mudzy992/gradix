@@ -1,7 +1,7 @@
-import { Prisma } from '../../../generated/client';
+import { decimal } from '../../../test/helpers/decimal';
 import { payrollAmount, payrollRate } from './payroll-amount';
 
-const dec = (value: number) => new Prisma.Decimal(value);
+const dec = decimal;
 
 describe('payroll-amount (BE-14 / B12)', () => {
   describe('payrollRate', () => {

@@ -1,4 +1,4 @@
-import { Prisma } from '../../../generated/client';
+import { decimal } from '../../../test/helpers/decimal';
 import type { AuthUser } from '../../common/types/auth-user';
 import type { PrismaService } from '../prisma/prisma.service';
 import { DashboardProjectsService } from './dashboard-projects.service';
@@ -33,22 +33,22 @@ describe('DashboardProjectsService', () => {
         id: 'p1',
         name: 'Project',
         status: 'IN_PROGRESS',
-        plannedBudget: new Prisma.Decimal('9999999999.99'),
-        currentSpend: new Prisma.Decimal('1234567890.01'),
+        plannedBudget: decimal('9999999999.99'),
+        currentSpend: decimal('1234567890.01'),
       },
       {
         id: 'p2',
         name: 'Zero',
         status: 'PLANNING',
-        plannedBudget: new Prisma.Decimal('0'),
-        currentSpend: new Prisma.Decimal('0'),
+        plannedBudget: decimal('0'),
+        currentSpend: decimal('0'),
       },
       {
         id: 'p3',
         name: 'No budget',
         status: 'PLANNING',
         plannedBudget: null,
-        currentSpend: new Prisma.Decimal('0.1'),
+        currentSpend: decimal('0.1'),
       },
     ]);
     const data = await service.list(actor(['ADMIN']));

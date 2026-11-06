@@ -49,6 +49,11 @@ const STEPS = [
     cmd: node('scripts/standards/check-console.mjs'),
   },
   {
+    id: 'decimal-mocks',
+    name: 'Backend testovi koriste pravi Prisma Decimal',
+    cmd: node('scripts/standards/check-decimal-mocks.mjs'),
+  },
+  {
     id: 'schema',
     name: 'Prisma šema: nema novih FK bez indeksa',
     cmd: node('scripts/standards/check-schema.mjs'),

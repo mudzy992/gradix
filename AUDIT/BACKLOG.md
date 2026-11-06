@@ -10,8 +10,7 @@ svaki stari navod i dalje aktuelan. Granice dashboarda slijede pravilo vlasnika 
 - **BL-001 — visoko, djelimično, F-CI-05-64:** zajednički `parseDecimal` sada odbija
   nenulti ulaz podliven u nulu; druge skale/opsezi i tokovi koji zaobilaze helper ostaju
   otvoreni. Dokaz: `backend/src/common/utils/decimal-input.spec.ts`, `backend/test/erp.e2e-spec.ts`
-  i [BE-01](segments/BE-01.md). Prijedlog: sistematska inventura skale/opsega po polju;
-  postojeći podaci i stari serveri nisu popravljeni.
+  i [BE-01](segments/BE-01.md). Radna [inventura](DECIMAL-INVENTORY.md) i 60 parser karakterizacija su dodani, ali direktni Prisma upisi i DTO/PG karakterizacija ostaju otvoreni; postojeći podaci i stari serveri nisu popravljeni. Trip >3 decimale čeka K1 (opcije A/B u inventuri).
 
 ## Sesije i autentifikacija
 

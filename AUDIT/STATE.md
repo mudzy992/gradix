@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `609450e`: CI `42171067680` 6/6; B1 status.
 - `d8d3512`: CI `42170687717` 6/6; B1 projects API.
 - `f7e379b`: dokumentovano CI-05 zatvaranje na bazi zelenog CI-ja.
-- `c842581`: CI `42169764781` 6/6; F-CI-05-73 riješen stvarnim Prisma Decimalom.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -26,14 +26,15 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 - Rerun palih poslova: GitHub `run ... cannot be rerun; its workflow file may be broken`; nije izvršen.
 - [Ledger](CI-05-LEDGER.md): 72 nalaza; [backlog](BACKLOG.md): 11 grupa i S-red, s indeksom historijskih ograničenja.
 - `npm ci`, Node 22 i CI env: ista unit komanda 43/331 za 2026-11-05 i 2026-11-06 u UTC i Sarajevo; coverage iznad baseline-a.
-- F-CI-05-73: izolovani geo test 4/9 pao → stvarni Prisma Decimal 10/10; backend 43/332; puni CI 6/6. Raniji padovi bez loga nisu dokazano isti uzrok.
+- F-CI-05-73: pravi Prisma Decimal i guard; random backend poslije promjena UTC 10/10 + Sarajevo 10/10 (45/395 po pokretanju). Raniji povremeni prolaz i padovi bez loga nisu dokazano objašnjeni.
+- Rerun REST HTTP 403 `Resource not accessible by integration`; dispatch ranije 403, tijelo nije sačuvano. YAML parsiran, nije actionlint.
 
 ## BE-19 / FE-17 — dashboard v2
 
 - B0: plan i D-057 dopunjuju D-043; B1 djelimično: novi ograničeni projects API, bez promjene postojećeg ugovora.
 - B1 test-first: unit 3/3, PG E2E 8/8 (12 SQL migracija ručno + demo seed), backend 44/335; CI 6/6. Admin UI još nije počeo.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
-- BL-001: mobile trip šalje slobodan `quantity` string; novo odbijanje više od 3 decimale je K1, inventura još traje.
+- BL-001: [radna inventura](DECIMAL-INVENTORY.md), 60 parser testova; direktni Prisma upisi i HTTP/PG karakterizacija ostaju otvoreni. Trip >3 decimale nepromijenjen, K1 A/B čeka vlasnika.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; K2 vlasnika čeka admin screenshotove.
 
 ## Sljedeći korak

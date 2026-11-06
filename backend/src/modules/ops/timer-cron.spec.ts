@@ -1,8 +1,3 @@
-jest.mock(
-  '../../../generated/client',
-  () => ({ Prisma: { Decimal: class Decimal {} } }),
-  { virtual: true },
-);
 jest.mock('../prisma/prisma.service', () => ({
   PrismaService: class PrismaService {},
 }));
