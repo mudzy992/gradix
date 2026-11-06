@@ -14,7 +14,8 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 - `b3e9b12`: CI [42278341873](https://github.com/mudzy992/gradix/actions/runs/42278341873) 6/6 uključujući Web E2E; djelimični OpenAPI gate.
 - `970344d`: CI [42282351096](https://github.com/mudzy992/gradix/actions/runs/42282351096) 6/6; S-01 zaseban ključ, family/generation i zamrznut replay testni sat.
-- Tekući commit: strict testni detektor i AST ratchet; puni strict E2E 197/214 pad, većinom login/fixture, neocijenjen uticaj; samo selftest u CI.
+- `d734e89`: CI [42283897872](https://github.com/mudzy992/gradix/actions/runs/42283897872) Audit pao zbog matrice baseline fajla, Web E2E još traje; strict puni E2E 197/214 pad, uticaj neocijenjen.
+- Tekući commit: ispravljen status pregledanog formata baselinea i lokalni check:all audit gate; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 

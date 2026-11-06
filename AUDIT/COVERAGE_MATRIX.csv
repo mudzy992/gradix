@@ -692,7 +692,7 @@ scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump cust
 scripts/ops/redis-acl.sh,INF,redis,INF-07,40,pregledano,"INF-07: ispisuje idempotentnu ACL SETUSER liniju (reset, ~<prefix>*, minimalne komande) + provjeru; lozinku unosi vlasnik",2026-11-03
 scripts/ops/restore.sh,INF,ops-scripts,INF-06,105,pregledano,"INF-06: restore trazi RESTORE_DATABASE_URL (nikad DATABASE_URL), odbija isti URL i ime sa prod (osim ALLOW_PRODUCTION_RESTORE=yes), provjerava sha256, pa pg_restore --exit-on-error + brojevi redova kljucnih tabela",2026-11-03
 scripts/standards/allowlist.json,STD,standards,STD-01,41,pregledano,"INF-01: sekcija env — DEV, JEST_WORKER_ID, MINIO_SKIP, EXPO_PUBLIC_API_URL sa razlogom",2026-11-02
-scripts/standards/check-all.mjs,STD,standards,STD-01,182,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
+scripts/standards/check-all.mjs,STD,standards,STD-01,187,pregledano,INF-02: 14 koraka (dodat image),2026-11-02
 scripts/standards/check-compose.mjs,STD,standards,STD-01,99,pregledano,"13 invarijanti: ports, external mreže, CA read_only, mrtve MinIO slike, healthcheck (STD-01)",2026-11-02
 scripts/standards/check-console.mjs,STD,standards,STD-01,41,pregledano,zabrana console.log/debug; 1 izuzetak (DEV socket) (STD-01),2026-11-02
 scripts/standards/check-coverage-ratchet.mjs,STD,standards,STD-01,91,pregledano,poredi coverage-summary sa baseline-om; pad = exit 1; GITHUB_STEP_SUMMARY tabela (CI-04),2026-11-02
@@ -707,4 +707,4 @@ scripts/standards/check-secrets.mjs,STD,standards,STD-01,65,pregledano,6 pravila
 scripts/standards/check-tenant.mjs,STD,standards,STD-01,113,pokriveno-testom,"TEST-01: AST ratchet, baseline kandidati nepregledani",2026-11-06
 scripts/standards/check-tenant.test.mjs,STD,standards,STD-01,27,pokriveno-testom,TEST-01: red-first novi i umnoženi kandidat,2026-11-06
 scripts/standards/lib.mjs,STD,standards,STD-01,106,pregledano,"zajednička logika guardraila: walk, glob, report, allowlist (STD-01)",2026-11-02
-scripts/standards/tenant-query-baseline.json,STD,standards,STD-01,2091,nepregledano,,
+scripts/standards/tenant-query-baseline.json,STD,standards,STD-01,2091,pregledano,TEST-01: baseline format pregledan; 234 kandidata nisu sigurnosno ocijenjena,2026-11-06

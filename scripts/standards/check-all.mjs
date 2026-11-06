@@ -29,6 +29,11 @@ const STEPS = [
     cmd: node('scripts/audit/check-coverage.mjs'),
   },
   {
+    id: 'audit-status',
+    name: 'Strogi audit gate (lokalne provjere statusa i matrice)',
+    cmd: node('scripts/audit/check-audit-gate.mjs'),
+  },
+  {
     id: 'segments',
     name: 'Skeletoni segmenata (59/59)',
     cmd: node('scripts/audit/scaffold-segments.mjs', '--check'),
