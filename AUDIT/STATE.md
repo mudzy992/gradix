@@ -12,8 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `59b902f`: procjena live prisustva; CI 42188838464 na čekanju.
+- `abbe5ea`: demo 30-dnevni trendovi; CI 42187752917 u toku.
 - `dae8043`: CI `42186602208` 6/6; upozorenja isteka dokumenata.
-- `b2b635d`: CI `42185923719` 6/6; trend odobrenih minuta timera.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
