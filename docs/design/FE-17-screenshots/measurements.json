@@ -1,0 +1,50 @@
+{
+  "note": "Local single-run observations, not production field metrics. Empty-company data is a browser-only fixture.",
+  "baselineRevision": "0d3980a",
+  "axe": {
+    "admin-light-desktop": [],
+    "admin-light-mobile": [],
+    "admin-dark-desktop": [],
+    "admin-dark-mobile": [],
+    "admin-command-desktop": [],
+    "admin-empty-desktop": [],
+    "admin-empty-mobile": []
+  },
+  "measurements": {
+    "before-admin-desktop.png": {
+      "lcpMs": 528,
+      "cls": 0.007456712962962964,
+      "horizontalOverflowPx": 0
+    },
+    "admin-light-desktop.png": {
+      "lcpMs": 552,
+      "cls": 0.021717849794238683,
+      "horizontalOverflowPx": 0
+    },
+    "admin-light-mobile.png": {
+      "lcpMs": 480,
+      "cls": 0.009478672985781991,
+      "horizontalOverflowPx": 0
+    },
+    "admin-dark-desktop.png": {
+      "lcpMs": 496,
+      "cls": 0.02160977366255144,
+      "horizontalOverflowPx": 0
+    },
+    "admin-dark-mobile.png": {
+      "lcpMs": 296,
+      "cls": 0.009478672985781991,
+      "horizontalOverflowPx": 0
+    },
+    "admin-empty-desktop.png": {
+      "lcpMs": 920,
+      "cls": 0.04569110082304527,
+      "horizontalOverflowPx": 0
+    },
+    "admin-empty-mobile.png": {
+      "lcpMs": 716,
+      "cls": 0.009478672985781991,
+      "horizontalOverflowPx": 0
+    }
+  }
+}

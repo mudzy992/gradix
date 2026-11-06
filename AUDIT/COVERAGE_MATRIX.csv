@@ -407,8 +407,8 @@ frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI
 frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,21,pregledano,"CI-05 F-50: obje greške, naslov, alert i akcije.",2026-11-04
 frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,CI-05 F-50: pristupačna i prevedena ponuda recoveryja za 429/mrežu.,2026-11-04
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
-frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,145,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
-frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,140,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
+frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,146,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
+frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,135,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
 frontend/src/components/dashboard/chart-primitives.spec.tsx,TEST,fe-unit,FE-05,96,pregledano,"FE-17: podaci, praznine, pragovi, animacija i alternative",2026-11-06
 frontend/src/components/dashboard/chart-primitives.tsx,FE,ops-ui,FE-08,160,pregledano,"FE-17: SVG grafikoni, tekstualni prikaz, pragovi i reduced motion",2026-11-06
 frontend/src/components/dashboard/project-map.spec.tsx,TEST,fe-unit,FE-05,19,pregledano,FE-17: nedostupne map pločice i fallback,2026-11-06
@@ -524,8 +524,8 @@ frontend/src/lib/csv.spec.ts,TEST,fe-unit,FE-05,74,pregledano,"FE-15: 4 testa �
 frontend/src/lib/csv.ts,FE,shared,FE-15,28,pregledano,"FE-15: UTF-8 BOM (č/ć/ž u Excelu), CRLF, zaštita od CSV injection (=,+,−,@), link u dokumentu (Safari)",2026-11-04
 frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() — null/undefined/prazno → „—“, nula ostaje 0, tekst nepromijenjen",2026-11-03
 frontend/src/lib/dash.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `dash(0)`/prazno daje „—“; bez nalaza,2026-11-04
-frontend/src/lib/dashboard-format.spec.ts,TEST,fe-unit,FE-05,27,pregledano,FE-17: decimalni i numerički rubni slučajevi,2026-11-06
-frontend/src/lib/dashboard-format.ts,FE,shared,FE-15,44,pregledano,FE-17: tačni decimalni prikazi i omjeri bez float novca,2026-11-06
+frontend/src/lib/dashboard-format.spec.ts,TEST,fe-unit,FE-05,34,pregledano,FE-17: decimalni i numerički rubni slučajevi,2026-11-06
+frontend/src/lib/dashboard-format.ts,FE,shared,FE-15,62,pregledano,FE-17: tačni decimalni prikazi i omjeri bez float novca,2026-11-06
 frontend/src/lib/decimal-input.ts,FE,shared,FE-15,20,popravljeno,F-CI-05-64: egzaktna frontend fixed-decimal validacija,2026-11-05
 frontend/src/lib/error-message.spec.ts,TEST,fe-unit,FE-05,35,pregledano,"FE-15: 5 testova — preveden kod, NETWORK_ERROR bez „Failed to fetch“, nepoznat kod → poruka servera, generička poruka",2026-11-04
 frontend/src/lib/error-message.ts,FE,shared,FE-15,17,pregledano,FE-15: NETWORK_ERROR preveden; nepoznat kod → poruka servera; pokriveno testom,2026-11-04
@@ -653,7 +653,7 @@ mobile/sync/engine.ts,MOB,offline,MOB-04,104,nepregledano,,
 mobile/sync/net.ts,MOB,offline,MOB-04,7,nepregledano,,
 mobile/sync/queue.ts,MOB,offline,MOB-04,63,nepregledano,,
 mobile/tsconfig.json,MOB,app,MOB-01,18,nepregledano,,
-package.json,STD,standards,STD-01,21,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
+package.json,STD,standards,STD-01,22,pregledano,ulazna tačka check:all; bez zavisnosti (STD-01),2026-11-02
 scripts/audit/check-audit-gate.mjs,STD,audit-tools,STD-01,255,pokriveno-testom,STD-01 pregled: integritet matrice status izvještaja CI invarijante i online dokaz; izolovani negativni node testovi. YAML provjera ostaje ograničena.,2026-11-05
 scripts/audit/check-audit-gate.test.mjs,STD,audit-tools,STD-01,281,pokriveno-testom,F-CI-05-42/44: strogi gate i regresije; online dostupnost jasno prijavljena.,2026-11-04
 scripts/audit/check-coverage.mjs,STD,audit-tools,STD-01,144,pregledano,F-CI-05-43: kalendarska validacija ISO datuma za pregledane redove.,2026-11-04
@@ -668,6 +668,9 @@ scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,62,pokriveno-testom,"C
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,455,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 proces zatvoren uz CI dokaz,2026-11-04
 scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,60,pokriveno-testom,STD-01: GitHub dokaz; nedostupan API upozorava a dostupan negativan dokaz ruši gate.,2026-11-05
+scripts/dev/dashboard/shots-helpers.mjs,STD,dev-tools,STD-01,29,pregledano,FE-17: izolirani prazni dashboard fixture i validacija konfiguracije,2026-11-06
+scripts/dev/dashboard/shots-helpers.test.mjs,STD,dev-tools,STD-01,28,pregledano,FE-17: test izoliranih fixture i konfiguracije,2026-11-06
+scripts/dev/dashboard/shots.mjs,STD,dev-tools,STD-01,176,pregledano,"FE-17: snimanje realnog backenda, sigurni fixture i opzionalni axe",2026-11-06
 scripts/dev/session-preflight.sh,STD,dev-tools,STD-01,32,pregledano,"Početni fetch, backup diffa, reset bez lokalnih commitova ili fast-forward push; testirano u privremenim git repozitorijima",2026-11-06
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03

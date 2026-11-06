@@ -84,6 +84,7 @@ describe('admin dashboard v2', () => {
     Object.values(mocks).forEach((mock) => mock.mockImplementation(() => new Promise(() => {})))
     setup()
     expect(screen.getAllByRole('status').length).toBeGreaterThan(4)
+    expect(within(screen.getByRole('region', { name: 'Ključni pokazatelji' })).getAllByRole('status')).toHaveLength(4)
     expect(screen.queryByText('Nema projekata za prikaz.')).not.toBeInTheDocument()
     expect(screen.queryByText('Nema trenutnih upozorenja.')).not.toBeInTheDocument()
   })

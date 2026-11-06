@@ -15,6 +15,7 @@
     "check:compose": "node scripts/standards/check-compose.mjs",
     "check:coverage-matrix": "node scripts/audit/check-coverage.mjs",
     "audit:inventory": "node scripts/audit/inventory.mjs",
-    "audit:segments": "node scripts/audit/scaffold-segments.mjs"
+    "audit:segments": "node scripts/audit/scaffold-segments.mjs",
+    "dashboard:shots": "node scripts/dev/dashboard/shots.mjs"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatExactMoney, moneyProgress, minutesParts, toSafeNumber } from './dashboard-format'
+import { formatDashboardDate, formatExactMoney, moneyProgress, minutesParts, toSafeNumber } from './dashboard-format'
 
 describe('dashboard exact formatting', () => {
   it('formats large decimal strings without passing amounts through floating point', () => {
@@ -16,6 +16,13 @@ describe('dashboard exact formatting', () => {
     expect(moneyProgress('-1.00', '3.00')).toBeNull()
     expect(moneyProgress('1.001', '3.00')).toBeNull()
     expect(moneyProgress('99999999999999999999.99', '0.01')).toBeNull()
+  })
+  it('renders Bosnian dates numerically and uses the company timezone', () => {
+    expect(formatDashboardDate('2025-01-01T23:30:00.000Z', 'bs', 'Europe/Sarajevo', true)).toBe('02.01.2025. 00:30')
+    expect(formatDashboardDate('2025-01-01T00:00:00.000Z', 'bs', 'UTC')).toBe('01.01.2025.')
+    expect(formatDashboardDate('2025-01-01T00:00:00.000Z', 'bs', undefined, true)).toBe('01.01.2025. 00:00 UTC')
+    expect(formatDashboardDate('bad', 'bs', 'UTC')).toBe('—')
+    expect(formatDashboardDate('2025-01-01T00:00:00.000Z', 'bs', 'invalid/timezone')).toBe('—')
   })
   it('keeps minutes exact and declines unsafe chart conversion', () => {
     expect(minutesParts('12345678901234567890')).toEqual({ hours: 205761315020576131n, minutes: 30 })

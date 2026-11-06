@@ -41,3 +41,21 @@ export function toSafeNumber(value: string): number | null {
   const result = BigInt(value)
   return result <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(result) : null
 }
+
+/** Company-local instants; Bosnian uses an explicit numeric date even with minimal ICU data. */
+export function formatDashboardDate(value: string, locale: string, timezone?: string, time = false): string {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return '—'
+  const zone = timezone ?? 'UTC'
+  try {
+    if (/^bs(?:-|$)/i.test(locale)) {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+        ...(time ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } : {}),
+      }).formatToParts(date)
+      const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+      return `${part('day')}.${part('month')}.${part('year')}.${time ? ` ${part('hour')}:${part('minute')}` : ''}${timezone ? '' : ' UTC'}`
+    }
+    return new Intl.DateTimeFormat(locale, { timeZone: zone, year: 'numeric', month: 'short', day: 'numeric', ...(time ? { hour: '2-digit', minute: '2-digit' } : {}) }).format(date) + (timezone ? '' : ' UTC')
+  } catch { return '—' }
+}
