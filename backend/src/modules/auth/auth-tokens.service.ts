@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { JwtService } from '@nestjs/jwt';
@@ -10,6 +11,10 @@ import {
 import { REFRESH_DAYS, REFRESH_RETENTION_DAYS } from '../../common/constants';
 import { AppError } from '../../common/errors/app-error';
 import { evaluateRefreshToken } from './auth-token-rules';
+import {
+  deriveRefreshSuccessor,
+  isWithinRefreshReplayWindow,
+} from './auth-refresh-replay';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import type { Prisma } from '../../../generated/client';
 
@@ -20,6 +25,7 @@ export class AuthTokensService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   // Issuance/rotation lock Company (SHARE) -> User -> RefreshToken.
@@ -126,8 +132,12 @@ export class AuthTokensService {
     });
     if (!initial) throw this.invalid();
 
-    const nextRefreshToken = createRefreshToken();
-    const accessToken = this.jwt.sign({ sub: initial.userId });
+    // A secret-derived successor lets us reconstruct the identical response
+    // without persisting bearer credentials. The key is domain-separated from JWT.
+    const nextRefreshToken = deriveRefreshSuccessor(
+      refreshToken,
+      this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+    );
     const result = await this.prisma.$transaction(async (tx) => {
       await this.lockCompanyForIssuance(tx, initial.user.companyId);
       await this.lockUser(tx, initial.userId);
@@ -141,23 +151,67 @@ export class AuthTokensService {
           existing.user.companyId !== initial.user.companyId)
       )
         return 'invalid';
-      const verdict = evaluateRefreshToken(
-        existing,
-        existing?.user
-          ? {
-              isActive: existing.user.isActive,
-              roles: existing.user.roles.map((item) => item.role),
-              company: existing.user.company,
+      // Use the database clock *after* waiting for the user lock so concurrent
+      // replicas agree on the rotation instant and replay window.
+      const [clock] = await tx.$queryRaw<
+        { now: Date }[]
+      >`SELECT clock_timestamp() AS now`;
+      const now = clock.now;
+      const owner = existing?.user
+        ? {
+            isActive: existing.user.isActive,
+            roles: existing.user.roles.map((item) => item.role),
+            company: existing.user.company,
+          }
+        : null;
+      if (existing?.revokedAt) {
+        if (isWithinRefreshReplayWindow(existing.revokedAt, now)) {
+          const eligible =
+            evaluateRefreshToken(
+              { ...existing, revokedAt: null },
+              owner,
+              now,
+            ) === 'ok';
+          if (eligible && existing.lineageKey) {
+            const child = await tx.refreshToken.findUnique({
+              where: { tokenHash: hashRefreshToken(nextRefreshToken) },
+            });
+            if (
+              child &&
+              child.userId === existing.userId &&
+              child.lineageKey === existing.lineageKey &&
+              !child.revokedAt &&
+              child.expiresAt.getTime() > now.getTime()
+            ) {
+              return { issuedAt: existing.revokedAt };
             }
-          : null,
-      );
+          }
+          // Logout, expired/rotated child, legacy tokens or key rotation must
+          // not resurrect a credential or revoke an unrelated session.
+          return 'reuse-no-revoke';
+        }
+        if (existing.lineageKey) {
+          await tx.refreshToken.updateMany({
+            where: {
+              userId: initial.userId,
+              lineageKey: existing.lineageKey,
+              revokedAt: null,
+            },
+            data: { revokedAt: now },
+          });
+        } else {
+          // Pre-family legacy rows cannot be scoped safely.
+          await this.revokeAllInTransaction(tx, initial.userId);
+        }
+        return 'reuse';
+      }
+      const verdict = evaluateRefreshToken(existing, owner, now);
       if (verdict !== 'ok') {
         if (verdict !== 'invalid') {
           await this.revokeAllInTransaction(tx, initial.userId);
         }
         return verdict;
       }
-      const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
       // Old rows have no family yet. Establish one on their first rotation
@@ -173,8 +227,7 @@ export class AuthTokensService {
           select: { revokedAt: true },
         });
         if (current?.revokedAt) {
-          await this.revokeAllInTransaction(tx, initial.userId);
-          return 'reuse';
+          return 'reuse-no-revoke';
         }
         return 'invalid';
       }
@@ -186,10 +239,10 @@ export class AuthTokensService {
           expiresAt,
         },
       });
-      return 'ok';
+      return { issuedAt: now };
     });
     // Throw only after commit: reuse/inactive verdicts must keep the revocation.
-    if (result === 'reuse') {
+    if (result === 'reuse' || result === 'reuse-no-revoke') {
       throw new AppError(
         ERROR_CODES.AUTH_REFRESH_REUSE,
         'Refresh token reuse detected',
@@ -210,7 +263,11 @@ export class AuthTokensService {
         401,
       );
     }
-    if (result !== 'ok') throw this.invalid();
+    if (typeof result !== 'object') throw this.invalid();
+    const accessToken = this.jwt.sign({
+      sub: initial.userId,
+      iat: Math.floor(result.issuedAt.getTime() / 1000),
+    });
     return { accessToken, refreshToken: nextRefreshToken };
   }
 

@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `d05a35d`: CI `42216260784` 6/6; ograničena E2E dijagnoza i izvještaj procesnog statusa.
 - `a743e48`: CI `42217150939` 6/6; permission-negative uzorci i javni izuzeci.
-- Tekući commit: D-059 S-01 server plan prije koda; CI čeka push.
+- `93fe880`: CI `42217587567` 6/6; D-059 plan prije koda.
+- Tekući commit: D-059 server replay, testovi i OpenAPI; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -47,4 +47,4 @@ S-01: web djelimično ne ponavlja refresh nakon nepoznatog ishoda; rizik ostaje.
 
 - TEST-01: 593 permission-negative uzorka, 103/171 rute; 0/171 potpuno pokrivenih generičkim cross-tenant fixtureima. Ostalo i ograničenja u TEST-01.
 
-- S-01: D-059 je plan prije koda, ne isporučeni protokol; grace kompromis i promjena globalnog reuse u family-scope izričito zapisani.
+- S-01: D-059 implementira serverski replay i family-scope reuse; grace kompromis i rollout rizici izričito zapisani. Web i dalje traži novu prijavu.

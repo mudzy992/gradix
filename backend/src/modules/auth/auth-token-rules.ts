@@ -17,7 +17,7 @@ const PLATFORM_ADMIN = 'PLATFORM_ADMIN';
 
 export type RefreshVerdict =
   | 'ok'
-  | 'reuse' // token je već rotiran → znak krađe, gasimo sve sesije
+  | 'reuse' // token je opozvan; servis provjerava D-059 replay i porodicu
   | 'invalid' // ne postoji ili je istekao
   | 'inactive' // korisnik deaktiviran
   | 'company-inactive' // firma ugašena

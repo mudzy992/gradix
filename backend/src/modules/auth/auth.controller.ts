@@ -1,5 +1,11 @@
 import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import {
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { AuthTokensService } from './auth-tokens.service';
 import {
@@ -40,6 +46,55 @@ export class AuthController {
 
   @Public()
   @Throttle({ default: { limit: REFRESH_LIMIT, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Rotate a refresh token',
+    description:
+      'For 20 seconds after rotation, replay returns the identical pair only while the direct successor and parent remain valid and the account is active. After the window reuse revokes the token family; legacy unlinked tokens can revoke all sessions. A stolen token can also be replayed during the window.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['refreshToken'],
+      properties: {
+        refreshToken: {
+          type: 'string',
+          description: 'Opaque bearer refresh token; never log or expose it.',
+        },
+      },
+    },
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      required: ['success', 'data'],
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          required: ['accessToken', 'refreshToken'],
+          properties: {
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid, expired, revoked or reused credential.',
+    schema: {
+      type: 'object',
+      required: ['success', 'error'],
+      properties: {
+        success: { type: 'boolean', example: false },
+        error: {
+          type: 'object',
+          required: ['code', 'message'],
+          properties: { code: { type: 'string' }, message: { type: 'string' } },
+        },
+      },
+    },
+  })
   @HttpCode(200)
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {

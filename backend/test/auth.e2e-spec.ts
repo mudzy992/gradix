@@ -53,13 +53,17 @@ describe('Auth (e2e)', () => {
     expect(response.status).toBe(200);
   });
 
-  it('refresh reuse revokes all', async () => {
+  it('expired grace reuse revokes the rotated family', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const first = logged.body.data.refreshToken as string;
     const rotated = await request(app.getHttpServer())
       .post('/api/auth/refresh')
       .send({ refreshToken: first });
     expect(rotated.status).toBe(200);
+    await app.get(PrismaService).refreshToken.update({
+      where: { tokenHash: hashRefreshToken(first) },
+      data: { revokedAt: new Date(Date.now() - 25_000) },
+    });
     const reuse = await request(app.getHttpServer())
       .post('/api/auth/refresh')
       .send({ refreshToken: first });
@@ -71,7 +75,7 @@ describe('Auth (e2e)', () => {
     expect(revokedRotation.status).toBe(401);
   });
 
-  it('characterizes two independent sessions and a lost refresh response', async () => {
+  it('recovers a lost refresh response without invalidating a second device', async () => {
     const prisma = app.get(PrismaService);
     const seed = await prisma.user.findUniqueOrThrow({
       where: { email: 'admin@gradix.local' },
@@ -89,7 +93,6 @@ describe('Auth (e2e)', () => {
       },
     });
     try {
-      // Two separate logins model distinct devices, rather than copying one token.
       const deviceA = await login(app, email);
       const deviceB = await login(app, email);
       expect([deviceA.status, deviceB.status]).toEqual([200, 200]);
@@ -107,9 +110,6 @@ describe('Auth (e2e)', () => {
       expect([rotatedA.status, rotatedB.status]).toEqual([200, 200]);
       const oldA = rotatedA.body.data.refreshToken as string;
       const newB = rotatedB.body.data.refreshToken as string;
-      const accessB = rotatedB.body.data.accessToken as string;
-      // Simulate an unknown outcome by discarding a successful response; this
-      // does not claim to simulate an actual network interruption or browser.
       const discarded = await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken: oldA });
@@ -117,23 +117,28 @@ describe('Auth (e2e)', () => {
       const retry = await request(app.getHttpServer())
         .post('/api/auth/refresh')
         .send({ refreshToken: oldA });
-      expect(retry.status).toBe(401);
-      expect(retry.body.error.code).toBe('AUTH_REFRESH_REUSE');
-      const otherDevice = await request(app.getHttpServer())
-        .post('/api/auth/refresh')
-        .send({ refreshToken: newB });
-      expect(otherDevice.status).toBe(401);
-      // Refresh revocation is not immediate access-token revocation.
+      expect(retry.status).toBe(200);
+      expect(retry.body.data).toEqual(discarded.body.data);
       expect(
-        (await request(app.getHttpServer()).get('/api/me').set(auth(accessB)))
-          .status,
+        (
+          await request(app.getHttpServer())
+            .post('/api/auth/refresh')
+            .send({ refreshToken: newB })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/me')
+            .set(auth(rotatedB.body.data.accessToken as string))
+        ).status,
       ).toBe(200);
     } finally {
       await prisma.user.delete({ where: { id: user.id } });
     }
   });
 
-  it('concurrent use of one refresh token yields one rotation and detects reuse', async () => {
+  it('concurrent use of one refresh token returns the same pair', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const token = logged.body.data.refreshToken as string;
     const [first, second] = await Promise.all([
@@ -144,16 +149,15 @@ describe('Auth (e2e)', () => {
         .post('/api/auth/refresh')
         .send({ refreshToken: token }),
     ]);
-    expect([first.status, second.status].sort()).toEqual([200, 401]);
-    const winner = first.status === 200 ? first : second;
-    const loser = first.status === 401 ? first : second;
-    expect(loser.body.error.code).toBe('AUTH_REFRESH_REUSE');
-    // Reuse revokes even the winning rotation; neither concurrent caller may
-    // keep a second live refresh credential after the response pair completes.
-    const after = await request(app.getHttpServer())
-      .post('/api/auth/refresh')
-      .send({ refreshToken: winner.body.data.refreshToken });
-    expect(after.status).toBe(401);
+    expect([first.status, second.status]).toEqual([200, 200]);
+    expect(first.body.data).toEqual(second.body.data);
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/api/auth/refresh')
+          .send({ refreshToken: first.body.data.refreshToken })
+      ).status,
+    ).toBe(200);
   });
 
   it('logout-all waits for an in-progress rotation and revokes the new token', async () => {
@@ -281,8 +285,7 @@ describe('Auth (e2e)', () => {
       select: { revokedAt: true },
     });
     expect(row.revokedAt).not.toBeNull();
-    // Inspect/rotate the other family before trying the revoked one: reuse of
-    // any revoked token intentionally still triggers the global theft policy.
+    // Repeated logout remains scoped to this family.
     const untouched = await tokens.rotate(otherToken);
     expect(untouched.refreshToken).toEqual(expect.any(String));
     await tokens.logout(userId, firstToken); // idempotent repeated logout

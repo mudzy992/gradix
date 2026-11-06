@@ -65,19 +65,11 @@ backend/src/
 
 - `Authorization: Bearer <access>` — access traje **15 min** (`ACCESS_TTL`), refresh **30 dana**.
 - JWT nosi **samo `sub`**; role/permisije/firma se čitaju iz baze.
-- **Refresh token je neproziran** (48 slučajnih bajtova, base64url); u bazi stoji samo `sha256`
-  hash (`RefreshToken.tokenHash`), pa `JWT_REFRESH_SECRET` ne postoji (D-029).
-- **Rotacija na svaki refresh:** stari token se opoziva, izdaje se novi par. Ponovna upotreba već
-  opozvanog tokena gasi **sve** sesije korisnika (`401 AUTH_REFRESH_REUSE`) — znak krađe.
-  Uslovni opoziv i kreiranje zamjene su jedna transakcija, pa isti token ne može izdati dva
-  nasljednika. Izdavanje, rotacija i opoziv koriste zajednički PostgreSQL row lock korisnika;
-  reuse i opoziv su u istoj transakciji. Nova ispravna prijava poslije opoziva je dozvoljena.
-  Pojedinačni logout opoziva porodicu tokena iste prijave, uključujući potomke nakon rotacije,
-  bez odjave drugih prijava. Postojećim aktivnim tokenima porodica se dodjeljuje pri prvoj
-  rotaciji; stari već rotirani tokeni bez veze s potomkom ne mogu se retroaktivno povezati.
-  Čišćenje starih redova uklanja mogućnost odjave preko obrisanog pretka; stari serveri
-  u miješanom deploymentu ne prate porodicu ni zajednički lock. Ponovna upotreba opozvanog
-  tokena i dalje opoziva sve sesije. Promjena lozinke i administratorski reset atomski
+- **Refresh token je neproziran** (48 bajtova, base64url); početni token je slučajan, a rotirani nasljednik je deterministički HMAC izveden iz roditelja i domenski odvojenog ključa `JWT_ACCESS_SECRET`. U bazi je samo `sha256` hash; zaseban `JWT_REFRESH_SECRET` ne postoji.
+- **Rotacija i replay (D-059):** rotacija i kreiranje nasljednika su jedna transakcija pod lockom Company → User → token. Do 20 sekundi od rotacije isti roditelj može vratiti isti par samo ako su roditelj i direktni nasljednik neistekli, nasljednik nije rotiran/opozvan i nalog je aktivan s dozvoljenom firmom i rolama. Poređenje koristi vrijeme baze pod lockom; JWT `iat` je izveden iz trenutka rotacije. Nakon 20 s ponovna upotreba opoziva **porodicu** (`401 AUTH_REFRESH_REUSE`), ne ostale prijave; za historijski token bez porodice zadržan je globalni opoziv. Tokom prozora replay bez važećeg direktnog nasljednika vraća 401 i ne oživljava sesiju. Pojedinačni logout opoziva porodicu, a logout-all, promjena lozinke i deaktivacija opozivaju sve relevantne refresh sesije.
+- **Sigurnosni kompromis:** svako ko posjeduje ukradeni roditeljski bearer token tokom prozora može dobiti isti par. Rotacija `JWT_ACCESS_SECRET`, različiti ključevi/TTL ili miješane verzije među replikama prekidaju oporavak; stari server može opozvati sve sesije. Koristiti koordinirani rollout i iste postavke na svim replikama. Već izdan access JWT nije opozvan i traje do isteka. Web trenutno i dalje odbacuje token na nepoznat ishod i traži novu prijavu; serverski replay je dostupan kooperativnim klijentima, ali web ga još ne koristi.
+- Čišćenje starih redova uklanja mogućnost odjave preko obrisanog pretka; stari serveri u miješanom deploymentu ne prate porodicu ni zajednički lock.
+- Promjena lozinke i administratorski reset atomski
   mijenjaju hash i opozivaju sesije pod user lockom; promjena lozinke provjerava i da
   prethodno potvrđeni hash nije promijenjen dok se čekao lock. Admin reset ponovo
   provjerava tenant i ciljne role nakon user locka; prava samog aktera se i dalje

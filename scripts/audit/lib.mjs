@@ -164,7 +164,7 @@ const RULES = [
   { re: /^backend\/test\/helpers\//, layer: 'TEST', module: 'e2e-helpers', segment: 'TEST-01' },
   { re: /^backend\/test\/(decimal-scale|project-isolation)\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'TEST-01' },
   { re: /^backend\/test\/jest-e2e\.json$/, layer: 'TEST', module: 'e2e-config', segment: 'TEST-01' },
-  { re: /^backend\/test\/auth\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'BE-02' },
+  { re: /^backend\/test\/auth(?:-refresh-replay)?\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'BE-02' },
   { re: /^backend\/test\/users(-rbac)?\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'BE-03' },
   { re: /^backend\/test\/tenant\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'BE-04' },
   { re: /^backend\/test\/(projects|ops-core)\.e2e-spec\.ts$/, layer: 'TEST', module: 'e2e', segment: 'BE-05' },
