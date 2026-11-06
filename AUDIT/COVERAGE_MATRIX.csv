@@ -376,6 +376,7 @@ backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregleda
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1543,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/project-isolation.e2e-spec.ts,TEST,e2e,TEST-01,137,pokriveno-testom,TEST-01: dvije stvarne firme i 10 rola; GET/PATCH izolacija projektnih ID-eva,2026-11-06
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,439,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom | F-CI-05-69: preciznost goriva i overflow proizvoda; CI 42096898797 prošao.",2026-11-05

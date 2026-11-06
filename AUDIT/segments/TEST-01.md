@@ -97,3 +97,9 @@ Deterministična regeneracija i detalji u `docs/TESTING.md`; ne prepisivati matr
 Lokalna provjera prve faze: fresh PostgreSQL 16, 12 ručno primijenjenih migracija i test-only readiness, route E2E 5/5; backend unit 54/439, frontend 66/645, `check:all` 0 grešaka/2 preskočeno, backend lint/build prošli. CI potvrda slijedi push.
 
 Druga faza: svih 9 firmnih rola × 160 non-public obrazaca s tuđim `X-Company-Id` vraća 400 `TENANT_HEADER_FORBIDDEN` (1.440 uzoraka); platform admin × 151 tenant obrazac bez zaglavlja vraća 403 `TENANT_HEADER_REQUIRED`, s nepoznatom firmom 404 `NOT_FOUND` (302 uzorka). Test koristi izolovane fixture naloge i čisti ih; još ne dokazuje izolaciju resursa unutar dozvoljenog konteksta, validan odabir firme, permission check ili javne/IoT rute.
+
+### Stvarni projektni resursi (2026-11-06)
+
+`project-isolation.e2e-spec.ts` koristi dvije odvojene firme, stvarne projektne ID-eve i svih 10 rola. Svih devet firmnih naloga ima fixture assignment na vlastiti projekat: GET vlastitog vraća 200, tuđeg 404; PATCH vlastitog dozvoljen je za četiri write role (uključujući platform admin), ostali dobiju 403; PATCH tuđeg vraća 404 za write role, 403 ostalima i provjerava se da strani zapis nije promijenjen. Platform admin sa odabranom drugom firmom može pročitati njen projekt, ali ne projekt prve. Test čisti fixture i audit. Ovo nije dokaz neassigned korisnika, drugih resursa/metoda, konkurentnosti ili svih ruta; generisane ćelije ostaju `unassessed`.
+
+Provjera: fresh PostgreSQL 16, 12 ručno primijenjenih SQL migracija + test-only readiness i seed; oba E2E fajla 8/8, izlaz 0; backend unit 54/439, lint/build, frontend 66/650 i `check:all` 0 grešaka/2 skip. Prvi fresh kombinovani pokret pod paralelnim opterećenjem ispisao je 8/8, ali je proces vratio 1 bez dodatnog razloga; zasebni i ponovljeni kombinovani pokret su vratili 0, kao i ponavljanje na drugoj svježoj bazi. Uzrok prvog izlaza ostaje nepoznat.

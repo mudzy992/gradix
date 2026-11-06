@@ -13,8 +13,8 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 ## Zadnji commit i CI
 
 - `72c4e7c`: CI `42209374216` 6/6; S-01 dvije nezavisne sesije.
-- `d6c1fa0`: CI `42200813899` 6/6; role × tenant header testovi.
-- Tekući commit: web fail-closed ublažavanje nepoznatog refresh ishoda; CI čeka push.
+- `bdaa426`: CI `42210988539` 6/6; djelimično web ublažavanje nepoznatog refresh ishoda.
+- Tekući commit: TEST-01 projektna izolacija resursa; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -40,3 +40,5 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 ## Sljedeći korak
 
 S-01: web djelimično ne ponavlja refresh nakon nepoznatog ishoda; rizik ostaje. Nastaviti TEST-01 cross-tenant, S-red i TEST-02 dok vlasnik pregleda K2. Detalji u [handoffu](HANDOFF.md).
+
+- TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
