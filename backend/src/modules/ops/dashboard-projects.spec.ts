@@ -15,9 +15,14 @@ const actor = (
   }) as AuthUser;
 
 function setup(rows: unknown[] = []) {
-  const findMany = jest
-    .fn<Promise<unknown[]>, [unknown]>()
-    .mockResolvedValue(rows);
+  const findMany = jest.fn<Promise<unknown[]>, [unknown]>().mockResolvedValue(
+    rows.map((row) => ({
+      lat: null,
+      lng: null,
+      geofenceRadius: 100,
+      ...(row as object),
+    })),
+  );
   const findFirst = jest.fn().mockResolvedValue({ id: 'p1' });
   return {
     findMany,
@@ -60,6 +65,9 @@ describe('DashboardProjectsService', () => {
         id: 'p1',
         name: 'Project',
         status: 'IN_PROGRESS',
+        lat: null,
+        lng: null,
+        geofenceRadius: 100,
         plannedBudget: '9999999999.99',
         currentSpend: '1234567890.01',
       },
@@ -67,6 +75,9 @@ describe('DashboardProjectsService', () => {
         id: 'p2',
         name: 'Zero',
         status: 'PLANNING',
+        lat: null,
+        lng: null,
+        geofenceRadius: 100,
         plannedBudget: '0.00',
         currentSpend: '0.00',
       },
@@ -74,6 +85,9 @@ describe('DashboardProjectsService', () => {
         id: 'p3',
         name: 'No budget',
         status: 'PLANNING',
+        lat: null,
+        lng: null,
+        geofenceRadius: 100,
         plannedBudget: null,
         currentSpend: '0.10',
       },
@@ -148,5 +162,34 @@ describe('DashboardProjectsService', () => {
       service.list(actor(['ADMIN']), { cursor: 'foreign' }),
     ).rejects.toMatchObject({ status: 400 });
     expect(findMany).not.toHaveBeenCalled();
+  });
+  it('returns project coordinates as exact decimal strings and preserves missing geometry', async () => {
+    const { service } = setup([
+      {
+        id: 'p1',
+        name: 'Geo',
+        status: 'IN_PROGRESS',
+        plannedBudget: null,
+        currentSpend: decimal('0'),
+        lat: decimal('43.8562581'),
+        lng: decimal('18.4130763'),
+        geofenceRadius: 200,
+      },
+      {
+        id: 'p2',
+        name: 'Empty',
+        status: 'PLANNING',
+        plannedBudget: null,
+        currentSpend: decimal('0'),
+        lat: null,
+        lng: null,
+        geofenceRadius: 100,
+      },
+    ]);
+    const result = await service.list(actor(['ADMIN']));
+    expect(result.data).toMatchObject([
+      { id: 'p1', lat: '43.8562581', lng: '18.4130763', geofenceRadius: 200 },
+      { id: 'p2', lat: null, lng: null, geofenceRadius: 100 },
+    ]);
   });
 });

@@ -544,3 +544,5 @@ Demo seed (`SEED_DEMO=true`) dodaje determinističke, jasno označene završene 
 ### Upozorenja o rokovima zadataka (BE-19)
 
 `GET /api/alerts/tasks?limit=20&cursor=<task-id>` vraća nezavršene zadatke aktivnih nearhiviranih projekata odabranog tenanta čiji je `plannedEnd` već prošao ili je unutar narednih 30 × 24 sata. Rangiranje je po apsolutnom UTC trenutku isteka, pa ID-u; `CRITICAL` je prošao rok, `HIGH` je do 5 dana, `MEDIUM` do 15, a `LOW` do 30 dana. `plannedEnd` se vraća kao UTC ISO timestamp, ne kao lokalni kalendarski rok. Samo tenant administratori s `projects.read` i `tasks.read` imaju pristup. Limit je 1–20; `meta.nextCursor` je ID zadnjeg reda ili null, a cursor iz drugog tenanta ili van scopea vraća 400. Rezultati nisu snapshot i promjena roka/statusa između stranica može promijeniti stranicu.
+
+`/api/dashboard/projects` uz svaku vidljivu stavku dodatno vraća projektne `lat` i `lng` kao decimalne stringove sa sedam decimala (ili null) te `geofenceRadius` kao cijeli broj metara. To su koordinate projekta, ne sirova lokacija osobe; ista `projects.read` i tenant/assignment ograničenja važe za sve stranice. Nedostajuća koordinata ne implicira (0, 0).

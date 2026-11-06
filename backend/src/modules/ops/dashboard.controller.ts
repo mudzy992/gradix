@@ -75,11 +75,23 @@ export class DashboardController {
           type: 'array',
           items: {
             type: 'object',
-            required: ['id', 'name', 'status', 'plannedBudget', 'currentSpend'],
+            required: [
+              'id',
+              'name',
+              'status',
+              'lat',
+              'lng',
+              'geofenceRadius',
+              'plannedBudget',
+              'currentSpend',
+            ],
             properties: {
               id: { type: 'string' },
               name: { type: 'string' },
               status: { type: 'string' },
+              lat: { type: 'string', nullable: true, example: '43.8562581' },
+              lng: { type: 'string', nullable: true, example: '18.4130763' },
+              geofenceRadius: { type: 'integer' },
               plannedBudget: {
                 type: 'string',
                 nullable: true,

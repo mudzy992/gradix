@@ -75,3 +75,5 @@ Demo seed daje sintetički promjenjiv 30-dnevni niz zadataka i odobrenih timera 
 `/analytics/summary` je zaseban tenant-admin scalarni izvor aktuelnih agregata, uključujući broj projekata s budžetom i tačan zbir poznatih budžeta. To nije transakcijski snapshot ni paginirana lista. UI još nije spojen.
 
 `/alerts/tasks` daje severity i paginaciju za nezavršene zadatke u aktivnim projektima s prošlim ili bliskim UTC rokom. UI još nije spojen.
+
+Projects API vraća projektne `lat`/`lng` kao decimalne stringove ili null i radijus u metrima za lazy mapu; ne izlaže lokacije ljudi.

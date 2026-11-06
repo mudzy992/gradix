@@ -99,7 +99,12 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     });
     const own = await prisma.project.update({
       where: { id: projectId },
-      data: { name: 'A scoped dashboard project', plannedBudget: '100.13' },
+      data: {
+        name: 'A scoped dashboard project',
+        plannedBudget: '100.13',
+        lat: '43.8562581',
+        lng: '18.4130763',
+      },
     });
     const extra = await Promise.all(
       Array.from({ length: 12 }, (_, index) =>
@@ -167,6 +172,9 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
             id: projectId,
             plannedBudget: '100.13',
             currentSpend: '0.00',
+            lat: '43.8562581',
+            lng: '18.4130763',
+            geofenceRadius: expect.any(Number),
           }),
         ]),
       );
