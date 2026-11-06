@@ -257,6 +257,7 @@ model RefreshToken {
   tokenHash  String    @unique
   lineageKey String?
   replayCount Int      @default(0)
+  generation Int       @default(0)
   expiresAt  DateTime
   revokedAt  DateTime?
   userId     String
@@ -266,6 +267,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([userId, lineageKey])
+  @@index([userId, lineageKey, generation])
 }
 
 model Device {

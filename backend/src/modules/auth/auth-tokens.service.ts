@@ -14,6 +14,8 @@ import { evaluateRefreshToken } from './auth-token-rules';
 import {
   deriveRefreshSuccessor,
   isWithinRefreshReplayWindow,
+  RefreshReplayClock,
+  safeRefreshHashEqual,
   REFRESH_REPLAY_MAX_RETRIES,
 } from './auth-refresh-replay';
 import { ERROR_CODES } from '../../common/errors/error-codes';
@@ -27,6 +29,7 @@ export class AuthTokensService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly replayClock: RefreshReplayClock,
   ) {}
 
   // Issuance/rotation lock Company (SHARE) -> User -> RefreshToken.
@@ -133,12 +136,6 @@ export class AuthTokensService {
     });
     if (!initial) throw this.invalid();
 
-    // A secret-derived successor lets us reconstruct the identical response
-    // without persisting bearer credentials. The key is domain-separated from JWT.
-    const nextRefreshToken = deriveRefreshSuccessor(
-      refreshToken,
-      this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-    );
     const result = await this.prisma.$transaction(async (tx) => {
       await this.lockCompanyForIssuance(tx, initial.user.companyId);
       await this.lockUser(tx, initial.userId);
@@ -154,10 +151,15 @@ export class AuthTokensService {
         return 'invalid';
       // Use the database clock *after* waiting for the user lock so concurrent
       // replicas agree on the rotation instant and replay window.
-      const [clock] = await tx.$queryRaw<
-        { now: Date }[]
-      >`SELECT clock_timestamp() AS now`;
-      const now = clock.now;
+      const now = await this.replayClock.now(tx);
+      if (!existing) return 'invalid';
+      const lineageKey = existing.lineageKey ?? existing.id;
+      const nextRefreshToken = deriveRefreshSuccessor(
+        refreshToken,
+        this.config.getOrThrow<string>('REFRESH_REPLAY_SECRET'),
+        lineageKey,
+        existing.generation,
+      );
       const owner = existing?.user
         ? {
             isActive: existing.user.isActive,
@@ -174,11 +176,20 @@ export class AuthTokensService {
               now,
             ) === 'ok';
           if (eligible && existing.lineageKey) {
-            const child = await tx.refreshToken.findUnique({
-              where: { tokenHash: hashRefreshToken(nextRefreshToken) },
+            const child = await tx.refreshToken.findFirst({
+              where: {
+                userId: existing.userId,
+                lineageKey: existing.lineageKey,
+                generation: existing.generation + 1,
+                revokedAt: null,
+              },
             });
             if (
               child &&
+              safeRefreshHashEqual(
+                child.tokenHash,
+                hashRefreshToken(nextRefreshToken),
+              ) &&
               child.userId === existing.userId &&
               child.lineageKey === existing.lineageKey &&
               !child.revokedAt &&
@@ -191,7 +202,7 @@ export class AuthTokensService {
                 where: { id: existing.id },
                 data: { replayCount: { increment: 1 } },
               });
-              return { issuedAt: existing.revokedAt };
+              return { issuedAt: existing.revokedAt, nextRefreshToken };
             }
           }
           // Logout, expired/rotated child, legacy tokens or key rotation must
@@ -222,17 +233,16 @@ export class AuthTokensService {
       }
       // Each successor inherits the parent's deadline; rotation and replay can
       // never extend the lifetime granted to the currently presented token.
-      const expiresAt = existing!.expiresAt;
+      const expiresAt = existing.expiresAt;
       // Old rows have no family yet. Establish one on their first rotation
       // without changing legacy rows or relying on another process to migrate.
-      const lineageKey = existing!.lineageKey ?? existing!.id;
       const consumed = await tx.refreshToken.updateMany({
-        where: { id: existing!.id, revokedAt: null, expiresAt: { gt: now } },
+        where: { id: existing.id, revokedAt: null, expiresAt: { gt: now } },
         data: { revokedAt: now, lineageKey },
       });
       if (consumed.count !== 1) {
         const current = await tx.refreshToken.findUnique({
-          where: { id: existing!.id },
+          where: { id: existing.id },
           select: { revokedAt: true },
         });
         if (current?.revokedAt) {
@@ -245,10 +255,11 @@ export class AuthTokensService {
           userId: initial.userId,
           tokenHash: hashRefreshToken(nextRefreshToken),
           lineageKey,
+          generation: existing.generation + 1,
           expiresAt,
         },
       });
-      return { issuedAt: now };
+      return { issuedAt: now, nextRefreshToken };
     });
     // Throw only after commit: reuse/inactive verdicts must keep the revocation.
     if (result === 'reuse' || result === 'reuse-no-revoke') {
@@ -277,7 +288,7 @@ export class AuthTokensService {
       sub: initial.userId,
       iat: Math.floor(result.issuedAt.getTime() / 1000),
     });
-    return { accessToken, refreshToken: nextRefreshToken };
+    return { accessToken, refreshToken: result.nextRefreshToken };
   }
 
   /**

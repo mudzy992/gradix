@@ -1,0 +1,27 @@
+S-01 replay tests on isolated PostgreSQL 16, 14 SQL migrations manually applied, test-only migration readiness metadata and demo seed. Production uses database clock after locking; this E2E suite injects a fixed clock and explicitly tests 19,999 and 20,000 ms, no sleeps. Every invocation runs one suite, 16 tests; five parallel invocations used separate Jest processes and distinct randomly named test users on the same DB. Exit codes (no --forceExit):
+serial-01 0
+serial-02 0
+serial-03 0
+serial-04 0
+serial-05 0
+serial-06 0
+serial-07 0
+serial-08 0
+serial-09 0
+serial-10 0
+serial-11 0
+serial-12 0
+serial-13 0
+serial-14 0
+serial-15 0
+serial-16 0
+serial-17 0
+serial-18 0
+serial-19 0
+serial-20 0
+parallel-01 0
+parallel-02 0
+parallel-03 0
+parallel-04 0
+parallel-05 0
+Production-mode process with missing REFRESH_REPLAY_SECRET: exit 1 and REFRESH_REPLAY_SECRET je obavezan. No secret or raw test logs recorded. CI 42275204800 failed test/erp.e2e-spec.ts, not this suite; its root cause remains unknown, and repeated S-01 successes do not identify that cause.

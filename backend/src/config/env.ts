@@ -20,6 +20,7 @@ export interface AppEnv {
   PORT: number;
   DATABASE_URL: string;
   JWT_ACCESS_SECRET: string;
+  REFRESH_REPLAY_SECRET: string;
   CORS_ORIGIN?: string;
   MINIO_ENDPOINT?: string;
   MINIO_PORT: number;
@@ -118,6 +119,19 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
     );
   }
 
+  const replaySecret = optional(raw.REFRESH_REPLAY_SECRET);
+  if (!replaySecret) {
+    errors.push('REFRESH_REPLAY_SECRET je obavezan');
+  } else if (replaySecret.length < MIN_SECRET_LENGTH) {
+    errors.push(
+      `REFRESH_REPLAY_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`,
+    );
+  } else if (replaySecret === accessSecret) {
+    errors.push(
+      'REFRESH_REPLAY_SECRET mora biti različit od JWT_ACCESS_SECRET',
+    );
+  }
+
   const corsOrigin = optional(raw.CORS_ORIGIN);
 
   const minioSkip = asBool('MINIO_SKIP', raw.MINIO_SKIP, false, errors);
@@ -161,6 +175,7 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
   out.PORT = String(asInt('PORT', raw.PORT, 3000, errors));
   out.DATABASE_URL = databaseUrl as string;
   out.JWT_ACCESS_SECRET = accessSecret as string;
+  out.REFRESH_REPLAY_SECRET = replaySecret as string;
   if (corsOrigin) out.CORS_ORIGIN = corsOrigin;
   if (minioEndpoint) out.MINIO_ENDPOINT = minioEndpoint;
   out.MINIO_PORT = String(asInt('MINIO_PORT', raw.MINIO_PORT, 9000, errors));

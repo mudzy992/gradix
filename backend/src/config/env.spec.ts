@@ -8,6 +8,7 @@ import {
 const BASE = {
   DATABASE_URL: 'postgresql://user:pass@postgres:5432/gradix?schema=public',
   JWT_ACCESS_SECRET: 'a'.repeat(32),
+  REFRESH_REPLAY_SECRET: 'r'.repeat(32),
   MINIO_SKIP: 'true',
 };
 
@@ -74,6 +75,21 @@ describe('validateEnv', () => {
         DATABASE_URL: 'mysql://user:pass@db:3306/gradix',
       }),
     ).toThrow(/postgresql:\/\//);
+  });
+
+  it('zahtijeva zasebnu refresh replay tajnu od najmanje 32 znaka', () => {
+    expect(() =>
+      validateEnv({ ...BASE, REFRESH_REPLAY_SECRET: undefined }),
+    ).toThrow(/REFRESH_REPLAY_SECRET/);
+    expect(() =>
+      validateEnv({ ...BASE, REFRESH_REPLAY_SECRET: 'short' }),
+    ).toThrow(/REFRESH_REPLAY_SECRET/);
+    expect(() =>
+      validateEnv({ ...BASE, REFRESH_REPLAY_SECRET: BASE.JWT_ACCESS_SECRET }),
+    ).toThrow(/REFRESH_REPLAY_SECRET/);
+    expect(validateEnv(BASE).REFRESH_REPLAY_SECRET).toBe(
+      BASE.REFRESH_REPLAY_SECRET,
+    );
   });
 
   it('odbija prekratku access tajnu', () => {

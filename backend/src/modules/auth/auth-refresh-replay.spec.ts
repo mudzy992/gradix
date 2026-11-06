@@ -1,6 +1,7 @@
 import {
   deriveRefreshSuccessor,
   isWithinRefreshReplayWindow,
+  safeRefreshHashEqual,
 } from './auth-refresh-replay';
 
 describe('refresh replay primitives', () => {
@@ -25,14 +26,33 @@ describe('refresh replay primitives', () => {
   it('derives a stable, domain-separated 48-byte opaque successor bound to parent and secret', () => {
     const parent = 'random-parent-token';
     const secret = 'test-secret-for-refresh-derivation';
-    const first = deriveRefreshSuccessor(parent, secret);
-    expect(first).toEqual(deriveRefreshSuccessor(parent, secret));
+    const first = deriveRefreshSuccessor(parent, secret, 'family-1', 0);
+    expect(first).toEqual(
+      deriveRefreshSuccessor(parent, secret, 'family-1', 0),
+    );
     expect(first).toMatch(/^[A-Za-z0-9_-]{64}$/);
     expect(first).not.toBe(
-      deriveRefreshSuccessor('other-parent-token', secret),
+      deriveRefreshSuccessor('other-parent-token', secret, 'family-1', 0),
     );
     expect(first).not.toBe(
-      deriveRefreshSuccessor(parent, 'other-test-secret-for-refresh'),
+      deriveRefreshSuccessor(
+        parent,
+        'other-test-secret-for-refresh',
+        'family-1',
+        0,
+      ),
     );
+    expect(first).not.toBe(
+      deriveRefreshSuccessor(parent, secret, 'family-2', 0),
+    );
+    expect(first).not.toBe(
+      deriveRefreshSuccessor(parent, secret, 'family-1', 1),
+    );
+  });
+  it('compares only valid fixed-size hashes using timingSafeEqual', () => {
+    const hash = 'ab'.repeat(32);
+    expect(safeRefreshHashEqual(hash, hash)).toBe(true);
+    expect(safeRefreshHashEqual(hash, 'ab'.repeat(31) + 'ac')).toBe(false);
+    expect(safeRefreshHashEqual(hash, 'garbage')).toBe(false);
   });
 });

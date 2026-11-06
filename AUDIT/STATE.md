@@ -12,9 +12,8 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `0d6f834`: CI [42276252687](https://github.com/mudzy992/gradix/actions/runs/42276252687) 6/6; fingerprint reportera, ne dokaz uzroka ranijeg pada.
-- `37b0542`: CI [42277336135](https://github.com/mudzy992/gradix/actions/runs/42277336135) 6/6; automatski discovery uzorci, 12/171 full; blokade TEST-01.
-- Tekući commit: djelimični OpenAPI snapshot i runtime operation gate; strogi DTO/error/pagination nedostaje (BL-OPENAPI-01), CI čeka push.
+- `b3e9b12`: CI [42278341873](https://github.com/mudzy992/gradix/actions/runs/42278341873) 6/6 uključujući Web E2E; djelimični OpenAPI gate.
+- Tekući commit: S-01 zaseban obavezni replay ključ, family+generation, timingSafeEqual i injektovani testni sat; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -39,7 +38,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Sljedeći korak
 
-TEST-01 discovery ostaje ispod cilja; generički test-only seed i validne mutacije/pozitivne kontrole su sljedeći. OpenAPI gate blokiran postojećim ugovorima; zatim TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
+TEST-01 strogi Prisma tenant mod i statička provjera su sljedeći; discovery je ispod cilja. OpenAPI gate blokiran postojećim ugovorima; zatim TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
 

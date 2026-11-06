@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { MeController } from './me.controller';
 import { AuthService } from './auth.service';
 import { AuthTokensService } from './auth-tokens.service';
+import { RefreshReplayClock } from './auth-refresh-replay';
 import { JwtStrategy } from './jwt.strategy';
 
 @Module({
@@ -21,7 +22,7 @@ import { JwtStrategy } from './jwt.strategy';
     }),
   ],
   controllers: [AuthController, MeController],
-  providers: [AuthService, AuthTokensService, JwtStrategy],
+  providers: [AuthService, AuthTokensService, RefreshReplayClock, JwtStrategy],
   exports: [AuthTokensService],
 })
 export class AuthModule {}

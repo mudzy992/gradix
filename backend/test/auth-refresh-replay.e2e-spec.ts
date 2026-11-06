@@ -7,6 +7,9 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { hashRefreshToken } from '../src/common/utils/password';
+import { RefreshReplayClock } from '../src/modules/auth/auth-refresh-replay';
+
+const FIXED_NOW = new Date('2035-01-01T00:00:00.000Z');
 import { auth, login } from './helpers/auth';
 import { createTestApp } from './helpers/create-app';
 
@@ -35,6 +38,14 @@ describe('D-059 refresh replay (e2e)', () => {
     });
     userId = user.id;
   });
+  beforeEach(() => {
+    jest
+      .spyOn(app.get(RefreshReplayClock), 'now')
+      .mockResolvedValue(new Date(FIXED_NOW));
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
   afterAll(async () => {
     if (userId) await prisma.user.delete({ where: { id: userId } });
     await app?.close();
@@ -46,7 +57,16 @@ describe('D-059 refresh replay (e2e)', () => {
   const signIn = async () => {
     const response = await login(app, email);
     expect(response.status).toBe(200);
-    return response.body.data as { refreshToken: string; accessToken: string };
+    const pair = response.body.data as {
+      refreshToken: string;
+      accessToken: string;
+    };
+    // Issuance uses the real login clock; make the token valid at the frozen replay clock.
+    await prisma.refreshToken.update({
+      where: { tokenHash: hashRefreshToken(pair.refreshToken) },
+      data: { expiresAt: new Date(FIXED_NOW.getTime() + 30 * 86400_000) },
+    });
+    return pair;
   };
   it('documents the refresh replay window and envelope in OpenAPI', () => {
     const document = SwaggerModule.createDocument(
@@ -92,7 +112,7 @@ describe('D-059 refresh replay (e2e)', () => {
   });
   it('never extends the family expiry on rotation or grace replay', async () => {
     const a = await signIn();
-    const expiry = new Date(Date.now() + 60_000);
+    const expiry = new Date(FIXED_NOW.getTime() + 60_000);
     await prisma.refreshToken.update({
       where: { tokenHash: hashRefreshToken(a.refreshToken) },
       data: { expiresAt: expiry },
@@ -132,6 +152,38 @@ describe('D-059 refresh replay (e2e)', () => {
       }),
     ).toBe(1);
   });
+  it('accepts replay at 19,999 ms but revokes at exactly 20,000 ms with an injected clock', async () => {
+    const a = await signIn();
+    const first = await refresh(a.refreshToken);
+    expect(first.status).toBe(200);
+    const clock = jest.spyOn(app.get(RefreshReplayClock), 'now');
+    clock.mockResolvedValue(new Date(FIXED_NOW.getTime() + 19_999));
+    expect((await refresh(a.refreshToken)).body.data).toEqual(first.body.data);
+    clock.mockResolvedValue(new Date(FIXED_NOW.getTime() + 20_000));
+    expect((await refresh(a.refreshToken)).status).toBe(401);
+    expect((await refresh(first.body.data.refreshToken as string)).status).toBe(
+      401,
+    );
+  });
+  it('binds successive tokens to one family and increments parent generation', async () => {
+    const a = await signIn();
+    const first = await refresh(a.refreshToken);
+    const next = await refresh(first.body.data.refreshToken as string);
+    expect(next.status).toBe(200);
+    const tokens = await Promise.all(
+      [
+        a.refreshToken,
+        first.body.data.refreshToken,
+        next.body.data.refreshToken,
+      ].map((token: string) =>
+        prisma.refreshToken.findUniqueOrThrow({
+          where: { tokenHash: hashRefreshToken(token) },
+        }),
+      ),
+    );
+    expect(tokens.map((token) => token.generation)).toEqual([0, 1, 2]);
+    expect(new Set(tokens.map((token) => token.lineageKey)).size).toBe(1);
+  });
   it('revokes only the reused family after the grace period', async () => {
     const a = await signIn();
     const b = await signIn();
@@ -139,7 +191,7 @@ describe('D-059 refresh replay (e2e)', () => {
     expect(first.status).toBe(200);
     await prisma.refreshToken.update({
       where: { tokenHash: hashRefreshToken(a.refreshToken) },
-      data: { revokedAt: new Date(Date.now() - 25_000) },
+      data: { revokedAt: new Date(FIXED_NOW.getTime() - 25_000) },
     });
     const stolen = await refresh(a.refreshToken);
     expect([stolen.status, stolen.body.error.code]).toEqual([
@@ -184,7 +236,7 @@ describe('D-059 refresh replay (e2e)', () => {
     expect(first.status).toBe(200);
     await prisma.refreshToken.update({
       where: { tokenHash: hashRefreshToken(a.refreshToken) },
-      data: { expiresAt: new Date(Date.now() - 1_000) },
+      data: { expiresAt: new Date(FIXED_NOW.getTime() - 1_000) },
     });
     expect((await refresh(a.refreshToken)).status).toBe(401);
     expect((await refresh(first.body.data.refreshToken as string)).status).toBe(
@@ -212,7 +264,7 @@ describe('D-059 refresh replay (e2e)', () => {
       where: {
         tokenHash: hashRefreshToken(first.body.data.refreshToken as string),
       },
-      data: { expiresAt: new Date(Date.now() - 1000) },
+      data: { expiresAt: new Date(FIXED_NOW.getTime() - 1000) },
     });
     expect((await refresh(a.refreshToken)).status).toBe(401);
   });
@@ -257,7 +309,10 @@ describe('D-059 refresh replay (e2e)', () => {
     const b = await signIn();
     await prisma.refreshToken.update({
       where: { tokenHash: hashRefreshToken(a.refreshToken) },
-      data: { lineageKey: null, revokedAt: new Date(Date.now() - 25_000) },
+      data: {
+        lineageKey: null,
+        revokedAt: new Date(FIXED_NOW.getTime() - 25_000),
+      },
     });
     const reuse = await refresh(a.refreshToken);
     expect([reuse.status, reuse.body.error.code]).toEqual([

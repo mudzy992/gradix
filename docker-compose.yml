@@ -77,6 +77,7 @@ services:
       # EKSTERNA PostgreSQL baza — hostname mora biti razrješiv u mreži `db_net`
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL je obavezan (postgresql://user:pass@host:5432/db)}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET je obavezan (min 32 znaka)}
+      REFRESH_REPLAY_SECRET: ${REFRESH_REPLAY_SECRET:?REFRESH_REPLAY_SECRET je obavezan (min 32 znaka i različit od JWT)}
       # MinIO — interni servis iz ovog compose fajla
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
       MINIO_PORT: 9000

@@ -905,3 +905,7 @@ Nakon prozora ponovna upotreba opoziva porodicu (`lineageKey`), prema vlasnikovo
 | `.cursor/rules/00_project.mdc` (penzionisano) | „Banned: PostgreSQL“, MySQL 8 | D-001 |
 | `PLAN_FREEZE.md` (penzionisano) | cross-cutting pravila | prenesena u `BACKEND.md` (važeća), MySQL dio povučen |
 | `ANALIZA_I_PLAN_PRODUKCIJA.md` (penzionisano) | stanje bez Docker/Coolify | D-020…D-025 |
+
+### D-059 dopuna: zaseban replay ključ i generacija (2026-11-06)
+
+`REFRESH_REPLAY_SECRET` je obavezan, nezavisan od JWT access tajne (min. 32 znaka, različita vrijednost); nedostaje/neispravan znači startup failure. HMAC-v2 veže parent bearer, ID porodice i generaciju roditelja; `generation` je aditivna kolona s default 0, dijete je parent+1. Usporedba očekivanog s pronađenim SHA-256 hashom je `timingSafeEqual`; lookup u bazi po hashu nije garantovano constant-time. Aktivni legacy tokeni mogu se rotirati po v2, ali replay roditelja koji je rotiran po v1 tokom prelaza neće rekonstruisati dijete; 401 bez opoziva živog djeteta. Miješanje verzija ne garantuje granice; rollout u `BACKEND.md` uz koordinaciju. Stari D-059 tekst o korištenju JWT tajne zamijenjen je ovom dopunom.

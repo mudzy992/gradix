@@ -1,4 +1,6 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../../generated/client';
 
 export const REFRESH_REPLAY_GRACE_MS = 20_000;
 export const REFRESH_REPLAY_MAX_RETRIES = 2;
@@ -11,17 +13,36 @@ export function isWithinRefreshReplayWindow(
   return age >= 0 && age < REFRESH_REPLAY_GRACE_MS;
 }
 
+/** The real clock is obtained only after the transaction has acquired the lock. */
+@Injectable()
+export class RefreshReplayClock {
+  async now(tx: Prisma.TransactionClient): Promise<Date> {
+    const [clock] = await tx.$queryRaw<
+      { now: Date }[]
+    >`SELECT clock_timestamp() AS now`;
+    return clock.now;
+  }
+}
+
 /** Deterministic opaque 48-byte successor; never store/log parent or output. */
 export function deriveRefreshSuccessor(
   parent: string,
-  accessSecret: string,
+  replaySecret: string,
+  family: string,
+  generation: number,
 ): string {
-  const key = createHmac('sha512', accessSecret)
-    .update('gradix.refresh.replay.v1')
-    .digest();
-  return createHmac('sha512', key)
-    .update(parent)
+  return createHmac('sha512', replaySecret)
+    .update(
+      JSON.stringify(['gradix.refresh.replay.v2', family, generation, parent]),
+    )
     .digest()
     .subarray(0, 48)
     .toString('base64url');
+}
+
+/** Both inputs must be canonical fixed-size SHA-256 hashes. */
+export function safeRefreshHashEqual(left: string, right: string): boolean {
+  if (!/^[0-9a-f]{64}$/.test(left) || !/^[0-9a-f]{64}$/.test(right))
+    return false;
+  return timingSafeEqual(Buffer.from(left, 'hex'), Buffer.from(right, 'hex'));
 }

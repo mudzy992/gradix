@@ -91,6 +91,7 @@ jobs:
       # `prisma generate` čita DATABASE_URL iz prisma.config.ts (bez konekcije)
       DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+      REFRESH_REPLAY_SECRET: ci-replay-secret-min-32-characters
       MINIO_ENDPOINT: localhost
       MINIO_PORT: '9000'
       MINIO_USE_SSL: 'false'
@@ -199,6 +200,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+      REFRESH_REPLAY_SECRET: ci-replay-secret-min-32-characters
       MINIO_ENDPOINT: localhost
       MINIO_PORT: '9000'
       MINIO_USE_SSL: 'false'
@@ -320,6 +322,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+      REFRESH_REPLAY_SECRET: ci-replay-secret-min-32-characters
       MINIO_ENDPOINT: localhost
       MINIO_PORT: '9000'
       MINIO_USE_SSL: 'false'
@@ -491,6 +494,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
           JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+          REFRESH_REPLAY_SECRET: ci-replay-secret-min-32-characters
         run: |
           docker compose config --quiet
           # Coolify deploya blue/green (stari i novi kontejner kratko rade
@@ -563,6 +567,7 @@ jobs:
           out=$(docker run --rm \
             -e DATABASE_URL='postgresql://u:p@127.0.0.1:5432/gradix?sslmode=verify-ca&sslrootcert=/etc/ssl/certs/nope.crt' \
             -e JWT_ACCESS_SECRET=ci-access-secret-min-32-characters \
+            -e REFRESH_REPLAY_SECRET=ci-replay-secret-min-32-characters \
             gradix-backend:ci 2>&1)
           code=$?
           set -e
@@ -642,6 +647,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://root:root@localhost:5432/gradix?schema=public
           JWT_ACCESS_SECRET: ci-access-secret-min-32-characters
+          REFRESH_REPLAY_SECRET: ci-replay-secret-min-32-characters
         run: |
           set -euo pipefail
           image=$(docker compose config --images | grep -i minio | head -1)
@@ -696,6 +702,7 @@ jobs:
           docker run -d --name gradix-backend-ci --network host \
             -e DATABASE_URL="$DATABASE_URL" \
             -e JWT_ACCESS_SECRET=ci-access-secret-min-32-characters \
+            -e REFRESH_REPLAY_SECRET=ci-replay-secret-min-32-characters \
             -e MINIO_SKIP=true \
             -e MINIO_ENDPOINT=localhost \
             -e MINIO_PORT=9000 \

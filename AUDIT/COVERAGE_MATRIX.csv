@@ -1,8 +1,8 @@
 file,layer,module,segment,loc,status,findings,date
-.env.coolify,INF,compose,INF-01,97,pregledano,FE-11/D-050: throttle limiti na produkcijskim defaultima,2026-11-03
-.env.example,INF,compose,INF-01,105,pregledano,FE-11/D-050: dokumentovani throttle limiti sa defaultima,2026-11-03
+.env.coolify,INF,compose,INF-01,98,pregledano,FE-11/D-050: throttle limiti na produkcijskim defaultima,2026-11-03
+.env.example,INF,compose,INF-01,106,pregledano,FE-11/D-050: dokumentovani throttle limiti sa defaultima,2026-11-03
 .github/workflows/backup-restore.yml,CI,ci,CI-01,157,pregledano,"CI-05: pregled drill-a; SQL greška i nevalidni brojevi ne mogu proći, broj migracija mora odgovarati.",2026-11-04
-.github/workflows/ci.yml,CI,ci,CI-01,739,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda. | BL-011: unit dijagnostika, summary i artefakt i na padu.",2026-11-06
+.github/workflows/ci.yml,CI,ci,CI-01,746,pregledano,"FE-11: „Playwright sažetak padova“ (`::error::` po padu) i podignuti throttle limiti samo u web-e2e poslu | CI-02: workflow_dispatch inputi `suite`/`verbose`/`tag`, `run-name`, `if:` na svih 6 poslova, oznaka u imenima artefakata | CI-05: regresijski testovi audit gatea u audit jobu. | CI-05: audit job pokreće regresijske testove matrice i backup/restore workflow provjere. | CI-05: audit job uključuje testove sigurnosti inventara i scaffolda. | BL-011: unit dijagnostika, summary i artefakt i na padu.",2026-11-06
 Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: identična kopija backend/Dockerfile (non-root USER node, --chown, Prisma keš u /home/node). Drift hvata check-image i CI job docker",2026-11-02
 Dockerfile.frontend,INF,frontend-image,INF-03,73,pregledano,INF-03: identična kopija frontend/Dockerfile; guard provjerava oba para (backend + frontend),2026-11-02
 backend/Dockerfile,INF,backend-image,INF-02,92,pregledano,"INF-02: USER node (non-root), --chown na svim COPY, Prisma keš u /home/node/.cache, HOME postavljen; healthcheck /api/health; seed u slici (D-024)",2026-11-02
@@ -26,9 +26,10 @@ backend/prisma/migrations/20261104220000_project_document_tombstone/migration.sq
 backend/prisma/migrations/20261105120000_stock_movement_idempotency/migration.sql,BE,migrations,BE-08,6,pregledano,F-CI-05-61: nullable key i unique po firmi,2026-11-05
 backend/prisma/migrations/20261105140000_cost_request_idempotency/migration.sql,BE,migrations,BE-08,15,pregledano,"F-CI-05-57: aditivni tenant receipt, unique ključ i FK tombstone; lokalni PostgreSQL E2E 16/124, CI 42046643464 prošao.",2026-11-05
 backend/prisma/migrations/20261106190000_refresh_replay_limit/migration.sql,BE,migrations,BE-08,2,pregledano,S-01: additive retry count with zero default,2026-11-06
+backend/prisma/migrations/20261106200000_refresh_replay_generation/migration.sql,BE,migrations,BE-08,3,pokriveno-testom,S-01: dodatna generacija i indeks; PG E2E,2026-11-06
 backend/prisma/schema/erp.prisma,BE,prisma-schema,BE-01,122,pregledano,"BE-08: +8 FK indeksa (zalihe, troškovi, partneri) | F-CI-05-57: trajni receipt za direktni cost retry; E2E lokalno.",2026-11-05
 backend/prisma/schema/fleet.prisma,BE,prisma-schema,BE-01,239,pregledano,"BE-08: +12 FK indeksa (ture, gorivo, mašine, GPS)",2026-11-03
-backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,336,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene; F-CI-05-35: nullable porodica refresh tokena i indeks po vlasniku | F-CI-05-57: relacija receipt firme.",2026-11-05
+backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,338,pregledano,"BE-08: +19 AuditAction vrijednosti (B8), +4 FK indeksa; zatvoren enum je skrivao promjene; F-CI-05-35: nullable porodica refresh tokena i indeks po vlasniku | F-CI-05-57: relacija receipt firme.",2026-11-05
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,411,pregledano,CI-05 F-49: tombstone projektnih dokumenata i indeks; ostali BE-08 FK indeksi zadržani.,2026-11-04
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
@@ -107,8 +108,8 @@ backend/src/common/utils/prisma-errors.ts,BE,common,BE-01,26,pregledano,BE-04: n
 backend/src/common/utils/serialization-retry.ts,BE,common,BE-01,19,popravljeno,F-CI-05-70: zajednička precizna detekcija P2034 i raw SQLSTATE 40001.,2026-11-05
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,BE-11: traversal i strani prefiks odbijeni; `buildObjectPath` = `{companyId}/{yyyy}/{mm}/{uuid}.{ext}`,2026-11-03
-backend/src/config/env.spec.ts,BE,config,BE-01,210,pregledano,BE-02: test dokazuje da produkcija prolazi bez refresh tajne,2026-11-02
-backend/src/config/env.ts,BE,config,BE-01,288,pregledano,"FE-11/D-050: validira THROTTLE_LIMIT, THROTTLE_TTL_MS, AUTH_LOGIN_LIMIT, AUTH_REFRESH_LIMIT (defaulti 120/60000/5/20)",2026-11-03
+backend/src/config/env.spec.ts,BE,config,BE-01,226,pokriveno-testom,S-01: obavezan zaseban replay ključ i start validator,2026-11-06
+backend/src/config/env.ts,BE,config,BE-01,303,pokriveno-testom,S-01: obavezan replay ključ min 32 i različit od JWT,2026-11-06
 backend/src/main.ts,BE,bootstrap,BE-01,31,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/activity.controller.ts,BE,audit,BE-04,96,pregledano,"BE-19: tenant admin aktivnost, cursor/limit i OpenAPI",2026-11-06
 backend/src/modules/audit/activity.service.spec.ts,BE,audit,BE-04,67,pregledano,"BE-19: scope, payloada nema, cursor i ograničenje",2026-11-06
@@ -116,14 +117,14 @@ backend/src/modules/audit/activity.service.ts,BE,audit,BE-04,72,pregledano,"BE-1
 backend/src/modules/audit/audit.module.ts,BE,audit,BE-04,13,pregledano,"BE-04: @Global modul, samo izvoz AuditService",2026-11-02
 backend/src/modules/audit/audit.service.spec.ts,BE,audit,BE-04,50,pregledano,"BE-04: 3 testa — upis, pad ne baca, greška se loguje",2026-11-02
 backend/src/modules/audit/audit.service.ts,BE,audit,BE-04,36,pregledano,"BE-04: best-effort upis (D-031) — greška se loguje, ne ruši zahtjev (F-02)",2026-11-02
-backend/src/modules/auth/auth-refresh-replay.spec.ts,BE,auth,BE-02,39,pokriveno-testom,"D-059: granice 20s, HMAC determinističnost i vezanost za ključ/roditelja",2026-11-06
-backend/src/modules/auth/auth-refresh-replay.ts,BE,auth,BE-02,28,pokriveno-testom,D-059: 20s prozor i domenski odvojena HMAC derivacija bez plaintext DB,2026-11-06
+backend/src/modules/auth/auth-refresh-replay.spec.ts,BE,auth,BE-02,59,pokriveno-testom,S-01: family generation key HMAC i fixed-hash compare,2026-11-06
+backend/src/modules/auth/auth-refresh-replay.ts,BE,auth,BE-02,49,pokriveno-testom,S-01: DB clock HMAC family/generation i timingSafeEqual,2026-11-06
 backend/src/modules/auth/auth-token-rules.spec.ts,BE,auth,BE-02,92,pregledano,BE-02: 9 testova pravila rotacije (reuse/expired/inactive/company/no-roles/PLATFORM_ADMIN),2026-11-02
 backend/src/modules/auth/auth-token-rules.ts,BE,auth,BE-02,53,pokriveno-testom,D-059: pravila vlasnika i isteka; replay odluka u token servisu,2026-11-06
-backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,365,pokriveno-testom,"D-059: transakcijski replay, DB clock, child/owner validacija, family reuse",2026-11-06
+backend/src/modules/auth/auth-tokens.service.ts,BE,auth,BE-02,376,pokriveno-testom,S-01: transakcijski replay family generation i provjera djeteta,2026-11-06
 backend/src/modules/auth/auth.controller.ts,BE,auth,BE-02,146,pokriveno-testom,"D-059: OpenAPI za refresh replay, envelope i sigurnosnu granicu",2026-11-06
 backend/src/modules/auth/auth.dto.ts,BE,auth,BE-02,69,pregledano,"BE-02: pregledano, bez izmjena (kratka lozinka → AUTH_PASSWORD_TOO_SHORT iz hashPassword, F-09)",2026-11-02
-backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,28,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
+backend/src/modules/auth/auth.module.ts,BE,auth,BE-02,29,pregledano,"BE-02: samo access tajna (JWT_REFRESH_SECRET uklonjen, D-029)",2026-11-02
 backend/src/modules/auth/auth.service.ts,BE,auth,BE-02,195,pregledano,BE-02: reset() → 501 AUTH_RESET_NOT_AVAILABLE (F-02); login/changePassword pregledani; F-CI-05-36: potvrđeni hash poredi se pod lockom,2026-11-04
 backend/src/modules/auth/jwt.strategy.ts,BE,auth,BE-02,54,pregledano,"BE-02: baza na svaki zahtjev, PLATFORM_ADMIN izuzet od ugašene firme (F-06)",2026-11-02
 backend/src/modules/auth/map-auth-user.ts,BE,auth,BE-02,65,pregledano,BE-02: mapiranje bez tajni; toMeDto ne izlaže companyId ugovor više nego prije,2026-11-02
@@ -361,7 +362,7 @@ backend/src/modules/users/users.controller.ts,BE,users,BE-03,57,pregledano,BE-03
 backend/src/modules/users/users.dto.ts,BE,users,BE-03,91,pregledano,BE-03: ROLES kao jedini izvor za IsIn; role bez ArrayMinSize na PATCH (provjera u servisu),2026-11-02
 backend/src/modules/users/users.module.ts,BE,users,BE-03,14,pregledano,BE-03: uvozi AuthModule (revokacija) i OpsModule (timeri),2026-11-02
 backend/src/modules/users/users.service.ts,BE,users,BE-03,293,pregledano,"BE-03: assertCanManageTarget (F-01), insensitive pretraga (F-04), deaktivacija gasi timere+sesije; F-CI-05-36: admin reset atomizovan s opozivom; F-CI-05-37: atomska deaktivacija i ponovljeni timer cleanup; F-CI-05-40: revalidacija ciljnog tenanta i rola pod lockom pri resetu; F-CI-05-41: company lock i provjere prije izmjene rola/statusa",2026-11-04
-backend/test/auth-refresh-replay.e2e-spec.ts,TEST,e2e,BE-02,270,pokriveno-testom,"D-059: PG HTTP replay, race, theft, logout, expiry, disabled i OpenAPI",2026-11-06
+backend/test/auth-refresh-replay.e2e-spec.ts,TEST,e2e,BE-02,325,pokriveno-testom,S-01: zamrznut clock 20s family generation 20/5,2026-11-06
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,893,pokriveno-testom,D-059: postojeći PG auth race/rollback testovi i nova semantika reuse,2026-11-06
 backend/test/decimal-scale.e2e-spec.ts,TEST,e2e,TEST-01,254,pregledano,D-058: odabrane HTTP/PG regresije za skalu i sync envelope,2026-11-06
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,3619,pregledano,"BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška; F-CI-05-65: atomski cost i zbir projekta; F-CI-05-65/66: zajednički lock i tenant-scope ispravke goriva | F-CI-05-57: konkurentni retry, tenant, rollback, source konflikt, brisanje i post-commit greška; PostgreSQL E2E lokalno. | F-CI-05-67: PostgreSQL tenant, rollback, default projekt i kontrolisana lock utrka; CI 42085642874 prošao. | F-CI-05-68: stvarne fuel/project lock utrke, tačan balans, legacy, replay i post-commit gubitak; CI 42095393195 prošao. | F-CI-05-69: preciznost goriva i overflow proizvoda; CI 42096898797 prošao. | F-CI-05-70: usklađivanje fuel ispravki sa stock, tenant i concurrency regresije; CI 42099914289 prošao. | F-CI-05-71: tenant i projekt fuel cost, zaključavanje i rollback; CI 42102237149 prošao. | F-CI-05-72: tenant/projekt SERVICE cost, lock redoslijed i regresije. | F-CI-05-64: podlijevanje zajedničkog parsera i regresije BE-01.",2026-11-05
@@ -395,7 +396,7 @@ backend/test/users.e2e-spec.ts,TEST,e2e,BE-03,108,pregledano,"BE-03: pregledano 
 backend/tsconfig.build.json,BE,config,BE-01,19,pregledano,BE-01: pregledano — isključuje test/spec/generated; namjerno uključuje prisma/ da seed uđe u dist (D-024),2026-11-02
 backend/tsconfig.json,BE,config,BE-01,27,pregledano,"BE-01: pregledano — strict + noImplicitAny + strictNullChecks, nodenext; typecheck pokriva i test/ i *.spec.ts",2026-11-02
 docker-compose.local-ports.yml,INF,compose,INF-01,24,pregledano,INF-01: jedini fajl koji smije imati host portove (lokalni razvoj),2026-11-02
-docker-compose.yml,INF,compose,INF-01,191,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
+docker-compose.yml,INF,compose,INF-01,192,pregledano,"INF-01: bez izmjena funkcionalnosti — provjereno guard-om (mreže external, CA read_only, bez host portova); prenosi REDIS_* koje kod ne čita (INF-07)",2026-11-02
 frontend/.oxlintrc.json,FE,config,FE-02,9,pregledano,FE-02: react/only-export-components (warn) + rules-of-hooks (error); nema a11y plugina (FE-03),2026-11-03
 frontend/Dockerfile,INF,frontend-image,INF-03,73,pregledano,"INF-03: provjeren — STOPSIGNAL SIGQUIT, HEALTHCHECK, exec CMD, envsubst template, VITE_API_URL build-arg; bez izmjena",2026-11-02
 frontend/components.json,FE,config,FE-02,22,pregledano,"FE-02: shadcn (new-york, neutral, cssVariables) — tokeni se čitaju iz src/index.css, aliasi @/components/ui",2026-11-03

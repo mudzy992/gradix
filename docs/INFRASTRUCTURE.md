@@ -89,6 +89,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 |---|---|---|
 | `DATABASE_URL` | `postgresql://user:pass@postgres:5432/gradix?schema=public&sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | Prisma (runtime + migracije) — `:?` u compose-u |
 | `JWT_ACCESS_SECRET` | 32+ znaka (`openssl rand -base64 32`) | auth, realtime — `:?` |
+| `REFRESH_REPLAY_SECRET` | nezavisnih 32+ znaka (`openssl rand -base64 32`), različit od JWT | refresh replay — obavezan na svim replikama prije deploya, `:?` |
 | `MINIO_ENDPOINT` | `minio` | `MinioService` (`getOrThrow`) |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `minioadmin` (promijeniti!) | `MinioService` |
 | `MINIO_BUCKET` | `gradix` | `MinioService` |
