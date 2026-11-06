@@ -80,7 +80,7 @@ describe('validateEnv', () => {
   it('zahtijeva zasebnu refresh replay tajnu od najmanje 32 znaka', () => {
     expect(() =>
       validateEnv({ ...BASE, REFRESH_REPLAY_SECRET: undefined }),
-    ).toThrow(/REFRESH_REPLAY_SECRET/);
+    ).toThrow(/REFRESH_REPLAY_SECRET je obavezan.*openssl rand -base64 48/);
     expect(() =>
       validateEnv({ ...BASE, REFRESH_REPLAY_SECRET: 'short' }),
     ).toThrow(/REFRESH_REPLAY_SECRET/);

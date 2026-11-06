@@ -25,3 +25,11 @@ test('shots require explicit credentials and accept only http(s) base URLs', () 
   assert.equal(config.url, 'http://127.0.0.1:5173')
   assert.equal(config.baselineRevision, '0d3980a')
 })
+
+test('viewport-only mode accepts a safe screenshot filename', () => {
+  const base = { E2E_LOGIN_EMAIL: 'a', E2E_LOGIN_PASSWORD: 'b', DASHBOARD_SHOTS_MODE: 'viewport' }
+  assert.equal(parseShotsConfig(base).mode, 'viewport')
+  assert.equal(parseShotsConfig({ ...base, DASHBOARD_SHOTS_FILE: 'v2-with-rich-seed.png' }).file, 'v2-with-rich-seed.png')
+  assert.throws(() => parseShotsConfig({ ...base, DASHBOARD_SHOTS_FILE: '../escape.png' }), /filename/)
+  assert.throws(() => parseShotsConfig({ ...base, DASHBOARD_SHOTS_MODE: 'unknown' }), /mode/)
+})

@@ -111,3 +111,5 @@ Za ponavljanje koristiti **isključivo izolovanu, sintetičku demo bazu**, lokal
 ### v2.1 — u toku
 
 Demo seed je proširen isključivo iza `SEED_DEMO=true`, bez promjene ostalih rola. Vrijednosti i GPS su sintetički (dokumenti nemaju fajlove); stariji demo zapisi ne brišu se pri ponovnom seedu. Ovo nije v2.1 vizuelna implementacija niti dokaz spremnosti za K2. Gore navedeni snimci i mjerenja odnose se na prethodni v2 i ne dokazuju v2.1 kriterije. Hero/upozorenja, stvarni KPI trendovi, tipografija, fallback, checklist, pretraga entiteta i novi screenshotovi i mjerenja ostaju otvoreni.
+
+Za korake v2.1 može se koristiti `DASHBOARD_SHOTS_MODE=viewport` i opcionalno `DASHBOARD_SHOTS_FILE=<ime.png>`: samo trenutni admin light viewport 1440×900, bez izmjene prethodnih snimaka i bez mjerenja. Puni režim ostaje podrazumijevan.

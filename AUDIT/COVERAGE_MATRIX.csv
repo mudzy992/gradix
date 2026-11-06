@@ -110,7 +110,7 @@ backend/src/common/utils/serialization-retry.ts,BE,common,BE-01,19,popravljeno,F
 backend/src/common/utils/slug.ts,BE,common,BE-01,15,pregledano,BE-01: pregledano — SLUG_PATTERN + TENANT_SLUG_INVALID,2026-11-02
 backend/src/common/utils/storage-path.ts,BE,common,BE-11,33,pregledano,BE-11: traversal i strani prefiks odbijeni; `buildObjectPath` = `{companyId}/{yyyy}/{mm}/{uuid}.{ext}`,2026-11-03
 backend/src/config/env.spec.ts,BE,config,BE-01,226,pokriveno-testom,S-01: obavezan zaseban replay ključ i start validator,2026-11-06
-backend/src/config/env.ts,BE,config,BE-01,303,pokriveno-testom,S-01: obavezan replay ključ min 32 i različit od JWT,2026-11-06
+backend/src/config/env.ts,BE,config,BE-01,305,pokriveno-testom,S-01: obavezan replay ključ min 32 i različit od JWT,2026-11-06
 backend/src/main.ts,BE,bootstrap,BE-01,31,pregledano,"BE-01: bootstrap sa .catch (jasna poruka + exit 1), enableShutdownHooks, PORT iz ConfigService",2026-11-02
 backend/src/modules/audit/activity.controller.ts,BE,audit,BE-04,96,pregledano,"BE-19: tenant admin aktivnost, cursor/limit i OpenAPI",2026-11-06
 backend/src/modules/audit/activity.service.spec.ts,BE,audit,BE-04,67,pregledano,"BE-19: scope, payloada nema, cursor i ograničenje",2026-11-06
@@ -687,9 +687,9 @@ scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,62,pokriveno-testom,"C
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,455,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 proces zatvoren uz CI dokaz,2026-11-04
 scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,60,pokriveno-testom,STD-01: GitHub dokaz; nedostupan API upozorava a dostupan negativan dokaz ruši gate.,2026-11-05
-scripts/dev/dashboard/shots-helpers.mjs,STD,dev-tools,STD-01,29,pregledano,FE-17: izolirani prazni dashboard fixture i validacija konfiguracije,2026-11-06
-scripts/dev/dashboard/shots-helpers.test.mjs,STD,dev-tools,STD-01,28,pregledano,FE-17: test izoliranih fixture i konfiguracije,2026-11-06
-scripts/dev/dashboard/shots.mjs,STD,dev-tools,STD-01,176,pregledano,"FE-17: snimanje realnog backenda, sigurni fixture i opzionalni axe",2026-11-06
+scripts/dev/dashboard/shots-helpers.mjs,STD,dev-tools,STD-01,33,pregledano,FE-17: izolirani prazni dashboard fixture i validacija konfiguracije,2026-11-06
+scripts/dev/dashboard/shots-helpers.test.mjs,STD,dev-tools,STD-01,36,pregledano,FE-17: test izoliranih fixture i konfiguracije,2026-11-06
+scripts/dev/dashboard/shots.mjs,STD,dev-tools,STD-01,185,pregledano,"FE-17: snimanje realnog backenda, sigurni fixture i opzionalni axe",2026-11-06
 scripts/dev/session-preflight.sh,STD,dev-tools,STD-01,32,pregledano,"Početni fetch, backup diffa, reset bez lokalnih commitova ili fast-forward push; testirano u privremenim git repozitorijima",2026-11-06
 scripts/ops/backup-restore-workflow.test.mjs,INF,ops-scripts,INF-06,77,pregledano,"CI-05: 4 node:test slučaja stvarnog workflow koraka, uključujući greške SQL-a i migracija.",2026-11-04
 scripts/ops/backup.sh,INF,ops-scripts,INF-06,82,pregledano,"INF-06: pg_dump custom format + sha256 + retencija (BACKUP_RETENTION, default 7); pg_dump iz PATH-a (host/CI/kontejner); ne dira MinIO",2026-11-03

@@ -109,8 +109,16 @@ async function axeCheck(page, name) {
 }
 try {
   await mkdir(output, { recursive: true })
-  const baselineUrl = await startBaseline()
+  const baselineUrl = config.mode === 'full' ? await startBaseline() : null
   browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] })
+  if (config.mode === 'viewport') {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    await login(page, config.url)
+    await navigateDashboard(page, config.url, 1440, 900)
+    await page.screenshot({ path: path.join(output, config.file), fullPage: false, animations: 'disabled' })
+    await context.close()
+  } else {
   const oldContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
   await startMeasurements(oldContext)
   const oldPage = await oldContext.newPage()
@@ -167,6 +175,7 @@ try {
   await axeCheck(page, 'admin-empty-mobile')
   await context.close()
   await writeFile(path.join(output, 'measurements.json'), `${JSON.stringify(metrics, null, 2)}\n`)
+  }
   process.stdout.write(`Dashboard screenshots saved to ${path.relative(root, output)}\n`)
 } finally {
   if (browser) await browser.close()

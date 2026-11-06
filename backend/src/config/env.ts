@@ -121,7 +121,9 @@ export function validateEnv(raw: RawEnv): ValidatedEnv {
 
   const replaySecret = optional(raw.REFRESH_REPLAY_SECRET);
   if (!replaySecret) {
-    errors.push('REFRESH_REPLAY_SECRET je obavezan');
+    errors.push(
+      'REFRESH_REPLAY_SECRET je obavezan; generišite ga komandom openssl rand -base64 48 i postavite na sve replike prije deploya',
+    );
   } else if (replaySecret.length < MIN_SECRET_LENGTH) {
     errors.push(
       `REFRESH_REPLAY_SECRET mora imati najmanje ${MIN_SECRET_LENGTH} znakova`,

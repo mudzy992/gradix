@@ -89,7 +89,7 @@ sliku i pušta seed iz nje — guard hvata regresiju prije nego što stigne do C
 |---|---|---|
 | `DATABASE_URL` | `postgresql://user:pass@postgres:5432/gradix?schema=public&sslmode=verify-ca&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | Prisma (runtime + migracije) — `:?` u compose-u |
 | `JWT_ACCESS_SECRET` | 32+ znaka (`openssl rand -base64 32`) | auth, realtime — `:?` |
-| `REFRESH_REPLAY_SECRET` | nezavisnih 32+ znaka (`openssl rand -base64 32`), različit od JWT | refresh replay — obavezan na svim replikama prije deploya, `:?` |
+| `REFRESH_REPLAY_SECRET` | nezavisnih 32+ znaka (`openssl rand -base64 48`), različit od JWT | refresh replay — obavezan na svim replikama prije deploya, `:?` |
 | `MINIO_ENDPOINT` | `minio` | `MinioService` (`getOrThrow`) |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `minioadmin` (promijeniti!) | `MinioService` |
 | `MINIO_BUCKET` | `gradix` | `MinioService` |
@@ -328,6 +328,7 @@ backend stavka** — do tada logo u postavkama firme koristi blob putanju.
 
 **Redoslijed deploya (Coolify):**
 
+0. Prije deploya backend koda generisati nezavisnu tajnu `openssl rand -base64 48` (najmanje 32 znaka, različitu od `JWT_ACCESS_SECRET`); sačuvati je samo u sigurnom secret storeu, ne u repou ni logovima. U Coolifyju je postaviti kao `REFRESH_REPLAY_SECRET` u build-time **i** runtime okruženje (Compose je interpolira već pri buildu), s identičnom vrijednošću na **svim** backend replikama prije deploya. Planirati rollout bez miješanja nekompatibilnih replay implementacija; pogledati `docs/BACKEND.md` za grace period i posljedice rotacije tajne.
 1. Backend: `CORS_ORIGIN=https://gradix.ba101.top` → deploy.
 2. Frontend: `VITE_API_URL=https://api.gradix.ba101.top` + `CSP_API_ORIGIN=https://api.gradix.ba101.top`
    → **rebuild** (prva je build-time, druga se čita pri startu kontejnera).
