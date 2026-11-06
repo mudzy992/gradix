@@ -17,6 +17,7 @@
 | [`design/FE-01-palette-proposals.md`](./design/FE-01-palette-proposals.md) | tri seta tokena (A „Gradix Green“ / B „Slate / Teal“ / **C kombinacija — primijenjeno**, D-040) sa izmjerenim kontrastima | pri izboru ili izmjeni vizuelnog identiteta |
 | [`design/FE-04-dashboard-ia.md`](./design/FE-04-dashboard-ia.md) | informaciona arhitektura dashboarda: zone, grid, stanja, šta svjesno **ne** prikazuje (D-043) | pri izmjeni dashboarda ili dodavanju novih ekrana |
 | [`design/FE-17-dashboard-v2.md`](./design/FE-17-dashboard-v2.md) | dashboard v2: B0, podatkovni ugovor i admin K2 checkpoint | tokom BE-19/FE-17 |
+| [`design/FE-17-roles.md`](./design/FE-17-roles.md) | neodobren prijedlog zona, KPI-ja i API izvora po ulozi | nakon K2 pregleda vlasnika |
 | [`_retired/INDEX.md`](./_retired/INDEX.md) | šta je penzionisano i zašto | samo za historijski kontekst |
 | [`../AUDIT/STATE.md`](../AUDIT/STATE.md) | dnevnik rada: gdje smo stali, zadnji CI run | početak svake sesije |
 

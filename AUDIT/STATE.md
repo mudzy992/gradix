@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `a743e48`: CI `42217150939` 6/6; permission-negative uzorci i javni izuzeci.
 - `93fe880`: CI `42217587567` 6/6; D-059 plan prije koda.
-- Tekući commit: D-059 server replay, testovi i OpenAPI; CI čeka push.
+- `2772a0e`: CI [42219098138](https://github.com/mudzy992/gradix/actions/runs/42219098138) 6/6; D-059 server replay.
+- Tekući commit: prijedlog rola bez UI implementacije; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -39,7 +39,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Sljedeći korak
 
-S-01: web djelimično ne ponavlja refresh nakon nepoznatog ishoda; rizik ostaje. Nastaviti TEST-01 cross-tenant, S-red i TEST-02 dok vlasnik pregleda K2. Detalji u [handoffu](HANDOFF.md).
+Prvo TEST-01 stvarni resursi i list filteri; zatim S-01 retry/lifetime, backend ugovori, pa TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
 
