@@ -1,11 +1,11 @@
 # Handoff
 - Grana `arena/0bc0e56e-gradix`; početak sesije: `scripts/dev/session-preflight.sh`.
 - Daljinski HEAD je izvor istine; bez force-pusha, svaka logična cjelina commit + push.
-- BE-19: B1 projects API (`3eb6e92`, CI 42184834793 6/6; cursor/limit) + `/analytics/tasks/created` (`6c0d586`, CI 42184267497 6/6; cursor/limit, DST); `/activity/events` (`6f76dd7`, CI 42185371287 6/6) je tenant-admin, max 20, bez payloada; `/analytics/timers/closed` (`b2b635d`, CI 42185923719 6/6) ima trend odobrenih minuta po danu zatvaranja (nije lokacijsko prisustvo). `/alerts/documents` (`dae8043`, CI 42186602208 6/6) pokriva samo istek dokumenata; demo seed ima sintetičke 30-dnevne trendove; ostali KPI i vrste upozorenja nisu urađeni.
+- BE-19: B1 projects API (`3eb6e92`, CI 42184834793 6/6; cursor/limit) + `/analytics/tasks/created` (`6c0d586`, CI 42184267497 6/6; cursor/limit, DST); `/activity/events` (`6f76dd7`, CI 42185371287 6/6) je tenant-admin, max 20, bez payloada; `/analytics/timers/closed` (`b2b635d`, CI 42185923719 6/6) ima trend odobrenih minuta po danu zatvaranja (nije lokacijsko prisustvo). `/alerts/documents` (`dae8043`, CI 42186602208 6/6) pokriva samo istek dokumenata; demo seed `abbe5ea` ima sintetičke 30-dnevne trendove (CI 42187752917 još radi); ostali KPI i vrste upozorenja nisu urađeni.
 - FE-17: plan postoji; admin UI, ostali endpointi, screenshotovi i K2 nisu urađeni.
 - K1 A: D-058 stroga skala za inventurisane inpute; sync višak skale vraća 400 prije batch upisa; ostale greške su per-item; mobile kod ne mijenjati.
 - K1 `d6b3095`: CI 42183403541 6/6, backend 46/418, frontend 59/599, PG E2E 17/170 (12 SQL migracija + readiness ručno).
-- Sljedeće: BE-19 preostali KPI, stvarno prisustvo (historija nije u timerima) i ostali izvori upozorenja; testovi tenant/role, OpenAPI, cursor/limit i ISO UTC.
+- Sljedeće: BE-19 preostali KPI i ostali izvori upozorenja (historijsko/garantovano prisustvo ne postoji u ovim izvorima); testovi tenant/role, OpenAPI, cursor/limit i ISO UTC.
 - Zatim završiti BE-19 i admin FE-17 do screenshotova, pa K2; bez novih zavisnosti ili migracija.
 - Nakon K2 snimaka raditi TEST-01, S-red i TEST-02 dok vlasnik pregleda; ostale dashboard role čekaju potvrdu.
 - Nema poznate blokade; TEST-01 treba preostalu HTTP/PG karakterizaciju decimalnih i direktnih Prisma putanja.

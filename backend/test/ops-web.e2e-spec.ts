@@ -288,6 +288,140 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('live presence is paged, tenant-scoped, recent, geofenced and excludes coordinates', async () => {
+    const platform = (await login(app, 'platform@gradix.local')).body.data
+      .accessToken as string;
+    const accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken as string;
+    const a = await prisma.company.create({
+      data: { name: 'Presence A', slug: `presence-a-${Date.now()}` },
+    });
+    const b = await prisma.company.create({
+      data: { name: 'Presence B', slug: `presence-b-${Date.now()}` },
+    });
+    const projectA = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'Site A',
+        lat: '43.85',
+        lng: '18.41',
+        geofenceRadius: 100,
+      },
+    });
+    const projectB = await prisma.project.create({
+      data: {
+        companyId: b.id,
+        name: 'Site B',
+        lat: '43.85',
+        lng: '18.41',
+        geofenceRadius: 100,
+      },
+    });
+    const archived = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'Archived site',
+        lat: '44.5',
+        lng: '18.41',
+        geofenceRadius: 100,
+        archivedAt: new Date(),
+      },
+    });
+    const stamp = Date.now();
+    const ids = Array.from({ length: 9 }, (_, i) => `presence-${stamp}-${i}`);
+    try {
+      await prisma.user.createMany({
+        data: ids.map((id, i) => ({
+          id,
+          companyId: i === 6 ? b.id : a.id,
+          firstName: 'Fixture',
+          lastName: `${i}`,
+          email: `${id}@example.test`,
+          passwordHash: 'fixture-not-used',
+          isActive: i !== 8,
+        })),
+      });
+      const now = Date.now();
+      const loc = (
+        userId: string,
+        companyId: string,
+        lat: string,
+        millisecondsAgo: number,
+      ) => ({
+        userId,
+        companyId,
+        lat,
+        lng: '18.41',
+        recordedAt: new Date(now - millisecondsAgo),
+      });
+      await prisma.userLocation.createMany({
+        data: [
+          ...ids.slice(0, 3).map((id) => loc(id, a.id, '43.8508', 60_000)),
+          loc(ids[3], a.id, '43.85', 120_000),
+          loc(ids[3], a.id, '43.851', 60_000),
+          loc(ids[4], a.id, '43.85', 3_600_000),
+          loc(ids[5], a.id, '43.85', -3_600_000),
+          loc(ids[6], b.id, '43.85', 60_000),
+          loc(ids[7], a.id, '44.5', 60_000),
+          loc(ids[8], a.id, '43.85', 60_000),
+        ],
+      });
+      const url = '/api/presence/people';
+      const headers = { ...auth(platform), 'X-Company-Id': a.id };
+      const first = await request(app.getHttpServer())
+        .get(`${url}?limit=2`)
+        .set(headers);
+      expect(first.status).toBe(200);
+      expect(first.body.data.map((r: { userId: string }) => r.userId)).toEqual(
+        ids.slice(0, 2),
+      );
+      expect(first.body.data[0]).toMatchObject({
+        projectId: projectA.id,
+        lastSeenAt: expect.stringMatching(/Z$/),
+      });
+      expect(first.body.data[0]).not.toHaveProperty('lat');
+      expect(first.body.data[0]).not.toHaveProperty('lng');
+      const second = await request(app.getHttpServer())
+        .get(`${url}?limit=2&cursor=${first.body.meta.nextCursor}`)
+        .set(headers);
+      expect(second.status).toBe(200);
+      expect(second.body.data.map((r: { userId: string }) => r.userId)).toEqual(
+        [ids[2]],
+      );
+      expect(second.body.meta.nextCursor).toBeNull();
+      const foreign = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', b.id);
+      expect(foreign.status).toBe(200);
+      expect(foreign.body.data).toMatchObject([
+        { userId: ids[6], projectId: projectB.id },
+      ]);
+      expect(
+        (await request(app.getHttpServer()).get(`${url}?limit=21`).set(headers))
+          .status,
+      ).toBe(400);
+      for (const token of [ss, worker, accountant, platform])
+        expect(
+          (await request(app.getHttpServer()).get(url).set(auth(token))).status,
+        ).toBe(403);
+      const api = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(api.body.paths['/api/presence/people'].get.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+    } finally {
+      await prisma.userLocation.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.user.deleteMany({ where: { id: { in: ids } } });
+      await prisma.project.deleteMany({
+        where: { id: { in: [projectA.id, projectB.id, archived.id] } },
+      });
+      await prisma.company.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    }
+  });
+
   it('demo trends seed is idempotent and produces a varied 30-day API series', async () => {
     const project = await prisma.project.findFirstOrThrow({
       where: { code: 'DEMO-1' },

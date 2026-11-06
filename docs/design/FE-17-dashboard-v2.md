@@ -69,3 +69,5 @@ Klijentski neutralan `/activity/events` donosi do 20 audit događaja po stranici
 `/alerts/documents` nudi ograničen severity/keyset pregled isteka dokumenata za tenant admina, bez putanja i bilješki. Nisu obuhvaćene druge vrste upozorenja; UI još nije spojen.
 
 Demo seed daje sintetički promjenjiv 30-dnevni niz zadataka i odobrenih timera samo uz `SEED_DEMO=true`; produkcija bez te zastavice nema demo podatke.
+
+`/presence/people` je zasebna tenant-admin cursor/limit lista korisnika na aktivnim geofencima na osnovu posljednjeg svježeg GPS pinga, bez sirovih koordinata; ne predstavlja historiju ni potvrđenu evidenciju prisustva. UI još nije spojen.
