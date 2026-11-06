@@ -117,6 +117,49 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
         .set(auth(admin));
       expect(adminDash.status).toBe(200);
       expect(adminDash.body.data.length).toBe(10);
+      expect(adminDash.body.meta).toMatchObject({
+        limit: 10,
+        nextCursor: expect.any(String),
+      });
+      const firstPage = await request(app.getHttpServer())
+        .get('/api/dashboard/projects?limit=2')
+        .set(auth(admin));
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.body.data).toHaveLength(2);
+      const secondPage = await request(app.getHttpServer())
+        .get(
+          `/api/dashboard/projects?limit=2&cursor=${firstPage.body.meta.nextCursor}`,
+        )
+        .set(auth(admin));
+      expect(secondPage.status).toBe(200);
+      const firstIds = firstPage.body.data.map((row: { id: string }) => row.id);
+      expect(
+        secondPage.body.data.every(
+          (row: { id: string }) => !firstIds.includes(row.id),
+        ),
+      ).toBe(true);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`/api/dashboard/projects?cursor=${hidden.id}`)
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`/api/dashboard/projects?cursor=${extra[0].id}`)
+            .set(auth(ss))
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/dashboard/projects?limit=11')
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+
       expect(adminDash.body.data).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

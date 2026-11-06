@@ -18,10 +18,12 @@ function setup(rows: unknown[] = []) {
   const findMany = jest
     .fn<Promise<unknown[]>, [unknown]>()
     .mockResolvedValue(rows);
+  const findFirst = jest.fn().mockResolvedValue({ id: 'p1' });
   return {
     findMany,
+    findFirst,
     service: new DashboardProjectsService({
-      project: { findMany },
+      project: { findMany, findFirst },
     } as unknown as PrismaService),
   };
 }
@@ -51,8 +53,9 @@ describe('DashboardProjectsService', () => {
         currentSpend: decimal('0.1'),
       },
     ]);
-    const data = await service.list(actor(['ADMIN']));
-    expect(data).toEqual([
+    const result = await service.list(actor(['ADMIN']));
+    expect(result.meta).toEqual({ limit: 10, nextCursor: null });
+    expect(result.data).toEqual([
       {
         id: 'p1',
         name: 'Project',
@@ -77,7 +80,7 @@ describe('DashboardProjectsService', () => {
     ]);
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        take: 10,
+        take: 11,
         where: {
           companyId: 'company-a',
           archivedAt: null,
@@ -90,7 +93,7 @@ describe('DashboardProjectsService', () => {
   it('constrains project managers to assigned projects in the selected tenant', async () => {
     const { service, findMany } = setup();
     expect(await service.list(actor(['PROJECT_MANAGER'], 'company-b'))).toEqual(
-      [],
+      { data: [], meta: { limit: 10, nextCursor: null } },
     );
     const query = findMany.mock.calls[0][0] as { where: unknown };
     expect(query.where).toEqual(
@@ -105,6 +108,45 @@ describe('DashboardProjectsService', () => {
     await expect(service.list(actor(['ADMIN'], null))).rejects.toMatchObject({
       status: 403,
     });
+    expect(findMany).not.toHaveBeenCalled();
+  });
+  it('paginates with a scoped cursor and exposes the next cursor without changing the data array', async () => {
+    const rows = ['p1', 'p2', 'p3'].map((id) => ({
+      id,
+      name: id,
+      status: 'PLANNING',
+      plannedBudget: null,
+      currentSpend: decimal('0'),
+    }));
+    const { service, findMany, findFirst } = setup(rows);
+    const page = await service.list(actor(['PROJECT_MANAGER']), {
+      limit: 2,
+      cursor: 'p1',
+    });
+    expect(page).toMatchObject({
+      data: [{ id: 'p1' }, { id: 'p2' }],
+      meta: { limit: 2, nextCursor: 'p2' },
+    });
+    const firstCalls = findFirst.mock.calls as unknown as Array<
+      [{ where: unknown }]
+    >;
+    expect(firstCalls[0][0].where).toEqual(
+      expect.objectContaining({
+        id: 'p1',
+        companyId: 'company-a',
+        assignments: { some: { userId: 'actor-a' } },
+      }),
+    );
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 3, cursor: { id: 'p1' }, skip: 1 }),
+    );
+  });
+  it('rejects a cursor that is not visible within the selected tenant', async () => {
+    const { service, findMany, findFirst } = setup();
+    findFirst.mockResolvedValue(null);
+    await expect(
+      service.list(actor(['ADMIN']), { cursor: 'foreign' }),
+    ).rejects.toMatchObject({ status: 400 });
     expect(findMany).not.toHaveBeenCalled();
   });
 });

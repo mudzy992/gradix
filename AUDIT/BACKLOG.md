@@ -1280,4 +1280,4 @@ Radi potpunosti, **svaki neprazan red** arhiviranog STATE-a ima ID i okvirnu kla
 | BL-H-1135 | ostalo / historijski kontekst | [STATE red 1352](history/STATE-2026-11-05.md#L1352) |
 | BL-H-1136 | ostalo / historijski kontekst | [STATE red 1353](history/STATE-2026-11-05.md#L1353) |
 
-- **BE-19:** postojeći `/dashboard/projects` još nema cursor/limit ugovor tražen novim pravilima; dopuniti kompatibilno pri nastavku B1.
+- **BE-19, riješeno za projects pagination:** `/dashboard/projects` sada ima cursor/limit i dodatni `meta` bez promjene niza `data`; dokaz u `ops-web.e2e-spec.ts`.

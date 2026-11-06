@@ -1,11 +1,11 @@
 # Handoff
 - Grana `arena/0bc0e56e-gradix`; početak sesije: `scripts/dev/session-preflight.sh`.
 - Daljinski HEAD je izvor istine; bez force-pusha, svaka logična cjelina commit + push.
-- BE-19: B1 projects API + `/analytics/tasks/created` (dnevni broj kreiranih zadataka, cursor/limit, DST); ostali KPI/trendovi, aktivnosti i upozorenja nisu urađeni.
+- BE-19: B1 projects API (cursor/limit) + `/analytics/tasks/created` (`6c0d586`, CI 42184267497 6/6; cursor/limit, DST); ostali KPI/trendovi, aktivnosti i upozorenja nisu urađeni.
 - FE-17: plan postoji; admin UI, ostali endpointi, screenshotovi i K2 nisu urađeni.
 - K1 A: D-058 stroga skala za inventurisane inpute; sync višak skale vraća 400 prije batch upisa; ostale greške su per-item; mobile kod ne mijenjati.
 - K1 `d6b3095`: CI 42183403541 6/6, backend 46/418, frontend 59/599, PG E2E 17/170 (12 SQL migracija + readiness ručno).
-- Sljedeće: BE-19 ostali endpointi i kompatibilan cursor/limit za postojeći projects API; testovi tenant/role, OpenAPI i ISO UTC.
+- Sljedeće: BE-19 preostali KPI, sati/prisustvo, aktivnosti i upozorenja; testovi tenant/role, OpenAPI, cursor/limit i ISO UTC.
 - Zatim završiti BE-19 i admin FE-17 do screenshotova, pa K2; bez novih zavisnosti ili migracija.
 - Nakon K2 snimaka raditi TEST-01, S-red i TEST-02 dok vlasnik pregleda; ostale dashboard role čekaju potvrdu.
 - Nema poznate blokade; TEST-01 treba preostalu HTTP/PG karakterizaciju decimalnih i direktnih Prisma putanja.
