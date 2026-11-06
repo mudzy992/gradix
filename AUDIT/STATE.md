@@ -12,10 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `970344d`: CI [42282351096](https://github.com/mudzy992/gradix/actions/runs/42282351096) 6/6; S-01 zaseban ključ, family/generation i zamrznut replay testni sat.
 - `d734e89`: CI [42283897872](https://github.com/mudzy992/gradix/actions/runs/42283897872) otkazan; Audit pao zbog matrice, Web otkazan tokom instalacije browsera; strict E2E 197/214 pad, uticaj neocijenjen.
 - `cf4a8fb`: CI [42285178185](https://github.com/mudzy992/gradix/actions/runs/42285178185) 6/6; matrica i lokalni audit status popravljeni.
-- Tekući commit: OpenAPI strukturni gate sa 927 eksplicitnih izuzetaka/nedostataka, CI čeka push; ugovor nije potpuno dokumentovan.
+- `4f63a33`: CI [42286451134](https://github.com/mudzy992/gradix/actions/runs/42286451134) 6/6 uključujući Web E2E; OpenAPI strukturni gate sa 927 izuzetaka/nedostataka, ugovor nije potpuno dokumentovan.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
