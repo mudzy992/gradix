@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `d734e89`: CI [42283897872](https://github.com/mudzy992/gradix/actions/runs/42283897872) otkazan; Audit pao zbog matrice, Web otkazan tokom instalacije browsera; strict E2E 197/214 pad, uticaj neocijenjen.
 - `cf4a8fb`: CI [42285178185](https://github.com/mudzy992/gradix/actions/runs/42285178185) 6/6; matrica i lokalni audit status popravljeni.
-- `4f63a33`: CI [42286451134](https://github.com/mudzy992/gradix/actions/runs/42286451134) 6/6 uključujući Web E2E; OpenAPI strukturni gate sa 927 izuzetaka/nedostataka, ugovor nije potpuno dokumentovan.
+- `4f63a33`: CI [42286451134](https://github.com/mudzy992/gradix/actions/runs/42286451134) 6/6; OpenAPI strukturni gate sa 927 izuzetaka/nedostataka.
+- `86fabed`: CI [42287097742](https://github.com/mudzy992/gradix/actions/runs/42287097742) 6/6, uključujući Web E2E.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -32,14 +32,14 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 ## BE-19 / FE-17 — dashboard v2
 
 - B0: plan i D-057 dopunjuju D-043; B1 djelimično: scalarni KPI, projects API s koordinatama, analitika kreiranja zadataka, admin audit aktivnost, odobrene minute timera, GPS procjena prisustva i upozorenja isteka dokumenata i rokova zadataka (cursor/limit); demo 30-dnevni trendovi. Ostali endpointi nisu završeni.
-- Admin v2: nezavisni tenant-keyed upiti, tačan decimalni prikaz, lazy mapa sa fallbackom, pristupačni SVG grafikoni, dark/light, BS/EN; ostale role ostaju na starom dashboardu.
+- Admin v2: tenant-keyed upiti, tačan decimalni prikaz, lazy mapa, SVG grafikoni, dark/light, BS/EN; ostale role ostaju na starom dashboardu. v2.1: proširen izolovani demo seed; UI, snimci i mjerenja nisu završeni. PG E2E 26/222 prije zadnje sitne izmjene ID-a i dopune testa, ciljani test nakon nje 1/1; backend 55/448, FE 66/650, lint/build i check:all 0/3 skip. Produkcijski seed na novoj bazi: 1 user, 0 firmi/projekata/zadataka/mašina.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: [inventura](DECIMAL-INVENTORY.md), D-058 K1 A; 70 parser slučajeva, PG E2E 17/170. Preostali HTTP/PG i DB opsezi idu u TEST-01.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; Paleta Ctrl/Cmd+K po pravima integrisana; admin screenshotovi, axe i lokalna mjerenja pripremljeni za K2.
 
 ## Sljedeći korak
 
-TEST-01: precizno odvojiti auth/fixture izuzetke i pregledati 234 kandidata prije punog strict CI; discovery je ispod cilja. OpenAPI gate blokiran postojećim ugovorima; zatim TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
+Prvo završiti admin v2.1 i S-01 deploy checklist; zatim TEST-01: precizno odvojiti auth/fixture izuzetke i pregledati 234 kandidata prije punog strict CI; discovery je ispod cilja. OpenAPI gate blokiran postojećim ugovorima; zatim TEST-02. K2: smjer odobren, izgled 6/10; odobrena admin v2.1 iteracija, ostale role čekaju novu potvrdu. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
 

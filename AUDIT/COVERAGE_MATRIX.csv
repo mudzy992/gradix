@@ -33,10 +33,11 @@ backend/prisma/schema/foundation.prisma,BE,prisma-schema,BE-01,338,pregledano,"B
 backend/prisma/schema/ops.prisma,BE,prisma-schema,BE-01,411,pregledano,CI-05 F-49: tombstone projektnih dokumenata i indeks; ostali BE-08 FK indeksi zadržani.,2026-11-04
 backend/prisma/schema/polish.prisma,BE,prisma-schema,BE-01,139,pregledano,"BE-08: +4 FK indeksa (tenderi, servisi, prilozi)",2026-11-03
 backend/prisma/schema/public.prisma,BE,prisma-schema,BE-01,20,pregledano,"BE-01: pregledano — mali model za javni sajt, bez FK bez indeksa",2026-11-02
+backend/prisma/seed-demo-dashboard.ts,BE,seed,BE-08,324,pregledano,FE-17: izolovani sintetički demo seed i ponavljanje,2026-11-06
 backend/prisma/seed-demo-fleet.ts,BE,seed,BE-08,54,pregledano,BE-08: pregledano — demo vozila/ture/gorivo vezani na DEMO-1,2026-11-03
 backend/prisma/seed-demo-ops.ts,BE,seed,BE-08,147,pregledano,BE-08: pregledano — demo korisnici/projekti/zadaci; nema otvorenih timera (ne krši parcijalni unique),2026-11-03
 backend/prisma/seed-demo-trends.ts,BE,seed,BE-08,105,pregledano,"BE-19: samo demo, idempotentni sintetički trendovi",2026-11-06
-backend/prisma/seed.ts,BE,seed,BE-08,135,pregledano,"BE-08: SEED_DEMO prekidač — produkcija = samo platform admin (P9), demo = firma + ops + flota",2026-11-03
+backend/prisma/seed.ts,BE,seed,BE-08,137,pregledano,"BE-08: SEED_DEMO prekidač — produkcija = samo platform admin (P9), demo = firma + ops + flota",2026-11-03
 backend/src/app.module.ts,BE,bootstrap,BE-01,85,pregledano,FE-11/D-050: globalni throttle limit i TTL iz okruženja (default 120/min),2026-11-03
 backend/src/app.setup.ts,BE,bootstrap,BE-01,85,pregledano,BE-01: Swagger samo van produkcije/uz ENABLE_API_DOCS; CORS kroz resolveCorsOrigin (prazno u produkciji = same-origin),2026-11-02
 backend/src/common/constants.ts,BE,common,BE-01,48,pregledano,BE-02: REFRESH_RETENTION_DAYS = 7 (retencija opozvanih tokena),2026-11-02
@@ -365,6 +366,7 @@ backend/src/modules/users/users.service.ts,BE,users,BE-03,293,pregledano,"BE-03:
 backend/test/auth-refresh-replay.e2e-spec.ts,TEST,e2e,BE-02,325,pokriveno-testom,S-01: zamrznut clock 20s family generation 20/5,2026-11-06
 backend/test/auth.e2e-spec.ts,TEST,e2e,BE-02,893,pokriveno-testom,D-059: postojeći PG auth race/rollback testovi i nova semantika reuse,2026-11-06
 backend/test/decimal-scale.e2e-spec.ts,TEST,e2e,TEST-01,254,pregledano,D-058: odabrane HTTP/PG regresije za skalu i sync envelope,2026-11-06
+backend/test/demo-dashboard-seed.e2e-spec.ts,TEST,e2e,TEST-01,107,pregledano,FE-17: PG provjera seedu i ponavljanja,2026-11-06
 backend/test/erp.e2e-spec.ts,TEST,e2e,BE-17,3619,pregledano,"BE-17: pregledano u BE-14 (ERP tok); sync izmjene nisu dirale njegove tvrdnje | CI-05 F-63: finite decimal regresija; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška; F-CI-05-65: atomski cost i zbir projekta; F-CI-05-65/66: zajednički lock i tenant-scope ispravke goriva | F-CI-05-57: konkurentni retry, tenant, rollback, source konflikt, brisanje i post-commit greška; PostgreSQL E2E lokalno. | F-CI-05-67: PostgreSQL tenant, rollback, default projekt i kontrolisana lock utrka; CI 42085642874 prošao. | F-CI-05-68: stvarne fuel/project lock utrke, tačan balans, legacy, replay i post-commit gubitak; CI 42095393195 prošao. | F-CI-05-69: preciznost goriva i overflow proizvoda; CI 42096898797 prošao. | F-CI-05-70: usklađivanje fuel ispravki sa stock, tenant i concurrency regresije; CI 42099914289 prošao. | F-CI-05-71: tenant i projekt fuel cost, zaključavanje i rollback; CI 42102237149 prošao. | F-CI-05-72: tenant/projekt SERVICE cost, lock redoslijed i regresije. | F-CI-05-64: podlijevanje zajedničkog parsera i regresije BE-01.",2026-11-05
 backend/test/files.e2e-spec.ts,TEST,e2e,BE-11,69,pregledano,"BE-11: traversal `400`, strani prefiks `403`, upload pod prefiks firme, download headeri",2026-11-03
 backend/test/fleet.e2e-spec.ts,TEST,e2e,BE-09,462,pregledano,"BE-12: prisustvo po dodjeli (admin van liste projekta, unutra na dashboardu) + flota/logistika/audit",2026-11-03

@@ -6,6 +6,7 @@ import { defaultSettingRows } from '../src/modules/companies/default-settings';
 import { MIN_PASSWORD_LENGTH } from '../src/common/constants';
 import { seedDemoOps } from './seed-demo-ops';
 import { seedDemoFleet } from './seed-demo-fleet';
+import { seedDemoDashboard } from './seed-demo-dashboard';
 
 function createPrisma(): PrismaClient {
   const url = process.env.DATABASE_URL;
@@ -92,6 +93,7 @@ async function seed(): Promise<void> {
     data: { userId: admin.id, role: 'SUPER_ADMIN' },
   });
   await seedDemoOps(prisma, { companyId: company.id, passwordHash });
+  await seedDemoDashboard(prisma, { companyId: company.id, actorId: admin.id, passwordHash });
   await prisma.setting.update({
     where: {
       companyId_key: { companyId: company.id, key: 'public.companyName' },
