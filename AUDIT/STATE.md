@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `cf4a8fb`: CI [42285178185](https://github.com/mudzy992/gradix/actions/runs/42285178185) 6/6; matrica i lokalni audit status popravljeni.
 - `4f63a33`: CI [42286451134](https://github.com/mudzy992/gradix/actions/runs/42286451134) 6/6; OpenAPI strukturni gate sa 927 izuzetaka/nedostataka.
 - `86fabed`: CI [42287097742](https://github.com/mudzy992/gradix/actions/runs/42287097742) 6/6, uključujući Web E2E.
+- `feb5d41`: CI [42290459105](https://github.com/mudzy992/gradix/actions/runs/42290459105) 5/6, Web E2E pao: HSE test očekivao praznu listu nakon dodavanja demo incidenata; test prilagođen uz provjeru stvarnog API-ja i zasebnu simulaciju prazne liste; lokalno svih 45/45 Playwright (Chromium 153, svježa PG baza).
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
