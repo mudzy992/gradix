@@ -82,7 +82,7 @@ backend/src/common/scope/ops-dates.spec.ts,BE,common,BE-03,75,pregledano,"BE-03:
 backend/src/common/scope/ops-dates.ts,BE,common,BE-03,79,pregledano,"CI-05: pregledana validacija opsega, radijusa, kodova; ISO datumi provjeravaju kalendarski overflow prije parsiranja.",2026-11-04
 backend/src/common/scope/ops-roles.spec.ts,BE,common,BE-03,97,pregledano,BE-03: 7 testova opsega rola (uključivo trenutno hidesBudget ponašanje),2026-11-02
 backend/src/common/scope/ops-roles.ts,BE,common,BE-03,87,pregledano,BE-03: hidesBudget je allow-by-default (F-06) — ponašanje zaključano testovima,2026-11-02
-backend/src/common/scope/project-lock.spec.ts,BE,common,BE-03,75,pregledano,BE-03: 9 testova tranzicija/terminalnih statusa,2026-11-02
+backend/src/common/scope/project-lock.spec.ts,BE,common,BE-03,78,pregledano,BE-03: 9 testova tranzicija/terminalnih statusa | BL-011: deterministički datum arhiviranog projekta.,2026-11-06
 backend/src/common/scope/project-lock.ts,BE,common,BE-03,51,pregledano,BE-03: tranzicije statusa i terminalna zaštita; 9 testova,2026-11-02
 backend/src/common/scope/scope-by-project.ts,BE,common,BE-03,44,pregledano,BE-03: requireTenant() umjesto ! (F-02); pretraga insensitive (F-04),2026-11-02
 backend/src/common/scope/tenant.spec.ts,BE,common,BE-03,22,pregledano,"BE-04: 403 TENANT_HEADER_REQUIRED bez tenanta, vraća id sa tenantom",2026-11-02
@@ -256,7 +256,7 @@ backend/src/modules/ops/tasks.service.ts,BE,ops,BE-06,253,pregledano,BE-08: TASK
 backend/src/modules/ops/timer-clock.ts,BE,ops,BE-07,86,pregledano,"BE-07: online sat se odbija; offline startedAt/closedAt validacija (budućnost, maxOpenHours)",2026-11-03
 backend/src/modules/ops/timer-create.ts,BE,ops,BE-07,153,pregledano,BE-07: vidljiv zadatak + zapisiv projekat + dodjela/SS + mašina; P2002 mapiran na TIMER_ALREADY_OPEN/MACHINE_IN_USE,2026-11-03
 backend/src/modules/ops/timer-cron.service.ts,BE,ops,BE-07,39,pregledano,BE-07: timer.maxOpenHours se čita jednom po firmi (F-03),2026-11-03
-backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,79,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours",2026-11-03
+backend/src/modules/ops/timer-cron.spec.ts,BE,ops,BE-07,93,pregledano,"BE-07: 2 testa — podešavanje po firmi, prag maxOpenHours | BL-011: fiksni sat i granica starosti timera; bez zavisnosti od realnog sata.",2026-11-06
 backend/src/modules/ops/timer-force-close.service.ts,BE,ops,BE-07,137,pregledano,BE-07: zatvaranje timera u jednoj $transaction (F-01); audit/notifikacije/realtime poslije,2026-11-03
 backend/src/modules/ops/timer-machine.ts,BE,ops,BE-07,42,pregledano,"BE-07: mašina iz firme, DECOMMISSIONED/IN_SERVICE 409, ACTIVE samo na svom projektu",2026-11-03
 backend/src/modules/ops/timer-math.spec.ts,BE,ops,BE-07,36,pregledano,BE-07: pregledano — pauze i trajanje,2026-11-03
@@ -314,7 +314,7 @@ backend/src/modules/public/public.controller.ts,BE,public-notify,BE-16,41,pregle
 backend/src/modules/public/public.dto.ts,BE,public-notify,BE-16,23,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
 backend/src/modules/public/public.module.ts,BE,public-notify,BE-16,13,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
 backend/src/modules/public/public.service.ts,BE,public-notify,BE-16,218,pregledano,"F-04/F-06: validacija prije uploada, stream headeri + error",2026-11-03
-backend/src/modules/public/serialize-public.spec.ts,BE,public-notify,BE-16,87,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
+backend/src/modules/public/serialize-public.spec.ts,BE,public-notify,BE-16,87,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu) | BL-011: deterministički datumi u testnim podacima.",2026-11-06
 backend/src/modules/public/serialize-public.ts,BE,public-notify,BE-16,48,pregledano,"BE-16: pregledano, nema nalaza (whitelist/RBAC u redu)",2026-11-03
 backend/src/modules/realtime/app.gateway.ts,BE,public-notify,BE-16,83,pregledano,"F-02/F-07/F-08: CORS iz env, aktivna firma, bez mrtvog handlera",2026-11-03
 backend/src/modules/realtime/join-project-rooms.ts,BE,public-notify,BE-16,57,pregledano,F-03: soba companywide:{id},2026-11-03
@@ -621,8 +621,8 @@ scripts/audit/inventory.mjs,STD,audit-tools,STD-01,113,pregledano,"CI-05: prefli
 scripts/audit/lib.mjs,STD,audit-tools,STD-01,296,pregledano,"CI-05: pregled inventara, klasifikacije, CSV čitanja; duplikati u Map detektuju se prije readMatrix u check-coverage.",2026-11-04
 scripts/audit/report-e2e.mjs,STD,audit-tools,STD-01,52,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
 scripts/audit/report-e2e.test.mjs,STD,audit-tools,STD-01,67,pregledano,CI-05: pregled fail-closed Jest reportera i izolovanih regresija,2026-11-04
-scripts/audit/report-unit.mjs,STD,audit-tools,STD-01,70,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije.",2026-11-06
-scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,57,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije.",2026-11-06
+scripts/audit/report-unit.mjs,STD,audit-tools,STD-01,72,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije. | CI-05 BL-011: API anotacija statusa i coverage-a, ne zahtijeva raw log.",2026-11-06
+scripts/audit/report-unit.test.mjs,STD,audit-tools,STD-01,62,pokriveno-testom,"CI-05 BL-011: JSON summary, coverage i anotacije; testovi procesa/padova/redakcije. | BL-011: test-first regresije za JSON, pogreške, redakciju, workflow i API anotaciju.",2026-11-06
 scripts/audit/scaffold-segments.mjs,STD,audit-tools,STD-01,160,pregledano,"CI-05: pregled; odbija --force, postojeći izvještaji se čuvaju.",2026-11-04
 scripts/audit/segments.json,STD,audit-tools,STD-01,455,pregledano,F-CI-05-24 pregled registra i izvještaja; F-CI-05-01 proces zatvoren uz CI dokaz,2026-11-04
 scripts/audit/verify-ci-evidence.mjs,STD,audit-tools,STD-01,60,pokriveno-testom,STD-01: GitHub dokaz; nedostupan API upozorava a dostupan negativan dokaz ruši gate.,2026-11-05

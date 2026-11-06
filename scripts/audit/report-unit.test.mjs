@@ -54,3 +54,8 @@ test('CI uvijek objavljuje sigurnu unit dijagnostiku i pokreće reporter nakon J
   assert.match(backend, /name: Backend unit dijagnostika\n\s+if: always\(\)/);
   assert.match(ci, /scripts\/audit\/report-unit\.test\.mjs/);
 });
+
+test('uspješan rezultat i coverage dostupni su kao check-run anotacija bez raw loga', (t) => {
+  const r = run(t, good());
+  assert.match(r.stdout + r.stderr, /::notice::.*lines.*80\.00.*10\.00/);
+});

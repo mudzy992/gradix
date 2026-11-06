@@ -56,6 +56,11 @@ function fake(
 }
 
 describe('TimerCronService.closeStale', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-06T12:00:00.000Z'));
+  });
+  afterEach(() => jest.useRealTimers());
   it('čita timer.maxOpenHours jednom po firmi, ne po sesiji', async () => {
     const f = fake([
       { id: 'a', companyId: 'c1', hoursAgo: 13 },
@@ -65,6 +70,15 @@ describe('TimerCronService.closeStale', () => {
     await new TimerCronService(f.prisma, f.closer).closeStale();
     expect(f.settingsReads).toEqual(['c1', 'c2']);
     expect(f.closed).toEqual(['a', 'b', 'c']);
+  });
+
+  it('zatvara tačno na granici, ne prije nje', async () => {
+    const f = fake([
+      { id: 'before', companyId: 'c1', hoursAgo: 11.99 },
+      { id: 'at', companyId: 'c1', hoursAgo: 12 },
+    ]);
+    await new TimerCronService(f.prisma, f.closer).closeStale();
+    expect(f.closed).toEqual(['at']);
   });
 
   it('ne zatvara sesije mlađe od timer.maxOpenHours', async () => {

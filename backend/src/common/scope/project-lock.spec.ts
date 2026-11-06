@@ -61,7 +61,10 @@ describe('assertProjectWritable', () => {
       /terminal/,
     );
     expect(() =>
-      assertProjectWritable({ status: 'IN_PROGRESS', archivedAt: new Date() }),
+      assertProjectWritable({
+        status: 'IN_PROGRESS',
+        archivedAt: new Date('2026-11-06T12:00:00.000Z'),
+      }),
     ).toThrow(/terminal/);
   });
 });

@@ -65,5 +65,7 @@ for (const failure of failures.slice(0, 20)) {
   console.error(`::error::${message}`);
 }
 if (!ok && failures.length === 0) console.error(`::error::Unit test proces ${exitCode}; Jest izvještaj ${valid ? 'neuspješan ili nekonzistentan' : 'nedostupan ili neispravan'}.`);
+const summary = metrics.map((metric) => `${metric.name} ${metric.current === null ? 'n/a' : metric.current.toFixed(2)} / ${metric.baseline === null ? 'n/a' : metric.baseline.toFixed(2)}`).join('; ');
+console.log(`::notice::Backend unit ${ok ? 'PASS' : 'FAIL'}; coverage vs baseline: ${summary}`);
 console.log(`Backend unit dijagnostika: ${ok ? 'PASS' : 'FAIL'}; pojedinačnih padova: ${failures.length}.`);
 process.exit(ok ? 0 : 1);

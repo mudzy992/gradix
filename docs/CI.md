@@ -233,7 +233,7 @@ Više o formatu i ograničenjima: `scripts/audit/README.md`.
 ### Dijagnostika backend unit testova
 
 `npm run test:cov -- --passWithNoTests --json --outputFile=…` zadržava Jest izlazni
-status, dok `scripts/audit/report-unit.mjs` piše step summary, ograničene anotacije
+status, dok `scripts/audit/report-unit.mjs` piše step summary, ograničene anotacije uključujući coverage i status
 (dostupne preko GitHub check-runs API-ja) i `backend-unit-diagnostics` artefakt.
 Prikazuje samo pale testove/suiteove, do 20 redova poruke i tabelu coverage vs baseline;
 nedostajući JSON ili neuspješan proces nisu uspjeh. Sirovi JSON ne upload-a se i briše se

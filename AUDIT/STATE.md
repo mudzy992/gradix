@@ -12,9 +12,9 @@ Trenutno: **47/61 segmenata `done`**. CI-05 je `in-progress` (čeka puni CI); BE
 
 ## Zadnji commit i CI
 
-- `3375497`: ponovo pada backend unit/coverage; ostali poslovi još završavaju (run `42167920165`).
-- `e002b19` i `c7bf610`: isti backend korak pao, logovi EOF, uzrok nepoznat (BL-011).
-- Zadnji zeleni: `8cac43d` (BE-01), CI 6/6. `8cac43d..c7bf610` mijenja samo tri AUDIT dokumenta, ne backend kod/testove.
+- `eef4bab`: puni CI `42168466281` prošao 6/6; dodata dijagnostika, raniji tačan uzrok ostaje nedokazan.
+- `3375497`: backend unit/coverage pao, run kasnije otkazan zbog novog pusha; `e002b19` 5/6, logovi EOF (BL-011).
+- `c7bf610`: 5/6. `8cac43d..c7bf610` mijenja samo tri AUDIT dokumenta, ne backend kod/testove.
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
 ## CI-05 — administrativno trijažiran, puni CI blokiran
@@ -24,8 +24,8 @@ Trenutno: **47/61 segmenata `done`**. CI-05 je `in-progress` (čeka puni CI); BE
 - Strogi gate i njegov online verifier potvrđeni su punim push CI-jem 6/6 za `6d1e925`.
 - Rerun palih poslova: GitHub `run ... cannot be rerun; its workflow file may be broken`; nije izvršen.
 - [Ledger](CI-05-LEDGER.md): 72 nalaza; [backlog](BACKLOG.md): 11 grupa i S-red, s indeksom historijskih ograničenja.
-- `npm ci`, Node 22 i CI env: ista unit komanda 43/330 u UTC i Sarajevo sa vremenom 2026-11-06; coverage iznad baseline-a.
-- BL-011: unit reporter daje redigovan summary/anotacije i artefakt; specifični uzrok CI pada još nije dokazan. F-CI-05-64 ostaje djelimičan.
+- `npm ci`, Node 22 i CI env: ista unit komanda 43/331 za 2026-11-05 i 2026-11-06 u UTC i Sarajevo; coverage iznad baseline-a.
+- BL-011: unit reporter daje redigovan summary/anotacije i artefakt; puni CI `42168466281` 6/6, raniji uzrok još nije dokazan. Test sata je deterministički.
 
 ## BE-19 / FE-17 — dashboard v2
 

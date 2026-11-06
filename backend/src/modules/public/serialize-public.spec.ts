@@ -23,8 +23,8 @@ const company = {
   isActive: true,
   logoAssetId: 'asset-1',
   logoPath: 'company-1/logo.png',
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: new Date('2026-11-06T12:00:00.000Z'),
+  updatedAt: new Date('2026-11-06T12:00:00.000Z'),
 } as unknown as Company;
 
 const project = {
