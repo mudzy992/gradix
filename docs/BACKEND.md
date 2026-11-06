@@ -237,9 +237,15 @@ Globalno 120 req/min (`ThrottlerModule`), po ruti preciznije (INF-07: brojač je
 - GPS telefona ostaje `source=PHONE`, IoT je `source=IOT`.
 
 ### 4.9 Dashboard i prisustvo
-- Jedan `GET /api/dashboard`; ko ga dobija zavisi **samo od rola**, po redu najširi → najuži:
+- Postojeći `GET /api/dashboard`; ko ga dobija zavisi **samo od rola**, po redu najširi → najuži:
   firma (`admin`) → PM/SS → DRIVER → WORKER/MACHINE_OPERATOR → MECHANIC (D-034).
   Korisnik sa više rola dobija dashboard **šire** role (prije je prva grana „upadala“).
+- Aditivni read-only `GET /api/dashboard/projects` (BE-19): traži `projects.read` i tenant;
+  do 10 ne-arhiviranih projekata u statusima `PLANNING`/`IN_PROGRESS`, poredanih po nazivu
+  i ID-u. Firma-široke role vide svoju firmu, ostale samo dodijeljene projekte. Izbor je
+  `id/name/status/plannedBudget/currentSpend`, iznosi su tačni decimalni stringovi sa dvije
+  decimale (`plannedBudget` može biti `null`); nema sume ni float zaokruživanja.
+  Ovo ne mijenja ulaznu validaciju niti rješava BL-001; stare dashboard klijente ne mijenja.
 - Prisustvo (`presence`) je „zadnja lokacija po korisniku“ u zadnjih **30 min** (`PRESENCE_MAX_MS`),
   jednim `DISTINCT ON` upitom (indeks `(companyId, userId, recordedAt)`); bez koordinata u odgovoru.
 - **Dashboard** prikazuje svakoga iz firme ko je u geofence-u aktivnog projekta;

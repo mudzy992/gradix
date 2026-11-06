@@ -12,9 +12,10 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `f7e379b`: dokumentovano CI-05 zatvaranje na bazi stvarnog zelenog CI-ja.
 - `c842581`: CI `42169764781` 6/6; F-CI-05-73 popravljen stvarnim Prisma Decimalom.
 - `811733a`: CI `42169245124` 5/6; anotacije otkrile geo mock bez `isZero`.
-- `eef4bab`: CI `42168466281` 6/6; reporter je dodan za dijagnostiku.
+
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
 ## CI-05 — procesno zatvoren
@@ -29,7 +30,8 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## BE-19 / FE-17 — dashboard v2
 
-- B0: plan i D-057 dopunjuju D-043; implementacija admin checkpointa još nije počela.
+- B0: plan i D-057 dopunjuju D-043; B1 djelimično: novi ograničeni projects API, bez promjene postojećeg ugovora.
+- B1 test-first: unit 3/3, PG E2E 8/8 (12 SQL migracija ručno + demo seed), backend 44/335; CI čeka. Admin UI još nije počeo.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: mobile trip šalje slobodan `quantity` string; novo odbijanje više od 3 decimale je K1, inventura još traje.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; K2 vlasnika čeka admin screenshotove.

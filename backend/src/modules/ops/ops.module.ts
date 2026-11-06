@@ -40,6 +40,7 @@ import { FuelService } from './fuel.service';
 import { CatalogService } from './catalog.service';
 import { LocationsService } from './locations.service';
 import { DashboardService } from './dashboard.service';
+import { DashboardProjectsService } from './dashboard-projects.service';
 import { DiaryService } from './diary.service';
 import { DiaryConflictService } from './diary-conflict.service';
 import { IncidentsService } from './incidents.service';
@@ -96,6 +97,7 @@ import { FilesModule } from '../files/files.module';
     CatalogService,
     LocationsService,
     DashboardService,
+    DashboardProjectsService,
     DiaryService,
     DiaryConflictService,
     IncidentsService,

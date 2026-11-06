@@ -85,6 +85,70 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     );
   });
 
+  it('dashboard projects are tenant-scoped, permission-checked and bounded', async () => {
+    const foreign = await prisma.company.create({
+      data: { name: 'Foreign dashboard company', slug: `dash-${Date.now()}` },
+    });
+    const hidden = await prisma.project.create({
+      data: {
+        companyId: foreign.id,
+        name: 'A foreign project',
+        geofenceRadius: 50,
+      },
+    });
+    const own = await prisma.project.update({
+      where: { id: projectId },
+      data: { name: 'A scoped dashboard project', plannedBudget: '100.13' },
+    });
+    const extra = await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        prisma.project.create({
+          data: {
+            companyId: own.companyId,
+            name: `ZZ unassigned ${index}`,
+            geofenceRadius: 50,
+          },
+        }),
+      ),
+    );
+    try {
+      const adminDash = await request(app.getHttpServer())
+        .get('/api/dashboard/projects')
+        .set(auth(admin));
+      expect(adminDash.status).toBe(200);
+      expect(adminDash.body.data.length).toBe(10);
+      expect(adminDash.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: projectId,
+            plannedBudget: '100.13',
+            currentSpend: '0.00',
+          }),
+        ]),
+      );
+      expect(
+        adminDash.body.data.map((row: { id: string }) => row.id),
+      ).not.toContain(hidden.id);
+      const scoped = await request(app.getHttpServer())
+        .get('/api/dashboard/projects')
+        .set(auth(ss));
+      expect(scoped.status).toBe(200);
+      const scopedIds = scoped.body.data.map((row: { id: string }) => row.id);
+      expect(scopedIds).toContain(projectId);
+      expect(scopedIds).not.toContain(hidden.id);
+      for (const project of extra) expect(scopedIds).not.toContain(project.id);
+      const forbidden = await request(app.getHttpServer())
+        .get('/api/dashboard/projects')
+        .set(auth(worker));
+      expect(forbidden.status).toBe(403);
+    } finally {
+      await prisma.project.deleteMany({
+        where: { id: { in: [hidden.id, ...extra.map((row) => row.id)] } },
+      });
+      await prisma.company.delete({ where: { id: foreign.id } });
+    }
+  });
+
   it('second diary create same day returns DIARY_CONFLICT; resolve B', async () => {
     const first = await request(app.getHttpServer())
       .post('/api/diary')
