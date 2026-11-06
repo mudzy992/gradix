@@ -371,6 +371,7 @@ backend/test/health.e2e-spec.ts,TEST,e2e,BE-12,60,pregledano,"BE-18: liveness 20
 backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/decimal.ts,TEST,e2e-helpers,TEST-01,7,pregledano,CI-05: zajednički stvarni Prisma Decimal za testove,2026-11-06
+backend/test/helpers/discover-route-resource.ts,TEST,e2e-helpers,TEST-01,67,pregledano,TEST-01: inventory list-based ID discovery,2026-11-06
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/helpers/route-inventory.e2e-spec.ts,TEST,e2e-helpers,TEST-01,377,pokriveno-testom,"TEST-01: Nest/Express parity, public exceptions, anonymous/header i 593 permission-negative uzorka",2026-11-06
 backend/test/helpers/route-inventory.ts,TEST,e2e-helpers,TEST-01,173,pregledano,TEST-01: runtime metapodaci i deterministički route × role × tenant generator,2026-11-06
@@ -384,6 +385,7 @@ backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano 
 backend/test/project-isolation.e2e-spec.ts,TEST,e2e,TEST-01,137,pokriveno-testom,TEST-01: dvije stvarne firme i 10 rola; GET/PATCH izolacija projektnih ID-eva,2026-11-06
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
 backend/test/public.e2e-spec.ts,TEST,e2e,BE-17,146,pregledano,BE-17: pregledano u BE-16 (javni sajt); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
+backend/test/resource-discovery.e2e-spec.ts,TEST,e2e,TEST-01,167,pokriveno-testom,TEST-01: demo discovery and partial cross-tenant GET samples,2026-11-06
 backend/test/sync.e2e-spec.ts,TEST,e2e,BE-17,439,pregledano,"BE-17: +3 testa — 201 item 400, since budućnost/neispravan 400, watermark ≤ serverTime i novi zapis vidljiv, 3 paralelna replay-a bez 500 i sa jednom sesijom | F-CI-05-69: preciznost goriva i overflow proizvoda; CI 42096898797 prošao.",2026-11-05
 backend/test/tenant-resource-isolation.e2e-spec.ts,TEST,e2e,TEST-01,383,pokriveno-testom,TEST-01: real resource isolation ledger and positive controls,2026-11-06
 backend/test/tenant.e2e-spec.ts,TEST,e2e,BE-04,568,pregledano,"BE-04: pregledano — PLATFORM_ADMIN bez headera 403, WORKER sa headerom 400, PATCH /company 200/409, GET 200, deaktivirana firma 401; F-CI-05-38: greške opoziva i timera; ponovljena deaktivacija; F-CI-05-39: rollback i DB utrke firma/rotacija/izdavanje/insert; F-CI-05-41: konkurentna democija i deaktivacija; posljednji/neaktivni super",2026-11-04

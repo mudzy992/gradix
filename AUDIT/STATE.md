@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `25e9931`: CI [42272490494](https://github.com/mudzy992/gradix/actions/runs/42272490494) 6/6 uključujući Web E2E.
 - `6e617cf`: CI [42275204800](https://github.com/mudzy992/gradix/actions/runs/42275204800) 5/6; backend E2E `erp.e2e-spec.ts` pad; uzrok nepoznat (log EOF), lokalni fresh E2E 21/206 exit 0.
-- Tekući commit: fail-closed reporter fingerprint dijagnostika; CI čeka push.
+- `0d6f834`: CI [42276252687](https://github.com/mudzy992/gradix/actions/runs/42276252687) 6/6; fingerprint reportera, ne dokaz uzroka ranijeg pada.
+- Tekući commit: automatski discovery uzorci i blokade; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -39,7 +39,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Sljedeći korak
 
-S-01 ograničenja u tekućem commitu; zatim TEST-01 automatsko otkrivanje resursa, OpenAPI gate i TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
+TEST-01 discovery ostaje ispod cilja; generički test-only seed i validne mutacije/pozitivne kontrole su sljedeći. OpenAPI gate blokiran postojećim ugovorima; zatim TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
 

@@ -1,0 +1,6 @@
+OpenAPI exploration on isolated seeded PG via Nest SwaggerModule.createDocument and collectRoutes, 2026-11-06.
+Diagnostic counted 171 runtime methods; each had an operation and at least one response.
+18 POST/PATCH/PUT operations had no requestBody; this includes deliberately bodyless operations and file uploads, so it is not a count of defective DTOs.
+171/171 operations lack at least one of 400/401/403/404 response declarations (strictly requiring all four is not necessarily semantically correct for public and special routes).
+33 GET handlers whose name begins 'list' lack at least one explicit cursor/limit query declaration. This heuristic misses other list-producing handlers and cannot determine runtime pagination policy.
+No full DTO/schema correctness audit or durable OpenAPI snapshot was performed. Existing page/limit lists are not proof of cursor support. A strict unconditional gate would fail current contracts; see BL-OPENAPI-01.

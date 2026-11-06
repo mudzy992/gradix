@@ -1282,3 +1282,11 @@ Radi potpunosti, **svaki neprazan red** arhiviranog STATE-a ima ID i okvirnu kla
 - **BE-19, riješeno za projects pagination:** `/dashboard/projects` sada ima cursor/limit i dodatni `meta` bez promjene niza `data`; dokaz u `ops-web.e2e-spec.ts`.
 
 - **BE-19 test fixture:** ponavljanje `ops-web.e2e-spec.ts` na istoj bazi nakuplja projekte i poslije više ponavljanja može izgurati fixture iz prve stranice; koristiti svježu testnu bazu ili kasnije izolovati/počistiti fixture.
+
+- **BL-TEST-01-SEED:** demo seed nema dokumente, diary, HSE, fuel, trip, servise ni ERP/tendere; dopuniti generički test-only seed sa realnim podacima u obje firme prije generisanih napada.
+- **BL-TEST-01-NOLIST:** izvještajni slugovi i task podresursi nemaju odgovarajući GET list u inventaru; eksplicitna mapa parametar→factory/selector ili dokumentovani izuzetak bez mijenjanja produkcijskog API-ja.
+- **BL-TEST-01-DISCOVERY:** izvršiti DELETE i preostale GET napade s otkrivenim ID-ovima i zasebnim pozitivnim kontrolama/DB provjerama za svaku dozvoljenu rolu.
+- **BL-TEST-01-MUTATION:** generisati validne OpenAPI/DTO payloadove za PATCH/POST/PUT te potvrditi vlastiti uspjeh i odsustvo stranih efekata; 400 nije dokaz izolacije.
+- **BL-TEST-01-LIST:** dokazati preostale list/agregat rute uz filtere, paginaciju, sortiranje i pretragu u obje firme.
+- **BL-TEST-01-IDENTITY:** netenant identitet/platform rute trebaju zasebne scenarije ili obrazložene izuzetke; ne tretirati ih kao standardne tenant ID rute.
+- **BL-OPENAPI-01:** strogi contract gate blokiran postojećim nedokumentovanim greškama i listama bez cursor/limit; uvesti ratchet i kompatibilnu migraciju ugovora prije bezuslovnog CI gatea.
