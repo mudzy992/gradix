@@ -1289,7 +1289,7 @@ Radi potpunosti, **svaki neprazan red** arhiviranog STATE-a ima ID i okvirnu kla
 - **BL-TEST-01-MUTATION:** generisati validne OpenAPI/DTO payloadove za PATCH/POST/PUT te potvrditi vlastiti uspjeh i odsustvo stranih efekata; 400 nije dokaz izolacije.
 - **BL-TEST-01-LIST:** dokazati preostale list/agregat rute uz filtere, paginaciju, sortiranje i pretragu u obje firme.
 - **BL-TEST-01-IDENTITY:** netenant identitet/platform rute trebaju zasebne scenarije ili obrazložene izuzetke; ne tretirati ih kao standardne tenant ID rute.
-- **BL-OPENAPI-01:** strogi contract gate blokiran postojećim nedokumentovanim greškama i listama bez cursor/limit; uvesti ratchet i kompatibilnu migraciju ugovora prije bezuslovnog CI gatea.
+- **BL-OPENAPI-01:** pregledati/ukloniti 927 eksplicitnih OpenAPI izuzetaka (nedokumentovane greške/DTO/paginacija i legitimne bodyless/204), potvrditi runtime semantiku te kompatibilno migrirati liste; strukturni ratchet nije dokaz pune usklađenosti.
 - **BL-TEST-01-STRICT:** razdvojiti testne fixture klijente od app klijenta i uvesti callsite-precizne opravdane izuzetke za pre-auth/login/platform/public; potom punu E2E pokrenuti sa `TENANT_STRICT=1` u CI i pregledati svaki stvarni nalaz.
 - **BL-TEST-01-STATIC:** pregledati 234 postojeća AST kandidata iz `scripts/standards/tenant-query-baseline.json` po vlasništvu i uticaju; baseline je neocijenjen dug, ne sigurnosna dozvola.
 - **BL-TEST-01-RAW:** zasebno pokriti raw SQL, nested Prisma upite i indirektne delegate te provjeriti da `companyId` odgovara autentificiranom tenantu; prisustvo polja samo po sebi nije izolacija.

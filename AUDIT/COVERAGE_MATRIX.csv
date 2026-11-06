@@ -374,13 +374,15 @@ backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,29,pokriveno-testom,
 backend/test/helpers/decimal.ts,TEST,e2e-helpers,TEST-01,7,pregledano,CI-05: zajednički stvarni Prisma Decimal za testove,2026-11-06
 backend/test/helpers/discover-route-resource.ts,TEST,e2e-helpers,TEST-01,67,pregledano,TEST-01: inventory list-based ID discovery,2026-11-06
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
+backend/test/helpers/openapi-contract.ts,TEST,e2e-helpers,TEST-01,152,pokriveno-testom,TEST-01: OpenAPI strukturna provjera i eksplicitni izuzeci,2026-11-06
 backend/test/helpers/route-inventory.e2e-spec.ts,TEST,e2e-helpers,TEST-01,377,pokriveno-testom,"TEST-01: Nest/Express parity, public exceptions, anonymous/header i 593 permission-negative uzorka",2026-11-06
 backend/test/helpers/route-inventory.ts,TEST,e2e-helpers,TEST-01,173,pregledano,TEST-01: runtime metapodaci i deterministički route × role × tenant generator,2026-11-06
 backend/test/helpers/tenant-fixtures.ts,TEST,e2e-helpers,TEST-01,269,pregledano,TEST-01: A/B factory registry and tenant roles,2026-11-06
 backend/test/helpers/tenant-strict.ts,TEST,e2e-helpers,TEST-01,95,pokriveno-testom,"TEST-01: opt-in runtime Prisma extension, 41 tenant modela",2026-11-06
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
-backend/test/openapi-snapshot.e2e-spec.ts,TEST,e2e,TEST-01,47,pokriveno-testom,TEST-01: runtime OpenAPI inventory and snapshot drift,2026-11-06
+backend/test/openapi-contract.e2e-spec.ts,TEST,e2e,TEST-01,121,pokriveno-testom,TEST-01: red-first schema error lista i reference,2026-11-06
+backend/test/openapi-snapshot.e2e-spec.ts,TEST,e2e,TEST-01,76,pokriveno-testom,TEST-01: runtime kontrakt izuzeci i snapshot drift,2026-11-06
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1543,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03

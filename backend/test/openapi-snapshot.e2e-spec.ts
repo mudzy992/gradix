@@ -6,6 +6,11 @@ import { resolve } from 'node:path';
 import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { collectRoutes } from './helpers/route-inventory';
+import {
+  contractIssues,
+  compareContractExceptions,
+} from './helpers/openapi-contract';
+import type { ContractException } from './helpers/openapi-contract';
 
 describe('OpenAPI snapshot gate', () => {
   let app: INestApplication<App>;
@@ -14,6 +19,30 @@ describe('OpenAPI snapshot gate', () => {
   });
   afterAll(async () => {
     await app?.close();
+  });
+
+  it('blocks unlisted contract gaps and stale exceptions for every inventoried route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/docs-json')
+      .expect(200);
+    const doc = response.body as {
+      paths: Record<string, Record<string, unknown>>;
+    };
+    const issues = collectRoutes(app).flatMap((route) => {
+      const path = route.path.replace(/:([^/]+)/g, '{$1}');
+      const op = doc.paths[path]?.[route.method.toLowerCase()];
+      return contractIssues(route, op, doc).map((issue) => ({
+        route: `${route.method} ${route.path}`,
+        issue,
+      }));
+    });
+    const exceptions = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), '../AUDIT/OPENAPI-EXCEPTIONS.json'),
+        'utf8',
+      ),
+    ) as ContractException[];
+    expect(compareContractExceptions(issues, exceptions)).toEqual([]);
   });
 
   it('describes every inventoried method and matches the checked-in snapshot', async () => {

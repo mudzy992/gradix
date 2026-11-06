@@ -1,0 +1,4637 @@
+[
+  {
+    "route": "GET /api/activity/events",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/activity/events",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/activity/events",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/activity/events",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/documents",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/documents",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/documents",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/documents",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/tasks",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/tasks",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/tasks",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/alerts/tasks",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/amendments",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/amendments",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/amendments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/amendments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/amendments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/amendments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/summary",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/summary",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/summary",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/summary",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/summary",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/analytics/tasks/created",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/tasks/created",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/tasks/created",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/tasks/created",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/tasks/created",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/analytics/timers/closed",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/timers/closed",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/timers/closed",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/timers/closed",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/analytics/timers/closed",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/auth/change-password",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/change-password",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/change-password",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/change-password",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/change-password",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/forgot",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/forgot",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/forgot",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/forgot",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/forgot",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/login",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/login",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/login",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/login",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/login",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/logout",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/logout-all",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/refresh",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/refresh",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/refresh",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/reset",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/auth/reset",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/reset",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/reset",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/auth/reset",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/companies",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/companies",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/companies",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/companies",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/companies",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/companies",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/companies/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/companies/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/companies/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/companies/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/companies/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/company",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/company",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/company",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/company",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/company",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/company",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/cost-entries",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/cost-entries",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/cost-entries/:id",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/cost-entries/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/cost-entries/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/cost-entries/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/cost-entries/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/cost-entries/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/cost-entries/from-payroll",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/cost-entries/from-payroll",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries/from-payroll",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries/from-payroll",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/cost-entries/from-payroll",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/dashboard/projects",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard/projects",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard/projects",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/dashboard/projects",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/depots",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/depots",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/depots",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/depots",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/depots",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/depots",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/depots/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "DELETE /api/depots/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/depots/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/depots/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/depots/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/depots/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/depots/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/depots/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/depots/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/depots/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/diary",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/diary",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/diary/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/diary/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/diary/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/diary/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/diary/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/diary/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/pdf",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/photos",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/diary/:id/photos",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/photos",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/photos",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/diary/:id/photos",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/company",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/documents/company",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/documents/company",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/company",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/company",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/company",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/documents/company/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/documents/company/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/documents/company/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/documents/company/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/documents/company/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/machine",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/documents/machine",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/documents/machine",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/machine",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/machine",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/machine",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/documents/worker",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/documents/worker",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/documents/worker",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/worker",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/worker",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/documents/worker",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/files",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "request-schema",
+    "reason": "BL-OPENAPI-01: upload zahtijeva multipart fajl, ali request schema nije dokumentovana; files.controller.ts."
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/files",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/fuel",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/fuel",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/fuel/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/fuel/:id/apply-stock",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/fuel/:id/apply-stock",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel/:id/apply-stock",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel/:id/apply-stock",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/fuel/:id/apply-stock",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/health",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/incidents",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/incidents",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/incidents",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/incidents",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/incidents",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/incidents",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/incidents/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/incidents/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/incidents/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/incidents/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/incidents/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/iot/gps",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/iot/gps",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/iot/gps",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/iot/gps",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/iot/gps",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/locations/geofence-check",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/locations/me",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/locations/me",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/locations/me",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/locations/me",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/locations/me",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/machines",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/machines/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "DELETE /api/machines/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/machines/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/machines/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/machines/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/machines/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/machines/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/assign",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines/:id/assign",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/assign",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/assign",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/assign",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/location",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines/:id/location",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/location",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/location",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/location",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:id/unassign",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/machines/:machineId/devices",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:machineId/devices/:deviceId",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/machines/:machineId/devices/:deviceId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:machineId/devices/:deviceId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:machineId/devices/:deviceId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/machines/:machineId/devices/:deviceId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/machines/:machineId/devices/:deviceId/rotate",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/materials",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/materials",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/materials",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/materials",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/materials",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/materials",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/materials/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "DELETE /api/materials/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/materials/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/materials/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/materials/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/materials/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/materials/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/materials/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/materials/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/materials/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/me",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/me",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/me",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/me",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/me",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/me",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/me/fcm-token",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PUT /api/me/fcm-token",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/me/fcm-token",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/me/fcm-token",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/me/fcm-token",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/notifications",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/notifications/:id/read",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/notifications/read-all",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/partners",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/partners",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/partners",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/partners",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/partners",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/partners/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/partners/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/partners/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/partners/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/partners/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/partners/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/export",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/sessions",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/approve",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/reject",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/reject",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/reject",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/reject",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/payroll/sessions/:id/reject",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/payroll/summary",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/presence/people",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/presence/people",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/presence/people",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/presence/people",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/projects",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/projects",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/projects/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/projects/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/projects/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/assignments",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/projects/:id/assignments",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/projects/:id/assignments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/assignments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/assignments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/assignments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/assignments/:userId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/projects/:id/assignments/:userId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/assignments/:userId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/assignments/:userId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/assignments/:userId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/documents",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/projects/:id/documents",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/projects/:id/documents",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/documents",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/documents",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/documents",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/documents/:docId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/projects/:id/documents/:docId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/documents/:docId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/documents/:docId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/documents/:docId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/phases",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/projects/:id/phases",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/projects/:id/phases",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/phases",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/phases",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/phases",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/phases/:phaseId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/projects/:id/phases/:phaseId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/phases/:phaseId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/phases/:phaseId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/projects/:id/phases/:phaseId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/phases/:phaseId",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/projects/:id/phases/:phaseId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/phases/:phaseId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/phases/:phaseId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/phases/:phaseId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/presence",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/projects/:id/public",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/projects/:id/public",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/public",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/public",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/public",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/:id/quantities",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/projects/:id/quantities",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/projects/:id/quantities",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/quantities",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/quantities",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/projects/:id/quantities",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/quantities/:qtyId",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/projects/:id/quantities/:qtyId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/quantities/:qtyId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/quantities/:qtyId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/quantities/:qtyId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/status",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/projects/:id/status",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/status",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/status",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/projects/:id/status",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/projects/picker",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/:slug/projects",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/public/assets",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/public/assets",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/public/assets",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/public/assets",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/public/assets",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/public/assets/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/ready",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/reports/:slug/export",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/service-templates",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/service-templates",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/service-templates",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/service-templates",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/service-templates",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/service-templates",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/service-templates/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/service-templates/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/service-templates/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/service-templates/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/service-templates/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/services",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/services",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/services",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/cancel",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/complete",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/services/:id/complete",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/complete",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/complete",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/complete",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/services/:id/start",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "request-schema",
+    "reason": "BL-OPENAPI-01: settings.controller.ts prima @Body Record, request schema nije dokumentovana."
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PUT /api/settings",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/settings/public",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/stock",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/stock-movements",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/stock-movements",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/stock-movements",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/stock-movements",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/stock-movements",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/sync/catalog",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/sync/pull",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/sync/pull",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/pull",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/pull",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/pull",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/push",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/sync/push",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/push",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/push",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/push",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/resolve-conflict",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/sync/resolve-conflict",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/resolve-conflict",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/resolve-conflict",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/sync/resolve-conflict",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/tasks",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tasks/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/tasks/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/tasks/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tasks/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tasks/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tasks/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/assignees",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks/:id/assignees",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/assignees",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/assignees",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/assignees",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/assignees/:userId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/tasks/:id/assignees/:userId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/assignees/:userId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/assignees/:userId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/assignees/:userId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/attachments",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks/:id/attachments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/attachments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/attachments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/attachments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/attachments/:attId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/tasks/:id/attachments/:attId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/attachments/:attId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/attachments/:attId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/attachments/:attId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/cancel",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/complete",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/dependencies",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tasks/:id/dependencies",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/dependencies",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/dependencies",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tasks/:id/dependencies",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/dependencies/:depId",
+    "issue": "response-schema-204",
+    "reason": "HTTP 204 No Content nema response tijelo; schema sadržaja nije primjenjiva (BL-OPENAPI-01)."
+  },
+  {
+    "route": "DELETE /api/tasks/:id/dependencies/:depId",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/dependencies/:depId",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/dependencies/:depId",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "DELETE /api/tasks/:id/dependencies/:depId",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/tenders",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tenders",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/tenders/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/tenders/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/tenders/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tenders/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tenders/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/tenders/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/attachments",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tenders/:id/attachments",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/attachments",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/attachments",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/attachments",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/tenders/:id/convert",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/timer/me",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/pause",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/resume",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/start",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/timer/start",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/start",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/start",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/start",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/timer/stop",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/trips",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/trips",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/trips/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "POST /api/trips/:id/complete",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/trips/:id/complete",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips/:id/complete",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips/:id/complete",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/trips/:id/complete",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/users",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/users",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/users/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  },
+  {
+    "route": "PATCH /api/users/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "PATCH /api/users/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/users/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/users/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "PATCH /api/users/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "request-schema",
+    "reason": "Operacija u controlleru nema request tijelo; request DTO nije primjenjiv (BL-OPENAPI-01)."
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/users/:id/reset-password",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses",
+    "issue": "cursor-limit",
+    "reason": "BL-OPENAPI-01: postojeća list heuristika nema oba deklarisana query parametra; pregledati oblik i kompatibilnu paginaciju"
+  },
+  {
+    "route": "POST /api/warehouses",
+    "issue": "response-schema-201",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "POST /api/warehouses",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/warehouses",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/warehouses",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "POST /api/warehouses",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "response-schema-200",
+    "reason": "BL-OPENAPI-01: postojeći 2xx tip nije dokumentovan ili je namjerno bez tijela/binarni odgovor; potreban pregled"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "error-400",
+    "reason": "BL-OPENAPI-01: opis HTTP 400 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "error-401",
+    "reason": "BL-OPENAPI-01: opis HTTP 401 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "error-403",
+    "reason": "BL-OPENAPI-01: opis HTTP 403 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "error-404",
+    "reason": "BL-OPENAPI-01: opis HTTP 404 nije deklarisan; potrebno je utvrditi primjenjivost i dokumentovati"
+  },
+  {
+    "route": "GET /api/warehouses/:id",
+    "issue": "list-classification",
+    "reason": "BL-OPENAPI-01: postojeći GET nije eksplicitno označen kao lista ili pojedinačni/agregatni odgovor; potrebna provjera."
+  }
+]
