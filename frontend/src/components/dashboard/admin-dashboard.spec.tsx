@@ -62,6 +62,14 @@ describe('admin dashboard v2', () => {
     const today = await screen.findByRole('region', { name: 'Danas' })
     expect(await within(today).findByText('Neka upozorenja nisu dostupna.')).toBeInTheDocument()
   })
+  it('styles each KPI with an accent and reduced-motion-safe hover treatment', async () => {
+    setup()
+    const overview = screen.getByRole('region', { name: 'Ključni pokazatelji' })
+    await within(overview).findByText('Aktivni projekti')
+    const cards = overview.querySelectorAll('[data-kpi-card]')
+    expect(cards).toHaveLength(4)
+    for (const card of cards) expect(card).toHaveClass('border-t-primary', 'motion-safe:hover:-translate-y-0.5')
+  })
   it('renders independent real sections, exact money, safe trend and project map', async () => {
     setup()
     expect(await screen.findByRole('link', { name: 'Most' })).toBeInTheDocument()

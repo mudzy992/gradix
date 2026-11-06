@@ -13,11 +13,12 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 ## Zadnji commit i CI
 
 
-- `b1236a7`: CI [42291835846](https://github.com/mudzy992/gradix/actions/runs/42291835846) 6/6 uključujući Web E2E.
 
 - `4f22c4b`: CI [42295365402](https://github.com/mudzy992/gradix/actions/runs/42295365402) 6/6; korak 0.
 
 - `e5841aa`: CI [42296174440](https://github.com/mudzy992/gradix/actions/runs/42296174440) 6/6; snimak bogatog demo seeda.
+
+- `b26e79d`: CI 42298212503 u toku; 5 poslova prošlo, Web E2E instalira browser.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -36,7 +37,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 - B0: plan i D-057 dopunjuju D-043; B1 djelimično: scalarni KPI, projects API s koordinatama, analitika kreiranja zadataka, admin audit aktivnost, odobrene minute timera, GPS procjena prisustva i upozorenja isteka dokumenata i rokova zadataka (cursor/limit); demo 30-dnevni trendovi. Ostali endpointi nisu završeni.
 - Admin v2: tenant-keyed upiti, tačan decimalni prikaz, lazy mapa, SVG grafikoni, dark/light, BS/EN; ostale role ostaju na starom dashboardu. v2.1: proširen izolovani demo seed; UI, snimci i mjerenja nisu završeni. PG E2E 26/222 prije zadnje sitne izmjene ID-a i dopune testa, ciljani test nakon nje 1/1; backend 55/448, FE 66/650, lint/build i check:all 0/3 skip. Produkcijski seed na novoj bazi: 1 user, 0 firmi/projekata/zadataka/mašina.
-- S-01 korak 0: checklist, poruka i test za `REFRESH_REPLAY_SECRET`; v2.1 korak 2: Danas i sortirana upozorenja prije KPI; broj je limitiran i nepotpuno stanje ne glumi nulu. Sljedeći korak 3. S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
+- S-01 korak 0: checklist, poruka i test za `REFRESH_REPLAY_SECRET`; v2.1 korak 2: Danas i sortirana upozorenja prije KPI; broj je limitiran i nepotpuno stanje ne glumi nulu. Korak 3 djelimično: KPI akcent/hover; stvarni trendovi/delta i valuta ostaju. S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: [inventura](DECIMAL-INVENTORY.md), D-058 K1 A; 70 parser slučajeva, PG E2E 17/170. Preostali HTTP/PG i DB opsezi idu u TEST-01.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; Paleta Ctrl/Cmd+K po pravima integrisana; admin screenshotovi, axe i lokalna mjerenja pripremljeni za K2.
 

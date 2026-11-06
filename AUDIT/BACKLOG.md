@@ -1294,3 +1294,5 @@ Radi potpunosti, **svaki neprazan red** arhiviranog STATE-a ima ID i okvirnu kla
 - **BL-TEST-01-STATIC:** pregledati 234 postojeća AST kandidata iz `scripts/standards/tenant-query-baseline.json` po vlasništvu i uticaju; baseline je neocijenjen dug, ne sigurnosna dozvola.
 - **BL-TEST-01-RAW:** zasebno pokriti raw SQL, nested Prisma upite i indirektne delegate te provjeriti da `companyId` odgovara autentificiranom tenantu; prisustvo polja samo po sebi nije izolacija.
 - **BL-CI-42283897872:** red-first lokalno ponovljen Audit gate pad zbog nepregledanog baseline fajla u završenom STD-01; format evidentiran bez tvrdnje da su tenant kandidati sigurnosno pregledani, te check:all sada uključuje audit status.
+
+- **BL-FE-17-KPI-HISTORY:** trenutni scalarni KPI nemaju uporedivu historiju za sve četiri kartice; obezbijediti stvarne izvore ili jasno označiti nedostupno, bez izmišljenih trendova/delta.
