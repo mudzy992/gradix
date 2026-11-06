@@ -5,7 +5,9 @@
 
 ---
 
-## 1. Trenutno stanje (commit `e531ca2`)
+## 1. Historijski snimak (commit `e531ca2`)
+
+> Ova tabela je historijska, ne opis trenutne pokrivenosti. Za aktuelne rezultate vidjeti `AUDIT/STATE.md` i TEST-01.
 
 | Sloj | Alat | Broj | Šta pokriva | Prag |
 |---|---|---|---|---|
@@ -140,3 +142,18 @@ nalaz). Gate je CI job `audit` (`scripts/audit/check-coverage.mjs`), detalji u
 | T4 | Playwright: 1 spec, bez page objects i fixtures | FE-06 |
 | T5 | Mobile: nema testova ni E2E | MOB-03 / MOB-05 |
 | T6 | Nema a11y testova (`axe`) | FE-03 |
+
+
+## TEST-01: generisani inventar ruta i matrica
+
+`AUDIT/ROUTE_INVENTORY.csv` je pregled stvarnih Nest controller metoda/putanja i njihovih efektivnih `@Public`, `@TenantRoute` i `@RequirePermissions` metapodataka. E2E test provjerava njihovu jednakost Express registraciji (isključeni Swagger docs i websocket). `AUDIT/ROUTE_MATRIX.csv` je deterministični kartezijanski proizvod: ruta × anonymous/10 rola iz aplikacije × četiri zaglavlja: bez zaglavlja, ID vlastite firme, ID druge firme, nepoznati ID. Za platform admina „vlastita firma“ može biti neprimjenjivo; anonimni header nije izbor tenanta. Matriks je lista za ocjenu, **ne** tvrdnja da svi slučajevi postoje ili su testirani: `unassessed` označava da još nema pregledanog pojedinačnog dokaza; evidenciju povezivati odvojeno da regeneracija ne uništi ručni audit. Deklarativne permisije same ne dokazuju service-level pravila ili stvarnu tenant izolaciju.
+
+Pokrenuti samo s izolovanom testnom PostgreSQL bazom i CI testnim env/seed postavkama:
+
+```sh
+cd backend
+ROUTE_INVENTORY_WRITE=1 npm run test:e2e -- --runInBand --runTestsByPath test/helpers/route-inventory.e2e-spec.ts
+npm run test:e2e -- --runInBand --runTestsByPath test/helpers/route-inventory.e2e-spec.ts
+```
+
+Prva komanda namjerno regeneriše oba CSV-a; druga samo provjerava drift. Testovi dodatno šalju anonimne zahtjeve bez tijela na sve non-public obrasce sa zamjenskim nepostojećim ID-jevima i očekuju 401, bez tvrdnje da su dokazane dozvoljene uloge ili tuđi resursi. Parametrizirane putanje su uzorak, ne dokaz svih vrijednosti parametra; regeneracija zahtijeva pregled diff-a.

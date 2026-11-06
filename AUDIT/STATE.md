@@ -8,13 +8,13 @@
 
 ## Stanje segmenata
 
-Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-progress` (backend izvori i admin web v2).
+Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su `in-progress` (dashboard K2 i inventar ruta).
 
 ## Zadnji commit i CI
 
+- `cd01d33`: CI `42198725351` 6/6; K2 snimci i stabilniji layout.
 - `b832d56`: CI `42196768138` 6/6; role-aware paleta.
-- `cb5e54f`: CI `42195850119` 6/6; admin dashboard v2.
-- Tekući commit: snimci, testovi i mjerenja; CI čeka push.
+- Tekući commit: TEST-01 route matrica i anonimni 401 uzorci; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -39,4 +39,4 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Sljedeći korak
 
-K2 izvještaj o screenshotovima; potom samostalno TEST-01, S-red (High) i TEST-02 dok vlasnik pregleda. Detalji u [handoffu](HANDOFF.md).
+TEST-01: generisana matrica ruta × role × tenant; nastaviti dokaze slučajeva, S-red (High) i TEST-02 dok vlasnik pregleda K2. Detalji u [handoffu](HANDOFF.md).

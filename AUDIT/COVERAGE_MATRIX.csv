@@ -368,6 +368,8 @@ backend/test/helpers/auth.ts,TEST,e2e-helpers,TEST-01,28,nepregledano,,
 backend/test/helpers/create-app.ts,TEST,e2e-helpers,TEST-01,21,nepregledano,,
 backend/test/helpers/decimal.ts,TEST,e2e-helpers,TEST-01,7,pregledano,CI-05: zajednički stvarni Prisma Decimal za testove,2026-11-06
 backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
+backend/test/helpers/route-inventory.e2e-spec.ts,TEST,e2e-helpers,TEST-01,136,pregledano,TEST-01: Express paritet drift i anonimni 401 uzorci,2026-11-06
+backend/test/helpers/route-inventory.ts,TEST,e2e-helpers,TEST-01,173,pregledano,TEST-01: runtime metapodaci i deterministički route × role × tenant generator,2026-11-06
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03

@@ -4,7 +4,7 @@
 |---|---|
 | Sloj | `TEST` |
 | Obim | `fajlovi` |
-| Status | `planned` |
+| Status | `in-progress` |
 | Plan | [`AUDIT/02_MASTER_AUDIT_PLAN.md`](../02_MASTER_AUDIT_PLAN.md) |
 | Matrica | [`AUDIT/COVERAGE_MATRIX.csv`](../COVERAGE_MATRIX.csv) (filter `segment=TEST-01`) |
 | Živi dnevnik | [`AUDIT/STATE.md`](../STATE.md) |
@@ -79,8 +79,19 @@ _Novi alati/zavisnosti: obrazloženje ide i u `docs/DECISIONS.md` (D-006)._
 | Datum | _(prazno dok se ne počne)_ |
 | Commit(ovi) | |
 | CI run | |
-| Status | `planned` |
+| Status | `in-progress` |
 
 ## Ulaz iz D-058
 
 Nakon K2 provjeriti preostalu decimalnu HTTP/PG karakterizaciju svih polja i granica, direktne vanjske Prisma upise, postojeće podatke, numeričke opsege i izvedene obračune; D-058 zatvara samo skalu inventurisanih API inputa. Automatska matrica role × tenant × ROUTE_INVENTORY ostaje prvi korak TEST-01.
+
+
+## 11. Prva faza — automatska ruta × uloga × tenant
+
+`AUDIT/ROUTE_INVENTORY.csv` generiše 171 aktivnu Nest controller rutu iz runtime metapodataka; test poredi metode/putanje i sa registrovanim Express rutama (Swagger docs i websocket nisu controller API). `AUDIT/ROUTE_MATRIX.csv` sadrži 7.524 kombinacije tih ruta, 10 Prisma uloga + anonymous i četiri konteksta headera. Sve ćelije su **unassessed**: to nije tvrdnja da nikakvi raniji E2E testovi ne postoje, nego da pojedinačni dokaz još nije povezan i pregledan. Public/tenant/permissions su deklarativni metapodaci, ne konačna odluka: dodatni guardovi, role checkovi u servisima, projekti, tijelo i prava korisnika mogu promijeniti ishod. Kombinacije koje nisu smislene tek treba označiti kao N/A uz obrazloženje.
+
+Test u izolovanoj testnoj bazi šalje zahtjev bez prijave i headera (bez tijela, s nepostojećim vrijednostima parametara) na 160 non-public obrazaca; svi vraćaju 401. To dokazuje samo anonimnu granicu za te primjere; ne dokazuje ispravnost dozvoljenih rola ni tenant izolaciju u čitanju/upisu. Naredno: dokazani dozvoljeni i odbijeni role/tenant slučajevi i cross-tenant resursi, pa S-red po prioritetu, decimalne granice i kriteriji plana.
+
+Deterministična regeneracija i detalji u `docs/TESTING.md`; ne prepisivati matrice ručno niti označavati neprocijenjene ćelije kao pokrivene.
+
+Lokalna provjera prve faze: fresh PostgreSQL 16, 12 ručno primijenjenih migracija i test-only readiness, route E2E 5/5; backend unit 54/439, frontend 66/645, `check:all` 0 grešaka/2 preskočeno, backend lint/build prošli. CI potvrda slijedi push.
