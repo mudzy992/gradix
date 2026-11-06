@@ -166,16 +166,54 @@ for (const [endpoint, prefixes] of [
     );
   }
 }
-function parse(kind: Kind, value: string) {
-  switch (kind) {
+add(
+  [
+    'projects.POST.lat',
+    'projects.POST.lng',
+    'projects.PATCH.lat',
+    'projects.PATCH.lng',
+    'timer.start.lat',
+    'timer.start.lng',
+    'sync.TIMER.lat',
+    'sync.TIMER.lng',
+  ],
+  'plain',
+  { max: '999.9999999', overflow: '1000' },
+  true,
+  true,
+);
+add(
+  ['users.POST.hourlyRate', 'users.PATCH.hourlyRate'],
+  'plain',
+  numeric12_2,
+  true,
+  true,
+);
+
+function scaleFor(field: Field): number {
+  return field.kind === 'lat' ||
+    field.kind === 'lng' ||
+    field.max === '999.9999999'
+    ? 7
+    : field.kind === 'temp'
+      ? 1
+      : field.kind === 'money' ||
+          field.max === numeric12_2.max ||
+          field.id === 'locations.me.accuracyM'
+        ? 2
+        : 3;
+}
+function parse(field: Field, value: string) {
+  const scale = scaleFor(field);
+  switch (field.kind) {
     case 'plain':
-      return parseDecimal(value, 'field');
+      return parseDecimal(value, 'field', scale);
     case 'nonnegative':
-      return parseNonNegativeDecimal(value, 'field');
+      return parseNonNegativeDecimal(value, 'field', scale);
     case 'positive':
-      return parsePositiveDecimal(value, 'field');
+      return parsePositiveDecimal(value, 'field', scale);
     case 'nonzero':
-      return parseNonZeroDecimal(value, 'field');
+      return parseNonZeroDecimal(value, 'field', scale);
     case 'money':
       return parseNonNegativeMoney(value, 'field');
     case 'quantity':
@@ -193,25 +231,24 @@ describe('decimal field parser characterization (F-CI-05-64)', () => {
   it.each(fields)(
     '$id: underflow, boundary, overflow, zeros, sign and non-finite',
     (field) => {
-      const read = (value: string) => parse(field.kind, value);
+      const read = (value: string) => parse(field, value);
       expect(() => read('1e-999999999999999999')).toThrow();
       expect(read(field.max)?.toString()).toBe(field.max);
       if (field.overflowAccepted)
         expect(read(field.overflow)?.toString()).toBe(field.overflow);
       else expect(() => read(field.overflow)).toThrow();
       expect(read('1.0000')?.toString()).toBe('1');
-      const excessivePrecision =
-        field.kind === 'lat' || field.kind === 'lng'
-          ? '0.00000001'
-          : field.kind === 'temp'
-            ? '0.01'
-            : field.kind === 'money'
-              ? '0.001'
-              : '0.0001';
-      if (field.kind === 'money' || field.kind === 'quantity')
-        expect(() => read(excessivePrecision)).toThrow();
-      else
-        expect(read(excessivePrecision)?.equals(excessivePrecision)).toBe(true);
+      const excessivePrecision = `0.${'0'.repeat(scaleFor(field))}1`;
+      try {
+        read(excessivePrecision);
+        throw new Error('excess precision accepted');
+      } catch (error) {
+        expect(error).toMatchObject({ status: 400, code: 'VALIDATION_FAILED' });
+        expect((error as Error).message).toMatch(
+          /decimal places|without rounding/,
+        );
+      }
+      expect(read('1.000000000')?.toString()).toBe('1');
       if (field.negativeAccepted) expect(read('-1')?.toString()).toBe('-1');
       else expect(() => read('-1')).toThrow();
       for (const nonfinite of ['NaN', 'Infinity', '-Infinity'])

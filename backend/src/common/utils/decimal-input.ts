@@ -2,9 +2,14 @@ import { Prisma } from '../../../generated/client';
 import { AppError } from '../errors/app-error';
 import { ERROR_CODES } from '../errors/error-codes';
 
-export function parseDecimal(value: string, field: string): Prisma.Decimal {
+export function parseDecimal(
+  value: string,
+  field: string,
+  scale?: number,
+): Prisma.Decimal {
+  let parsed: Prisma.Decimal;
   try {
-    const parsed = new Prisma.Decimal(value);
+    parsed = new Prisma.Decimal(value);
     if (!parsed.isFinite()) {
       throw new Error('non-finite decimal');
     }
@@ -21,7 +26,6 @@ export function parseDecimal(value: string, field: string): Prisma.Decimal {
     ) {
       throw new Error('decimal underflow');
     }
-    return parsed;
   } catch {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,
@@ -29,13 +33,32 @@ export function parseDecimal(value: string, field: string): Prisma.Decimal {
       400,
     );
   }
+  return scale === undefined
+    ? parsed
+    : assertDecimalScale(parsed, field, scale);
+}
+
+export function assertDecimalScale(
+  value: Prisma.Decimal,
+  field: string,
+  scale: number,
+): Prisma.Decimal {
+  if (value.decimalPlaces() > scale) {
+    throw new AppError(
+      ERROR_CODES.VALIDATION_FAILED,
+      `${field} must have at most ${scale} decimal places`,
+      400,
+    );
+  }
+  return value;
 }
 
 export function parsePositiveDecimal(
   value: string,
   field: string,
+  scale?: number,
 ): Prisma.Decimal {
-  const parsed = parseDecimal(value, field);
+  const parsed = parseDecimal(value, field, scale);
   if (parsed.lte(0)) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,
@@ -49,8 +72,9 @@ export function parsePositiveDecimal(
 export function parseNonNegativeDecimal(
   value: string,
   field: string,
+  scale?: number,
 ): Prisma.Decimal {
-  const parsed = parseDecimal(value, field);
+  const parsed = parseDecimal(value, field, scale);
   if (parsed.lt(0)) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,
@@ -64,8 +88,9 @@ export function parseNonNegativeDecimal(
 export function parseNonZeroDecimal(
   value: string,
   field: string,
+  scale?: number,
 ): Prisma.Decimal {
-  const parsed = parseDecimal(value, field);
+  const parsed = parseDecimal(value, field, scale);
   if (parsed.eq(0)) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,

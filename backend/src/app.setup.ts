@@ -66,6 +66,9 @@ export function configureApp(app: INestApplication): void {
   if (isApiDocsEnabled(process.env.NODE_ENV, process.env.ENABLE_API_DOCS)) {
     const swagger = new DocumentBuilder()
       .setTitle('Gradix API')
+      .setDescription(
+        'Decimal inputs are strings. Scale 3: trip quantity/weighQty, fuel liters, stock qty and project quantities; scale 2: monetary values, user hourlyRate and location accuracyM; scale 1: diary temperatures; scale 7: coordinates including geofence queries. Excess significant fractional digits are rejected with VALIDATION_FAILED (HTTP 400); trailing zeros are allowed. Excess scale is checked before processing any sync batch items. Other sync errors remain per-item in the HTTP 200 batch result. Existing data and computed amounts are not rewritten.',
+      )
       .setVersion('1.0')
       .addBearerAuth()
       .build();

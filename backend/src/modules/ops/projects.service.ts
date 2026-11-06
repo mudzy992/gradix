@@ -14,7 +14,10 @@ import {
   parseOptionalDate,
 } from '../../common/scope/ops-dates';
 import { assertStatusTransition } from '../../common/scope/project-lock';
-import { parseNonNegativeDecimal } from '../../common/utils/decimal-input';
+import {
+  parseDecimal,
+  parseNonNegativeDecimal,
+} from '../../common/utils/decimal-input';
 import { projectListWhere } from '../../common/scope/scope-by-project';
 import { ProjectAccessService } from './project-access.service';
 import {
@@ -134,13 +137,13 @@ export class ProjectsService {
         code: normalizeProjectCode(dto.code),
         name: dto.name,
         locality: dto.locality,
-        lat: dto.lat,
-        lng: dto.lng,
+        lat: dto.lat == null ? dto.lat : parseDecimal(dto.lat, 'lat', 7),
+        lng: dto.lng == null ? dto.lng : parseDecimal(dto.lng, 'lng', 7),
         geofenceRadius: radius,
         plannedBudget:
           dto.plannedBudget === undefined
             ? undefined
-            : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
+            : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget', 2),
         client: dto.client,
         plannedStart,
         plannedEnd,
@@ -200,15 +203,15 @@ export class ProjectsService {
         name: dto.name,
         locality:
           dto.locality === undefined ? undefined : dto.locality?.trim() || null,
-        lat: dto.lat,
-        lng: dto.lng,
+        lat: dto.lat == null ? dto.lat : parseDecimal(dto.lat, 'lat', 7),
+        lng: dto.lng == null ? dto.lng : parseDecimal(dto.lng, 'lng', 7),
         geofenceRadius: dto.geofenceRadius,
         plannedBudget:
           dto.plannedBudget === undefined
             ? undefined
             : dto.plannedBudget == null || dto.plannedBudget.trim() === ''
               ? null
-              : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget'),
+              : parseNonNegativeDecimal(dto.plannedBudget, 'plannedBudget', 2),
         client:
           dto.client === undefined ? undefined : dto.client?.trim() || null,
         plannedStart: dto.plannedStart !== undefined ? plannedStart : undefined,

@@ -3245,9 +3245,11 @@ describe('Phase 10 erp-lite (e2e)', () => {
       },
     });
     const replay = await post('0.0005000', key);
-    expect(replay.status).toBe(201);
-    expect(replay.body.data.id).toBe(legacy.id);
-    expect(replay.body.data.qty).toBe('0.001');
+    expect(replay.status).toBe(400);
+    expect(replay.body.error.code).toBe('VALIDATION_FAILED');
+    expect(
+      await prisma.stockMovement.findUnique({ where: { id: legacy.id } }),
+    ).not.toBeNull();
     const conflict = await post('0.001', key);
     expect(conflict.status).toBe(409);
     expect(conflict.body.error.code).toBe('CONFLICT');

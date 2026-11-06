@@ -42,11 +42,11 @@ export class QuantitiesService {
     }
     this.access.assertQtyWrite(project, false);
     await this.assertPhase(projectId, dto.phaseId);
-    const plannedQty = parseNonNegativeDecimal(dto.plannedQty, 'plannedQty');
+    const plannedQty = parseNonNegativeDecimal(dto.plannedQty, 'plannedQty', 3);
     const executedQty =
       dto.executedQty === undefined
         ? 0
-        : parseDecimal(dto.executedQty, 'executedQty');
+        : parseDecimal(dto.executedQty, 'executedQty', 3);
     const row = await this.prisma.quantityItem.create({
       data: {
         companyId: project.companyId,
@@ -113,11 +113,11 @@ export class QuantitiesService {
         plannedQty:
           dto.plannedQty === undefined
             ? undefined
-            : parseNonNegativeDecimal(dto.plannedQty, 'plannedQty'),
+            : parseNonNegativeDecimal(dto.plannedQty, 'plannedQty', 3),
         executedQty:
           dto.executedQty === undefined
             ? undefined
-            : parseDecimal(dto.executedQty, 'executedQty'),
+            : parseDecimal(dto.executedQty, 'executedQty', 3),
         note: dto.note,
       },
     });

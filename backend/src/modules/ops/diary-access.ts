@@ -75,7 +75,7 @@ export function parseDiaryTemp(
   if (raw === undefined || raw === '') {
     return undefined;
   }
-  const value = parseDecimal(raw, field);
+  const value = parseDecimal(raw, field, 1);
   if (value.lt(-100) || value.gt(100)) {
     throw new AppError(
       ERROR_CODES.VALIDATION_FAILED,

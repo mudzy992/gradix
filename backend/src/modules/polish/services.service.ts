@@ -174,7 +174,7 @@ export class ServicesService {
       );
     }
     const totalCost = dto.totalCost
-      ? parseNonNegativeDecimal(dto.totalCost, 'totalCost')
+      ? parseNonNegativeDecimal(dto.totalCost, 'totalCost', 2)
       : record.totalCost;
     // BE-15 (F-01): završetak je bio „provjeri pa upiši“ kroz tri upisa; dupli klik
     // je dva puta vraćao status mašine, a pad između upisa ostavljao mašinu u servisu.

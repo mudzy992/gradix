@@ -10,7 +10,11 @@ svaki stari navod i dalje aktuelan. Granice dashboarda slijede pravilo vlasnika 
 - **BL-001 — visoko, djelimično, F-CI-05-64:** zajednički `parseDecimal` sada odbija
   nenulti ulaz podliven u nulu; druge skale/opsezi i tokovi koji zaobilaze helper ostaju
   otvoreni. Dokaz: `backend/src/common/utils/decimal-input.spec.ts`, `backend/test/erp.e2e-spec.ts`
-  i [BE-01](segments/BE-01.md). Radna [inventura](DECIMAL-INVENTORY.md) i 60 parser karakterizacija su dodani, ali direktni Prisma upisi i DTO/PG karakterizacija ostaju otvoreni; postojeći podaci i stari serveri nisu popravljeni. Trip >3 decimale čeka K1 (opcije A/B u inventuri).
+  i [BE-01](segments/BE-01.md). Radna [inventura](DECIMAL-INVENTORY.md) i 60 parser karakterizacija su dodani, ali direktni Prisma upisi i DTO/PG karakterizacija ostaju otvoreni; postojeći podaci i stari serveri nisu popravljeni. K1 A usvojen (D-058): skala inputa je stroga; rasponi, izvedene vrijednosti i dodatna HTTP/PG karakterizacija ostaju za TEST-01.
+
+## MOB — budući jedinstveni API kontrakt (bez mobile izmjena sada)
+
+- Trip `quantity`/`weighQty`, fuel `liters`, stock i projektne količine: skala 3, npr. `{"quantity":"12.345"}` prihvatljivo, `12.3456` nije. Fuel `unitPrice`, troškovi i satnica: skala 2, npr. `{"liters":"10.125","unitPrice":"2.50"}`; diary `tempMin`/`tempMax` skala 1, npr. `{"tempMin":"-3.5"}`; GPS `lat`/`lng` skala 7, npr. `{"lat":"43.8563000","lng":"18.4131000"}`; `accuracyM` skala 2. Decimalne vrijednosti slati kao string, završne nule dozvoljene. Sync batch s viškom skale vraća HTTP 400 prije bilo kojeg upisa; kod legacy replaya ne mijenjati ključ dok se stanje ne provjeri. D-058 / TEST-01.
 
 ## Sesije i autentifikacija
 
@@ -81,7 +85,9 @@ utvrditi granice i regresije; migracije ili nove zavisnosti traže odgovarajuće
   kvalitet pregleda. Dokaz: `scripts/audit/check-audit-gate.mjs` i CI-05 ledger.
   Prijedlog: eksplicitni podržani format, fail-closed provjere i nezavisna verifikacija.
 
-### BL-001 — potvrđen K1 rizik, nepotpuna inventura
+### BL-001 — historijski zapis prije K1 A
+
+**D-058 je zamijenio prijedlog ispod:** vrijednosti s viškom skale sada se odbijaju; mobile ostaje odgođen. Ostatak raspona, historije i testova prati TEST-01.
 
 `POST /trips` prima `quantity` kroz `parsePositiveDecimal`, dok je `Trip.quantity`
 `Decimal(12,3)`; `mobile/app/trip/new.tsx` i offline red prosljeđuju unos stringa bez

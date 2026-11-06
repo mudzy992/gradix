@@ -80,3 +80,7 @@ _Novi alati/zavisnosti: obrazloženje ide i u `docs/DECISIONS.md` (D-006)._
 | Commit(ovi) | |
 | CI run | |
 | Status | `planned` |
+
+## Ulaz iz D-058
+
+Nakon K2 provjeriti preostalu decimalnu HTTP/PG karakterizaciju svih polja i granica, direktne vanjske Prisma upise, postojeće podatke, numeričke opsege i izvedene obračune; D-058 zatvara samo skalu inventurisanih API inputa. Automatska matrica role × tenant × ROUTE_INVENTORY ostaje prvi korak TEST-01.

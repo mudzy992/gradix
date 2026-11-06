@@ -445,6 +445,8 @@ Svih 72 nalaza zadržavaju izvorni opis, odluku, ograničenja i dokaze iz [CI-05
 
 ## F-CI-05-64
 
+**D-058 (2026-11-06):** riješena skala inventurisanih API inputa; preostale granice/vanjski Prisma upisi i HTTP/PG karakterizacija preneseni u TEST-01. Stariji statusi ispod su historija.
+
 **Dopuna BE-01 (u radu):** zajednički parser odbija podlijevanje nenultih ulaza; unit regresija i PG E2E, a ostala polja/skale i stari podaci ostaju otvoreni (BL-001). Dopuna je commit `8cac43d`; puni CI [42108548062](https://github.com/mudzy992/gradix/actions/runs/42108548062) je prošao 6/6.
 
 - **Težina:** visoko. **Status:** djelimično — BL-001. **Vlasnički segment:** BE-01, BE-14. **Commit(i):** `ed1c0b5`, `da68931`, `5e9a4cd`, `8cac43d`.

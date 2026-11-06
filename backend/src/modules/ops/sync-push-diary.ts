@@ -6,7 +6,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DiaryService } from './diary.service';
 import { UpsertDiaryDto, DiaryPhotoDto } from './diary.dto';
 import { SyncPushItemDto } from './sync.dto';
-import { asOptionalString, asString, syncOk } from './sync-result';
+import {
+  asOptionalString,
+  asString,
+  syncOk,
+  validateSyncDecimalScale,
+} from './sync-result';
 import { requireCompany } from '../users/users-helpers';
 import { assertDiaryWrite } from './diary-access';
 
@@ -19,6 +24,7 @@ export class SyncPushDiaryService {
 
   async pushEntry(actor: AuthUser, item: SyncPushItemDto) {
     assertDiaryWrite(actor);
+    validateSyncDecimalScale(item.payload, { tempMin: 1, tempMax: 1 });
     const existing = await this.prisma.diaryEntry.findFirst({
       where: {
         companyId: requireCompany(actor),

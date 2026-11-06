@@ -31,8 +31,8 @@ export function parseLatLng(
   latRaw: string,
   lngRaw: string,
 ): { lat: Prisma.Decimal; lng: Prisma.Decimal } {
-  const lat = parseDecimal(latRaw, 'lat');
-  const lng = parseDecimal(lngRaw, 'lng');
+  const lat = parseDecimal(latRaw, 'lat', 7);
+  const lng = parseDecimal(lngRaw, 'lng', 7);
   assertLatLng(lat, lng);
   return { lat, lng };
 }

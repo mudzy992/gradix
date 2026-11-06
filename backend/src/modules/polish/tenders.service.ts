@@ -73,7 +73,7 @@ export class TendersService {
         title: dto.title,
         client: dto.client,
         submittedValue: dto.submittedValue
-          ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue')
+          ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue', 2)
           : undefined,
         // BE-15 (F-06): `new Date('nije-datum')` je ranije pravio `Invalid Date`
         // koji Prisma pretvori u 500; sada je 400.
@@ -108,7 +108,7 @@ export class TendersService {
         client: dto.client,
         notes: dto.notes,
         submittedValue: dto.submittedValue
-          ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue')
+          ? parseNonNegativeDecimal(dto.submittedValue, 'submittedValue', 2)
           : undefined,
         status: dto.status,
         submittedAt:

@@ -75,7 +75,7 @@ describe('Sync push pull catalog (e2e)', () => {
     await app?.close();
   });
 
-  it('validates new fuel precision but preserves already-persisted sync replay', async () => {
+  it('rejects excess fuel scale before replay but preserves valid replay', async () => {
     const item = {
       type: 'FUEL',
       localId: `fuel-precision-${Date.now()}`,
@@ -93,18 +93,21 @@ describe('Sync push pull catalog (e2e)', () => {
         .set(auth(admin))
         .send({ items: [body] });
     const rejected = await send(item);
-    expect(rejected.status).toBe(200);
-    expect(rejected.body.data.results[0]).toMatchObject({
-      ok: false,
-      code: 'VALIDATION_FAILED',
-    });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error.code).toBe('VALIDATION_FAILED');
     const accepted = await send({
       ...item,
       payload: { ...item.payload, liters: '0.001' },
     });
     expect(accepted.body.data.results[0].ok).toBe(true);
     const replay = await send(item);
-    expect(replay.body.data.results[0]).toMatchObject({
+    expect(replay.status).toBe(400);
+    expect(replay.body.error.code).toBe('VALIDATION_FAILED');
+    const validReplay = await send({
+      ...item,
+      payload: { ...item.payload, liters: '0.0010' },
+    });
+    expect(validReplay.body.data.results[0]).toMatchObject({
       ok: true,
       serverId: accepted.body.data.results[0].serverId,
     });

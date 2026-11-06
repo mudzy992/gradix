@@ -40,7 +40,7 @@ export async function applyTripAmendment(
   if (field === 'quantity') {
     await prisma.trip.update({
       where: { id: trip.id },
-      data: { quantity: parsePositiveDecimal(newValue, 'quantity') },
+      data: { quantity: parsePositiveDecimal(newValue, 'quantity', 3) },
     });
   } else if (field === 'notes') {
     await prisma.trip.update({
@@ -50,7 +50,7 @@ export async function applyTripAmendment(
   } else if (field === 'weighQty') {
     await prisma.trip.update({
       where: { id: trip.id },
-      data: { weighQty: parsePositiveDecimal(newValue, 'weighQty') },
+      data: { weighQty: parsePositiveDecimal(newValue, 'weighQty', 3) },
     });
   } else {
     const depot = await prisma.depot.findFirst({

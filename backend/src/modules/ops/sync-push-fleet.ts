@@ -9,7 +9,12 @@ import { FuelService } from './fuel.service';
 import { CreateTripDto } from './trips.dto';
 import { CreateFuelDto } from './fuel.dto';
 import { SyncPushItemDto } from './sync.dto';
-import { asOptionalString, asString, syncOk } from './sync-result';
+import {
+  asOptionalString,
+  asString,
+  syncOk,
+  validateSyncDecimalScale,
+} from './sync-result';
 import { requireCompany } from '../users/users-helpers';
 
 @Injectable()
@@ -24,6 +29,14 @@ export class SyncPushFleetService {
     if (!actor.permissions.includes(PERMISSIONS.TRIPS_WRITE)) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'Trips write not allowed', 403);
     }
+    validateSyncDecimalScale(item.payload, {
+      quantity: 3,
+      weighQty: 3,
+      originLat: 7,
+      originLng: 7,
+      destLat: 7,
+      destLng: 7,
+    });
     const existing = await this.prisma.trip.findFirst({
       where: {
         companyId: requireCompany(actor),
@@ -48,6 +61,7 @@ export class SyncPushFleetService {
     if (!actor.permissions.includes(PERMISSIONS.FUEL_WRITE)) {
       throw new AppError(ERROR_CODES.FORBIDDEN, 'Fuel write not allowed', 403);
     }
+    validateSyncDecimalScale(item.payload, { liters: 3, unitPrice: 2 });
     const existing = await this.prisma.fuelEntry.findFirst({
       where: {
         companyId: requireCompany(actor),

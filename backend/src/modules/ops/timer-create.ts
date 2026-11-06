@@ -1,3 +1,4 @@
+import { parseDecimal } from '../../common/utils/decimal-input';
 import { Prisma, TimerSession } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -66,8 +67,14 @@ export async function createTimerSession(params: {
         userId: params.actor.id,
         taskId: task.id,
         startedAt: params.identity.startedAt,
-        lat: params.dto.lat,
-        lng: params.dto.lng,
+        lat:
+          params.dto.lat == null
+            ? params.dto.lat
+            : parseDecimal(params.dto.lat, 'lat', 7),
+        lng:
+          params.dto.lng == null
+            ? params.dto.lng
+            : parseDecimal(params.dto.lng, 'lng', 7),
         machineId: params.dto.machineId ?? null,
         localId: params.identity.localId,
         deviceId: params.identity.deviceId,

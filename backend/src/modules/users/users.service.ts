@@ -1,3 +1,4 @@
+import { parseDecimal } from '../../common/utils/decimal-input';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -102,7 +103,10 @@ export class UsersService {
           phone: normalizePhone(dto.phone),
           employeeCode: dto.employeeCode || null,
           companyId,
-          hourlyRate: dto.hourlyRate ?? null,
+          hourlyRate:
+            dto.hourlyRate == null
+              ? null
+              : parseDecimal(dto.hourlyRate, 'hourlyRate', 2),
           locale: dto.locale === 'en' ? 'en' : 'bs',
           mustChangePassword: true,
           passwordHash: await hashPassword(temporaryPassword),
@@ -190,7 +194,10 @@ export class UsersService {
                   ? undefined
                   : dto.employeeCode || null,
               isActive: dto.isActive,
-              hourlyRate: dto.hourlyRate,
+              hourlyRate:
+                dto.hourlyRate == null
+                  ? dto.hourlyRate
+                  : parseDecimal(dto.hourlyRate, 'hourlyRate', 2),
               locale: dto.locale,
             },
             include: { roles: true },

@@ -105,7 +105,7 @@ export class TripsService {
         projectId: project.id,
         machineId: machine.id,
         materialId: material.id,
-        quantity: parsePositiveDecimal(dto.quantity, 'quantity'),
+        quantity: parsePositiveDecimal(dto.quantity, 'quantity', 3),
         originText: dto.originText,
         originLat: origin.lat,
         originLng: origin.lng,
@@ -114,7 +114,7 @@ export class TripsService {
         destLng: dest.destLng,
         weighTicketPath: dto.weighTicketPath,
         weighQty: dto.weighQty
-          ? parsePositiveDecimal(dto.weighQty, 'weighQty')
+          ? parsePositiveDecimal(dto.weighQty, 'weighQty', 3)
           : undefined,
         notes: dto.notes,
         // BE-10 (F-06): offline identitet se upisuje u istom `create` — ranije je

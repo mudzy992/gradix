@@ -69,11 +69,11 @@ const body = {
 describe('stock movement idempotency', () => {
   it('replays the same canonical request before loading resources or checking balance', async () => {
     const f = fixture();
-    f.movement.requestFingerprint = fingerprint('0.0005');
+    f.movement.requestFingerprint = fingerprint('0.001');
     f.findFirst.mockResolvedValue(f.movement);
     const result = await f.service.createMovement(actor, {
       ...body,
-      qty: '0.0005000',
+      qty: '0.001000',
       idempotencyKey: key.toUpperCase(),
     });
     expect(result.id).toBe(f.movement.id);
@@ -88,7 +88,7 @@ describe('stock movement idempotency', () => {
     const f = fixture();
     f.findFirst.mockResolvedValue(f.movement);
     await expect(
-      f.service.createMovement(actor, { ...body, qty: '0.0005' }),
+      f.service.createMovement(actor, { ...body, qty: '0.002' }),
     ).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
     await expect(
       f.service.createMovement(actor, { ...body, projectId: 'project-2' }),
@@ -157,21 +157,21 @@ describe('stock movement idempotency', () => {
     expect(f.create).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects legacy payload with a new key but replays an already persisted legacy key', async () => {
+  it('rejects excess-scale legacy payloads even on an existing key', async () => {
     const f = fixture();
-    const legacy = { ...f.movement, requestFingerprint: fingerprint('0.0005') };
-    f.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(legacy);
-    await expect(
-      f.service.createMovement(actor, { ...body, qty: '0.0005' }),
-    ).rejects.toMatchObject({
-      code: 'VALIDATION_FAILED',
-      status: 400,
+    f.findFirst.mockResolvedValue({
+      ...f.movement,
+      requestFingerprint: fingerprint('0.0005'),
     });
-    const replay = await f.service.createMovement(actor, {
-      ...body,
-      qty: '0.000500',
-    });
-    expect(replay.id).toBe(legacy.id);
+    for (const qty of ['0.0005', '0.000500']) {
+      await expect(
+        f.service.createMovement(actor, { ...body, qty }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION_FAILED',
+        status: 400,
+      });
+    }
+    expect(f.findFirst).not.toHaveBeenCalled();
     expect(f.create).not.toHaveBeenCalled();
   });
 

@@ -35,6 +35,7 @@ export class DiaryConflictService {
     if (!existing) {
       throw new AppError(ERROR_CODES.NOT_FOUND, 'Diary entry not found', 404);
     }
+    if (dto.incoming) diaryWriteData(dto.incoming);
     if (dto.choice === 'A') {
       return serializeDiary(existing);
     }

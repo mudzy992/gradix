@@ -42,7 +42,7 @@ export class LocationsService {
         lat,
         lng,
         accuracyM: dto.accuracyM
-          ? parseDecimal(dto.accuracyM, 'accuracyM')
+          ? parseDecimal(dto.accuracyM, 'accuracyM', 2)
           : undefined,
       },
     });

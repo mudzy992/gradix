@@ -51,7 +51,7 @@ export class StockService {
 
   async createMovement(actor: AuthUser, dto: CreateMovementDto) {
     const companyId = requireCompany(actor);
-    const qty = parseNonZeroDecimal(dto.qty, 'qty');
+    const qty = parseNonZeroDecimal(dto.qty, 'qty', 3);
     const key = dto.idempotencyKey?.toLowerCase();
     // Fingerprint the requested payload, not rounded DB qty or mutable warehouse defaults.
     const fingerprint = key

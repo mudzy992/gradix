@@ -9,7 +9,7 @@ import { SYNC_PULL_LIMIT } from '../../common/constants';
 import { pullWatermark } from './sync-watermark';
 import { requireCompany } from '../users/users-helpers';
 import { SyncPushDto, SyncPullDto, SyncItemResult } from './sync.dto';
-import { syncErr } from './sync-result';
+import { syncErr, validateSyncDecimalScale } from './sync-result';
 import { SyncPushTimerService } from './sync-push-timer';
 import { SyncPushFleetService } from './sync-push-fleet';
 import { SyncPushDiaryService } from './sync-push-diary';
@@ -28,6 +28,24 @@ export class SyncService {
   ) {}
 
   async push(actor: AuthUser, dto: SyncPushDto) {
+    // Check the complete batch before the first write: a 400 must not conceal
+    // earlier successful items and provoke a duplicate client retry.
+    const scales = {
+      TRIP: {
+        quantity: 3,
+        weighQty: 3,
+        originLat: 7,
+        originLng: 7,
+        destLat: 7,
+        destLng: 7,
+      },
+      FUEL: { liters: 3, unitPrice: 2 },
+      TIMER: { lat: 7, lng: 7 },
+      DIARY: { tempMin: 1, tempMax: 1 },
+      PHOTO: { lat: 7, lng: 7 },
+    } as const;
+    for (const item of dto.items)
+      validateSyncDecimalScale(item.payload, scales[item.type]);
     const results: SyncItemResult[] = [];
     for (const item of dto.items) {
       try {

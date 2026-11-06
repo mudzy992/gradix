@@ -8,7 +8,12 @@ import { TimerService } from './timer.service';
 import { TimerForceCloseService } from './timer-force-close.service';
 import { parseOptionalClosedAt } from './timer-clock';
 import { SyncPushItemDto } from './sync.dto';
-import { asOptionalString, asString, syncOk } from './sync-result';
+import {
+  asOptionalString,
+  asString,
+  syncOk,
+  validateSyncDecimalScale,
+} from './sync-result';
 import { StartTimerDto } from './timer.dto';
 
 @Injectable()
@@ -20,6 +25,7 @@ export class SyncPushTimerService {
 
   async push(actor: AuthUser, item: SyncPushItemDto) {
     this.assertTimerPerm(actor);
+    validateSyncDecimalScale(item.payload, { lat: 7, lng: 7 });
     const existing = await this.timer.findByLocalId(
       actor,
       item.deviceId,

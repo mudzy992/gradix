@@ -81,6 +81,7 @@ export class DiaryService {
   async create(actor: AuthUser, dto: UpsertDiaryDto) {
     const project = await this.requireWritableProject(actor, dto.projectId);
     const date = parseDateOnly(dto.date);
+    const writeData = diaryWriteData(dto);
     // BE-11 (F-04): offline ponavljanje mora vratiti **postojeći** zapis. Prije se
     // `localId` upisivao bez `deviceId` (i u drugom upisu, kroz sync), pa je ponovni
     // sync uvijek padao na dnevni unique kao `DIARY_CONFLICT`.
@@ -103,7 +104,7 @@ export class DiaryService {
           companyId: project.companyId,
           projectId: project.id,
           date,
-          ...diaryWriteData(dto),
+          ...writeData,
           localId: typeof dto.localId === 'string' ? dto.localId : undefined,
           deviceId: typeof dto.deviceId === 'string' ? dto.deviceId : undefined,
         },
@@ -167,6 +168,7 @@ export class DiaryService {
     await this.access.assertScopedWrite(actor, project);
     assertProjectWritable(project);
     const path = assertStoragePath(dto.path, project.companyId);
+    const coords = parseOptionalLatLng(dto.lat, dto.lng);
     // BE-11 (F-11): offline sync ponovo šalje istu fotografiju (isti objekat u MinIO)
     // → vrati postojeći zapis umjesto duplikata. `path` je jedinstven po uploadu.
     const duplicate = await this.prisma.diaryPhoto.findFirst({
@@ -187,7 +189,6 @@ export class DiaryService {
     }
     // BE-11 (F-05): koordinate fotografije su išle u bazu bez provjere opsega i
     // dozvoljavale su „samo lat“ (ista klasa kao F-BE-09-04 / F-BE-10-03).
-    const coords = parseOptionalLatLng(dto.lat, dto.lng);
     const photo = await this.prisma.diaryPhoto.create({
       data: {
         companyId: project.companyId,

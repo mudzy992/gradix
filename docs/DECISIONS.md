@@ -877,6 +877,14 @@ zaustavljanje za vlasnikovu K2 potvrdu prije ostalih rola. Rizici S-01/S-02/S-03
 zaista utiču na nove putanje razrješavaju se ili se dokazuje neprimjenjivost prije upotrebe;
 nepovezani High nalazi idu paralelno u S-red.
 
+
+### D-058 — Stroga skala decimalnih ulaza (K1 A)
+**Datum:** 2026-11-06 · **Status:** odobreno od vlasnika
+
+Decimalni string s više značajnih decimalnih mjesta nego što je skala inventurisanog polja odbija se, bez tihog zaokruživanja; završne nule su dozvoljene. Trip i izmjene tripa imaju skalu 3, bez izuzetka za mobile. Validacija skale prethodi i replayu sync/stock/diary: legacy replay s viškom decimala može biti odbijen, bez automatskog novog pokušaja s drugim ključem. `/sync/push` provjerava čitav batch prije upisa i za decimalni input izvan skale vraća HTTP 400; druge sync greške zadržavaju postojeći HTTP 200 batch envelope. Mobile se ne mijenja i mora se uskladiti prije upotrebe.
+
+Odluka zatvara F-CI-05-64 **u opsegu skale inventurisanih inputa**, ne tvrdi da su svi DB opsezi, vanjski Prisma pisci ili historijski podaci pokriveni. Ostatak i dodatna HTTP/PG karakterizacija idu u TEST-01.
+
 ---
 
 ## Zamijenjene / povučene odluke
