@@ -287,6 +287,163 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('document alerts are severity ordered, scoped, bounded and exclude file details', async () => {
+    const platform = (await login(app, 'platform@gradix.local')).body.data
+      .accessToken as string;
+    const accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken as string;
+    const a = await prisma.company.create({
+      data: { name: 'Alerts A', slug: `alerts-a-${Date.now()}` },
+    });
+    const b = await prisma.company.create({
+      data: { name: 'Alerts B', slug: `alerts-b-${Date.now()}` },
+    });
+    const alertUser = await prisma.user.create({
+      data: {
+        companyId: a.id,
+        firstName: 'Alert',
+        lastName: 'Worker',
+        email: `alert-worker-${Date.now()}@example.test`,
+        passwordHash: 'fixture-not-used',
+      },
+    });
+    const machine = await prisma.machine.create({
+      data: { companyId: a.id, name: 'Alert machine', type: 'OTHER' },
+    });
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Sarajevo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const day = (offset: number) => {
+      const d = new Date(`${today}T00:00:00.000Z`);
+      d.setUTCDate(d.getUTCDate() + offset);
+      return d;
+    };
+    const ids = Array.from(
+      { length: 7 },
+      (_, i) => `document-alert-${Date.now()}-${i}`,
+    );
+    try {
+      await prisma.companyDocument.createMany({
+        data: [-3, 1, 10, 20, -91, 31, -10].map((offset, i) => ({
+          id: ids[i],
+          companyId: i === 6 ? b.id : a.id,
+          type: 'Test licence',
+          filePath: 'private-file-path',
+          note: 'private-document-note',
+          expiresAt: day(offset),
+        })),
+      });
+      const workerDoc = await prisma.workerDocument.create({
+        data: {
+          companyId: a.id,
+          userId: alertUser.id,
+          type: 'Worker permit',
+          filePath: 'private-worker-path',
+          expiresAt: day(1),
+        },
+      });
+      const machineDoc = await prisma.machineDocument.create({
+        data: {
+          companyId: a.id,
+          machineId: machine.id,
+          type: 'Machine permit',
+          filePath: 'private-machine-path',
+          expiresAt: day(1),
+        },
+      });
+      const url = '/api/alerts/documents';
+      const headers = { ...auth(platform), 'X-Company-Id': a.id };
+      const first = await request(app.getHttpServer())
+        .get(`${url}?limit=2`)
+        .set(headers);
+      expect(first.status).toBe(200);
+      expect(first.body.data.map((r: { id: string }) => r.id)).toEqual(
+        ids.slice(0, 2),
+      );
+      expect(
+        first.body.data.map((r: { severity: string }) => r.severity),
+      ).toEqual(['CRITICAL', 'HIGH']);
+      expect(JSON.stringify(first.body)).not.toContain('private-');
+      const next = await request(app.getHttpServer())
+        .get(`${url}?limit=2&cursor=${first.body.meta.nextCursor}`)
+        .set(headers);
+      expect(next.status).toBe(200);
+      expect(next.body.data.map((r: { id: string }) => r.id)).toEqual([
+        machineDoc.id,
+        workerDoc.id,
+      ]);
+      expect(
+        next.body.data.map((r: { severity: string }) => r.severity),
+      ).toEqual(['HIGH', 'HIGH']);
+      const last = await request(app.getHttpServer())
+        .get(`${url}?limit=2&cursor=${next.body.meta.nextCursor}`)
+        .set(headers);
+      expect(last.body.data.map((r: { id: string }) => r.id)).toEqual(
+        ids.slice(2, 4),
+      );
+      expect(
+        last.body.data.map((r: { severity: string }) => r.severity),
+      ).toEqual(['MEDIUM', 'LOW']);
+      expect(last.body.meta.nextCursor).toBeNull();
+      expect(next.body.data[0].expiresAt).toMatch(/Z$/);
+      expect(
+        (await request(app.getHttpServer()).get(`${url}?limit=21`).set(headers))
+          .status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`${url}?cursor=bad`)
+            .set(headers)
+        ).status,
+      ).toBe(400);
+      expect(
+        (await request(app.getHttpServer()).get(url).set(auth(ss))).status,
+      ).toBe(403);
+      expect(
+        (await request(app.getHttpServer()).get(url).set(auth(worker))).status,
+      ).toBe(403);
+      expect(
+        (await request(app.getHttpServer()).get(url).set(auth(accountant)))
+          .status,
+      ).toBe(403);
+      expect(
+        (await request(app.getHttpServer()).get(url).set(auth(platform)))
+          .status,
+      ).toBe(403);
+      const secondTenant = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', b.id);
+      expect(secondTenant.status).toBe(200);
+      expect(secondTenant.body.data.map((r: { id: string }) => r.id)).toEqual([
+        ids[6],
+      ]);
+      const own = await request(app.getHttpServer()).get(url).set(auth(admin));
+      expect(own.status).toBe(200);
+      expect(own.body.data.map((r: { id: string }) => r.id)).not.toContain(
+        ids[0],
+      );
+      const api = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(api.body.paths['/api/alerts/documents'].get.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+    } finally {
+      await prisma.workerDocument.deleteMany({ where: { companyId: a.id } });
+      await prisma.machineDocument.deleteMany({ where: { companyId: a.id } });
+      await prisma.user.delete({ where: { id: alertUser.id } });
+      await prisma.machine.delete({ where: { id: machine.id } });
+      await prisma.companyDocument.deleteMany({ where: { id: { in: ids } } });
+      await prisma.company.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    }
+  });
+
   it('closed timer metrics use approved durations, tenant scope and bounded local-day periods', async () => {
     const me = (
       await request(app.getHttpServer()).get('/api/me').set(auth(admin))

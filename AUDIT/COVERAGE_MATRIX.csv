@@ -174,6 +174,8 @@ backend/src/modules/ops/amendments.service.ts,BE,ops,BE-07,228,pregledano,"BE-07
 backend/src/modules/ops/assignments.service.ts,BE,ops,BE-05,99,pregledano,BE-08: PROJECT_ASSIGNED / PROJECT_UNASSIGNED u audit (B8),2026-11-03
 backend/src/modules/ops/catalog.controller.ts,BE,ops,BE-10,45,pregledano,BE-10: pregledano — materijali/depoi pod canReadCatalog/canWriteCatalog,2026-11-03
 backend/src/modules/ops/catalog.service.ts,BE,ops,BE-10,281,pregledano,"BE-10: koordinate depoa kroz parseOptionalLatLng (F-03), qrToken prazan 400 / duplikat 409 (F-05), soft-delete materijala i depoa",2026-11-03
+backend/src/modules/ops/dashboard-document-alerts.service.ts,BE,ops,BE-12,128,pregledano,"BE-19: tenant admin upozorenja isteka, severity i keyset",2026-11-06
+backend/src/modules/ops/dashboard-document-alerts.spec.ts,BE,ops,BE-12,66,pregledano,"BE-19: scope, severity, nevalidan cursor i privatna polja",2026-11-06
 backend/src/modules/ops/dashboard-expiring.ts,BE,ops,BE-12,72,pregledano,"BE-12 (F-06/07): istekli dokumenti ostaju do 90 dana unazad, cap 100, `max` izvan petlje",2026-11-03
 backend/src/modules/ops/dashboard-presence.spec.ts,BE,ops,BE-12,136,pregledano,BE-12: 8 testova prisustva/geofence granica/`spend`/`avgProgress`,2026-11-03
 backend/src/modules/ops/dashboard-presence.ts,BE,ops,BE-12,129,pregledano,BE-12 (F-03/04): čisto mapiranje prisustva (testirano) + `loadPresence` preko `latestLocations` (DISTINCT ON),2026-11-03
@@ -197,6 +199,7 @@ backend/src/modules/ops/diary-pdf.service.ts,BE,ops,BE-11,128,pregledano,BE-11 (
 backend/src/modules/ops/diary.controller.ts,BE,ops,BE-11,76,pregledano,"BE-11: rute dnevnika (lista, create, patch, fotografija, PDF) — sve kroz servisne provjere",2026-11-03
 backend/src/modules/ops/diary.dto.ts,BE,ops,BE-11,141,pregledano,BE-11 (F-04): `localId`/`deviceId` validirani (`@MaxLength(120)`),2026-11-03
 backend/src/modules/ops/diary.service.ts,BE,ops,BE-11,271,pregledano,"BE-11 (F-04/05/06/11): idempotentan offline create, koordinate fotografije, dedupe po putanji, best-effort notifikacija",2026-11-03
+backend/src/modules/ops/document-alerts.controller.ts,BE,ops,BE-05,91,pregledano,"BE-19: alerts, prava, OpenAPI i cursor/limit",2026-11-06
 backend/src/modules/ops/documents.service.ts,BE,ops,BE-05,136,pregledano,CI-05 F-49: soft-delete tombstone; siguran keyed retry i uslovni konkurentni delete.,2026-11-04
 backend/src/modules/ops/fuel-anomaly.ts,BE,ops,BE-10,46,pregledano,"BE-10: pregledano — 30-dnevni prosjek po mašini, prag FUEL_ANOMALY_PCT, notifikacija rolama",2026-11-03
 backend/src/modules/ops/fuel.controller.ts,BE,ops,BE-10,28,pregledano,BE-10: pregledano — 5 ruta pod fuel.write/fuel.reports,2026-11-03
@@ -222,7 +225,7 @@ backend/src/modules/ops/machine-status.ts,BE,ops,BE-09,18,pregledano,BE-09: preg
 backend/src/modules/ops/machines.controller.ts,BE,ops,BE-09,87,pregledano,"BE-09: pregledano — fleet.* permisije, @Throttle na /location, DELETE = decommission",2026-11-03
 backend/src/modules/ops/machines.dto.ts,BE,ops,BE-09,74,pregledano,BE-09: pregledano — tipovi mašina kroz IsIn; MachineLocationDto nosi stringove (validacija u geo.ts),2026-11-03
 backend/src/modules/ops/machines.service.ts,BE,ops,BE-09,302,pregledano,"BE-09: assign/unassign/decommission u transakcijama (F-02), jedna otvorena dodjela + IN_SERVICE 409 (F-03,F-05), status se ne pregazi (F-06)",2026-11-03
-backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,122,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri) | BE-19 B1: registracija read-only dashboard servisa.,2026-11-06
+backend/src/modules/ops/ops.module.ts,BE,ops,BE-05,126,pregledano,BE-05: pregledano — modul izvozi servise koje koriste companies/users (timeri) | BE-19 B1: registracija read-only dashboard servisa.,2026-11-06
 backend/src/modules/ops/phases.service.ts,BE,ops,BE-05,120,pregledano,BE-08: PROJECT_PHASE_CREATED / PROJECT_PHASE_UPDATED u audit (B8),2026-11-03
 backend/src/modules/ops/progress.spec.ts,BE,ops,BE-05,33,pregledano,"BE-05: 5 testova procenta (otkazani ne ulaze u imenilac, zaokruživanje)",2026-11-02
 backend/src/modules/ops/progress.ts,BE,ops,BE-05,80,pregledano,BE-05: dva upita umjesto 1+2N; čiste funkcije taskPercent/averagePercent (F-04),2026-11-02
@@ -357,7 +360,7 @@ backend/test/helpers/minio-memory.ts,TEST,e2e-helpers,TEST-01,67,nepregledano,,
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,893,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1050,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/projects.e2e-spec.ts,TEST,e2e,BE-05,412,pregledano,CI-05 F-49: PostgreSQL scenariji konkurentnog delete/retryja i izolacije; izvršava se u CI.,2026-11-04
