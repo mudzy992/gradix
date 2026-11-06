@@ -256,6 +256,7 @@ model RefreshToken {
   id         String    @id @default(cuid())
   tokenHash  String    @unique
   lineageKey String?
+  replayCount Int      @default(0)
   expiresAt  DateTime
   revokedAt  DateTime?
   userId     String

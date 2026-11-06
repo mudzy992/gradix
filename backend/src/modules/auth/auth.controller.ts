@@ -49,7 +49,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Rotate a refresh token',
     description:
-      'For 20 seconds after rotation, replay returns the identical pair only while the direct successor and parent remain valid and the account is active. After the window reuse revokes the token family; legacy unlinked tokens can revoke all sessions. A stolen token can also be replayed during the window.',
+      'For 20 seconds after rotation, up to two retries return the identical pair only while the direct successor and parent remain valid and the account is active. Additional retries are rejected without revoking the valid child. Rotation does not extend the refresh deadline. After the window reuse revokes the token family; legacy unlinked tokens can revoke all sessions. A stolen token can also be replayed during the window.',
   })
   @ApiBody({
     schema: {

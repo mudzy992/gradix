@@ -55,6 +55,7 @@ describe('D-059 refresh replay (e2e)', () => {
     );
     const operation = document.paths['/api/auth/refresh']?.post;
     expect(operation?.description).toContain('20 seconds');
+    expect(operation?.description).toContain('two retries');
     expect(operation?.responses?.['200']).toBeDefined();
     expect(operation?.responses?.['401']).toBeDefined();
     expect(operation?.requestBody).toBeDefined();
@@ -68,6 +69,51 @@ describe('D-059 refresh replay (e2e)', () => {
     expect(replay.status).toBe(200);
     expect(replay.body.data).toEqual(first.body.data);
     expect((await refresh(b.refreshToken)).status).toBe(200);
+  });
+  it('allows only two concurrent replays per consumed parent and preserves its live child', async () => {
+    const a = await signIn();
+    const responses = await Promise.all(
+      Array.from({ length: 4 }, () => refresh(a.refreshToken)),
+    );
+    const successes = responses.filter((response) => response.status === 200);
+    const failures = responses.filter((response) => response.status === 401);
+    expect([successes.length, failures.length]).toEqual([3, 1]);
+    expect(
+      successes.every(
+        (response) =>
+          JSON.stringify(response.body.data) ===
+          JSON.stringify(successes[0].body.data),
+      ),
+    ).toBe(true);
+    expect(failures[0].body.error.code).toBe('AUTH_REFRESH_REUSE');
+    expect(
+      (await refresh(successes[0].body.data.refreshToken as string)).status,
+    ).toBe(200);
+  });
+  it('never extends the family expiry on rotation or grace replay', async () => {
+    const a = await signIn();
+    const expiry = new Date(Date.now() + 60_000);
+    await prisma.refreshToken.update({
+      where: { tokenHash: hashRefreshToken(a.refreshToken) },
+      data: { expiresAt: expiry },
+    });
+    const first = await refresh(a.refreshToken);
+    expect(first.status).toBe(200);
+    const child = await prisma.refreshToken.findUniqueOrThrow({
+      where: {
+        tokenHash: hashRefreshToken(first.body.data.refreshToken as string),
+      },
+    });
+    expect(child.expiresAt.getTime()).toBe(expiry.getTime());
+    expect((await refresh(a.refreshToken)).body.data).toEqual(first.body.data);
+    const next = await refresh(first.body.data.refreshToken as string);
+    expect(next.status).toBe(200);
+    const grandchild = await prisma.refreshToken.findUniqueOrThrow({
+      where: {
+        tokenHash: hashRefreshToken(next.body.data.refreshToken as string),
+      },
+    });
+    expect(grandchild.expiresAt.getTime()).toBe(expiry.getTime());
   });
   it('serializes concurrent requests to the same pair without creating two children', async () => {
     const a = await signIn();

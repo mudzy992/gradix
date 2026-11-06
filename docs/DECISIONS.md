@@ -894,6 +894,8 @@ Implementacija: pod postojećim redoslijedom Company → User → token i jednom
 
 Nakon prozora ponovna upotreba opoziva porodicu (`lineageKey`), prema vlasnikovom zahtjevu; **trenutni kod** umjesto toga opoziva sve sesije, pa je to promjena sigurnosne semantike, ne opis postojećeg stanja. Za legacy red bez porodice ne pretpostavljati povezanost: fail closed, zadržati globalni opoziv. Unutar prozora, kad tačan aktivni nasljednik nije nađen (odjava, rotacija nasljednika, drugi ključ ili legacy), odbiti bez vraćanja tokena; prava/status provjeriti ponovno pod lockom. Vrijeme na granici, istek, paralelizam, više uređaja, odjave, promjena lozinke/deaktivacija i miješane verzije zahtijevaju PG testove prije isporuke; nikada ne logovati tokene ili ključ. Web postojeće fail-closed ponašanje ne uklanjati dok se ne testira klijentski oporavak. OpenAPI i `docs/BACKEND.md` ažurirani su zajedno s kodom.
 
+**Dopuna 2026-11-06:** prvobitna isporuka nije tražila migraciju; naknadni S-01 review uvodi aditivni `replayCount` (migracija `20261106190000_refresh_replay_limit`), najviše dva retryja po roditelju i neproduživanje roka nasljeđivanjem `expiresAt`. Treći retry u prozoru ne opoziva živog nasljednika. Za legacy porodice raniji produženi rok i retryji nisu rekonstruisani; miješani serveri ne sprovode novu garanciju. Rok novih porodica postaje apsolutan, što može tražiti ponovnu prijavu. Detalji u `BACKEND.md`.
+
 ---
 
 ## Zamijenjene / povučene odluke

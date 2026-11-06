@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `2772a0e`: CI [42219098138](https://github.com/mudzy992/gradix/actions/runs/42219098138) 6/6; D-059 server replay.
 - `77ca0f4`: CI [42267832249](https://github.com/mudzy992/gradix/actions/runs/42267832249) 6/6; prijedlog rola bez UI izmjena.
-- Tekući commit: stvarni tenant fixturei i početni TEST-01 resource gate; CI čeka push.
+- `25e9931`: CI [42272490494](https://github.com/mudzy992/gradix/actions/runs/42272490494) 6/6 uključujući Web E2E.
+- Tekući commit: S-01 ograničen replay i rok; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -39,7 +39,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Sljedeći korak
 
-Prvo TEST-01 stvarni resursi i list filteri; zatim S-01 retry/lifetime, backend ugovori, pa TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
+S-01 ograničenja u tekućem commitu; zatim TEST-01 automatsko otkrivanje resursa, OpenAPI gate i TEST-02. K2 čeka vlasnika; drugi dashboardi i vizuelne promjene na čekanju. Prijedlog: `docs/design/FE-17-roles.md`. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
 
@@ -47,4 +47,4 @@ Prvo TEST-01 stvarni resursi i list filteri; zatim S-01 retry/lifetime, backend 
 
 - TEST-01: 12/171 stvarnih GET/DELETE slučajeva u oba smjera s pozitivnim kontrolama; 2 liste djelimično, 146 pending, 11 public izuzetaka. Cilj 95% nije dostignut; granice i ledger u TEST-01. Raniji permission-negative uzorci nisu dokaz izolacije.
 
-- S-01: D-059 implementira serverski replay i family-scope reuse; grace kompromis i rollout rizici izričito zapisani. Web i dalje traži novu prijavu.
+- S-01: replay maksimalno dva retryja i naslijeđeni rok; prethodno produžene legacy porodice se ne mogu retroaktivno rekonstruisati. Grace rizik i rollout u docs/BACKEND.md; automatski Coolify deploy grane nije potvrđen.

@@ -14,6 +14,7 @@ import { evaluateRefreshToken } from './auth-token-rules';
 import {
   deriveRefreshSuccessor,
   isWithinRefreshReplayWindow,
+  REFRESH_REPLAY_MAX_RETRIES,
 } from './auth-refresh-replay';
 import { ERROR_CODES } from '../../common/errors/error-codes';
 import type { Prisma } from '../../../generated/client';
@@ -181,8 +182,15 @@ export class AuthTokensService {
               child.userId === existing.userId &&
               child.lineageKey === existing.lineageKey &&
               !child.revokedAt &&
-              child.expiresAt.getTime() > now.getTime()
+              child.expiresAt.getTime() > now.getTime() &&
+              existing.replayCount < REFRESH_REPLAY_MAX_RETRIES
             ) {
+              // The user row lock serializes retries across replicas. Rejected
+              // replays do not revoke the still-valid successor.
+              await tx.refreshToken.update({
+                where: { id: existing.id },
+                data: { replayCount: { increment: 1 } },
+              });
               return { issuedAt: existing.revokedAt };
             }
           }
@@ -212,8 +220,9 @@ export class AuthTokensService {
         }
         return verdict;
       }
-      const expiresAt = new Date(now);
-      expiresAt.setDate(expiresAt.getDate() + REFRESH_DAYS);
+      // Each successor inherits the parent's deadline; rotation and replay can
+      // never extend the lifetime granted to the currently presented token.
+      const expiresAt = existing!.expiresAt;
       // Old rows have no family yet. Establish one on their first rotation
       // without changing legacy rows or relying on another process to migrate.
       const lineageKey = existing!.lineageKey ?? existing!.id;

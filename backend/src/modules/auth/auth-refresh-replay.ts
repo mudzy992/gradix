@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 
 export const REFRESH_REPLAY_GRACE_MS = 20_000;
+export const REFRESH_REPLAY_MAX_RETRIES = 2;
 
 export function isWithinRefreshReplayWindow(
   rotatedAt: Date,
