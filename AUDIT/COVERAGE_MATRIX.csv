@@ -407,6 +407,8 @@ frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI
 frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,21,pregledano,"CI-05 F-50: obje greške, naslov, alert i akcije.",2026-11-04
 frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,CI-05 F-50: pristupačna i prevedena ponuda recoveryja za 429/mrežu.,2026-11-04
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
+frontend/src/components/dashboard/chart-primitives.spec.tsx,TEST,fe-unit,FE-05,90,pregledano,"FE-17: podaci, praznine, pragovi, animacija i alternative",2026-11-06
+frontend/src/components/dashboard/chart-primitives.tsx,FE,ops-ui,FE-08,158,pregledano,"FE-17: SVG grafikoni, tekstualni prikaz, pragovi i reduced motion",2026-11-06
 frontend/src/components/erp/erp-costs-tab.tsx,FE,erp-ui,FE-12,435,pregledano,"FE-12: prevedene kategorije i izvori, formatAmount, odvojena forma „Iz obračuna“, labela datuma, skeleton i prazno stanje; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: isti ključ/payload, memorijski scope oporavak i brava kroz remount.",2026-11-05
 frontend/src/components/erp/erp-partners-tab.tsx,FE,erp-ui,FE-12,149,pregledano,"FE-12: preveden tip partnera preko labels.ts, labela umjesto placeholdera, broj partnera, skeleton i prazno stanje",2026-11-04
 frontend/src/components/erp/erp-stock-tab.tsx,FE,erp-ui,FE-12,476,pregledano,"FE-12: dugme „Knjiži“ (bilo „Količina“), preveden tip skladišta, labele polja, skeleton, prazno stanje bez skladišta; F-CI-05-64: stock preciznost i legacy retry",2026-11-05
@@ -495,7 +497,7 @@ frontend/src/i18n/polish-bs.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/
 frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/en potvrđen globalnim testom,2026-11-04
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/en potvrđen testom; dodati ključevi iz FE-14 (loadError*, projectsError, logoSet)",2026-11-04
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
-frontend/src/index.css,FE,design,FE-01,126,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
+frontend/src/index.css,FE,design,FE-01,140,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
 frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,504,pregledano,"CI-05 F-50: 43 testa uključujući JSON/ne-JSON 429, API/Blob, cache, single-flight i novu sesiju.",2026-11-04
 frontend/src/lib/api-client.ts,FE,shared,FE-15,293,pregledano,CI-05 F-50: refresh 429 čuva sesiju i keš; odbijeni token se i dalje čisti.,2026-11-04
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
