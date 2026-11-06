@@ -157,3 +157,5 @@ npm run test:e2e -- --runInBand --runTestsByPath test/helpers/route-inventory.e2
 ```
 
 Prva komanda namjerno regeneriše oba CSV-a; druga samo provjerava drift. Testovi dodatno šalju anonimne zahtjeve bez tijela na sve non-public obrasce sa zamjenskim nepostojećim ID-jevima i očekuju 401, bez tvrdnje da su dokazane dozvoljene uloge ili tuđi resursi. Parametrizirane putanje su uzorak, ne dokaz svih vrijednosti parametra; regeneracija zahtijeva pregled diff-a.
+
+Dodatni generisani negativni uzorci: svih devet firmnih rola s tuđim tenant headerom na svakoj non-public ruti dobijaju `TENANT_HEADER_FORBIDDEN`; platform admin na tenant rutama bez izbora dobija `TENANT_HEADER_REQUIRED`, a za nepoznat ID `NOT_FOUND`. To nije dokaz da odabrani tenant ne može čitati tuđe resurse; pojedinačne ćelije matrice i dalje zahtijevaju pregled i kontekstualne fixture slučajeve.

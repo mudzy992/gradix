@@ -4,6 +4,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { Role } from '../../generated/client';
+import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { login } from './auth';
 import { createTestApp } from './create-app';
 import {
   collectRoutes,
@@ -111,6 +113,142 @@ describe('TEST-01 runtime route inventory', () => {
     }
     expect(failures).toEqual([]);
   });
+
+  it('rejects a foreign company header for every company role and non-public route', async () => {
+    const prisma = app.get(PrismaService);
+    const seed = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    if (!seed.companyId) throw new Error('Demo admin must belong to a company');
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const foreign = await prisma.company.create({
+      data: {
+        name: 'Route matrix foreign test',
+        slug: `route-matrix-${suffix}`,
+      },
+    });
+    const created: string[] = [];
+    const failures: string[] = [];
+    try {
+      const agent = request(app.getHttpServer());
+      const methods = {
+        GET: agent.get.bind(agent),
+        POST: agent.post.bind(agent),
+        PUT: agent.put.bind(agent),
+        PATCH: agent.patch.bind(agent),
+        DELETE: agent.delete.bind(agent),
+      };
+      for (const role of Object.values(Role).filter(
+        (value) => value !== 'PLATFORM_ADMIN',
+      )) {
+        const email = `route-${role.toLowerCase()}-${suffix}@example.invalid`;
+        const user = await prisma.user.create({
+          data: {
+            email,
+            firstName: 'Route',
+            lastName: 'Test',
+            companyId: seed.companyId,
+            passwordHash: seed.passwordHash,
+            mustChangePassword: false,
+            roles: { create: { role } },
+          },
+        });
+        created.push(user.id);
+        const logged = await login(app, email);
+        expect(logged.status).toBe(200);
+        expect(logged.body.data.user.roles).toContain(role);
+        const token = logged.body.data.accessToken as string;
+        for (const route of collectRoutes(app).filter((item) => !item.public)) {
+          const call = methods[route.method as keyof typeof methods];
+          if (!call)
+            throw new Error(`Unsupported request method ${route.method}`);
+          const path = route.path.replace(
+            /:[A-Za-z0-9_]+/g,
+            'nonexistent-test-resource',
+          );
+          const response = await call(path)
+            .set('Authorization', `Bearer ${token}`)
+            .set('X-Company-Id', foreign.id);
+          if (
+            response.status !== 400 ||
+            response.body?.error?.code !== 'TENANT_HEADER_FORBIDDEN'
+          )
+            failures.push(
+              `${role} ${route.method} ${route.path}: ${response.status}`,
+            );
+        }
+      }
+      expect(failures).toEqual([]);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: created } } });
+      await prisma.company.delete({ where: { id: foreign.id } });
+    }
+  }, 120_000);
+
+  it('requires a real selected tenant for platform admins on tenant routes', async () => {
+    const prisma = app.get(PrismaService);
+    const seed = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    const email = `route-platform-${Date.now()}-${Math.random().toString(36).slice(2)}@example.invalid`;
+    const user = await prisma.user.create({
+      data: {
+        email,
+        firstName: 'Route',
+        lastName: 'Platform Test',
+        passwordHash: seed.passwordHash,
+        mustChangePassword: false,
+        roles: { create: { role: 'PLATFORM_ADMIN' } },
+      },
+    });
+    try {
+      const logged = await login(app, email);
+      expect(logged.status).toBe(200);
+      expect(logged.body.data.user.roles).toContain('PLATFORM_ADMIN');
+      const token = logged.body.data.accessToken as string;
+      const agent = request(app.getHttpServer());
+      const methods = {
+        GET: agent.get.bind(agent),
+        POST: agent.post.bind(agent),
+        PUT: agent.put.bind(agent),
+        PATCH: agent.patch.bind(agent),
+        DELETE: agent.delete.bind(agent),
+      };
+      const failures: string[] = [];
+      for (const route of collectRoutes(app).filter(
+        (item) => !item.public && item.tenantRoute,
+      )) {
+        const call = methods[route.method as keyof typeof methods];
+        if (!call)
+          throw new Error(`Unsupported request method ${route.method}`);
+        const path = route.path.replace(
+          /:[A-Za-z0-9_]+/g,
+          'nonexistent-test-resource',
+        );
+        const missing = await call(path).set(
+          'Authorization',
+          `Bearer ${token}`,
+        );
+        if (
+          missing.status !== 403 ||
+          missing.body?.error?.code !== 'TENANT_HEADER_REQUIRED'
+        )
+          failures.push(
+            `missing ${route.method} ${route.path}: ${missing.status}`,
+          );
+        const unknown = await call(path)
+          .set('Authorization', `Bearer ${token}`)
+          .set('X-Company-Id', 'nonexistent-test-company');
+        if (unknown.status !== 404 || unknown.body?.error?.code !== 'NOT_FOUND')
+          failures.push(
+            `unknown ${route.method} ${route.path}: ${unknown.status}`,
+          );
+      }
+      expect(failures).toEqual([]);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  }, 120_000);
 
   it('generates every role and tenant-header context without claiming test evidence', () => {
     const routes = collectRoutes(app);

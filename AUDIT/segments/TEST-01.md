@@ -95,3 +95,5 @@ Test u izolovanoj testnoj bazi šalje zahtjev bez prijave i headera (bez tijela,
 Deterministična regeneracija i detalji u `docs/TESTING.md`; ne prepisivati matrice ručno niti označavati neprocijenjene ćelije kao pokrivene.
 
 Lokalna provjera prve faze: fresh PostgreSQL 16, 12 ručno primijenjenih migracija i test-only readiness, route E2E 5/5; backend unit 54/439, frontend 66/645, `check:all` 0 grešaka/2 preskočeno, backend lint/build prošli. CI potvrda slijedi push.
+
+Druga faza: svih 9 firmnih rola × 160 non-public obrazaca s tuđim `X-Company-Id` vraća 400 `TENANT_HEADER_FORBIDDEN` (1.440 uzoraka); platform admin × 151 tenant obrazac bez zaglavlja vraća 403 `TENANT_HEADER_REQUIRED`, s nepoznatom firmom 404 `NOT_FOUND` (302 uzorka). Test koristi izolovane fixture naloge i čisti ih; još ne dokazuje izolaciju resursa unutar dozvoljenog konteksta, validan odabir firme, permission check ili javne/IoT rute.

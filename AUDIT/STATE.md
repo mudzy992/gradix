@@ -13,8 +13,8 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 ## Zadnji commit i CI
 
 - `cd01d33`: CI `42198725351` 6/6; K2 snimci i stabilniji layout.
-- `b832d56`: CI `42196768138` 6/6; role-aware paleta.
-- Tekući commit: TEST-01 route matrica i anonimni 401 uzorci; CI čeka push.
+- `311e0f6`: CI `42199734717` u toku; ruta × rola × tenant matrica.
+- Tekući commit: role × tenant header negativni uzorci; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
