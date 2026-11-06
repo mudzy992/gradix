@@ -498,8 +498,10 @@ frontend/src/i18n/polish-en.ts,FE,shared,FE-15,100,pregledano,FE-15: paritet bs/
 frontend/src/i18n/public-bs.ts,FE,shared,FE-15,31,pregledano,"FE-15: paritet bs/en potvrđen testom; dodati ključevi iz FE-14 (loadError*, projectsError, logoSet)",2026-11-04
 frontend/src/i18n/public-en.ts,FE,shared,FE-15,31,pregledano,FE-15: isti skup ključeva kao public-bs (parity test),2026-11-04
 frontend/src/index.css,FE,design,FE-01,140,pregledano,"FE-01: jedan set tokena (:root + .dark + @theme inline); C = A podloga/brend zelena + B teal akcenat, amber kao --warning; kontrasti u docs/design §5.3 (D-040)",2026-11-03
-frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,504,pregledano,"CI-05 F-50: 43 testa uključujući JSON/ne-JSON 429, API/Blob, cache, single-flight i novu sesiju.",2026-11-04
+frontend/src/lib/api-client.spec.ts,TEST,fe-unit,FE-05,512,pregledano,"CI-05 F-50: 43 testa uključujući JSON/ne-JSON 429, API/Blob, cache, single-flight i novu sesiju.",2026-11-04
 frontend/src/lib/api-client.ts,FE,shared,FE-15,293,pregledano,CI-05 F-50: refresh 429 čuva sesiju i keš; odbijeni token se i dalje čisti.,2026-11-04
+frontend/src/lib/api-dashboard.spec.ts,TEST,fe-unit,FE-05,30,pregledano,"FE-17: odvojeni endpoints, ograničenje i cursor meta",2026-11-06
+frontend/src/lib/api-dashboard.ts,FE,shared,FE-15,23,pregledano,FE-17: tipizirani zasebni dashboard API i cursor meta,2026-11-06
 frontend/src/lib/api-erp.ts,FE,shared,FE-15,78,pregledano,"FE-12: ugovor potvrđen kroz UI (PartnerRow/CostRow/WarehouseRow/StockRow, fromPayroll)",2026-11-04
 frontend/src/lib/api-fleet.ts,FE,shared,FE-15,51,pregledano,FE-15: pregledano — flota/logistika; bez nalaza,2026-11-04
 frontend/src/lib/api-ops.ts,FE,shared,FE-15,169,pregledano,FE-15: pregledano — endpointi operacija odgovaraju backendu; bez nalaza,2026-11-04
@@ -507,7 +509,7 @@ frontend/src/lib/api-payroll.ts,FE,shared,FE-15,62,pregledano,"FE-12: ugovor pot
 frontend/src/lib/api-polish.ts,FE,shared,FE-15,111,pregledano,FE-15: pregledano — tenderi/servis/izvještaji; izvoz ide kroz `apiBlob` (sada sa 401 refresh),2026-11-04
 frontend/src/lib/api-public.spec.ts,TEST,fe-unit,FE-05,78,pregledano,"FE-14: 6 testova — uspjeh sa meta, 404, ne-JSON 502, throttlerov 429, 2xx bez `success`, `publicAssetUrl`",2026-11-04
 frontend/src/lib/api-public.ts,FE,shared,FE-15,75,pregledano,FE-14: ne-JSON tijelo (proxy 502) i 429 bez envelope-a daju ApiError sa statusom (prije SyntaxError / TypeError na body.error),2026-11-04
-frontend/src/lib/api-types.ts,FE,shared,FE-15,103,pregledano,FE-15: pregledano — tipovi ugovora (MeUser/AuthPayload/ApiError); bez nalaza,2026-11-04
+frontend/src/lib/api-types.ts,FE,shared,FE-15,105,pregledano,FE-15: pregledano — tipovi ugovora (MeUser/AuthPayload/ApiError); bez nalaza,2026-11-04
 frontend/src/lib/api.ts,FE,shared,FE-15,115,pregledano,FE-15: pregledano — tanke funkcije nad `api()`; login/forgot/reset idu sa `skipRefresh` (bez nalaza),2026-11-04
 frontend/src/lib/company-switch-block.spec.tsx,TEST,fe-unit,FE-05,60,pokriveno-testom,"F-CI-05-52: nacrt, cache, storage, modalni lockovi i navigacija",2026-11-04
 frontend/src/lib/company-switch-block.ts,FE,shared,FE-15,14,popravljeno,F-CI-05-52: nezavisni in-memory lockovi za promjenu firme,2026-11-04

@@ -1,9 +1,11 @@
 import type { AppRole } from '@/lib/constants'
 
-export type Envelope<T> = {
+export type PageMeta = { page: number; limit: number; total: number }
+export type CursorMeta = { limit: number; nextCursor: string | null }
+export type Envelope<T, M = PageMeta> = {
   success: true
   data: T
-  meta?: { page: number; limit: number; total: number }
+  meta?: M
 }
 
 export type EnvelopeError = {

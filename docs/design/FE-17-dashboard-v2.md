@@ -81,3 +81,5 @@ Projects API vraća projektne `lat`/`lng` kao decimalne stringove ili null i rad
 Primitivi `chart-primitives.tsx`: prazna/nedostajuća mjerenja se ne pretvaraju u nulu; sparkline ne spaja praznine; grafici imaju otkrivenu tabelu podataka, donut vidljivu legendu i najviše četiri segmenta. Neispravan/nepotpun ili nulti zbir donuta nema proporcionalni crtež; oznaku praznog stanja daje pozivalac. Progress prikazuje tekst i pragove 80/100%, bez dijeljenja nulom, a animirani brojač i shimmer poštuju smanjeno kretanje. Primitivi nisu decimalna biblioteka: za novac pozivalac mora prvo tačno izračunati omjer. Admin UI/axe/screenshotovi još nisu urađeni.
 
 Mjerenje prije povezivanja admin v2 (lokalni `vite build`, Node 22): glavni `index-DX_kZ0LL.js` 734.28 kB minificiran / 210.19 kB gzip. Primitivi tada nisu bili uvezeni u dashboard; uporediti isti build nakon integracije, uz izdvojeni lazy map chunk.
+
+Web klijent ima tipizirane odvojene pozive (`api-dashboard.ts`); generički envelope može nositi cursor meta bez promjene postojećeg page meta tipa. Svi pozivi koriste postojeći session/tenant context guard. Admin UI još nije spojen.

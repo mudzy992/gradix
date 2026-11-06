@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
-import { ApiError, type Envelope, type EnvelopeError } from '@/lib/api-types'
+import { ApiError, type Envelope, type EnvelopeError, type PageMeta } from '@/lib/api-types'
 import { queryClient } from '@/lib/query-client'
 import {
   bindRefreshToken,
@@ -72,9 +72,9 @@ function networkError(error: unknown): ApiError {
 }
 
 /** FE-15: odgovor ne mora biti JSON (proxy 502/504 vrati HTML) — `response.json()` bi bacio `SyntaxError`. */
-async function readBody<T>(response: Response): Promise<Envelope<T> | EnvelopeError | null> {
+async function readBody<T, M = PageMeta>(response: Response): Promise<Envelope<T, M> | EnvelopeError | null> {
   try {
-    return (await response.json()) as Envelope<T> | EnvelopeError
+    return (await response.json()) as Envelope<T, M> | EnvelopeError
   } catch {
     return null
   }
@@ -207,9 +207,9 @@ function headers(isForm: boolean): HeadersInit {
   return result
 }
 
-export async function api<T>(path: string, options: RequestOptions = {}): Promise<{
+export async function api<T, M = PageMeta>(path: string, options: RequestOptions = {}): Promise<{
   data: T
-  meta?: { page: number; limit: number; total: number }
+  meta?: M
 }> {
   const context = requestContext()
   const url = buildUrl(path, options.query)
@@ -232,7 +232,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const ok = await refreshSession()
     if (ok) {
       ensureContext(context)
-      return api<T>(path, { ...options, skipRefresh: true })
+      return api<T, M>(path, { ...options, skipRefresh: true })
     }
     ensureNoNewSessionAfterFailedRefresh(context)
     forceLogin()
@@ -241,7 +241,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (response.status === 204) {
     return { data: null as T }
   }
-  const body = await readBody<T>(response)
+  const body = await readBody<T, M>(response)
   ensureContext(context)
   if (!body) {
     throw new ApiError(response.status === 429 ? 'RATE_LIMITED' : 'INTERNAL_ERROR', 'Invalid response', response.status)

@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `0d3980a`: CI `42191902452` 6/6; pristupačni SVG primitivi.
 - `b82c4e1`: CI `42190518141` 6/6; projektne koordinate.
 - `605d395`: CI `42189974121` 6/6; upozorenja rokova zadataka.
-- `141f874`: CI `42189459874` 6/6; KPI sažetak.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -32,7 +32,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 ## BE-19 / FE-17 — dashboard v2
 
 - B0: plan i D-057 dopunjuju D-043; B1 djelimično: scalarni KPI, projects API s koordinatama, analitika kreiranja zadataka, admin audit aktivnost, odobrene minute timera, GPS procjena prisustva i upozorenja isteka dokumenata i rokova zadataka (cursor/limit); demo 30-dnevni trendovi. Ostali endpointi nisu završeni.
-- Primitivi: SVG grafikoni s tabelom, pragovi, count-up i shimmer; reduced motion testiran. Admin UI još nije počeo.
+- Primitivi: SVG grafikoni s tabelom, pragovi, count-up i shimmer; reduced motion testiran. Tipizirani dashboard API i cursor meta pripremljeni. Admin UI još nije počeo.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: [inventura](DECIMAL-INVENTORY.md), D-058 K1 A; 70 parser slučajeva, PG E2E 17/170. Preostali HTTP/PG i DB opsezi idu u TEST-01.
 - Bez novih zavisnosti bez K3 i bez mobile promjena; K2 vlasnika čeka admin screenshotove.

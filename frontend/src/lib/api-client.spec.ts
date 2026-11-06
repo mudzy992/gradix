@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '@/lib/api-types'
+import { ApiError, type CursorMeta } from '@/lib/api-types'
 import type { AppRole } from '@/lib/constants'
 import { api, apiBlob, clearSession, forceLogin, refreshSession } from '@/lib/api-client'
 import { queryClient } from '@/lib/query-client'
@@ -66,6 +66,14 @@ describe('api()', () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/projects?page=1&q=kanal')
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer token-1')
+  })
+
+  it('čuva tip i vrijednost cursor metapodataka bez mijenjanja page ugovora', async () => {
+    fetchMock.mockResolvedValue(json({ success: true, data: [{ id: 'p1' }], meta: { limit: 1, nextCursor: 'p1' } }))
+    const result = await api<{ id: string }[], CursorMeta>('/api/dashboard/projects', { query: { limit: 1 } })
+    const cursor: string | null | undefined = result.meta?.nextCursor
+    expect(cursor).toBe('p1')
+    expect(result.meta).toEqual({ limit: 1, nextCursor: 'p1' })
   })
 
   it('platform administrator uz izabranu firmu šalje `X-Company-Id`', async () => {
