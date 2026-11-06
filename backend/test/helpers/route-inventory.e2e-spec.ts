@@ -5,6 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { Role } from '../../generated/client';
 import { PrismaService } from '../../src/modules/prisma/prisma.service';
+import { resolvePermissions } from '../../src/common/rbac/role-permissions';
 import { login } from './auth';
 import { createTestApp } from './create-app';
 import {
@@ -88,6 +89,33 @@ describe('TEST-01 runtime route inventory', () => {
     }
     expect(readFileSync(inventoryPath, 'utf8')).toBe(renderRouteCsv(routes));
     expect(readFileSync(matrixPath, 'utf8')).toBe(renderMatrixCsv(routes));
+  });
+
+  it('requires an explicit reason for every public route exception', () => {
+    const exceptions: Record<string, string> = {
+      'POST /api/auth/forgot': 'Anonymous password recovery request.',
+      'POST /api/auth/login': 'Anonymous credential exchange.',
+      'POST /api/auth/refresh':
+        'Refresh credential authenticates instead of an access JWT.',
+      'POST /api/auth/reset':
+        'Password reset token authenticates the operation.',
+      'GET /api/health': 'Liveness probe.',
+      'GET /api/ready': 'Readiness probe.',
+      'POST /api/iot/gps':
+        'Device-key authentication is separate from access JWT.',
+      'GET /api/public/:slug': 'Public company profile.',
+      'GET /api/public/:slug/projects': 'Published project listing.',
+      'GET /api/public/assets/:id': 'Public asset stream.',
+      'GET /api/settings/public': 'Public company settings by slug.',
+    };
+    const publicRoutes = collectRoutes(app)
+      .filter((route) => route.public)
+      .map((route) => `${route.method} ${route.path}`)
+      .sort();
+    expect(Object.keys(exceptions).sort()).toEqual(publicRoutes);
+    expect(
+      Object.values(exceptions).every((reason) => reason.trim().length > 0),
+    ).toBe(true);
   });
 
   it('rejects unauthenticated no-header requests to every non-public route', async () => {
@@ -182,6 +210,81 @@ describe('TEST-01 runtime route inventory', () => {
     } finally {
       await prisma.user.deleteMany({ where: { id: { in: created } } });
       await prisma.company.delete({ where: { id: foreign.id } });
+    }
+  }, 120_000);
+
+  it('denies missing declared permissions for every applicable route and company role', async () => {
+    const prisma = app.get(PrismaService);
+    const seed = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    if (!seed.companyId) throw new Error('Demo admin must belong to a company');
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const created: string[] = [];
+    const failures: string[] = [];
+    let checked = 0;
+    const checkedRoutes = new Set<string>();
+    try {
+      const agent = request(app.getHttpServer());
+      const methods = {
+        GET: agent.get.bind(agent),
+        POST: agent.post.bind(agent),
+        PUT: agent.put.bind(agent),
+        PATCH: agent.patch.bind(agent),
+        DELETE: agent.delete.bind(agent),
+      };
+      for (const role of Object.values(Role).filter(
+        (value) => value !== 'PLATFORM_ADMIN',
+      )) {
+        const email = `route-denied-${role.toLowerCase()}-${suffix}@example.invalid`;
+        const user = await prisma.user.create({
+          data: {
+            email,
+            firstName: 'Route',
+            lastName: 'Denied',
+            companyId: seed.companyId,
+            passwordHash: seed.passwordHash,
+            mustChangePassword: false,
+            roles: { create: { role } },
+          },
+        });
+        created.push(user.id);
+        const logged = await login(app, email);
+        expect(logged.status).toBe(200);
+        const token = logged.body.data.accessToken as string;
+        const granted: readonly string[] = resolvePermissions([role]);
+        for (const route of collectRoutes(app).filter(
+          (item) =>
+            !item.public && item.permissions.some((p) => !granted.includes(p)),
+        )) {
+          const call = methods[route.method as keyof typeof methods];
+          if (!call)
+            throw new Error(`Unsupported request method ${route.method}`);
+          const path = route.path.replace(
+            /:[A-Za-z0-9_]+/g,
+            'nonexistent-test-resource',
+          );
+          const response = await call(path).set(
+            'Authorization',
+            `Bearer ${token}`,
+          );
+          checked++;
+          checkedRoutes.add(`${route.method} ${route.path}`);
+          if (
+            response.status !== 403 ||
+            response.body?.error?.code !== 'FORBIDDEN' ||
+            response.body?.data !== undefined
+          )
+            failures.push(
+              `${role} ${route.method} ${route.path}: ${response.status}`,
+            );
+        }
+      }
+      expect(checked).toBeGreaterThan(0);
+      expect(checkedRoutes.size).toBeGreaterThan(0);
+      expect(failures).toEqual([]);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: { in: created } } });
     }
   }, 120_000);
 
