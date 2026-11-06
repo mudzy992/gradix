@@ -115,3 +115,5 @@ Demo seed je proširen isključivo iza `SEED_DEMO=true`, bez promjene ostalih ro
 Za korake v2.1 može se koristiti `DASHBOARD_SHOTS_MODE=viewport` i opcionalno `DASHBOARD_SHOTS_FILE=<ime.png>`: samo trenutni admin light viewport 1440×900, bez izmjene prethodnih snimaka i bez mjerenja. Puni režim ostaje podrazumijevan.
 
 Korak 1: [v2 sa bogatim seedom](FE-17-screenshots/v2-with-rich-seed.png) je admin light viewport 1440×900 iz izolovane PostgreSQL demo baze. Vizuelno su popunjeni grafikoni novih zadataka i odobrenog vremena; dodatna izmjena seeda nije bila potrebna. Podaci su sintetički, a v2.1 UI i mjerenja tek slijede.
+
+Korak 2: Danas (GPS procjena, otvoreni timeri, broj dostupnih upozorenja) i upozorenja su prvi red; najhitnija tri imaju oznaku težine i akcijske linkove, a veze vode do preostalih zadataka/dokumenata. Broj je ograničen na do 20 rezultata po izvoru i prikazuje + na limitu; nedostupni ili djelimični izvori nisu nula. Kartice u istom redu imaju jednaku visinu. [Desktop viewport](FE-17-screenshots/step-2-admin-light.png); ostali kriteriji v2.1 nisu još izmjereni.

@@ -42,6 +42,26 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 describe('admin dashboard v2', () => {
+  it('puts today and severity-ranked actionable alerts before the KPI overview', async () => {
+    mocks.getDocumentAlerts.mockImplementation(() => response([{ id: 'd', kind: 'WORKER', type: 'medical', expiresAt: '2025-01-01T00:00:00.000Z', daysUntilExpiry: -1, severity: 'CRITICAL' }]))
+    mocks.getTaskAlerts.mockImplementation(() => response([{ id: 't', projectId: 'p', title: 'Nadzor', status: 'OPEN', plannedEnd: '2025-01-02T00:00:00.000Z', severity: 'HIGH' }]))
+    setup()
+    const today = await screen.findByRole('region', { name: 'Danas' })
+    const alerts = screen.getByRole('region', { name: 'Upozorenja' })
+    const overview = screen.getByRole('region', { name: 'Ključni pokazatelji' })
+    expect(today.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(alerts.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(await within(today).findByText('Na terenu · GPS procjena')).toBeInTheDocument()
+    expect(within(today).getByText('2')).toBeInTheDocument()
+    expect(await within(alerts).findByRole('link', { name: /Dokument radnika/ })).toHaveAttribute('href', '/documents')
+    expect(within(alerts).getByRole('link', { name: /Zadatak: Nadzor/ })).toHaveAttribute('href', '/tasks/t')
+  })
+  it('does not show a complete alert count when one source fails', async () => {
+    mocks.getDocumentAlerts.mockRejectedValueOnce(new Error('offline'))
+    setup()
+    const today = await screen.findByRole('region', { name: 'Danas' })
+    expect(await within(today).findByText('Neka upozorenja nisu dostupna.')).toBeInTheDocument()
+  })
   it('renders independent real sections, exact money, safe trend and project map', async () => {
     setup()
     expect(await screen.findByRole('link', { name: 'Most' })).toBeInTheDocument()
@@ -124,7 +144,7 @@ describe('admin dashboard v2', () => {
     expect(await screen.findByText('Dokument radnika')).toBeInTheDocument()
     await act(async () => { useAuthStore.setState({ user: user({ permissions: ['projects.read', 'tasks.read', 'users.read', 'payroll.read'] }) }) })
     expect(screen.queryByText('Dokument radnika')).not.toBeInTheDocument()
-    expect(screen.getByText('Neka upozorenja nisu dostupna.')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Upozorenja' })).getByText('Neka upozorenja nisu dostupna.')).toBeInTheDocument()
   })
   it('restores the previous document theme when leaving the dashboard', async () => {
     const view = setup()

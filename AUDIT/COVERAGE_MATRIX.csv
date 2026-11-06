@@ -426,8 +426,8 @@ frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI
 frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,29,pregledano,S-01: nepoznat ishod bez retryja i postojeći retry za 429/mrežu,2026-11-06
 frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,S-01: lokalizovano objašnjenje nepoznatog ishoda i siguran nastavak,2026-11-06
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
-frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,146,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
-frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,135,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
+frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,166,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
+frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,148,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
 frontend/src/components/dashboard/chart-primitives.spec.tsx,TEST,fe-unit,FE-05,96,pregledano,"FE-17: podaci, praznine, pragovi, animacija i alternative",2026-11-06
 frontend/src/components/dashboard/chart-primitives.tsx,FE,ops-ui,FE-08,160,pregledano,"FE-17: SVG grafikoni, tekstualni prikaz, pragovi i reduced motion",2026-11-06
 frontend/src/components/dashboard/project-map.spec.tsx,TEST,fe-unit,FE-05,19,pregledano,FE-17: nedostupne map pločice i fallback,2026-11-06
@@ -507,8 +507,8 @@ frontend/src/hooks/use-sensitive-navigation.spec.tsx,TEST,fe-unit,FE-05,81,pokri
 frontend/src/hooks/use-sensitive-navigation.ts,FE,shared,FE-15,25,popravljeno,F-CI-05-55: lifecycle osjetljivih radnji i router guard,2026-11-05
 frontend/src/hooks/use-socket.ts,FE,shared,FE-15,44,pregledano,"FE-15: pregledano — socket se otvara samo uz token, filtrira nepoznate tipove, gasi se na unmount; bez nalaza",2026-11-04
 frontend/src/hooks/use-tenant-ready.ts,FE,shared,FE-15,12,pregledano,FE-15: pregledano — platform admin bez firme nije „spreman“; pokriveno testom,2026-11-04
-frontend/src/i18n/bs.ts,FE,shared,FE-15,441,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
-frontend/src/i18n/en.ts,FE,shared,FE-15,441,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
+frontend/src/i18n/bs.ts,FE,shared,FE-15,442,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
+frontend/src/i18n/en.ts,FE,shared,FE-15,442,pregledano,S-01: lokalizovana poruka i upute za nepoznat refresh ishod,2026-11-06
 frontend/src/i18n/erp-bs.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: poruke nepoznatog ishoda i scopea.,2026-11-05
 frontend/src/i18n/erp-en.ts,FE,shared,FE-15,68,pregledano,FE-15: paritet bs/en potvrđen globalnim testom; F-CI-05-64: stock preciznost i legacy retry; F-CI-05-64: preciznost iznosa troška | F-CI-05-57: lokalizovane poruke retryja i scopea.,2026-11-05
 frontend/src/i18n/i18n.spec.ts,TEST,fe-unit,FE-05,99,pregledano,FE-05: svi dash.*/dashboard.* ključevi u bs+en; dash sekcija u tačno jednom modulu (spread override guard),2026-11-03

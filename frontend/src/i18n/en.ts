@@ -1,6 +1,7 @@
 export const en = {
   commandPalette: { open: 'Open quick navigation', title: 'Quick navigation', description: 'Search available pages and use the arrow keys and Enter to select one.', search: 'Search pages', placeholder: 'Search pages…', empty: 'No results.', hint: '↑ ↓ select · Enter open · Esc close' },
   adminDashboard: {
+    today: 'Today', todayDescription: 'Estimated current activity and alerts.', todayPresence: 'On site · GPS estimate', showingTopAlerts: 'Showing the three most urgent alerts; the count includes up to 20 items from each source.',
     eyebrow: 'BUSINESS OVERVIEW', title: 'Welcome, {{name}}', subtitle: 'Your company, all in one place.', light: 'Light mode', dark: 'Dark mode', selectCompany: 'Select a company to see its dashboard.',
     overview: 'Key metrics', activeProjects: 'Active projects', openTasks: 'Open tasks', openTimers: 'Active timers', spend: 'Active project spend', knownBudget: 'Known budgets', unknownBudget: 'No budget entered',
     actions: 'Quick actions', projectsLink: 'All projects', tasksLink: 'Tasks', teamLink: 'Team', documentsLink: 'Documents',

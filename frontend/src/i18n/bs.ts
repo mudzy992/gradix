@@ -1,6 +1,7 @@
 export const bs = {
   commandPalette: { open: 'Otvori brzu navigaciju', title: 'Brza navigacija', description: 'Pretražite dostupne stranice i koristite strelice i Enter za odabir.', search: 'Pretraži stranice', placeholder: 'Pretraži stranice…', empty: 'Nema rezultata.', hint: '↑ ↓ odabir · Enter otvori · Esc zatvori' },
   adminDashboard: {
+    today: 'Danas', todayDescription: 'Procjena trenutne aktivnosti i upozorenja.', todayPresence: 'Na terenu · GPS procjena', showingTopAlerts: 'Prikazana su tri najhitnija upozorenja; broj uključuje do 20 stavki iz svakog izvora.',
     eyebrow: 'PREGLED POSLOVANJA', title: 'Dobro došli, {{name}}', subtitle: 'Vaša firma, na jednom mjestu.', light: 'Svijetli prikaz', dark: 'Tamni prikaz', selectCompany: 'Izaberite firmu da vidite pokazatelje.',
     overview: 'Ključni pokazatelji', activeProjects: 'Aktivni projekti', openTasks: 'Otvoreni zadaci', openTimers: 'Aktivni timeri', spend: 'Troškovi aktivnih projekata', knownBudget: 'Poznati budžeti', unknownBudget: 'Budžet nije unesen',
     actions: 'Brze radnje', projectsLink: 'Svi projekti', tasksLink: 'Zadaci', teamLink: 'Tim', documentsLink: 'Dokumenti',
