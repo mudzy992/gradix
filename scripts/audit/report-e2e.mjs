@@ -9,6 +9,9 @@ function fail(message) {
   process.exit(1);
 }
 if (!file || !/^(0|[1-9]\d*)$/.test(status ?? '')) fail('Nedostaju izvještaj ili status Jest procesa.');
+// Preserve the process failure independently of the JSON, including when Jest
+// reports all assertions green but exits nonzero. Never echo arbitrary input.
+if (status !== '0') console.error(`::error::Jest proces je završio sa statusom ${status}.`);
 let report;
 try {
   report = JSON.parse(fs.readFileSync(file, 'utf8'));

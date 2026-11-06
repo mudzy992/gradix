@@ -9,5 +9,5 @@
 - Admin v2: `dashboard:shots` (desktop/mobile, light/dark, paleta, prije i simulirana prazna firma); axe A/AA 0 ozbiljnih/kritičnih, lokalni LCP/CLS u `docs/design/FE-17-screenshots/measurements.json`; OSM pločice blokirane, fallback vidljiv.
 - S-01: `72c4e7c` CI 42209374216 6/6 potvrđuje globalni refresh opoziv i još važeći access JWT; `bdaa426` CI 42210988539 6/6: web djelimično odbacuje refresh nakon nepoznatog fetch ishoda (FE-15), bez slabljenja servera. Crash/storage/stari klijenti i siguran replay ostaju otvoreni.
 - Privremeni PG `s01_auth_e2e` ima 12 ručno primijenjenih SQL migracija, test-only readiness i demo seed; TEST-01 treba preostalu HTTP/PG karakterizaciju decimalnih i direktnih Prisma putanja. Ostale dashboard role čekaju potvrdu vlasnika.
-- Sljedeće: dovršiti TEST-01 cross-tenant resurse, S-red High i TEST-02; ostale dashboard role/vizuelne promjene čekaju vlasnika.
-- Provjere: `check:all` 0/2 skip, backend 54/439 + lint/build, frontend 66/650; fresh PG 8/8 exit 0 (12 SQL migracija + test-only readiness). Prvi paralelni E2E ispisao 8/8, exit 1 bez razloga; ponavljanja exit 0.
+- Sljedeće: generička TEST-01 matrica i S-01 serverski dizajn/testovi; ostale dashboard role/vizuelne promjene čekaju vlasnika.
+- E2E anomalija: 20/20 serijski 8/8 exit 0; detectOpenHandles 8/8 bez prijavljenih handleova, 0 test PG konekcija; prvobitni exit 1 nije objašnjen niti je ponovljeno paralelno opterećenje. Detalji + stderr/timings u `AUDIT/evidence/e2e-exit-2026-11-06.txt`; reporter ispisuje procesni status.

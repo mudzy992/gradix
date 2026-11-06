@@ -28,6 +28,16 @@ test('prihvata samo uspješan proces i neprazan izvještaj', (t) => {
   assert.notEqual(run(t, { ...clean(), numPassedTests: 2 }).status, 0);
 });
 
+test('ispisuje izlazni status kada proces padne uprkos zelenim testovima', (t) => {
+  const result = run(t, clean(), '1');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Jest proces je završio sa statusom 1/);
+  const killed = run(t, null, '137');
+  assert.notEqual(killed.status, 0);
+  assert.match(killed.stderr, /Jest proces je završio sa statusom 137/);
+  assert.match(killed.stderr, /JSON izvještaj nedostaje/);
+});
+
 test('pada kada setup/teardown ili kompajliranje obori cijeli suite bez palog testa', (t) => {
   const report = clean();
   report.success = false;

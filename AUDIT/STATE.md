@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `72c4e7c`: CI `42209374216` 6/6; S-01 dvije nezavisne sesije.
 - `bdaa426`: CI `42210988539` 6/6; djelimično web ublažavanje nepoznatog refresh ishoda.
-- Tekući commit: TEST-01 projektna izolacija resursa; CI čeka push.
+- `f234b0e`: CI `42211895948` 6/6; TEST-01 projektna izolacija resursa.
+- Tekući commit: ograničena E2E izlaz dijagnoza, reporter ispisuje status; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -42,3 +42,5 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 S-01: web djelimično ne ponavlja refresh nakon nepoznatog ishoda; rizik ostaje. Nastaviti TEST-01 cross-tenant, S-red i TEST-02 dok vlasnik pregleda K2. Detalji u [handoffu](HANDOFF.md).
 
 - TEST-01: ograničeni PG/HTTP dokaz stvarnih projektnih GET/PATCH ID-eva u dvije firme za svih 10 rola; detalji i ograničenja u segmentu.
+
+- E2E: 20 serijskih prolaza exit 0, detectOpenHandles bez prijavljenih handleova, test PG konekcije 0; izvorni exit 1 nije reproduciran. Dokazi i ograničenja: `evidence/e2e-exit-2026-11-06.txt`, TEST-01 i `docs/TESTING.md`.

@@ -1,0 +1,281 @@
+E2E exit diagnostic: 20 serial runs, isolated PostgreSQL 16, no --forceExit.
+Command: npm --prefix backend run test:e2e -- --runInBand --runTestsByPath test/project-isolation.e2e-spec.ts test/helpers/route-inventory.e2e-spec.ts
+Each command was wrapped in timeout 120s; exit 124 would indicate timeout.
+
+Run timings (UTC, wall milliseconds, process exit):
+run	start_utc	duration_ms	exit
+01	2026-11-06T12:07:20Z	13147	0
+02	2026-11-06T12:07:33Z	12189	0
+03	2026-11-06T12:07:45Z	11148	0
+04	2026-11-06T12:07:56Z	13240	0
+05	2026-11-06T12:08:09Z	13907	0
+06	2026-11-06T12:08:23Z	12020	0
+07	2026-11-06T12:08:35Z	12454	0
+08	2026-11-06T12:08:48Z	12490	0
+09	2026-11-06T12:09:00Z	13114	0
+10	2026-11-06T12:09:13Z	14820	0
+11	2026-11-06T12:09:28Z	12466	0
+12	2026-11-06T12:09:41Z	12215	0
+13	2026-11-06T12:09:53Z	12626	0
+14	2026-11-06T12:10:06Z	13590	0
+15	2026-11-06T12:10:19Z	14080	0
+16	2026-11-06T12:10:33Z	12754	0
+17	2026-11-06T12:10:46Z	11911	0
+18	2026-11-06T12:10:58Z	11424	0
+19	2026-11-06T12:11:09Z	12586	0
+20	2026-11-06T12:11:22Z	12746	0
+
+--- run-01.stderr ---
+(node:32773) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.889 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.469 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-02.stderr ---
+(node:33017) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.156 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.622 s, estimated 13 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-03.stderr ---
+(node:33201) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (8.404 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        10.604 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-04.stderr ---
+(node:33258) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (10.07 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.645 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-05.stderr ---
+(node:33512) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (10.959 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        13.313 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-06.stderr ---
+(node:34172) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (8.798 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.452 s, estimated 14 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-07.stderr ---
+(node:34729) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.32 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.84 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-08.stderr ---
+(node:35337) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.51 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.901 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-09.stderr ---
+(node:35945) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.969 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.53 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-10.stderr ---
+(node:36606) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (11.749 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        14.254 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-11.stderr ---
+(node:37315) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.327 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.818 s, estimated 14 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-12.stderr ---
+(node:37877) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.056 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.623 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-13.stderr ---
+(node:38486) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.621 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.068 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-14.stderr ---
+(node:39094) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (10.056 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.976 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-15.stderr ---
+(node:39755) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (11.094 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        13.499 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-16.stderr ---
+(node:40415) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.292 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.163 s, estimated 14 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-17.stderr ---
+(node:41024) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.03 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.327 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-18.stderr ---
+(node:41587) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (8.611 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        10.845 s, estimated 12 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-19.stderr ---
+(node:42085) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.589 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        11.929 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- run-20.stderr ---
+(node:42693) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (9.73 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        12.207 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+
+--- detectOpenHandles stderr ---
+(node:43351) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/helpers/route-inventory.e2e-spec.ts (33.428 s)
+PASS test/project-isolation.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        36.558 s
+Ran all test suites within paths "test/project-isolation.e2e-spec.ts", "test/helpers/route-inventory.e2e-spec.ts".
+Test results written to: ../../../../tmp/gradix-e2e-diagnostic/detect-report.json
+
+DetectOpenHandles command: same Jest paths with --detectOpenHandles --json, no --forceExit; Jest exit 0, reporter exit 0, remaining test DB connections 0.
