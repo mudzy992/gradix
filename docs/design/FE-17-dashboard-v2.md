@@ -63,3 +63,5 @@ BE-19 dodatni izvor: `GET /api/analytics/tasks/created` daje dva jednaka perioda
 Projects API je proširen opcionalnim `cursor`/`limit` (1–10): originalni `data` niz ostaje, `meta.nextCursor` omogućava nastavak. Scope cursor-a provjerava se prije čitanja stranice.
 
 Klijentski neutralan `/activity/events` donosi do 20 audit događaja po stranici za tenant administratore, s UTC vremenom i bez payloada; best-effort audit nije potpuna historija. UI još nije spojen.
+
+`/analytics/timers/closed` daje dnevne odobrene minute po danu zatvaranja i broj različitih radnika sa zatvorenom sesijom; to nije lokacijski potvrđeno prisustvo. UI još nije spojen.

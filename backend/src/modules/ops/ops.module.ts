@@ -30,6 +30,8 @@ import { IotController } from './iot.controller';
 import { MachineDevicesController } from './machine-devices.controller';
 import { DashboardController } from './dashboard.controller';
 import { TaskMetricsController } from './task-metrics.controller';
+import { TimerMetricsController } from './timer-metrics.controller';
+import { TimerMetricsService } from './dashboard-timer-metrics.service';
 import { TaskCreationMetricsService } from './dashboard-task-metrics.service';
 import { DiaryController } from './diary.controller';
 import { SyncController } from './sync.controller';
@@ -73,6 +75,7 @@ import { FilesModule } from '../files/files.module';
     IotController,
     DashboardController,
     TaskMetricsController,
+    TimerMetricsController,
     DiaryController,
     SyncController,
     IncidentsController,
@@ -102,6 +105,7 @@ import { FilesModule } from '../files/files.module';
     DashboardService,
     DashboardProjectsService,
     TaskCreationMetricsService,
+    TimerMetricsService,
     DiaryService,
     DiaryConflictService,
     IncidentsService,

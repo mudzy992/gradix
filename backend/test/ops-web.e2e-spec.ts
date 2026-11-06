@@ -287,6 +287,196 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('closed timer metrics use approved durations, tenant scope and bounded local-day periods', async () => {
+    const me = (
+      await request(app.getHttpServer()).get('/api/me').set(auth(admin))
+    ).body.data as { id: string; companyId: string };
+    const other = await prisma.company.create({
+      data: {
+        name: 'Timer metrics other',
+        slug: `timer-metrics-${Date.now()}`,
+      },
+    });
+    const ownProject = await prisma.project.findUniqueOrThrow({
+      where: { id: projectId },
+    });
+    const foreignProject = await prisma.project.create({
+      data: { companyId: other.id, name: 'Timer foreign', geofenceRadius: 100 },
+    });
+    const ownTask = await prisma.task.create({
+      data: {
+        companyId: ownProject.companyId,
+        projectId,
+        title: 'Timer trend own',
+      },
+    });
+    const foreignTask = await prisma.task.create({
+      data: {
+        companyId: other.id,
+        projectId: foreignProject.id,
+        title: 'Timer trend foreign',
+      },
+    });
+    const endpoint = '/api/analytics/timers/closed?limit=3&cursor=2025-01-08';
+    const before = await request(app.getHttpServer())
+      .get(endpoint)
+      .set(auth(admin));
+    expect(before.status).toBe(200);
+    const timerIds = Array.from(
+      { length: 6 },
+      (_, i) => `timer-metrics-${Date.now()}-${i}`,
+    );
+    try {
+      const current = new Date('2025-01-07T12:00:00.000Z');
+      const previous = new Date('2025-01-04T12:00:00.000Z');
+      await prisma.timerSession.createMany({
+        data: [
+          {
+            id: timerIds[0],
+            companyId: me.companyId,
+            taskId: ownTask.id,
+            userId: me.id,
+            startedAt: previous,
+            closedAt: previous,
+            durationMinutes: 60,
+            approvalStatus: 'APPROVED',
+          },
+          {
+            id: timerIds[1],
+            companyId: me.companyId,
+            taskId: ownTask.id,
+            userId: me.id,
+            startedAt: previous,
+            closedAt: current,
+            durationMinutes: 120,
+            approvalStatus: 'APPROVED',
+          },
+          {
+            id: timerIds[2],
+            companyId: me.companyId,
+            taskId: ownTask.id,
+            userId: me.id,
+            startedAt: current,
+            closedAt: current,
+            durationMinutes: 60,
+            approvalStatus: 'APPROVED',
+          },
+          {
+            id: timerIds[3],
+            companyId: me.companyId,
+            taskId: ownTask.id,
+            userId: me.id,
+            startedAt: current,
+            closedAt: current,
+            durationMinutes: 500,
+            approvalStatus: 'REJECTED',
+          },
+          {
+            id: timerIds[4],
+            companyId: me.companyId,
+            taskId: ownTask.id,
+            userId: me.id,
+            startedAt: current,
+            closedAt: null,
+            durationMinutes: null,
+            approvalStatus: 'APPROVED',
+          },
+          {
+            id: timerIds[5],
+            companyId: other.id,
+            taskId: foreignTask.id,
+            userId: me.id,
+            startedAt: current,
+            closedAt: current,
+            durationMinutes: 999,
+            approvalStatus: 'APPROVED',
+          },
+        ],
+      });
+      const result = await request(app.getHttpServer())
+        .get(endpoint)
+        .set(auth(admin));
+      expect(result.status).toBe(200);
+      expect(
+        BigInt(result.body.data.currentMinutes) -
+          BigInt(before.body.data.currentMinutes),
+      ).toBe(180n);
+      expect(
+        BigInt(result.body.data.previousMinutes) -
+          BigInt(before.body.data.previousMinutes),
+      ).toBe(60n);
+      expect(result.body.data.nextCursor).toBe('2025-01-05');
+      expect(result.body.data.series[2]).toMatchObject({
+        minutes: '180',
+        workers: 1,
+      });
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(ss))).status,
+      ).toBe(403);
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(worker)))
+          .status,
+      ).toBe(403);
+      const accountant = (await login(app, 'accountant@gradix.local')).body.data
+        .accessToken as string;
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(accountant)))
+          .status,
+      ).toBe(403);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/analytics/timers/closed?limit=31')
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get('/api/analytics/timers/closed?cursor=2025-02-30')
+            .set(auth(admin))
+        ).status,
+      ).toBe(400);
+      const platform = (await login(app, 'platform@gradix.local')).body.data
+        .accessToken as string;
+      expect(
+        (await request(app.getHttpServer()).get(endpoint).set(auth(platform)))
+          .status,
+      ).toBe(403);
+      const foreign = await request(app.getHttpServer())
+        .get(endpoint)
+        .set(auth(platform))
+        .set('X-Company-Id', other.id);
+      expect(foreign.status).toBe(200);
+      expect(foreign.body.data.currentMinutes).toBe('999');
+      const dst = await request(app.getHttpServer())
+        .get('/api/analytics/timers/closed?limit=1&cursor=2025-03-31')
+        .set(auth(platform))
+        .set('X-Company-Id', other.id);
+      expect(dst.status).toBe(200);
+      expect(dst.body.data.series[0]).toMatchObject({
+        startAt: '2025-03-29T23:00:00.000Z',
+        endAt: '2025-03-30T22:00:00.000Z',
+      });
+      const api = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(
+        api.body.paths['/api/analytics/timers/closed'].get.parameters,
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+    } finally {
+      await prisma.timerSession.deleteMany({ where: { id: { in: timerIds } } });
+      await prisma.task.deleteMany({
+        where: { id: { in: [ownTask.id, foreignTask.id] } },
+      });
+      await prisma.project.delete({ where: { id: foreignProject.id } });
+      await prisma.company.delete({ where: { id: other.id } });
+    }
+  });
+
   it('task creation metrics apply tenant and project scope with bounded cursor paging', async () => {
     const endpoint = '/api/analytics/tasks/created?limit=3&cursor=2025-01-08';
     const beforeAdmin = await request(app.getHttpServer())
