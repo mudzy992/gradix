@@ -1,39 +1,5 @@
-// Minimalna zamjena za `Prisma.Decimal` (u pješčaniku nema generisanog klijenta).
-// U CI-ju se takođe koristi ova klasa — poređenja su numerička, kao u decimal.js.
-class FakeDecimal {
-  private readonly value: number;
-
-  constructor(input: number | string) {
-    this.value = Number(input);
-  }
-
-  isFinite(): boolean {
-    return Number.isFinite(this.value);
-  }
-
-  lt(other: number): boolean {
-    return this.value < other;
-  }
-
-  lte(other: number): boolean {
-    return this.value <= other;
-  }
-
-  gt(other: number): boolean {
-    return this.value > other;
-  }
-
-  toString(): string {
-    return String(this.value);
-  }
-}
-
-jest.mock(
-  '../../../generated/client',
-  () => ({ Prisma: { Decimal: FakeDecimal } }),
-  { virtual: true },
-);
-
+// Use the generated Prisma Decimal: a partial fake silently diverges from the
+// parser contract and can mask failures depending on the test environment.
 import { AppError } from '../errors/app-error';
 import { assertLatLng, parseLatLng, parseOptionalLatLng } from './geo';
 
@@ -51,6 +17,12 @@ describe('parseLatLng', () => {
     const { lat, lng } = parseLatLng('43.8563', '18.4131');
     expect(lat.toString()).toBe('43.8563');
     expect(lng.toString()).toBe('18.4131');
+  });
+
+  it('prihvata nulte koordinate kroz stvarni Prisma Decimal', () => {
+    const { lat, lng } = parseLatLng('0', '-0');
+    expect(lat.isZero()).toBe(true);
+    expect(lng.isZero()).toBe(true);
   });
 
   it('prihvata granične vrijednosti (±90, ±180)', () => {

@@ -12,9 +12,9 @@ Trenutno: **47/61 segmenata `done`**. CI-05 je `in-progress` (čeka puni CI); BE
 
 ## Zadnji commit i CI
 
-- `eef4bab`: puni CI `42168466281` prošao 6/6; dodata dijagnostika, raniji tačan uzrok ostaje nedokazan.
-- `3375497`: backend unit/coverage pao, run kasnije otkazan zbog novog pusha; `e002b19` 5/6, logovi EOF (BL-011).
-- `c7bf610`: 5/6. `8cac43d..c7bf610` mijenja samo tri AUDIT dokumenta, ne backend kod/testove.
+- `811733a`: CI `42169245124` 5/6; anotacije otkrile `geo.spec.ts` parcijalni Decimal mock bez `isZero` (F-CI-05-73).
+- `eef4bab`: CI `42168466281` 6/6; `3375497` backend pao, run kasnije otkazan zbog novog pusha (BL-011).
+- `e002b19` 5/6. `8cac43d..c7bf610` mijenja samo tri AUDIT dokumenta, ne backend kod/testove.
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
 ## CI-05 — administrativno trijažiran, puni CI blokiran
@@ -25,7 +25,7 @@ Trenutno: **47/61 segmenata `done`**. CI-05 je `in-progress` (čeka puni CI); BE
 - Rerun palih poslova: GitHub `run ... cannot be rerun; its workflow file may be broken`; nije izvršen.
 - [Ledger](CI-05-LEDGER.md): 72 nalaza; [backlog](BACKLOG.md): 11 grupa i S-red, s indeksom historijskih ograničenja.
 - `npm ci`, Node 22 i CI env: ista unit komanda 43/331 za 2026-11-05 i 2026-11-06 u UTC i Sarajevo; coverage iznad baseline-a.
-- BL-011: unit reporter daje redigovan summary/anotacije i artefakt; puni CI `42168466281` 6/6, raniji uzrok još nije dokazan. Test sata je deterministički.
+- F-CI-05-73: izolovani geo test 4/9 pao → stvarni Prisma Decimal 10/10; backend 43/332, FE 599/599, check:all PASS (2 skipa); puni CI čeka se.
 
 ## BE-19 / FE-17 — dashboard v2
 
@@ -36,6 +36,6 @@ Trenutno: **47/61 segmenata `done`**. CI-05 je `in-progress` (čeka puni CI); BE
 
 ## Sljedeći korak
 
-Pribaviti log palog backend posla CI-ja i dovesti puni CI do zelenog za CI-05; B1 dashboard v2 i S-red paralelno; dashboard blokiraju samo Critical ili nalazi
+Potvrditi popravku F-CI-05-73 u punom CI-ju za CI-05; B1 dashboard v2 i S-red paralelno; dashboard blokiraju samo Critical ili nalazi
 koji zaista utiču na njegove podatke/tenant/prisutnost/auth. Prije UI realizacije razjasniti
 S-01/S-02/S-03 za korištene putanje. Nakon admin screenshot checkpointa obavezna je K2 odluka.

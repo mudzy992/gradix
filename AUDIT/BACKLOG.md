@@ -94,14 +94,13 @@ kompatibilno upozorenje i ažurirati klijente kada mobile ponovo bude dozvoljen;
 komunikovanog roka verzionisati/odobriti stroži ugovor. Ostala polja, seed i E2E još
 treba iscrpno inventarisati i tabelarno testirati; ovaj primjer nije dokaz cjelovite inventure.
 
-- **BL-011 — srednje, djelimično, CI:** push runovi `42109948886` (`c7bf610`) i `42111636754` (`e002b19`) pali su
-  u backend unit/coverage; annotation sadrži samo exit 1 a čitanje loga završava EOF.
-  Isti CI env i komanda lokalno, datumi 2026-11-05 i 2026-11-06 u UTC i Europe/Sarajevo: 43/331 PASS;
-  coverage je iznad svih globalnih pragova. Diff `8cac43d..c7bf610` sadrži samo tri
-  AUDIT dokumenta, pa prethodni backend kod nije promijenjen. Dijagnostički reporter sada
-  daje summary/anotacije i artefakt i na padu. `42168466281` (`eef4bab`) je 6/6,
-  ali nova komanda ima dodane JSON argumente i ne dokazuje zašto su prethodni runovi pali.
-  Stariji logovi i artefakt nedostupni su u sandboxu; uzrok je i dalje nepoznat.
+- **BL-011 — visoko, djelimično, CI / F-CI-05-73:** instrumentirani run `42169245124`
+  prijavio je četiri pada `geo.spec.ts`: testni `FakeDecimal` nema `isZero()`, koju parser
+  od `8cac43d` poziva; parser pretvara TypeError u validacijsku grešku. Izolovan test
+  lokalno reprodukovao 4 pada, a zamjena lažnog objekta stvarnim Prisma Decimalom i test
+  nultih koordinata prolaze 10/10. Puni CI poslije popravke čeka se. Raniji crveni runovi
+  nemaju dostupnu dijagnostiku i ne mogu se pojedinačno pripisati ovom kvaru.
+
 
 ## S-red
 
