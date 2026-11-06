@@ -885,6 +885,15 @@ Decimalni string s više značajnih decimalnih mjesta nego što je skala inventu
 
 Odluka zatvara F-CI-05-64 **u opsegu skale inventurisanih inputa**, ne tvrdi da su svi DB opsezi, vanjski Prisma pisci ili historijski podaci pokriveni. Ostatak i dodatna HTTP/PG karakterizacija idu u TEST-01.
 
+### D-059 — Ograničeni idempotentni refresh replay
+**Datum:** 2026-11-06 · **Status:** plan za implementaciju; još nije u produkcijskom kodu
+
+Vlasnik traži oporavak izgubljenog odgovora na jednom API-ju za sve klijente. Nakon uspješne rotacije, isti stari refresh može do **20 sekundi** ponovo dobiti isti novi par, ali samo dok su vlasnik/firma aktivni, stari token nije istekao i direktni nasljednik još postoji, nije istekao ni opozvan. Nema novog obaveznog polja/headera, zavisnosti ni migracije. Ovo namjerno uvodi sigurnosni kompromis: onaj ko ukrade stari bearer refresh može tokom tog prozora dobiti isti novi par; server ne može razlikovati krađu od izgubljenog odgovora. Već izdati access JWT ostaje važeći do isteka.
+
+Plan implementacije: pod postojećim redoslijedom Company → User → token i jednom PostgreSQL transakcijom derivirati direktni refresh nasljednik HMAC-SHA-512 uz domenski odvojeni ključ izveden iz `JWT_ACCESS_SECRET` i stari tajni refresh; DB čuva samo hash. Vrijeme rotacije `revokedAt` je iz baze pod lockom; eksplicitni `iat` iz tog vremena daje isti potpisani access JWT na ponovljenom zahtjevu. Replay traži tačan hash izvedenog nasljednika istog korisnika i porodice te aktivnu/važeću roditeljsku i dječju granu; ponavljanje ne smije oživjeti odjavljeni, promijenjeni ili već rotirani nasljednik. Isti ključ, TTL i kod moraju biti na svim replikama; rotacija ključa i miješane verzije mogu prekinuti oporavak, a stari server može opozvati sve sesije. Potreban je koordiniran deployment; bez toga ne tvrditi sigurnost.
+
+Nakon prozora ponovna upotreba opoziva porodicu (`lineageKey`), prema vlasnikovom zahtjevu; **trenutni kod** umjesto toga opoziva sve sesije, pa je to promjena sigurnosne semantike, ne opis postojećeg stanja. Za legacy red bez porodice ne pretpostavljati povezanost: fail closed, zadržati globalni opoziv. Unutar prozora, kad tačan aktivni nasljednik nije nađen (odjava, rotacija nasljednika, drugi ključ ili legacy), odbiti bez vraćanja tokena; prava/status provjeriti ponovno pod lockom. Vrijeme na granici, istek, paralelizam, više uređaja, odjave, promjena lozinke/deaktivacija i miješane verzije zahtijevaju PG testove prije isporuke; nikada ne logovati tokene ili ključ. Web postojeće fail-closed ponašanje ne uklanjati dok se ne testira klijentski oporavak. OpenAPI i `docs/BACKEND.md` ažurirati zajedno s kodom.
+
 ---
 
 ## Zamijenjene / povučene odluke

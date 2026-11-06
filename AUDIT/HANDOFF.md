@@ -9,7 +9,8 @@
 - Admin v2: `dashboard:shots` (desktop/mobile, light/dark, paleta, prije i simulirana prazna firma); axe A/AA 0 ozbiljnih/kritičnih, lokalni LCP/CLS u `docs/design/FE-17-screenshots/measurements.json`; OSM pločice blokirane, fallback vidljiv.
 - S-01: `72c4e7c` CI 42209374216 6/6 potvrđuje globalni refresh opoziv i još važeći access JWT; `bdaa426` CI 42210988539 6/6: web djelimično odbacuje refresh nakon nepoznatog fetch ishoda (FE-15), bez slabljenja servera. Crash/storage/stari klijenti i siguran replay ostaju otvoreni.
 - Privremeni PG `s01_auth_e2e` ima 12 ručno primijenjenih SQL migracija, test-only readiness i demo seed; TEST-01 treba preostalu HTTP/PG karakterizaciju decimalnih i direktnih Prisma putanja. Ostale dashboard role čekaju potvrdu vlasnika.
-- Sljedeće: proširiti TEST-01 stvarnim fixtureima po ruti i započeti S-01 serverski dizajn/testove; ostale dashboard role/vizuelne promjene čekaju vlasnika.
+- Sljedeće: implementirati D-059 test-first na serveru i proširiti TEST-01 stvarnim fixtureima po ruti; ostale dashboard role/vizuelne promjene čekaju vlasnika.
 - E2E anomalija: 20/20 serijski 8/8 exit 0; detectOpenHandles 8/8 bez prijavljenih handleova, 0 test PG konekcija; prvobitni exit 1 nije objašnjen niti je ponovljeno paralelno opterećenje. Detalji + stderr/timings u `AUDIT/evidence/e2e-exit-2026-11-06.txt`; reporter ispisuje procesni status.
 - E2E izlaz dijagnoza `d05a35d`, CI 42216260784 6/6; uzrok prvobitnog izlaza 1 ostaje nepoznat.
 - TEST-01 provjere: fresh PG E2E 10/10, backend 54/439 + lint/build, frontend 66/650, `check:all` 0/2 skip; public gate test prvo crven.
+- D-059 je plan, ne implementacija: 20 s replay i opoziv porodice mijenjaju sigurnosnu semantiku; kratak prozor dopušta ukradenom tokenu replay. Koordinirati rollout i testirati prije upotrebe.

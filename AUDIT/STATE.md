@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `f234b0e`: CI `42211895948` 6/6; TEST-01 projektna izolacija resursa.
 - `d05a35d`: CI `42216260784` 6/6; ograničena E2E dijagnoza i izvještaj procesnog statusa.
-- Tekući commit: generički permission-negative uzorci i eksplicitni javni izuzeci; CI čeka push.
+- `a743e48`: CI `42217150939` 6/6; permission-negative uzorci i javni izuzeci.
+- Tekući commit: D-059 S-01 server plan prije koda; CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -46,3 +46,5 @@ S-01: web djelimično ne ponavlja refresh nakon nepoznatog ishoda; rizik ostaje.
 - E2E: 20 serijskih prolaza exit 0, detectOpenHandles bez prijavljenih handleova, test PG konekcije 0; izvorni exit 1 nije reproduciran. Dokazi i ograničenja: `evidence/e2e-exit-2026-11-06.txt`, TEST-01 i `docs/TESTING.md`.
 
 - TEST-01: 593 permission-negative uzorka, 103/171 rute; 0/171 potpuno pokrivenih generičkim cross-tenant fixtureima. Ostalo i ograničenja u TEST-01.
+
+- S-01: D-059 je plan prije koda, ne isporučeni protokol; grace kompromis i promjena globalnog reuse u family-scope izričito zapisani.
