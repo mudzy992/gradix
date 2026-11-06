@@ -4,6 +4,7 @@ import { App } from 'supertest/types';
 import { createTestApp } from './helpers/create-app';
 import { auth, login } from './helpers/auth';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { seedDemoTrends } from '../prisma/seed-demo-trends';
 
 describe('Phase 5 dashboard diary HSE (e2e)', () => {
   let app: INestApplication<App>;
@@ -285,6 +286,50 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       await prisma.auditEvent.deleteMany({ where: { id: { in: ids } } });
       await prisma.company.delete({ where: { id: other.id } });
     }
+  });
+
+  it('demo trends seed is idempotent and produces a varied 30-day API series', async () => {
+    const project = await prisma.project.findFirstOrThrow({
+      where: { code: 'DEMO-1' },
+    });
+    const demoWorker = await prisma.user.findUniqueOrThrow({
+      where: { email: 'worker@gradix.local' },
+    });
+    const operator = await prisma.user.findUniqueOrThrow({
+      where: { email: 'op@gradix.local' },
+    });
+    const input = {
+      companyId: project.companyId,
+      projectId: project.id,
+      workerId: demoWorker.id,
+      operatorId: operator.id,
+    };
+    await seedDemoTrends(prisma, input);
+    const where = {
+      companyId: project.companyId,
+      id: { startsWith: `demo-trend-${project.id}-` },
+    };
+    const beforeTasks = await prisma.task.count({ where });
+    const beforeTimers = await prisma.timerSession.count({ where });
+    await seedDemoTrends(prisma, input);
+    expect(await prisma.task.count({ where })).toBe(beforeTasks);
+    expect(await prisma.timerSession.count({ where })).toBe(beforeTimers);
+    expect(beforeTasks).toBeGreaterThan(20);
+    expect(beforeTimers).toBeGreaterThan(20);
+    const result = await request(app.getHttpServer())
+      .get('/api/analytics/tasks/created?limit=30')
+      .set(auth(admin));
+    expect(result.status).toBe(200);
+    expect(result.body.data.series).toHaveLength(30);
+    expect(
+      new Set(result.body.data.series.map((r: { count: number }) => r.count))
+        .size,
+    ).toBeGreaterThan(1);
+    const timers = await request(app.getHttpServer())
+      .get('/api/analytics/timers/closed?limit=30')
+      .set(auth(admin));
+    expect(timers.status).toBe(200);
+    expect(BigInt(timers.body.data.currentMinutes)).toBeGreaterThan(0n);
   });
 
   it('document alerts are severity ordered, scoped, bounded and exclude file details', async () => {

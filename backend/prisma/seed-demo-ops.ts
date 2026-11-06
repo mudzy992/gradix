@@ -1,4 +1,5 @@
 import { PrismaClient, Role } from '../generated/client';
+import { seedDemoTrends } from './seed-demo-trends';
 
 type SeedUser = {
   email: string;
@@ -50,6 +51,12 @@ export async function seedDemoOps(
     where: { companyId: input.companyId, code: 'DEMO-1' },
   });
   if (existing) {
+    await seedDemoTrends(prisma, {
+      companyId: input.companyId,
+      projectId: existing.id,
+      workerId: ids.WORKER,
+      operatorId: ids.MACHINE_OPERATOR,
+    });
     return;
   }
   const project = await prisma.project.create({
@@ -129,5 +136,11 @@ export async function seedDemoOps(
         plannedQty: 80,
       },
     ],
+  });
+  await seedDemoTrends(prisma, {
+    companyId: input.companyId,
+    projectId: project.id,
+    workerId: ids.WORKER,
+    operatorId: ids.MACHINE_OPERATOR,
   });
 }

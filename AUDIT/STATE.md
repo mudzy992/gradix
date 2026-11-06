@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## Zadnji commit i CI
 
+- `dae8043`: CI `42186602208` 6/6; upozorenja isteka dokumenata.
 - `b2b635d`: CI `42185923719` 6/6; trend odobrenih minuta timera.
 - `6f76dd7`: CI `42185371287` 6/6; tenant admin aktivnost.
-- `3eb6e92`: CI `42184834793` 6/6; paginacija projekata.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 
@@ -31,7 +31,7 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19 i FE-17 su `in-prog
 
 ## BE-19 / FE-17 — dashboard v2
 
-- B0: plan i D-057 dopunjuju D-043; B1 djelimično: projects API, analitika kreiranja zadataka, admin audit aktivnost, odobrene minute timera i upozorenja isteka dokumenata (cursor/limit). Ostali endpointi nisu završeni.
+- B0: plan i D-057 dopunjuju D-043; B1 djelimično: projects API, analitika kreiranja zadataka, admin audit aktivnost, odobrene minute timera i upozorenja isteka dokumenata (cursor/limit); demo 30-dnevni trendovi. Ostali endpointi nisu završeni.
 - B1 test-first: unit 3/3, PG E2E 8/8 (12 SQL migracija ručno + demo seed), backend 44/335; CI 6/6. Admin UI još nije počeo.
 - S-01 auth, S-02 novac i S-03 tenant moraju biti provjereni za nove putanje; drugi High ne blokiraju automatski.
 - BL-001: [inventura](DECIMAL-INVENTORY.md), D-058 K1 A; 70 parser slučajeva, PG E2E 17/170. Preostali HTTP/PG i DB opsezi idu u TEST-01.
