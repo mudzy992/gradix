@@ -71,6 +71,68 @@ describe('Auth (e2e)', () => {
     expect(revokedRotation.status).toBe(401);
   });
 
+  it('characterizes two independent sessions and a lost refresh response', async () => {
+    const prisma = app.get(PrismaService);
+    const seed = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@gradix.local' },
+    });
+    const email = `two-session-${randomUUID()}@example.invalid`;
+    const user = await prisma.user.create({
+      data: {
+        email,
+        firstName: 'Two',
+        lastName: 'Sessions',
+        companyId: seed.companyId,
+        passwordHash: seed.passwordHash,
+        mustChangePassword: false,
+        roles: { create: { role: 'ADMIN' } },
+      },
+    });
+    try {
+      // Two separate logins model distinct devices, rather than copying one token.
+      const deviceA = await login(app, email);
+      const deviceB = await login(app, email);
+      expect([deviceA.status, deviceB.status]).toEqual([200, 200]);
+      const refreshA = deviceA.body.data.refreshToken as string;
+      const refreshB = deviceB.body.data.refreshToken as string;
+      expect(refreshA).not.toBe(refreshB);
+      const [rotatedA, rotatedB] = await Promise.all([
+        request(app.getHttpServer())
+          .post('/api/auth/refresh')
+          .send({ refreshToken: refreshA }),
+        request(app.getHttpServer())
+          .post('/api/auth/refresh')
+          .send({ refreshToken: refreshB }),
+      ]);
+      expect([rotatedA.status, rotatedB.status]).toEqual([200, 200]);
+      const oldA = rotatedA.body.data.refreshToken as string;
+      const newB = rotatedB.body.data.refreshToken as string;
+      const accessB = rotatedB.body.data.accessToken as string;
+      // Simulate an unknown outcome by discarding a successful response; this
+      // does not claim to simulate an actual network interruption or browser.
+      const discarded = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: oldA });
+      expect(discarded.status).toBe(200);
+      const retry = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: oldA });
+      expect(retry.status).toBe(401);
+      expect(retry.body.error.code).toBe('AUTH_REFRESH_REUSE');
+      const otherDevice = await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .send({ refreshToken: newB });
+      expect(otherDevice.status).toBe(401);
+      // Refresh revocation is not immediate access-token revocation.
+      expect(
+        (await request(app.getHttpServer()).get('/api/me').set(auth(accessB)))
+          .status,
+      ).toBe(200);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
+  });
+
   it('concurrent use of one refresh token yields one rotation and detects reuse', async () => {
     const logged = await login(app, 'admin@gradix.local');
     const token = logged.body.data.refreshToken as string;

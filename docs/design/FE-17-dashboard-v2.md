@@ -1,7 +1,6 @@
 # FE-17 — Dashboard v2, radni dizajn
 
-**Status:** B0 + dio B1 (ograničeni projects API i klijentski neutralan izvor dnevnog broja kreiranih zadataka); nadograđuje D-043 prema D-057. K2 dolazi tek nakon admin
-izvedbe i snimaka; ostale role nisu odobrene tom kontrolnom tačkom. Paleta D-040,
+**Status:** admin v2, paleta i K2 snimci su isporučeni; BE-19 i FE-17 ostaju u toku do pregleda vlasnika. Nadograđuje D-043 prema D-057; ostale role nisu odobrene tom kontrolnom tačkom. Paleta D-040,
 postojeći tokeni i WCAG 2.2 AA, bez promjene drugih ekrana osim zajedničkih primitiva.
 
 ## Svrha i redoslijed

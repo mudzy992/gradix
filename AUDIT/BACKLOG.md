@@ -21,8 +21,7 @@ svaki stari navod i dalje aktuelan. Granice dashboarda slijede pravilo vlasnika 
 - **BL-002 — visoko, otvoreno, F-FE-06-06 / F-CI-05-29–33:** gubitak odgovora nakon
   rotacije, nepodržani Web Locks, stari tabovi ili kopirani storage mogu dovesti do reuse i
   opoziva legitimnih sesija. Dokaz: `AUDIT/segments/FE-06.md` F-FE-06-06 i CI-05 ledger.
-  Prijedlog: dizajnirati i test-first dokazati serverski protokol sigurnog ponavljanja bez
-  slabljenja detekcije krađe; posebno pokriti više tabova i nepoznat ishod.
+  PG HTTP karakterizacija dvije nezavisne sesije i simuliranog izgubljenog odgovora u BE-02 potvrđuje opoziv druge refresh sesije, ali access JWT ostaje važeći. Prijedlog: test-first ublažiti klijentski nepoznat ishod i dizajnirati serverski protokol bez slabljenja detekcije krađe; stvarni browser tabovi i dalje nisu dokazani.
 
 ## Tenant i prava
 
