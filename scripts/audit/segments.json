@@ -51,7 +51,7 @@
       "id": "CI-05",
       "layer": "CI",
       "title": "Audit gate (matrica + docs)",
-      "status": "done",
+      "status": "in-progress",
       "scope": "process",
       "scopeReason": "Audit gate poziva scripts/audit/* (vlasništvo STD-01); ovdje se dodaje korak u ci.yml."
     },

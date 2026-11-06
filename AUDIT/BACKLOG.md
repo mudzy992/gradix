@@ -94,9 +94,10 @@ kompatibilno upozorenje i ažurirati klijente kada mobile ponovo bude dozvoljen;
 komunikovanog roka verzionisati/odobriti stroži ugovor. Ostala polja, seed i E2E još
 treba iscrpno inventarisati i tabelarno testirati; ovaj primjer nije dokaz cjelovite inventure.
 
-- **BL-011 — srednje, djelimično, CI:** push run `42109948886` za `c7bf610` pao je
-  u backend unit/coverage, annotation sadrži samo exit 1 a čitanje loga završava EOF.
-  Lokalno ponoviti coverage, provjeriti sljedeći push CI i dostupnost loga; uzrok nije poznat.
+- **BL-011 — srednje, djelimično, CI:** push runovi `42109948886` (`c7bf610`) i `42111636754` (`e002b19`) pali su
+  u backend unit/coverage; annotation sadrži samo exit 1 a čitanje loga završava EOF.
+  Isti CI env i komanda lokalno 43/330 PASS. Pribaviti puni log palog posla, utvrditi uzrok,
+  ispraviti prema potrebi i potvrditi puni CI; uzrok nije poznat.
 
 ## S-red
 
