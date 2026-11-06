@@ -58,28 +58,35 @@ B0 dokument i registracija → B1 ograničena API analitika + testovi → B2 adm
 S-01/S-02/S-03 provjeriti za korištene auth, tenant i novčane putanje, a nepovezane stavke
 S-reda ne zaustavljaju B0. Nijedna uloga ni screenshot nisu sada prikazani kao implementirani.
 
-BE-19 dodatni izvor: `GET /api/analytics/tasks/created` daje dva jednaka perioda kreiranja zadataka i dnevne UTC granice, sa cursor/limit i rolom/tenant scopeom; to nije trend radnih sati ni završavanja zadataka. Usporedba koristi završene lokalne dane i ne izračunava procenat iz nule. UI još ne koristi taj izvor.
+BE-19 dodatni izvor: `GET /api/analytics/tasks/created` daje dva jednaka perioda kreiranja zadataka i dnevne UTC granice, sa cursor/limit i rolom/tenant scopeom; to nije trend radnih sati ni završavanja zadataka. Usporedba koristi završene lokalne dane i ne izračunava procenat iz nule.
 
 Projects API je proširen opcionalnim `cursor`/`limit` (1–10): originalni `data` niz ostaje, `meta.nextCursor` omogućava nastavak. Scope cursor-a provjerava se prije čitanja stranice.
 
-Klijentski neutralan `/activity/events` donosi do 20 audit događaja po stranici za tenant administratore, s UTC vremenom i bez payloada; best-effort audit nije potpuna historija. UI još nije spojen.
+Klijentski neutralan `/activity/events` donosi do 20 audit događaja po stranici za tenant administratore, s UTC vremenom i bez payloada; best-effort audit nije potpuna historija.
 
-`/analytics/timers/closed` daje dnevne odobrene minute po danu zatvaranja i broj različitih radnika sa zatvorenom sesijom; to nije lokacijski potvrđeno prisustvo. UI još nije spojen.
+`/analytics/timers/closed` daje dnevne odobrene minute po danu zatvaranja i broj različitih radnika sa zatvorenom sesijom; to nije lokacijski potvrđeno prisustvo.
 
-`/alerts/documents` nudi ograničen severity/keyset pregled isteka dokumenata za tenant admina, bez putanja i bilješki. Nisu obuhvaćene druge vrste upozorenja; UI još nije spojen.
+`/alerts/documents` nudi ograničen severity/keyset pregled isteka dokumenata za tenant admina, bez putanja i bilješki. Nisu obuhvaćene druge vrste upozorenja;
 
 Demo seed daje sintetički promjenjiv 30-dnevni niz zadataka i odobrenih timera samo uz `SEED_DEMO=true`; produkcija bez te zastavice nema demo podatke.
 
-`/presence/people` je zasebna tenant-admin cursor/limit lista korisnika na aktivnim geofencima na osnovu posljednjeg svježeg GPS pinga, bez sirovih koordinata; ne predstavlja historiju ni potvrđenu evidenciju prisustva. UI još nije spojen.
+`/presence/people` je zasebna tenant-admin cursor/limit lista korisnika na aktivnim geofencima na osnovu posljednjeg svježeg GPS pinga, bez sirovih koordinata; ne predstavlja historiju ni potvrđenu evidenciju prisustva.
 
-`/analytics/summary` je zaseban tenant-admin scalarni izvor aktuelnih agregata, uključujući broj projekata s budžetom i tačan zbir poznatih budžeta. To nije transakcijski snapshot ni paginirana lista. UI još nije spojen.
+`/analytics/summary` je zaseban tenant-admin scalarni izvor aktuelnih agregata, uključujući broj projekata s budžetom i tačan zbir poznatih budžeta. To nije transakcijski snapshot ni paginirana lista.
 
-`/alerts/tasks` daje severity i paginaciju za nezavršene zadatke u aktivnim projektima s prošlim ili bliskim UTC rokom. UI još nije spojen.
+`/alerts/tasks` daje severity i paginaciju za nezavršene zadatke u aktivnim projektima s prošlim ili bliskim UTC rokom.
 
 Projects API vraća projektne `lat`/`lng` kao decimalne stringove ili null i radijus u metrima za lazy mapu; ne izlaže lokacije ljudi.
 
-Primitivi `chart-primitives.tsx`: prazna/nedostajuća mjerenja se ne pretvaraju u nulu; sparkline ne spaja praznine; grafici imaju otkrivenu tabelu podataka, donut vidljivu legendu i najviše četiri segmenta. Neispravan/nepotpun ili nulti zbir donuta nema proporcionalni crtež; oznaku praznog stanja daje pozivalac. Progress prikazuje tekst i pragove 80/100%, bez dijeljenja nulom, a animirani brojač i shimmer poštuju smanjeno kretanje. Primitivi nisu decimalna biblioteka: za novac pozivalac mora prvo tačno izračunati omjer. Admin UI/axe/screenshotovi još nisu urađeni.
+Primitivi `chart-primitives.tsx`: prazna/nedostajuća mjerenja se ne pretvaraju u nulu; sparkline ne spaja praznine; grafici imaju otkrivenu tabelu podataka, donut vidljivu legendu i najviše četiri segmenta. Neispravan/nepotpun ili nulti zbir donuta nema proporcionalni crtež; oznaku praznog stanja daje pozivalac. Progress prikazuje tekst i pragove 80/100% bez zaokruživanja ispod praga na viši status, bez dijeljenja nulom, a animirani brojač i shimmer poštuju smanjeno kretanje. Primitivi nisu decimalna biblioteka: za novac pozivalac mora prvo tačno izračunati omjer.
 
 Mjerenje prije povezivanja admin v2 (lokalni `vite build`, Node 22): glavni `index-DX_kZ0LL.js` 734.28 kB minificiran / 210.19 kB gzip. Primitivi tada nisu bili uvezeni u dashboard; uporediti isti build nakon integracije, uz izdvojeni lazy map chunk.
 
-Web klijent ima tipizirane odvojene pozive (`api-dashboard.ts`); generički envelope može nositi cursor meta bez promjene postojećeg page meta tipa. Svi pozivi koriste postojeći session/tenant context guard. Admin UI još nije spojen.
+Web klijent ima tipizirane odvojene pozive (`api-dashboard.ts`); generički envelope može nositi cursor meta bez promjene postojećeg page meta tipa. Svi pozivi koriste postojeći session/tenant context guard. Admin
+
+
+Admin v2 koristi odvojene upite s ključem korisnik/firma/platform revision i vlastita stanja; bez platform firme nema zahtjeva. Dozvole određuju upite i prečice, a ostale role zadržavaju stari dashboard. Prikaz novca i budžetskog omjera koristi decimalne stringove/BigInt i omjer se prikazuje skraćen na dvije decimale kako ne bi prešao prag zbog zaokruživanja; nepostojeći budžet, nulti nazivnik i nesiguran graf nisu nula. Upiti prikazuju prvih 10 aktivnih projekata te do 20 prisutnih i audit događaja; datum isteka dokumenta je UTC datum, a rok zadatka instant u zoni firme. Lista je tekstualna alternativa projektnoj mapi; Leaflet se učitava samo kad ima koordinata, a greška pločica se jasno prikazuje. Prisustvo je GPS procjena, ne evidencija radnog vremena. Dark klasa se primjenjuje na shell samo dok je admin dashboard montiran, preferencija ostaje lokalna.
+
+Lokalna provjera stvarnog demo backenda: Playwright dashboard/prečica/reflow 3/3, kompletni admin tok 16/16; axe-core 4.11.1, WCAG 2/2.1 A/AA light i dark, bez serious/critical nalaza; na 320 px nema horizontalnog prelijevanja. Lokalni preview fixture ima koordinate i budžet dodane u privremenu bazu, ne u seed; mreža ovdje blokira OSM pločice i prikazuje se fallback. Pri prvom punom pokretanju korišteni su preniski lokalni auth limiti (429), zatim je uz CI vrijednosti otkriven i ispravljen reflow test koji nije vraćao širinu prozora. To nije potpuna WCAG provjera; završni screenshotovi, metrika i K2 slijede poslije palete.
+
+Nakon integracije (isti lokalni Vite build): glavni JS 756.68 kB / 216.07 kB gzip, +22.40 kB / +5.88 kB gzip u odnosu na zabilježenu osnovu. `project-map` je odvojen 1.25 kB / 0.71 kB gzip, zajednički Leaflet 152.73 kB / 44.77 kB gzip; učitava se tek za kartu s koordinatama. Brojke su build veličine, ne stvarni prijenos ili LCP/CLS.

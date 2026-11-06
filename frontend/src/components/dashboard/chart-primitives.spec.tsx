@@ -29,6 +29,12 @@ describe('dashboard primitives', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
     expect(screen.getByText('Not available')).toBeInTheDocument()
   })
+  it('does not promote a value below a threshold because of display rounding', () => {
+    const { rerender } = render(<ProgressBar label="Budget" value={79.99} max={100} unavailableLabel="Not available" statusLabels={{ normal: 'Normal', warning: 'Warning', critical: 'Critical' }} />)
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '79.99% — Normal')
+    rerender(<ProgressBar label="Budget" value={99.99} max={100} unavailableLabel="Not available" statusLabels={{ normal: 'Normal', warning: 'Warning', critical: 'Critical' }} />)
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '99.99% — Warning')
+  })
   it('keeps donut values readable when total is zero', () => {
     render(<Donut label="Split" values={[{ label: 'A', value: 0 }, { label: 'B', value: 0 }]} emptyLabel="No data" tableLabel="Show data" />)
     expect(screen.getByText('No data')).toBeInTheDocument()

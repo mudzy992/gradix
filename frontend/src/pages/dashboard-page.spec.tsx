@@ -7,7 +7,7 @@ import type { MeUser } from '@/lib/api-types'
 import type { DashboardPayload } from '@/lib/ops-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
-import { DashboardPage } from '@/pages/dashboard-page'
+import { LegacyDashboardPage as DashboardPage } from '@/pages/dashboard-page'
 
 /**
  * FE-05 — testovi drže odluke iz FE-04/D-043: prevedene kartice (ne sirovi `dash.*` ključevi),

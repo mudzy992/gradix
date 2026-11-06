@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { NAV_ITEMS, isNavItemVisible } from '@/components/layout/navigation'
 import { cn } from '@/lib/utils'
+import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 
 /**
  * FE-04 (D-043) — dashboard je odgovor na tri pitanja, po roli: šta ističe, ko je na terenu,
@@ -56,6 +57,12 @@ function initials(firstName: string, lastName: string): string {
 }
 
 export function DashboardPage() {
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.roles?.some((role) => ['ADMIN', 'SUPER_ADMIN', 'PLATFORM_ADMIN'].includes(role)) ?? false
+  return isAdmin ? <AdminDashboard /> : <LegacyDashboardPage />
+}
+
+export function LegacyDashboardPage() {
   const { t, i18n } = useTranslation()
   const user = useAuthStore((state) => state.user)
   const tenantReady = useTenantReady()

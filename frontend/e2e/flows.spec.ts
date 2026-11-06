@@ -53,7 +53,7 @@ test.describe('FE-06 — admin tok', () => {
   })
 
   test('dashboard je prvi ekran poslije prijave i ima prevedene kartice', async () => {
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/dashboard/i)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/dobro došli|welcome/i)
     await expect(page.getByRole('heading', { name: /ključni pokazatelji/i })).toHaveCount(1)
 
     // Kartice po roli (SUPER_ADMIN → admin bucket): barem jedna poznata labela.
@@ -65,8 +65,8 @@ test.describe('FE-06 — admin tok', () => {
 
   test('prečica vodi na projekte, red otvara detalj sa fazama', async () => {
     // Prečica (zona B), ne sidebar — ista prava, drugi put do ekrana.
-    const quick = page.getByRole('region', { name: /brze akcije/i })
-    await quick.getByRole('link', { name: 'Projekti' }).click()
+    const quick = page.getByRole('region', { name: /brze radnje|quick actions/i })
+    await quick.getByRole('link', { name: 'Svi projekti' }).click()
     await expect(page).toHaveURL(/\/projects$/)
 
     const project = page.getByRole('link', { name: 'Sarajevo obilaznica' })
@@ -216,13 +216,18 @@ test.describe('FE-06 — admin tok', () => {
   })
 
   test('dashboard nema horizontalnog skrola na 320 px i ima jedno h1', async () => {
-    await page.setViewportSize({ width: 320, height: 640 })
-    await page.goto('/dashboard')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-    expect(overflow).toBeLessThanOrEqual(1)
+    const original = page.viewportSize()
+    try {
+      await page.setViewportSize({ width: 320, height: 640 })
+      await page.goto('/dashboard')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      )
+      expect(overflow).toBeLessThanOrEqual(1)
+    } finally {
+      if (original) await page.setViewportSize(original)
+    }
   })
   test('lager: izgubljeni odgovor stvarnog servera i retry knjiže samo jedno kretanje', async () => {
     // Namjenski objekat ne dira postojeće zalihe; CI baza je seedovana demo baza.

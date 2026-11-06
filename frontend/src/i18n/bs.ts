@@ -1,4 +1,17 @@
 export const bs = {
+  adminDashboard: {
+    eyebrow: 'PREGLED POSLOVANJA', title: 'Dobro došli, {{name}}', subtitle: 'Vaša firma, na jednom mjestu.', light: 'Svijetli prikaz', dark: 'Tamni prikaz', selectCompany: 'Izaberite firmu da vidite pokazatelje.',
+    overview: 'Ključni pokazatelji', activeProjects: 'Aktivni projekti', openTasks: 'Otvoreni zadaci', openTimers: 'Aktivni timeri', spend: 'Troškovi aktivnih projekata', knownBudget: 'Poznati budžeti', unknownBudget: 'Budžet nije unesen',
+    actions: 'Brze radnje', projectsLink: 'Svi projekti', tasksLink: 'Zadaci', teamLink: 'Tim', documentsLink: 'Dokumenti',
+    emptyTitle: 'Nema aktivnih projekata.', emptyDescription: 'Dodajte projekat da biste pratili troškove, zadatke i napredak na jednom mjestu.', createProject: 'Kreiraj projekat',
+    trends: 'Trendovi', lastSeven: 'Posljednjih 7 dana', taskTrend: 'Novi zadaci', timerTrend: 'Odobreno vrijeme', minutesTrend: 'Odobrene minute po danu zatvaranja', compare: '{{value}}% u odnosu na prethodnih 7 dana', noComparison: 'Nema poređenja za prethodni period.', hours: '{{hours}} h {{minutes}} min', noTrend: 'Nema podataka za prikaz.', dataTable: 'Prikaži podatke u tabeli',
+    projects: 'Projekti i budžeti', projectDescription: 'Prvih 10 aktivnih projekata prema nazivu', noProjects: 'Nema projekata za prikaz.', budgetProgress: 'Iskorištenost budžeta', spendOnly: 'Troškovi {{spend}} · Budžet nije unesen', spendOf: 'Troškovi {{spend}} / budžet {{budget}}', unavailable: 'Nije dostupno', normal: 'U okviru budžeta', warning: 'Blizu budžeta', critical: 'Na ili iznad budžeta',
+    map: 'Projekti na mapi', mapDescription: 'Lokacije prvih 10 aktivnih projekata s unesenim koordinatama.', noLocations: 'Nema projekata s koordinatama.', mapUnavailable: 'Podloga mape nije dostupna. Lokacije su navedene ispod.', mapLoading: 'Učitavanje mape', mapList: 'Projekti prikazani na mapi',
+    presence: 'Prisustvo', presenceDescription: 'Do 20 procjena prema GPS lokaciji iz posljednjih 30 minuta; nije potvrđena evidencija prisustva.', noPresence: 'Nema nedavno pronađenih GPS lokacija.', unknownProject: 'Projekat nije u prikazanoj listi', lastSeen: 'Zadnja lokacija: {{date}}',
+    alerts: 'Upozorenja', alertsDescription: 'Rokovi zadataka i dokumenata, po ozbiljnosti.', noAlerts: 'Nema trenutnih upozorenja.', taskAlert: 'Zadatak: {{title}}', docCompany: 'Dokument firme', docWorker: 'Dokument radnika', docMachine: 'Dokument mašine', due: 'Rok: {{date}}', CRITICAL: 'Kritično', HIGH: 'Visoko', MEDIUM: 'Srednje', LOW: 'Nisko',
+    activity: 'Nedavna aktivnost', activityDescription: 'Posljednjih 20 zabilježenih događaja.', noActivity: 'Nema nedavne aktivnosti.', activityEvent: 'Zabilježena aktivnost', events: { PROJECT_CREATED: 'Kreiran projekat', PROJECT_UPDATED: 'Ažuriran projekat', TASK_CREATED: 'Kreiran zadatak', TASK_UPDATED: 'Ažuriran zadatak', TASK_COMPLETED: 'Završen zadatak', TASK_ASSIGNED: 'Dodijeljen zadatak', DOCUMENT_CREATED: 'Dodan dokument', USER_CREATED: 'Dodan korisnik', TRIP_CREATED: 'Kreirana tura' },
+    loadError: 'Podatke nije moguće učitati.', retry: 'Pokušaj ponovo', loading: 'Učitavanje podataka', forbidden: 'Nemate dozvolu za ovaj dio.', partialAlerts: 'Neka upozorenja nisu dostupna.',
+  },
   app: { name: 'Gradix' },
   nav: {
     dashboard: 'Dashboard',

@@ -35,8 +35,7 @@
   --radius: 0.75rem;
 }
 
-/* Tamna tema: tokeni postoje da `.dark` (kad se uključi) ne padne na svjetle vrijednosti.
-   Do tada je inertna — nigdje se ne dodaje klasa `dark` na <html>. */
+/* FE-17: admin dashboard privremeno primjenjuje ove tokene na shell preko <html>. */
 .dark {
   --background: #0b120e;
   --foreground: #e8efe9;

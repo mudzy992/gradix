@@ -78,17 +78,19 @@ export function BarChart({ label, values, emptyLabel, tableLabel }: ChartProps) 
   )
 }
 
-export function ProgressBar({ label, value, max, unavailableLabel, statusLabels }: { label: string; value: number | null; max: number | null; unavailableLabel: string; statusLabels: { normal: string; warning: string; critical: string } }) {
+export function ProgressBar({ label, value, max, unavailableLabel, statusLabels, locale = 'en' }: { label: string; value: number | null; max: number | null; unavailableLabel: string; statusLabels: { normal: string; warning: string; critical: string }; locale?: string }) {
   if (!valid(value) || !valid(max) || max <= 0 || value < 0) return <div className="text-sm"><span>{label}: </span><span className="text-muted-foreground">{unavailableLabel}</span></div>
-  const percent = Math.round((value / max) * 100)
-  if (!Number.isFinite(percent)) return <div className="text-sm"><span>{label}: </span><span className="text-muted-foreground">{unavailableLabel}</span></div>
-  const status = percent >= 100 ? statusLabels.critical : percent >= 80 ? statusLabels.warning : statusLabels.normal
-  const bounded = Math.min(100, Math.max(0, percent))
-  const color = percent >= 100 ? 'bg-destructive' : percent >= 80 ? 'bg-warning' : 'bg-success'
+  const rawPercent = (value / max) * 100
+  if (!Number.isFinite(rawPercent)) return <div className="text-sm"><span>{label}: </span><span className="text-muted-foreground">{unavailableLabel}</span></div>
+  const percent = rawPercent <= Number.MAX_SAFE_INTEGER / 100 ? Math.round(rawPercent * 100) / 100 : Math.round(rawPercent)
+  const displayed = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(percent)
+  const status = rawPercent >= 100 ? statusLabels.critical : rawPercent >= 80 ? statusLabels.warning : statusLabels.normal
+  const bounded = Math.min(100, Math.max(0, rawPercent))
+  const color = rawPercent >= 100 ? 'bg-destructive' : rawPercent >= 80 ? 'bg-warning' : 'bg-success'
   return (
     <div className="grid gap-1">
-      <div className="flex justify-between gap-3 text-sm"><span>{label}</span><span><span className="tabular-nums">{percent}%</span> <span>· {status}</span></span></div>
-      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={bounded} aria-valuetext={`${percent}% — ${status}`} className="h-2 overflow-hidden rounded-full bg-muted">
+      <div className="flex justify-between gap-3 text-sm"><span>{label}</span><span><span className="tabular-nums">{displayed}%</span> <span>· {status}</span></span></div>
+      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={bounded} aria-valuetext={`${displayed}% — ${status}`} className="h-2 overflow-hidden rounded-full bg-muted">
         <div className={cn('h-full rounded-full', color)} style={{ width: `${bounded}%` }} />
       </div>
     </div>

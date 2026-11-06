@@ -1,4 +1,17 @@
 export const en = {
+  adminDashboard: {
+    eyebrow: 'BUSINESS OVERVIEW', title: 'Welcome, {{name}}', subtitle: 'Your company, all in one place.', light: 'Light mode', dark: 'Dark mode', selectCompany: 'Select a company to see its dashboard.',
+    overview: 'Key metrics', activeProjects: 'Active projects', openTasks: 'Open tasks', openTimers: 'Active timers', spend: 'Active project spend', knownBudget: 'Known budgets', unknownBudget: 'No budget entered',
+    actions: 'Quick actions', projectsLink: 'All projects', tasksLink: 'Tasks', teamLink: 'Team', documentsLink: 'Documents',
+    emptyTitle: 'There are no active projects.', emptyDescription: 'Add a project to track costs, tasks and progress in one place.', createProject: 'Create project',
+    trends: 'Trends', lastSeven: 'Last 7 days', taskTrend: 'New tasks', timerTrend: 'Approved time', minutesTrend: 'Approved minutes by closing day', compare: '{{value}}% compared with the previous 7 days', noComparison: 'No comparison for the previous period.', hours: '{{hours}} h {{minutes}} min', noTrend: 'No data to display.', dataTable: 'View data as a table',
+    projects: 'Projects and budgets', projectDescription: 'First 10 active projects by name', noProjects: 'No projects to display.', budgetProgress: 'Budget used', spendOnly: 'Spend {{spend}} · No budget entered', spendOf: 'Spend {{spend}} / budget {{budget}}', unavailable: 'Unavailable', normal: 'Within budget', warning: 'Near budget', critical: 'At or over budget',
+    map: 'Projects on the map', mapDescription: 'Locations among the first 10 active projects with coordinates.', noLocations: 'No projects have coordinates.', mapUnavailable: 'Map tiles are unavailable. Locations are listed below.', mapLoading: 'Loading map', mapList: 'Projects shown on the map',
+    presence: 'Presence', presenceDescription: 'Up to 20 GPS estimates from the last 30 minutes; not confirmed attendance.', noPresence: 'No recent GPS locations found.', unknownProject: 'Project is not in the displayed list', lastSeen: 'Last location: {{date}}',
+    alerts: 'Alerts', alertsDescription: 'Task and document deadlines, ranked by severity.', noAlerts: 'No current alerts.', taskAlert: 'Task: {{title}}', docCompany: 'Company document', docWorker: 'Worker document', docMachine: 'Machine document', due: 'Due: {{date}}', CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low',
+    activity: 'Recent activity', activityDescription: 'The last 20 recorded events.', noActivity: 'No recent activity.', activityEvent: 'Activity recorded', events: { PROJECT_CREATED: 'Project created', PROJECT_UPDATED: 'Project updated', TASK_CREATED: 'Task created', TASK_UPDATED: 'Task updated', TASK_COMPLETED: 'Task completed', TASK_ASSIGNED: 'Task assigned', DOCUMENT_CREATED: 'Document added', USER_CREATED: 'User added', TRIP_CREATED: 'Trip created' },
+    loadError: 'Could not load this section.', retry: 'Try again', loading: 'Loading data', forbidden: 'You do not have permission for this section.', partialAlerts: 'Some alerts are unavailable.',
+  },
   app: { name: 'Gradix' },
   nav: {
     dashboard: 'Dashboard',
