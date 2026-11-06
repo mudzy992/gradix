@@ -12,9 +12,9 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-- `6e617cf`: CI [42275204800](https://github.com/mudzy992/gradix/actions/runs/42275204800) 5/6; backend E2E `erp.e2e-spec.ts` pad; uzrok nepoznat (log EOF), lokalni fresh E2E 21/206 exit 0.
 - `0d6f834`: CI [42276252687](https://github.com/mudzy992/gradix/actions/runs/42276252687) 6/6; fingerprint reportera, ne dokaz uzroka ranijeg pada.
-- Tekući commit: automatski discovery uzorci i blokade; CI čeka push.
+- `37b0542`: CI [42277336135](https://github.com/mudzy992/gradix/actions/runs/42277336135) 6/6; automatski discovery uzorci, 12/171 full; blokade TEST-01.
+- Tekući commit: djelimični OpenAPI snapshot i runtime operation gate; strogi DTO/error/pagination nedostaje (BL-OPENAPI-01), CI čeka push.
 
 - Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
 

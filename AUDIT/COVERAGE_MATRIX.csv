@@ -378,6 +378,7 @@ backend/test/helpers/route-inventory.ts,TEST,e2e-helpers,TEST-01,173,pregledano,
 backend/test/helpers/tenant-fixtures.ts,TEST,e2e-helpers,TEST-01,269,pregledano,TEST-01: A/B factory registry and tenant roles,2026-11-06
 backend/test/iot.e2e-spec.ts,TEST,e2e,BE-09,159,pregledano,"BE-09/10: pregledano — uređaj jednom, ključ skriven, duplikat 409, throttle 429, dekomisionirana mašina 403",2026-11-03
 backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
+backend/test/openapi-snapshot.e2e-spec.ts,TEST,e2e,TEST-01,47,pokriveno-testom,TEST-01: runtime OpenAPI inventory and snapshot drift,2026-11-06
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
 backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1543,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
