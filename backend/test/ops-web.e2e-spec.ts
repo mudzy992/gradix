@@ -288,6 +288,159 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
     }
   });
 
+  it('task deadline alerts are tenant scoped, severity ordered and cursor paged', async () => {
+    const platform = (await login(app, 'platform@gradix.local')).body.data
+      .accessToken as string;
+    const accountant = (await login(app, 'accountant@gradix.local')).body.data
+      .accessToken as string;
+    const a = await prisma.company.create({
+      data: { name: 'Task alerts A', slug: `task-alert-a-${Date.now()}` },
+    });
+    const b = await prisma.company.create({
+      data: { name: 'Task alerts B', slug: `task-alert-b-${Date.now()}` },
+    });
+    const p = await prisma.project.create({
+      data: { companyId: a.id, name: 'A', geofenceRadius: 100 },
+    });
+    const foreignProject = await prisma.project.create({
+      data: { companyId: b.id, name: 'B', geofenceRadius: 100 },
+    });
+    const archived = await prisma.project.create({
+      data: {
+        companyId: a.id,
+        name: 'Archived',
+        geofenceRadius: 100,
+        archivedAt: new Date(),
+      },
+    });
+    const stamp = Date.now();
+    const ids = Array.from({ length: 8 }, (_, i) => `task-alert-${stamp}-${i}`);
+    const date = (days: number) => new Date(stamp + days * 86_400_000);
+    try {
+      await prisma.task.createMany({
+        data: [
+          {
+            id: ids[0],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Overdue',
+            plannedEnd: date(-1),
+          },
+          {
+            id: ids[1],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Soon',
+            plannedEnd: date(2),
+          },
+          {
+            id: ids[2],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Later',
+            plannedEnd: date(10),
+          },
+          {
+            id: ids[3],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Future',
+            plannedEnd: date(20),
+          },
+          {
+            id: ids[4],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Far future',
+            plannedEnd: date(31),
+          },
+          {
+            id: ids[5],
+            companyId: a.id,
+            projectId: p.id,
+            title: 'Completed',
+            status: 'COMPLETED',
+            plannedEnd: date(-5),
+          },
+          {
+            id: ids[6],
+            companyId: a.id,
+            projectId: archived.id,
+            title: 'Archived',
+            plannedEnd: date(-4),
+          },
+          {
+            id: ids[7],
+            companyId: b.id,
+            projectId: foreignProject.id,
+            title: 'Foreign',
+            plannedEnd: date(-3),
+          },
+        ],
+      });
+      const url = '/api/alerts/tasks';
+      const headers = { ...auth(platform), 'X-Company-Id': a.id };
+      const first = await request(app.getHttpServer())
+        .get(`${url}?limit=2`)
+        .set(headers);
+      expect(first.status).toBe(200);
+      expect(first.body.data.map((r: { id: string }) => r.id)).toEqual(
+        ids.slice(0, 2),
+      );
+      expect(
+        first.body.data.map((r: { severity: string }) => r.severity),
+      ).toEqual(['CRITICAL', 'HIGH']);
+      const next = await request(app.getHttpServer())
+        .get(`${url}?limit=2&cursor=${first.body.meta.nextCursor}`)
+        .set(headers);
+      expect(next.status).toBe(200);
+      expect(next.body.data.map((r: { id: string }) => r.id)).toEqual(
+        ids.slice(2, 4),
+      );
+      expect(
+        next.body.data.map((r: { severity: string }) => r.severity),
+      ).toEqual(['MEDIUM', 'LOW']);
+      expect(next.body.meta.nextCursor).toBeNull();
+      expect(next.body.data[0].plannedEnd).toMatch(/Z$/);
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get(`${url}?cursor=${ids[7]}`)
+            .set(headers)
+        ).status,
+      ).toBe(400);
+      expect(
+        (await request(app.getHttpServer()).get(`${url}?limit=21`).set(headers))
+          .status,
+      ).toBe(400);
+      for (const token of [ss, worker, accountant, platform])
+        expect(
+          (await request(app.getHttpServer()).get(url).set(auth(token))).status,
+        ).toBe(403);
+      const other = await request(app.getHttpServer())
+        .get(url)
+        .set(auth(platform))
+        .set('X-Company-Id', b.id);
+      expect(other.status).toBe(200);
+      expect(other.body.data.map((r: { id: string }) => r.id)).toEqual([
+        ids[7],
+      ]);
+      const api = await request(app.getHttpServer()).get('/api/docs-json');
+      expect(api.body.paths['/api/alerts/tasks'].get.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'limit' }),
+          expect.objectContaining({ name: 'cursor' }),
+        ]),
+      );
+    } finally {
+      await prisma.task.deleteMany({ where: { id: { in: ids } } });
+      await prisma.project.deleteMany({
+        where: { id: { in: [p.id, foreignProject.id, archived.id] } },
+      });
+      await prisma.company.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    }
+  });
+
   it('analytics summary is an exact tenant-admin scalar aggregate with budget coverage', async () => {
     const platform = (await login(app, 'platform@gradix.local')).body.data
       .accessToken as string;
