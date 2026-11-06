@@ -94,11 +94,11 @@ kompatibilno upozorenje i ažurirati klijente kada mobile ponovo bude dozvoljen;
 komunikovanog roka verzionisati/odobriti stroži ugovor. Ostala polja, seed i E2E još
 treba iscrpno inventarisati i tabelarno testirati; ovaj primjer nije dokaz cjelovite inventure.
 
-- **BL-011 — visoko, djelimično, CI / F-CI-05-73:** instrumentirani run `42169245124`
+- **BL-011 — visoko, riješeno za dijagnosticirani F-CI-05-73:** instrumentirani run `42169245124`
   prijavio je četiri pada `geo.spec.ts`: testni `FakeDecimal` nema `isZero()`, koju parser
   od `8cac43d` poziva; parser pretvara TypeError u validacijsku grešku. Izolovan test
   lokalno reprodukovao 4 pada, a zamjena lažnog objekta stvarnim Prisma Decimalom i test
-  nultih koordinata prolaze 10/10. Puni CI poslije popravke čeka se. Raniji crveni runovi
+  nultih koordinata prolaze 10/10; `c842581` CI `42169764781` je 6/6. Raniji crveni runovi
   nemaju dostupnu dijagnostiku i ne mogu se pojedinačno pripisati ovom kvaru.
 
 
