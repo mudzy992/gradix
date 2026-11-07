@@ -1,0 +1,147 @@
+// Šema za Fazu 1 (hodajući kostur) — NIJE konačni model podataka.
+// Konačni model je Faza 2 (A4). Ovdje su samo entiteti potrebni za R0 i za RLS spike.
+//
+// Namjerno prisutno od prve migracije (odluke G0, ADR 0001):
+//   - Membership razdvaja korisnika od firme (v1 je imao User.companyId, zamka iz B6.12)
+//   - Money: iznos je Decimal + valuta uz njega (nikad goli broj)
+//   - stacionaža i partner su predviđeni u modelu (dolaze u R2/R3, ne u R0)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Locale {
+  bs
+  en
+}
+
+enum Role {
+  // Role unutar firme. Operator platforme NIJE rola u firmi (vidi PlatformUser).
+  OWNER
+  ADMIN
+  PROJECT_MANAGER
+  SITE_SUPERVISOR
+  WORKER
+  DRIVER
+  MACHINE_OPERATOR
+  MECHANIC
+  ACCOUNTANT
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("Europe/Sarajevo")
+  currency  String   @default("BAM")
+  locale    Locale   @default(bs)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  machines    Machine[]
+  auditEvents AuditEvent[]
+
+  @@map("companies")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  firstName          String
+  lastName           String
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  locale             Locale    @default(bs)
+  // Tenantski ključ nije na korisniku nego na članstvu; polje ostaje radi RLS-a
+  // na tabeli koja nije tenant-vlasništvo (korisnik može biti u više firmi kasnije).
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  memberships Membership[]
+  sessions    Session[]
+  auditEvents AuditEvent[]
+
+  @@map("users")
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  roles     Role[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@map("memberships")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  companyId  String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId])
+  @@map("sessions")
+}
+
+// Spike tabela: minimalni oblik, puni model mehanizacije je R2.
+model Machine {
+  id        String   @id @default(cuid())
+  companyId String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("machines")
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  companyId  String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@map("audit_events")
+}
+
+// Operator platforme nije korisnik firme: odvojen entitet, odvojen prikaz, odvojena sesija.
+model PlatformUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+
+  @@map("platform_users")
+}

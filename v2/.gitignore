@@ -1,0 +1,32 @@
+# zavisnosti i build
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# okruženja — nikad u repo
+.env
+.env.*
+!.env.example
+
+# testovi i alat
+coverage/
+.turbo/
+.vitest/
+playwright-report/
+test-results/
+
+# baza i lokalni podaci
+pgdata/
+*.sqlite
+*.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# generisano (Prisma klijent, OpenAPI)
+packages/**/src/generated/

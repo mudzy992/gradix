@@ -1,0 +1,27 @@
+{
+  "name": "gradix",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "eslint .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:migrate": "pnpm --filter @gradix/db migrate",
+    "db:generate": "pnpm --filter @gradix/db generate",
+    "db:seed": "pnpm --filter @gradix/db seed",
+    "db:reset": "pnpm --filter @gradix/db reset"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "eslint": "9.39.1",
+    "turbo": "2.11.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.4"
+  },
+  "type": "module"
+}

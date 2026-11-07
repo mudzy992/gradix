@@ -1,0 +1,29 @@
+# Gradix v2 — ACL usklađivanje Redisa (izvršava VLASNIK kroz redis-cli; agent ne dira Redis).
+#
+# Kontekst (G0/P3 i odluka o v2 resursima): v2 smije koristiti postojeći Redis, ali sa
+# SVOJIM prefiksom, da ključevi v1 i v2 ne dijele prostor. v1 koristi `gradix:`, v2 koristi `gx2:`.
+#
+# Prije izvršavanja: odluči da li v2 koristi Redis uopšte. U Fazi 1 se Redis NE koristi
+# (throttle je u memoriji; nema druge replike). Ova komanda je priprema za Fazu 2+.
+#
+# Izvor šeme: v1/docs/INFRASTRUCTURE.md §5.4 i v1 DECISIONS D-039 (ACL po prefiksu, TLS 6380).
+
+# 1) Provjeri postojeće korisnike (read-only):
+ACL LIST
+
+# 2) Provjeri da v1 ključevi neće biti dirani:
+#    v2 smije pisati SAMO u `gx2:*`. Ako u bazi postoje v1 ključevi pod `gradix:*`, oni ostaju.
+SCAN 0 MATCH gradix:* COUNT 100
+
+# 3) Kreiraj/uskadi korisnika za v2 (zamijeni <V2_LOZINKA> stvarnom lozinkom; ne u repo):
+#    Prava: samo gx2:* + komande koje aplikacija koristi (ping, multi/exec, incr, pexpire,
+#    pttl, get, set, del, exists, ttl). Bez @admin, bez KEYS, bez SCAN u produkciji.
+ACL SETUSER gradix_v2 reset on '>V2_LOZINKA' '~gx2:*' +ping +multi +exec +incr +pexpire +pttl +get +set +del +exists +ttl
+
+# 4) Provjeri da je korisnik tačan (ne smije imati +@all ni ~*):
+ACL GETUSER gradix_v2
+
+# 5) Opciono: ukloni v1 korisniku pravo na gx2:* ako je ikad dobio širi obrazac:
+#    (v1 korisnik ima ~gradix:*, pa nema šta mijenjati — provjeri sa ACL GETUSER gradix)
+
+# Napomena: TLS ostaje na 6380 (v1 D-039). v2 koristi REDIS_PORT=6380 i svoj CA.
