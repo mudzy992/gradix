@@ -1,6 +1,6 @@
 # ADR 0002 — Prisma generator blokiran u razvojnom okruženju; prelazak na SQL-first
 
-**Datum:** 2026-11-07 · **Status:** privremeno (na snazi do provjere u CI-ju/Coolifyju)
+**Datum:** 2026-11-07 · **Status:** potvrđeno u praksi (CI zelen); model „Prisma u CI/Coolify, SQL-first lokalno“
 
 ## Kontekst
 
@@ -25,6 +25,11 @@ Ovo nije promjena odlučenog stacka — to je privremeni način rada dok generat
 ## Posljedice
 
 - **Rizik:** dupli posao ako se Prisma vrati u Fazu 2 (mapiranje šeme na postojeće tabele). Ublaženje: imena tabela i kolona su već `snake_case` i odgovaraju Prisma `@@map` konvenciji.
-- **Provjera prije G1:** u CI-ju (GitHub runner ima pristup internetu) pokrenuti `prisma generate`; ako prođe, ADR se mijenja na „Prisma radi u CI-ju, lokalno SQL-first“ ili se vraća Prisma svuda.
+- **Provjera prije G1 — ZAVRŠENO:** `prisma generate` radi u GitHub Actions (CI run `daabf07`, korak 11 zelen). Time je potvrđen model **„Prisma u CI/Coolify, SQL-first lokalno“**.
+  Put do tog rezultata je otkrio dvije prave greške, obje popravljene:
+  1. **CI se nikad nije izvršavao** — workflow je bio u `v2/.github/workflows/`, a GitHub čita samo korijen. Premješten u `.github/workflows/ci-v2.yml`.
+  2. **`prisma` CLI nije bio u zavisnostima**, pa je `pnpm exec prisma` padao prije ijednog mrežnog poziva. Dodat `prisma@7.10.1` + `@prisma/client@7.10.1`.
+  3. **Prisma 7 ne prima `url` u `datasource`** — traži `prisma.config.ts`. Šema je očišćena, konekcija preseljena u `packages/db/prisma.config.ts`.
+  Lokalno u sandboxu `generate` i dalje pada na `binaries.prisma.sh` (mreža), ali to više nije jedina mjera: sintaksa i alat su provjereni na runneru.
 - Nema `prisma migrate` historije; stanje šeme se prati po folderima migracija i provjerava testom na praznoj bazi.
 - Novi zavisnik: `pg@8.16.3` + `@types/pg` (P6 — obrazloženje u ovom ADR-u).

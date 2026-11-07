@@ -15,7 +15,7 @@
 | 6 | Prijava, zaštićena stranica, `/api/me`, jedan zapis | ✅ 8/8 integracijskih testova |
 | 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; web izlaz se builda |
 | 8 | `contracts` (OpenAPI iz koda) | ❌ nije urađeno — vidi „ne radi“ |
-| 9 | CI | ⚠️ workflow napisan, **neizvršen** (nema GH runnera u sandboxu) |
+| 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 
@@ -37,7 +37,7 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 - **`packages/contracts` i OpenAPI iz koda** nisu urađeni; API je tipiziran ručno u `apps/mobile/src/api/client.ts`. Ovo je dug, ne zaborav.
 - **Docker slika nije izgrađena** (nema Dockera u sandboxu). Dokazano je ono što se dokazati može: `output: standalone` build + pokretanje `server.js` protiv prave baze. Prvi `docker build` se dešava na Coolifyju i to je prva prava provjera Dockerfilea.
-- **CI nije pokrenut.** Workflow uključuje korak `prisma generate` — to je i provjera ADR 0002.
+- **CI je bio mrtav kod** i to je otkriveno u ovoj kapiji: workflow je stajao u `v2/.github/workflows/`, a GitHub izvršava samo `.github/workflows/` u korijenu. Sada je `.github/workflows/ci-v2.yml` sa `paths: v2/**`. Prvi zelen run: `daabf07`.
 - **Staging ne postoji** — čeka tvoj Coolify deploy; uputstvo i tačne varijable: `docs/COOLIFY.md`.
 - **Skillovi** (`new-resource`, `db-migration`, `ui-screen`, `mobile-offline-entity`) nisu napisani.
 - **Rate limit prijave je u memoriji procesa** — ne dijeli se između replika. Redis dolazi kad bude druga replika.
@@ -58,5 +58,5 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 4. **Demo** po `docs/DEMO-G1.md` — reci prolazi/ne prolazi.
 5. **Bucket `gradix-v2`** — potreban prije R5, ne prije G1.
 6. **Redis ACL** (`infra/redis/acl-v2.txt`) — nije potreban u ovoj fazi; javim kad bude.
-7. **Prisma u CI-ju:** zelen CI na `prisma generate` mijenja ADR 0002 u „Prisma u CI/Coolify,
-   SQL-first lokalno“.
+7. ~~Prisma u CI-ju~~ — **zatvoreno:** `prisma generate` je zelen u CI-ju (`daabf07`), ADR 0002
+   je time potvrđen u modelu „Prisma u CI/Coolify, SQL-first lokalno“.
