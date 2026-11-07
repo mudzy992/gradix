@@ -17,6 +17,7 @@ import {
 import { login, me, pushNotes, pullChanges, getAccessToken, type Me } from "../api/client";
 import { openDb, insertNote, markFailed, markSent, pendingCount, pendingNotes, readWatermark, writeWatermark } from "../db/sqlite";
 import { runSync } from "../sync/engine";
+import { colors, radius, spacing, touchTarget, typography } from "../theme/tokens";
 
 const DEVICE_ID = "gradix-device-r0";
 
@@ -189,32 +190,52 @@ export default function IndexScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  container: { padding: 24, gap: 8, backgroundColor: "#f7faf8", flexGrow: 1 },
-  title: { fontSize: 26, fontWeight: "700", color: "#123" },
-  subtitle: { fontSize: 16, color: "#456", marginBottom: 16 },
-  label: { fontSize: 15, fontWeight: "600", marginTop: 8, color: "#234" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted },
+  container: {
+    padding: spacing.xl,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
+    flexGrow: 1,
+  },
+  title: { ...typography.title, color: colors.text },
+  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  label: { ...typography.label, color: colors.text, marginTop: spacing.sm },
   input: {
     borderWidth: 2,
-    borderColor: "#c9d6cf",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 18,
-    backgroundColor: "#fff",
+    borderColor: colors.borderStrong, // 3,76:1 na bijelom — WCAG 1.4.11 traži 3:1 za ivicu polja
+    borderRadius: radius.input,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: touchTarget,
+    ...typography.body,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
   multiline: { minHeight: 96, textAlignVertical: "top" },
   button: {
-    marginTop: 16,
-    backgroundColor: "#1f6f4a",
-    borderRadius: 12,
-    paddingVertical: 18,
+    marginTop: spacing.lg,
+    backgroundColor: colors.brand,
+    borderRadius: radius.card,
+    paddingVertical: spacing.lg,
+    minHeight: touchTarget,
     alignItems: "center",
+    justifyContent: "center",
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#fff", fontSize: 19, fontWeight: "700" },
-  secondaryButton: { backgroundColor: "#fff", borderWidth: 2, borderColor: "#1f6f4a" },
-  secondaryText: { color: "#1f6f4a" },
-  error: { color: "#a3241c", fontSize: 16, marginTop: 8 },
-  hint: { marginTop: 16, fontSize: 16, color: "#456" },
+  buttonText: { ...typography.button, color: colors.textInverse },
+  secondaryButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.brand,
+  },
+  secondaryText: { color: colors.brand },
+  error: {
+    ...typography.body,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.input,
+    backgroundColor: colors.dangerSoft,
+    color: colors.danger,
+  },
+  hint: { marginTop: spacing.lg, ...typography.body, color: colors.textMuted },
 });

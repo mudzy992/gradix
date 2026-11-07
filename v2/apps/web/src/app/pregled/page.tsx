@@ -57,7 +57,7 @@ export default async function PregledPage() {
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"
-            className="rounded-md border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm"
+            className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
           >
             Odjavi se
           </button>
@@ -69,13 +69,13 @@ export default async function PregledPage() {
           Mašine ({data.machines.length})
         </h2>
         {data.machines.length === 0 ? (
-          <p className="mt-3 rounded-md border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
+          <p className="mt-3 rounded-md border border-dashed border-[var(--color-border-strong)] p-4 text-sm text-[var(--color-text-muted)]">
             Nema mašina u ovoj firmi. Dodajte prvu mašinu da biste počeli.
           </p>
         ) : (
           <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
             {data.machines.map((machine) => (
-              <li key={machine.code} className="flex justify-between px-4 py-3">
+              <li key={machine.code} className="flex justify-between px-4 py-3 hover:bg-[var(--color-brand-soft)]">
                 <span className="font-medium">{machine.name}</span>
                 <span className="text-sm text-[var(--color-text-muted)]">{machine.code}</span>
               </li>

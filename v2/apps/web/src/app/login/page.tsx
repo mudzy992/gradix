@@ -59,7 +59,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-base"
+              className="mt-1 w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-base"
             />
           </div>
 
@@ -75,12 +75,12 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-base"
+              className="mt-1 w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-base"
             />
           </div>
 
           {state.kind === "error" && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+            <p role="alert" className="rounded-md bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]">
               {state.message}
             </p>
           )}
@@ -88,7 +88,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={state.kind === "busy"}
-            className="w-full rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-base font-medium text-white disabled:opacity-60"
+            className="w-full rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-base font-medium text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
           >
             {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
           </button>

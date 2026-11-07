@@ -1,22 +1,53 @@
 @import "tailwindcss";
 
 /*
-  Minimalni dizajn tokeni za R0. NIJE dizajn sistem — dva smjera su prvi zadatak Faze 2.
-  Paleta je polazna iz v1 D-040 (zelena = brend/akcija, teal = informacija,
-  amber = upozorenje, crvena = greška), jer je vlasnik već jednom birao između A i B.
-  Nijedna komponenta ne hardkodira boju: sve ide kroz tokene.
+  Dizajn tokeni — vrijednosti je odobrio vlasnik 2026-11-08 (vidi docs/design/PALETA.md).
+  Ovo NIJE dizajn sistem: dva dizajn smjera su prvi zadatak Faze 2. Ovo su samo vrijednosti,
+  izmjerene prije primjene (najniži par teksta je 4,97:1, prag je 4,5:1).
+
+  Pravila (test ih čuva — src/design/tokens.test.ts):
+   - `accent` je podloga i ivica, NIKAD tekst na svijetlom (1,55:1).
+   - `border-strong` (bivši #7B858D) je za ivice i veliki tekst, ne za sitan (3,76:1).
+   - Nijedna komponenta ne hardkodira boju; sve ide kroz `var(--color-*)`.
+
+  Mobilni ima iste vrijednosti u apps/mobile/src/theme/tokens.ts; test provjerava da se
+  dva fajla ne raziđu.
 */
 @theme {
-  --color-brand: oklch(0.45 0.09 155);
-  --color-brand-soft: oklch(0.95 0.02 155);
-  --color-accent: oklch(0.55 0.08 195);
-  --color-warning: oklch(0.72 0.14 75);
-  --color-danger: oklch(0.55 0.19 27);
-  --color-surface: oklch(0.99 0.005 155);
-  --color-surface-muted: oklch(0.97 0.008 155);
-  --color-border: oklch(0.9 0.01 155);
-  --color-text: oklch(0.25 0.02 155);
-  --color-text-muted: oklch(0.45 0.02 155);
+  /* Brend i akcija */
+  --color-brand: #140a9a;
+  --color-brand-hover: #0d0770;
+  --color-brand-soft: #e8e9fb;
+
+  /* Akcenat — podloga, bedž, fokus na tamnom */
+  --color-accent: #ffc82f;
+  --color-accent-soft: #fdf3d6;
+
+  /* Površine */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f6f7;
+  --color-surface-inverse: #1b232a;
+
+  /* Tekst */
+  --color-text: #1b232a;
+  --color-text-muted: #59656f;
+  --color-text-inverse: #ffffff;
+
+  /* Ivice */
+  --color-border: #d7dbdf;
+  --color-border-strong: #7b858d;
+
+  /* Stanja (paleta ih nije imala; dodate i izmjerene) */
+  --color-danger: #c1121f;
+  --color-danger-soft: #fdecec;
+  --color-success: #186b3e;
+  --color-success-soft: #e8f5ec;
+  --color-warning-text: #8a5e06;
+  --color-warning-soft: #fdf3d6;
+
+  /* Fokus: brend na svijetlom, akcenat na tamnom (oba ≥ 10:1) */
+  --color-focus: #140a9a;
+  --color-focus-inverse: #ffc82f;
 
   --radius-card: 0.75rem;
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
@@ -36,6 +67,11 @@ body {
 
 /* Fokus mora biti vidljiv: terenski korisnici rade i tastaturom i rukavicama. */
 :focus-visible {
-  outline: 3px solid var(--color-accent);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* Na tamnoj podlozi fokus ide u akcent, jer brend na tamnom ima 1,17:1. */
+.on-inverse :focus-visible {
+  outline-color: var(--color-focus-inverse);
 }
