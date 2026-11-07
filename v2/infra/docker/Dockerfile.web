@@ -56,6 +56,11 @@ RUN apt-get update \
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# `public/` se prvo stvara: COPY iz praznog/nepostojećeg direktorija ruši build
+# ("failed to calculate checksum ... /app/apps/web/public: not found"), a prazan
+# direktorij git ne prati. Sadržaj namjerno postoji (favicon, robots.txt); ova linija
+# je pojas i za slučaj da neko doda `public/` u .gitignore.
+RUN mkdir -p apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 # Migracije i bootstrap idu u sliku: entrypoint ih primjenjuje prije starta.
 # `db-apply.sh` sam prepoznaje ovaj raspored (migrations/ + bootstrap/ pored skripte).

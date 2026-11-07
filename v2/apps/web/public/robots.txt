@@ -1,0 +1,4 @@
+# Gradix v2 — testna domena. Aplikacija je interna (prijava obavezna),
+# pa nema šta da se indeksira.
+User-agent: *
+Disallow: /
