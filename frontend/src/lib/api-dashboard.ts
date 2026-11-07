@@ -2,7 +2,7 @@ import { api } from '@/lib/api-client'
 import type { CursorMeta } from '@/lib/api-types'
 
 type PageQuery = { limit?: number; cursor?: string }
-export type DashboardSummary = { activeProjects: number; openTasks: number; openTimers: number; projectsWithBudget: number; knownPlannedBudget: string | null; currentSpend: string }
+export type DashboardSummary = { activeProjects: number; openTasks: number; openTimers: number; projectsWithBudget: number; knownPlannedBudget: string | null; currentSpend: string; currency: string | null }
 export type TaskMetrics = { timezone: string; limit: number; nextCursor: string | null; current: number; previous: number; delta: number; deltaPercent: number | null; series: Array<{ startAt: string; endAt: string; count: number }> }
 export type TimerMetrics = { timezone: string; limit: number; nextCursor: string | null; currentMinutes: string; previousMinutes: string; deltaMinutes: string; deltaPercent: string | null; series: Array<{ startAt: string; endAt: string; minutes: string; workers: number }> }
 export type DashboardProject = { id: string; name: string; status: string; plannedBudget: string | null; currentSpend: string; lat: string | null; lng: string | null; geofenceRadius: number }

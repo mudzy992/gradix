@@ -9,7 +9,7 @@ export function emptyDashboardResponse(path) {
     endAt: new Date(today.getTime() - (6 - index) * 86_400_000).toISOString(),
   }))
   const responses = {
-    '/api/analytics/summary': { success: true, data: { activeProjects: 0, openTasks: 0, openTimers: 0, projectsWithBudget: 0, knownPlannedBudget: null, currentSpend: '0.00' } },
+    '/api/analytics/summary': { success: true, data: { activeProjects: 0, openTasks: 0, openTimers: 0, projectsWithBudget: 0, knownPlannedBudget: null, currentSpend: '0.00', currency: 'BAM' } },
     '/api/analytics/tasks/created': { success: true, data: { timezone: 'UTC', limit: 7, nextCursor: null, current: 0, previous: 0, delta: 0, deltaPercent: null, series: days.map((day) => ({ ...day, count: 0 })) } },
     '/api/analytics/timers/closed': { success: true, data: { timezone: 'UTC', limit: 7, nextCursor: null, currentMinutes: '0', previousMinutes: '0', deltaMinutes: '0', deltaPercent: null, series: days.map((day) => ({ ...day, minutes: '0', workers: 0 })) } },
     '/api/dashboard/projects': { ...page, meta: { limit: 10, nextCursor: null } },

@@ -192,8 +192,8 @@ backend/src/modules/ops/dashboard-projects.service.ts,BE,ops,BE-12,75,pokriveno-
 backend/src/modules/ops/dashboard-projects.spec.ts,BE,ops,BE-12,196,pokriveno-testom,"BE-19 B1: unit test limita, tenanta, assignment scope i decimalne serijalizacije.",2026-11-06
 backend/src/modules/ops/dashboard-role.spec.ts,BE,ops,BE-12,65,pregledano,BE-12: 5 testova prioriteta rola (više rola = širi dashboard),2026-11-03
 backend/src/modules/ops/dashboard-role.ts,BE,ops,BE-12,35,pregledano,BE-12 (novo): prioritet rola za dashboard (firma → PM/SS → DRIVER → WORKER → MECHANIC),2026-11-03
-backend/src/modules/ops/dashboard-summary.service.ts,BE,ops,BE-12,58,pregledano,BE-19: tenant admin agregati i tačni decimalni zbirovi,2026-11-06
-backend/src/modules/ops/dashboard-summary.spec.ts,BE,ops,BE-12,59,pregledano,"BE-19: budget coverage, scope i prazno stanje",2026-11-06
+backend/src/modules/ops/dashboard-summary.service.ts,BE,ops,BE-12,71,pregledano,BE-19: tenant admin agregati i tačni decimalni zbirovi,2026-11-06
+backend/src/modules/ops/dashboard-summary.spec.ts,BE,ops,BE-12,82,pregledano,"BE-19: budget coverage, scope i prazno stanje",2026-11-06
 backend/src/modules/ops/dashboard-task-alerts.service.ts,BE,ops,BE-12,99,pregledano,BE-19: tenant admin rokovi zadataka i severity,2026-11-06
 backend/src/modules/ops/dashboard-task-alerts.spec.ts,BE,ops,BE-12,66,pregledano,"BE-19: scope, severity i ograničenje",2026-11-06
 backend/src/modules/ops/dashboard-task-metrics.service.ts,BE,ops,BE-12,103,pregledano,"BE-19: ograničeni dnevni brojevi uz tenant, assignment i DST",2026-11-06
@@ -386,7 +386,7 @@ backend/test/jest-e2e.json,TEST,e2e-config,TEST-01,16,nepregledano,,
 backend/test/openapi-contract.e2e-spec.ts,TEST,e2e,TEST-01,121,pokriveno-testom,TEST-01: red-first schema error lista i reference,2026-11-06
 backend/test/openapi-snapshot.e2e-spec.ts,TEST,e2e,TEST-01,76,pokriveno-testom,TEST-01: runtime kontrakt izuzeci i snapshot drift,2026-11-06
 backend/test/ops-core.e2e-spec.ts,TEST,e2e,BE-05,197,pregledano,"BE-06: pregledano — dispečing, terminalni prelazi, timer tok",2026-11-03
-backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1543,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
+backend/test/ops-web.e2e-spec.ts,TEST,e2e,BE-12,1553,pregledano,"BE-12: dashboard kartice po roli (admin/worker), dnevnik, HSE opcija A, validacije | BE-19 B1: DB E2E tenant, assigned/unassigned, permissions i limit.",2026-11-06
 backend/test/payroll.e2e-spec.ts,TEST,e2e,BE-17,350,pregledano,BE-17: pregledano u BE-13 (payroll tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/polish.e2e-spec.ts,TEST,e2e,BE-17,361,pregledano,BE-17: pregledano u BE-16 (email/javni tok); sync izmjene nisu dirale njegove tvrdnje,2026-11-03
 backend/test/project-isolation.e2e-spec.ts,TEST,e2e,TEST-01,137,pokriveno-testom,TEST-01: dvije stvarne firme i 10 rola; GET/PATCH izolacija projektnih ID-eva,2026-11-06
@@ -426,7 +426,7 @@ frontend/src/components/auth/password-input.tsx,FE,ops-ui,FE-08,34,pregledano,CI
 frontend/src/components/auth/session-recovery.spec.tsx,TEST,fe-unit,FE-05,29,pregledano,S-01: nepoznat ishod bez retryja i postojeći retry za 429/mrežu,2026-11-06
 frontend/src/components/auth/session-recovery.tsx,FE,ops-ui,FE-08,24,pregledano,S-01: lokalizovano objašnjenje nepoznatog ishoda i siguran nastavak,2026-11-06
 frontend/src/components/companies/company-sheet.tsx,FE,admin-ui,FE-13,183,pregledano,"FE-13: validacija u `handleSubmit`-u (RHF je zadržavao pravila odmontiranih polja), slug format uz polje, ne šalje skriveni `legalName`",2026-11-04
-frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,174,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
+frontend/src/components/dashboard/admin-dashboard.spec.tsx,TEST,fe-unit,FE-05,190,pregledano,"FE-17: stanja, pravo, tenant switch, tema i sigurnost",2026-11-06
 frontend/src/components/dashboard/admin-dashboard.tsx,FE,ops-ui,FE-08,148,pregledano,"FE-17: admin v2, ograničeni tenant-keyed upiti, stanja i prava",2026-11-06
 frontend/src/components/dashboard/chart-primitives.spec.tsx,TEST,fe-unit,FE-05,96,pregledano,"FE-17: podaci, praznine, pragovi, animacija i alternative",2026-11-06
 frontend/src/components/dashboard/chart-primitives.tsx,FE,ops-ui,FE-08,160,pregledano,"FE-17: SVG grafikoni, tekstualni prikaz, pragovi i reduced motion",2026-11-06
@@ -543,8 +543,8 @@ frontend/src/lib/csv.spec.ts,TEST,fe-unit,FE-05,74,pregledano,"FE-15: 4 testa �
 frontend/src/lib/csv.ts,FE,shared,FE-15,28,pregledano,"FE-15: UTF-8 BOM (č/ć/ž u Excelu), CRLF, zaštita od CSV injection (=,+,−,@), link u dokumentu (Safari)",2026-11-04
 frontend/src/lib/dash.spec.ts,TEST,fe-unit,FE-05,25,pregledano,"FE-05: dash() — null/undefined/prazno → „—“, nula ostaje 0, tekst nepromijenjen",2026-11-03
 frontend/src/lib/dash.ts,FE,shared,FE-15,7,pregledano,FE-15: pregledano — `dash(0)`/prazno daje „—“; bez nalaza,2026-11-04
-frontend/src/lib/dashboard-format.spec.ts,TEST,fe-unit,FE-05,34,pregledano,FE-17: decimalni i numerički rubni slučajevi,2026-11-06
-frontend/src/lib/dashboard-format.ts,FE,shared,FE-15,62,pregledano,FE-17: tačni decimalni prikazi i omjeri bez float novca,2026-11-06
+frontend/src/lib/dashboard-format.spec.ts,TEST,fe-unit,FE-05,41,pregledano,FE-17: decimalni i numerički rubni slučajevi,2026-11-06
+frontend/src/lib/dashboard-format.ts,FE,shared,FE-15,77,pregledano,FE-17: tačni decimalni prikazi i omjeri bez float novca,2026-11-06
 frontend/src/lib/decimal-input.ts,FE,shared,FE-15,20,popravljeno,F-CI-05-64: egzaktna frontend fixed-decimal validacija,2026-11-05
 frontend/src/lib/error-message.spec.ts,TEST,fe-unit,FE-05,35,pregledano,"FE-15: 5 testova — preveden kod, NETWORK_ERROR bez „Failed to fetch“, nepoznat kod → poruka servera, generička poruka",2026-11-04
 frontend/src/lib/error-message.ts,FE,shared,FE-15,17,pregledano,FE-15: NETWORK_ERROR preveden; nepoznat kod → poruka servera; pokriveno testom,2026-11-04

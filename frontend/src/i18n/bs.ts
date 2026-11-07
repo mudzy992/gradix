@@ -3,7 +3,7 @@ export const bs = {
   adminDashboard: {
     today: 'Danas', todayDescription: 'Procjena trenutne aktivnosti i upozorenja.', todayPresence: 'Na terenu · GPS procjena', showingTopAlerts: 'Prikazana su tri najhitnija upozorenja; broj uključuje do 20 stavki iz svakog izvora.',
     eyebrow: 'PREGLED POSLOVANJA', title: 'Dobro došli, {{name}}', subtitle: 'Vaša firma, na jednom mjestu.', light: 'Svijetli prikaz', dark: 'Tamni prikaz', selectCompany: 'Izaberite firmu da vidite pokazatelje.',
-    overview: 'Ključni pokazatelji', activeProjects: 'Aktivni projekti', openTasks: 'Otvoreni zadaci', openTimers: 'Aktivni timeri', spend: 'Troškovi aktivnih projekata', knownBudget: 'Poznati budžeti', unknownBudget: 'Budžet nije unesen',
+    overview: 'Ključni pokazatelji', activeProjects: 'Aktivni projekti', openTasks: 'Otvoreni zadaci', openTimers: 'Aktivni timeri', spend: 'Troškovi aktivnih projekata', currencyUnavailable: 'valuta nije dostupna', knownBudget: 'Poznati budžeti', unknownBudget: 'Budžet nije unesen',
     actions: 'Brze radnje', projectsLink: 'Svi projekti', tasksLink: 'Zadaci', teamLink: 'Tim', documentsLink: 'Dokumenti',
     emptyTitle: 'Nema aktivnih projekata.', emptyDescription: 'Dodajte projekat da biste pratili troškove, zadatke i napredak na jednom mjestu.', createProject: 'Kreiraj projekat',
     trends: 'Trendovi', lastSeven: 'Posljednjih 7 dana', taskTrend: 'Novi zadaci', timerTrend: 'Odobreno vrijeme', minutesTrend: 'Odobrene minute po danu zatvaranja', compare: '{{value}}% u odnosu na prethodnih 7 dana', noComparison: 'Nema poređenja za prethodni period.', hours: '{{hours}} h {{minutes}} min', noTrend: 'Nema podataka za prikaz.', dataTable: 'Prikaži podatke u tabeli',

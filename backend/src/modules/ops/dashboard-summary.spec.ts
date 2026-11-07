@@ -13,10 +13,12 @@ describe('analytics summary', () => {
     });
     const tasks = jest.fn().mockResolvedValue(3);
     const timers = jest.fn().mockResolvedValue(4);
+    const findFirst = jest.fn().mockResolvedValue({ value: 'EUR' });
     const service = new DashboardSummaryService({
       project: { aggregate },
       task: { count: tasks },
       timerSession: { count: timers },
+      setting: { findFirst },
     } as never);
     expect(await service.get(admin)).toEqual({
       activeProjects: 2,
@@ -25,11 +27,30 @@ describe('analytics summary', () => {
       projectsWithBudget: 1,
       knownPlannedBudget: '100.10',
       currentSpend: '99.99',
+      currency: 'EUR',
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { companyId: 'c', key: 'app.currency' },
+      select: { value: true },
     });
     const calls = aggregate.mock.calls as unknown as Array<
       [{ where: { companyId: string } }]
     >;
     expect(calls[0][0].where.companyId).toBe('c');
+  });
+  it('does not invent currency when a stored setting is invalid', async () => {
+    const service = new DashboardSummaryService({
+      project: {
+        aggregate: jest.fn().mockResolvedValue({
+          _count: { _all: 0, plannedBudget: 0 },
+          _sum: { plannedBudget: null, currentSpend: null },
+        }),
+      },
+      task: { count: jest.fn().mockResolvedValue(0) },
+      timerSession: { count: jest.fn().mockResolvedValue(0) },
+      setting: { findFirst: jest.fn().mockResolvedValue({ value: null }) },
+    } as never);
+    expect((await service.get(admin)).currency).toBeNull();
   });
   it('preserves an absent budget and fails closed for non-admin and missing tenant', async () => {
     const aggregate = jest.fn().mockResolvedValue({
@@ -40,6 +61,7 @@ describe('analytics summary', () => {
       project: { aggregate },
       task: { count: jest.fn().mockResolvedValue(0) },
       timerSession: { count: jest.fn().mockResolvedValue(0) },
+      setting: { findFirst: jest.fn().mockResolvedValue(null) },
     } as never);
     await expect(
       service.get({ ...admin, roles: ['ACCOUNTANT'] }),
@@ -53,6 +75,7 @@ describe('analytics summary', () => {
       projectsWithBudget: 0,
       knownPlannedBudget: null,
       currentSpend: '0.00',
+      currency: 'BAM',
     });
   });
 });

@@ -536,6 +536,14 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
       data: { companyId: a.id, projectId: held.id, title: 'On hold' },
     });
     try {
+      await prisma.setting.create({
+        data: {
+          companyId: a.id,
+          key: 'app.currency',
+          scope: 'PUBLIC',
+          value: 'EUR',
+        },
+      });
       await prisma.timerSession.createMany({
         data: [
           {
@@ -565,6 +573,7 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
         projectsWithBudget: 1,
         knownPlannedBudget: '100.10',
         currentSpend: '13.36',
+        currency: 'EUR',
       });
       const second = await request(app.getHttpServer())
         .get(url)
@@ -578,6 +587,7 @@ describe('Phase 5 dashboard diary HSE (e2e)', () => {
         projectsWithBudget: 1,
         knownPlannedBudget: '987.65',
         currentSpend: '0.00',
+        currency: 'BAM',
       });
       for (const token of [ss, worker, accountant, platform])
         expect(

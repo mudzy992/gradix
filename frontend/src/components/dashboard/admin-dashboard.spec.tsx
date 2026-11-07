@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MeUser } from '@/lib/api-types'
+import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { AdminDashboard } from './admin-dashboard'
@@ -31,7 +32,7 @@ beforeEach(() => {
   useAuthStore.setState({ user: user(), accessToken: 'token', ready: true })
   useCompanyStore.setState({ selectedId: null, revision: 0 })
   Object.values(mocks).forEach((mock) => mock.mockReset())
-  mocks.getSummary.mockImplementation(() => response({ activeProjects: 2, openTasks: 3, openTimers: 1, projectsWithBudget: 1, knownPlannedBudget: '100.10', currentSpend: '99.99' }))
+  mocks.getSummary.mockImplementation(() => response({ activeProjects: 2, openTasks: 3, openTimers: 1, projectsWithBudget: 1, knownPlannedBudget: '100.10', currentSpend: '99.99', currency: 'BAM' }))
   mocks.getCreatedTasks.mockImplementation(() => response({ timezone: 'Europe/Sarajevo', limit: 7, nextCursor: null, current: 2, previous: 0, delta: 2, deltaPercent: null, series: [{ startAt: '2025-01-01T00:00:00.000Z', endAt: '2025-01-02T00:00:00.000Z', count: 2 }] }))
   mocks.getClosedTimers.mockImplementation(() => response({ timezone: 'Europe/Sarajevo', limit: 7, nextCursor: null, currentMinutes: '90', previousMinutes: '60', deltaMinutes: '30', deltaPercent: '50.00', series: [{ startAt: '2025-01-01T00:00:00.000Z', endAt: '2025-01-02T00:00:00.000Z', minutes: '90', workers: 1 }] }))
   mocks.getProjects.mockImplementation(() => response([{ id: 'p', name: 'Most', status: 'IN_PROGRESS', plannedBudget: '100.10', currentSpend: '99.99', lat: '43.8563000', lng: '18.4131000', geofenceRadius: 100 }]))
@@ -70,10 +71,25 @@ describe('admin dashboard v2', () => {
     expect(cards).toHaveLength(4)
     for (const card of cards) expect(card).toHaveClass('border-t-primary', 'motion-safe:hover:-translate-y-0.5')
   })
+  it('shows company currency with a compact value and the exact amount in its title', async () => {
+    mocks.getSummary.mockImplementation(() => response({ activeProjects: 2, openTasks: 3, openTimers: 1, projectsWithBudget: 1, knownPlannedBudget: '2000000.00', currentSpend: '1234567.89', currency: 'EUR' }))
+    setup()
+    const overview = screen.getByRole('region', { name: 'Ključni pokazatelji' })
+    expect(await within(overview).findByText('1,2M EUR')).toHaveAttribute('title', '1.234.567,89 EUR')
+  })
+  it('renders an explicit missing-currency label in English', async () => {
+    await i18n.changeLanguage('en')
+    try {
+      mocks.getSummary.mockImplementation(() => response({ activeProjects: 2, openTasks: 3, openTimers: 1, projectsWithBudget: 1, knownPlannedBudget: null, currentSpend: '1234567.89', currency: null }))
+      setup()
+      const overview = screen.getByRole('region', { name: 'Key metrics' })
+      expect(await within(overview).findByText('1.2M currency unavailable')).toHaveAttribute('title', '1,234,567.89 currency unavailable')
+    } finally { await i18n.changeLanguage('bs') }
+  })
   it('renders independent real sections, exact money, safe trend and project map', async () => {
     setup()
     expect(await screen.findByRole('link', { name: 'Most' })).toBeInTheDocument()
-    expect(screen.getAllByText('99,99').length).toBeGreaterThan(0)
+    expect(screen.getByText('99,99 BAM')).toHaveAttribute('title', '99,99 BAM')
     expect(screen.getByText('Ana Anić')).toBeInTheDocument()
     expect(screen.getByText(/Nema poređenja/)).toBeInTheDocument()
     expect(await screen.findByTestId('project-map')).toBeInTheDocument()

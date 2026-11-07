@@ -3,7 +3,7 @@ export const en = {
   adminDashboard: {
     today: 'Today', todayDescription: 'Estimated current activity and alerts.', todayPresence: 'On site · GPS estimate', showingTopAlerts: 'Showing the three most urgent alerts; the count includes up to 20 items from each source.',
     eyebrow: 'BUSINESS OVERVIEW', title: 'Welcome, {{name}}', subtitle: 'Your company, all in one place.', light: 'Light mode', dark: 'Dark mode', selectCompany: 'Select a company to see its dashboard.',
-    overview: 'Key metrics', activeProjects: 'Active projects', openTasks: 'Open tasks', openTimers: 'Active timers', spend: 'Active project spend', knownBudget: 'Known budgets', unknownBudget: 'No budget entered',
+    overview: 'Key metrics', activeProjects: 'Active projects', openTasks: 'Open tasks', openTimers: 'Active timers', spend: 'Active project spend', currencyUnavailable: 'currency unavailable', knownBudget: 'Known budgets', unknownBudget: 'No budget entered',
     actions: 'Quick actions', projectsLink: 'All projects', tasksLink: 'Tasks', teamLink: 'Team', documentsLink: 'Documents',
     emptyTitle: 'There are no active projects.', emptyDescription: 'Add a project to track costs, tasks and progress in one place.', createProject: 'Create project',
     trends: 'Trends', lastSeven: 'Last 7 days', taskTrend: 'New tasks', timerTrend: 'Approved time', minutesTrend: 'Approved minutes by closing day', compare: '{{value}}% compared with the previous 7 days', noComparison: 'No comparison for the previous period.', hours: '{{hours}} h {{minutes}} min', noTrend: 'No data to display.', dataTable: 'View data as a table',

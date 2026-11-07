@@ -6,6 +6,21 @@ function cents(value: string): bigint | null {
   return match[1] ? -units : units
 }
 
+export function formatCompactMoney(value: string, locale: string): string | null {
+  const amount = cents(value)
+  if (amount === null) return null
+  const magnitude = amount < 0n ? -amount : amount
+  const units = [[100_000_000_000_000n, 'T'], [100_000_000_000n, 'B'], [100_000_000n, 'M'], [100_000n, 'K']] as const
+  const scale = units.find(([threshold]) => magnitude >= threshold)
+  if (!scale) return formatExactMoney(value, locale)
+  const tenths = magnitude * 10n / scale[0] // Truncate, never convert money to a binary float.
+  const numberLocale = /^bs(?:-|$)/i.test(locale) ? 'de-DE' : locale
+  const integer = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 0 }).format(tenths / 10n)
+  const decimal = new Intl.NumberFormat(numberLocale).formatToParts(1.1).find((part) => part.type === 'decimal')?.value ?? '.'
+  const fraction = tenths % 10n === 0n ? '' : `${decimal}${tenths % 10n}`
+  return `${amount < 0n ? '-' : ''}${integer}${fraction}${scale[1]}`
+}
+
 export function formatExactMoney(value: string, locale: string): string | null {
   const amount = cents(value)
   if (amount === null) return null

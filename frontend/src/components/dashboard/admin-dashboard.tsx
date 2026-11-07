@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { Activity, ArrowRight, BriefcaseBusiness, CircleAlert, ClipboardList, Clock3, Moon, Sun, Wallet } from 'lucide-react'
 import { BarChart, CountUp, ProgressBar, Skeleton, Sparkline } from './chart-primitives'
 import { getActivity, getClosedTimers, getCreatedTasks, getDocumentAlerts, getPresence, getProjects, getSummary, getTaskAlerts, type DashboardProject, type Severity } from '@/lib/api-dashboard'
-import { formatDashboardDate, formatExactMoney, minutesParts, moneyProgress, toSafeNumber } from '@/lib/dashboard-format'
+import { formatCompactMoney, formatDashboardDate, formatExactMoney, minutesParts, moneyProgress, toSafeNumber } from '@/lib/dashboard-format'
 import { useAuthStore } from '@/stores/auth-store'
 import { useCompanyStore } from '@/stores/company-store'
 import { Button } from '@/components/ui/button'
@@ -120,8 +120,8 @@ export function AdminDashboard() {
               { label: t('adminDashboard.activeProjects'), value: data.activeProjects, icon: BriefcaseBusiness },
               { label: t('adminDashboard.openTasks'), value: data.openTasks, icon: ClipboardList },
               { label: t('adminDashboard.openTimers'), value: data.openTimers, icon: Clock3 },
-              { label: t('adminDashboard.spend'), value: money(data.currentSpend), icon: Wallet },
-            ].map(({ label, value, icon: Icon }) => <div key={label} data-kpi-card className={`${card} border-t-2 border-t-primary motion-safe:transition motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-md`}><div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">{label}</span><span className="rounded-lg bg-primary/10 p-2 text-primary"><Icon className="size-4" aria-hidden="true" /></span></div><p className="mt-4 text-2xl font-semibold tabular-nums">{typeof value === 'number' ? <CountUp value={value} locale={numberLocale} /> : value}</p></div>)}
+              { label: t('adminDashboard.spend'), value: `${formatCompactMoney(data.currentSpend, locale) ?? t('adminDashboard.unavailable')} ${data.currency ?? t('adminDashboard.currencyUnavailable')}`, title: `${money(data.currentSpend)} ${data.currency ?? t('adminDashboard.currencyUnavailable')}`, icon: Wallet },
+            ].map(({ label, value, title, icon: Icon }) => <div key={label} data-kpi-card className={`${card} border-t-2 border-t-primary motion-safe:transition motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-md`}><div className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">{label}</span><span className="rounded-lg bg-primary/10 p-2 text-primary"><Icon className="size-4" aria-hidden="true" /></span></div><p title={title} aria-label={title} className="mt-4 text-2xl font-semibold tabular-nums">{typeof value === 'number' ? <CountUp value={value} locale={numberLocale} /> : value}</p></div>)}
           </div>
         </>}</SectionState>
       </section>
