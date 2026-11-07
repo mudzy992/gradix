@@ -71,6 +71,12 @@ jobs:
         working-directory: v2
         run: pnpm typecheck
 
+      - name: Expo verzije (native bundle ne pada tek na telefonu)
+        working-directory: v2
+        # Bez mreže: čita bundledNativeModules.json iz instaliranog `expo`.
+        # Hvata slučaj react-native !== ono što SDK traži — `expo export -p web` to propusti.
+        run: pnpm check-expo
+
       - name: Migracije i role
         working-directory: v2
         run: |

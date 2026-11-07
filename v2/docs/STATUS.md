@@ -13,13 +13,15 @@
 | 4 | `packages/db`: šema, 4 migracije, role bootstrap | ✅ prolazi na praznoj bazi |
 | 5 | Tenant scope + RLS spike | ✅ 8/8 na pravoj bazi |
 | 6 | Prijava, zaštićena stranica, `/api/me`, jedan zapis | ✅ 8/8 integracijskih testova |
-| 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; web izlaz se builda |
+| 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; **native (android) bundle se builda** — `expo export -p android` |
 | 8 | `contracts` (OpenAPI iz koda) | ❌ nije urađeno — vidi „ne radi“ |
 | 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 
-**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**49** testova: 26 domain, 10 db, 8 web, 5 mobile), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
+**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**49** testova: 26 domain, 10 db, 8 web, 5 mobile), `pnpm check-expo` (verzije usklađene sa SDK 58), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
+
+**Mobilni native bundle:** `expo export -p android` prolazi (`entry-*.hbc`, 2,6 MB) — ovim je otkriven i popravljen bug `react-native/setup-env` (RN 0.86 → 0.88.1). `expo export -p web` prolazi i sa neusklađenim verzijama, zato je u CI dodata provjera `pnpm check-expo`.
 
 **Provjereno u oba modela baze** (ovo je bilo otvoreno, sada zatvoreno):
 
@@ -35,6 +37,7 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 ## Ne radi / nije urađeno
 
+- **Mobilni u Expo Go nije još otvoren na telefonu** — bundle i Metro su dokazani u sandboxu, veza telefon → Metro nije (mora vlasnik, `docs/MOBILE-EXPO-GO.md`).
 - **`packages/contracts` i OpenAPI iz koda** nisu urađeni; API je tipiziran ručno u `apps/mobile/src/api/client.ts`. Ovo je dug, ne zaborav.
 - **Docker slika nije izgrađena** (nema Dockera u sandboxu). Dokazano je ono što se dokazati može: `output: standalone` build + pokretanje `server.js` protiv prave baze. Prvi `docker build` se dešava na Coolifyju i to je prva prava provjera Dockerfilea.
 - **CI je bio mrtav kod** i to je otkriveno u ovoj kapiji: workflow je stajao u `v2/.github/workflows/`, a GitHub izvršava samo `.github/workflows/` u korijenu. Sada je `.github/workflows/ci-v2.yml` sa `paths: v2/**`. Prvi zelen run: `daabf07`.

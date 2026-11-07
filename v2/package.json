@@ -14,7 +14,8 @@
     "db:migrate": "pnpm --filter @gradix/db migrate",
     "db:generate": "pnpm --filter @gradix/db generate",
     "db:seed": "pnpm --filter @gradix/db seed",
-    "db:reset": "pnpm --filter @gradix/db reset"
+    "db:reset": "pnpm --filter @gradix/db reset",
+    "check-expo": "pnpm --filter @gradix/mobile check-expo"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

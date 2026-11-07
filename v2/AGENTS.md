@@ -21,7 +21,12 @@ pnpm build                    # turbo build
 
 Baza: `infra/scripts/db-apply.sh` primjenjuje migracije iz `packages/db/prisma/migrations/` i
 bootstrap rola. Aplikacija se konektuje kao `gradix_app`, **nikad** kao vlasnik šeme ni superuser
-(ADR 0003). Demo tok i prijavne podatke vidi `docs/DEMO-G1.md`.
+(ADR 0003). Demo tok i prijavne podatke vidi `docs/DEMO-G1.md`, pokretanje mobilnog u Expo Go
+`docs/MOBILE-EXPO-GO.md`.
+
+Mobilni: verzije `react-native`/`react`/`expo-*` **moraju** odgovarati tabeli SDK-a. Provjera je
+`pnpm check-expo` (radi u CI, bez mreže). `expo export -p web` prolazi i kad native bundle puca —
+native se provjerava sa `npx expo export -p android`.
 
 ## Struktura
 

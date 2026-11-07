@@ -2,7 +2,18 @@
 
 **Trajanje:** 10 minuta. **Cilj:** vlasnik sam prođe tok, ne gleda snimak.
 
-## 1. Lokalno, jednom komandom
+## 1. Gdje se prolazi
+
+**Preporučeno: testna domena** (ista baza, isti seed, ništa ne dižeš lokalno).
+
+```
+https://gradix.ba101.top
+```
+
+Prijava: `ured@demo.ba` / lozinka iz `SEED_PASSWORD`. Provjeri prije početka:
+`curl -s https://gradix.ba101.top/api/ready` ⇒ `"status":"ok"`.
+
+**Alternativa — lokalno** (samo ako želiš svoju bazu; traži Docker):
 
 ```bash
 cd v2
@@ -10,7 +21,7 @@ cd v2
 pnpm --filter @gradix/web dev      # http://localhost:3000
 ```
 
-Prijava: `ured@demo.ba` / `demo-lozinka-123` (ADMIN).
+Lokalna lozinka: `demo-lozinka-123`. **Ne miješaj**: lokalno i testna domena imaju različite lozinke.
 
 ## 2. Šta proći (redom)
 
@@ -20,7 +31,7 @@ Prijava: `ured@demo.ba` / `demo-lozinka-123` (ADMIN).
 | 2 | Vidiš 3 mašine svoje firme | `/api/me` i stranica idu kroz tenant scope |
 | 3 | Odjavi se, prijavi kao `vlasnik@druga.ba` | vidiš **1** mašinu (Druga Firma) — izolacija radi |
 | 4 | Otvori `/pregled` bez prijave u privatnom prozoru | preusmjerenje na `/login` (nema curenja) |
-| 5 | Na telefonu/emulatoru: `pnpm --filter @gradix/mobile start` — prijavi se, ukucaj zapis, klikni **Sačuvaj na uređaju** | zapis je u lokalnoj bazi prije mreže |
+| 5 | Na telefonu (Expo Go): `pnpm --filter @gradix/mobile start` — skeniraj QR, prijavi se, ukucaj zapis, klikni **Sačuvaj na uređaju** (detalji: `docs/MOBILE-EXPO-GO.md`) | zapis je u lokalnoj bazi prije mreže |
 | 6 | Ugasi mrežu (aviо režim), klikni **Pošalji sve** | poruka „Nema veze… čeka slanje“, zapis nije izgubljen |
 | 7 | Vrati mrežu, klikni **Pošalji sve** | „Poslano: 1. Čeka: 0.“ |
 | 8 | Klikni **Pošalji sve** još jednom | „Poslano: 0“ — nema duplikata (idempotentno) |

@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check-expo": "node scripts/check-expo-versions.mjs"
   },
   "dependencies": {
     "@gradix/domain": "workspace:*",
@@ -18,9 +19,9 @@
     "expo-secure-store": "58.0.2",
     "expo-sqlite": "58.0.15",
     "expo-status-bar": "58.0.4",
-    "react": "19.3.1",
-    "react-dom": "19.3.1",
-    "react-native": "0.86.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
     "react-native-safe-area-context": "5.11.1",
     "react-native-screens": "4.30.1",
     "react-native-web": "0.21.4"

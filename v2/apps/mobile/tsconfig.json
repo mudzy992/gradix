@@ -4,7 +4,15 @@
     "strict": true,
     "jsx": "react-jsx",
     "moduleResolution": "Bundler",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "app.json"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "app.json",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }
