@@ -58,6 +58,7 @@ build ponavlja sa starom greškom.
 | `TZ` | `Europe/Sarajevo` | Datumi u logovima i izvještajima. |
 | `PGSSLMODE` | `verify-full` | Ako je u `DATABASE_URL` već `sslmode=verify-full` + `sslrootcert`, ovo je suvišno ali ne smeta. |
 | `POSTGRES_CA_FILE` | `/data/coolify/ssl/coolify-ca.crt` | CA za TLS prema bazi. Compose ga montira na `/etc/ssl/certs/coolify-ca.crt`; ako je na drugom mjestu na hostu, promijeni ovdje. |
+| `REDIS_CA_FILE` | `/data/coolify/ssl/redis-core/redis-ca.crt` | CA za Redis. Montira se na `/run/secrets/redis-ca.crt`. Ne koristi se u Fazi 1, ali mount mora postojati ako je putanja zadana. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo ako pokrećeš demo seed ručno (vidi §5). Ne ostavljati trajno. |
 
 ## 3. Ne treba u Fazi 1
@@ -65,6 +66,34 @@ build ponavlja sa starom greškom.
 `MINIO_*`, `REDIS_*`, `EXPO_PUBLIC_API_URL` (mobilni se gradi lokalno), `CORS_ORIGIN`
 (prazno = same-origin, što je i cilj jer je jedan domen i `/api` na njemu).
 Puni spisak sa objašnjenjima: `v2/.env.example`.
+
+## 3.5. Mreže: `db_net` i `redis_net` su eksterne (v1 D-021)
+
+Baza i Redis **nisu** na Coolifyjevoj default mreži — žive na postojećim mrežama hosta.
+Compose se na njih samo priključuje:
+
+```yaml
+networks:
+  default:            # Coolifyjev proxy (mora ostati da bi domen radio)
+  db_net:
+    external: true    # NE kreira se ovdje
+  redis_net:
+    external: true
+```
+
+Ako mreža ne postoji, deploy pada sa `network db_net declared as external, but could not
+be found`. Provjera na serveru:
+
+```sh
+docker network ls | grep -E "db_net|redis_net"
+# ako fali:
+docker network create db_net 2>/dev/null || true
+docker network create redis_net 2>/dev/null || true
+```
+
+Coolify **ne** priključuje resource na te mreže automatski — zato su navedene u compose-u.
+Isto važi za Postgres resource: mora mu biti uključeno `Connect to Predefined Network`
+(inače nije na `db_net` i hostname iz `DATABASE_URL` se ne razrješava).
 
 ## 4. Baza: koja rola radi šta (modeli A / B / C)
 
@@ -141,8 +170,22 @@ curl -s https://gradix.ba101.top/api/health   # {"status":"ok"}
 curl -s https://gradix.ba101.top/api/ready    # postgres ok, migrations.applied, databaseRole
 ```
 
-`/api/ready` mora vratiti `"is_super": false, "bypass_rls": false`. Ako vrati `true`,
-RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
+Očekivani `/api/ready` (primjer, provjeren na modelu C):
+
+```json
+{"status":"ok","checks":{"postgres":{"status":"ok","latencyMs":18},
+ "migrations":{"applied":5},
+ "databaseRole":{"role":"gradix_app","is_super":false,"bypass_rls":false,
+                 "database":"gradix","can_create":false}}}
+```
+
+Tri stvari koje se čitaju iz ovoga:
+
+* `is_super:false` i `bypass_rls:false` — RLS stvarno štiti (inače §4).
+* `database` — **stvarno** ime baze kojoj je pool spojen. Ako piše nešto drugo od očekivanog
+  (npr. `postgres` ili generisano ime), `DATABASE_URL` gleda pogrešnu bazu.
+* `can_create:false` — očekivano: aplikacijska rola ne kreira tabele, to radi migracija
+  kroz `DATABASE_ADMIN_URL`. Ako je `true`, rola ima više prava nego što joj treba.
 
 ## 7. Ako padne — šta znači koja poruka
 
@@ -153,6 +196,8 @@ RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
 | `DATABASE_URL mora biti postavljen u Coolifyju` | varijabla nije unesena u UI | §1 |
 | `AUTH_SECRET je prekratak` | manje od 32 znaka | `openssl rand -base64 48` |
 | `GREŠKA: baza nije dostupna nakon 10 pokušaja` | host/port, mreža, CA ili `&amp;` u URL-u | poruka sama ispiše host i **zadnju grešku** — gledaj nju: `ENOENT ... coolify-ca.crt` = CA nije montiran (§2), `could not translate host name` = pogrešan/vanjski host, `password authentication failed` = lozinka ili rola |
+| `network db_net declared as external, but could not be found` | mreža ne postoji na hostu | §3.5 |
+| `GREŠKA: DATABASE_URL traži CA na '/etc/ssl/certs/coolify-ca.crt', ali tog fajla nema u kontejneru` | CA nije montiran | §2, `POSTGRES_CA_FILE` |
 | `GREŠKA: rola koja radi migracije nema CREATE na šemi public` | model C bez `DATABASE_ADMIN_URL` | §4 |
 | `GREŠKA: DATABASE_URL sadrži HTML entity `&amp;`` | copy/paste iz HTML-a | zamijeni `&amp;` sa `&` |
 | `TenantSecurityError` / `/api/ready` vraća `is_super:true` | rola je superuser ili `BYPASSRLS` | `ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS;` |

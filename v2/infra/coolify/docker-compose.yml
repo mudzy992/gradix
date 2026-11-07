@@ -6,24 +6,21 @@
 #                     Docker Compose Location = /infra/coolify/docker-compose.yml
 #
 # Šta ovdje NEMA i zašto:
-#   * nema Postgres servisa — baza je već na serveru (Coolify resource), baza `gradix`,
-#     korisnik `gradix_app`. Contejner se na nju spaja kroz DATABASE_URL.
-#   * nema MinIO/Redis — u Fazi 1 se ne koriste (ADR 0006, STATUS.md).
+#   * nema Postgres servisa — baza je eksterni PostgreSQL na mreži `db_net` (v1 D-021).
+#   * nema Redis servisa — u Fazi 1 se ne koristi; mreža `redis_net` je ipak priključena
+#     jer je infrastruktura već postavljena i ne košta ništa (nema konekcije bez REDIS_HOST).
+#   * nema MinIO-a — dolazi u R5 (ADR 0006).
 #   * nema port mappinga — Coolify upravlja rutiranjem preko interneta kontejnera;
-#     izlaganje porta hostu bi zaobišlo Coolifyjev TLS proxy.
+#     `ports:` bi zaobišao Coolifyjev TLS proxy.
 #
 # Tajne: NIJEDNA vrijednost nije u ovom fajlu. Sve dolazi iz Coolify environment
-# varijabli resource-a (šablon: v2/.env.example, sekcija "Coolify").
+# varijabli resource-a (šablon: v2/.env.example).
 services:
   web:
     build:
       # VAŽNO — kako Coolify razrješava putanje (provjereno na grešci iz deploya):
       # `context` i `dockerfile` se odnose na BASE DIRECTORY, ne na lokaciju ovog fajla.
-      # Coolify pokreće `docker compose --project-directory <base>` gdje je <base> = /v2, pa:
-      #   context: .            → /v2                      (korijen monorepa = ono što Dockerfile traži)
-      #   dockerfile: infra/... → /v2/infra/docker/...     (relativno na context)
-      # Prije je stajalo `../..`, što je iz /v2 otišlo u /artifacts i build je padao sa
-      # "resolve : lstat /artifacts/infra: no such file or directory".
+      # Coolify pokreće `docker compose --project-directory <base>` gdje je <base> = /v2.
       context: .
       dockerfile: infra/docker/Dockerfile.web
     restart: unless-stopped
@@ -31,28 +28,25 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
+      # Coolify postavlja SERVICE_FQDN_WEB sam kad u UI-ju dodaš domenu i port.
+      SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-}
       # --- obavezno (bez ovoga kontejner ne starta, namjerno) ---
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
       DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET mora biti postavljen u Coolifyju (min 32 znaka)}
       # --- ponašanje ---
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
-      # Coolify postavlja SERVICE_FQDN_WEB sam kad u UI-ju dodaš domenu i port.
-      SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: ${TRUST_PROXY:-1}
-      PGSSLMODE: ${PGSSLMODE:-prefer}
+      PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
-    healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+      # --- Redis (opciono; u Fazi 1 se ne koristi) ---
+      REDIS_HOST: ${REDIS_HOST:-}
+      REDIS_PORT: ${REDIS_PORT:-6380}
+      REDIS_USER: ${REDIS_USER:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PREFIX: ${REDIS_PREFIX:-gx2:}
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
     volumes:
       # CA kojim se provjerava TLS prema Postgresu. Coolify ga drži na HOSTU, a
       # DATABASE_URL ga traži UNUTAR kontejnera (/etc/ssl/certs/coolify-ca.crt).
@@ -66,13 +60,46 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # CA za Redis (isti obrazac; koristi se tek kad REDIS_HOST bude zadat).
+      - type: bind
+        source: ${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}
+        target: /run/secrets/redis-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - default
+      # Eksterne mreže: baza i Redis žive na postojećim mrežama hosta (v1 D-021).
+      # Compose ih NE kreira — moraju postojati (Coolify ih pravi za svoje resource-e).
+      - db_net
+      - redis_net
     # Coolify proxy traži da port bude izložen iz kontejnera; javni domen se dodaje
-    # u UI-ju (https://gradix.ba101.top → 3000). Bez `ports:` — TLS i rutiranje su
-    # Coolifyjev posao, a direktno izlaganje na host bi ga zaobišlo.
+    # u UI-ju (https://gradix.ba101.top → 3000).
     expose:
       - "3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  # Kad servis navede `networks:`, default mreža se više ne dodaje automatski —
+  # zato je eksplicitno ovdje. NAMJERNO bez `name:`: Coolifyjev proxy očekuje
+  # `<project>_default`; preimenovanje bi prekinulo rutiranje do kontejnera.
+  default:
+  # Postojeće mreže na hostu (Docker / Coolify). Compose ih NE kreira (v1 D-021).
+  db_net:
+    external: true
+  redis_net:
+    external: true
