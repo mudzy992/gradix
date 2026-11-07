@@ -83,9 +83,21 @@ jobs:
 
       - name: Prisma generator (dokaz da radi u CI-ju)
         working-directory: v2/packages/db
-        # ADR 0002: lokalno je generator blokiran, u CI-ju mora raditi. Ako ovo padne,
-        # znamo da SQL-first nije privremen nego trajan i ADR se mijenja.
-        run: pnpm exec prisma generate
+        # ADR 0002: lokalno je generator blokiran (nema pristupa binaries.prisma.sh), u CI-ju
+        # mora raditi. Greška se namjerno podiže i kao ANOTACIJA: logovi runa nisu dostupni
+        # svim klijentima, a anotacije jesu — bez toga ovaj korak ne daje upotrebljiv signal.
+        run: |
+          set +e
+          pnpm exec prisma generate 2>&1 | tee /tmp/prisma.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            echo "::error::prisma generate pao (exit $code)"
+            tail -n 12 /tmp/prisma.log | sed 's/%/%25/g; s/\r//g' | while IFS= read -r line; do
+              [ -n "$line" ] && echo "::error title=prisma generate::$line"
+            done
+          fi
+          exit "$code"
+        shell: bash
 
       - name: Provjera da migracija radi na praznoj bazi
         working-directory: v2
