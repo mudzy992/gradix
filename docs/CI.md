@@ -56,8 +56,14 @@ gh workflow run ci.yml --ref arena/0bc0e56e-gradix -f suite=frontend -f verbose=
 
 **Dokaz izbora:** run [41826584564](https://github.com/mudzy992/gradix/actions/runs/41826584564) je ručno pokrenut na `main` sa `suite=audit`: audit je uspješan, pet ostalih poslova preskočeno. Aktivna grana ima iste uslove izbora; u odnosu na testirani commit `bfa7e97` audit korak ima dodatne regresijske testove. Ostale `suite` opcije nisu pojedinačno potvrđene ručnim runom.
 
-**Napomena:** `concurrency` grupa je `ci-<workflow>-<ref>` sa `cancel-in-progress: true`, pa ručno
-pokretanje **otkazuje** tekući push-run iste grane — puštaj ga kad prethodni run završi.
+**Napomena:** `concurrency` grupa je `ci-<workflow>-<ref>`. Radne grane prekidaju tekući
+run pri novom pokretanju; `main` i grane čiji naziv počinje `release` ne prekidaju pokrenuti
+run. GitHub i dalje može zamijeniti prethodni *pending* run iste grupe; ovo nije FIFO red.
+Workflow trenutno sluša push samo na aktivnoj grani; ručni `workflow_dispatch` može koristiti druge refove.
+
+Web E2E kešira `~/.cache/ms-playwright` po OS-u, arhitekturi, runner imageu i instaliranoj
+verziji `@playwright/test`, bez fallback ključa. `playwright install --with-deps chromium` i dalje
+provjerava browser i instalira sistemske biblioteke na svakom runu; cache hit ne preskače OS zavisnosti.
 
 ### Noćni backup/restore drill (INF-06)
 
@@ -161,7 +167,7 @@ on:
 2. Poslije svakog pusha: `gh run watch <id> --exit-status`; ako je crven → popravka **prije**
    novog posla.
 3. Run ID i status se upisuju u [`AUDIT/STATE.md`](../AUDIT/STATE.md).
-4. `concurrency.group` sa `cancel-in-progress` — novi push poništava stari run.
+4. `concurrency.group` prekida aktivni run na radnim granama, ali ne na `main`/`release*`; pending run može biti zamijenjen.
 5. `permissions: contents: read` — minimalna prava; nikad `write-all`.
 6. Tajne u CI-ju: samo „testne“ vrijednosti (npr. `GradixSeed1`); nikad produkcijske.
 

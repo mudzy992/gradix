@@ -12,15 +12,10 @@ Trenutno: **48/61 segmenata `done`**. CI-05 je `done`; BE-19, FE-17 i TEST-01 su
 
 ## Zadnji commit i CI
 
-
-
-- `4f22c4b`: CI [42295365402](https://github.com/mudzy992/gradix/actions/runs/42295365402) 6/6; korak 0.
-
 - `e5841aa`: CI [42296174440](https://github.com/mudzy992/gradix/actions/runs/42296174440) 6/6; snimak bogatog demo seeda.
-
-- `b26e79d`: CI 42298212503 u toku; 5 poslova prošlo, Web E2E instalira browser.
-
-- Zadnji potvrđeni puni CI za prethodni kod evidentiran je u zaglavljima gotovih izvještaja; ne predstavlja dokaz za tekući commit.
+- `b26e79d`: CI [42298212503](https://github.com/mudzy992/gradix/actions/runs/42298212503) Web E2E otkazan, ostalih 5 prošlo.
+- `cdcf9fc`: CI [42299391505](https://github.com/mudzy992/gradix/actions/runs/42299391505) 6/6; KPI akcent, korak 3 djelimično.
+- CI cache/concurrency: lokalni testovi 2/2, check:all 0/3 skip, backend 55/448, frontend 66/653; PG demo 1/1 nakon ispravnog seeda (prvi pokušaj na neseedanoj bazi nije prošao). Cache hit i GitHub concurrency ponašanje tek treba potvrditi u CI.
 
 ## CI-05 — procesno zatvoren
 

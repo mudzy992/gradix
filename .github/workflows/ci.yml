@@ -32,7 +32,8 @@ run-name: >-
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Main i release* ne prekidaju već pokrenuti run; radne grane i dalje prekidaju.
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/release') }}
 
 permissions:
   contents: read
@@ -62,7 +63,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit gate regresijski testovi
-        run: node --test scripts/audit/report-e2e.test.mjs scripts/audit/report-unit.test.mjs scripts/audit/check-coverage.test.mjs scripts/audit/check-audit-gate.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs scripts/standards/check-env.test.mjs scripts/standards/check-decimal-mocks.test.mjs
+        run: node --test scripts/audit/ci-workflow.test.mjs scripts/audit/report-e2e.test.mjs scripts/audit/report-unit.test.mjs scripts/audit/check-coverage.test.mjs scripts/audit/check-audit-gate.test.mjs scripts/audit/inventory-scaffold.test.mjs scripts/ops/backup-restore-workflow.test.mjs scripts/standards/check-env.test.mjs scripts/standards/check-decimal-mocks.test.mjs
 
       - name: Guardrail (matrica, segmenti, docs, tajne, logovi, compose)
         run: npm run check:all -- --only=coverage,segments,docs,secrets,logs,decimal-mocks,schema,image,env,compose
@@ -397,6 +398,20 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
 
+      - name: Playwright — verzija i runner image
+        id: playwright-version
+        working-directory: frontend
+        run: |
+          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright — cache browsera
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright-version.outputs.image }}-${{ steps.playwright-version.outputs.version }}
+
+      # OS biblioteke se instaliraju i na cache hit; install provjerava i dopunjava browser.
       - name: Playwright — instalacija browsera
         working-directory: frontend
         run: npx playwright install --with-deps chromium
