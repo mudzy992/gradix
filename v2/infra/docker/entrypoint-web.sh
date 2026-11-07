@@ -6,38 +6,71 @@ set -eu
 : "${DATABASE_URL:?DATABASE_URL nedostaje}"
 : "${AUTH_SECRET:?AUTH_SECRET nedostaje}"
 
-# Dužina tajne se provjerava u Node-u (sh nema pouzdanu usporedbu dužine stringa).
+#
+# psql ne razumije Prisma-stil `?schema=public`, ali RAZUMIJE `sslmode` i `sslrootcert`.
+# Prva verzija je odsijecala cijeli query string (`cut -d'?' -f1`) i time je tiho brisala
+# TLS parametre — baza koja traži TLS onda padne sa nejasnom porukom. Sada se uklanja
+# SAMO `schema=`, sve ostalo ostaje netaknuto.
+#
+sanitize_pg_url() {
+  printf '%s' "$1" | sed -E 's/[?&]schema=[^&]*//; s/\?&/?/; s/\?$//'
+}
+
 node -e '
   const secret = process.env.AUTH_SECRET ?? "";
   if (secret.length < 32) {
-    console.error("AUTH_SECRET je prekratak (min 32 znaka).");
+    console.error("GREŠKA: AUTH_SECRET je prekratak (min 32 znaka).");
     process.exit(1);
   }
-  if (!process.env.DATABASE_URL) {
-    console.error("DATABASE_URL nedostaje.");
+  if ((process.env.DATABASE_URL ?? "").includes("&amp;")) {
+    console.error("GREŠKA: DATABASE_URL sadrži HTML entity `&amp;` umjesto `&` — copy/paste iz HTML-a.");
     process.exit(1);
   }
 '
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   # Migracije idu ADMIN konekcijom (vlasnik šeme). Ako DATABASE_ADMIN_URL nije zadan,
-  # pretpostavlja se da je aplikacijska rola ujedno vlasnik šeme (Coolify setup sa
-  # jednim korisnikom). U modelu A (dvije role) se admin URL MORA zadati.
+  # pretpostavlja se da je aplikacijska rola ujedno vlasnik šeme (model B).
+  # U modelu C (administrator `gradix` posjeduje šemu, `gradix_app` je samo aplikacija)
+  # DATABASE_ADMIN_URL je OBAVEZAN — inače `gradix_app` nema CREATE na public šemi.
   ADMIN_URL="${DATABASE_ADMIN_URL:-$DATABASE_URL}"
-  # psql ne razumije Prisma-style `?schema=public`.
-  ADMIN_URL_CLEAN=$(printf '%s' "$ADMIN_URL" | cut -d'?' -f1)
+  ADMIN_URL_CLEAN=$(sanitize_pg_url "$ADMIN_URL")
+
   echo "→ provjera baze i primjena migracija"
+
   # Kratki retry: na svježem deployu baza ili DNS mogu zakasniti nekoliko sekundi.
+  # Greška se ispisuje ODMAH i u cjelini — bez toga „ne odgovara“ ne kaže ništa korisno.
   i=0
-  until psql "$ADMIN_URL_CLEAN" -Atc "SELECT 1" >/dev/null 2>&1; do
+  last_error=""
+  while :; do
+    if last_error=$(PGCONNECT_TIMEOUT=10 psql "$ADMIN_URL_CLEAN" -Atc "SELECT 1" 2>&1); then
+      break
+    fi
     i=$((i + 1))
     if [ "$i" -ge 10 ]; then
-      echo "GREŠKA: baza nije dostupna nakon 10 pokušaja — provjeri DATABASE_URL i mrežu." >&2
+      echo "GREŠKA: baza nije dostupna nakon 10 pokušaja." >&2
+      echo "  host: $(printf '%s' "$ADMIN_URL_CLEAN" | sed -E 's#^[a-z]+://([^@]*@)?([^/:?]+).*#\2#')" >&2
+      echo "  zadnja greška: $last_error" >&2
+      echo "  provjeri: (1) je li host ime Postgres resource-a iz Coolifyja," >&2
+      echo "           (2) je li kontejner na istoj mreži (ne 'localhost')," >&2
+      echo "           (3) postoji li CA na putanji iz sslrootcert," >&2
+      echo "           (4) je li u URL-u '&amp;' umjesto '&'." >&2
       exit 1
     fi
-    echo "  ... baza još ne odgovara (pokušaj $i/10), čekam 3 s"
+    echo "  ... baza još ne odgovara (pokušaj $i/10, za 3 s): $last_error"
     sleep 3
   done
+
+  # Tko radi migracije? U modelu C `gradix_app` nema CREATE na public šemi — bolje
+  # reći to odmah nego pustiti migraciju da padne na trećem koraku.
+  can_create=$(psql "$ADMIN_URL_CLEAN" -Atc "SELECT has_schema_privilege(current_user, 'public', 'CREATE')" || echo "f")
+  if [ "$can_create" != "t" ]; then
+    echo "GREŠKA: rola koja radi migracije nema CREATE na šemi public." >&2
+    echo "  Postavi DATABASE_ADMIN_URL na vlasnika šeme (u Coolifyju: konekcija role 'gradix')," >&2
+    echo "  ili daj pravo: GRANT CREATE ON SCHEMA public TO <rola>;  (vidi docs/COOLIFY.md §4)" >&2
+    exit 1
+  fi
+
   sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
 

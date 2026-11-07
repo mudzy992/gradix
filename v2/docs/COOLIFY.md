@@ -44,7 +44,8 @@ build ponavlja sa starom greškom.
 
 | Varijabla | Vrijednost koju unosiš | Napomena |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://gradix_app:LOZINKA@HOST:5432/gradix?schema=public` | `HOST` = ime Postgres resource-a u Coolifyju na istoj mreži (npr. `postgresql-abc123`) ili `127.0.0.1` ako je host-network. `gradix_app` je ujedno vlasnik šeme (vidi §4). |
+| `DATABASE_URL` | `postgresql://gradix_app:LOZINKA@HOST:5432/BAZA?sslmode=verify-full&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | `HOST` = **interni** hostname iz Coolify resource-a Postgres (`Connect to Predefined Network`), nikad javni UUID hostname. `BAZA` = tačno ime baze iz tog resource-a (`current_database()`), ne pretpostavka. `&` piši kao `&`, **nikad** `&amp;`. |
+| `DATABASE_ADMIN_URL` | isto, samo rola `gradix` | **Obavezno u modelu C** (§4). Bez njega migracije padaju sa „nema CREATE na šemi public“. |
 | `AUTH_SECRET` | 48+ slučajnih bajtova, base64 | Generiši: `openssl rand -base64 48`. Min 32 znaka. Rotacija odjavljuje sve korisnike. |
 | `RUN_MIGRATIONS` | `true` | Prvi deploy `true`; poslije može ostati `true` (idempotentno). |
 
@@ -55,7 +56,8 @@ build ponavlja sa starom greškom.
 | `LOG_LEVEL` | `info` | `debug` samo dok tražiš grešku. |
 | `TRUST_PROXY` | `1` | Coolify je jedan proxy hop; bez ovoga `x-forwarded-for` nije pouzdan. |
 | `TZ` | `Europe/Sarajevo` | Datumi u logovima i izvještajima. |
-| `PGSSLMODE` | `prefer` | Unutar Coolify mreže TLS nije potreban; `require` ako baza nije na istoj mreži. |
+| `PGSSLMODE` | `verify-full` | Ako je u `DATABASE_URL` već `sslmode=verify-full` + `sslrootcert`, ovo je suvišno ali ne smeta. |
+| `POSTGRES_CA_FILE` | `/data/coolify/ssl/coolify-ca.crt` | CA za TLS prema bazi. Compose ga montira na `/etc/ssl/certs/coolify-ca.crt`; ako je na drugom mjestu na hostu, promijeni ovdje. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo ako pokrećeš demo seed ručno (vidi §5). Ne ostavljati trajno. |
 
 ## 3. Ne treba u Fazi 1
@@ -64,30 +66,56 @@ build ponavlja sa starom greškom.
 (prazno = same-origin, što je i cilj jer je jedan domen i `/api` na njemu).
 Puni spisak sa objašnjenjima: `v2/.env.example`.
 
-## 4. Baza: jedan korisnik je dovoljan (i bezbjedan)
+## 4. Baza: koja rola radi šta (modeli A / B / C)
 
-Tvoj setup — baza `gradix` i korisnik `gradix_app` kao vlasnik — **radi ispravno**.
-Dokazano na pravoj PostgreSQL instanci, ne tvrdnjom:
+Tri postavljanja rade. Razlika je **ko radi migracije**, i to je jedina stvar koju treba
+podesiti. Sva tri su provjerena testovima (db 10/10, web 8/8) na pravoj bazi.
 
-* `FORCE ROW LEVEL SECURITY` važi **i za vlasnika tabela**, pa izolacija firmi drži i kad
-  `gradix_app` posjeduje šemu (provjereno: bez `app.company_id` → 0 redova; tuđa firma →
-  `new row violates row-level security policy`).
-* Aplikacija pri prvom upitu provjerava da rola nije `SUPERUSER` i nema `BYPASSRLS`.
-  Ako jeste, `/api/ready` i svaki poslovni upit padaju sa `TenantSecurityError`
-  (fail-closed) — bolje pasti nego tiho miješati firme.
+| Model | Vlasnik šeme | Aplikacija | `DATABASE_ADMIN_URL` | Kada |
+|---|---|---|---|---|
+| **C** (tvoj, preporučen) | `gradix` | `gradix_app` | **obavezan** (rola `gradix`) | Coolify gdje je bazu kreirao administrator |
+| B | `gradix_app` | `gradix_app` | prazan | kad je `gradix_app` vlasnik baze |
+| A | `postgres` (superuser) | `gradix_app` | obavezan | stari lokalni setup |
 
-Zato je dovoljno:
+### Zašto `DATABASE_ADMIN_URL` mora biti `gradix` u modelu C
 
-```sql
--- Jednom, kao superuser (Coolify → Postgres → Terminal). NE mijenja lozinku.
-ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+Migracija kreira tabele i politike — to traži `CREATE` na šemi `public`. U modelu C tu
+privilegiju ima **samo vlasnik šeme** (`gradix`). `gradix_app` namjerno NEMA `CREATE`:
+aplikacijska rola ne smije sama sebi dodati tabelu bez RLS-a. Ako se `DATABASE_ADMIN_URL`
+ostavi prazan, entrypoint to kaže odmah i jasno:
+
+```
+GREŠKA: rola koja radi migracije nema CREATE na šemi public.
+  Postavi DATABASE_ADMIN_URL na vlasnika šeme (u Coolifyju: konekcija role 'gradix'),
 ```
 
-`DATABASE_ADMIN_URL` **ne moraš** postavljati: ako ga nema, entrypoint koristi
-`DATABASE_URL` za migracije (vlasnik šeme = `gradix_app`). U modelu sa dvije role
-(admin radi migracije, app se samo spaja) ovdje upišeš admin konekciju.
+U Coolifyju: Postgres resource → **Terminal** → `psql -U gradix -d <baza>` je već otvoren,
+pa samo provjeri `\du gradix_app` (mora biti `NOSUPERUSER`, bez `BYPASSRLS`) i
+`\dn+ public` (vlasnik `gradix`).
 
-Migrationske skripte same provjeravaju da li rola postoji, pa ne padaju na tuđem setupu.
+### RLS ostaje na snazi i u modelu C
+
+`FORCE ROW LEVEL SECURITY` važi i za vlasnika tabela, a `gradix_app` nije ni superuser ni
+`BYPASSRLS`, pa izolacija firmi drži. Provjera ide pri prvom upitu: ako rola može zaobići
+RLS, aplikacija pada sa `TenantSecurityError` (fail-closed) umjesto da tiho miješa firme.
+`/api/ready` prijavljuje `is_super`, `bypass_rls` i **`database`** (stvarno ime baze kojoj
+je pool spojen) — to je najbrža provjera da URL gleda pravu bazu.
+
+### SQL koji je vlasnik izvršio (ispravan, samo jedna dopuna)
+
+```sql
+CREATE ROLE gradix_app WITH LOGIN PASSWORD '...' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+GRANT CONNECT ON DATABASE gradix TO gradix_app;
+GRANT USAGE ON SCHEMA public TO gradix_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE gradix IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gradix_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE gradix IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO gradix_app;
+```
+
+Ovo je tačno. Dvije napomene: `GRANT USAGE ON SCHEMA` važi za objekte koji **već** postoje,
+`ALTER DEFAULT PRIVILEGES` za one koje `gradix` kreira **poslije** — oba su potrebna, i oba
+su gore. `db-apply.sh` ih ionako primjenjuje sam (idempotentno) pri svakom deployu.
 
 ## 5. Demo podaci (opciono, jednom) — radi iz slike
 
@@ -124,7 +152,10 @@ RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
 | `failed to calculate checksum ... /app/apps/web/public: not found` | prazan direktorij nije u gitu | §9 |
 | `DATABASE_URL mora biti postavljen u Coolifyju` | varijabla nije unesena u UI | §1 |
 | `AUTH_SECRET je prekratak` | manje od 32 znaka | `openssl rand -base64 48` |
-| `GREŠKA: baza nije dostupna nakon 10 pokušaja` | pogrešan host/port ili baza nije na istoj mreži | provjeri da je `HOST` ime Postgres resource-a, ne `localhost` |
+| `GREŠKA: baza nije dostupna nakon 10 pokušaja` | host/port, mreža, CA ili `&amp;` u URL-u | poruka sama ispiše host i **zadnju grešku** — gledaj nju: `ENOENT ... coolify-ca.crt` = CA nije montiran (§2), `could not translate host name` = pogrešan/vanjski host, `password authentication failed` = lozinka ili rola |
+| `GREŠKA: rola koja radi migracije nema CREATE na šemi public` | model C bez `DATABASE_ADMIN_URL` | §4 |
+| `GREŠKA: DATABASE_URL sadrži HTML entity `&amp;`` | copy/paste iz HTML-a | zamijeni `&amp;` sa `&` |
+| `TenantSecurityError` / `/api/ready` vraća `is_super:true` | rola je superuser ili `BYPASSRLS` | `ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS;` |
 | `TenantSecurityError: Rola ... je SUPERUSER` | `gradix_app` je superuser | §4, `ALTER ROLE` |
 | `permission denied for function auth_memberships` | stara baza bez lookup politika | migracije se primjenjuju same (`RUN_MIGRATIONS=true`) — provjeri log koraka „provjera baze i primjena migracija“ |
 | Healthcheck `unhealthy` | kontejner sluša, ali `/api/health` ne vraća 200 | provjeri `PORT`; aplikacija sluša na 3000 |

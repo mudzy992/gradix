@@ -17,8 +17,17 @@ if [ -z "$DATABASE_ADMIN_URL" ]; then
   exit 1
 fi
 
-# psql ne razumije Prisma-style `?schema=public`; odsijeci query string.
-DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL%%\?*}"
+# psql ne razumije Prisma-style `?schema=public`, ali RAZUMIJE `sslmode` i `sslrootcert`.
+# Zato se uklanja SAMO `schema=` — ranije se odsijecao cijeli query string i time su
+# tiho nestajali TLS parametri (baza koja traži TLS je onda padala bez jasnog razloga).
+DATABASE_ADMIN_URL=$(printf '%s' "$DATABASE_ADMIN_URL" \
+  | sed -E 's/[?&]schema=[^&]*//' \
+  | sed -E '/\?/!s/&/?/')
+
+# Ime baze i rola za dijagnostiku (bez lozinke).
+db_host=$(printf '%s' "$DATABASE_ADMIN_URL" | sed -E 's#^[a-z]+://([^@]*@)?([^/:?]+).*#\2#')
+db_role=$(printf '%s' "$DATABASE_ADMIN_URL" | sed -E 's#^[a-z]+://([^:@]*).*#\1#')
+echo "→ baza: $db_host, rola: $db_role"
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 

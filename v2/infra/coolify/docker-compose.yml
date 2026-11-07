@@ -53,6 +53,19 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+    volumes:
+      # CA kojim se provjerava TLS prema Postgresu. Coolify ga drži na HOSTU, a
+      # DATABASE_URL ga traži UNUTAR kontejnera (/etc/ssl/certs/coolify-ca.crt).
+      # Bez ovog mounta `pg` padne sa ENOENT na sslrootcert — a to izgleda kao
+      # „baza ne odgovara“, iako je problem lokalna putanja fajla.
+      # `create_host_path: false`: ako putanja na hostu ne postoji, deploy padne
+      # JASNO, umjesto da tiho napravi prazan direktorij.
+      - type: bind
+        source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
+        target: /etc/ssl/certs/coolify-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
     # Coolify proxy traži da port bude izložen iz kontejnera; javni domen se dodaje
     # u UI-ju (https://gradix.ba101.top → 3000). Bez `ports:` — TLS i rutiranje su
     # Coolifyjev posao, a direktno izlaganje na host bi ga zaobišlo.

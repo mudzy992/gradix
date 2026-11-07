@@ -12,6 +12,16 @@ const PROBE_TIMEOUT_MS = 2000;
 
 type Probe = { status: "ok" | "error"; latencyMs: number };
 
+type DbInfo = {
+  role: string;
+  is_super: boolean;
+  bypass_rls: boolean;
+  /** Stvarno ime baze kojoj je pool spojen — hvata `hgsakyyni` vs `gradix` zabunu. */
+  database: string;
+  /** Može li rola pisati u šemu public (DDL). U modelu C to radi samo admin rola. */
+  can_create: boolean;
+};
+
 async function probe(sql: string): Promise<Probe> {
   const started = Date.now();
   let timer: NodeJS.Timeout | undefined;
@@ -33,15 +43,17 @@ async function probe(sql: string): Promise<Probe> {
 export async function GET(): Promise<Response> {
   const postgres = await probe("SELECT 1");
   let applied = 0;
-  let dbRole: { role: string; is_super: boolean; bypass_rls: boolean } | null = null;
+  let dbRole: DbInfo | null = null;
   if (postgres.status === "ok") {
     try {
       const result = await getPool().query<{ count: string }>(
         "SELECT count(*)::text AS count FROM schema_migrations",
       );
       applied = Number(result.rows[0]?.count ?? 0);
-      const role = await getPool().query<{ role: string; is_super: boolean; bypass_rls: boolean }>(
-        "SELECT current_user AS role, r.rolsuper AS is_super, r.rolbypassrls AS bypass_rls " +
+      const role = await getPool().query<DbInfo>(
+        "SELECT current_user AS role, r.rolsuper AS is_super, r.rolbypassrls AS bypass_rls, " +
+          "current_database() AS database, " +
+          "has_schema_privilege(current_user, 'public', 'CREATE') AS can_create " +
           "FROM pg_roles r WHERE r.rolname = current_user",
       );
       dbRole = role.rows[0] ?? null;

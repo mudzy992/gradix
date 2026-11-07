@@ -13,9 +13,15 @@ BEGIN
   END IF;
 
   IF current_user <> 'gradix_app' THEN
+    -- Model C (preporučen na Coolifyju): migracije radi vlasnik šeme (`gradix`),
+    -- aplikacija radi kao `gradix_app`. Aplikacija NE dobija CREATE na šemi:
+    -- tabele i poglede kreira isključivo migracija. To je i zaštita — aplikacijska
+    -- rola ne može sama sebi dodati tabelu bez RLS-a.
     GRANT USAGE ON SCHEMA public TO gradix_app;
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gradix_app;
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gradix_app;
+    -- Važno: ALTER DEFAULT PRIVILEGES važi za objekte koje kreira TEKUĆA rola.
+    -- Zato se izvršava kao vlasnik šeme (admin konekcija), a ne kao gradix_app.
     ALTER DEFAULT PRIVILEGES IN SCHEMA public
       GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gradix_app;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public

@@ -22,7 +22,12 @@ fi
 # a ne hardkodira, da skripta radi i van slike.
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-# `withCompany` u seederu piše tenant tabele kroz RLS scope — radi i kad je
-# aplikacijska rola vlasnik šeme (Coolify model B, ADR 0007).
-DATABASE_ADMIN_URL=$(printf '%s' "$DATABASE_ADMIN_URL" | cut -d'?' -f1) \
-  node "$script_dir/seed.mjs"
+# psql/`pg` ne razumiju `?schema=public`, ali RAZUMIJU sslmode/sslrootcert — zato se
+# uklanja samo `schema=`, nikad cijeli query string.
+DATABASE_ADMIN_URL=$(printf '%s' "$DATABASE_ADMIN_URL" \
+  | sed -E 's/[?&]schema=[^&]*//' \
+  | sed -E '/\?/!s/&/?/')
+
+# Seed piše i globalne tabele (companies, users) — u modelu C (vlasnik šeme `gradix`,
+# aplikacija `gradix_app`) to smije samo admin rola. Zato DATABASE_ADMIN_URL.
+DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" node "$script_dir/seed.mjs"
