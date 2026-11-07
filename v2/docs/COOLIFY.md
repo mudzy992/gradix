@@ -1,19 +1,44 @@
-# Gradix v2 — Coolify resource `gradix-web` (testna domena gradix.ba101.top)
-#
+# Gradix v2 — Coolify resource (testna domena gradix.ba101.top)
+
 # KAKO SE KORISTI
-#   1. Coolify → Project → Environment (npr. `test`) → + New Resource → Docker Compose
-#      (Empty / "Docker Compose" sa git izvorom; NIJE "Nixpacks".)
-#   2. Source: GitHub repo, branch `arena/37e610e9-gradix` (ili `main` kad se spoji).
+#   1. Coolify → Project → Environment → + New Resource → Docker Compose (NIJE Nixpacks!).
+#   2. Source: GitHub repo, grana **arena/37e610e9-gradix** (vidi §0 — grana mora imati fix).
 #   3. Base Directory: `/v2`
 #      Docker Compose Location: `/infra/coolify/docker-compose.yml`
-#   4. Environment Variables: prepiši iz tabele ispod (samo imena — vrijednosti unosiš ti).
+#   4. Environment Variables: iz tabele §1 (samo imena — vrijednosti unosiš ti).
 #   5. Domain: `https://gradix.ba101.top` → kontejner port `3000`, TLS on (Let's Encrypt).
-#   6. Deploy. Prvi deploy gradi sliku ~3–5 min (pnpm install + next build).
-#
-# Redoslijed pri startu kontejnera:
-#   provjera env → (RUN_MIGRATIONS=true) psql provjera + migracije → node server.js
-# Ako baza nije dostupna ili AUTH_SECRET < 32 znaka, kontejner PADA sa jasnom porukom
-# umjesto da radi u polupokvarenom stanju.
+#   6. Deploy. Prvi build ~4–6 min (pnpm install + next build + seed bundle).
+
+## 0. Kako Coolify razrješava putanje (ovo je bio prvi pad deploya)
+
+Coolify pokreće build iz **kopije repoa** i postavlja `--project-directory` na Base Directory:
+
+```
+docker compose --project-directory /artifacts/<id>/v2 -f /artifacts/<id>/v2/infra/coolify/docker-compose.yml build
+```
+
+Zato se `build.context` i `dockerfile` odnose na **Base Directory**, a ne na lokaciju compose fajla.
+Uz Base Directory `/v2`:
+
+| Polje | Vrijednost | Razrješava se u |
+|---|---|---|
+| `context` | `.` | `/artifacts/<id>/v2` — korijen monorepa |
+| `dockerfile` | `infra/docker/Dockerfile.web` | `/artifacts/<id>/v2/infra/docker/Dockerfile.web` |
+
+Prva verzija je imala `context: ../..`, što se iz `/artifacts/<id>/v2` razriješilo u `/artifacts`,
+pa je build pao sa:
+
+```
+Dockerfile not found for service web at ../../infra/docker/Dockerfile.web, skipping ARG injection.
+resolve : lstat /artifacts/infra: no such file or directory
+```
+
+Ako ikad promijeniš Base Directory, `context` se mijenja s njom — provjeri oba polja zajedno.
+
+**Grana:** Coolify je bio podešen na `v2-bootstrap`. Ta grana i `arena/37e610e9-gradix` su u ovom
+trenutku na istom commitu, ali fix iz §0 postoji samo na `arena/37e610e9-gradix`. Postavi granu u
+Coolifyju na `arena/37e610e9-gradix` (ili fast-forward `v2-bootstrap` na taj commit), inače se
+build ponavlja sa starom greškom.
 
 ## 1. Obavezno (bez ovoga deploy pada — namjerno)
 
@@ -64,23 +89,22 @@ ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
 
 Migrationske skripte same provjeravaju da li rola postoji, pa ne padaju na tuđem setupu.
 
-## 5. Demo podaci (opciono, jednom)
+## 5. Demo podaci (opciono, jednom) — radi iz slike
 
-Coolify → resource `gradix-web` → Terminal:
+Seed je u runtime slici kao `seed.mjs` (u build fazi se kompajlira iz `scripts/seed.ts`,
+pa runtime ne treba `tsx` ni dev zavisnosti).
+
+Coolify → resource `gradix-web` → **Terminal**:
 
 ```sh
-cd /app && DATABASE_ADMIN_URL="$DATABASE_URL" SEED_PASSWORD='<tvoja lozinka>' \
-  node -e "console.log('seed se pokreće iz build faze, vidi niže')"
+cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
 ```
 
-Seed je razvojni alat (TypeScript, traži `tsx`), pa se **ne** izvršava u runtime slici.
-Dva načina:
-* **Preporučeno:** privremeno uključi `RUN_SEED=true` u compose-u (build stage ima tsx),
-  ili
-* pokreni seed sa svoje mašine protiv javno dostupne baze (nije preporučeno).
+Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
+kroz RLS scope, pa radi i kad je `gradix_app` vlasnik šeme. Nalozi: `ured@demo.ba`,
+`vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.ba` (firma 2) — svi sa `SEED_PASSWORD`.
 
-Ako demo podaci nisu potrebni, preskoči — aplikacija radi sa praznom bazom, samo nema
-korisnika za prijavu.
+Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
 
 ## 6. Provjera poslije deploya
 
@@ -91,3 +115,23 @@ curl -s https://gradix.ba101.top/api/ready    # postgres ok, migrations.applied,
 
 `/api/ready` mora vratiti `"is_super": false, "bypass_rls": false`. Ako vrati `true`,
 RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
+
+## 7. Ako padne — šta znači koja poruka
+
+| Poruka | Uzrok | Rješenje |
+|---|---|---|
+| `Dockerfile not found ... resolve : lstat /artifacts/infra` | `context` nije relativan na Base Directory | `context: .` (§0) |
+| `DATABASE_URL mora biti postavljen u Coolifyju` | varijabla nije unesena u UI | §1 |
+| `AUTH_SECRET je prekratak` | manje od 32 znaka | `openssl rand -base64 48` |
+| `GREŠKA: baza nije dostupna nakon 10 pokušaja` | pogrešan host/port ili baza nije na istoj mreži | provjeri da je `HOST` ime Postgres resource-a, ne `localhost` |
+| `TenantSecurityError: Rola ... je SUPERUSER` | `gradix_app` je superuser | §4, `ALTER ROLE` |
+| `permission denied for function auth_memberships` | stara baza bez lookup politika | migracije se primjenjuju same (`RUN_MIGRATIONS=true`) — provjeri log koraka „provjera baze i primjena migracija“ |
+| Healthcheck `unhealthy` | kontejner sluša, ali `/api/health` ne vraća 200 | provjeri `PORT`; aplikacija sluša na 3000 |
+| `Cannot find module 'argon2'` ili `.node` greška | slika je Alpine, a prebuilt argon2 traži glibc | slika je namjerno `node:22-slim` (§8) |
+
+## 8. Zašto Debian slim, a ne Alpine
+
+`argon2` dolazi sa prebuilt binarijem. Musl varijanta traži `libstdc++.so.6`, kojeg
+`node:22-alpine` nema (provjereno čitanjem simbola `.node` fajla). Alpine bi tražio ručnu
+instalaciju `libstdc++` u runtime fazi i nosio rizik da se to tiho pokvari pri sljedećem
+`apk` sloju. `node:22-slim` ima glibc koji prebuilt očekuje; cijena je ~40 MB veća slika.

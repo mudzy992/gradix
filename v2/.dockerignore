@@ -1,0 +1,41 @@
+# Kontekst builda je KORIJEN v2 monorepa (Coolify: Base Directory /v2 → context ".").
+# Bez ovog fajla kontekst nosi node_modules (~1.4 GB) i build traje bespotrebno dugo,
+# a lokalni node_modules može i pokvariti instalaciju u slici.
+node_modules
+**/node_modules
+.pnpm-store
+
+# build izlazi i keš
+.next
+**/.next
+dist
+**/dist
+apps/mobile/dist-web
+.turbo
+**/.turbo
+out
+build
+coverage
+*.tsbuildinfo
+
+# tajne — nikad u sliku
+.env
+.env.*
+!.env.example
+.npmrc.local
+*.pem
+*.key
+
+# git i editor
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# dokumentacija i lokalni docker fajlovi nisu potrebni u slici
+docs
+infra/compose
+README.md
+AGENTS.md

@@ -1,11 +1,20 @@
 # Web (Next.js standalone) + API. Jedan kontejner, jedan domen, /api na istoj adresi (G0/P4).
-FROM node:22-alpine AS base
+#
+# Build kontekst = KORIJEN v2 monorepa (Coolify: Base Directory /v2 → context ".").
+# Zato su sve COPY putanje relativne na v2/, a ne na ovaj fajl.
+#
+# Slika je Debian-slim, NE Alpine — namjerno: `argon2` dolazi sa prebuilt musl binarijem
+# koji traži libstdc++ (potvrđeno čitanjem simbola: libc.musl-x86_64, libgcc_s, libstdc++.so.6).
+# Alpine bi zahtijevao ručnu instalaciju libstdc++ i dodatni rizik u runtime-u; slim je
+# predvidiv i ima glibc koji argon2 prebuilt očekuje.
+FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
-# 1) Zavisnosti: samo manifesti, da se kešira sloj.
+# 1) Zavisnosti: samo manifesti, da se ovaj sloj kešira dok se kod ne mijenja.
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc turbo.json ./
 COPY packages/config/package.json packages/config/
@@ -19,34 +28,47 @@ RUN pnpm install --frozen-lockfile --filter @gradix/web...
 FROM deps AS builder
 COPY packages packages
 COPY apps/web apps/web
-# `next build` traži DATABASE_URL samo ako se stranica izvršava u build vremenu;
-# sve poslovne stranice su `force-dynamic`, pa placeholder ne utiče na izlaz.
+# `next build` traži DATABASE_URL i AUTH_SECRET jer se konfiguracija validira pri uvozu.
+# Sve poslovne stranice su `force-dynamic`, pa placeholder ne utiče na izlaz slike.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 ENV AUTH_SECRET=build-time-placeholder-secret-min-32-chars
-RUN pnpm --filter @gradix/web build
+# Seed za demo se kompajlira ovdje: runtime slika nema `tsx` ni dev zavisnosti.
+# `pg` i `argon2` ostaju vanjski (serverExternalPackages), pa se u bundlu ne dupliraju.
+RUN pnpm --filter @gradix/web build \
+ && cd apps/web \
+ && pnpm exec esbuild scripts/seed.ts \
+      --bundle --platform=node --format=esm --target=node22 \
+      --outfile=seed.mjs \
+      --external:pg --external:argon2 --external:@gradix/db
 
 # 3) Runtime: samo ono što treba, bez pnpm-a i dev zavisnosti.
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
 # psql je potreban samo ako entrypoint primjenjuje migracije (RUN_MIGRATIONS=true).
-RUN apk add --no-cache postgresql-client \
- && addgroup -g 1001 -S nodejs \
- && adduser -S -u 1001 -G nodejs nextjs
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd -g 1001 nodejs \
+ && useradd -m -u 1001 -g nodejs nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
-# Migracije i bootstrap rola idu u sliku: entrypoint ih primjenjuje prije starta.
+# Migracije i bootstrap idu u sliku: entrypoint ih primjenjuje prije starta.
+# `db-apply.sh` sam prepoznaje ovaj raspored (migrations/ + bootstrap/ pored skripte).
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma/migrations ./db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/bootstrap ./db/bootstrap
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
 COPY --chown=nextjs:nodejs infra/docker/entrypoint-web.sh ./entrypoint.sh
+COPY --chown=nextjs:nodejs infra/docker/seed-web.sh ./seed.sh
 COPY --chown=nextjs:nodejs infra/scripts/db-apply.sh ./db/apply.sh
 
 USER nextjs
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["./entrypoint.sh"]
