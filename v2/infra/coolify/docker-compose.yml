@@ -7,11 +7,11 @@
 #
 # Šta ovdje NEMA i zašto:
 #   * nema Postgres servisa — baza je eksterni PostgreSQL na mreži `db_net` (v1 D-021).
-#   * nema Redis servisa — u Fazi 1 se ne koristi; mreža `redis_net` je ipak priključena
-#     jer je infrastruktura već postavljena i ne košta ništa (nema konekcije bez REDIS_HOST).
+#   * nema Redis servisa ni Redis CA mounta — u Fazi 1 nijedan dio koda ne čita REDIS_*.
+#     Mount je ranije postojao „za svaki slučaj“ i RUŠIO je deploy kad tog fajla nema
+#     (`bind source path does not exist`). Vraća se kad Redis zaista bude potreban.
 #   * nema MinIO-a — dolazi u R5 (ADR 0006).
-#   * nema port mappinga — Coolify upravlja rutiranjem preko interneta kontejnera;
-#     `ports:` bi zaobišao Coolifyjev TLS proxy.
+#   * nema port mappinga — Coolify upravlja rutiranjem; `ports:` bi zaobišao TLS proxy.
 #
 # Tajne: NIJEDNA vrijednost nije u ovom fajlu. Sve dolazi iz Coolify environment
 # varijabli resource-a (šablon: v2/.env.example).
@@ -40,39 +40,23 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-1}
       PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
-      # --- Redis (opciono; u Fazi 1 se ne koristi) ---
-      REDIS_HOST: ${REDIS_HOST:-}
-      REDIS_PORT: ${REDIS_PORT:-6380}
-      REDIS_USER: ${REDIS_USER:-}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PREFIX: ${REDIS_PREFIX:-gx2:}
-      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
     volumes:
-      # CA kojim se provjerava TLS prema Postgresu. Coolify ga drži na HOSTU, a
-      # DATABASE_URL ga traži UNUTAR kontejnera (/etc/ssl/certs/coolify-ca.crt).
-      # Bez ovog mounta `pg` padne sa ENOENT na sslrootcert — a to izgleda kao
-      # „baza ne odgovara“, iako je problem lokalna putanja fajla.
-      # `create_host_path: false`: ako putanja na hostu ne postoji, deploy padne
-      # JASNO, umjesto da tiho napravi prazan direktorij.
+      # CA kojim se provjerava TLS prema Postgresu — JEDINI mount koji Faza 1 koristi.
+      # Coolify ga drži na hostu, a `sslrootcert` u DATABASE_URL ga traži unutar kontejnera.
+      # Može se ugasiti prekidačem: POSTGRES_CA_MOUNT=false (npr. ako je baza bez TLS-a
+      # ili je CA već u sistemskom trust storeu slike). Tada u DATABASE_URL treba
+      # `sslmode=disable` ili `require`, i NE smije stajati `sslrootcert=`.
       - type: bind
         source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
         target: /etc/ssl/certs/coolify-ca.crt
         read_only: true
         bind:
-          create_host_path: false
-      # CA za Redis (isti obrazac; koristi se tek kad REDIS_HOST bude zadat).
-      - type: bind
-        source: ${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}
-        target: /run/secrets/redis-ca.crt
-        read_only: true
-        bind:
-          create_host_path: false
+          create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
     networks:
       - default
-      # Eksterne mreže: baza i Redis žive na postojećim mrežama hosta (v1 D-021).
-      # Compose ih NE kreira — moraju postojati (Coolify ih pravi za svoje resource-e).
+      # Eksterne mreže: baza živi na postojećoj mreži hosta (v1 D-021).
+      # `redis_net` se dodaje kad Redis zaista uđe u upotrebu.
       - db_net
-      - redis_net
     # Coolify proxy traži da port bude izložen iz kontejnera; javni domen se dodaje
     # u UI-ju (https://gradix.ba101.top → 3000).
     expose:
@@ -98,8 +82,6 @@ networks:
   # zato je eksplicitno ovdje. NAMJERNO bez `name:`: Coolifyjev proxy očekuje
   # `<project>_default`; preimenovanje bi prekinulo rutiranje do kontejnera.
   default:
-  # Postojeće mreže na hostu (Docker / Coolify). Compose ih NE kreira (v1 D-021).
+  # Postojeća mreža na hostu. Compose je NE kreira (v1 D-021).
   db_net:
-    external: true
-  redis_net:
     external: true

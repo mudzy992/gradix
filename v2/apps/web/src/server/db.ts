@@ -6,6 +6,7 @@
  * korištenju pool-a i greška je GLASNA (fail-closed), a ne tihi gubitak izolacije.
  * U DB-u se provjera izvršava jednom po procesu.
  */
+import { existsSync } from "node:fs";
 import { Pool } from "pg";
 import { loadConfig } from "./config";
 
@@ -42,11 +43,39 @@ export async function assertRlsEnforceable(client: {
   }
 }
 
+/**
+ * `sslrootcert` u URL-u je putanja do fajla. Ako tog fajla nema (CA nije montiran),
+ * `pg` puca sa ENOENT **pri parsiranju URL-a** — dakle pri svakom pokušaju konekcije,
+ * a poruka izgleda kao da je baza nedostupna. Zato se u tom slučaju parametar ukloni
+ * i ostane `sslmode` kakav jeste: sa `verify-full` veza će pasti sa JASNOM TLS greškom
+ * (cert not trusted), a sa `require`/`disable` će raditi. Tihi fallback na „ne provjeravaj
+ * certifikat“ se NE radi — to bi sakrilo pravi problem sa TLS-om.
+ */
+function connectionStringWithoutMissingCa(url: string): string {
+  if (!url.includes("sslrootcert=")) return url;
+  const match = /[?&]sslrootcert=([^&]*)/.exec(url);
+  if (!match) return url;
+  const caPath = decodeURIComponent(match[1] ?? "");
+  if (caPath.length === 0 || existsSync(caPath)) return url;
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      msg:
+        `sslrootcert putanja ne postoji (${caPath}) — uklanjam je iz konekcije. ` +
+        "Provjeri mount CA u compose-u (docs/COOLIFY.md §2).",
+    }),
+  );
+  return url
+    .replace(/[?&]sslrootcert=[^&]*/g, "")
+    .replace(/\?&/, "?")
+    .replace(/&$/, "");
+}
+
 export function getPool(): Pool {
   if (!pool) {
     const config = loadConfig();
     pool = new Pool({
-      connectionString: config.DATABASE_URL,
+      connectionString: connectionStringWithoutMissingCa(config.DATABASE_URL),
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,

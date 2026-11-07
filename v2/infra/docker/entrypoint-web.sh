@@ -29,27 +29,29 @@ node -e '
 '
 
 #
-# Provjera CA PRIJE ijedne konekcije. `pg` (i `psql`, za `sslrootcert=`) čita fajl iz
-# DATABASE_URL pri parsiranju — ako ga nema, greška je `ENOENT ... coolify-ca.crt`,
-# koja izgleda kao „baza ne odgovara“, a problem je bind mount u compose-u.
+# `sslrootcert` u URL-u je putanja do fajla. Ako fajl ne postoji, `psql`/`pg` padnu pri
+# PARSIRANJU URL-a — poruka onda izgleda kao „baza ne odgovara“, a problem je mount.
+# Zato: ako CA nema, parametar se ukloni (UZ GLASNO UPOZORENJE) i pokušaj ide dalje.
+# Ne izmišljamo „ne provjeravaj certifikat“ — `sslmode` ostaje kakav jeste, pa
+# `verify-full` i dalje pada, ali sa pravom TLS greškom umjesto ENOENT.
 #
-check_ca() {
+strip_missing_ca() {
   url="$1"
   label="$2"
   ca=$(printf '%s' "$url" | sed -nE 's/.*[?&]sslrootcert=([^&]*).*/\1/p')
   if [ -n "$ca" ] && [ ! -f "$ca" ]; then
-    echo "GREŠKA: $label traži CA na '$ca', ali tog fajla nema u kontejneru." >&2
-    echo "  Compose mora montirati CA (docs/COOLIFY.md §2):" >&2
-    echo "    /data/coolify/ssl/coolify-ca.crt -> /etc/ssl/certs/coolify-ca.crt  (read-only)" >&2
-    echo "  Ako je CA na hostu drugdje, postavi POSTGRES_CA_FILE na tu putanju." >&2
-    exit 1
+    echo "UPOZORENJE: $label traži CA na '$ca', ali tog fajla nema u kontejneru." >&2
+    echo "  Mount u compose-u: /data/coolify/ssl/coolify-ca.crt -> /etc/ssl/certs/coolify-ca.crt" >&2
+    echo "  Nastavljam bez sslrootcert — ako baza traži TLS, greška će sada biti TLS greška." >&2
+    printf '%s' "$url" | sed -E 's/[?&]sslrootcert=[^&]*//' | sed -E '/\?/!s/&/?/'
+    return 0
   fi
-  if [ -n "$ca" ]; then
-    echo "→ CA: $ca ($(wc -c <"$ca") bajtova)"
-  fi
+  [ -n "$ca" ] && echo "→ CA: $ca ($(wc -c <"$ca" | tr -d ' ') bajtova)"
+  printf '%s' "$url"
 }
 
-check_ca "$DATABASE_URL" "DATABASE_URL"
+DATABASE_URL_CLEAN=$(sanitize_pg_url "$DATABASE_URL")
+DATABASE_URL_CLEAN=$(strip_missing_ca "$DATABASE_URL_CLEAN" "DATABASE_URL")
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   # Migracije idu ADMIN konekcijom (vlasnik šeme). Ako DATABASE_ADMIN_URL nije zadan,
@@ -58,7 +60,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   # DATABASE_ADMIN_URL je OBAVEZAN — inače `gradix_app` nema CREATE na public šemi.
   ADMIN_URL="${DATABASE_ADMIN_URL:-$DATABASE_URL}"
   ADMIN_URL_CLEAN=$(sanitize_pg_url "$ADMIN_URL")
-  check_ca "$ADMIN_URL_CLEAN" "DATABASE_ADMIN_URL"
+  ADMIN_URL_CLEAN=$(strip_missing_ca "$ADMIN_URL_CLEAN" "DATABASE_ADMIN_URL")
 
   echo "→ provjera baze i primjena migracija"
 

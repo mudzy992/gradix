@@ -58,7 +58,11 @@ build ponavlja sa starom greškom.
 | `TZ` | `Europe/Sarajevo` | Datumi u logovima i izvještajima. |
 | `PGSSLMODE` | `verify-full` | Ako je u `DATABASE_URL` već `sslmode=verify-full` + `sslrootcert`, ovo je suvišno ali ne smeta. |
 | `POSTGRES_CA_FILE` | `/data/coolify/ssl/coolify-ca.crt` | CA za TLS prema bazi. Compose ga montira na `/etc/ssl/certs/coolify-ca.crt`; ako je na drugom mjestu na hostu, promijeni ovdje. |
-| `REDIS_CA_FILE` | `/data/coolify/ssl/redis-core/redis-ca.crt` | CA za Redis. Montira se na `/run/secrets/redis-ca.crt`. Ne koristi se u Fazi 1, ali mount mora postojati ako je putanja zadana. |
+| `POSTGRES_CA_MOUNT_CREATE_PATH` | `false` | `false` = deploy padne JASNO ako CA na hostu ne postoji. `true` = Docker tiho napravi prazan direktorij (izbjegni: `pg` onda pada sa ENOENT na `ca`). |
+
+> **Redis CA se NE montira u Fazi 1.** Nijedan dio koda ne čita `REDIS_*`, a mount je
+> RUŠIO deploy kad tog fajla nema (`bind source path does not exist`). Vraća se u istom
+> commitu u kojem Redis zaista uđe u upotrebu.
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo ako pokrećeš demo seed ručno (vidi §5). Ne ostavljati trajno. |
 
 ## 3. Ne treba u Fazi 1
@@ -77,18 +81,19 @@ networks:
   default:            # Coolifyjev proxy (mora ostati da bi domen radio)
   db_net:
     external: true    # NE kreira se ovdje
-  redis_net:
-    external: true
 ```
+
+`redis_net` **namjerno nije** priključen u Fazi 1 — Redis se ne koristi, a svaka dodatna
+eksterna mreža je još jedan uslov koji mora biti ispunjen na hostu. Dodaje se zajedno sa
+Redisom.
 
 Ako mreža ne postoji, deploy pada sa `network db_net declared as external, but could not
 be found`. Provjera na serveru:
 
 ```sh
-docker network ls | grep -E "db_net|redis_net"
+docker network ls | grep db_net
 # ako fali:
 docker network create db_net 2>/dev/null || true
-docker network create redis_net 2>/dev/null || true
 ```
 
 Coolify **ne** priključuje resource na te mreže automatski — zato su navedene u compose-u.
