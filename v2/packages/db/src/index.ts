@@ -7,4 +7,4 @@
  * idu kroz `withCompany` + parametrizovani SQL, što je isti mehanizam koji bi
  * Prisma koristila (`SET LOCAL app.company_id` u transakciji).
  */
-export { companyId, setTenant, withCompany, type CompanyId } from "./tenant.js";
+export { companyId, setTenant, withCompany, type CompanyId } from "./tenant";

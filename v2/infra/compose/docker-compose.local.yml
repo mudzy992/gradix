@@ -1,0 +1,60 @@
+# Lokalno okruženje jednom komandom: `docker compose -f infra/compose/docker-compose.local.yml up`
+#
+# Namjerno NEMA web kontejnera: razvoj ide kroz `pnpm dev` (hot reload), a ovdje su samo
+# zavisnosti. Produkcijska topologija (Coolify) je druga stvar i ne miješa se s ovom.
+#
+# Portovi su vezani na 127.0.0.1: baza i MinIO ne smiju biti dostupni s mreže.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gradix
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Role i prava se primjenjuju pri prvom podizanju (idempotentno).
+      - ../../packages/db/bootstrap/roles.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gradix"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      # Lokalne razvojne vrijednosti, ne tajne. Produkcija ih unosi kroz Coolify.
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Redis je isključen dok se ne dokaže da donosi vrijednost (ADR o pozadinskim poslovima).
+  # Profil `cache` ga uključuje bez mijenjanja defaultnog iskustva.
+  redis:
+    image: redis:7-alpine
+    profiles: ["cache"]
+    command: ["redis-server", "--requirepass", "redisdev", "--port", "6379"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redisdev", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
+  miniodata:

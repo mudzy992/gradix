@@ -1,0 +1,84 @@
+name: CI
+
+# Brzina je uslov: cilj je pregled svake promjene ispod 10 minuta.
+# Teški testovi (mobilni E2E na emulatoru) idu u noćni pokret kad budu postojali.
+on:
+  push:
+    branches: [main, "arena/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+  DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+  AUTH_SECRET: ci-placeholder-secret-min-32-characters
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: v2
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: v2
+        run: pnpm typecheck
+
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+
+      - name: Testovi (jedinični + integracijski na pravoj bazi)
+        working-directory: v2
+        run: pnpm test
+
+      - name: Prisma generator (dokaz da radi u CI-ju)
+        working-directory: v2/packages/db
+        # ADR 0002: lokalno je generator blokiran, u CI-ju mora raditi. Ako ovo padne,
+        # znamo da SQL-first nije privremen nego trajan i ADR se mijenja.
+        run: pnpm exec prisma generate
+
+      - name: Provjera da migracija radi na praznoj bazi
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "DROP DATABASE IF EXISTS gradix_check" -c "CREATE DATABASE gradix_check"
+          DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL%/*}/gradix_check" ./infra/scripts/db-apply.sh

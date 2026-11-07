@@ -1,0 +1,36 @@
+{
+  "name": "@gradix/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@gradix/db": "workspace:*",
+    "@gradix/domain": "workspace:*",
+    "@tailwindcss/postcss": "4.3.5",
+    "argon2": "0.45.2",
+    "next": "16.0.1",
+    "pg": "8.16.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.5",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@gradix/config": "workspace:*",
+    "@types/node": "22.20.0",
+    "@types/pg": "8.15.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}

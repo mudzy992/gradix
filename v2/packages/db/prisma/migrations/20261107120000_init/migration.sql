@@ -3,6 +3,13 @@
 -- (Prisma generator/migrate engine se skida sa tog hosta — vidi ADR 0002).
 -- Šema odgovara packages/db/prisma/schema.prisma.
 
+-- Evidencija primijenjenih migracija. Bez Prisma `migrate` (ADR 0002) ovo je jedini trag
+-- koji `/api/ready` može pročitati u kontejneru.
+CREATE TABLE schema_migrations (
+  name       TEXT PRIMARY KEY,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ID-evi su cuid() iz aplikacije, pa baza ne traži pgcrypto/gen_random_uuid.
 
 CREATE TYPE "Locale" AS ENUM ('bs', 'en');
@@ -128,3 +135,5 @@ CREATE POLICY tenant_isolation ON machines
 CREATE POLICY tenant_isolation ON audit_events
   USING (company_id = current_setting('app.company_id', true))
   WITH CHECK (company_id = current_setting('app.company_id', true));
+
+INSERT INTO schema_migrations (name) VALUES ('20261107120000_init') ON CONFLICT DO NOTHING;

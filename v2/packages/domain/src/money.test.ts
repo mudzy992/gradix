@@ -10,7 +10,7 @@ import {
   sum,
   toAmountString,
   zero,
-} from "./money.js";
+} from "./money";
 
 describe("money", () => {
   it("parsira tipične iznose iz niskogradnje", () => {

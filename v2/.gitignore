@@ -30,3 +30,6 @@ pgdata/
 
 # generisano (Prisma klijent, OpenAPI)
 packages/**/src/generated/
+
+# mobilni web izvoz i Turborepo keš
+apps/mobile/dist-web/

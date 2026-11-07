@@ -10,26 +10,28 @@ ne broj testova ni količina dokumentacije. Sve odluke i granice opsega su u `MA
 ## Komande
 
 ```bash
-pnpm install          # zavisnosti (pnpm 9, Node 22+)
-pnpm test             # vitest u svim paketima (db testovi traže DATABASE_URL)
-pnpm lint             # eslint
-pnpm typecheck        # tsc --noEmit u svim paketima
-pnpm build            # turbo build
+pnpm install                  # zavisnosti (pnpm 9, Node 22+)
+./infra/scripts/dev-up.sh     # baza + migracije + demo podaci (jednom komandom)
+pnpm --filter @gradix/web dev # web + /api na 3000
+pnpm test                     # vitest u svim paketima (db/web testovi traže DATABASE_URL)
+pnpm lint                     # eslint
+pnpm typecheck                # tsc --noEmit u svim paketima
+pnpm build                    # turbo build
 ```
 
-Baza (lokalno): `psql -f packages/db/prisma/migrations/<migracija>/migration.sql`, pa
-`psql -f packages/db/bootstrap/roles.sql`. Aplikacija se konektuje kao `gradix_app`, **nikad** kao
-vlasnik šeme ni superuser (ADR 0003).
+Baza: `infra/scripts/db-apply.sh` primjenjuje migracije iz `packages/db/prisma/migrations/` i
+bootstrap rola. Aplikacija se konektuje kao `gradix_app`, **nikad** kao vlasnik šeme ni superuser
+(ADR 0003). Demo tok i prijavne podatke vidi `docs/DEMO-G1.md`.
 
 ## Struktura
 
 ```
-apps/web        Next.js (App Router) — web panel i /api            [korak 6]
-apps/mobile     Expo — offline-first teren                          [korak 7]
+apps/web        Next.js 16 (App Router) — web panel i /api          [R0 ✅]
+apps/mobile     Expo 58 — offline-first teren, jedan ekran           [R0 ✅]
 apps/worker     pozadinski poslovi                                  [kad bude 2. posao]
-packages/db     migracije, tenant scope (withCompany), RLS
-packages/domain čista poslovna logika (Money, datumi, pravila)
-packages/contracts zod + OpenAPI generisan iz koda                  [korak 8]
+packages/db     migracije, tenant scope (withCompany), RLS          [R0 ✅]
+packages/domain čista poslovna logika (Money, sesije, sync, datumi)  [R0 ✅]
+packages/contracts zod + OpenAPI generisan iz koda                  [DUG: nije urađeno]
 packages/ui     dizajn sistem i komponente                          [Faza 2]
 packages/config tsconfig, eslint
 infra/          Docker, Coolify, skripte, redis ACL
@@ -55,5 +57,6 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 
 ## Dublje
 
-`docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (ADR 0001 G0 odluke, 0002 Prisma blokada,
-0003 tenant/RLS, 0004 novac) · `docs/PRODUCT/00-razumijevanje-i-pitanja.md` · `MASTER_BRIEF.md`.
+`docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (0001 G0 odluke, 0002 Prisma blokada,
+0003 tenant/RLS, 0004 novac, 0005 sesije, 0006 MinIO bucket) · `docs/DEMO-G1.md` (kako pokazati)
+· `docs/GH-SECRETS.md` (koje varijable trebaju) · `MASTER_BRIEF.md`.

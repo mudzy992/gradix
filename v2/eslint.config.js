@@ -4,27 +4,45 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/.next/**", "**/node_modules/**", "**/coverage/**", "**/generated/**"],
+    ignores: [
+      "**/dist/**",
+      "**/dist-web/**",
+      "**/.next/**",
+      "**/node_modules/**",
+      "**/coverage/**",
+      "**/generated/**",
+      "**/.turbo/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // TypeScript sam provjerava nedefinisane identitete; `no-undef` daje lažne pozitive na `console`.
+    files: ["**/*.ts", "**/*.tsx"],
     rules: {
-      // A3.3.7 / A3.3.10: nema console.log u aplikativnom kodu (logger ili ništa).
+      "no-undef": "off",
       "no-console": ["error", { allow: ["error", "warn"] }],
-      // Ne koristi se `any` da bi se zaobišao strict; ako baš treba, `unknown` + provjera.
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
-      ]
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.spec.ts", "**/test/**/*.ts", "**/scripts/**/*.ts"],
+    files: ["**/*.test.ts", "**/test/**/*.ts", "**/scripts/**/*.ts", "**/scripts/**/*.mjs", "**/*.mjs"],
     rules: {
       "no-console": "off",
+      "no-undef": "off",
+    },
+  },
+  {
+    // Metro/PostCSS konfiguracije su CommonJS po konvenciji Expo-a i Next-a.
+    files: ["**/metro.config.js", "**/*.config.mjs", "**/*.config.js"],
+    rules: {
+      "no-undef": "off",
+      "@typescript-eslint/no-require-imports": "off",
     },
   }
 );

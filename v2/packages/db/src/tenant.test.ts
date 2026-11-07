@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { companyId, withCompany } from "./tenant.js";
+import { companyId, withCompany } from "./tenant";
 
 /**
  * RLS spike (Faza 1, korak 5). Testira PONAŠANJE BAZE, ne aplikacije:
