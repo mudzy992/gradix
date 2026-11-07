@@ -65,9 +65,15 @@ export async function login(
   const refreshToken = newRefreshToken();
   const sessionId = await withCompany(pool, membership.company_id as CompanyId, async (client) => {
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at)
-       VALUES (gen_random_uuid()::text, $1, $2, $3, $4) RETURNING id`,
-      [user.id, membership.company_id, hashRefreshToken(refreshToken), refreshExpiry(now)],
+      `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at, pwd_change_required)
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5) RETURNING id`,
+      [
+        user.id,
+        membership.company_id,
+        hashRefreshToken(refreshToken),
+        refreshExpiry(now),
+        user.must_change_password,
+      ],
     );
     return inserted.rows[0]?.id ?? "";
   });
@@ -115,8 +121,9 @@ export async function rotateRefresh(token: string, now = new Date()): Promise<Re
     );
     if (claimed.rowCount === 0) return false;
     await client.query(
-      `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at)
-       VALUES (gen_random_uuid()::text, $1, $2, $3, $4)`,
+      `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at, pwd_change_required)
+       SELECT gen_random_uuid()::text, $1, $2, $3, $4, u.must_change_password
+         FROM users u WHERE u.id = $1`,
       [session!.user_id, session!.company_id, hashRefreshToken(nextToken), refreshExpiry(now)],
     );
     return true;

@@ -22,6 +22,10 @@ export const ERROR_CODES = [
   "SYNC_LOCAL_ID_INVALID",
   "SYNC_CLIENT_AT_INVALID",
   "SYNC_SINCE_INVALID",
+  "AUTH_PASSWORD_WEAK",
+  "AUTH_PASSWORD_WRONG",
+  "LINK_INVALID",
+  "USERS_TARGET_PROTECTED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -44,6 +48,10 @@ const STATUS: Record<ErrorCode, number> = {
   SYNC_LOCAL_ID_INVALID: 400,
   SYNC_CLIENT_AT_INVALID: 400,
   SYNC_SINCE_INVALID: 400,
+  AUTH_PASSWORD_WEAK: 400,
+  AUTH_PASSWORD_WRONG: 400,
+  LINK_INVALID: 410,
+  USERS_TARGET_PROTECTED: 403,
 };
 
 export function ok<T>(data: T, meta?: Record<string, unknown>): NextResponse {

@@ -33,7 +33,9 @@ export default function LoginPage() {
         });
         return;
       }
-      router.replace("/pregled");
+      // Obavezna promjena lozinke ide prije bilo čega drugog.
+      const mustChange = (body as { data?: { mustChangePassword?: boolean } }).data?.mustChangePassword;
+      router.replace(mustChange ? "/lozinka/promjena" : "/pregled");
       router.refresh();
     } catch {
       setState({ kind: "error", message: "Nema veze sa serverom. Provjerite mrežu." });
@@ -42,7 +44,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm" style={{ padding: "var(--card-pad)" }}>
         <h1 className="text-xl font-semibold text-[var(--color-text)]">Gradix</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">Prijava u sistem</p>
 
@@ -59,7 +61,8 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-base"
+              className="mt-1 w-full rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-base"
+              style={{ minHeight: "var(--control-height)" }}
             />
           </div>
 
@@ -75,7 +78,8 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-2 text-base"
+              className="mt-1 w-full rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-base"
+              style={{ minHeight: "var(--control-height)" }}
             />
           </div>
 
@@ -88,11 +92,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={state.kind === "busy"}
-            className="w-full rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-base font-medium text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
+            className="gx-primary-full rounded-[10px] bg-[var(--color-brand)] px-4 text-base font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
+            style={{ minHeight: "var(--control-height)" }}
           >
             {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
           </button>
         </form>
+        <p className="mt-4 text-[13px] text-[var(--color-text-muted)]">
+          Zaboravljena lozinka? Obratite se administratoru firme — on izdaje jednokratni link.
+        </p>
       </div>
     </main>
   );

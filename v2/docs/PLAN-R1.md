@@ -52,6 +52,55 @@ Sva stanja su obavezna (učitavanje / prazno / greška / uspjeh), tastatura kroz
 - **Audit:** svaka izmjena ostavlja tačno jedan zapis; filteri vraćaju isto što i direktan upit.
 - **E2E glavnog toka** — vidi odluku ispod (Playwright nije u projektu).
 
+
+---
+
+## Kako RLS radi prije prijave (invitations, password_resets, login_attempts)
+
+Prijava je jedini tok u kojem se čita **prije nego znamo firmu**, pa `withCompany` ne može
+posredovati. Tri tabele se zato rješavaju na tri različita načina — i nijedan ne zaobilazi
+izolaciju:
+
+1. **`invitations` — tenant tabela, čita se dvaput.**
+   - Admin izdaje pozivnicu: ima sesiju, dakle firmu → `withCompany` + `SET LOCAL app.company_id`
+     kao i sve ostalo. RLS politika je `company_id = current_setting('app.company_id')`.
+   - Primalac otvara `/lozinka/postavi?token=…`: firme još nema. Tada se **neznačajni** podaci
+     (email, role, opseg, rok) čitaju kroz **uskopojasnu `FOR SELECT` politiku** koja pušta red
+     samo kad je `token_hash` jednak vrijednosti koju je server stavio u
+     `app.invite_lookup_token` (isti obrazac kao `auth_lookup_session` iz migracije
+     `20261107160000`). Token je 32 slučajna bajta — pogađanje je nemoguće, a politika ne
+     dozvoljava čitanje „svega“, samo red koji odgovara proslijeđenom ključu. Upis (postavljanje
+     lozinke, `used_at`) ide posebnom `FOR UPDATE` politikom vezanom na isti ključ, u jednoj
+     transakciji sa `UPDATE … WHERE used_at IS NULL` (atomski claim, kao kod refresh tokena).
+
+2. **`password_resets` — potpuno isti obrazac, po `user_id` iz sesije.** Čita admin (kroz firmu)
+   i primalac (kroz `app.reset_lookup_token`). Nema putanje koja vraća listu resetova.
+
+3. **`login_attempts` — nije tenant tabela i zato RLS ne bi imao smisla.** Čuva se **bez
+   čitljivog identiteta**: `email_hash` (SHA-256 sa `AUTH_SECRET` kao pepperom, ne čist hash —
+   bez tajne se ne može pogoditi email iz baze) i `ip_hash`. Nema `company_id` jer se firma u tom
+   trenutku ne zna i ne smije se saznati. Tabela nema RLS politiku „po firmi“ nego **samo
+   zapisivanje i brojanje** kroz dvije funkcije (`login_attempt_record`, `login_attempt_count`);
+   aplikacijska rola nema direktan `SELECT` na tabelu. Tako rate limit ne postaje oracle koji
+   otkriva postoji li nalog.
+
+**Zajedničko pravilo:** nijedna nova tabela ne dobija „pročitaj sve“ politiku. Svaka ima ili
+tenant politiku (`company_id`), ili politiku vezanu na **tačan ključ pretrage** koji postavlja
+server u `SET LOCAL` unutar transakcije, ili nema `SELECT` pravo uopšte. Test izolacije se
+generiše iz liste tenant tabela, pa nova tabela ne može ostati nepokrivena.
+
+## Kako se čuvaju tokeni (i zašto ih nema u logu ni u auditu)
+
+| Pravilo | Kako |
+|---|---|
+| U bazi samo hash | `token_hash = sha256(token)`; sirovi token postoji samo u odgovoru onome ko ga je izdao i nikad se ne upisuje |
+| Jednokratnost | `used_at` + `UPDATE … WHERE used_at IS NULL RETURNING id` u transakciji; drugi pokušaj dobija isti kod `INVITE_INVALID` (bez razlike istekao/iskorišten/izmišljen) |
+| Rok | pozivnica i reset **48 h**; istek se provjerava u istom `UPDATE`-u, ne u aplikaciji |
+| Nikad u logu | token se ne pojavljuje u porukama greške, u `console.*`, ni u `pino` poljima; jedini izlaz je tijelo odgovora kreiranja |
+| Nikad u auditu | `audit_events` za ove akcije nosi `action` (`invitation.created`, `password.reset_issued`, `password.changed`), `entity_id` (id zapisa, ne token) i `metadata` **bez** tokena. Test to tvrdi: serijalizovan audit zapis ne sadrži vrijednost tokena |
+| Opoziv | novi token ne opoziva stari automatski; stari sam ističe. Deaktivacija korisnika gasi sve sesije i sve važeće pozivnice te osobe |
+| U URL-u | token je u **query** dijelu, pa ga Next.js ne loguje po defaultu; `Referer` se ne šalje na treće strane jer nema vanjskih resursa. Nakon uspjeha URL se zamjenjuje (`router.replace`) da token ne ostane u istoriji |
+
 ## Procjena i zavisnosti
 
 | | R1a | R1b |

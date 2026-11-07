@@ -25,6 +25,13 @@ export type AccessClaims = {
   sub: string;
   sid: string;
   companyId: string;
+  /**
+   * Sesija izdata dok je nalog morao promijeniti lozinku. Takva sesija smije samo
+   * `POST /api/auth/change-password` i `POST /api/auth/logout-all`; sve ostalo vraća
+   * `AUTH_PASSWORD_CHANGE_REQUIRED`. Provjerava se i u bazi (`sessions.pwd_change_required`),
+   * pa promjena djeluje odmah, a ne tek kad istekne token.
+   */
+  pwd?: boolean;
   exp: number;
   iat: number;
 };

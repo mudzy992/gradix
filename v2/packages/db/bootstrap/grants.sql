@@ -28,6 +28,13 @@ BEGIN
       GRANT USAGE, SELECT ON SEQUENCES TO gradix_app;
   END IF;
 
+  -- R1a: rate limit NAMJERNO nema direktan pristup tabeli. Aplikacija smije samo kroz
+  -- funkcije (record/count/clear). Bez ovog REVOKE-a bi `GRANT ... ON ALL TABLES` iznad
+  -- dao SELECT na tabeli bez ijedne RLS politike, pa bi „fail-closed“ bio samo na papiru.
+  IF has_table_privilege('gradix_app', 'login_attempts', 'SELECT') THEN
+    REVOKE ALL ON login_attempts FROM gradix_app;
+  END IF;
+
   -- Uske lookup funkcije za prijavu i refresh. Aplikacija ih mora moći zvati.
   -- GRANT samo ako rola još NEMA pravo: kad je vlasnik funkcije, pravo već ima, a suvišan
   -- GRANT bi ispisao "no privileges were granted" upozorenje koje zbunjuje u logu.
@@ -44,6 +51,17 @@ BEGIN
        AND NOT has_function_privilege('gradix_app', p.oid, 'EXECUTE')
   ) THEN
     GRANT EXECUTE ON FUNCTION auth_session_by_hash(TEXT) TO gradix_app;
+  END IF;
+
+  -- R1a: pozivnice, reset i rate limit.
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE p.proname = 'login_attempt_record' AND n.nspname = 'public'
+       AND NOT has_function_privilege('gradix_app', p.oid, 'EXECUTE')
+  ) THEN
+    GRANT EXECUTE ON FUNCTION login_attempt_record(TEXT, TEXT, INTEGER) TO gradix_app;
+    GRANT EXECUTE ON FUNCTION login_attempt_count(TEXT, INTEGER) TO gradix_app;
+    GRANT EXECUTE ON FUNCTION login_attempt_clear(TEXT) TO gradix_app;
   END IF;
 END
 $$;

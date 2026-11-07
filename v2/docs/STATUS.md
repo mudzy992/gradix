@@ -1,7 +1,7 @@
 # STATUS — Gradix v2
 
-**Faza:** 1 (postavljanje) · **Datum:** 2026-11-07 · **Kapija:** mini-kapija 2 (koraci 6–7) + Coolify isporuka
-**Sljedeće:** vlasnik diže resource po `docs/COOLIFY.md`; bez njegove riječi ne idem na G1 ni Fazu 2.
+**Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, radi se **R1a (pristup)**
+**Sljedeće:** demo R1a (`docs/design/demo-r1a/`) → vlasnikova riječ → R1b (matrica + audit).
 
 ## Gotovo
 
@@ -14,12 +14,13 @@
 | 5 | Tenant scope + RLS spike | ✅ 8/8 na pravoj bazi |
 | 6 | Prijava, zaštićena stranica, `/api/me`, jedan zapis | ✅ 8/8 integracijskih testova |
 | 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; **native (android) bundle se builda** — `expo export -p android` |
+| R1a | Pristup: pozivnice, reset, obavezna promjena, deaktivacija, rate limit u bazi | ✅ 9/9 integracijskih testova, 22 snimka svih stanja |
 | 8 | `contracts` (OpenAPI iz koda) | ❌ nije urađeno — vidi „ne radi“ |
 | 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 
-**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**49** testova: 26 domain, 10 db, 8 web, 5 mobile), `pnpm check-expo` (verzije usklađene sa SDK 58), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
+**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**62** testa: 26 domain, 10 db, 17 web, 9 mobile), `pnpm check-expo` (verzije usklađene sa SDK 58), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
 
 **Mobilni native bundle:** `expo export -p android` prolazi (`entry-*.hbc`, 2,6 MB) — ovim je otkriven i popravljen bug `react-native/setup-env` (RN 0.86 → 0.88.1). `expo export -p web` prolazi i sa neusklađenim verzijama, zato je u CI dodata provjera `pnpm check-expo`.
 

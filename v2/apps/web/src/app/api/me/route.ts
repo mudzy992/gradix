@@ -4,16 +4,17 @@
  */
 import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
-import { fail, internal, ok } from "@/server/api";
+import { internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
-import { authenticate } from "@/server/tenant-context";
+import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const auth = await authenticate(request);
-    if (!auth.ok) return fail(auth.code, "Niste prijavljeni.");
+    const guardResult = await guard(request);
+    if (!guardResult.ok) return guardResult.response;
+    const auth = { ok: true as const, ctx: guardResult.ctx };
 
     const data = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
       const profile = await client.query<{ email: string; first_name: string; last_name: string; must_change_password: boolean }>(

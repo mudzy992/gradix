@@ -9,14 +9,15 @@ import { withCompany } from "@gradix/db";
 import { SYNC_PULL_LIMIT, isSinceValid, nextWatermark } from "@gradix/domain";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
-import { authenticate } from "@/server/tenant-context";
+import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const auth = await authenticate(request);
-    if (!auth.ok) return fail(auth.code, "Niste prijavljeni.");
+    const guardResult = await guard(request);
+    if (!guardResult.ok) return guardResult.response;
+    const ctx = guardResult.ctx;
 
     const now = new Date();
     const sinceParam = request.nextUrl.searchParams.get("since");
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       return fail("SYNC_SINCE_INVALID", "Vrijeme zadnjeg preuzimanja nije ispravno.");
     }
 
-    const rows = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
+    const rows = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const result = await client.query<{
         id: string;
         local_id: string;
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           WHERE company_id = $1 AND server_at >= $2
           ORDER BY server_at ASC, id ASC
           LIMIT $3`,
-        [auth.ctx.companyId, since, SYNC_PULL_LIMIT],
+        [ctx.companyId, since, SYNC_PULL_LIMIT],
       );
       return result.rows;
     });

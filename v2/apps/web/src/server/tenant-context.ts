@@ -3,6 +3,7 @@
  *  - je li korisnik prijavljen (access JWT)
  *  - je li sesija još u bazi i nije opozvana (odjava i deaktivacija moraju djelovati odmah)
  *  - je li firma aktivna i je li korisnik njen član
+ *  - je li nalog deaktiviran (R1a: deaktivacija mora djelovati odmah, ne za 15 minuta)
  *
  * RLS radi tek kad `withCompany` postavi `app.company_id` — zato se sve provjere
  * rade prije poslovnog upita, ali firma nikad ne dolazi iz klijenta (samo iz sesije).
@@ -29,6 +30,21 @@ export function readAccessToken(request: NextRequest): string | null {
   return request.cookies.get(ACCESS_COOKIE)?.value ?? null;
 }
 
+/**
+ * Rute koje smije koristiti sesija izdata dok je nalog morao promijeniti lozinku.
+ * Sve ostalo vraća `AUTH_PASSWORD_CHANGE_REQUIRED` (403) — bez toga bi korisnik sa
+ * privremenom lozinkom mogao raditi sve osim što mu UI to ne pokazuje.
+ */
+const PASSWORD_CHANGE_ALLOWED = new Set(["/api/auth/change-password", "/api/auth/logout-all", "/api/me"]);
+
+export function requiresPasswordChange(
+  ctx: AuthContext,
+  pathname: string,
+): "AUTH_PASSWORD_CHANGE_REQUIRED" | null {
+  if (!ctx.mustChangePassword) return null;
+  return PASSWORD_CHANGE_ALLOWED.has(pathname) ? null : "AUTH_PASSWORD_CHANGE_REQUIRED";
+}
+
 export async function authenticate(request: NextRequest, now = new Date()): Promise<AuthResult> {
   const token = readAccessToken(request);
   if (!token) return { ok: false, code: "UNAUTHENTICATED" };
@@ -36,15 +52,22 @@ export async function authenticate(request: NextRequest, now = new Date()): Prom
   if (!claims) return { ok: false, code: "UNAUTHENTICATED" };
 
   const rows = await withCompany(await getVerifiedPool(), claims.companyId as CompanyId, async (client) => {
-    const session = await client.query<{ expires_at: Date; revoked_at: Date | null }>(
-      "SELECT expires_at, revoked_at FROM sessions WHERE id = $1 AND user_id = $2",
+    const session = await client.query<{
+      expires_at: Date;
+      revoked_at: Date | null;
+      pwd_change_required: boolean;
+    }>(
+      "SELECT expires_at, revoked_at, pwd_change_required FROM sessions WHERE id = $1 AND user_id = $2",
       [claims.sid, claims.sub],
     );
     const first = session.rows[0];
     if (!first) return null;
     if (!isSessionUsable({ expiresAt: first.expires_at, revokedAt: first.revoked_at }, now)) return null;
 
-    const membership = await client.query<{ roles: string[]; must_change_password: boolean }>(
+    const membership = await client.query<{
+      roles: string[];
+      must_change_password: boolean;
+    }>(
       `SELECT m.roles::text[] AS roles, u.must_change_password
          FROM memberships m
          JOIN users u ON u.id = m.user_id
@@ -52,7 +75,9 @@ export async function authenticate(request: NextRequest, now = new Date()): Prom
         WHERE m.user_id = $1 AND m.company_id = $2 AND m.is_active AND u.is_active AND c.is_active`,
       [claims.sub, claims.companyId],
     );
-    return membership.rows[0] ?? null;
+    const row = membership.rows[0];
+    if (!row) return null;
+    return { ...row, pwd_change_required: first.pwd_change_required };
   });
 
   if (!rows) return { ok: false, code: "UNAUTHENTICATED" };
@@ -63,7 +88,7 @@ export async function authenticate(request: NextRequest, now = new Date()): Prom
       sessionId: claims.sid,
       companyId: claims.companyId as CompanyId,
       roles: rows.roles,
-      mustChangePassword: rows.must_change_password,
+      mustChangePassword: rows.must_change_password || rows.pwd_change_required,
     },
   };
 }

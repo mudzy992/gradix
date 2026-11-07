@@ -12,7 +12,7 @@ import { validatePushBatch, type SyncPushItem } from "@gradix/domain";
 import { z } from "zod";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
-import { authenticate } from "@/server/tenant-context";
+import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +30,9 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const auth = await authenticate(request);
-    if (!auth.ok) return fail(auth.code, "Niste prijavljeni.");
+    const guardResult = await guard(request);
+    if (!guardResult.ok) return guardResult.response;
+    const ctx = guardResult.ctx;
 
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return fail("VALIDATION_FAILED", "Neispravan oblik zahtjeva.");
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return fail(validation.code, messages[validation.code] ?? "Neispravan batch.");
     }
 
-    const results = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
+    const results = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const out: { localId: string; serverId: string; duplicate: boolean }[] = [];
       for (const item of items) {
         // ON CONFLICT DO NOTHING + ponovni SELECT: ponovljeni push vraća ISTI serverId.
@@ -65,8 +66,8 @@ export async function POST(request: NextRequest): Promise<Response> {
            ON CONFLICT (company_id, user_id, device_id, local_id) DO NOTHING
            RETURNING id`,
           [
-            auth.ctx.companyId,
-            auth.ctx.userId,
+            ctx.companyId,
+            ctx.userId,
             parsed.data.deviceId,
             item.localId,
             item.entityType,
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           (
             await client.query<{ id: string }>(
               "SELECT id FROM sync_items WHERE company_id = $1 AND user_id = $2 AND device_id = $3 AND local_id = $4",
-              [auth.ctx.companyId, auth.ctx.userId, parsed.data.deviceId, item.localId],
+              [ctx.companyId, ctx.userId, parsed.data.deviceId, item.localId],
             )
           ).rows[0];
         out.push({

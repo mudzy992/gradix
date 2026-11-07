@@ -54,6 +54,13 @@ export default async function PregledPage() {
             {data.profile?.first_name} {data.profile?.last_name} · {data.company?.currency}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/ured/korisnici"
+            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
+          >
+            Korisnici
+          </a>
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"
@@ -62,6 +69,7 @@ export default async function PregledPage() {
             Odjavi se
           </button>
         </form>
+        </div>
       </header>
 
       <section aria-labelledby="machines-heading" className="mt-8">

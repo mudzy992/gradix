@@ -1,0 +1,75 @@
+/*
+  Dvije gustine nad istom paletom i tipografijom (docs/design/ODLUKA-R1A.md).
+  Gustina je atribut na <html>: `gusto` (ured, podrazumijevano) ili `udobno` (teren).
+  Mijenja se bez izmjene komponenti — komponente koriste iste klase, ritam dolazi odavde.
+*/
+:root,
+[data-density="gusto"] {
+  --row-height: 40px;
+  --cell-pad-y: 8px;
+  --cell-pad-x: 12px;
+  --control-height: 32px;
+  --section-gap: 16px;
+  --body-size: 15px;
+  --card-pad: 20px;
+}
+
+[data-density="udobno"] {
+  --row-height: 56px;
+  --cell-pad-y: 16px;
+  --cell-pad-x: 16px;
+  --control-height: 48px;
+  --section-gap: 24px;
+  --body-size: 17px;
+  --card-pad: 24px;
+}
+
+/* Prelivanje u kartice na uskom ekranu (raspored iz smjera B, smjer A na širokom). */
+@media (max-width: 639px) {
+  .gx-table thead {
+    display: none;
+  }
+  .gx-table,
+  .gx-table tbody,
+  .gx-table tr,
+  .gx-table td {
+    display: block;
+    width: 100%;
+  }
+  .gx-table tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    margin-bottom: calc(var(--section-gap) / 2);
+    padding: var(--card-pad);
+    background: var(--color-surface);
+  }
+  .gx-table td {
+    border: 0;
+    padding: 4px 0;
+  }
+  .gx-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+  }
+  /* Primarno dugme je pune širine SAMO ispod 640 px. */
+  .gx-primary-full {
+    width: 100%;
+  }
+}
+
+@media (min-width: 640px) {
+  .gx-primary-full {
+    width: auto;
+  }
+  .gx-table tr {
+    min-height: var(--row-height);
+  }
+  .gx-table td {
+    padding: var(--cell-pad-y) var(--cell-pad-x);
+  }
+}
