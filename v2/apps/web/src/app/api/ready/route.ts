@@ -33,19 +33,33 @@ async function probe(sql: string): Promise<Probe> {
 export async function GET(): Promise<Response> {
   const postgres = await probe("SELECT 1");
   let applied = 0;
+  let dbRole: { role: string; is_super: boolean; bypass_rls: boolean } | null = null;
   if (postgres.status === "ok") {
     try {
       const result = await getPool().query<{ count: string }>(
         "SELECT count(*)::text AS count FROM schema_migrations",
       );
       applied = Number(result.rows[0]?.count ?? 0);
+      const role = await getPool().query<{ role: string; is_super: boolean; bypass_rls: boolean }>(
+        "SELECT current_user AS role, r.rolsuper AS is_super, r.rolbypassrls AS bypass_rls " +
+          "FROM pg_roles r WHERE r.rolname = current_user",
+      );
+      dbRole = role.rows[0] ?? null;
     } catch {
       applied = 0;
     }
   }
   const status = postgres.status === "ok" ? "ok" : "error";
   return Response.json(
-    { status, checks: { postgres, migrations: { applied } } },
+    {
+      status,
+      checks: {
+        postgres,
+        migrations: { applied },
+        // Dijagnostika: ako je is_super ili bypass_rls true, RLS ne štiti (ADR 0003).
+        databaseRole: dbRole,
+      },
+    },
     { status: status === "ok" ? 200 : 503 },
   );
 }

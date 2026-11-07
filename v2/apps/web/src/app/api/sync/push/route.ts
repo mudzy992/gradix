@@ -11,7 +11,7 @@ import { withCompany } from "@gradix/db";
 import { validatePushBatch, type SyncPushItem } from "@gradix/domain";
 import { z } from "zod";
 import { fail, internal, ok } from "@/server/api";
-import { getPool } from "@/server/db";
+import { getVerifiedPool } from "@/server/db";
 import { authenticate } from "@/server/tenant-context";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return fail(validation.code, messages[validation.code] ?? "Neispravan batch.");
     }
 
-    const results = await withCompany(getPool(), auth.ctx.companyId, async (client) => {
+    const results = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
       const out: { localId: string; serverId: string; duplicate: boolean }[] = [];
       for (const item of items) {
         // ON CONFLICT DO NOTHING + ponovni SELECT: ponovljeni push vraća ISTI serverId.

@@ -16,12 +16,15 @@ node -e '
 '
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-  # Migracije idu ADMIN konekcijom (vlasnik šeme). Aplikacijska rola nije vlasnik
-  # tabela — inače RLS ne štiti (ADR 0003).
-  : "${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL je potreban kad je RUN_MIGRATIONS=true}"
-  echo "→ provjera baze i primjena migracija"
-  psql "$DATABASE_ADMIN_URL" -Atc "SELECT 1" >/dev/null
-  sh ./db/apply.sh "$DATABASE_ADMIN_URL"
+  # Migracije idu ADMIN konekcijom (vlasnik šeme). Ako DATABASE_ADMIN_URL nije zadan,
+  # pretpostavlja se da je aplikacijska rola ujedno vlasnik šeme (Coolify setup sa
+  # jednim korisnikom). U modelu A (dvije role) se admin URL MORA zadati.
+  ADMIN_URL="${DATABASE_ADMIN_URL:-$DATABASE_URL}"
+  echo "→ provjera baze i primjena migracija (rola: ${ADMIN_URL%%:*}...)"
+  # Ukloni query parametre koje psql ne razumije (?schema=public iz Prisma URL-a).
+  ADMIN_URL_CLEAN="${ADMIN_URL%%\?*}"
+  psql "$ADMIN_URL_CLEAN" -Atc "SELECT 1" >/dev/null
+  sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
 
 exec node apps/web/server.js

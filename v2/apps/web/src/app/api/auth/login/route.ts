@@ -19,8 +19,10 @@ const bodySchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-const WINDOW_MS = 60_000;
-const MAX_ATTEMPTS = 5;
+// Limiti se mogu podesiti bez izmjene koda, ali imaju sigurne zadane vrijednosti.
+// Napomena: brojač je u memoriji procesa (R0 bez Redisa) — vidi STATUS.md, dug za Fazu 2.
+const WINDOW_MS = Number(process.env.AUTH_LOGIN_WINDOW_MS ?? 60_000);
+const MAX_ATTEMPTS = Number(process.env.AUTH_LOGIN_LIMIT ?? 5);
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function tooManyAttempts(key: string, now: number): boolean {

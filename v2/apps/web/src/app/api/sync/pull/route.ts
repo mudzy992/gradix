@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
 import { SYNC_PULL_LIMIT, isSinceValid, nextWatermark } from "@gradix/domain";
 import { fail, internal, ok } from "@/server/api";
-import { getPool } from "@/server/db";
+import { getVerifiedPool } from "@/server/db";
 import { authenticate } from "@/server/tenant-context";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       return fail("SYNC_SINCE_INVALID", "Vrijeme zadnjeg preuzimanja nije ispravno.");
     }
 
-    const rows = await withCompany(getPool(), auth.ctx.companyId, async (client) => {
+    const rows = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
       const result = await client.query<{
         id: string;
         local_id: string;

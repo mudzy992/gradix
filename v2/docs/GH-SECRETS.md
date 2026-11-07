@@ -1,50 +1,51 @@
-# GitHub secrets i varijable — šta treba unijeti
+# Minimalni spisak GitHub secrets — Gradix v2
 
-**Samo imena i opisi.** Vrijednosti nikad ne idu u repo ni u ovaj dokument.
+Kratko: **za sada nijedan secret nije obavezan da bi Coolify radio.** Deploy ide iz
+Coolifyja (git izvor), a sve što aplikaciji treba unosi se kao environment varijable
+Coolify resource-a, ne u GitHub.
 
-## 1. Za CI (GitHub Actions) — potrebno sada
+## 1. Za CI da prođe danas: 0 (nula) secrets
 
-CI u ovom trenutku **ne traži nijednu tajnu**: bazu diže kao servis (`postgres:16-alpine`), `AUTH_SECRET` je placeholder u workflowu, a testovi koriste lokalnu bazu. To je namjerno — CI ne smije zavisiti od produkcije.
+`.github/workflows/ci.yml` ne traži nijednu tajnu:
 
-| Ime | Tip | Za šta | Potrebno |
-|---|---|---|---|
-| `COOLIFY_DEPLOY_HOOK` | secret | automatski deploy v2 na staging poslije zelenog CI-ja | kad staging postoji |
-| `COOLIFY_API_TOKEN` | secret | alternativa deploy hooku (Coolify API) | opciono |
+* Postgres je `services:` kontejner u jobu — kredencijali su fiksni i javni (`postgres/postgres`).
+* `AUTH_SECRET` u CI-ju je placeholder od 39 znakova, samo da aplikacija starta.
+* Testovi ne izlaze u internet, ne zovu `binaries.prisma.sh` kritično (korak
+  `prisma generate` je dokaz koji smije pasti i to je zapisano u ADR 0002).
 
-## 2. Za staging i produkciju (Coolify) — potrebno prije G1 deploya
+Ako je u Settings → Secrets and variables → **Variables** već nešto dodato za v1,
+v2 to ne koristi.
 
-Unosi se u Coolify, ne u GitHub. Ako želiš da ih imam i u GH secrets (npr. za budući deploy workflow), kopija je ista lista.
+## 2. Kad se doda deploy iz GitHub Actions (opciono, kasnije)
 
-| Ime | Za šta | Napomena |
+Samo ako odlučiš da `main` automatski deploya preko Coolify API-ja:
+
+| Secret | Šta je | Odakle |
 |---|---|---|
-| `DATABASE_URL` | aplikacijska konekcija | **rola `gradix_app`** (`NOSUPERUSER NOBYPASSRLS`), ne vlasnik šeme — inače RLS ne štiti (ADR 0003) |
-| `DATABASE_ADMIN_URL` | konekcija za migracije | vlasnik šeme; koristi se samo kad je `RUN_MIGRATIONS=true`. Može biti isti server, druga rola |
-| `AUTH_SECRET` | potpis sesijskih tokena | min. 32 znaka; rotacija odjavljuje sve korisnike |
-| `POSTGRES_CA_FILE` | CA za PostgreSQL u kontejneru | v1: `/data/coolify/ssl/coolify-ca.crt` |
-| `PGSSLMODE` / `PGSSLROOTCERT` | TLS prema bazi | v1: `verify-ca` + putanja CA |
-| `MINIO_ENDPOINT` / `MINIO_PORT` / `MINIO_USE_SSL` | S3 | v1: `minio`, `9000`, `false` |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | S3 kredencijali | rotirati prije v2 deploya |
-| `MINIO_BUCKET` | bucket | **`gradix-v2`** (ADR 0006) |
-| `MINIO_DATA_DIR` | host putanja za MinIO /data | v1: `/mnt/shared-app-files/gradix/minio` |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_USER` / `REDIS_PASSWORD` / `REDIS_PREFIX` / `REDIS_TLS_CA_FILE` | Redis | **nije potrebno u R0**; `gx2:` prefiks i korisnik `gradix_v2` kad se uvede (ADR 0006) |
-| `CORS_ORIGIN` | dozvoljeni origin | prazno = same-origin; uz jedan domen ostaje prazno (G0/P4) |
-| `TRUST_PROXY` | broj proxy hopova | Coolify = `1` |
-| `RUN_MIGRATIONS` | migracije u entrypointu | staging `true`; za produkciju odlučiti (preporuka: `false` + zaseban korak) |
-| `LOG_LEVEL` | nivo logova | `info` |
-| `SEED_PASSWORD` | samo za seed | **ne** postavljati u produkciji; seed se tamo ne pokreće |
+| `COOLIFY_WEBHOOK` | Deploy webhook URL resource-a `gradix-web` | Coolify → resource → Webhooks → Deploy URL |
+| `COOLIFY_TOKEN` | API token, ako webhook traži `Authorization: Bearer` | Coolify → Keys & Tokens → API tokens (read/write na taj resource) |
 
-## 3. Šta namjerno NIJE potrebno
+To je sve. **Ne treba** `DATABASE_URL`, `AUTH_SECRET`, `POSTGRES_*`, `MINIO_*`, `REDIS_*`
+u GitHubu — te vrijednosti žive samo u Coolifyju i u tvom `.env`, nikad u CI-ju.
 
-- `JWT_REFRESH_SECRET`, `REFRESH_REPLAY_SECRET` — v2 nema replay zaštitu (ADR 0005).
-- `JWT_ACCESS_SECRET` — zamijenjen sa `AUTH_SECRET`.
-- `VITE_API_URL`, `CSP_API_ORIGIN` — uz jedan domen nema cross-origin poziva.
-- `SEED_DEMO` — demo podaci se ne sade u produkciju; seed skripta je odvojena.
+## 3. Čega namjerno NEMA
 
-## 4. Redoslijed uvođenja
+| Ne uvodimo | Zašto |
+|---|---|
+| `DATABASE_URL` / `DATABASE_ADMIN_URL` kao GH secret | CI ima svoju ephemralnu bazu. Tajna baze u GitHubu bi značila da svaki PR može čitati produkcijske podatke. |
+| `AUTH_SECRET` kao GH secret | Isti razlog; testovi koriste placeholder. |
+| MinIO / Redis kredencijali | Ne koriste se u Fazi 1 (ADR 0006, STATUS.md). |
+| Expo/EAS tokeni | Mobilni se za sada gradi lokalno; EAS dolazi u Fazi 2+ uz svoj ADR. |
+| Docker Hub / GHCR login | Sliku gradi Coolify na svom serveru, ne GitHub. |
 
-1. Kreirati bazu (čistu) i **dvije role**: vlasnik šeme i `gradix_app`.
-2. Unijeti `DATABASE_ADMIN_URL` i `DATABASE_URL` u Coolify, pa pokrenuti `infra/scripts/db-apply.sh` (ili `RUN_MIGRATIONS=true` pri prvom startu).
-3. Kreirati bucket `gradix-v2` (tek prije R5).
-4. Postaviti `AUTH_SECRET` (32+ znaka) — bez njega aplikacija ne starta, i to je namjerno.
-5. Provjeriti `/api/ready` = 200 i `/api/health` = 200.
-6. Seed u produkciji: **ne**. Prvi korisnik se pravi skriptom jednokratno, po proceduri koja se dogovara u R1.
+## 4. Redoslijed uvođenja (kad zatreba)
+
+1. Sada: ništa. Coolify + ručni deploy.
+2. Kad `main` postane stabilan: `COOLIFY_WEBHOOK` (+ `COOLIFY_TOKEN` ako webhook traži).
+3. Kad mobilni dobije EAS build: Expo token, odvojen ADR.
+4. Kad se uvede 2+ replike ili pozadinski poslovi: Redis ACL korisnik (u Coolifyju, ne u GitHubu).
+
+## 5. Pravilo koje ostaje
+
+Nijedna tajna ne ulazi u repo, ni u `.env.example`, ni u testove. `docs/COOLIFY.md` i ovaj
+fajl sadrže **samo imena** varijabli i uputstva gdje se vrijednost unosi.

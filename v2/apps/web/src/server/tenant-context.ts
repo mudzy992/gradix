@@ -10,7 +10,7 @@
 import { withCompany, type CompanyId } from "@gradix/db";
 import { isSessionUsable } from "@gradix/domain";
 import type { NextRequest } from "next/server";
-import { getPool } from "./db";
+import { getVerifiedPool } from "./db";
 import { ACCESS_COOKIE, verifyAccessToken } from "./session";
 
 export type AuthContext = {
@@ -35,7 +35,7 @@ export async function authenticate(request: NextRequest, now = new Date()): Prom
   const claims = verifyAccessToken(token, now);
   if (!claims) return { ok: false, code: "UNAUTHENTICATED" };
 
-  const rows = await withCompany(getPool(), claims.companyId as CompanyId, async (client) => {
+  const rows = await withCompany(await getVerifiedPool(), claims.companyId as CompanyId, async (client) => {
     const session = await client.query<{ expires_at: Date; revoked_at: Date | null }>(
       "SELECT expires_at, revoked_at FROM sessions WHERE id = $1 AND user_id = $2",
       [claims.sid, claims.sub],

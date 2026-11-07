@@ -26,7 +26,14 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION auth_memberships(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION auth_memberships(TEXT) TO gradix_app;
+-- Izvršavanje: aplikacijska rola ako postoji (model A), inače vlasnik funkcije (model B).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_app') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION auth_memberships(TEXT) TO gradix_app';
+  END IF;
+END
+$$;
 
 -- Nagovještaj planeru za čest upit po korisniku (članstva su već pokrivena unique indeksom).
 CREATE INDEX IF NOT EXISTS memberships_user_id_idx ON memberships (user_id);

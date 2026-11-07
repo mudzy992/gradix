@@ -60,19 +60,21 @@ describeDb("API (integracija na pravoj bazi)", () => {
        VALUES ($1, 'it-a@test.ba', $3, 'Test', 'A', false), ($2, 'it-b@test.ba', $3, 'Test', 'B', false)`,
       [USER_A, USER_B, hash],
     );
-    await admin.query(
-      `INSERT INTO memberships (id, user_id, company_id, roles)
-       VALUES ('mem_it_a', $1, $3, ARRAY['ADMIN']::"Role"[]), ('mem_it_b', $2, $4, ARRAY['OWNER']::"Role"[])`,
-      [USER_A, USER_B, COMPANY_A, COMPANY_B],
-    );
-    // Mašine kroz tenant scope (RLS ne dozvoljava direktan upis bez njega).
+    // `companies` i `users` nisu tenant tabele; `memberships` i `machines` jesu.
+    // U modelu B (gradix_app je vlasnik šeme) RLS važi i za admin konekciju, pa seed
+    // mora ići kroz tenant scope — inače bi test dokazivao pogrešnu stvar.
     const { withCompany, companyId } = await import("@gradix/db");
     const appPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
-    for (const [company, machineId, code, name] of [
-      [COMPANY_A, "mch_it_a", "IT-BAG", "Bager A"],
-      [COMPANY_B, "mch_it_b", "IT-KAM", "Kamion B"],
+    for (const [company, machineId, code, name, memberId, userId, role] of [
+      [COMPANY_A, "mch_it_a", "IT-BAG", "Bager A", "mem_it_a", USER_A, "ADMIN"],
+      [COMPANY_B, "mch_it_b", "IT-KAM", "Kamion B", "mem_it_b", USER_B, "OWNER"],
     ] as const) {
       await withCompany(appPool, companyId(company), async (client) => {
+        await client.query("DELETE FROM memberships WHERE id = $1", [memberId]);
+        await client.query(
+          "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[])",
+          [memberId, userId, company, role],
+        );
         await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
         await client.query(
           "INSERT INTO machines (id, company_id, code, name) VALUES ($1, $2, $3, $4)",

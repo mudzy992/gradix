@@ -1,0 +1,56 @@
+# Gradix v2 — Coolify (testna domena gradix.ba101.top)
+#
+# OVAJ FAJL JE ZA COOLIFY, NE ZA LOKALNI RAZVOJ.
+#   putanja u repou:  v2/infra/coolify/docker-compose.yml
+#   u Coolifyju:      Base Directory = /v2   (korijen v2 radnog stabla)
+#                     Docker Compose Location = /infra/coolify/docker-compose.yml
+#
+# Šta ovdje NEMA i zašto:
+#   * nema Postgres servisa — baza je već na serveru (Coolify resource), baza `gradix`,
+#     korisnik `gradix_app`. Contejner se na nju spaja kroz DATABASE_URL.
+#   * nema MinIO/Redis — u Fazi 1 se ne koriste (ADR 0006, STATUS.md).
+#   * nema port mappinga — Coolify upravlja rutiranjem preko interneta kontejnera;
+#     izlaganje porta hostu bi zaobišlo Coolifyjev TLS proxy.
+#
+# Tajne: NIJEDNA vrijednost nije u ovom fajlu. Sve dolazi iz Coolify environment
+# varijabli resource-a (šablon: v2/.env.example, sekcija "Coolify").
+services:
+  web:
+    build:
+      # Kontekst je KORIJEN v2 (monorepo): Dockerfile čita pnpm-workspace.yaml i
+      # packages/*. Ako je Base Directory u Coolifyju /v2, ovo je ispravna putanja.
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      # --- obavezno (bez ovoga kontejner ne starta, namjerno) ---
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
+      DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET mora biti postavljen u Coolifyju (min 32 znaka)}
+      # --- ponašanje ---
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      PGSSLMODE: ${PGSSLMODE:-prefer}
+      TZ: ${TZ:-Europe/Sarajevo}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    # Coolify očekuje da kontejner sluša na ovom portu (proxy → kontejner).
+    expose:
+      - "3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const config: NextConfig = {
-  // Next izlazi u samostalan Node proces za Docker/Coolify (nije serverless).
+  // Next izlazi kao samostalan Node proces za Docker/Coolify (nije serverless).
   output: "standalone",
+  // Bez ovoga Next traži node_modules unutar apps/web i u monorepu ne nađe
+  // @gradix/* pakete. Korijen praćenja je korijen v2/ workspace-a.
+  outputFileTracingRoot: path.join(import.meta.dirname, "../../"),
   reactStrictMode: true,
   poweredByHeader: false,
-  // Paketi se ne bundluju na serveru: `pg` i argon2 imaju native/Node dijelove.
+  // Native/Node moduli se ne bundluju na serveru.
   serverExternalPackages: ["pg", "argon2"],
   async headers() {
     return [

@@ -17,6 +17,13 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION auth_session_by_hash(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION auth_session_by_hash(TEXT) TO gradix_app;
+-- Izvršavanje: aplikacijska rola ako postoji (model A), inače vlasnik funkcije (model B).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_app') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION auth_session_by_hash(TEXT) TO gradix_app';
+  END IF;
+END
+$$;
 
 INSERT INTO schema_migrations (name) VALUES ('20261107150000_session_lookup') ON CONFLICT DO NOTHING;

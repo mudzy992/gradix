@@ -9,7 +9,8 @@
  */
 import { withCompany, type CompanyId } from "@gradix/db";
 import { decideRefresh, refreshExpiry } from "@gradix/domain";
-import { getPool } from "./db";
+import { lookupMemberships, lookupSessionByHash } from "./auth-lookup";
+import { getVerifiedPool } from "./db";
 import { hashRefreshToken, newRefreshToken } from "./session";
 
 export type LoginFailure =
@@ -33,7 +34,7 @@ export async function login(
   verify: (hash: string, password: string) => Promise<boolean>,
   now = new Date(),
 ): Promise<LoginSuccess | LoginFailure> {
-  const pool = getPool();
+  const pool = await getVerifiedPool();
   const normalized = email.trim().toLowerCase();
 
   // `users` nije tenant tabela: identitet je globalan (jedan email = jedan nalog).
@@ -55,12 +56,9 @@ export async function login(
   const passwordOk = await verify(hash, password);
   if (!user || !passwordOk || !user.is_active) return { code: "AUTH_INVALID_CREDENTIALS" };
 
-  // membership lookup ide kroz SECURITY DEFINER funkciju (vidi migraciju auth_lookup).
-  const memberships = await pool.query<{ company_id: string; roles: string[]; company_active: boolean }>(
-    "SELECT company_id, roles::text[] AS roles, company_active FROM auth_memberships($1)",
-    [user.id],
-  );
-  const membership = memberships.rows.find((row) => row.company_active) ?? memberships.rows[0];
+  // Membership lookup ide kroz usku RLS politiku za pretragu (vidi auth-lookup.ts).
+  const memberships = await lookupMemberships(pool, user.id);
+  const membership = memberships.find((row) => row.company_active) ?? memberships[0];
   if (!membership) return { code: "FORBIDDEN", message: "Nalog nije povezan s aktivnom firmom." };
   if (!membership.company_active) return { code: "AUTH_COMPANY_INACTIVE" };
 
@@ -90,16 +88,12 @@ export type RefreshResult =
   | { ok: false; code: "AUTH_REFRESH_INVALID" | "AUTH_REFRESH_REUSE" };
 
 export async function rotateRefresh(token: string, now = new Date()): Promise<RefreshResult> {
-  const pool = getPool();
+  const pool = await getVerifiedPool();
   const tokenHash = hashRefreshToken(token);
 
   // Bez tenanta se ne zna firma, a `sessions` je RLS tabela. Zato prvo nalazimo
-  // firmu kroz istu usku funkciju kao pri prijavi — po hashu, ne po korisniku iz zahtjeva.
-  const found = await pool.query<{ id: string; user_id: string; company_id: string; expires_at: Date; revoked_at: Date | null }>(
-    "SELECT id, user_id, company_id, expires_at, revoked_at FROM auth_session_by_hash($1)",
-    [tokenHash],
-  );
-  const session = found.rows[0];
+  // sesiju po hashu tokena (ne po korisniku iz zahtjeva) kroz usku lookup politiku.
+  const session = await lookupSessionByHash(pool, tokenHash);
   const decision = decideRefresh(
     session ? { expiresAt: session.expires_at, revokedAt: session.revoked_at } : null,
     now,
@@ -139,13 +133,13 @@ export async function rotateRefresh(token: string, now = new Date()): Promise<Re
 }
 
 export async function revokeSession(sessionId: string, companyId: CompanyId, now = new Date()): Promise<void> {
-  await withCompany(getPool(), companyId, async (client) => {
+  await withCompany(await getVerifiedPool(), companyId, async (client) => {
     await client.query("UPDATE sessions SET revoked_at = $1 WHERE id = $2 AND revoked_at IS NULL", [now, sessionId]);
   });
 }
 
 export async function revokeAllForUser(userId: string, companyId: CompanyId, now = new Date()): Promise<void> {
-  await withCompany(getPool(), companyId, async (client) => {
+  await withCompany(await getVerifiedPool(), companyId, async (client) => {
     await client.query("UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [now, userId]);
   });
 }
