@@ -1,12 +1,22 @@
-name: CI
+name: CI (v2)
 
+# Zašto je ovaj fajl u KORIJENU repoa: GitHub Actions čita isključivo
+# `.github/workflows/` u korijenu. Dok je bio u `v2/.github/workflows/`, v2 CI se
+# NIKAD nije pokrenuo (391 run je bio v1). Radni direktorij v2 zato stoji u svakom koraku.
+#
 # Brzina je uslov: cilj je pregled svake promjene ispod 10 minuta.
 # Teški testovi (mobilni E2E na emulatoru) idu u noćni pokret kad budu postojali.
 on:
   push:
     branches: [main, "arena/**"]
+    paths:
+      - "v2/**"
+      - ".github/workflows/ci-v2.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "v2/**"
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
