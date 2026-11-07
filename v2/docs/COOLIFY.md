@@ -121,6 +121,7 @@ RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
 | Poruka | Uzrok | Rješenje |
 |---|---|---|
 | `Dockerfile not found ... resolve : lstat /artifacts/infra` | `context` nije relativan na Base Directory | `context: .` (§0) |
+| `failed to calculate checksum ... /app/apps/web/public: not found` | prazan direktorij nije u gitu | §9 |
 | `DATABASE_URL mora biti postavljen u Coolifyju` | varijabla nije unesena u UI | §1 |
 | `AUTH_SECRET je prekratak` | manje od 32 znaka | `openssl rand -base64 48` |
 | `GREŠKA: baza nije dostupna nakon 10 pokušaja` | pogrešan host/port ili baza nije na istoj mreži | provjeri da je `HOST` ime Postgres resource-a, ne `localhost` |
@@ -135,3 +136,32 @@ RLS ne štiti i to se rješava u §4 prije bilo kakve upotrebe.
 `node:22-alpine` nema (provjereno čitanjem simbola `.node` fajla). Alpine bi tražio ručnu
 instalaciju `libstdc++` u runtime fazi i nosio rizik da se to tiho pokvari pri sljedećem
 `apk` sloju. `node:22-slim` ima glibc koji prebuilt očekuje; cijena je ~40 MB veća slika.
+
+## 9. `public/` i prazni direktoriji (drugi pad builda)
+
+```
+COPY --from=builder /app/apps/web/public ./apps/web/public
+→ failed to calculate checksum ... "/app/apps/web/public": not found
+```
+
+Git **ne prati prazne direktorije**. `apps/web/public` je postojao u radnom stablu, ali ne i u
+Coolify klon repoa, pa je `COPY` tražio put koji ne postoji. Provjera prije svakog ovakvog
+deploya — pusti ovu petlju i vidi ima li `NEMA`:
+
+```sh
+cd v2 && for d in apps/web/public packages/db/bootstrap packages/db/prisma/migrations; do
+  [ "$(git ls-files "$d" | wc -l)" -gt 0 ] && echo "OK   $d" || echo "NEMA $d"
+done
+```
+
+Riješeno na dva nivoa: `public/` ima sadržaj (`favicon.png`, `robots.txt`) **i** Dockerfile
+radi `RUN mkdir -p apps/web/public` prije kopiranja. Ako neki budući direktorij ostane prazan,
+istu grešku će dati i isti lijek je: sadržaj u git ili `mkdir -p` prije `COPY`.
+
+## 10. Dokaz iz klona (kako sam provjerio build bez Dockera)
+
+Build je simuliran **iz `git archive` grane** (dakle iz istog sadržaja koji Coolify klonira),
+fazu po fazu: `pnpm install --frozen-lockfile --filter @gradix/web...` → `next build` →
+`esbuild` seed → slaganje runtime rasporeda → `entrypoint.sh` sa `RUN_MIGRATIONS=true`.
+Rezultat: migracije prošle, `/api/health` 200, `/api/ready` sa `is_super:false`,
+`/login` 200, `/favicon.png` 200, `/robots.txt` 200, seed iz slike prošao, prijava 200.
