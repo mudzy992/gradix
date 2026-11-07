@@ -83,9 +83,14 @@ networks:
     external: true    # NE kreira se ovdje
 ```
 
-`redis_net` **namjerno nije** priključen u Fazi 1 — Redis se ne koristi, a svaka dodatna
-eksterna mreža je još jedan uslov koji mora biti ispunjen na hostu. Dodaje se zajedno sa
-Redisom.
+`redis_net` je priključen (pripremljen za Redis), ali **Redis CA mount NIJE** — vidi §3.6.
+Svaka `external` mreža je uslov koji mora biti ispunjen na hostu: ako `redis_net` ne
+postoji, deploy pada sa `network redis_net declared as external, but could not be found`.
+Zato provjeri obje:
+
+```sh
+docker network ls | grep -E "db_net|redis_net"
+```
 
 Ako mreža ne postoji, deploy pada sa `network db_net declared as external, but could not
 be found`. Provjera na serveru:
@@ -99,6 +104,22 @@ docker network create db_net 2>/dev/null || true
 Coolify **ne** priključuje resource na te mreže automatski — zato su navedene u compose-u.
 Isto važi za Postgres resource: mora mu biti uključeno `Connect to Predefined Network`
 (inače nije na `db_net` i hostname iz `DATABASE_URL` se ne razrješava).
+
+## 3.6. CA: dvije različite putanje (česta zabuna)
+
+Postoje **dvije** putanje i one nisu ista stvar:
+
+| Gdje | Putanja | Šta je |
+|---|---|---|
+| HOST (server) | `/data/coolify/ssl/coolify-ca.crt` | fajl koji Coolify drži; vrijednost `POSTGRES_CA_FILE` |
+| KONTEJNER | `/etc/ssl/certs/coolify-ca.crt` | gdje ga mount čini vidljivim; ovo ide u `DATABASE_URL` |
+
+Ako u `POSTGRES_CA_FILE` upišeš putanju **u kontejneru**, Docker tumači da takav fajl
+postoji na hostu i deploy padne (`bind source path does not exist`). Greška je ista ako
+upišete obrnuto. Pravilo: **`POSTGRES_CA_FILE` = host, `sslrootcert` = kontejner.**
+
+Ako baza uopšte ne koristi TLS (npr. ista Docker mreža), najjednostavnije je:
+`DATABASE_URL` bez `sslrootcert`, sa `sslmode=disable` ili `require`.
 
 ## 4. Baza: koja rola radi šta (modeli A / B / C)
 
@@ -202,6 +223,7 @@ Tri stvari koje se čitaju iz ovoga:
 | `AUTH_SECRET je prekratak` | manje od 32 znaka | `openssl rand -base64 48` |
 | `GREŠKA: baza nije dostupna nakon 10 pokušaja` | host/port, mreža, CA ili `&amp;` u URL-u | poruka sama ispiše host i **zadnju grešku** — gledaj nju: `ENOENT ... coolify-ca.crt` = CA nije montiran (§2), `could not translate host name` = pogrešan/vanjski host, `password authentication failed` = lozinka ili rola |
 | `network db_net declared as external, but could not be found` | mreža ne postoji na hostu | §3.5 |
+| `psql: error: missing "=" after "→" in connection info string` | dijagnostička poruka je ušla u URL (bug u entrypointu, popravljen) | ažuriraj granu; sve poruke sada idu na stderr |
 | `GREŠKA: DATABASE_URL traži CA na '/etc/ssl/certs/coolify-ca.crt', ali tog fajla nema u kontejneru` | CA nije montiran | §2, `POSTGRES_CA_FILE` |
 | `GREŠKA: rola koja radi migracije nema CREATE na šemi public` | model C bez `DATABASE_ADMIN_URL` | §4 |
 | `GREŠKA: DATABASE_URL sadrži HTML entity `&amp;`` | copy/paste iz HTML-a | zamijeni `&amp;` sa `&` |

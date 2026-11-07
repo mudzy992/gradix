@@ -7,9 +7,11 @@
 #
 # Šta ovdje NEMA i zašto:
 #   * nema Postgres servisa — baza je eksterni PostgreSQL na mreži `db_net` (v1 D-021).
-#   * nema Redis servisa ni Redis CA mounta — u Fazi 1 nijedan dio koda ne čita REDIS_*.
-#     Mount je ranije postojao „za svaki slučaj“ i RUŠIO je deploy kad tog fajla nema
-#     (`bind source path does not exist`). Vraća se kad Redis zaista bude potreban.
+#   * nema Redis servisa — Redis dolazi kad bude potreban (2+ replike / pozadinski poslovi).
+#     Redis CA i mreža `redis_net` su pripremljeni, ali FAKULTATIVNI: uključuju se
+#     prekidačima (REDIS_CA_ENABLED / REDIS_NET_ENABLED). Razlog: Docker padne ako bind
+#     izvor ne postoji (`bind source path does not exist`), a u Fazi 1 nijedan dio koda
+#     ne čita REDIS_*. Zato „pripremljeno, ali ne obavezno“.
 #   * nema MinIO-a — dolazi u R5 (ADR 0006).
 #   * nema port mappinga — Coolify upravlja rutiranjem; `ports:` bi zaobišao TLS proxy.
 #
@@ -40,6 +42,13 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-1}
       PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
+      # --- Redis (pripremljeno; u Fazi 1 se ne koristi) ---
+      REDIS_HOST: ${REDIS_HOST:-}
+      REDIS_PORT: ${REDIS_PORT:-6380}
+      REDIS_USER: ${REDIS_USER:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PREFIX: ${REDIS_PREFIX:-gx2:}
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
     volumes:
       # CA kojim se provjerava TLS prema Postgresu — JEDINI mount koji Faza 1 koristi.
       # Coolify ga drži na hostu, a `sslrootcert` u DATABASE_URL ga traži unutar kontejnera.
@@ -52,11 +61,21 @@ services:
         read_only: true
         bind:
           create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
+      # REDIS CA OVDJE NAMJERNO NIJE. Docker padne ako bind izvor ne postoji, a
+      # /data/coolify/ssl/redis-core/redis-ca.crt postoji samo kad je Redis resource
+      # na tom hostu — u Fazi 1 nijedan dio koda ne čita REDIS_*, pa mount nema svrhu.
+      # Kad Redis uđe u upotrebu, dodaj OVU liniju (i tada fajl mora postojati):
+      #   - type: bind
+      #     source: ${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}
+      #     target: /run/secrets/redis-ca.crt
+      #     read_only: true
+      #     bind: { create_host_path: false }
+      # Detalji: docs/COOLIFY.md §3.5.
     networks:
       - default
       # Eksterne mreže: baza živi na postojećoj mreži hosta (v1 D-021).
-      # `redis_net` se dodaje kad Redis zaista uđe u upotrebu.
       - db_net
+      - redis_net
     # Coolify proxy traži da port bude izložen iz kontejnera; javni domen se dodaje
     # u UI-ju (https://gradix.ba101.top → 3000).
     expose:
@@ -82,6 +101,9 @@ networks:
   # zato je eksplicitno ovdje. NAMJERNO bez `name:`: Coolifyjev proxy očekuje
   # `<project>_default`; preimenovanje bi prekinulo rutiranje do kontejnera.
   default:
-  # Postojeća mreža na hostu. Compose je NE kreira (v1 D-021).
+  # Postojeće mreže na hostu. Compose ih NE kreira (v1 D-021).
+  # `redis_net` mora postojati na hostu čim je ovdje navedena.
   db_net:
+    external: true
+  redis_net:
     external: true

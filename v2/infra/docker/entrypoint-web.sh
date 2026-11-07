@@ -7,47 +7,43 @@ set -eu
 : "${AUTH_SECRET:?AUTH_SECRET nedostaje}"
 
 #
+# DVIJE FUNKCIJE, JEDNO PRAVILO: na STDOUT ide ISKLJUČIVO očišćeni URL, jer se rezultat
+# hvata u `$(...)`. Sve poruke (i upozorenja i informacije) idu na STDERR.
+#
+# Zašto je ovo napisano ovako: prva verzija je imala `echo "→ CA: ..."` bez `>&2`.
+# Taj tekst je ušao u varijablu, pa je psql dobio
+#   "→ CA: /etc/ssl/certs/coolify-ca.crt (891 bajtova)\npostgresql://..."
+# i javio `missing "=" after "→" in connection info string`. Greška je bila moja, ne baze.
+#
 # psql ne razumije Prisma-stil `?schema=public`, ali RAZUMIJE `sslmode` i `sslrootcert`.
-# Prva verzija je odsijecala cijeli query string (`cut -d'?' -f1`) i time je tiho brisala
-# TLS parametre — baza koja traži TLS onda padne sa nejasnom porukom. Sada se uklanja
-# SAMO `schema=`, sve ostalo ostaje netaknuto.
+# Uklanja se SAMO `schema=`.
 #
 sanitize_pg_url() {
-  printf '%s' "$1" | sed -E 's/[?&]schema=[^&]*//; s/\?&/?/; s/\?$//'
+  printf '%s\n' "$1" | sed -E 's/[?&]schema=[^&]*//' | sed -E '/\?/!s/&/?/'
 }
 
-node -e '
-  const secret = process.env.AUTH_SECRET ?? "";
-  if (secret.length < 32) {
-    console.error("GREŠKA: AUTH_SECRET je prekratak (min 32 znaka).");
-    process.exit(1);
-  }
-  if ((process.env.DATABASE_URL ?? "").includes("&amp;")) {
-    console.error("GREŠKA: DATABASE_URL sadrži HTML entity `&amp;` umjesto `&` — copy/paste iz HTML-a.");
-    process.exit(1);
-  }
-'
-
-#
-# `sslrootcert` u URL-u je putanja do fajla. Ako fajl ne postoji, `psql`/`pg` padnu pri
-# PARSIRANJU URL-a — poruka onda izgleda kao „baza ne odgovara“, a problem je mount.
-# Zato: ako CA nema, parametar se ukloni (UZ GLASNO UPOZORENJE) i pokušaj ide dalje.
-# Ne izmišljamo „ne provjeravaj certifikat“ — `sslmode` ostaje kakav jeste, pa
-# `verify-full` i dalje pada, ali sa pravom TLS greškom umjesto ENOENT.
-#
+# Ako `sslrootcert` pokazuje na fajl kojeg nema, ukloni parametar (UZ upozorenje) —
+# inače psql/pg padnu pri parsiranju URL-a i poruka govori o bazi, a problem je mount.
+# Ne izmišljamo „ne provjeravaj certifikat“: `sslmode` ostaje kakav jeste, pa
+# `verify-full` i dalje pada — samo sa pravom TLS greškom umjesto ENOENT.
 strip_missing_ca() {
   url="$1"
   label="$2"
-  ca=$(printf '%s' "$url" | sed -nE 's/.*[?&]sslrootcert=([^&]*).*/\1/p')
-  if [ -n "$ca" ] && [ ! -f "$ca" ]; then
-    echo "UPOZORENJE: $label traži CA na '$ca', ali tog fajla nema u kontejneru." >&2
-    echo "  Mount u compose-u: /data/coolify/ssl/coolify-ca.crt -> /etc/ssl/certs/coolify-ca.crt" >&2
-    echo "  Nastavljam bez sslrootcert — ako baza traži TLS, greška će sada biti TLS greška." >&2
-    printf '%s' "$url" | sed -E 's/[?&]sslrootcert=[^&]*//' | sed -E '/\?/!s/&/?/'
+  ca=$(printf '%s\n' "$url" | sed -nE 's/.*[?&]sslrootcert=([^&]*).*/\1/p')
+  if [ -z "$ca" ]; then
+    printf '%s\n' "$url"
     return 0
   fi
-  [ -n "$ca" ] && echo "→ CA: $ca ($(wc -c <"$ca" | tr -d ' ') bajtova)"
-  printf '%s' "$url"
+  if [ -f "$ca" ]; then
+    echo "→ CA ($label): $ca ($(wc -c <"$ca" | tr -d ' ') bajtova)" >&2
+    printf '%s\n' "$url"
+    return 0
+  fi
+  echo "UPOZORENJE: $label traži CA na '$ca', ali tog fajla nema u kontejneru." >&2
+  echo "  Compose montira CA na /etc/ssl/certs/coolify-ca.crt (docs/COOLIFY.md §2)." >&2
+  echo "  Ako je fajl na hostu drugdje, postavi POSTGRES_CA_FILE na tu putanju." >&2
+  echo "  Nastavljam bez sslrootcert — ako baza traži TLS, greška će sada biti TLS greška." >&2
+  printf '%s\n' "$url" | sed -E 's/[?&]sslrootcert=[^&]*//' | sed -E '/\?/!s/&/?/'
 }
 
 DATABASE_URL_CLEAN=$(sanitize_pg_url "$DATABASE_URL")
@@ -62,7 +58,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   ADMIN_URL_CLEAN=$(sanitize_pg_url "$ADMIN_URL")
   ADMIN_URL_CLEAN=$(strip_missing_ca "$ADMIN_URL_CLEAN" "DATABASE_ADMIN_URL")
 
-  echo "→ provjera baze i primjena migracija"
+  echo "→ provjera baze i primjena migracija" >&2
 
   # Kratki retry: na svježem deployu baza ili DNS mogu zakasniti nekoliko sekundi.
   # Greška se ispisuje ODMAH i u cjelini — bez toga „ne odgovara“ ne kaže ništa korisno.
@@ -83,7 +79,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
       echo "           (4) je li u URL-u '&amp;' umjesto '&'." >&2
       exit 1
     fi
-    echo "  ... baza još ne odgovara (pokušaj $i/10, za 3 s): $last_error"
+    echo "  ... baza još ne odgovara (pokušaj $i/10, za 3 s): $last_error" >&2
     sleep 3
   done
 
@@ -100,5 +96,5 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
 
-echo "→ start: node apps/web/server.js (port ${PORT:-3000})"
+echo "→ start: node apps/web/server.js (port ${PORT:-3000})" >&2
 exec node apps/web/server.js
