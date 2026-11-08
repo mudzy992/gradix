@@ -170,7 +170,12 @@ describe("referenca i kod se ne raziđu", () => {
 
   it("svaki semantički token iz koda postoji i u referenci, u obje teme", () => {
     const imena = (source: string) =>
-      new Set([...source.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)].map((match) => match[1].toLowerCase()));
+      new Set(
+        [...source.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)]
+          .map((match) => match[1])
+          .filter((name): name is string => Boolean(name))
+          .map((name) => name.toLowerCase()),
+      );
     const uKodu = imena(globals);
     // Tokeni koji su samo za kod (okvir, skala, gradijent) ne moraju biti u statičnoj referenci.
     const samoUKodu = new Set([
