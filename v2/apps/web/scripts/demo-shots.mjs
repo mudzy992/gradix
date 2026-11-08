@@ -119,6 +119,9 @@ for (const width of WIDTHS) {
   await shot(page, width, "korisnici-greska");
 
   // 4. učitavanje — zahtjev se drži otvorenim
+  // Redoslijed je obavezan: prvo skinuti listener, pa tek onda ugasiti interception —
+  // inače već poslani zahtjev uhvati handler koji više ne smije `continue()`.
+  page.removeAllListeners("request");
   await page.setRequestInterception(false).catch(() => {});
   const slowPage = await browser.newPage();
   await slowPage.setViewport({ width, height: width === 360 ? 780 : 900 });
@@ -137,6 +140,7 @@ for (const width of WIDTHS) {
   await slowPage.close();
 
   // 5. dijalog pozivnice
+  page.removeAllListeners("request");
   await page.setRequestInterception(false).catch(() => {});
   const page2 = await browser.newPage();
   await page2.setViewport({ width, height: width === 360 ? 780 : 900 });
@@ -173,6 +177,29 @@ for (const width of WIDTHS) {
   await page.click('button[type="submit"]');
   await new Promise((resolve) => setTimeout(resolve, 600));
   await shot(page, width, "prijava-greska");
+
+  // 7b. limit prijave — brojač je po emailu, pa se troši tuđi (nepostojeći) email da demo
+  // nalog ostane funkcionalan. Pet promašaja pa šesti kroz formu: poruka odbrojava.
+  await page.evaluate(async (base) => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await fetch(`${base}/api/auth/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "limit@demo.ba", password: "pogresna" }),
+      });
+    }
+  }, BASE);
+  await page.evaluate(() => {
+    for (const id of ["email", "password"]) {
+      const field = document.getElementById(id);
+      if (field) field.value = "";
+    }
+  });
+  await page.type("#email", "limit@demo.ba");
+  await page.type("#password", "pogresna-lozinka");
+  await page.click('button[type="submit"]');
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  await shot(page, width, "prijava-limit");
 
   // 8. postavljanje lozinke preko linka — važeći i nevažeći
   await page.goto(links.inviteLink, { waitUntil: "networkidle0" });

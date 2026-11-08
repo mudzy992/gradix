@@ -269,6 +269,17 @@ describeDb("R1a — pristup (integracija na pravoj bazi)", () => {
     }
     const blocked = await loginRoute(json(`${BASE}/api/auth/login`, { email, password: "pogresna" }));
     expect(blocked.status).toBe(429);
+    // Poruka nosi STVARNI broj sekundi, ne fiksnu minutu: prozor je 60 s, pet promašaja je
+    // upravo palo, pa je ostatak reda veličine minute i sigurno nije 0.
+    const blockedBody = (await bodyOf<Envelope<unknown>>(blocked)) as { error: { message: string } };
+    const seconds = Number(/za (\d+) s/.exec(blockedBody.error.message)?.[1]);
+    expect(seconds).toBeGreaterThan(0);
+    expect(seconds).toBeLessThanOrEqual(60 + 1);
+    expect(Number(blocked.headers.get("retry-after"))).toBe(seconds);
+
+    // Razmak i velika slova ne smiju otvoriti drugi brojač (inače limit ne važi).
+    const respaced = await loginRoute(json(`${BASE}/api/auth/login`, { email: "  RATELIMIT@r1a.test ", password: "pogresna" }));
+    expect(respaced.status).toBe(429);
 
     // U bazi nema čitljivog emaila — samo hash.
     const rows = await admin.query<{ email_hash: string }>("SELECT email_hash FROM login_attempts");

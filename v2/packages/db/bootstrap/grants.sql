@@ -63,5 +63,14 @@ BEGIN
     GRANT EXECUTE ON FUNCTION login_attempt_count(TEXT, INTEGER) TO gradix_app;
     GRANT EXECUTE ON FUNCTION login_attempt_clear(TEXT) TO gradix_app;
   END IF;
+
+  -- Koliko još sekundi prozor drži korisnika (da poruka ne laže „sačekajte minutu").
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE p.proname = 'login_attempt_retry_after' AND n.nspname = 'public'
+       AND NOT has_function_privilege('gradix_app', p.oid, 'EXECUTE')
+  ) THEN
+    GRANT EXECUTE ON FUNCTION login_attempt_retry_after(TEXT, INTEGER) TO gradix_app;
+  END IF;
 END
 $$;

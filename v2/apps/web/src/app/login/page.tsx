@@ -1,18 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type State =
   | { kind: "idle" }
   | { kind: "busy" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; retryAfter?: number };
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  // Odbrojavanje traje samo dok traje zabrana; `retryAfter` u stanju je početna vrijednost.
+  const retryAfter = state.kind === "error" ? state.retryAfter : undefined;
+  useEffect(() => {
+    if (!retryAfter) return;
+    setSecondsLeft(retryAfter);
+    const timer = setInterval(() => {
+      setSecondsLeft((left) => (left <= 1 ? 0 : left - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [retryAfter]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -27,9 +39,13 @@ export default function LoginPage() {
         | { success: true }
         | { success: false; error: { code: string; message: string } };
       if (!response.ok || !body.success) {
+        // Kad je limit aktivan, poruka nosi stvarni broj sekundi; ekran ga odbrojava sam,
+        // da korisnik ne mora da pogađa kad smije ponovo (i da ne troši pokušaje).
+        const retryAfter = Number(response.headers.get("retry-after"));
         setState({
           kind: "error",
           message: body.success ? "Prijava nije uspjela." : body.error.message,
+          ...(Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfter } : {}),
         });
         return;
       }
@@ -85,13 +101,15 @@ export default function LoginPage() {
 
           {state.kind === "error" && (
             <p role="alert" className="rounded-md bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]">
-              {state.message}
+              {secondsLeft > 0
+                ? `Previše pokušaja. Pokušajte ponovo za ${secondsLeft} s.`
+                : state.message}
             </p>
           )}
 
           <button
             type="submit"
-            disabled={state.kind === "busy"}
+            disabled={state.kind === "busy" || secondsLeft > 0}
             className="gx-primary-full rounded-[10px] bg-[var(--color-brand)] px-4 text-base font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
             style={{ minHeight: "var(--control-height)" }}
           >

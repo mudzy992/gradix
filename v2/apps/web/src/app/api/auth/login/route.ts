@@ -13,7 +13,7 @@ import { login } from "@/server/auth-service";
 import { checkPasswordPolicy, verifyPassword } from "@/server/password";
 import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, issueAccessToken, refreshCookieOptions } from "@/server/session";
 import { getVerifiedPool } from "@/server/db";
-import { clearAttempts, isRateLimited, recordAttempt } from "@/server/rate-limit";
+import { clearAttempts, rateLimitWait, recordAttempt } from "@/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -28,14 +28,22 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!parsed.success) return fail("VALIDATION_FAILED", "Email i lozinka su obavezni.");
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    // Brojač i prijava moraju gledati ISTI ključ: `login` normalizuje email, pa bi bez ovoga
+    // „ Ured@Demo.ba " pravio drugi brojač (i zaobilazio limit).
+    const email = parsed.data.email.trim().toLowerCase();
     const pool = await getVerifiedPool();
-    if (await isRateLimited(pool, parsed.data.email)) {
-      return fail("RATE_LIMITED", "Previše pokušaja. Sačekajte minutu.");
+
+    // Koliko još traje prozor — da poruka kaže stvarni broj sekundi, ne fiksnu minutu.
+    const wait = await rateLimitWait(pool, email);
+    if (wait > 0) {
+      const response = fail("RATE_LIMITED", `Previše pokušaja. Pokušajte ponovo za ${wait} s.`);
+      response.headers.set("Retry-After", String(wait));
+      return response;
     }
 
-    const result = await login(parsed.data.email, parsed.data.password, verifyPassword);
+    const result = await login(email, parsed.data.password, verifyPassword);
     if ("code" in result) {
-      await recordAttempt(pool, parsed.data.email, ip);
+      await recordAttempt(pool, email, ip);
       if (result.code === "AUTH_COMPANY_INACTIVE") {
         return fail("AUTH_COMPANY_INACTIVE", "Firma je deaktivirana. Obratite se administratoru.");
       }
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return fail("AUTH_INVALID_CREDENTIALS", "Email ili lozinka nisu ispravni.");
     }
 
-    await clearAttempts(pool, parsed.data.email);
+    await clearAttempts(pool, email);
     const accessToken = issueAccessToken({
       sub: result.userId,
       sid: result.sessionId,

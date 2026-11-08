@@ -48,7 +48,7 @@ Sva stanja su obavezna (učitavanje / prazno / greška / uspjeh), tastatura kroz
 - **Tenant izolacija, generisano po resursu** (invitations, resets, scopes, audit): firma A ne vidi ni jedan red firme B; test se generiše iz liste tenant tabela da novi resurs ne može ostati nepokriven.
 - **Dozvole po roli:** matrica rola × ruta; ADMIN smije, SITE_SUPERVISOR ne smije, WORKER ne smije; ADMIN ne dira OWNER-a.
 - **Jednokratnost:** iskorišten/istekao/opozvan token → isti kod, bez razlike u poruci.
-- **Rate limit:** 5 neuspjeha ⇒ `RATE_LIMITED`, uspjeh resetuje brojač, radi preko dva procesa (dijeljena tabela).
+- **Rate limit:** 5 neuspjeha ⇒ `RATE_LIMITED` (429) sa `Retry-After`; **koliko još traje prozor** računa baza (`login_attempt_retry_after`), pa poruka kaže stvarni broj sekundi, ne fiksnu minutu. Uspješna prijava resetuje brojač. Ključ je `trim().toLowerCase()` emaila — isti ključ za brojanje i za prijavu, inače razmak otvara drugi brojač. Radi preko više procesa (dijeljena tabela).
 - **Audit:** svaka izmjena ostavlja tačno jedan zapis; filteri vraćaju isto što i direktan upit.
 - **E2E glavnog toka** — vidi odluku ispod (Playwright nije u projektu).
 

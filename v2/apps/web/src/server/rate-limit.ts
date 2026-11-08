@@ -41,6 +41,15 @@ export async function recordAttempt(pool: Pool, email: string, ip: string): Prom
   return Number(result.rows[0]?.count ?? 0);
 }
 
+/** Koliko još sekundi prozor drži ovaj email (0 = slobodno). */
+export async function retryAfterSeconds(pool: Pool, email: string): Promise<number> {
+  const result = await pool.query<{ seconds: number }>(
+    "SELECT login_attempt_retry_after($1, $2) AS seconds",
+    [identifierHash(email), Math.round(LOGIN_WINDOW_SECONDS)],
+  );
+  return Number(result.rows[0]?.seconds ?? 0);
+}
+
 /** Uspješna prijava briše promašaje za taj email. */
 export async function clearAttempts(pool: Pool, email: string): Promise<void> {
   await pool.query("SELECT login_attempt_clear($1)", [identifierHash(email)]);
@@ -50,7 +59,14 @@ export async function clearAttempts(pool: Pool, email: string): Promise<void> {
  * Fail-closed odluka: ako brojač ne može da se pročita (baza nedostupna), prijava se
  * odbija kao `RATE_LIMITED`? Ne — tada bi pad baze izgledao kao napad. Umjesto toga se
  * greška propagira i ruta vraća `INTERNAL`, jer prijava i onako ne može bez baze.
+ *
+ * Vraća 0 kad prozor nije blokiran, inače broj sekundi do prvog slobodnog pokušaja.
+ * Ruta taj broj stavlja u poruku i u `retryAfterSeconds`, da „sačekajte minutu" ne bude
+ * fiksna laž kad se prozor otvara za pet sekundi.
  */
-export async function isRateLimited(pool: Pool, email: string): Promise<boolean> {
-  return (await countAttempts(pool, email)) >= LOGIN_MAX_ATTEMPTS;
+export async function rateLimitWait(pool: Pool, email: string): Promise<number> {
+  if ((await countAttempts(pool, email)) < LOGIN_MAX_ATTEMPTS) return 0;
+  // `count` je već rekao da je blokirano; kad bi retry_after iz nekog razloga vratio 0,
+  // poruka bez broja je bolja od „sačekajte 0 sekundi".
+  return Math.max(1, await retryAfterSeconds(pool, email));
 }

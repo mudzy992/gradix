@@ -13,9 +13,12 @@ Snimci su napravljeni stvarnim preglednikom (Chromium), na **stvarnim podacima i
 | Link izdat | `360-link-izdat.png` | `1440-link-izdat.png` | token se vidi **jednom**, uz upozorenje da se poslije ne može prikazati |
 | Prijava | `360-prijava.png` | `1440-prijava.png` | „Zaboravljena lozinka? → administrator“ |
 | Prijava — greška | `360-prijava-greska.png` | `1440-prijava-greska.png` | ista poruka za sve slučajeve |
+| Prijava — limit | `360-prijava-limit.png` | `1440-prijava-limit.png` | poslije 5 promašaja poruka kaže **stvarni** broj sekundi i sama odbrojava; dugme zaključano |
 | Postavi lozinku (link) | `360-postavi-lozinku.png` | `1440-postavi-lozinku.png` | firma, email, rola iz pozivnice |
 | Link ne važi | `360-link-nevazeci.png` | `1440-link-nevazeci.png` | istekao = iskorišten = izmišljen (bez razlike) |
 | Obavezna promjena | `360-promjena-lozinke.png` | `1440-promjena-lozinke.png` | prva prijava vodi ovdje, ostatak sistema zaključan |
+
+Ukupno: **24 snimka** (12 stanja × 2 širine).
 
 ## Kako su napravljeni
 
