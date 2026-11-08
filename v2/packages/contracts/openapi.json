@@ -11325,6 +11325,9 @@
                       "number",
                       "null"
                     ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -11998,6 +12001,9 @@
                       "number",
                       "null"
                     ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -12727,6 +12733,12 @@
                           "items": {
                             "type": "string"
                           }
+                        },
+                        "notices": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -12738,7 +12750,8 @@
                         "fileName",
                         "rows",
                         "counts",
-                        "blockers"
+                        "blockers",
+                        "notices"
                       ],
                       "additionalProperties": false
                     },
