@@ -50,7 +50,7 @@ curl -s https://gradix.ba101.top/api/ready
 
 Mora vratiti `"status":"ok"` i `"migrations":{"applied":5}`. Ako ne — problem je na serveru, ne u telefonu; vidi `docs/COOLIFY.md` §7.
 
-Prijava u app ide seed nalozima (isti kao web): `ured@demo.ba`, `vlasnik@demo.ba`, `vlasnik@druga.ba`, lozinka iz `SEED_PASSWORD`.
+Prijava u app ide seed nalozima (isti kao web): `ured@demo.ba`, `vlasnik@demo.ba`, `vlasnik@druga.test`, lozinka iz `SEED_PASSWORD`.
 
 ---
 

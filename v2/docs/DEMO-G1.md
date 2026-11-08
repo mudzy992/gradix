@@ -29,7 +29,7 @@ Lokalna lozinka: `demo-lozinka-123`. **Ne miješaj**: lokalno i testna domena im
 |---|---|---|
 | 1 | Prijavi se kao `ured@demo.ba` | sesija, Argon2id, tenant iz sesije |
 | 2 | Vidiš 3 mašine svoje firme | `/api/me` i stranica idu kroz tenant scope |
-| 3 | Odjavi se, prijavi kao `vlasnik@druga.ba` | vidiš **1** mašinu (Druga Firma) — izolacija radi |
+| 3 | Odjavi se, prijavi kao `vlasnik@druga.test` | vidiš **1** mašinu (Druga Firma) — izolacija radi |
 | 4 | Otvori `/pregled` bez prijave u privatnom prozoru | preusmjerenje na `/login` (nema curenja) |
 | 5 | Na telefonu (Expo Go): `pnpm --filter @gradix/mobile start` — skeniraj QR, prijavi se, ukucaj zapis, klikni **Sačuvaj na uređaju** (detalji: `docs/MOBILE-EXPO-GO.md`) | zapis je u lokalnoj bazi prije mreže |
 | 6 | Ugasi mrežu (aviо režim), klikni **Pošalji sve** | poruka „Nema veze… čeka slanje“, zapis nije izgubljen |

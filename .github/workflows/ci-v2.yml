@@ -73,6 +73,12 @@ jobs:
 
       # Ugovor: `openapi.json` je generisan iz šema. Ako se šema promijeni a dokument ne,
       # klijent se zakuca na stari ugovor i to se vidi tek na uređaju.
+      # Vlasnička odluka: repo sadrži samo sintetičke podatke. Provjera ide prije testova —
+      # JMBG ili strani email u seedu bi prošao testove i otišao u repo.
+      - name: Nema stvarnih ličnih podataka
+        working-directory: v2
+        run: pnpm check-privacy
+
       - name: OpenAPI je ažuran
         working-directory: v2
         run: pnpm --filter @gradix/contracts check

@@ -16,7 +16,8 @@
     "db:generate": "pnpm --filter @gradix/db generate",
     "db:seed": "pnpm --filter @gradix/db seed",
     "db:reset": "pnpm --filter @gradix/db reset",
-    "check-expo": "pnpm --filter @gradix/mobile check-expo"
+    "check-expo": "pnpm --filter @gradix/mobile check-expo",
+    "check-privacy": "node infra/scripts/check-privacy.mjs ."
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

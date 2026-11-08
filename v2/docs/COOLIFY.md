@@ -185,7 +185,7 @@ cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
 
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
 kroz RLS scope, pa radi i kad je `gradix_app` vlasnik šeme. Nalozi: `ured@demo.ba`,
-`vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.ba` (firma 2) — svi sa `SEED_PASSWORD`.
+`vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
 

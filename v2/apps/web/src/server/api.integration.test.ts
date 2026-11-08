@@ -57,7 +57,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
     );
     await admin.query(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password)
-       VALUES ($1, 'it-a@test.ba', $3, 'Test', 'A', false), ($2, 'it-b@test.ba', $3, 'Test', 'B', false)`,
+       VALUES ($1, 'it-a@test.example', $3, 'Test', 'A', false), ($2, 'it-b@test.example', $3, 'Test', 'B', false)`,
       [USER_A, USER_B, hash],
     );
     // `companies` i `users` nisu tenant tabele; `memberships` i `machines` jesu.
@@ -86,7 +86,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("prijava vraća sesiju i cookie", async () => {
-    const response = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: PASSWORD }));
+    const response = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
     expect(response.status).toBe(200);
     const body = await bodyOf<{ success: boolean; data: { companyId: string } }>(response);
     expect(body.data.companyId).toBe(COMPANY_A);
@@ -96,10 +96,10 @@ describeDb("API (integracija na pravoj bazi)", () => {
 
   it("nepoznat email i pogrešna lozinka daju isti kod", async () => {
     const wrongPassword = await loginRoute(
-      jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: "pogresna-lozinka" }),
+      jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: "pogresna-lozinka" }),
     );
     const missingUser = await loginRoute(
-      jsonRequest("http://localhost/api/auth/login", { email: "nema@test.ba", password: "pogresna-lozinka" }),
+      jsonRequest("http://localhost/api/auth/login", { email: "nema@test.example", password: "pogresna-lozinka" }),
     );
     expect(wrongPassword.status).toBe(401);
     expect(missingUser.status).toBe(401);
@@ -112,7 +112,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("/api/me vraća samo mašine svoje firme", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: PASSWORD }));
+    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
     const cookie = cookieFrom(login, "gx_at");
     const me = await meRoute(getRequest("http://localhost/api/me", cookie));
     expect(me.status).toBe(200);
@@ -122,7 +122,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("refresh rotira token, ponovna upotreba gasi sesije", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.ba", password: PASSWORD }));
+    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD }));
     const refreshToken = (await bodyOf<{ data: { refreshToken: string } }>(login)).data.refreshToken;
 
     const first = await refreshRoute(jsonRequest("http://localhost/api/auth/refresh", { refreshToken }));
@@ -139,7 +139,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("sync push je idempotentan i izolovan po firmi", async () => {
-    const loginA = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: PASSWORD }));
+    const loginA = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
     const cookieA = cookieFrom(loginA, "gx_at");
     const payload = {
       deviceId: "it-dev-1",
@@ -156,7 +156,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
     expect(secondBody.data.results[0]?.serverId).toBe(firstBody.data.results[0]?.serverId);
 
     // Firma B ne vidi zapise firme A.
-    const loginB = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.ba", password: PASSWORD }));
+    const loginB = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD }));
     const cookieB = cookieFrom(loginB, "gx_at");
     const pullB = await pullRoute(getRequest("http://localhost/api/sync/pull?since=1970-01-01T00:00:00Z", cookieB));
     const pullBody = await bodyOf<{ data: { items: unknown[] } }>(pullB);
@@ -164,7 +164,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("sync push odbija prevelik batch prije ijednog upisa", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: PASSWORD }));
+    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
     const cookie = cookieFrom(login, "gx_at");
     const items = Array.from({ length: 201 }, (_, index) => ({
       localId: `bulk-${index}`,
@@ -178,7 +178,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("sync pull odbija since u budućnosti", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.ba", password: PASSWORD }));
+    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
     const cookie = cookieFrom(login, "gx_at");
     const response = await pullRoute(getRequest("http://localhost/api/sync/pull?since=2030-01-01T00:00:00Z", cookie));
     expect(response.status).toBe(400);

@@ -91,7 +91,7 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
   it("lookup politika: bez ključa ništa, sa ključem samo taj korisnik", async () => {
     // Priprema: dva korisnika u dvije firme. `users` nije tenant tabela.
     await withCompany(pool, companyId(COMPANY_A), async (client) => {
-      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_a', 'lk-a@test.ba', 'x', 'A', 'A') ON CONFLICT DO NOTHING");
+      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_a', 'lk-a@test.example', 'x', 'A', 'A') ON CONFLICT DO NOTHING");
       await client.query(
         `INSERT INTO memberships (id, user_id, company_id, roles)
          VALUES ('mem_lk_a', 'u_lk_a', $1, ARRAY['ADMIN']::"Role"[]) ON CONFLICT DO NOTHING`,
@@ -99,7 +99,7 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
       );
     });
     await withCompany(pool, companyId(COMPANY_B), async (client) => {
-      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_b', 'lk-b@test.ba', 'x', 'B', 'B') ON CONFLICT DO NOTHING");
+      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_b', 'lk-b@test.example', 'x', 'B', 'B') ON CONFLICT DO NOTHING");
       await client.query(
         `INSERT INTO memberships (id, user_id, company_id, roles)
          VALUES ('mem_lk_b', 'u_lk_b', $1, ARRAY['ADMIN']::"Role"[]) ON CONFLICT DO NOTHING`,

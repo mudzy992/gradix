@@ -131,11 +131,13 @@ poruka, `table.cards` ispod 640 px) — u istom commitu, kao i do sada.
   slučajno ući kroz uvoz; nepoznate kolone u Excelu se prijavljuju i ignorišu.
 - **Svi seed i test podaci su sintetički.** Imena su izmišljena; telefoni su iz opsega za
   fikciju (`+387 00 …`), emailovi na `@demo.ba`. U repou nema stvarnih ličnih podataka.
-- **CI provjera (izvodljivo, mali posao):** skripta koja prolazi kroz `docs/`, seedove i testove
-  i pada na JMBG (13 cifara koje prolaze kontrolnu cifru) i na email adrese van `@demo.ba` /
-  `@primjer.test` / `example.com`. Prag je „nema pogodaka“, bez izuzetaka u kodu. Dodaje se u
-  CI kao korak prije testova; ako se pokaže da lažno pogađa (npr. broj mašine od 13 cifara),
-  pravilo se sužava na polja koja se zovu `jmbg`/`licni_broj`.
+- **CI provjera je napravljena** (`infra/scripts/check-privacy.mjs`, korak „Nema stvarnih ličnih
+  podataka“ prije testova): pada na JMBG (13 cifara koje prolaze kontrolnu cifru — sam format nije
+  dovoljan, inače bi vrijeme u milisekundama bilo pogodak), na polja `jmbg`/`bankovni_racun`/`iban`
+  i na email adrese van `*.test`, `@demo.ba` i `example.*`. Provjereno i na lažnom pogotku
+  (13 cifara sa pogrešnom kontrolnom cifrom prolazi, ispravan JMBG pada) i na lažnom emailu.
+  Domene testova sam usput preimenovao (`@test.ba` → `@test.example`, `@druga.ba` → `@druga.test`),
+  da svi sintetički podaci budu u rezervisanim domenima.
 
 ## Ne ulazi u R2
 
