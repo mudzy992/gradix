@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
-import { getPool } from "@/server/db";
+import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
 import { Card, Chip, Icon, Mono } from "@/components/ui";
+import { can } from "@/server/permissions";
+import { listObligations } from "@/server/obligation-service";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +44,28 @@ export default async function PregledPage() {
       "SELECT code, name FROM machines ORDER BY code",
     );
     const notes = await client.query<{ count: string }>("SELECT count(*)::text AS count FROM sync_items");
+    const memberships = await client.query<{ roles: string[] }>(
+      "SELECT roles::text[] AS roles FROM memberships WHERE user_id = $1",
+      [claims.sub],
+    );
+    const roles = memberships.rows[0]?.roles ?? [];
     return {
       profile: profile.rows[0],
       company: company.rows[0],
       machines: machines.rows,
       noteCount: Number(notes.rows[0]?.count ?? 0),
+      roles,
     };
   });
 
   if (!data) redirect("/login");
+
+  // Rokovi se broje SAMO ako osoba smije da ih vidi; inače kartice nema (nema ni prazne kutije
+  // koja bi rekla „0“ i time slagala da rokova nema).
+  const canSeeObligations = can(data.roles, "obligations.view");
+  const obligationCounts = canSeeObligations
+    ? (await listObligations(await getVerifiedPool(), claims.companyId as CompanyId)).counts
+    : null;
 
   const firstName = data.profile?.first_name ?? "";
   const machineCount = data.machines.length;
@@ -136,6 +152,42 @@ export default async function PregledPage() {
           </div>
         </Card>
       </div>
+
+      {obligationCounts ? (
+        <Card>
+          <div className="gx-section-head">
+            <div className="gx-section-head__text">
+              <h2 className="gx-section-title">Rokovi</h2>
+              <span className="gx-section-hint">ljekarski, registracije, licence</span>
+            </div>
+            <Link className="gx-btn gx-btn--quiet" href="/ured/rokovi">
+              Otvori rokove
+            </Link>
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-6)", marginTop: "var(--space-3)" }}>
+            <div>
+              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
+                {obligationCounts.expired}
+              </div>
+              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>isteklo</span>
+            </div>
+            <div>
+              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
+                {obligationCounts.expiring}
+              </div>
+              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
+                uskoro istječe
+              </span>
+            </div>
+            <div>
+              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
+                {obligationCounts.valid}
+              </div>
+              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>važeće</span>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <Card>
         <div className="gx-section-head">
