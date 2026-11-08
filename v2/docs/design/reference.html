@@ -6,15 +6,14 @@
 <title>Gradix — dizajn referenca</title>
 <style>
 :root,[data-theme=light]{
-  --brand:#140A9A;--accent:#FFC82F;--ink:#1B232A;--slate:#59656F;--edge:#7B858D;
+  --brand:#140A9A;--accent:#FFC82F;--ink:#1B232A;--slate:#59656F;--edge:#7B858D;--danger-raw:#B42318;
   --bg:color-mix(in srgb,var(--ink) 5%,#fff);--panel:#fff;--raise:color-mix(in srgb,var(--ink) 4%,#fff);
   --line:color-mix(in srgb,var(--edge) 28%,#fff);--text:var(--ink);--muted:var(--slate);
   --sunken:color-mix(in srgb,var(--ink) 7%,#fff);
   --primary:var(--brand);--on-primary:#fff;--on-accent:var(--ink);--link:var(--brand);--bar:var(--brand);
   --tint:color-mix(in srgb,var(--brand) 9%,#fff);--shadow:0 1px 2px color-mix(in srgb,var(--ink) 9%,transparent);
   --shadow-lift:0 2px 10px color-mix(in srgb,var(--ink) 8%,transparent);
-  --danger:color-mix(in srgb,var(--ink) 22%,var(--brand));--danger-soft:color-mix(in srgb,var(--brand) 6%,#fff);
-  --success:color-mix(in srgb,var(--ink) 74%,var(--slate));--success-soft:color-mix(in srgb,var(--edge) 14%,#fff);
+  --danger:var(--danger-raw);--danger-soft:color-mix(in srgb,var(--danger-raw) 9%,#fff);
   --warn-soft:color-mix(in srgb,var(--accent) 22%,#fff);--scrim:color-mix(in srgb,var(--ink) 45%,transparent);
   --field:var(--edge);color-scheme:light}
 [data-theme=dark]{
@@ -22,9 +21,8 @@
   --line:color-mix(in srgb,#fff 13%,var(--ink));--text:#fff;--muted:color-mix(in srgb,#fff 64%,var(--ink));
   --sunken:color-mix(in srgb,var(--ink) 88%,#fff);
   --primary:var(--accent);--on-primary:var(--ink);--on-accent:var(--ink);--link:color-mix(in srgb,var(--brand) 40%,#fff);--bar:var(--link);
-  --tint:color-mix(in srgb,var(--brand) 38%,var(--ink));--shadow:none;--shadow-lift:none;
-  --danger:color-mix(in srgb,#fff 86%,var(--brand));--danger-soft:color-mix(in srgb,#fff 12%,var(--ink));
-  --success:color-mix(in srgb,#fff 88%,var(--slate));--success-soft:color-mix(in srgb,#fff 9%,var(--ink));
+  --tint:color-mix(in srgb,#fff 10%,var(--ink));--shadow:none;--shadow-lift:none;
+  --danger:#FF9B90;--danger-soft:color-mix(in srgb,#FF9B90 18%,var(--ink));
   --warn-soft:color-mix(in srgb,var(--accent) 24%,var(--ink));--scrim:color-mix(in srgb,#fff 45%,var(--ink));
   --field:color-mix(in srgb,#fff 38%,var(--ink));color-scheme:dark}
 *{box-sizing:border-box;margin:0}
@@ -120,8 +118,8 @@ td.r,th.r{text-align:right}
 /* Poruka (note iz „Komponente“) sada ima i stanja: greška, uspjeh, upozorenje. */
 .note.err{background:var(--danger-soft);color:var(--danger)}
 .note.err svg{color:var(--danger)}
-.note.ok{background:var(--success-soft);color:var(--success)}
-.note.ok svg{color:var(--success)}
+.note.ok{background:var(--tint);color:var(--text)}
+.note.ok svg{color:var(--link)}
 .note.warn{background:var(--warn-soft);color:var(--text)}
 .note.warn svg{color:var(--text)}
 
@@ -270,8 +268,8 @@ td.r,th.r{text-align:right}
         <section class="card">
           <h2 style="margin-bottom:16px">Stanja i boje</h2>
           <div class="row" style="justify-content:flex-start;margin:0 0 16px"><span class="chip"><i class="dot"></i>Radi</span><span class="chip"><i class="dot w"></i>Zastoj</span><span class="chip"><i class="dot o"></i>Servis</span><span class="days hot">3 dana</span></div>
-          <div class="sw" aria-label="Paleta"><i style="background:#140A9A"></i><i style="background:#FFC82F"></i><i style="background:#1B232A"></i><i style="background:#fff"></i><i style="background:#59656F"></i><i style="background:#7B858D"></i></div>
-          <p class="hint" style="margin-top:12px">Svijetlo: brend je primarna akcija. Tamno: akcent je primarna akcija, a brend se osvjetljava za tekst i oznake.</p>
+          <div class="sw" aria-label="Paleta"><i style="background:#140A9A"></i><i style="background:#FFC82F"></i><i style="background:#1B232A"></i><i style="background:#fff"></i><i style="background:#59656F"></i><i style="background:#7B858D"></i><i style="background:#B42318"></i></div>
+          <p class="hint" style="margin-top:12px">Svijetlo: brend je primarna akcija. Tamno: akcent je primarna akcija, a brend se osvjetljava za tekst i oznake. Sedma boja je crvena (#B42318) i koristi se <b>samo</b> za grešku; uspjeh nema svoju boju nego plohu brenda. Stanje se nikad ne prikazuje samo bojom — uvijek ikona i tekst.</p>
         </section>
       </div>
 

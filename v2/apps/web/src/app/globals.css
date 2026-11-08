@@ -25,6 +25,14 @@
   --palette-slate: #59656f;
   --palette-edge: #7b858d;
 
+  /*
+    Sedma boja, izričita (vlasnikova odluka 2026-11-08): crvena za grešku. Nije `color-mix` —
+    mješanjem indiga, žute, sive i bijele crvena ne nastaje, a „greška“ je stanje koje mora biti
+    prepoznatljivo na prvi pogled. Sve ostale nijanse i dalje nastaju mješanjem.
+    Stanje se NIKAD ne prikazuje samo bojom (ikona + tekst).
+  */
+  --palette-danger: #b42318;
+
   /* ---- tipografija (next/font postavlja --font-manrope / --font-plex-mono) ---------- */
   --font-sans: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, Menlo, monospace;
@@ -84,11 +92,10 @@
   --on-accent: var(--palette-ink);
   --tint: color-mix(in srgb, var(--palette-brand) 9%, var(--palette-surface));
 
-  /* Stanja: poruka je obojena podloga s ikonom; tekst mora proći AA na njoj. */
-  --danger: color-mix(in srgb, var(--palette-ink) 22%, var(--palette-brand));
-  --danger-soft: color-mix(in srgb, var(--palette-brand) 6%, var(--palette-surface));
-  --success: color-mix(in srgb, var(--palette-ink) 74%, var(--palette-slate));
-  --success-soft: color-mix(in srgb, var(--palette-edge) 14%, var(--palette-surface));
+  /* Stanja: poruka je obojena podloga s ikonom; tekst mora proći AA na njoj.
+     Uspjeh nema svoju boju — koristi `--tint` (brend) i zelena se ne uvodi. */
+  --danger: var(--palette-danger);
+  --danger-soft: color-mix(in srgb, var(--palette-danger) 9%, var(--palette-surface));
   --warn-soft: color-mix(in srgb, var(--palette-accent) 22%, var(--palette-surface));
 
   --shadow: 0 1px 2px color-mix(in srgb, var(--palette-ink) 9%, transparent);
@@ -116,13 +123,15 @@
 
   --accent: var(--palette-accent);
   --on-accent: var(--palette-ink);
-  --tint: color-mix(in srgb, var(--palette-brand) 38%, var(--palette-ink));
+  /* Obojena podloga na tamnoj: neutralna ploha od bijele preko pozadine (10 %) — ista ideja kao
+     `--raise`, ali dovoljno daleko od nje da se poruka vidi kao zasebna ploha. Brend na 38 %
+     davao je gotovo crnu plohu; 12 % je rušilo AA za link na njoj (4,36:1), pa je 10 %
+     najtamnija vrijednost koja još drži `--link` preko 4,5:1. */
+  --tint: color-mix(in srgb, var(--palette-surface) 10%, var(--palette-ink));
 
-  /* Na tamnoj su i poruke mješavina iste palete, ali svjetlije da tekst prođe AA. */
-  --danger: color-mix(in srgb, var(--palette-surface) 86%, var(--palette-brand));
-  --danger-soft: color-mix(in srgb, var(--palette-surface) 12%, var(--palette-ink));
-  --success: color-mix(in srgb, var(--palette-surface) 88%, var(--palette-slate));
-  --success-soft: color-mix(in srgb, var(--palette-surface) 9%, var(--palette-ink));
+  /* Crvena je u tamnoj temi svjetlija (vlasnikova odluka), da prođe AA na tamnoj plohi. */
+  --danger: #ff9b90;
+  --danger-soft: color-mix(in srgb, var(--danger) 18%, var(--palette-ink));
   --warn-soft: color-mix(in srgb, var(--palette-accent) 24%, var(--palette-ink));
 
   /* U tamnoj temi nema sjena — dubinu nosi podignuta podloga. */

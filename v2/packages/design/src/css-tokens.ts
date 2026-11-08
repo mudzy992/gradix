@@ -122,3 +122,77 @@ export function contrast(a: string, b: string): number {
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light! + 0.05) / (dark! + 0.05);
 }
+
+/**
+ * CIEDE2000 — razlika dvije boje onako kako je vidi oko, ne po kanalima.
+ *
+ * Zašto u dizajn paketu: AA kontrast mjeri samo „je li tekst čitljiv na podlozi“. Ne kaže da su
+ * dvije obojene podloge (informacija / greška / upozorenje) različite — dvije skoro iste nijanse
+ * prolaze AA svaka za sebe, a čovjek ne vidi razliku. Prag koji se koristi u testu je 2
+ * (ispod toga se boje ne razlikuju ni posmatrane jedna uz drugu), a za podloge stanja tražimo 5.
+ *
+ * Formula: Sharma, Wu, Dalal (2005), „The CIEDE2000 color-difference formula“.
+ */
+export function deltaE(a: string, b: string): number {
+  const toLab = (hex: string) => {
+    const value = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((index) => parseInt(value.slice(index, index + 2), 16) / 255) as [
+      number,
+      number,
+      number,
+    ];
+    const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const [lr, lg, lb] = [linear(r), linear(g), linear(b)];
+    const x = (lr * 0.4124 + lg * 0.3576 + lb * 0.1805) / 0.95047;
+    const y = lr * 0.2126 + lg * 0.7152 + lb * 0.0722;
+    const z = (lr * 0.0193 + lg * 0.1192 + lb * 0.9505) / 1.08883;
+    const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))] as [number, number, number];
+  };
+
+  const [l1, a1, b1] = toLab(a);
+  const [l2, a2, b2] = toLab(b);
+  const rad = Math.PI / 180;
+  const c1 = Math.hypot(a1, b1);
+  const c2 = Math.hypot(a2, b2);
+  const cBar = (c1 + c2) / 2;
+  const g = 0.5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + 25 ** 7)));
+  const a1p = a1 * (1 + g);
+  const a2p = a2 * (1 + g);
+  const c1p = Math.hypot(a1p, b1);
+  const c2p = Math.hypot(a2p, b2);
+  const h1p = (Math.atan2(b1, a1p) / rad + 360) % 360;
+  const h2p = (Math.atan2(b2, a2p) / rad + 360) % 360;
+
+  const dLp = l2 - l1;
+  const dCp = c2p - c1p;
+  let dhp = 0;
+  if (c1p * c2p !== 0) {
+    dhp = h2p - h1p;
+    if (dhp > 180) dhp -= 360;
+    if (dhp < -180) dhp += 360;
+  }
+  const dHp = 2 * Math.sqrt(c1p * c2p) * Math.sin((dhp * rad) / 2);
+
+  const lBar = (l1 + l2) / 2;
+  const cBarP = (c1p + c2p) / 2;
+  let hBar = h1p + h2p;
+  if (c1p * c2p !== 0) hBar = Math.abs(h1p - h2p) > 180 ? (h1p + h2p + 360) / 2 : (h1p + h2p) / 2;
+
+  const t =
+    1 -
+    0.17 * Math.cos((hBar - 30) * rad) +
+    0.24 * Math.cos(2 * hBar * rad) +
+    0.32 * Math.cos((3 * hBar + 6) * rad) -
+    0.2 * Math.cos((4 * hBar - 63) * rad);
+  const dTheta = 30 * Math.exp(-(((hBar - 275) / 25) ** 2));
+  const rc = 2 * Math.sqrt(cBarP ** 7 / (cBarP ** 7 + 25 ** 7));
+  const sl = 1 + (0.015 * (lBar - 50) ** 2) / Math.sqrt(20 + (lBar - 50) ** 2);
+  const sc = 1 + 0.045 * cBarP;
+  const sh = 1 + 0.015 * cBarP * t;
+  const rt = -Math.sin(2 * dTheta * rad) * rc;
+
+  return Math.sqrt(
+    (dLp / sl) ** 2 + (dCp / sc) ** 2 + (dHp / sh) ** 2 + rt * (dCp / sc) * (dHp / sh),
+  );
+}

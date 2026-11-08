@@ -11,7 +11,11 @@
  * tokene (`text`, `panel`, `muted`, `line`, `primary`…), isto kao `var(--text)` na webu.
  */
 
-/** Šest boja palete — jedine dopuštene „sirove“ boje (DESIGN.md „Paleta“). */
+/**
+ * Šest boja palete + jedna izričita crvena (vlasnikova odluka 2026-11-08) — jedine dopuštene
+ * „sirove“ boje (DESIGN.md „Paleta“). Sve ostale nijanse nastaju mješanjem. Crvena postoji
+ * samo za grešku; uspjeh je `tint` (brend), da se ne uvodi zelena.
+ */
 export const palette = {
   brand: "#140a9a",
   accent: "#ffc82f",
@@ -19,6 +23,7 @@ export const palette = {
   surface: "#ffffff",
   slate: "#59656f",
   edge: "#7b858d",
+  danger: "#b42318",
 } as const;
 
 /** Semantički tokeni — imena su ista kao CSS varijable bez `--`. */
@@ -40,8 +45,6 @@ export type ThemeTokens = {
   tint: string;
   danger: string;
   dangerSoft: string;
-  success: string;
-  successSoft: string;
   warnSoft: string;
 };
 
@@ -61,10 +64,8 @@ export const lightTheme: ThemeTokens = {
   accent: "#ffc82f",
   onAccent: "#1b232a",
   tint: "#eae9f6",
-  danger: "#161081",
-  dangerSoft: "#f1f0f9",
-  success: "#2b343c",
-  successSoft: "#edeeef",
+  danger: "#b42318",
+  dangerSoft: "#f8ebea",
   warnSoft: "#fff3d1",
 };
 
@@ -83,11 +84,9 @@ export const darkTheme: ThemeTokens = {
   bar: "#a19dd7",
   accent: "#ffc82f",
   onAccent: "#1b232a",
-  tint: "#181a55",
-  danger: "#deddf1",
-  dangerSoft: "#363d44",
-  success: "#ebedee",
-  successSoft: "#30373d",
+  tint: "#32393f",
+  danger: "#ff9b90",
+  dangerSoft: "#44393c",
   warnSoft: "#524b2b",
 };
 

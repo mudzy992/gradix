@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { resolveTheme } from "@gradix/design/css-tokens";
+import { contrast, deltaE, resolveTheme } from "@gradix/design/css-tokens";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const read = (path: string) => readFileSync(join(here, "..", path), "utf8");
@@ -32,18 +32,45 @@ const reference = readFileSync(
   "utf8",
 );
 
-const PALETTE = ["#140a9a", "#ffc82f", "#1b232a", "#ffffff", "#59656f", "#7b858d"];
+/**
+ * Zatvorena paleta. Sedam vrijednosti: šest iz `DESIGN.md` + **jedna crvena**, vlasnikova odluka
+ * 2026-11-08. Crvena je izričit token (`--palette-danger`), ne `color-mix`, jer mješanjem indiga,
+ * žute, sive i bijele crvena ne nastaje. Ona postoji samo za grešku; uspjeh je `--tint`.
+ */
+const PALETTE = [
+  "#140a9a", // brend (indigo)
+  "#ffc82f", // akcent (žuta)
+  "#1b232a", // tekst (ink)
+  "#ffffff", // površina
+  "#59656f", // sekundarni tekst
+  "#7b858d", // ivica polja
+  "#b42318", // crvena za grešku (svijetla tema)
+];
+
+/** Crvena se u tamnoj temi svjetlja da prođe AA — i ta vrijednost je dio ugovora. */
+const DANGER_DARK = "#ff9b90";
 
 describe("paleta i teme", () => {
-  it("u globals.css postoji samo šest boja palete kao hex", () => {
+  it("u globals.css postoji samo paleta (šest boja + jedna crvena) kao hex", () => {
     const found = new Set((globals.match(/#[0-9a-f]{6}\b/gi) ?? []).map((value) => value.toLowerCase()));
-    for (const value of found) expect(PALETTE, `neočekivan hex ${value}`).toContain(value);
+    const dozvoljeni = [...PALETTE, DANGER_DARK];
+    for (const value of found) expect(dozvoljeni, `neočekivan hex ${value}`).toContain(value);
+    // Sedam u svijetloj + jedna svjetlija crvena u tamnoj. Svaki novi hex pada ovdje.
+    expect(found.size).toBeLessThanOrEqual(8);
+  });
+
+  it("crvena je izričit token, a uspjeh nema svoju boju", () => {
+    expect(globals).toMatch(/--palette-danger:\s*#b42318/);
+    // Uspjeh koristi `--tint`; zelena se ne uvodi (nijedan token se ne zove `success`).
+    expect(globals).not.toMatch(/--success(-soft)?:/);
+    expect(shell).toMatch(/\.gx-note--success\s*\{[^}]*background:\s*var\(--tint\)/);
   });
 
   it("sve ostale nijanse nastaju color-mix-om", () => {
-    // Broj `color-mix` poziva mora biti veći od broja semantičkih tokena: svaka nijansa koja
-    // nije direktna paleta mora biti izmiješana, ne upisana.
-    expect((globals.match(/color-mix\(/g) ?? []).length).toBeGreaterThanOrEqual(20);
+    // Nijansa koja nije direktna paleta mora biti izmiješana, ne upisana. Prag je broj
+    // mješavina u `globals.css`; spušten je sa 20 na 18 kad je `--success` uklonjen
+    // (vlasnikova odluka 2026-11-08: uspjeh koristi `--tint`, pa su dvije mješavine otišle).
+    expect((globals.match(/color-mix\(/g) ?? []).length).toBeGreaterThanOrEqual(18);
   });
 
   it("obje teme postoje i imaju iste semantičke tokene", () => {
@@ -184,6 +211,8 @@ describe("referenca i kod se ne raziđu", () => {
       "text-label", "radius-panel", "radius-card", "radius-field", "radius-tile", "radius-pill",
       "font-sans", "font-mono", "palette-brand", "palette-accent", "palette-ink", "palette-surface",
       "palette-slate", "palette-edge",
+      // Referenca je statična i drži crvenu pod imenom `--danger-raw`; kod ima `--palette-danger`.
+      "palette-danger",
     ]);
     const uReferenci = imena(referenca);
     const nedostaju = [...uKodu].filter((name) => !samoUKodu.has(name) && !uReferenci.has(name));
@@ -192,7 +221,8 @@ describe("referenca i kod se ne raziđu", () => {
 
   it("referenca ne uvodi nijednu boju van palete", () => {
     const heksovi = [...referenca.matchAll(/#[0-9a-f]{3,8}\b/gi)].map((match) => match[0].toLowerCase());
-    const dozvoljeni = new Set([...PALETTE, "#fff"]);
+    // Ista dva izuzetka kao u `globals.css`: kratki `#fff` i svjetlija crvena za tamnu temu.
+    const dozvoljeni = new Set([...PALETTE, "#fff", DANGER_DARK]);
     const nove = [...new Set(heksovi)].filter((value) => !dozvoljeni.has(value));
     expect(nove, `boje van palete u reference.html: ${nove.join(", ")}`).toEqual([]);
   });
@@ -211,5 +241,42 @@ describe("referenca i kod se ne raziđu", () => {
     ];
     const nedostaju = selektori.filter((selector) => !referenca.includes(selector));
     expect(nedostaju, `nema primjera u reference.html: ${nedostaju.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("podloge stanja se razlikuju (ΔE)", () => {
+  /**
+   * AA kontrast mjeri čitljivost teksta na podlozi, ali NE kaže da dvije podloge razlikuje
+   * čovjek. Prije ove provjere `--danger-soft` i `--tint` su u svijetloj temi bili ΔE 2,3
+   * (ispod praga razlučivosti), pa su greška i informacija izgledale isto.
+   * Prag 5 za razliku između stanja (porede se neposredno), 3 za to da se podloga vidi kao
+   * zasebna ploha na ploči.
+   */
+  const PODLOGE = ["tint", "danger-soft", "warn-soft"] as const;
+
+  for (const theme of ["light", "dark"] as const) {
+    it(`${theme}: svaka podloga stanja je različita od svake druge i od ploče`, () => {
+      const resolved = resolveTheme(globals, theme);
+      for (let i = 0; i < PODLOGE.length; i += 1) {
+        for (let j = i + 1; j < PODLOGE.length; j += 1) {
+          const a = resolved[PODLOGE[i]!]!;
+          const b = resolved[PODLOGE[j]!]!;
+          expect(deltaE(a, b), `${PODLOGE[i]} ${a} vs ${PODLOGE[j]} ${b}`).toBeGreaterThanOrEqual(5);
+        }
+        const podloga = resolved[PODLOGE[i]!]!;
+        const ploca = resolved.panel!;
+        // Prag za plohu je niži (3): podloga samo mora biti vidljiva kao zasebna ploha;
+        // prag za razliku IZMEĐU stanja je 5, jer se ta dva stanja porede neposredno.
+        expect(deltaE(podloga, ploca), `${PODLOGE[i]} ${podloga} vs ploča ${ploca}`).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+
+  it("crvena prolazi AA na svojoj podlozi i na ploči, u obje teme", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const t = resolveTheme(globals, theme);
+      expect(contrast(t.danger!, t["danger-soft"]!), `${theme} danger na danger-soft`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(t.danger!, t.panel!), `${theme} danger na ploči`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

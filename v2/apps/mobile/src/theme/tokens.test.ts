@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { darkTheme, lightTheme, palette, themes, touchTarget, type ThemeTokens } from "./tokens";
-import { contrast, resolveTheme } from "@gradix/design/css-tokens";
+import { contrast, deltaE, resolveTheme } from "@gradix/design/css-tokens";
 
 // Putanja od `apps/mobile/src/theme` do `apps/web/src/app/globals.css` — jedan nivo više
 // nego što izgleda, jer `here` je već `…/src/theme`.
@@ -43,18 +43,17 @@ const TOKEN_NAMES: Record<keyof ThemeTokens, string> = {
   tint: "tint",
   danger: "danger",
   dangerSoft: "danger-soft",
-  success: "success",
-  successSoft: "success-soft",
   warnSoft: "warn-soft",
 };
 
 describe("tokeni: web i mobilni", () => {
-  it("paleta je šest boja i ista na oba mjesta", () => {
+  it("paleta je šest boja + crvena i ista na oba mjesta", () => {
     for (const [name, value] of Object.entries(palette)) {
       const cssValue = resolveTheme(css, "light")[`palette-${name}`];
       expect(cssValue, `paleta ${name}`).toBe(value);
     }
-    expect(Object.keys(palette)).toHaveLength(6);
+    // Sedam: šest iz DESIGN.md + izričita crvena za grešku (vlasnikova odluka 2026-11-08).
+    expect(Object.keys(palette)).toHaveLength(7);
   });
 
   it.each(["light", "dark"] as const)("%s tema se ne raziđe između web i mobilnog", (theme) => {
@@ -65,10 +64,11 @@ describe("tokeni: web i mobilni", () => {
     }
   });
 
-  it("sedam boja palete je SVE što postoji kao hex u globals.css", () => {
+  it("paleta (šest + crvena, i svjetlija crvena za tamnu temu) je SVE što postoji kao hex", () => {
     // `#fff`/`#000` u CSS-u nisu dopušteni; sve nijanse su color-mix nad paletom.
+    // Crvena u tamnoj temi je svjetlija (AA), pa je i ta vrijednost dio ugovora.
     const fromCss = new Set((css.match(/#[0-9a-f]{6}\b/gi) ?? []).map((value) => value.toLowerCase()));
-    const allowed = new Set(Object.values(palette));
+    const allowed = new Set([...Object.values(palette), darkTheme.danger.toLowerCase()]);
     for (const value of fromCss) expect(allowed.has(value as never), `neočekivan hex ${value}`).toBe(true);
   });
 });
@@ -92,8 +92,12 @@ describe("AA kontrast u obje teme", () => {
       ["ivica polja na ploči", t.field, t.panel, 3],
       ["ivica polja na pozadini", t.field, t.bg, 3],
       ["poruka greške na svojoj podlozi", t.danger, t.dangerSoft, 4.5],
-      ["poruka uspjeha na svojoj podlozi", t.success, t.successSoft, 4.5],
+      // Uspjeh nema svoju boju — ista ploha kao informacija, ikona nosi razliku.
+      ["tekst na plohi uspjeha", t.text, t.tint, 4.5],
       ["tekst na žutoj podlozi", t.text, t.warnSoft, 4.5],
+      // Crvena je izričit token (vlasnikova odluka 2026-11-08), pa se mjeri kao i sve ostalo.
+      ["crvena na svojoj podlozi", t.danger, t.dangerSoft, 4.5],
+      ["crvena na ploči", t.danger, t.panel, 4.5],
     ];
   }
 
@@ -106,6 +110,21 @@ describe("AA kontrast u obje teme", () => {
   it("tamna tema", () => {
     for (const [name, foreground, background, min] of pairs(darkTheme)) {
       expect(contrast(foreground, background), `${name}: ${foreground} na ${background}`).toBeGreaterThanOrEqual(min);
+    }
+  });
+
+  it("podloge stanja se razlikuju jedna od druge (ΔE ≥ 5) u obje teme", () => {
+    // AA kontrast ne hvata dvije podloge koje izgledaju isto — to hvata ΔE. Prije ove
+    // provjere greška i informacija su u svijetloj temi bile ΔE 2,3 (nerazlučivo).
+    for (const theme of [lightTheme, darkTheme]) {
+      const podloge = [theme.tint, theme.dangerSoft, theme.warnSoft];
+      for (let i = 0; i < podloge.length; i += 1) {
+        for (let j = i + 1; j < podloge.length; j += 1) {
+          expect(deltaE(podloge[i]!, podloge[j]!), `${podloge[i]} vs ${podloge[j]}`).toBeGreaterThanOrEqual(5);
+        }
+        // Ploha samo mora biti vidljiva kao zasebna (3); razlika između stanja je 5.
+        expect(deltaE(podloge[i]!, theme.panel), `${podloge[i]} vs ploča`).toBeGreaterThanOrEqual(3);
+      }
     }
   });
 

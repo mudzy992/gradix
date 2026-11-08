@@ -726,9 +726,14 @@ textarea.gx-input {
   color: var(--danger);
 }
 
+/* Uspjeh nema svoju boju (odluka 2026-11-08): ista ploha kao informacija, ikona nosi razliku. */
 .gx-note--success {
-  background: var(--success-soft);
-  color: var(--success);
+  background: var(--tint);
+  color: var(--text);
+}
+
+.gx-note--success svg {
+  color: var(--link);
 }
 
 .gx-note--warning {
