@@ -95,17 +95,23 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     await admin.end();
   });
 
-  it("aktivan je TAČNO JEDAN mehanizam: EXCLUDE (btree_gist) ili triger sa bravom", async () => {
-    const constraints = await admin.query<{ conname: string }>(
+  /**
+   * Koji mehanizam je aktivan na OVOJ bazi.
+   *
+   * Ispisuje se u log jer se put bira pri migraciji (ima li `btree_gist`) i razlikuje se između
+   * lokalne baze i CI slike. Testovi ispod NE tvrde koji je — tvrde da preklapanje pada, što mora
+   * važiti za oba.
+   */
+  async function mehanizam(): Promise<"EXCLUDE" | "triger"> {
+    const constraints = await admin.query(
       "SELECT conname FROM pg_constraint WHERE conrelid = 'project_assignments'::regclass AND contype = 'x'",
     );
-    const trigger = await admin.query<{ tgname: string }>(
+    const trigger = await admin.query(
       "SELECT tgname FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND NOT tgisinternal",
     );
     const hasGist = constraints.rowCount === 2;
     const hasTrigger = trigger.rowCount === 1;
 
-    // Dijagnostika u log — iz nje se vidi koji je put migracija izabrala na ovoj bazi.
     console.log(
       `MEHANIZAM: ${hasGist ? "EXCLUDE USING gist (btree_gist dostupan)" : "triger + pg_advisory_xact_lock"} ` +
         `[constraints=${constraints.rowCount}, triggers=${trigger.rowCount}]`,
@@ -114,6 +120,11 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     // Nijedan ili oba = greška: prvo znači da preklapanje nije zaštićeno, drugo da postoje dva
     // mjesta za isto pravilo (i da će se razići).
     expect(hasGist !== hasTrigger, "mora biti tačno jedan mehanizam").toBe(true);
+    return hasGist ? "EXCLUDE" : "triger";
+  }
+
+  it("aktivan je TAČNO JEDAN mehanizam: EXCLUDE (btree_gist) ili triger sa bravom", async () => {
+    await mehanizam();
   });
 
   it("dvije paralelne dodjele ISTOG radnika u istom periodu: tačno jedna pada", async () => {
@@ -148,7 +159,12 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
       }
 
       expect(outcome, "bez brave bi obje prošle — to je greška u bazi").toContain("pala");
-      expect(outcome).toContain("ASSIGNMENT_OVERLAP");
+      /*
+       * Poruka zavisi od mehanizma: triger baca našu `ASSIGNMENT_OVERLAP`, a `EXCLUDE` constraint
+       * SQLSTATE 23P01. Test zato traži ZNAK preklapanja, a ne tačan tekst — inače bi prolazio samo
+       * na jednoj od dvije podržane baze (i to je bila greška koju je uhvatio CI).
+       */
+      expect(outcome).toMatch(/ASSIGNMENT_OVERLAP|no_overlap|23P01/);
 
       // Na kraju u bazi smije biti TAČNO JEDAN red za taj period.
       const rows = await admin.query(
@@ -184,7 +200,7 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
       if (outcome === "uspjela") await second.query("COMMIT");
       else await second.query("ROLLBACK");
 
-      expect(outcome).toContain("ASSIGNMENT_OVERLAP");
+      expect(outcome).toMatch(/ASSIGNMENT_OVERLAP|no_overlap|23P01/);
       const rows = await admin.query(
         "SELECT id FROM project_assignments WHERE company_id = $1 AND machine_id = $2",
         [COMPANY, MACHINE],
@@ -217,6 +233,47 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     } finally {
       first.release();
       second.release();
+    }
+  }, 30_000);
+
+  it("servis prevodi grešku baze u čitljiv 409 — za OBA mehanizma, ne samo za triger", async () => {
+    // Ovo je mjesto gdje je CI pao: sa `EXCLUDE` mehanizmom greška je 23P01, a ne `ASSIGNMENT_OVERLAP`,
+    // pa je provjera tekstualnog prefiksa propuštala grešku do korisnika kao „Došlo je do greške" (500).
+    const { createAssignment } = await import("./project-service");
+    const { getVerifiedPool } = await import("./db");
+    const pool = await getVerifiedPool();
+
+    // Nalog mora postojati: dodjela piše audit, a audit nosi FK na korisnika.
+    await admin.query(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password)
+       VALUES ($1, 'race@example.test', 'x', 'Trka', 'Test', false)
+       ON CONFLICT (id) DO NOTHING`,
+      ["usr_r3_race"],
+    );
+    const actor = { userId: "usr_r3_race", roles: ["OWNER" as const], scope: "COMPANY" as const, projectIds: null };
+    const first = await createAssignment(
+      pool,
+      COMPANY as never,
+      actor,
+      PROJECT,
+      { workerId: WORKER_A, fromDate: "2027-01-01", toDate: "2027-01-31" } as never,
+    );
+    expect("code" in first, `prva dodjela mora proći: ${JSON.stringify(first)}`).toBe(false);
+
+    const second = await createAssignment(
+      pool,
+      COMPANY as never,
+      actor,
+      PROJECT,
+      { workerId: WORKER_A, fromDate: "2027-01-15", toDate: "2027-02-15" } as never,
+    );
+
+    expect("code" in second).toBe(true);
+    if ("code" in second) {
+      expect(second.code).toBe("CONFLICT");
+      // Poruka je za čovjeka, ne za bazu: bez imena constraint-a i bez SQLSTATE.
+      expect(second.message).toContain("preklapa");
+      expect(second.message).not.toContain("constraint");
     }
   }, 30_000);
 });

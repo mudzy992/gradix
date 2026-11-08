@@ -152,6 +152,28 @@ export async function companyToday(client: PoolClient, companyId: CompanyId): Pr
  * `null` iz `visibleProjectIds` znači „bez filtera" (`COMPANY`); prazan niz znači „nijedan" — i to
  * je ISPRAVNO za `SELF` i za `PROJECTS` bez dodjele. Zato se ne piše `= ANY('{}')` za sve.
  */
+/**
+ * Je li greška baze PREKLAPANJE dodjela? Prepoznaje OBA mehanizma.
+ *
+ * Zašto oba: ovo pravilo u bazi ima dva moguća nosioca (vidi migraciju
+ * `20261109160000_r3_preklapanje_gist`) — `EXCLUDE USING gist` kad je `btree_gist` dostupan, triger
+ * sa savjetodavnom bravom kad nije. Oni se NE javljaju istom greškom:
+ *   - triger:      `ASSIGNMENT_OVERLAP` (naša poruka),
+ *   - EXCLUDE:     SQLSTATE `23P01`, tekst `… exclusion constraint "project_assignments_worker_no_overlap"`.
+ * Prvobitna verzija je provjeravala samo prvu — pa bi na bazi SA `btree_gist` korisnik dobio
+ * „Došlo je do greške" (500) tamo gdje treba čitljivo „već je na projektu". Test trke je to uhvatio
+ * u CI-ju jer tamo `btree_gist` postoji, a lokalno ne.
+ */
+export function isOverlapError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const saPorukom = error as { message?: unknown; code?: unknown; constraint?: unknown };
+  if (String(saPorukom.code ?? "") === "23P01") return true;
+  if (String(saPorukom.constraint ?? "").includes("no_overlap")) return true;
+  return String(saPorukom.message ?? "").includes("ASSIGNMENT_OVERLAP");
+}
+
+export const OVERLAP_MESSAGE = "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.";
+
 function scopeClause(actor: ProjectActor, column: string): { sql: string; params: unknown[] } {
   const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
   if (ids === null) return { sql: "", params: [] };
@@ -621,15 +643,9 @@ export async function createAssignment(
         });
       }
     } catch (error) {
-      // Triger u bazi baci `ASSIGNMENT_OVERLAP`; ekran ne treba da vidi naziv constraint-a.
-      if (typeof error === "object" && error !== null && "message" in error) {
-        const message = String((error as { message: unknown }).message);
-        if (message.includes("ASSIGNMENT_OVERLAP")) {
-          return {
-            code: "CONFLICT",
-            message: "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.",
-          } as ServiceError;
-        }
+      // Baza brani preklapanje; ekran ne treba da vidi naziv constraint-a ni SQLSTATE.
+      if (isOverlapError(error)) {
+        return { code: "CONFLICT", message: OVERLAP_MESSAGE } as ServiceError;
       }
       throw error;
     }
@@ -1053,14 +1069,8 @@ export async function approveOverride(
         ],
       );
     } catch (error) {
-      if (typeof error === "object" && error !== null && "message" in error) {
-        const message = String((error as { message: unknown }).message);
-        if (message.includes("ASSIGNMENT_OVERLAP") || message.includes("no_overlap")) {
-          return {
-            code: "CONFLICT",
-            message: "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.",
-          } as ServiceError;
-        }
+      if (isOverlapError(error)) {
+        return { code: "CONFLICT", message: OVERLAP_MESSAGE } as ServiceError;
       }
       throw error;
     }
