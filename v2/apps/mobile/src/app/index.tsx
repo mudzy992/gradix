@@ -20,6 +20,7 @@ import { openDb, insertNote, markFailed, markSent, pendingCount, pendingNotes, r
 import { runSync } from "../sync/engine";
 import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
+import { jedanStil } from "../lib/styles";
 
 const DEVICE_ID = "gradix-device-r0";
 
@@ -234,8 +235,14 @@ export default function IndexScreen() {
         Rokovi su odvojen ekran (R2b), samo čitanje. Link je ovdje, a ne u meniju: na terenu se
         dolazi zbog dva pitanja — „šta nisam poslao“ i „šta mi istječe“.
       */}
+      {/*
+        `asChild` NIJE upotrijebljen namjerno: expo-router 58 kroz `<Slot>` klonira dijete i baca
+        grešku ako ono dobije NIZ stilova (`style={[a, b]}`), a `Pressable` ovdje ima dva stila.
+        Zato stil ide kroz `jedanStil(...)` (jedan objekat, ne niz) — i to ne samo ovdje: pravilo
+        provjerava `src/lib/styles.test.ts`, jer ga ni `tsc` ni lint ne vide.
+      */}
       <Link href="/rokovi" asChild>
-        <Pressable style={[styles.button, styles.secondaryButton]} accessibilityRole="link">
+        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
           <Text style={[styles.buttonText, styles.secondaryText]}>Moji rokovi</Text>
         </Pressable>
       </Link>

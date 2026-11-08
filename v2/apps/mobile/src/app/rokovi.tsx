@@ -8,10 +8,11 @@
  * kopiju (i kad nema veze), pa je osvježi kad veza postoji — nikad prazan ekran zbog mreže.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { myObligations } from "../api/client";
 import { openDb, readObligations, saveObligations, type LocalObligation } from "../db/sqlite";
-import { radius, spacing, typography } from "../theme/tokens";
+import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 
 const STATE_LABEL: Record<string, string> = {
@@ -29,6 +30,13 @@ function sinceLabel(fetchedAt: string | null): string {
   if (minutes < 60) return `od prije ${minutes} min`;
   const hours = Math.round(minutes / 60);
   return hours === 1 ? "od prije 1 sat" : `od prije ${hours} sata`;
+}
+
+/** `2026-11-27` → `27. 11. 2026.` — isti zapis kao na webu (`formatDate`). */
+function domaciDatum(iso: string): string {
+  const [godina, mjesec, dan] = iso.slice(0, 10).split("-");
+  if (!godina || !mjesec || !dan) return iso;
+  return `${Number(dan)}. ${Number(mjesec)}. ${godina}.`;
 }
 
 function daysLabel(row: LocalObligation): string {
@@ -99,6 +107,20 @@ export default function ObligationsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/*
+        Zaglavlje je u cijeloj aplikaciji isključeno (`_layout.tsx`), pa ekran koji nije početni
+        mora sam imati put nazad — inače na iOS-u nema kako da se vrati. Ako je ekran otvoren
+        direktno (deep link), nazad vodi na početni.
+      */}
+      <Pressable
+        style={styles.back}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+        accessibilityRole="button"
+        accessibilityLabel="Nazad na početni ekran"
+      >
+        <Text style={styles.backText}>‹ Nazad</Text>
+      </Pressable>
+
       <Text style={styles.title}>Moji rokovi</Text>
       <Text style={styles.subtitle}>{sinceLabel(fetchedAt)}</Text>
 
@@ -108,7 +130,7 @@ export default function ObligationsScreen() {
         <View style={styles.panel}>
           <Text style={styles.panelLabel}>Nema rokova</Text>
           <Text style={styles.panelHint}>
-            Ovdje su obaveze gdje si odgovoran ili je radnik vezan za tvoj nalog. Osvježi za novi spisak.
+            Ovdje se vide obaveze gdje si odgovoran ili je radnik vezan za tvoj nalog. Osvježi za novi spisak.
           </Text>
         </View>
       ) : (
@@ -123,7 +145,7 @@ export default function ObligationsScreen() {
             </View>
             <Text style={styles.cardTarget}>{row.target}</Text>
             <Text style={styles.cardMono}>
-              {row.expiresAt ?? "bez roka"} · {daysLabel(row)}
+              {row.expiresAt ? domaciDatum(row.expiresAt) : "bez roka"} · {daysLabel(row)}
             </Text>
           </View>
         ))
@@ -151,6 +173,13 @@ function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
   return StyleSheet.create({
     center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: t.bg },
     container: { padding: spacing.xl, gap: spacing.md, backgroundColor: t.bg, flexGrow: 1 },
+    back: {
+      minHeight: touchTarget,
+      justifyContent: "center",
+      alignSelf: "flex-start",
+      paddingRight: spacing.md,
+    },
+    backText: { ...typography.button, color: t.muted },
     title: { ...typography.page, color: t.text },
     subtitle: { ...typography.body, color: t.muted, marginBottom: spacing.sm },
     panel: {
