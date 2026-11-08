@@ -56,6 +56,8 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
   `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja. Dodjela projekta dobija **posebnu
   dozvolu `projects.assign`**, ne `users.manage`.
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
+- **Crvena za grešku** je izričit token (`#b42318` / `#ff9b90`) uz šest boja palete; `--success` je
+  uklonjen i uspjeh koristi `--tint`. Podloge stanja moraju biti ΔE ≥ 5 jedna od druge (test).
 - **Dizajn v2** je prepisan po `docs/design/DESIGN.md` + `reference.html` (okvir, primitivi, svi
   ekrani, obje teme, mobilni sa istim tokenima). Stari smjerovi A/B i R1c okvir su **obrisani**.
 - **Osam elemenata je bilo van reference** (dijalozi, prazna stanja, učitavanje, prijava, lozinke,
