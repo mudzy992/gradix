@@ -4,25 +4,21 @@
  *
  * Tokeni se drže u `lib/store` (na uređaju Keychain/Keystore, na webu `localStorage`), nikad u AsyncStorage.
  */
+import { ApiError, createClient, type ErrorCode } from "@gradix/contracts";
+import type { LoginResponse, MeResponse, SyncPullResponse, SyncPushRequest, SyncPushResponse } from "@gradix/contracts";
 import { deleteStore, readStore, writeStore } from "../lib/store";
 
 const ACCESS_KEY = "gx_access";
 const REFRESH_KEY = "gx_refresh";
 
-export type ApiEnvelope<T> =
-  | { success: true; data: T; meta?: Record<string, unknown> }
-  | { success: false; error: { code: string; message: string } };
+/**
+ * `ApiError` dolazi iz ugovora; ovdje se samo dodaje slučaj kojeg ugovor ne poznaje jer se ne
+ * dešava na serveru — mrežni prekid. Kod je namjerno van `ErrorCode` kataloga i provjerava se
+ * poređenjem, ne po tipu.
+ */
+export const NETWORK_ERROR = "NETWORK_ERROR" as ErrorCode;
 
-export class ApiError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
+export { ApiError };
 
 export function getBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
@@ -45,39 +41,36 @@ export async function getAccessToken(): Promise<string | null> {
   return readStore(ACCESS_KEY);
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+/**
+ * Klijent iz ugovora + dva sloja koja su specifična za uređaj:
+ * (1) mrežni prekid se pretvara u `NETWORK_ERROR` (zapis ostaje u redu i šalje se ponovo),
+ * (2) 401 pokušava jednu rotaciju refresh tokena pa ponavlja zahtjev.
+ */
+async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, init);
+}
+
+const client = createClient({ baseUrl: getBaseUrl(), fetch: authedFetch });
+
+async function withToken<T>(call: (token: string | null) => Promise<T>): Promise<T> {
   const token = await getAccessToken();
-  const headers: Record<string, string> = {
-    "content-type": "application/json",
-    ...(init.headers as Record<string, string> | undefined),
-  };
-  if (token) headers.authorization = `Bearer ${token}`;
-
-  let response: Response;
   try {
-    response = await fetch(`${getBaseUrl()}${path}`, { ...init, headers });
-  } catch {
-    // Mrežni prekid NIJE greška servera: zapis ostaje u redu i šalje se ponovo.
-    throw new ApiError("NETWORK_ERROR", "Nema veze sa serverom.", 0);
-  }
-
-  if (response.status === 401 && retry) {
+    return await call(token);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+    if (error.status === 0) {
+      // Mrežni prekid NIJE greška servera: zapis ostaje u redu i šalje se ponovo.
+      throw new ApiError({ code: NETWORK_ERROR, message: "Nema veze sa serverom.", status: 0 });
+    }
+    if (error.status !== 401) throw error;
     const refreshed = await refreshTokens();
-    if (refreshed) return request<T>(path, init, false);
+    if (!refreshed) throw error;
+    return call(await getAccessToken());
   }
-
-  const body = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
-  if (!body) throw new ApiError("INTERNAL", "Neispravan odgovor servera.", response.status);
-  if (!body.success) throw new ApiError(body.error.code, body.error.message, response.status);
-  return body.data;
 }
 
 export async function login(email: string, password: string): Promise<{ mustChangePassword: boolean }> {
-  const data = await request<{
-    accessToken: string;
-    refreshToken: string;
-    mustChangePassword: boolean;
-  }>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }, false);
+  const { data } = await client.post("/api/auth/login", { email, password }, undefined, { accessToken: null });
   await saveTokens(data.accessToken, data.refreshToken);
   return { mustChangePassword: data.mustChangePassword };
 }
@@ -86,44 +79,41 @@ export async function refreshTokens(): Promise<boolean> {
   const refreshToken = await readStore(REFRESH_KEY);
   if (!refreshToken) return false;
   try {
-    const response = await fetch(`${getBaseUrl()}/api/auth/refresh`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    });
-    const body = (await response.json().catch(() => null)) as ApiEnvelope<{
-      accessToken: string;
-      refreshToken: string;
-    }> | null;
-    if (!response.ok || !body || !body.success) {
-      await clearTokens();
-      return false;
-    }
-    await saveTokens(body.data.accessToken, body.data.refreshToken);
+    const { data } = await client.post("/api/auth/refresh", { refreshToken }, undefined, { accessToken: null });
+    await saveTokens(data.accessToken, data.refreshToken);
     return true;
   } catch {
+    await clearTokens();
     return false;
   }
 }
 
-export type Me = {
-  user: { id: string; firstName: string; lastName: string; roles: string[] };
-  company: { name: string; currency: string } | null;
-};
+/** Tipovi dolaze iz ugovora — `Me` je ono što `GET /api/me` stvarno vraća. */
+export type Me = MeResponse;
 
-export function me(): Promise<Me> {
-  return request<Me>("/api/me");
+export async function me(): Promise<Me> {
+  const { data } = await withToken((accessToken) => client.get("/api/me", undefined, { accessToken }));
+  return data;
 }
 
-export function pushNotes(
+export async function pushNotes(
   deviceId: string,
-  items: { localId: string; entityType: "note"; payload: Record<string, unknown>; clientAt: string }[],
-): Promise<{ results: { localId: string; serverId: string; duplicate: boolean }[] }> {
-  return request("/api/sync/push", { method: "POST", body: JSON.stringify({ deviceId, items }) });
+  items: SyncPushRequest["items"],
+): Promise<SyncPushResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.post("/api/sync/push", { deviceId, items }, undefined, { accessToken }),
+  );
+  return data;
 }
 
-export function pullChanges(
+/** `lastSyncTimestamp` je u `meta` — ugovor ga tamo i stavlja. */
+export async function pullChanges(
   since: string,
-): Promise<{ items: unknown[]; lastSyncTimestamp: string }> {
-  return request(`/api/sync/pull?since=${encodeURIComponent(since)}`);
+): Promise<{ items: SyncPullResponse["items"]; lastSyncTimestamp: string }> {
+  const { data, meta } = await withToken((accessToken) =>
+    client.get("/api/sync/pull", undefined, { query: { since }, accessToken }),
+  );
+  return { items: data.items, lastSyncTimestamp: String(meta?.lastSyncTimestamp ?? since) };
 }
+
+export type { LoginResponse };

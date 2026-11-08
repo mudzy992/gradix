@@ -1,0 +1,24 @@
+{
+  "name": "@gradix/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi": "./src/openapi.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "openapi": "tsx scripts/generate-openapi.ts",
+    "check": "tsx scripts/check-openapi.ts"
+  },
+  "devDependencies": {
+    "@gradix/config": "workspace:*",
+    "@types/node": "22.20.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}

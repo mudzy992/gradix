@@ -1,8 +1,8 @@
 # STATUS — Gradix v2
 
 **Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b funkcionalno ✅**, **dizajn v2 urađen** ⇒ čeka vlasnikov pregled
-**Sljedeće:** `packages/contracts` (OpenAPI iz koda, tipizirani klijent, CI provjera) → plan R2
-na odobrenje (`docs/PLAN-R2.md` — radnici, mašine, rokovi) → dizajn samo novih ekrana → kod R2.
+**Sljedeće:** vlasnikovo odobrenje `docs/PLAN-R2.md` (radnici, mašine, rokovi) → dizajn samo novih
+ekrana → kod R2. `packages/contracts` je gotov (OpenAPI iz šema, tipizirani klijent, CI provjera).
 **R3** (projekti, dodjele, opseg `PROJECTS`, dozvola `projects.assign`): `docs/PLAN-R3.md`.
 
 ## Gotovo
@@ -56,6 +56,9 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
   `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja. Dodjela projekta dobija **posebnu
   dozvolu `projects.assign`**, ne `users.manage`.
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
+- **`packages/contracts`** drži envelope, kodove grešaka, šeme, registar ruta, tipizirani klijent i
+  `openapi.json`. Web i mobilni koriste isti klijent; `pnpm --filter @gradix/contracts check` u CI-ju
+  pada ako `openapi.json` nije regenerisan.
 - **Crvena za grešku** je izričit token (`#b42318` / `#ff9b90`) uz šest boja palete; `--success` je
   uklonjen i uspjeh koristi `--tint`. Podloge stanja moraju biti ΔE ≥ 5 jedna od druge (test).
 - **Dizajn v2** je prepisan po `docs/design/DESIGN.md` + `reference.html` (okvir, primitivi, svi

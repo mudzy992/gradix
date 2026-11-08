@@ -71,6 +71,12 @@ jobs:
         working-directory: v2
         run: pnpm typecheck
 
+      # Ugovor: `openapi.json` je generisan iz šema. Ako se šema promijeni a dokument ne,
+      # klijent se zakuca na stari ugovor i to se vidi tek na uređaju.
+      - name: OpenAPI je ažuran
+        working-directory: v2
+        run: pnpm --filter @gradix/contracts check
+
       - name: Expo verzije (native bundle ne pada tek na telefonu)
         working-directory: v2
         # Bez mreže: čita bundledNativeModules.json iz instaliranog `expo`.
