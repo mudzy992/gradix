@@ -1,9 +1,9 @@
 # STATUS — Gradix v2
 
 **Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b funkcionalno ✅**, **dizajn v2 urađen** ⇒ čeka vlasnikov pregled
-**Sljedeće:** vlasnik pregleda snimke (`docs/demo-dizajn/`, `docs/DEMO-DIZAJN.md`) i kaže
-(a) prihvata odstupanja iz §4 ili ih mijenja, (b) dopunjavam `reference.html` u istom commitu
-→ onda `packages/contracts` → R2.
+**Sljedeće:** `packages/contracts` (OpenAPI iz koda, tipizirani klijent, CI provjera) → plan R2
+na odobrenje (`docs/PLAN-R2.md` — radnici, mašine, rokovi) → dizajn samo novih ekrana → kod R2.
+**R3** (projekti, dodjele, opseg `PROJECTS`, dozvola `projects.assign`): `docs/PLAN-R3.md`.
 
 ## Gotovo
 
@@ -52,7 +52,9 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 - **Skillovi** (`new-resource`, `db-migration`, `ui-screen`, `mobile-offline-entity`) nisu napisani.
 - **Rate limit prijave je u memoriji procesa** — ne dijeli se između replika. Redis dolazi kad bude druga replika.
 - ~~Nema `logout-all`, liste sesija, promjene lozinke, pozivnica~~ — **R1a urađen.**
-- **Opseg „dodijeljeni projekti“ nije u R1b** — odluka vlasnika, odloženo u R2 (`docs/PLAN-R2.md`); `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja.
+- **Opseg „dodijeljeni projekti“ nije u R1b** — odluka vlasnika, a **R3**, ne R2 (`docs/PLAN-R3.md`);
+  `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja. Dodjela projekta dobija **posebnu
+  dozvolu `projects.assign`**, ne `users.manage`.
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
 - **Dizajn v2** je prepisan po `docs/design/DESIGN.md` + `reference.html` (okvir, primitivi, svi
   ekrani, obje teme, mobilni sa istim tokenima). Stari smjerovi A/B i R1c okvir su **obrisani**.
@@ -69,10 +71,10 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 ## Otvoreno za vlasnika
 
-1. **R2 — potvrda redoslijeda.** Plan je u `docs/PLAN-R2.md`: `projects` + `project_assignments`,
-   opseg `PROJECTS` u `resolveScope`, izbor projekata u dijalogu i E2E izolacija. Prije koda
-   trebam tvoje „kreni“ i odgovor na jedno pitanje: **ko smije dodijeliti projekat** osobi —
-   samo ADMIN/OWNER (kao role danas) ili i vođa projekta?
+1. **Plan R2 na odobrenje** (`docs/PLAN-R2.md`, ispravljen): R2a radnici + mašine + uvoz iz
+   Excela s pregledom grešaka; R2b univerzalna obaveza s rokom + prilozi preko potpisanih
+   URL-ova + podsjetnici + pregled „Rokovi“. Kod ne počinje prije odobrenja. Prije njega ide
+   `packages/contracts`.
 2. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
    `/infra/coolify/docker-compose.yml`, tri varijable (`DATABASE_URL`, `AUTH_SECRET`,
    `RUN_MIGRATIONS=true`), domena `https://gradix.ba101.top` → port 3000.
