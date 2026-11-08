@@ -62,6 +62,11 @@ import {
   ProjectInput,
   ProjectResponse,
   ProjectsResponse,
+  OverrideRequestInput,
+  OverrideRequestResponse,
+  OverrideRequestsResponse,
+  OverrideApproveInput,
+  AssignmentRemovedResponse,
 } from "./schemas";
 
 export type RouteSpec = {
@@ -578,11 +583,38 @@ export const ROUTES = [
   {
     method: "DELETE",
     path: "/api/projects/{id}/assignments/{assignmentId}",
-    summary: "Skidanje dodjele; dodjela ostaje u auditu.",
+    summary: "Skidanje dodjele; ako je to bila zadnja, opseg se spušta i javlja se `scopeNotice`.",
     auth: true,
     permission: "projects.assign",
     request: null,
-    response: OkResponse,
+    response: AssignmentRemovedResponse,
+  },
+  {
+    method: "GET",
+    path: "/api/projects/{id}/override-requests",
+    summary: "Otvoreni zahtjevi za iznimku od blokade na projektu.",
+    auth: true,
+    permission: "projects.view",
+    request: null,
+    response: OverrideRequestsResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/projects/{id}/override-requests",
+    summary: "Zahtjev za iznimku — traži `projects.assign`, odobrava druga dozvola.",
+    auth: true,
+    permission: "projects.assign",
+    request: OverrideRequestInput,
+    response: OverrideRequestResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/projects/{id}/override-requests/{requestId}",
+    summary: "Odobrenje iznimke (`projects.override`); stvara dodjelu sa iznimkom.",
+    auth: true,
+    permission: "projects.override",
+    request: OverrideApproveInput,
+    response: ProjectAssignmentResponse,
   },
   {
     method: "POST",

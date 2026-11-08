@@ -81,6 +81,14 @@ export const RefreshResponse = z.object({
 export type RefreshResponse = z.infer<typeof RefreshResponse>;
 
 export const OkResponse = z.object({ ok: z.literal(true) });
+/**
+ * Odgovor na skidanje dodjele: uz `ok` ide i `scopeNotice` kad je osoba ostala bez ijednog
+ * projekta, pa joj je opseg spušten. UI ga OBAVEZNO prikaže — tiho gašenje vidnog polja je greška.
+ */
+export const AssignmentRemovedResponse = z.object({
+  ok: z.literal(true),
+  scopeNotice: z.string().nullable(),
+});
 export const LoggedOutResponse = z.object({ loggedOut: z.literal(true) });
 
 export const ChangePasswordRequest = z.object({
@@ -698,3 +706,50 @@ export type ProjectAssignmentsResponse = z.infer<typeof ProjectAssignmentsRespon
 
 export const ProjectAssignmentResponse = z.object({ assignment: ProjectAssignment });
 export type ProjectAssignmentResponse = z.infer<typeof ProjectAssignmentResponse>;
+
+/* ---------------------------------------------- zahtjev za iznimku (R3) */
+
+/**
+ * Zahtjev za iznimku od blokade.
+ *
+ * Postoji zato što iznimku odobrava `projects.override` (vlasnik/admin), a dodjeljuje
+ * `projects.assign` (i PM). Bez zahtjeva bi PM morao zvati vlasnika telefonom.
+ */
+export const OverrideRequest = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  obligationId: z.string(),
+  typeLabel: z.string(),
+  workerId: z.string().nullable(),
+  machineId: z.string().nullable(),
+  targetName: z.string(),
+  reason: z.string(),
+  requestedBy: z.string().nullable(),
+  requestedByName: z.string().nullable(),
+  createdAt: IsoDate,
+});
+export type OverrideRequest = z.infer<typeof OverrideRequest>;
+
+export const OverrideRequestsResponse = z.object({ requests: z.array(OverrideRequest) });
+export type OverrideRequestsResponse = z.infer<typeof OverrideRequestsResponse>;
+
+export const OverrideRequestInput = z.object({
+  obligationId: z.string(),
+  workerId: z.string().nullable().optional(),
+  machineId: z.string().nullable().optional(),
+  reason: z.string().min(10).max(500),
+  fromDate: z.string(),
+  toDate: z.string().nullable().optional(),
+});
+export type OverrideRequestInput = z.infer<typeof OverrideRequestInput>;
+
+export const OverrideRequestResponse = z.object({ request: OverrideRequest });
+export type OverrideRequestResponse = z.infer<typeof OverrideRequestResponse>;
+
+/** Odobrenje: rok je OBAVEZAN — iznimka bez roka je trajno gašenje pravila. */
+export const OverrideApproveInput = z.object({
+  validUntil: z.string(),
+  fromDate: z.string().optional(),
+  toDate: z.string().nullable().optional(),
+});
+export type OverrideApproveInput = z.infer<typeof OverrideApproveInput>;

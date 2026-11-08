@@ -55,6 +55,11 @@ projekta, bez drugog izvora istine.
 - **Tuđi projekat u istoj firmi = 403** („Nisi dodijeljen ovom projektu.“), **tuđa firma = 404**.
 - **Opseg `PROJECTS` bez ijedne dodjele se odbija** pri snimanju članstva — opseg koji ne vidi
   ništa je zamka, ne podešavanje.
+- **Skidanje ZADNJE dodjele takvoj osobi** ne smije je ostaviti sa opsegom koji ne vidi ništa.
+  Opseg se zato **automatski spušta na `SELF`** (najuži, nikad širi), radnja ide u audit sa
+  razlogom `last_project_assignment_removed`, a odgovor nosi `scopeNotice` koji ekran **obavezno**
+  prikaže. Tiho gašenje vidnog polja je greška, ne detalj: čovjek bi se prijavio u prazan sistem i
+  mislio da je pokvaren, a niko ne bi znao zašto od sutra vidi manje.
 - Nepoznat opseg u bazi pada na `SELF` (najuži), nikad na `COMPANY` — nema tiho podignute dozvole.
 
 ### Dozvole
@@ -64,20 +69,35 @@ projekta, bez drugog izvora istine.
 | `projects.view` | ✅ | ✅ | ✅ | ✅ | ✅ (radnik mora znati gdje je) |
 | `projects.manage` | ✅ | ✅ | — | — | — |
 | `projects.assign` | ✅ | ✅ | ✅ | — | — |
+| `projects.override` | ✅ | ✅ | — | — | — |
 
 `projects.assign` je **odvojena** dozvola, ne dio `users.manage` — odluka vlasnika iz R1b.
 
-### API (7 novih ruta, OpenAPI 42 putanje)
+**`projects.override` (dodato u pregledu R3).** Odobrenje iznimke je posebno pravo, samo vlasnik i
+admin. Rukovodilac projekta (PM) ima `projects.assign`: dodjeljuje ljude svaki dan, ali iznimku —
+„ovaj čovjek radi sa isteklom dokumentacijom" — **samo traži**. Bez te podjele bi pravilo iz B5.4
+važilo samo protiv onoga ko se sam ne može izuzeti; ko dodjeljuje, taj bi ga gasio.
+
+Tok je zato dvokoračan: PM pošalje **zahtjev** (razlog, entitet, period) na
+`POST /api/projects/{id}/override-requests`; vlasnik/admin ga odobri na
+`POST /api/projects/{id}/override-requests/{requestId}` uz **rok** koji određuje odobravalac.
+Odobrenje u ISTOJ transakciji upisuje dodjelu i pretvara zahtjev u iznimku — nema stanja u kojem
+iznimka postoji bez dodjele. Server provjerava dozvolu; UI je samo prikaz (bez prava se polja
+iznimke ne nude, nudi se zahtjev). Test to tvrdi sa obje strane.
+
+### API (9 novih ruta, OpenAPI 44 putanje)
 
 `GET/POST /api/projects`, `GET/PATCH /api/projects/{id}`,
-`GET/POST /api/projects/{id}/assignments`, `DELETE …/assignments/{assignmentId}`.
+`GET/POST /api/projects/{id}/assignments`, `DELETE …/assignments/{assignmentId}`,
+`GET/POST /api/projects/{id}/override-requests`, `POST …/override-requests/{requestId}`.
 Obaveze: `projectId` u unosu i `?projectId=` u listi.
 
 ### Ekrani
 
 - **`/ured/projekti`** — lista (šifra, stanje riječima, lokacija, tim, rokovi), filter po stanju,
   dijalog za novi/izmjenu, detalj sa dva taba: **Tim i mašine** (dodjele, skidanje, blokada PRIJE
-  upisa sa poljem za razlog iznimke) i **Rokovi na projektu**.
+  upisa sa poljem za razlog iznimke, ako osoba ima `projects.override`; bez njega dugme je
+  „Pošalji zahtjev") i **Rokovi na projektu**.
 - **`/ured/rokovi`** — projekat kao treći entitet u formi (uz radnika, mašinu, firmu).
 - **`/pregled`** — kartica rokova (iz R2b) ostaje; projekti se vide kroz meni.
 - **Mobilni `/projekti`** — „Moji projekti“, read-only, lokalni keš, „od prije X“, put nazad.
@@ -95,6 +115,12 @@ Obaveze: `projectId` u unosu i `?projectId=` u listi.
 5. PROJECT_MANAGER dodjeljuje, ali ne mijenja role; SITE_SUPERVISOR vidi projekat, ne dodjeljuje.
 6. Mašina sa isteklom registracijom ne može na projekat; **iznimka sa razlogom prolazi** i vidi se u
    auditu (`project.assignment_overridden`).
+7. **Iznimku traži PM, odobrava vlasnik.** Kao PROJECT_MANAGER: pokušaj dodjele sa iznimkom →
+   odbijeno (403); pošalji zahtjev → prolazi. Kao vlasnik: odobri uz rok → dodjela nastaje, a
+   `project.assignment_overridden` je u auditu. PM koji pokuša odobriti svoj zahtjev → 403.
+8. **Skidanje zadnje dodjele:** osobi sa opsegom „dodijeljeni projekti“ skini njen jedini projekat →
+   ekran javlja da je opseg spušten na „samo svoje“, a u auditu stoji
+   `last_project_assignment_removed`. Lista projekata za tu osobu je **prazna, ne greška**.
 
 ### R3b — projekti u rokovima
 

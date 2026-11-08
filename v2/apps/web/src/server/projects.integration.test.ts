@@ -24,6 +24,8 @@ import {
   GET as assignmentsRoute,
 } from "@/app/api/projects/[id]/assignments/route";
 import { DELETE as removeAssignmentRoute } from "@/app/api/projects/[id]/assignments/[assignmentId]/route";
+import { POST as overrideRequestRoute } from "@/app/api/projects/[id]/override-requests/route";
+import { POST as approveOverrideRoute } from "@/app/api/projects/[id]/override-requests/[requestId]/route";
 import { POST as createObligationRoute, GET as obligationsRoute } from "@/app/api/obligations/route";
 import { GET as obligationTypesRoute } from "@/app/api/obligation-types/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
@@ -44,6 +46,12 @@ const WORKER = "wrk_r3_amar";
 const WORKER_USER_ROW = "wrk_r3_vezani";
 const MACHINE = "mch_r3_bager";
 const MACHINE_CLEAN = "mch_r3_valjak";
+/*
+ * Mašina SAMO za test iznimke. Ne dijeli se sa testom blokade: isti tip dokumenta na istoj mašini
+ * ne može imati dva aktivna zapisa (unique), pa bi dijeljenje mašine padalo na tom pravilu — a ne
+ * na onome što test mjeri.
+ */
+const MACHINE_OVERRIDE = "mch_r3_iznimka";
 
 const get = (url: string, cookie = "") => new NextRequest(url, { headers: cookie ? { cookie } : {} });
 
@@ -135,8 +143,9 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
       await client.query(
         `INSERT INTO machines (id, company_id, code, name, category_id)
          VALUES ($1, $2, 'BAG-01', 'Bager CAT 320', $2 || '_cat_excavator'),
-                ($3, $2, 'VAL-01', 'Valjak Bomag', $2 || '_cat_roller')`,
-        [MACHINE, COMPANY, MACHINE_CLEAN],
+                ($3, $2, 'VAL-01', 'Valjak Bomag', $2 || '_cat_roller'),
+                ($4, $2, 'GRE-01', 'Grejder', $2 || '_cat_roller')`,
+        [MACHINE, COMPANY, MACHINE_CLEAN, MACHINE_OVERRIDE],
       );
     });
     await app.end();
@@ -481,6 +490,26 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(can(["SITE_SUPERVISOR"], "projects.view")).toBe(true);
   });
 
+  it("matrica: `projects.override` imaju SAMO OWNER i ADMIN — dodjela ga ne nosi", async () => {
+    const { can, permissionsFor } = await import("./permissions");
+
+    expect(can(["OWNER"], "projects.override")).toBe(true);
+    expect(can(["ADMIN"], "projects.override")).toBe(true);
+
+    /*
+     * Ovo je test koji brani odluku vlasnika: ko dodjeljuje NE odobrava iznimku. Ako neko
+     * „pojednostavi" tako što iznimku veže na `projects.assign`, ovaj test pada — i to je poenta.
+     */
+    expect(can(["PROJECT_MANAGER"], "projects.assign")).toBe(true);
+    expect(can(["PROJECT_MANAGER"], "projects.override")).toBe(false);
+    expect(permissionsFor("PROJECT_MANAGER")).not.toContain("projects.override");
+
+    // Ni jedna terenska rola ne odobrava iznimku; ni računovođa.
+    for (const role of ["SITE_SUPERVISOR", "WORKER", "DRIVER", "MACHINE_OPERATOR", "MECHANIC", "ACCOUNTANT"] as const) {
+      expect(can([role], "projects.override")).toBe(false);
+    }
+  });
+
   it("SITE_SUPERVISOR ne može dodijeliti (403), iako vidi projekat", async () => {
     const assignment = await assignmentRoute(
       authed("http://interni/api/projects/x/assignments", {
@@ -542,6 +571,142 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     ).json()) as Json<{ obligations: { projectId: string | null }[]; counts: { all: number } }>;
     expect(filtered.data.obligations).toHaveLength(1);
     expect(filtered.data.obligations[0]!.projectId).toBe(projectA);
+  });
+
+  it("PM sa `projects.assign` može ZATRAŽITI iznimku, ali je NE može odobriti (403)", async () => {
+    // Istekao dokument na mašini — treba mu iznimka.
+    const obligation = (await (
+      await createObligationRoute(
+        authed("http://interni/api/obligations", {
+          method: "POST",
+          body: {
+            typeId: registrationTypeId,
+            machineId: MACHINE_OVERRIDE,
+            number: "REG-ISTEKAO",
+            expiresAt: "2026-02-01",
+          },
+        }, cookieAdmin),
+      )
+    ).json()) as Json<{ obligation: { id: string } }>;
+    const expiredId = obligation.data.obligation.id;
+
+    // 1) PM pokušava dodjelu SA iznimkom → 403, jer nema `projects.override`.
+    const pmDirect = await assignmentRoute(
+      authed("http://interni/api/projects/x/assignments", {
+        method: "POST",
+        body: {
+          machineId: MACHINE_OVERRIDE,
+          fromDate: "2026-11-01",
+          overrides: [
+            { obligationId: expiredId, reason: "Mašina je neophodna na gradilištu, dokument je na putu.", validUntil: "2026-12-31" },
+          ],
+        },
+      }, cookiePm),
+      { params: Promise.resolve({ id: projectA }) },
+    );
+    expect(pmDirect.status).toBe(403);
+    const pmBody = (await pmDirect.json()) as Json<unknown>;
+    expect(pmBody.error?.message).toContain("vlasnik ili administrator");
+
+    // 2) PM ZATRAŽI iznimku → prolazi (ima `projects.assign`).
+    const requested = await overrideRequestRoute(
+      authed("http://interni/api/projects/x/override-requests", {
+        method: "POST",
+        body: {
+          obligationId: expiredId,
+          machineId: MACHINE_OVERRIDE,
+          reason: "Mašina je neophodna na gradilištu, dokument je na putu.",
+          fromDate: "2026-11-01",
+        },
+      }, cookiePm),
+      { params: Promise.resolve({ id: projectA }) },
+    );
+    expect(requested.status).toBe(200);
+    const requestBody = (await requested.json()) as Json<{ request: { id: string } }>;
+    const requestId = requestBody.data.request.id;
+
+    // 3) PM pokušava ODOBRITI svoj zahtjev → 403. Ovo je srce pravila.
+    const pmApprove = await approveOverrideRoute(
+      authed("http://interni/api/projects/x", { method: "POST", body: { validUntil: "2026-12-31" } }, cookiePm),
+      { params: Promise.resolve({ id: projectA, requestId }) },
+    );
+    expect(pmApprove.status).toBe(403);
+
+    // 4) Vlasnik/admin odobrava → dodjela sa iznimkom nastaje.
+    const approved = await approveOverrideRoute(
+      authed("http://interni/api/projects/x", { method: "POST", body: { validUntil: "2026-12-31", fromDate: "2026-11-01" } }, cookieAdmin),
+      { params: Promise.resolve({ id: projectA, requestId }) },
+    );
+    expect(approved.status).toBe(200);
+    const approvedBody = (await approved.json()) as Json<{ assignment: { blocked: { covered: boolean; reason?: string }[] } }>;
+    expect(approvedBody.data.assignment.blocked.some((entry) => entry.covered)).toBe(true);
+
+    // 5) Zahtjev je obrađen — drugi put ne postoji.
+    const again = await approveOverrideRoute(
+      authed("http://interni/api/projects/x", { method: "POST", body: { validUntil: "2027-01-31" } }, cookieAdmin),
+      { params: Promise.resolve({ id: projectA, requestId }) },
+    );
+    expect(again.status).toBe(404);
+  });
+
+  it("skidanje ZADNJE dodjele osobi sa opsegom PROJECTS spušta opseg na SELF i javlja zašto", async () => {
+    // Radnik-nalog je dodijeljen na projektA (iz testa opsega) i ima opseg PROJECTS.
+    const list = (await (
+      await assignmentsRoute(get("http://interni/api/projects/x/assignments", cookieAdmin), {
+        params: Promise.resolve({ id: projectA }),
+      })
+    ).json()) as Json<{ assignments: { id: string; workerId: string | null }[] }>;
+    const assignment = list.data.assignments.find((entry) => entry.workerId === WORKER_USER_ROW)!;
+
+    const removed = await removeAssignmentRoute(get("http://interni/api/projects/x", cookieAdmin), {
+      params: Promise.resolve({ id: projectA, assignmentId: assignment.id }),
+    });
+    const body = (await removed.json()) as Json<{ ok: true; scopeNotice: string | null }>;
+
+    expect(removed.status).toBe(200);
+    // Poruka mora postojati i imenovati osobu — inače se promjena opsega ne vidi nigdje.
+    expect(body.data.scopeNotice).toContain("Amar");
+    expect(body.data.scopeNotice).toContain("samo svoje");
+
+    const scope = await admin.query<{ scope: string }>(
+      "SELECT scope FROM memberships WHERE company_id = $1 AND user_id = $2",
+      [COMPANY, WORKER_USER],
+    );
+    expect(scope.rows[0]!.scope).toBe("SELF");
+
+    // I trag u auditu, sa razlogom — bez toga bi promjena opsega bila neobjašnjena.
+    const audit = await admin.query(
+      "SELECT metadata FROM audit_events WHERE entity_id = $1 AND action = 'user.membership_changed'",
+      [WORKER_USER],
+    );
+    expect(audit.rows.at(-1)!.metadata).toMatchObject({ reason: "last_project_assignment_removed" });
+
+    // Osoba i dalje vidi svoje rokove — nije ostala bez ičega.
+    // Bez dodjele opseg `SELF` više nema ni jedan projekat — i vraća PRAZNO, ne grešku. To je
+    // razlika između „nemaš šta vidjeti" i „nešto je pokvareno".
+    const projectsAfter = (await (
+      await projectsRoute(get("http://interni/api/projects", cookieWorker))
+    ).json()) as Json<{ projects: unknown[] }>;
+    expect(projectsAfter.success).toBe(true);
+    expect(projectsAfter.data.projects).toEqual([]);
+
+    /*
+     * „Moji projekti" na mobilnom traži ISTI filter po radniku — i poslije skidanja dodjele mora
+     * vratiti prazno, ne grešku. Inače telefon pokazuje „greška" tamo gdje je istina „nemaš
+     * projekata", pa čovjek zove ured da prijavi kvar koji ne postoji.
+     */
+    const mine = (await (
+      await projectsRoute(get(`http://interni/api/projects?mine=1`, cookieWorker))
+    ).json()) as Json<{ projects: unknown[] }>;
+    expect(mine.success).toBe(true);
+    expect(mine.data.projects).toEqual([]);
+
+    /*
+     * NAMJERNO SE NE TVRDI da radnik i dalje vidi „Moje rokove": `WORKER` nema `obligations.view`
+     * (R3 odluka — dozvola je data samo ulogama koje rokove uređuju ili prate). Mobilni ekran
+     * „Rokovi" zato radniku vraća 403. To je OTVORENO PITANJE za vlasnika (vidi izvještaj), a ne
+     * nešto što test smije zaključati kao ispravno.
+     */
   });
 
   it("ljekarski tip NE može na projekat — poruka imenuje projekat kao traženi entitet", async () => {

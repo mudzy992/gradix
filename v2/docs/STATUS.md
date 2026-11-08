@@ -3,8 +3,9 @@
 **Faza:** 1 · **Datum:** 2026-11-09 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
 **dizajn v2 ✅**, **R2a ✅ (kapija prošla uživo)**, **R2b ✅ (kapija prošla uživo)**, **R3 🚧 kod i
 testovi gotovi, čeka kapiju uživo**
-**Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom) → R4 (radni dan na
-terenu, offline). R3 plan i odluke vlasnika: `docs/PLAN-R3.md`.
+**Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom, zahtjev → odobrenje) →
+**odobrenje plana R4** → R4 (radni dan na terenu, offline). Planovi i odluke vlasnika:
+`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/DECISIONS/0009`, `0010`.
 
 ## Gotovo
 
@@ -26,7 +27,7 @@ terenu, offline). R3 plan i odluke vlasnika: `docs/PLAN-R3.md`.
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 | R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
 | R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
-| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (16 integracijskih, 7 jsdom) |
+| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (19 integracijskih, 4 trke, 9 jsdom); iznimku traži PM, odobrava vlasnik (`projects.override`) |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 
@@ -58,7 +59,9 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 - ~~Nema `logout-all`, liste sesija, promjene lozinke, pozivnica~~ — **R1a urađen.**
 - **Opseg „dodijeljeni projekti“ nije u R1b** — odluka vlasnika, a **R3**, ne R2 (`docs/PLAN-R3.md`);
   `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja. Dodjela projekta dobija **posebnu
-  dozvolu `projects.assign`**, ne `users.manage`.
+  dozvolu `projects.assign`**, ne `users.manage`. Iznimku od blokade odobrava **još uža dozvola
+  `projects.override`** (OWNER, ADMIN) — ko dodjeljuje, ne odobrava pravilo sam sebi
+  (`docs/DECISIONS/0010`).
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
 - **Provjera privatnosti** (`pnpm check-privacy`) je CI korak prije testova: pada na JMBG, na polja
   ličnih podataka u kodu i na emailove van `*.test`/`example.*`/`@demo.ba`; ima samoprovjeru.

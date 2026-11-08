@@ -113,7 +113,7 @@ afterEach(() => {
 describe("projekti", () => {
   it("lista pokazuje šifru, stanje riječima, tim i rokove kao tekst", async () => {
     mockApi();
-    render(<ProjectsClient canManage canAssign />);
+    render(<ProjectsClient canManage canAssign canOverride />);
 
     const row = (await screen.findByText("Dionica Visoko–Kiseljak")).closest("tr")!;
     expect(within(row).getByText("P-24/2026")).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe("projekti", () => {
 
   it("filter po stanju sužava listu bez novog zahtjeva", async () => {
     const calls = mockApi();
-    render(<ProjectsClient canManage canAssign />);
+    render(<ProjectsClient canManage canAssign canOverride />);
     await screen.findByText("Dionica Visoko–Kiseljak");
     const before = calls.length;
 
@@ -143,7 +143,7 @@ describe("projekti", () => {
 
   it("bez `projects.manage` nema dugmeta za novi projekat, ali detalj radi", async () => {
     mockApi();
-    render(<ProjectsClient canManage={false} canAssign={false} />);
+    render(<ProjectsClient canManage={false} canAssign={false} canOverride={false} />);
 
     await screen.findByText("Dionica Visoko–Kiseljak");
     expect(screen.queryByRole("button", { name: /Novi projekat/ })).toBeNull();
@@ -154,9 +154,9 @@ describe("projekti", () => {
     expect(screen.queryByRole("button", { name: /Dodaj na projekat/ })).toBeNull();
   });
 
-  it("istekla obaveza traži razlog iznimke i NE šalje zahtjev bez njega", async () => {
+  it("istekla obaveza traži razlog iznimke i NE dozvoljava upis bez njega", async () => {
     const calls = mockApi();
-    render(<ProjectsClient canManage canAssign />);
+    render(<ProjectsClient canManage canAssign canOverride />);
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
@@ -167,19 +167,22 @@ describe("projekti", () => {
     // Blokada se vidi odmah, sa imenom tipa — a ne poslije odbijenog upisa.
     expect(await screen.findByText(/Ne može bez iznimke: Ljekarski pregled/)).toBeInTheDocument();
 
-    // Bez razloga dugme šalje zahtjev, ali server bi ga odbio; ovdje provjeravamo da ekran
-    // pošalje BEZ iznimke (pa poruka dođe sa servera) — tijelo ne smije izmisliti razlog.
+    /*
+     * Bez razloga dugme je ZAKLJUČANO. Ranije je puštalo upis bez iznimke i čovjek je čekao
+     * odbijenicu sa servera — dvije runde za grešku koja se vidi prije prvog slova.
+     */
+    expect(screen.getByRole("button", { name: "Dodijeli" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "Dodijeli" }));
-    await waitFor(() => expect(calls.some((call) => call.method === "POST")).toBe(true));
-    const post = calls.find((call) => call.method === "POST")!;
-    const body = post.body as { workerId: string; overrides?: unknown };
-    expect(body).toMatchObject({ workerId: "wrk_1" });
-    expect(body.overrides).toBeUndefined();
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+    // Sa razlogom (≥ 10 znakova) dugme se otvara.
+    await userEvent.type(screen.getByLabelText("Razlog iznimke"), "Dokument je u proceduri obnove, hitno je.");
+    expect(screen.getByRole("button", { name: "Dodijeli" })).toBeEnabled();
   });
 
   it("sa razlogom iznimke zahtjev nosi iznimku za TAČNO isteklu obavezu", async () => {
     const calls = mockApi();
-    render(<ProjectsClient canManage canAssign />);
+    render(<ProjectsClient canManage canAssign canOverride />);
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
@@ -213,12 +216,17 @@ describe("projekti", () => {
         },
       },
     });
-    render(<ProjectsClient canManage canAssign />);
+    render(<ProjectsClient canManage canAssign canOverride />);
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
     await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-01");
+
+    // Blokada se mora slegnuti PRIJE upisa — inače je dugme zaključano i klikne se u prazno.
+    await screen.findByText(/Ne može bez iznimke/);
+    await userEvent.type(screen.getByLabelText("Razlog iznimke"), "Radnik je jedini koji zna taj posao.");
+    await userEvent.type(screen.getByLabelText("Iznimka važi do"), "2026-12-31");
     await userEvent.click(screen.getByRole("button", { name: "Dodijeli" }));
 
     expect(await screen.findByText(/preklapa/)).toBeInTheDocument();
@@ -226,8 +234,60 @@ describe("projekti", () => {
 
   it("nema ozbiljnih a11y prekršaja na listi", async () => {
     mockApi();
-    const { container } = render(<ProjectsClient canManage canAssign />);
+    const { container } = render(<ProjectsClient canManage canAssign canOverride />);
     await screen.findByText("Dionica Visoko–Kiseljak");
     await expectNoSeriousA11yViolations(container);
+  });
+
+  it("bez `projects.override` iznimka se NE nudi — nudi se zahtjev, i ide na drugu rutu", async () => {
+    const calls = mockApi();
+    render(<ProjectsClient canManage={false} canAssign canOverride={false} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
+    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await userEvent.type(screen.getByLabelText("Od"), "2026-11-10");
+
+    // Blokada se vidi PRIJE upisa, i poruka imenuje ko odobrava.
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Ne može bez iznimke: Ljekarski pregled");
+    expect(alert).toHaveTextContent("vlasnik ili administrator");
+
+    // Polje roka iznimke NE postoji: rok određuje onaj ko odobrava.
+    expect(screen.queryByLabelText("Iznimka važi do")).toBeNull();
+    // Dugme je „pošalji zahtjev", ne „dodijeli".
+    expect(screen.queryByRole("button", { name: "Dodijeli" })).toBeNull();
+
+    await userEvent.type(screen.getByLabelText("Razlog zahtjeva"), "Dokument je na putu, poslali smo ga prije sedam dana.");
+    await userEvent.click(screen.getByRole("button", { name: /Pošalji zahtjev/ }));
+
+    const request = calls.find((call) => call.url.includes("/override-requests"));
+    expect(request?.url).toContain("/api/projects/prj_1/override-requests");
+    expect(request?.body).toMatchObject({ obligationId: "ob1", workerId: "wrk_1" });
+
+    // Nijedna dodjela nije poslana — bez odobrenja je i ne može biti.
+    expect(calls.some((call) => call.url.endsWith("/assignments") && call.method === "POST")).toBe(false);
+  });
+
+  it("sa `projects.override` iznimka se odobrava odmah i traži rok", async () => {
+    const calls = mockApi();
+    render(<ProjectsClient canManage canAssign canOverride />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
+    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await userEvent.type(screen.getByLabelText("Od"), "2026-11-10");
+
+    // Vlasnik vidi polje roka — iznimka bez roka ne postoji.
+    expect(await screen.findByLabelText("Iznimka važi do")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Razlog iznimke"), "Mašina mora raditi, dokument je u proceduri.");
+    await userEvent.type(screen.getByLabelText("Iznimka važi do"), "2026-12-31");
+    await userEvent.click(screen.getByRole("button", { name: "Dodijeli" }));
+
+    const assignment = calls.find((call) => call.url.endsWith("/assignments") && call.method === "POST");
+    expect(assignment?.body).toMatchObject({
+      workerId: "wrk_1",
+      overrides: [{ obligationId: "ob1", validUntil: "2026-12-31" }],
+    });
   });
 });

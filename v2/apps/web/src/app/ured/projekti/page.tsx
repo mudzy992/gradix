@@ -29,6 +29,7 @@ export default async function ProjectsPage() {
       <ProjectsClient
         canManage={can(auth.ctx.roles, "projects.manage")}
         canAssign={can(auth.ctx.roles, "projects.assign")}
+        canOverride={can(auth.ctx.roles, "projects.override")}
       />
     </main>
   );

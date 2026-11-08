@@ -81,9 +81,12 @@ const toPayload = (form: FormState) => ({
 export default function ProjectsClient({
   canManage,
   canAssign,
+  canOverride,
 }: {
   canManage: boolean;
   canAssign: boolean;
+  /** `projects.override`: bez njega se iznimka može samo ZATRAŽITI, ne odobriti. */
+  canOverride: boolean;
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -263,6 +266,7 @@ export default function ProjectsClient({
           project={open}
           canManage={canManage}
           canAssign={canAssign}
+          canOverride={canOverride}
           onClose={() => setOpen(null)}
           onChanged={load}
           onEdit={(project) => {
@@ -436,6 +440,7 @@ function ProjectDetail({
   project,
   canManage,
   canAssign,
+  canOverride,
   onClose,
   onChanged,
   onEdit,
@@ -443,6 +448,7 @@ function ProjectDetail({
   project: Project;
   canManage: boolean;
   canAssign: boolean;
+  canOverride: boolean;
   onClose: () => void;
   onChanged: () => Promise<void>;
   /** Izmjena se otvara iz detalja — inače bi čovjek morao zatvoriti detalj i tražiti red u listi. */
@@ -474,14 +480,22 @@ function ProjectDetail({
   }, [loadAssignments]);
 
   async function remove(assignment: ProjectAssignment) {
-    const result = await apiCall<{ ok: true }>(`/api/projects/${project.id}/assignments/${assignment.id}`, {
-      method: "DELETE",
-    });
+    const result = await apiCall<{ ok: true; scopeNotice: string | null }>(
+      `/api/projects/${project.id}/assignments/${assignment.id}`,
+      { method: "DELETE" },
+    );
     if (!result.ok) {
       setError(result.message);
       return;
     }
-    setMessage("Dodjela je skinuta. Ostaje u audit tragu.");
+    /*
+     * `scopeNotice` se prikazuje UMJESTO obične poruke, ne uz nju.
+     *
+     * To nije detalj: posljedica je da je osoba ostala bez ijednog projekta i da joj je opseg
+     * spušten. Ako se to izgubi među „dodjela je skinuta", niko ne zna zašto radnik od sutra vidi
+     * manje — a promjena dozvole bez objašnjenja je tačno ono što ne smijemo raditi.
+     */
+    setMessage(result.data.scopeNotice ?? "Dodjela je skinuta. Ostaje u audit tragu.");
     await loadAssignments();
     await onChanged();
   }
@@ -604,6 +618,7 @@ function ProjectDetail({
             <AssignmentDialog
               projectId={project.id}
               onClose={() => setAdding(false)}
+              canOverride={canOverride}
               onSaved={async (text) => {
                 setAdding(false);
                 setMessage(text);
@@ -624,10 +639,13 @@ function ProjectDetail({
 
 function AssignmentDialog({
   projectId,
+  canOverride,
   onClose,
   onSaved,
 }: {
   projectId: string;
+  /** `projects.override` — bez njega se iznimka samo TRAŽI; odobrava je vlasnik/admin. */
+  canOverride: boolean;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -690,6 +708,41 @@ function AssignmentDialog({
       cancelled = true;
     };
   }, [entityId, kind, projectId]);
+
+  /*
+   * Bez `projects.override` polja iznimke se UOPŠTE ne prikazuju.
+   *
+   * Zašto ne „prikaži pa odbij na serveru": čovjek bi popunio razlog i rok, sačekao upis i dobio
+   * 403 — a poruka stiže tek poslije truda. Umjesto toga nudi se jedina radnja koju smije: zahtjev.
+   * Server i dalje provjerava dozvolu (UI nije odbrana), ali ovdje se ne obećava nemoguće.
+   */
+  const canAskOverride = blockers.length > 0 && reason.trim().length >= 10;
+
+  async function requestOverride() {
+    const blocker = blockers[0];
+    if (!blocker) return;
+    setBusy(true);
+    setError(null);
+
+    const result = await apiCall<{ request: { id: string } }>(
+      `/api/projects/${projectId}/override-requests`,
+      jsonBody({
+        obligationId: blocker.obligationId,
+        ...(kind === "worker" ? { workerId: entityId } : { machineId: entityId }),
+        reason: reason.trim(),
+        fromDate,
+        toDate: toDate || null,
+      }),
+    );
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    onSaved(
+      "Zahtjev je poslan. Iznimku odobrava vlasnik ili administrator — dodjela se upisuje tek tada.",
+    );
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -803,11 +856,18 @@ function AssignmentDialog({
           <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <Alert tone="warning" role="alert">
               Ne može bez iznimke: {blockers.map((blocker) => blocker.typeLabel).join(", ")} — isteklo.
+              {canOverride
+                ? ""
+                : " Iznimku odobrava vlasnik ili administrator; vi je možete zatražiti."}
             </Alert>
             <Field
-              label="Razlog iznimke"
+              label={canOverride ? "Razlog iznimke" : "Razlog zahtjeva"}
               htmlFor="assignment-reason"
-              hint="Najmanje 10 znakova. Iznimka ide u audit trag sa vašim imenom."
+              hint={
+                canOverride
+                  ? "Najmanje 10 znakova. Iznimka ide u audit trag sa vašim imenom."
+                  : "Najmanje 10 znakova. Zahtjev ide vlasniku ili administratoru na odobrenje."
+              }
             >
               <input
                 id="assignment-reason"
@@ -817,15 +877,18 @@ function AssignmentDialog({
                 minLength={10}
               />
             </Field>
-            <Field label="Iznimka važi do" htmlFor="assignment-until">
-              <input
-                id="assignment-until"
-                type="date"
-                className={inputClass}
-                value={validUntil}
-                onChange={(event) => setValidUntil(event.target.value)}
-              />
-            </Field>
+            {/* Rok iznimke postavlja ONAJ KO ODOBRAVA — tražilac ne određuje dokle pravilo važi. */}
+            {canOverride ? (
+              <Field label="Iznimka važi do" htmlFor="assignment-until">
+                <input
+                  id="assignment-until"
+                  type="date"
+                  className={inputClass}
+                  value={validUntil}
+                  onChange={(event) => setValidUntil(event.target.value)}
+                />
+              </Field>
+            ) : null}
           </div>
         ) : null}
 
@@ -833,9 +896,23 @@ function AssignmentDialog({
           <Button variant="quiet" onClick={onClose}>
             Odustani
           </Button>
-          <Button variant="primary" type="submit" disabled={busy || !entityId || !fromDate}>
-            {busy ? "Upisujem…" : "Dodijeli"}
-          </Button>
+          {blockers.length > 0 && !canOverride ? (
+            <Button
+              variant="primary"
+              onClick={() => void requestOverride()}
+              disabled={busy || !entityId || !fromDate || !canAskOverride}
+            >
+              {busy ? "Šaljem…" : "Pošalji zahtjev"}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={busy || !entityId || !fromDate || (blockers.length > 0 && !canAskOverride)}
+            >
+              {busy ? "Upisujem…" : "Dodijeli"}
+            </Button>
+          )}
         </div>
       </form>
     </Dialog>

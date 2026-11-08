@@ -25,6 +25,7 @@ import {
   type Scope,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { can } from "./permissions";
 import type { Actor } from "./rbac-service";
 
 export type ServiceError =
@@ -200,9 +201,17 @@ export async function listProjects(
     // Opseg ide POSLIJE ostalih uslova i uvijek prisutan — nema puta koji ga preskače.
     const scope = scopeClause(actor, "p.id");
     let sql = `${PROJECT_SELECT} WHERE ${conditions.length > 0 ? conditions.join(" AND ") : "true"}`;
-    if (scope.sql) {
+    /*
+     * `AND false` (prazan opseg) nema parametar — i to je bilo mjesto gdje je lista projekata
+     * PADALA tačno u scenariju „osoba više nije ni na jednom projektu": `param(undefined)` bi
+     * dodao parametar kojeg SQL ne koristi, pa bi baza odbila upit („supplies 2 parameters, but
+     * prepared statement requires 1"). Umjesto prazne liste dobijala se greška 500.
+     */
+    if (scope.params.length > 0) {
       const index = param(scope.params[0]);
       sql += scope.sql.replace("$SCOPE_IDS", index);
+    } else {
+      sql += scope.sql;
     }
     sql += " ORDER BY p.status = 'ACTIVE' DESC, p.code";
 
@@ -558,6 +567,24 @@ export async function createAssignment(
       reason: entry.reason,
       validUntil: entry.validUntil,
     }));
+    /*
+     * IZNIMKA TRAŽI `projects.override`, NE `projects.assign`.
+     *
+     * Ovo je jedina odbrana od toga da iznimka postane besplatna: bez provjere bila bi dovoljna
+     * `projects.assign` (koju ima PM), pa bi blokada iz B5.4 važila samo za one koji je sami sebi
+     * ne mogu ugasiti. Provjera ide OVDJE, a ne u UI-u — UI je samo prikaz.
+     *
+     * Odgovor je 403 („nemaš pravo"), a ne 409: razlika je bitna, jer 409 znači „pokušaj ispraviti
+     * podatke", a ovdje podaci ne pomažu.
+     */
+    if (requestedOverrides.length > 0 && !can(actor.roles, "projects.override")) {
+      return {
+        code: "FORBIDDEN",
+        message:
+          "Iznimku od blokade odobrava vlasnik ili administrator. Pošaljite zahtjev, ili obnovite dokument prije dodjele.",
+      } as ServiceError;
+    }
+
     const check = checkAssignment(obligations, requestedOverrides, today);
     const blockMessage = assignmentBlockMessage(check);
     if (blockMessage) {
@@ -585,33 +612,12 @@ export async function createAssignment(
       // Iznimke nose FK na dodjelu, pa idu tek sada — u istoj transakciji.
       for (const override of check.overridden) {
         const requested = requestedOverrides.find((entry) => entry.obligationId === override.obligationId);
-        await client.query(
-          `INSERT INTO project_assignment_overrides (id, company_id, assignment_id, obligation_id,
-                                                     reason, valid_until, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            `pao_${crypto.randomUUID()}`,
-            companyId,
-            id,
-            override.obligationId,
-            requested?.reason.trim() ?? override.reason ?? "",
-            requested?.validUntil ?? today,
-            actor.userId,
-          ],
-        );
-        await writeAudit(client, {
-          companyId,
-          actorId: actor.userId,
-          actorEmail: null,
-          action: "project.assignment_overridden",
-          entityType: "project_assignment",
-          entityId: id,
-          metadata: {
-            obligationId: override.obligationId,
-            typeLabel: override.typeLabel,
-            reason: requested?.reason.trim() ?? override.reason ?? "",
-            validUntil: requested?.validUntil ?? today,
-          },
+        await writeOverride(client, companyId, actor, {
+          assignmentId: id,
+          obligationId: override.obligationId,
+          reason: requested?.reason.trim() ?? override.reason ?? "",
+          validUntil: requested?.validUntil ?? today,
+          typeLabel: override.typeLabel,
         });
       }
     } catch (error) {
@@ -710,7 +716,7 @@ export async function removeAssignment(
   actor: ProjectActor,
   projectId: string,
   assignmentId: string,
-): Promise<{ ok: true } | ServiceError> {
+): Promise<{ ok: true; scopeNotice: string | null } | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
     if (ids !== null && !ids.includes(projectId)) {
@@ -742,7 +748,60 @@ export async function removeAssignment(
       },
     });
 
-    return { ok: true };
+    /*
+     * POSLJEDNJA DODJELA OSOBI SA OPSEGOM `PROJECTS`.
+     *
+     * Do ovoga je ta osoba vidjela tačno jedan projekat; poslije ovoga ne vidi nijedan. Ako se to
+     * desi tiho, čovjek se prijavi u prazan sistem i misli da je pokvaren — a ništa ne piše.
+     *
+     * Zato: (1) opseg se automatski spušta na `SELF` — najuži, nikad širi; (2) radnja ide u audit
+     * sa razlogom; (3) pozivalac dobija `scopeNotice` koji UI OBAVEZNO prikaže. Ne ostavljamo osobu
+     * sa opsegom koji ne vidi ništa, jer je takav opseg već jednom odbijen pri snimanju (R3 odluka).
+     */
+    let scopeNotice: string | null = null;
+    if (row.worker_id) {
+      const person = await client.query<{ user_id: string | null; scope: string; name: string }>(
+        `SELECT w.user_id, m.scope, w.first_name || ' ' || w.last_name AS name
+           FROM workers w
+           JOIN memberships m ON m.user_id = w.user_id AND m.company_id = w.company_id
+          WHERE w.company_id = $1 AND w.id = $2`,
+        [companyId, row.worker_id],
+      );
+      const affected = person.rows[0];
+      if (affected?.user_id && affected.scope === "PROJECTS") {
+        const remaining = await client.query(
+          `SELECT count(*)::int AS n
+             FROM project_assignments a
+             JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
+            WHERE w.user_id = $1`,
+          [affected.user_id],
+        );
+        if (Number(remaining.rows[0]?.n ?? 0) === 0) {
+          await client.query(
+            "UPDATE memberships SET scope = 'SELF', updated_at = now() WHERE company_id = $1 AND user_id = $2",
+            [companyId, affected.user_id],
+          );
+          await writeAudit(client, {
+            companyId,
+            actorId: actor.userId,
+            actorEmail: null,
+            action: "user.membership_changed",
+            entityType: "user",
+            entityId: affected.user_id,
+            metadata: {
+              reason: "last_project_assignment_removed",
+              from: { scope: "PROJECTS" },
+              to: { scope: "SELF" },
+            },
+          });
+          scopeNotice =
+            `${affected.name} više nije ni na jednom projektu, pa je opseg spušten sa „dodijeljeni ` +
+            `projekti" na „samo svoje". Vrati ga na „dodijeljeni projekti" kad ga dodijelite ponovo.`;
+        }
+      }
+    }
+
+    return { ok: true, scopeNotice };
   });
 }
 
@@ -762,5 +821,343 @@ export async function assignmentPreview(
     const obligations = await entityObligations(client, today, entity);
     const check = checkAssignment(obligations, [], today);
     return check.blocked;
+  });
+}
+
+/* --------------------------------------------------- zahtjev za iznimku (PM) */
+
+export type OverrideRequestRow = {
+  id: string;
+  projectId: string;
+  obligationId: string;
+  typeLabel: string;
+  workerId: string | null;
+  machineId: string | null;
+  targetName: string;
+  reason: string;
+  requestedBy: string | null;
+  requestedByName: string | null;
+  fromDate: string;
+  toDate: string | null;
+  createdAt: string;
+};
+
+/**
+ * Zahtjev za iznimku koji ČEKA odobrenje.
+ *
+ * Živi u `project_assignment_overrides` sa `assignment_id = NULL` i `approved_at = NULL`: iznimka
+ * bez dodjele nema čemu da visi (dodjela bi bila odbijena), pa je zahtjev zaseban red koji
+ * odobravanje tek pretvara u iznimku uz dodjelu. Tako PM može tražiti, a vlasnik odobriti — bez
+ * toga bi PM morao zvati vlasnika telefonom i vlasnik bi „odobrio" usmeno.
+ */
+export type OverrideRequestInput = {
+  obligationId: string;
+  workerId?: string | null;
+  machineId?: string | null;
+  reason: string;
+  fromDate: string;
+  toDate?: string | null;
+};
+
+export async function requestOverride(
+  pool: Pool,
+  companyId: CompanyId,
+  actor: ProjectActor,
+  projectId: string,
+  input: OverrideRequestInput,
+): Promise<OverrideRequestRow | ServiceError> {
+  if (!input.obligationId) {
+    return { code: "VALIDATION_FAILED", message: "Nedostaje obaveza na koju se iznimka odnosi." };
+  }
+  if (input.reason.trim().length < 10) {
+    return { code: "VALIDATION_FAILED", message: "Razlog iznimke mora imati najmanje 10 znakova." };
+  }
+  if (Boolean(input.workerId) === Boolean(input.machineId)) {
+    return { code: "VALIDATION_FAILED", message: "Zahtjev ide ili za radnika ili za mašinu." };
+  }
+
+  return withCompany(pool, companyId, async (client) => {
+    const project = await client.query("SELECT 1 FROM projects WHERE id = $1", [projectId]);
+    if (project.rowCount === 0) {
+      return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
+    }
+
+    const obligation = await client.query<{ type_label: string }>(
+      `SELECT t.label AS type_label
+         FROM obligations o
+         JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
+        WHERE o.id = $1`,
+      [input.obligationId],
+    );
+    if (obligation.rowCount === 0) {
+      return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
+    }
+
+    const id = `paor_${crypto.randomUUID()}`;
+    await client.query(
+      `INSERT INTO project_assignment_overrides
+         (id, company_id, assignment_id, obligation_id, project_id, worker_id, machine_id,
+          reason, requested_by, created_by)
+       VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8, $8)`,
+      [
+        id,
+        companyId,
+        input.obligationId,
+        projectId,
+        input.workerId ?? null,
+        input.machineId ?? null,
+        input.reason.trim(),
+        actor.userId,
+      ],
+    );
+
+    await writeAudit(client, {
+      companyId,
+      actorId: actor.userId,
+      actorEmail: null,
+      action: "project.override_requested",
+      entityType: "project_overrides",
+      entityId: id,
+      metadata: {
+        projectId,
+        obligationId: input.obligationId,
+        typeLabel: obligation.rows[0]!.type_label,
+        reason: input.reason.trim(),
+      },
+    });
+
+    return {
+      id,
+      projectId,
+      obligationId: input.obligationId,
+      typeLabel: String(obligation.rows[0]!.type_label),
+      workerId: input.workerId ?? null,
+      machineId: input.machineId ?? null,
+      targetName: "",
+      reason: input.reason.trim(),
+      requestedBy: actor.userId,
+      requestedByName: null,
+      fromDate: input.fromDate,
+      toDate: input.toDate ?? null,
+      createdAt: new Date().toISOString(),
+    };
+  });
+}
+
+/** Upisuje ODOBRENU iznimku (zahtjev ili direktno uz dodjelu). */
+async function writeOverride(
+  client: PoolClient,
+  companyId: CompanyId,
+  actor: ProjectActor,
+  values: {
+    assignmentId: string;
+    obligationId: string;
+    reason: string;
+    validUntil: string;
+    typeLabel: string;
+  },
+): Promise<void> {
+  await client.query(
+    `INSERT INTO project_assignment_overrides
+       (id, company_id, assignment_id, obligation_id, reason, valid_until,
+        requested_by, approved_at, approved_by, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8, $8)`,
+    [
+      `pao_${crypto.randomUUID()}`,
+      companyId,
+      values.assignmentId,
+      values.obligationId,
+      values.reason,
+      values.validUntil,
+      actor.userId,
+      actor.userId,
+    ],
+  );
+
+  await writeAudit(client, {
+    companyId,
+    actorId: actor.userId,
+    actorEmail: null,
+    action: "project.assignment_overridden",
+    entityType: "project_assignment",
+    entityId: values.assignmentId,
+    metadata: {
+      obligationId: values.obligationId,
+      typeLabel: values.typeLabel,
+      reason: values.reason,
+      validUntil: values.validUntil,
+    },
+  });
+}
+
+/* ------------------------------------------------------ odobravanje iznimke */
+
+/**
+ * Odobrenje zahtjeva: `projects.override` (vlasnik/admin).
+ *
+ * Prema odluci vlasnika, PM sa `projects.assign` može **zatražiti** iznimku, ali je **ne odobrava**.
+ * Odobrenje zato traži drugu dozvolu — i to se provjerava ovdje, a ne samo u UI-u.
+ *
+ * Odobrenje ne „odobrava red" nego stvara dodjelu sa iznimkom: zahtjev bez dodjele ne visi ni o
+ * čemu, jer blokada djeluje na dodjelu. Iznimka i dodjela nastaju u ISTOJ transakciji — nema stanja
+ * u kojem iznimka postoji a dodjela nije upisana (ili obrnuto).
+ */
+export async function approveOverride(
+  pool: Pool,
+  companyId: CompanyId,
+  actor: ProjectActor,
+  requestId: string,
+  input: { validUntil: string; fromDate?: string; toDate?: string | null },
+): Promise<AssignmentRow | ServiceError> {
+  if (!can(actor.roles, "projects.override")) {
+    return {
+      code: "FORBIDDEN",
+      message: "Iznimku od blokade odobrava vlasnik ili administrator.",
+    };
+  }
+  if (!input.validUntil) {
+    return { code: "VALIDATION_FAILED", message: "Iznimka mora imati rok do kojeg važi." };
+  }
+
+  return withCompany(pool, companyId, async (client) => {
+    const request = await client.query(
+      `SELECT r.id, r.project_id, r.obligation_id, r.worker_id, r.machine_id, r.reason,
+              r.approved_at, t.label AS type_label
+         FROM project_assignment_overrides r
+         JOIN obligations o ON o.company_id = r.company_id AND o.id = r.obligation_id
+         JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
+        WHERE r.id = $1 AND r.assignment_id IS NULL`,
+      [requestId],
+    );
+    const row = request.rows[0];
+    if (!row) {
+      return { code: "NOT_FOUND", message: "Zahtjev nije pronađen ili je već obrađen." } as ServiceError;
+    }
+
+    const id = `pas_${crypto.randomUUID()}`;
+    const fromDate = input.fromDate ?? (await companyToday(client, companyId));
+    try {
+      await client.query(
+        `INSERT INTO project_assignments (id, company_id, project_id, worker_id, machine_id,
+                                          from_date, to_date, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          id,
+          companyId,
+          row.project_id,
+          row.worker_id,
+          row.machine_id,
+          fromDate,
+          input.toDate || null,
+          actor.userId,
+        ],
+      );
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "message" in error) {
+        const message = String((error as { message: unknown }).message);
+        if (message.includes("ASSIGNMENT_OVERLAP") || message.includes("no_overlap")) {
+          return {
+            code: "CONFLICT",
+            message: "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.",
+          } as ServiceError;
+        }
+      }
+      throw error;
+    }
+
+    // Zahtjev postaje iznimka: dobija dodjelu, rok i odobrenje. Isti red, ne novi — historija
+    // zahtjeva ostaje čitljiva bez duplog zapisa.
+    await client.query(
+      `UPDATE project_assignment_overrides
+          SET assignment_id = $2, valid_until = $3, approved_at = now(), approved_by = $4
+        WHERE id = $1`,
+      [requestId, id, input.validUntil, actor.userId],
+    );
+
+    await writeAudit(client, {
+      companyId,
+      actorId: actor.userId,
+      actorEmail: null,
+      action: "project.assignment_overridden",
+      entityType: "project_assignment",
+      entityId: id,
+      metadata: {
+        requestId,
+        obligationId: row.obligation_id,
+        typeLabel: row.type_label,
+        reason: row.reason,
+        validUntil: input.validUntil,
+      },
+    });
+
+    const created = await client.query("SELECT * FROM project_assignments WHERE id = $1", [id]);
+    const today = await companyToday(client, companyId);
+    const obligations = await entityObligations(client, today, {
+      workerId: row.worker_id ? String(row.worker_id) : null,
+      machineId: row.machine_id ? String(row.machine_id) : null,
+    });
+    const overrides = await activeOverrides(client, id);
+    // `ASSIGNMENT_SELECT` je JOIN — novi red se čita istim putem da odgovor ima imena, ne id-jeve.
+    const full = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1`, [id]);
+    void created;
+    return toAssignment(full.rows[0]!, obligations, overrides, today);
+  });
+}
+
+/** Otvoreni zahtjevi — ono što vlasnik treba da vidi na jednom mjestu. */
+export async function listOverrideRequests(
+  pool: Pool,
+  companyId: CompanyId,
+  actor: ProjectActor,
+  projectId?: string,
+): Promise<OverrideRequestRow[]> {
+  return withCompany(pool, companyId, async (client) => {
+    const params: unknown[] = [];
+    const conditions = ["r.approved_at IS NULL", "r.assignment_id IS NULL"];
+    if (projectId) {
+      params.push(projectId);
+      conditions.push(`r.project_id = $${params.length}`);
+    }
+
+    // Opseg: zahtjevi se vide samo za projekte koje osoba vidi.
+    const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
+    if (ids !== null) {
+      if (ids.length === 0) return [];
+      params.push(ids);
+      conditions.push(`r.project_id = ANY($${params.length}::text[])`);
+    }
+
+    const result = await client.query(
+      `SELECT r.id, r.project_id, r.obligation_id, r.reason, r.created_at, r.requested_by,
+              r.worker_id, r.machine_id,
+              t.label AS type_label,
+              COALESCE(w.first_name || ' ' || w.last_name, m.code || ' · ' || m.name) AS target_name,
+              COALESCE(ru.first_name || ' ' || ru.last_name, NULL) AS requested_by_name
+         FROM project_assignment_overrides r
+         JOIN obligations o ON o.company_id = r.company_id AND o.id = r.obligation_id
+         JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
+         LEFT JOIN workers w ON w.company_id = r.company_id AND w.id = r.worker_id
+         LEFT JOIN machines m ON m.company_id = r.company_id AND m.id = r.machine_id
+         LEFT JOIN users ru ON ru.id = r.requested_by
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY r.created_at`,
+      params,
+    );
+
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      projectId: String(row.project_id),
+      obligationId: String(row.obligation_id),
+      typeLabel: String(row.type_label),
+      workerId: row.worker_id ? String(row.worker_id) : null,
+      machineId: row.machine_id ? String(row.machine_id) : null,
+      targetName: String(row.target_name ?? ""),
+      reason: String(row.reason),
+      requestedBy: row.requested_by ? String(row.requested_by) : null,
+      requestedByName: row.requested_by_name ? String(row.requested_by_name) : null,
+      fromDate: "",
+      toDate: null,
+      createdAt: new Date(row.created_at as string).toISOString(),
+    }));
   });
 }

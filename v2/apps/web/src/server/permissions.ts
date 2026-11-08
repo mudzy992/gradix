@@ -72,6 +72,16 @@ export const PERMISSIONS = {
   ],
   "projects.manage": ["OWNER", "ADMIN"],
   "projects.assign": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  /*
+   * R3 (odluka vlasnika, 2026-11-09): iznimka od blokade je POSEBNO pravo.
+   *
+   * Zašto odvojeno od `projects.assign`: dodjela je raspoređivanje ljudi, a iznimka je odobrenje da
+   * čovjek radi sa ISTEKLIM dokumentom. Rukovodilac projekta (PM) raspoređuje svaki dan; ako bi
+   * iznimka išla s dodjelom, pravilo iz B5.4 ne bi štitilo ni od koga — svako ko dodjeljuje bi ga
+   * mogao ugasiti. PM zato može ZATRAŽITI iznimku (polje u formi), ali je odobrava samo vlasnik ili
+   * admin.
+   */
+  "projects.override": ["OWNER", "ADMIN"],
   "workers.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "workers.manage": ["OWNER", "ADMIN"],
   "equipment.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC"],
@@ -111,6 +121,11 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "projects.manage": {
     label: "Upravljanje projektima",
     description: "Novi projekti, izmjena naziva, statusa, perioda i rukovodioca.",
+  },
+  "projects.override": {
+    label: "Odobravanje iznimke od blokade",
+    description:
+      "Dopušta dodjelu uprkos isteklom dokumentu, uz obavezan razlog i rok. Bez ovog prava se iznimka može zatražiti, ali ne odobriti.",
   },
   "projects.assign": {
     label: "Dodjela na projekte",

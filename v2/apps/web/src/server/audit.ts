@@ -57,6 +57,7 @@ export const AUDIT_ACTIONS = [
   "project.machine_assigned",
   "project.assignment_removed",
   "project.assignment_overridden",
+  "project.override_requested",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -72,6 +73,7 @@ export const AUDIT_ENTITY_TYPES = [
   "obligation_attachment",
   "project",
   "project_assignment",
+  "project_overrides",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -115,6 +117,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "project.machine_assigned": "Mašina dodijeljena projektu",
   "project.assignment_removed": "Dodjela skinuta",
   "project.assignment_overridden": "Iznimka od blokade odobrena",
+  "project.override_requested": "Zatražena iznimka od blokade",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */
