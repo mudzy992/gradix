@@ -32,6 +32,19 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
     </>
   ),
+  truck: (
+    <>
+      <path d="M3 7h10v9H3zM13 10h4l4 3.5V16h-8z" />
+      <circle cx="7" cy="18.5" r="1.8" />
+      <circle cx="17.5" cy="18.5" r="1.8" />
+    </>
+  ),
+  upload: (
+    <>
+      <path d="M12 16V4M7.5 8.5L12 4l4.5 4.5" />
+      <path d="M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="7" />

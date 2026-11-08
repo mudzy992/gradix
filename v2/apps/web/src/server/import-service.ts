@@ -103,8 +103,10 @@ export type PreviewResult = {
   sheetName: string;
   rows: PreviewRow[];
   counts: { import: number; skip: number; error: number; duplicate: number };
-  /** Greške koje blokiraju cijeli uvoz (nemapirano obavezno polje). */
+  /** Razlozi zbog kojih uvoz NE MOŽE da krene (nemapirano obavezno polje). */
   blockers: string[];
+  /** Ono što ne blokira, ali korisnik mora vidjeti prije potvrde (neuvežene kolone). */
+  notices: string[];
 };
 
 export type ImportError =
@@ -175,20 +177,23 @@ export async function previewImport(
   for (const field of fields) {
     if (field.required && !mapping[field.key]) blockers.push(`Polje „${field.label}“ nije mapirano.`);
   }
-  // Nepodržane kolone se prijavljuju: korisnik mora znati da nešto nije uvezeno.
+
+  // Neuvežene kolone ne blokiraju uvoz — ali se prijavljuju, jer korisnik mora znati šta od
+  // njegovog fajla nije ušlo. Lični podaci su tu samo naglašeniji slučaj istog pravila.
+  const notices: string[] = [];
   const mappedColumns = new Set(Object.values(mapping).filter(Boolean) as string[]);
   const ignoredColumns = sheet.headers.filter((header) => !mappedColumns.has(header));
   for (const column of ignoredColumns) {
     const normalised = normaliseHeader(column);
     const knownPersonal = ["jmbg", "licna karta", "broj licne", "adresa", "iban", "bankovni racun", "racun"];
-    blockers.push(
+    notices.push(
       knownPersonal.some((pattern) => normalised.includes(pattern))
         ? `Kolona „${column}“ nije podržana i nije uvezena: lični podaci se u R2 ne unose.`
         : `Kolona „${column}“ nije mapirana i nije uvezena.`,
     );
   }
 
-  if (blockers.some((blocker) => blocker.includes("nije mapirano"))) {
+  if (blockers.length > 0) {
     return {
       kind,
       mapping,
@@ -197,6 +202,7 @@ export async function previewImport(
       rows: [],
       counts: { import: 0, skip: 0, error: 0, duplicate: 0 },
       blockers,
+      notices,
     };
   }
 
@@ -216,8 +222,8 @@ export async function previewImport(
       sheetName: sheet.sheetName,
       rows,
       counts,
-      // Nepodržane kolone ne blokiraju uvoz, ali moraju biti vidljive u pregledu.
-      blockers: blockers.filter((blocker) => blocker.includes("lični podaci")),
+      blockers: [],
+      notices,
     };
   });
 }
@@ -466,7 +472,7 @@ export async function applyImport(
 ): Promise<ApplyResult | ImportError> {
   const preview = await previewImport(pool, companyId, kind, sheet, mapping);
   if (isServiceError(preview)) return preview;
-  if (preview.blockers.some((blocker) => blocker.includes("nije mapirano"))) {
+  if (preview.blockers.length > 0) {
     return { code: "VALIDATION_FAILED", message: preview.blockers.join(" ") };
   }
 

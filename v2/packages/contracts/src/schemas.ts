@@ -317,6 +317,8 @@ export const MachineInput = z.object({
   ownership: Ownership.optional(),
   meter: Meter.optional(),
   meterValue: z.number().nullable().optional(),
+  /** `false` = deaktivacija; mašina i njena istorija ostaju. */
+  isActive: z.boolean().optional(),
 });
 export type MachineInput = z.infer<typeof MachineInput>;
 
@@ -366,8 +368,10 @@ export const ImportPreview = z.object({
     error: z.number(),
     duplicate: z.number(),
   }),
-  /** Ono što blokira cijeli uvoz ili što korisnik mora vidjeti (nepodržane kolone). */
+  /** Razlozi zbog kojih uvoz ne može da krene; dok ih ima, potvrda je onemogućena. */
   blockers: z.array(z.string()),
+  /** Neuvežene kolone i slično: ne blokira, ali korisnik mora vidjeti prije potvrde. */
+  notices: z.array(z.string()),
 });
 export type ImportPreview = z.infer<typeof ImportPreview>;
 

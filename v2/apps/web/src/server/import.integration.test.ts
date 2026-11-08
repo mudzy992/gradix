@@ -325,6 +325,28 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
     expect(parsed.ignoredSheets).toBe(1);
   }, 30_000);
 
+  it("nemapirano obavezno polje blokira uvoz prije ijednog upisa", async () => {
+    const parsed = await parse(await makeWorkbook([[...WORKER_HEADER], ["Amina", "Karić", null, null, null, "STALNO", "01.03.2025", null, null, null]]));
+    const preview = await previewImport(pool, COMPANY as never, "workers", parsed, { ...workerMapping, lastName: null });
+    if (isServiceError(preview)) throw new Error(preview.message);
+    expect(preview.blockers).toEqual(["Polje „Prezime“ nije mapirano."]);
+    expect(preview.rows).toHaveLength(0);
+
+    const applied = await applyImport(
+      pool,
+      COMPANY as never,
+      actor,
+      "workers",
+      parsed,
+      { ...workerMapping, lastName: null },
+      [{ rowNumber: 1, action: "import" }],
+      "radnici.xlsx",
+    );
+    expect(isServiceError(applied)).toBe(true);
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM workers WHERE company_id = $1", [COMPANY]);
+    expect(rows[0].n).toBe(0);
+  }, 30_000);
+
   it("licni podaci u koloni se prijavljuju kao nepodržani", async () => {
     // 13 cifara sa pogrešnom kontrolnom cifrom: kolona se odbija po IMENU, ne po sadržaju.
     const parsed = await parse(
@@ -335,6 +357,7 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
     );
     const preview = await previewImport(pool, COMPANY as never, "workers", parsed, workerMapping);
     if (isServiceError(preview)) throw new Error(preview.message);
-    expect(preview.blockers.join(" ")).toContain("lični podaci");
+    expect(preview.notices.join(" ")).toContain("lični podaci");
+    expect(preview.blockers).toHaveLength(0);
   }, 30_000);
 });

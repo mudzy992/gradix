@@ -85,9 +85,11 @@ try {
 
   for (const machine of machines) {
     await withCompany(pool, companyId(machine.companyId), async (client) => {
+      // Kategorija i u `UPDATE`-u: seed mora vratiti demo u stanje koje opisuje, i kad su
+      // mašine već postojale (poslije migracije koja ih je stavila u „Ostalo“).
       const updated = await client.query(
-        "UPDATE machines SET code = $2, name = $3 WHERE id = $1",
-        [machine.id, machine.code, machine.name],
+        "UPDATE machines SET code = $2, name = $3, category_id = $4 || '_cat_' || lower($5), meter = COALESCE((SELECT meter FROM equipment_categories WHERE id = $4 || '_cat_' || lower($5)), meter) WHERE id = $1",
+        [machine.id, machine.code, machine.name, machine.companyId, machine.category],
       );
       if (updated.rowCount === 0) {
         await client.query(

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const parsed = await parseWorkbook(bytes, file.name);
     if ("code" in parsed) return fail("VALIDATION_FAILED", parsed.message);
 
-    const result = await applyImport(
+    const applied = await applyImport(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
       { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
@@ -63,8 +63,26 @@ export async function POST(request: NextRequest): Promise<Response> {
       file.name,
     );
 
-    if (isServiceError(result)) return fail(result.code, result.message);
-    return ok(result);
+    if (isServiceError(applied)) return fail(applied.code, applied.message);
+
+    // Greška u sredini uvoza ruši cijelu transakciju, ali rezultat NOSI koje je redove stigao
+    // obraditi — bez toga korisnik vidi „puklo je“ i ne zna na kom redu. Status je 409 jer
+    // uvoz nije prošao, a `data` nosi izvještaj.
+    if (applied.failed > 0) {
+      return Response.json(
+        {
+          success: false,
+          error: {
+            code: "CONFLICT",
+            message: `Uvoz je prekinut na redu ${applied.errors[0]?.rowNumber ?? "?"}: ${applied.errors[0]?.message ?? ""} Ništa nije uvezeno.`,
+          },
+          data: applied,
+        },
+        { status: 409 },
+      );
+    }
+
+    return ok(applied);
   } catch (error) {
     return internal(error, "imports.apply");
   }

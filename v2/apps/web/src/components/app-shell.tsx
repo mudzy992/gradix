@@ -41,6 +41,9 @@ export default async function AppShell({ children }: { children: React.ReactNode
   });
 
   const canManageUsers = can(ctx.roles, "users.manage");
+  const canViewWorkers = can(ctx.roles, "workers.view");
+  const canManageWorkers = can(ctx.roles, "workers.manage");
+  const canViewEquipment = can(ctx.roles, "equipment.view");
   const canViewAudit = can(ctx.roles, "audit.view");
   const canViewRoles = can(ctx.roles, "roles.view");
 
@@ -48,6 +51,35 @@ export default async function AppShell({ children }: { children: React.ReactNode
     {
       label: "Pregled",
       items: [{ href: "/pregled", label: "Pregled", icon: "home", description: "Mašine i offline zapisi" }],
+    },
+    {
+      // Redoslijed je redoslijed rada: prvo ljudi i mašine, pa uvoz kad se prelazi sa papira.
+      label: "Evidencija",
+      items: [
+        ...(canViewEquipment
+          ? [
+              {
+                href: "/ured/masine",
+                label: "Mašine i vozila",
+                icon: "truck" as const,
+                description: "Inventar, kategorije, brojilo",
+              },
+            ]
+          : []),
+        ...(canViewWorkers
+          ? [
+              {
+                href: "/ured/radnici",
+                label: "Radnici",
+                icon: "users" as const,
+                description: "Ljudi, kontakt, angažman",
+              },
+            ]
+          : []),
+        ...(canManageWorkers
+          ? [{ href: "/ured/uvoz", label: "Uvoz iz Excela", icon: "upload" as const, description: "Spisak sa papira" }]
+          : []),
+      ],
     },
     {
       label: "Ured",

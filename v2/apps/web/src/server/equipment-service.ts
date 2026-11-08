@@ -491,6 +491,8 @@ export type MachineInput = {
   ownership?: string;
   meter?: string;
   meterValue?: number | null;
+  /** Deaktivacija umjesto brisanja: mašina ostaje u istoriji. */
+  isActive?: boolean;
 };
 
 const MACHINE_SELECT = `
@@ -656,7 +658,8 @@ export async function updateMachine(
           SET name = $2,
               category_id = COALESCE($3, category_id),
               make = $4, model = $5, serial_no = $6, plate = $7, year = $8,
-              ownership = COALESCE($9, ownership), meter = $10, updated_at = now()
+              ownership = COALESCE($9, ownership), meter = $10,
+              is_active = COALESCE($11, is_active), updated_at = now()
         WHERE id = $1`,
       [
         machineId,
@@ -669,6 +672,7 @@ export async function updateMachine(
         input.year ?? null,
         input.ownership ?? null,
         nextMeter,
+        input.isActive ?? null,
       ],
     );
 
@@ -679,7 +683,8 @@ export async function updateMachine(
       action: "equipment.updated",
       entityType: "equipment",
       entityId: machineId,
-      metadata: {},
+      metadata:
+        input.isActive === undefined ? {} : { isActive: input.isActive, code: input.code?.trim().toUpperCase() ?? null },
     });
 
     const updated = await client.query(`SELECT * FROM (${MACHINE_SELECT}) m WHERE m.id = $1`, [machineId]);
