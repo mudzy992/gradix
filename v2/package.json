@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:a11y": "pnpm --filter @gradix/web test:a11y",
     "db:migrate": "pnpm --filter @gradix/db migrate",
     "db:generate": "pnpm --filter @gradix/db generate",
     "db:seed": "pnpm --filter @gradix/db seed",

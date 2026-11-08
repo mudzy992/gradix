@@ -74,7 +74,8 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [state, setState] = useState<State>({ kind: "loading" });
   const [loadingMore, setLoadingMore] = useState(false);
-  const [open, setOpen] = useState<AuditRow | null>(null);
+  // Uz zapis pamtimo dugme iz reda: fokus se vraća tamo, ne na `<body>`.
+  const [open, setOpen] = useState<{ row: AuditRow; returnTo: HTMLElement | null } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const load = useCallback(async () => {
@@ -258,13 +259,17 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
                   </td>
                   <td data-label="Ko">{row.actorEmail ?? "sistem"}</td>
                   <td data-label="Šta">
-                    <Pill tone="brand">{ACTION_LABELS[row.action] ?? row.action}</Pill>{" "}
+                    <Pill tone="quiet">{ACTION_LABELS[row.action] ?? row.action}</Pill>{" "}
                     <span className="text-[13px] text-[var(--color-text-muted)]">
                       {ENTITY_LABELS[row.entityType] ?? row.entityType}
                     </span>
                   </td>
                   <td data-label="Detalj" className="text-right">
-                    <Button variant="quiet" onClick={() => setOpen(row)} className="whitespace-nowrap">
+                    <Button
+                      variant="quiet"
+                      onClick={(event) => setOpen({ row, returnTo: event.currentTarget })}
+                      className="whitespace-nowrap"
+                    >
                       Otvori
                     </Button>
                   </td>
@@ -286,17 +291,24 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
         </Card>
       ) : null}
 
-      {open ? <AuditDetail row={open} onClose={() => setOpen(null)} /> : null}
+      {open ? <AuditDetail row={open.row} returnFocusTo={open.returnTo} onClose={() => setOpen(null)} /> : null}
     </div>
   );
 }
 
-function AuditDetail({ row, onClose }: { row: AuditRow; onClose: () => void }) {
+function AuditDetail({
+  row,
+  returnFocusTo,
+  onClose,
+}: {
+  row: AuditRow;
+  returnFocusTo: HTMLElement | null;
+  onClose: () => void;
+}) {
   const panel = useRef<HTMLDivElement>(null);
 
   // Fokus ulazi u dijalog; `Escape` zatvara; fokus se vraća na dugme koje ga je otvorilo.
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
     panel.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -307,20 +319,19 @@ function AuditDetail({ row, onClose }: { row: AuditRow; onClose: () => void }) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      previous?.focus?.();
+      returnFocusTo?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, returnFocusTo]);
 
   return (
-    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" role="presentation">
+    <div className="gx-overlay" role="presentation">
       <div
         ref={panel}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="audit-detail-title"
-        className="w-full max-w-lg overflow-y-auto rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5 outline-none"
-        style={{ maxHeight: "calc(100vh - 2rem)" }}
+        className="gx-dialog w-full max-w-lg p-4 outline-none"
       >
         <h2 id="audit-detail-title" className="text-lg font-semibold">
           {ACTION_LABELS[row.action] ?? row.action}
@@ -341,7 +352,7 @@ function AuditDetail({ row, onClose }: { row: AuditRow; onClose: () => void }) {
         </dl>
 
         <p className="mt-4 mb-1 text-sm font-semibold">Detalji</p>
-        <pre className="max-h-56 overflow-auto rounded-[10px] bg-[var(--color-surface-muted)] p-3 text-[12px] leading-relaxed">
+        <pre className="gx-mono max-h-56 overflow-auto bg-[var(--color-surface-muted)] p-3 text-[12px] leading-relaxed" style={{ borderRadius: "var(--radius)" }}>
           {JSON.stringify(row.metadata, null, 2)}
         </pre>
 

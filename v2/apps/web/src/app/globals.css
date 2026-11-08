@@ -49,8 +49,23 @@
   --color-focus: #140a9a;
   --color-focus-inverse: #ffc82f;
 
-  --radius-card: 0.75rem;
+  /*
+    R1c — okvir i dizajn sistem v1: industrijski, oštar, gust.
+    Oblik: radijus 2 px (dijalog 4 px), linije 1 px, BEZ sjenki i gradijenata, bez pilula.
+    `border` je razdjelnik (1 px, nenametljiv), `border-strong` je ivica polja za unos.
+  */
+  --radius: 2px;
+  --radius-dialog: 4px;
+  --radius-card: var(--radius);
+
+  /* Okvir: fiksni sidebar, dvije širine (otvoren / sklopljen na ikone). */
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 56px;
+  --header-h: 52px;
+
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Mono za šifre, ID-ove i brojeve — bez mrežnog preuzimanja (nema vanjskih resursa). */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", "DejaVu Sans Mono", monospace;
 }
 
 html,
@@ -67,8 +82,25 @@ body {
 
 /* Fokus mora biti vidljiv: terenski korisnici rade i tastaturom i rukavicama. */
 :focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Unutar okvira fokus je jasan i na gustim redovima: 2 px, bez zaobljenja. */
+.gx-shell :focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* Cifre u tabelama i brojevima su tabularne: kolone se ne „šetaju“. */
+.gx-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Šifre, ID-ovi i ključevi idu u mono. */
+.gx-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Na tamnoj podlozi fokus ide u akcent, jer brend na tamnom ima 1,17:1. */

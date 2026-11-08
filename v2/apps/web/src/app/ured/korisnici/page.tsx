@@ -26,7 +26,7 @@ export default async function UsersPage() {
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
 
   return (
-    <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+    <main className="mx-auto w-full max-w-6xl">
       <UsersClient
         canManage={can(auth.ctx.roles, "users.manage")}
         actorId={auth.ctx.userId}

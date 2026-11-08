@@ -9,6 +9,7 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
@@ -25,12 +26,18 @@
   },
   "devDependencies": {
     "@gradix/config": "workspace:*",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "22.20.0",
     "@types/pg": "8.15.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "axe-core": "^4.14.0",
+    "jsdom": "^31.0.0",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "vitest-axe": "^0.1.0"
   }
 }

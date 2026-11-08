@@ -23,7 +23,7 @@ export default async function RolesPage() {
   if (!can(auth.ctx.roles, "roles.view")) redirect("/pregled");
 
   return (
-    <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+    <main className="mx-auto w-full max-w-6xl">
       <RolesClient />
     </main>
   );

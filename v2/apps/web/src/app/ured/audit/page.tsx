@@ -34,7 +34,7 @@ export default async function AuditPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+    <main className="mx-auto w-full max-w-6xl">
       <AuditClient actors={actors} />
     </main>
   );

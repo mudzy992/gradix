@@ -1,7 +1,7 @@
 # STATUS — Gradix v2
 
-**Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅ (demo pregledan)**, radi se **R1b (matrica + audit)**
-**Sljedeće:** demo R1b (`docs/design/demo-r1b/`, `docs/DEMO-G1b.md`) → vlasnikova riječ → Faza 2.
+**Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b: funkcionalno ✅ / dizajn ✗** ⇒ radi se **R1c (okvir, oblik, gustina)**
+**Sljedeće:** vlasnikova riječ o prijedlogu okvira (`docs/design/r1c-predlog/`, `docs/DEMO-G1c.md`) → G1c → `packages/contracts` → R2.
 
 ## Gotovo
 
@@ -15,13 +15,16 @@
 | 6 | Prijava, zaštićena stranica, `/api/me`, jedan zapis | ✅ 8/8 integracijskih testova |
 | 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; **native (android) bundle se builda** — `expo export -p android` |
 | R1a | Pristup: pozivnice, reset, obavezna promjena, deaktivacija, rate limit u bazi | ✅ 9/9 integracijskih testova, 24 snimka svih stanja |
-| R1b | Matrica rola (pregled), dodjela rola i opsega, audit trag sa filterima | ⚠️ kod + 23/23 testa + 24 snimka; **čeka kapiju G1b** |
+| R1b | Matrica rola (pregled), dodjela rola i opsega, audit trag sa filterima | ⚠️ funkcionalno ✅ (23/23 testa), **dizajn pao** ⇒ R1c |
+| R1c | Okvir (sidebar, header, `Ctrl+K`), oblik (2 px, bez sjenki), gustina 36 px, tastatura, a11y u CI-ju | ⚠️ kod + 42 nova testa + 14 snimka; **čeka vlasnikovu riječ** |
 | 8 | `contracts` (OpenAPI iz koda) | ❌ nije urađeno — vidi „ne radi“ |
 | 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 
-**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**93** testa: 34 domain, 10 db, 40 web, 9 mobile), `pnpm check-expo` (verzije usklađene sa SDK 58), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
+**Provjereno lokalno:** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm test` (**135** testa: 34 domain, 10 db, 82 web, 9 mobile), `pnpm test:a11y` (30 testova, axe WCAG 2.1 AA), `pnpm check-expo` (verzije usklađene sa SDK 58), migracije na praznoj bazi, demo tok kroz `curl` i kroz integracijske testove.
+
+**R1c — šta je mašinski dokazano:** tastatura (sidebar strelicama/`Home`/`End`, `Ctrl+K` filter + `Enter` + `Esc` + povratak fokusa, meni reda, dijalog „Role i opseg“, detalj audita) i a11y (axe na okviru, listi korisnika, matrici, auditu i oba dijaloga) su **testovi**, ne tvrdnje: 42 nova testa + korak u CI-ju (`.github/workflows/ci-v2.yml`). Dizajn pravila (radijus 2 px, nula sjenki, tabularne cifre, mono, nema heksa u komponentama) su takođe test (`apps/web/src/design/tokens.test.ts`, 12 testova).
 
 **Mobilni native bundle:** `expo export -p android` prolazi (`entry-*.hbc`, 2,6 MB) — ovim je otkriven i popravljen bug `react-native/setup-env` (RN 0.86 → 0.88.1). `expo export -p web` prolazi i sa neusklađenim verzijama, zato je u CI dodata provjera `pnpm check-expo`.
 
@@ -55,7 +58,10 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 ## Otvoreno za vlasnika
 
-1. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
+1. **R1c prijedlog okvira** — pogledaj `docs/design/r1c-predlog/` (14 snimaka, 360 i 1440) i
+   `docs/design/r1c-predlog/README.md`. Trebam: (a) prihvataš okvir ili izmjene, (b) tamna tema
+   da/ne, (c) fontovi bez mreže ili samohostovan `woff2`. Detalji: `docs/DEMO-G1c.md`.
+2. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
    `/infra/coolify/docker-compose.yml`, tri varijable (`DATABASE_URL`, `AUTH_SECRET`,
    `RUN_MIGRATIONS=true`), domena `https://gradix.ba101.top` → port 3000.
 2. **Rola u bazi** (jednom, kao superuser): `ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS;`

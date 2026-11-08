@@ -59,8 +59,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm" style={{ padding: "var(--card-pad)" }}>
+    <main className="flex min-h-[calc(100vh-2rem)] items-center justify-center p-4">
+      <div className="gx-panel w-full max-w-sm" style={{ padding: "var(--card-pad)" }}>
         <h1 className="text-xl font-semibold text-[var(--color-text)]">Gradix</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">Prijava u sistem</p>
 
@@ -77,8 +77,8 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-base"
-              style={{ minHeight: "var(--control-height)" }}
+              className="gx-input mt-1"
+              style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
             />
           </div>
 
@@ -94,8 +94,8 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-1 w-full rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 text-base"
-              style={{ minHeight: "var(--control-height)" }}
+              className="gx-input mt-1"
+              style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
             />
           </div>
 
@@ -110,8 +110,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={state.kind === "busy" || secondsLeft > 0}
-            className="gx-primary-full rounded-[10px] bg-[var(--color-brand)] px-4 text-base font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
-            style={{ minHeight: "var(--control-height)" }}
+            className="gx-primary-full gx-btn border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
+            style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
           >
             {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
           </button>

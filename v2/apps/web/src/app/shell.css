@@ -1,0 +1,518 @@
+/*
+  Okvir aplikacije (R1c): fiksni sidebar + header + sadržaj.
+
+  Pravila koja ovaj fajl sprovodi (i koja test čuva):
+   - linije su 1 px, radijus je 2 px (dijalog 4 px), NEMA sjena ni gradijenata,
+   - sidebar je 240 px, sklopljen na 56 px (ikone) — stanje je atribut `data-collapsed`,
+   - ispod 1024 px sidebar je drawer preko sadržaja, otvara ga dugme u headeru,
+   - boje samo kroz `var(--color-*)`; `#140A9A` = aktivna stavka, `#FFC82F` = fokus/akcenat.
+
+  Sidebar se sklapa BEZ klijentskog stanja u JS-u kad je to moguće: DOM nosi `data-collapsed`,
+  pa isti CSS važi za server-render i za klik.
+*/
+
+.gx-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.gx-shell[data-collapsed="true"] {
+  grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+/* ------------------------------------------------------------------ sidebar */
+
+.gx-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.gx-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--header-h);
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  /* Naziv firme je jedan red: dug naziv se skraćuje, ne lomi zaglavlje sidebara. */
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.gx-sidebar__brand-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Manje od 13 px ne ide: naziv firme je podatak, ne dekoracija. */
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-sidebar__brand-text {
+  display: none;
+}
+
+.gx-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.gx-nav-group + .gx-nav-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.gx-nav-group__label {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-nav-group__label {
+  /* Sklopljeno: grupa ostaje vidljiva kao tanka linija, tekst se ne cijepa. */
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  margin: 4px 8px;
+}
+
+.gx-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  min-height: var(--row-height);
+  border-left: 3px solid transparent;
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--body-size);
+}
+
+.gx-nav-item:hover {
+  background: var(--color-surface-muted);
+}
+
+/* Aktivna stavka: brend (štedljivo — samo ovdje i na primarnoj akciji). */
+.gx-nav-item[aria-current="page"] {
+  background: var(--color-brand-soft);
+  border-left-color: var(--color-brand);
+  font-weight: 600;
+}
+
+.gx-nav-item__icon {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-nav-item {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-nav-item__text,
+.gx-sidebar[data-collapsed="true"] .gx-nav-item__badge {
+  display: none;
+}
+
+/* Sklopljeno: naziv stavke se vidi na hover/fokus kao običan tooltip, bez sjenke. */
+.gx-sidebar[data-collapsed="true"] .gx-nav-item::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(var(--sidebar-w-collapsed) + 6px);
+  padding: 4px 8px;
+  background: var(--color-surface-inverse);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-nav-item {
+  position: relative;
+}
+
+.gx-sidebar[data-collapsed="true"] .gx-nav-item:hover::after,
+.gx-sidebar[data-collapsed="true"] .gx-nav-item:focus-visible::after {
+  opacity: 1;
+}
+
+.gx-sidebar__footer {
+  border-top: 1px solid var(--color-border);
+  padding: 8px;
+}
+
+.gx-sidebar__collapse {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--control-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.gx-sidebar__collapse:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+/* ------------------------------------------------------------------- header */
+
+.gx-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gx-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--header-h);
+  padding: 0 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gx-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.gx-breadcrumbs a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.gx-breadcrumbs a:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.gx-breadcrumbs [aria-current="page"] {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.gx-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* `min-width: 0` umjesto fiksne donje granice: na 360 px nema mjesta za 200 px pretragu
+     pored hamburgera, breadcrumbs-a i avatara. Ime „Traži…“ se skraćuje, polje ostaje. */
+  min-width: 0;
+  max-width: 320px;
+  flex: 1 1 160px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.gx-search:hover {
+  border-color: var(--color-text);
+  color: var(--color-text);
+}
+
+.gx-search__key {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+}
+
+.gx-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gx-content {
+  padding: 16px;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ telefon */
+
+/*
+  Ispod 1024 px sidebar nije kolona nego drawer: pomjeren ulijevo, otvara se atributom
+  `data-open`. Bez sjenke — granica je 1 px linija, kako pravilo nalaže.
+*/
+@media (max-width: 1023px) {
+  /* Telefon: breadcrumbs se skraćuju umjesto da guraju pretragu van ekrana. */
+  .gx-header {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .gx-breadcrumbs {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .gx-breadcrumbs a,
+  .gx-breadcrumbs [aria-current="page"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Polje sa 132 px pokazivalo je „Tra…“ — gore od ikone. Na telefonu je ikona sa imenom
+     (čitač ekrana čita `aria-label`), a Ctrl K i tako nije tastatura telefona. */
+  .gx-search {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0;
+    width: 32px;
+    justify-content: center;
+    gap: 0;
+    border-color: transparent;
+  }
+
+  .gx-search__label,
+  .gx-search__key {
+    display: none;
+  }
+
+  /* Putanja na telefonu: naziv ekrana je važniji od korijena. */
+  .gx-breadcrumbs__root,
+  .gx-breadcrumbs > span[aria-hidden="true"] {
+    display: none;
+  }
+
+  .gx-shell,
+  .gx-shell[data-collapsed="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gx-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: var(--sidebar-w);
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 120ms linear;
+  }
+
+  .gx-shell[data-open="true"] .gx-sidebar {
+    transform: translateX(0);
+  }
+
+  /* Sklapanje na ikone nema smisla na telefonu — drawer je uvijek pun. */
+  .gx-shell[data-collapsed="true"] .gx-sidebar__brand-text,
+  .gx-shell[data-collapsed="true"] .gx-nav-item__text,
+  .gx-shell[data-collapsed="true"] .gx-nav-group__label {
+    display: revert;
+  }
+
+  .gx-sidebar[data-collapsed="true"] {
+    width: var(--sidebar-w);
+  }
+
+  .gx-sidebar[data-collapsed="true"] .gx-nav-item {
+    justify-content: flex-start;
+    padding: 7px 12px;
+    gap: 10px;
+  }
+
+  .gx-sidebar[data-collapsed="true"] .gx-nav-item::after {
+    content: none;
+  }
+
+  /* Sklapanje na ikone nema smisla kad je drawer pun: dugme se sklanja, ne nudi mrtvu akciju. */
+  .gx-sidebar__footer {
+    display: none;
+  }
+
+  .gx-shell__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: var(--color-surface-inverse);
+    opacity: 0.4;
+    border: 0;
+    padding: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gx-shell__scrim {
+    display: none;
+  }
+  /* Na desktopu sidebar je uvijek tu — hamburger nema šta da otvori. Mora pobijediti
+     `.gx-icon-button { display: inline-flex }`, zato `!important` nije potreban: klasa je
+     ista specifičnost, a ovaj selektor je dvostruk (kasnije u fajlu). */
+  .gx-header .gx-header__menu {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------- panel */
+
+/* Kartica = 1 px linija + 2 px radijus. Nema sjene. */
+.gx-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.gx-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------- dijalog */
+
+/* Dijalog: 4 px (najviše dopušteno), 1 px ivica, bez sjene. */
+.gx-dialog {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-dialog);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.gx-dialog__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* --------------------------------------------------------- pomoćne klase okvira */
+
+.gx-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 40;
+  padding: 8px 12px;
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  border-radius: var(--radius);
+}
+
+.gx-skip:focus {
+  left: 8px;
+  top: 8px;
+}
+
+.gx-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.gx-icon-button:hover {
+  background: var(--color-surface-muted);
+}
+
+.gx-input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--body-size);
+}
+
+.gx-menu-item {
+  display: block;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  text-decoration: none;
+  font-size: var(--body-size);
+  cursor: pointer;
+}
+
+.gx-menu-item:hover,
+.gx-menu-item:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+/* Overlay dijaloga: bez sjene — samo zatamnjenje i 1 px okvir dijaloga. */
+.gx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  /* Preko sadržaja, ne preko boje: crna sa prozirnošću, bez gradijenta. */
+  background: rgb(27 35 42 / 45%);
+}

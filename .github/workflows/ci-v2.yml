@@ -87,6 +87,13 @@ jobs:
         working-directory: v2
         run: pnpm test
 
+      # R1c kapija: pristupačnost i tastatura nisu ručna provjera. Isti testovi su dio
+      # `pnpm test`; ovaj korak ih imenuje da u CI-ju bude VIDLJIV zelen a11y, a ne skriven
+      # u zbirnom broju. Pad ovdje znači: ekran ili okvir ima serious/critical nalaz.
+      - name: Pristupačnost i tastatura (axe, WCAG 2.1 AA)
+        working-directory: v2
+        run: pnpm test:a11y
+
       - name: Prisma generator (dokaz da radi u CI-ju)
         working-directory: v2/packages/db
         # ADR 0002: lokalno je generator blokiran (nema pristupa binaries.prisma.sh), u CI-ju

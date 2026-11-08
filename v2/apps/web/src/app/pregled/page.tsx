@@ -46,41 +46,13 @@ export default async function PregledPage() {
   if (!data) redirect("/login");
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <main className="mx-auto w-full max-w-5xl">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{data.company?.name ?? "Firma"}</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">
+          <h1 className="text-xl font-semibold tracking-tight">{data.company?.name ?? "Firma"}</h1>
+          <p className="text-[13px] text-[var(--color-text-muted)]">
             {data.profile?.first_name} {data.profile?.last_name} · {data.company?.currency}
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <a
-            href="/ured/korisnici"
-            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
-          >
-            Korisnici
-          </a>
-          <a
-            href="/ured/role"
-            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
-          >
-            Matrica rola
-          </a>
-          <a
-            href="/ured/audit"
-            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
-          >
-            Audit trag
-          </a>
-        <form action="/api/auth/logout" method="post">
-          <button
-            type="submit"
-            className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
-          >
-            Odjavi se
-          </button>
-        </form>
         </div>
       </header>
 
@@ -93,7 +65,7 @@ export default async function PregledPage() {
             Nema mašina u ovoj firmi. Dodajte prvu mašinu da biste počeli.
           </p>
         ) : (
-          <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <ul className="gx-panel mt-3 divide-y divide-[var(--color-border)]">
             {data.machines.map((machine) => (
               <li key={machine.code} className="flex justify-between px-4 py-3 hover:bg-[var(--color-brand-soft)]">
                 <span className="font-medium">{machine.name}</span>

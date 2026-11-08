@@ -1,17 +1,20 @@
 /*
-  Dvije gustine nad istom paletom i tipografijom (docs/design/ODLUKA-R1A.md).
+  Dvije gustine nad istom paletom i tipografijom (docs/design/ODLUKA-R1A.md, R1c).
   Gustina je atribut na <html>: `gusto` (ured, podrazumijevano) ili `udobno` (teren).
   Mijenja se bez izmjene komponenti — komponente koriste iste klase, ritam dolazi odavde.
+
+  R1c: web `gusto` = 36 px red (gust dashboard). Kontrola (dugme, polje) ostaje 32 px
+  da ostane dodirljiva i na desktopu; `udobno` je nepromijenjen — to je terenski ritam.
 */
 :root,
 [data-density="gusto"] {
-  --row-height: 40px;
-  --cell-pad-y: 8px;
-  --cell-pad-x: 12px;
+  --row-height: 36px;
+  --cell-pad-y: 6px;
+  --cell-pad-x: 10px;
   --control-height: 32px;
-  --section-gap: 16px;
-  --body-size: 15px;
-  --card-pad: 20px;
+  --section-gap: 14px;
+  --body-size: 14px;
+  --card-pad: 14px;
 }
 
 [data-density="udobno"] {
@@ -22,6 +25,14 @@
   --section-gap: 24px;
   --body-size: 17px;
   --card-pad: 24px;
+}
+
+/*
+  Cifre u tabelama su tabularne u OBJE gustine — brojevi moraju stajati u koloni i kad se
+  format promijeni (1.234,50 → 9.999,00). Ovo je pravilo gustine, ne komponente.
+*/
+.gx-table {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Prelivanje u kartice na uskom ekranu (raspored iz smjera B, smjer A na širokom). */
@@ -38,7 +49,7 @@
   }
   .gx-table tr {
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius);
     margin-bottom: calc(var(--section-gap) / 2);
     padding: var(--card-pad);
     background: var(--color-surface);

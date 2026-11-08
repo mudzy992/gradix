@@ -81,7 +81,9 @@ export default function UsersClient({
   const [issued, setIssued] = useState<IssuedLink>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [editing, setEditing] = useState<User | null>(null);
+  // Uz osobu pamtimo i dugme koje je otvorilo dijalog: meni se zatvara prije dijaloga, pa
+  // `document.activeElement` u trenutku montiranja pokazuje na stavku koja upravo nestaje.
+  const [editing, setEditing] = useState<{ user: User; returnTo: HTMLElement | null } | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -315,7 +317,7 @@ export default function UsersClient({
                   busy={busyId === user.id}
                   onReset={() => void issueReset(user)}
                   onToggle={() => void toggleActive(user)}
-                  onEdit={() => setEditing(user)}
+                  onEdit={(returnTo) => setEditing({ user, returnTo })}
                 />
               ))}
             </tbody>
@@ -326,10 +328,11 @@ export default function UsersClient({
       {inviteOpen ? <InviteDialog onSubmit={issueInvite} onClose={() => setInviteOpen(false)} /> : null}
       {editing ? (
         <MembershipDialog
-          user={editing}
+          user={editing.user}
+          returnFocusTo={editing.returnTo}
           actorIsOwner={actorIsOwner}
-          busy={busyId === editing.id}
-          onSave={(roles, scope) => changeMembership(editing, roles, scope)}
+          busy={busyId === editing.user.id}
+          onSave={(roles, scope) => changeMembership(editing.user, roles, scope)}
           onClose={() => setEditing(null)}
         />
       ) : null}
@@ -360,7 +363,7 @@ function UserRow({
   busy: boolean;
   onReset: () => void;
   onToggle: () => void;
-  onEdit: () => void;
+  onEdit: (returnFocusTo: HTMLElement | null) => void;
 }) {
   const status = statusOf(user);
   /**
@@ -370,6 +373,7 @@ function UserRow({
   const protectedRow = (user.roles.includes("OWNER") && !actorIsOwner) || user.id === actorId;
   const actionable = canManage && !protectedRow;
   const [menuOpen, setMenuOpen] = useState(false);
+  const moreButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -398,7 +402,7 @@ function UserRow({
         <div className="flex items-center gap-2.5 font-semibold">
           <span
             aria-hidden="true"
-            className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[var(--color-accent)] text-[11px] font-extrabold text-[var(--color-text)]"
+            className="gx-mono grid h-7 w-7 flex-none place-items-center border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[11px] font-extrabold text-[var(--color-text)]"
           >
             {initials(user)}
           </span>
@@ -410,7 +414,7 @@ function UserRow({
         </div>
       </td>
       <td data-label="Rola">
-        <Pill tone="brand">{rolesBs(user.roles)}</Pill>
+        <Pill tone="quiet">{rolesBs(user.roles)}</Pill>
       </td>
       <td data-label="Opseg" className="text-[var(--color-text-muted)]">
         {SCOPE_BS[user.scope] ?? user.scope}
@@ -441,12 +445,13 @@ function UserRow({
           {actionable ? (
             <div className="relative">
               <button
+                ref={moreButton}
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 aria-label={`Više radnji za ${user.firstName} ${user.lastName}`}
                 onClick={() => setMenuOpen((open) => !open)}
-                className="grid place-items-center rounded-[10px] border-2 border-[var(--color-border-strong)] hover:bg-[var(--color-surface-muted)]"
+                className="gx-icon-button"
                 style={{ height: "var(--control-height)", width: "var(--control-height)" }}
               >
                 ⋯
@@ -454,7 +459,7 @@ function UserRow({
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 z-10 mt-1 grid w-56 gap-1 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg"
+                  className="gx-dialog absolute right-0 z-10 mt-1 grid w-56 gap-1 p-1"
                 >
                   <button
                     role="menuitem"
@@ -462,7 +467,7 @@ function UserRow({
                     className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
                     onClick={() => {
                       setMenuOpen(false);
-                      onEdit();
+                      onEdit(moreButton.current);
                     }}
                   >
                     Role i opseg
@@ -563,7 +568,7 @@ function InviteDialog({
       aria-labelledby="invite-title"
     >
       <div
-        className="w-full max-w-md overflow-y-auto rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5"
+        className="gx-dialog w-full max-w-md p-4"
         style={{ maxHeight: "calc(100vh - 2rem)" }}
       >
         <h2 id="invite-title" className="mb-3 text-lg font-semibold">
@@ -649,12 +654,14 @@ function MembershipDialog({
   user,
   actorIsOwner,
   busy,
+  returnFocusTo,
   onSave,
   onClose,
 }: {
   user: User;
   actorIsOwner: boolean;
   busy: boolean;
+  returnFocusTo: HTMLElement | null;
   onSave: (roles: string[], scope: string) => Promise<string | null>;
   onClose: () => void;
 }) {
@@ -664,9 +671,9 @@ function MembershipDialog({
   const [saving, setSaving] = useState(false);
   const firstField = useRef<HTMLInputElement>(null);
 
-  // Fokus ulazi u dijalog; `Escape` zatvara; fokus se vraća na dugme koje ga je otvorilo.
+  // Fokus ulazi u dijalog; `Escape` zatvara; fokus se vraća na „⋯“ koji ga je otvorio
+  // (`returnFocusTo`, ne `document.activeElement` — stavka menija u međuvremenu nestane).
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
     firstField.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -677,9 +684,9 @@ function MembershipDialog({
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      previous?.focus?.();
+      returnFocusTo?.focus?.();
     };
-  }, [onClose]);
+  }, [onClose, returnFocusTo]);
 
   const options = Object.entries(ROLE_BS).filter(([value]) => value !== "OWNER" || actorIsOwner);
   const changed = roles.slice().sort().join(",") !== user.roles.slice().sort().join(",") || scope !== user.scope;
@@ -691,15 +698,12 @@ function MembershipDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" role="presentation">
+    <div className="gx-overlay" role="presentation">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="membership-title"
-        className="w-full max-w-lg overflow-y-auto rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5"
-        // Dijalog je viši od ekrana na 360 px: skroluje SEBE, ne izlazi iz ekrana i ne
-        // ostavlja stranicu da probije ispod njega.
-        style={{ maxHeight: "calc(100vh - 2rem)" }}
+        className="gx-dialog w-full max-w-lg p-4"
       >
         <h2 id="membership-title" className="text-lg font-semibold">
           Role i opseg

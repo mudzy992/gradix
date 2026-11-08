@@ -10,7 +10,7 @@
  * ekran ne može prikazati dozvolu koju ruta ne provjerava: jedan izvor, dva prikaza.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Card, Pill, SectionTitle, Skeleton } from "@/components/ui";
+import { Alert, Button, Card, Mono, SectionTitle, Skeleton } from "@/components/ui";
 
 type Permission = { key: string; label: string; description: string };
 type RoleRow = {
@@ -80,7 +80,7 @@ export default function RolesClient() {
                 Rola × dozvola. ✓ znači da rola ima dozvolu.
               </caption>
               <thead>
-                <tr className="border-b-2 border-[var(--color-border)] text-left text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                <tr className="border-b border-[var(--color-border)] text-left text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
                   <th scope="col" className="px-3 py-2 font-semibold">
                     Rola
                   </th>
@@ -96,6 +96,9 @@ export default function RolesClient() {
                   <tr key={role.role} className="border-b border-[var(--color-border)]">
                     <th scope="row" className="px-3 py-2 text-left font-semibold">
                       {role.label}
+                      <Mono className="block text-[11px] font-normal text-[var(--color-text-muted)]">
+                        {role.role}
+                      </Mono>
                       <span className="block text-xs font-normal text-[var(--color-text-muted)]">
                         {role.description}
                       </span>
@@ -128,9 +131,10 @@ export default function RolesClient() {
           <div className="grid gap-3 sm:hidden">
             {state.data.roles.map((role) => (
               <Card key={role.role}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-semibold">{role.label}</p>
-                  <Pill tone="quiet">{role.role}</Pill>
+                  {/* Tehnički ključ je za podršku, ne za čitanje — zato mono i tiho. */}
+                  <Mono className="text-[11px] text-[var(--color-text-muted)]">{role.role}</Mono>
                 </div>
                 <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">{role.description}</p>
                 <ul className="mt-2 grid gap-1 text-sm">

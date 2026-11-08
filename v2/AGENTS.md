@@ -14,6 +14,7 @@ pnpm install                  # zavisnosti (pnpm 9, Node 22+)
 ./infra/scripts/dev-up.sh     # baza + migracije + demo podaci (jednom komandom)
 pnpm --filter @gradix/web dev # web + /api na 3000
 pnpm test                     # vitest u svim paketima (db/web testovi traže DATABASE_URL)
+pnpm test:a11y                # samo a11y + tastatura (axe, WCAG 2.1 AA) — korak u CI-ju
 pnpm lint                     # eslint
 pnpm typecheck                # tsc --noEmit u svim paketima
 pnpm build                    # turbo build
