@@ -5,10 +5,23 @@
     "version": "0.1.0",
     "scheme": "gradix",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "android": { "package": "ba.gradix.teren", "permissions": [] },
-    "ios": { "bundleIdentifier": "ba.gradix.teren", "supportsTablet": false },
-    "plugins": ["expo-router", "expo-secure-store", "expo-sqlite"],
-    "experiments": { "typedRoutes": true }
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "ba.gradix.teren",
+      "permissions": [],
+      "userInterfaceStyle": "automatic"
+    },
+    "ios": {
+      "bundleIdentifier": "ba.gradix.teren",
+      "supportsTablet": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

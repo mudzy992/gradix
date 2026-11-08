@@ -4,7 +4,7 @@
  * Namjerno krupno i jednostavno: rukavice, sunce, jedan dodir za glavnu akciju.
  * Sve što ne radi ili nije implementirano — ne postoji na ekranu (A1.5).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,13 +17,18 @@ import {
 import { login, me, pushNotes, pullChanges, getAccessToken, type Me } from "../api/client";
 import { openDb, insertNote, markFailed, markSent, pendingCount, pendingNotes, readWatermark, writeWatermark } from "../db/sqlite";
 import { runSync } from "../sync/engine";
-import { colors, radius, spacing, touchTarget, typography } from "../theme/tokens";
+import { radius, spacing, touchTarget, typography } from "../theme/tokens";
+import { useTheme } from "../theme/use-theme";
 
 const DEVICE_ID = "gradix-device-r0";
 
 type Phase = "loading" | "login" | "ready";
 
 export default function IndexScreen() {
+  // Tema: prati sistem, prekidač je u zaglavlju. Ista pravila kao na webu.
+  const { theme, name, toggle } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [phase, setPhase] = useState<Phase>("loading");
   const [profile, setProfile] = useState<Me | null>(null);
   const [email, setEmail] = useState("");
@@ -112,15 +117,32 @@ export default function IndexScreen() {
   if (phase === "loading") {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
+  // Prekidač teme: jedno dugme, ime nosi stanje koje SLIJEDI (kao na webu).
+  const themeToggle = (
+    <Pressable
+      onPress={toggle}
+      accessibilityRole="button"
+      accessibilityLabel={name === "dark" ? "Pređi na svijetlu temu" : "Pređi na tamnu temu"}
+      style={styles.themeButton}
+      hitSlop={8}
+    >
+      <Text style={styles.themeButtonText}>{name === "dark" ? "Svijetla" : "Tamna"}</Text>
+    </Pressable>
+  );
+
   if (phase === "login") {
     return (
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Gradix — teren</Text>
+        <View style={styles.topRow}>
+          <Text style={styles.title}>Gradix</Text>
+          {themeToggle}
+        </View>
+        <Text style={styles.subtitle}>Prijava za teren.</Text>
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
@@ -155,11 +177,24 @@ export default function IndexScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{profile?.company?.name ?? "Firma"}</Text>
-      <Text style={styles.subtitle}>
-        {profile?.user.firstName} {profile?.user.lastName} ·{" "}
-        {pending === 0 ? "sve poslano" : `${pending} čeka slanje`}
-      </Text>
+      <View style={styles.topRow}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.title}>{profile?.company?.name ?? "Firma"}</Text>
+          <Text style={styles.subtitle}>
+            {profile?.user.firstName} {profile?.user.lastName}
+          </Text>
+        </View>
+        {themeToggle}
+      </View>
+
+      {/* Pločica stanja: mono broj zapisa koji čekaju — isti ritam kao na webu. */}
+      <View style={styles.panel}>
+        <Text style={styles.panelLabel}>Red za slanje</Text>
+        <Text style={styles.timer}>{pending === 0 ? "0" : String(pending)}</Text>
+        <Text style={styles.panelHint}>
+          {pending === 0 ? "Sve je poslano." : `${pending} zapisa čeka vezu.`}
+        </Text>
+      </View>
 
       <Text style={styles.label}>Novi zapis s terena</Text>
       <TextInput
@@ -167,12 +202,20 @@ export default function IndexScreen() {
         value={text}
         onChangeText={setText}
         placeholder="npr. Iskop kanala, dionica 2, 40 m"
+        placeholderTextColor={theme.muted}
         multiline
         accessibilityLabel="Tekst zapisa"
       />
 
-      <Pressable style={styles.button} onPress={addNote} disabled={busy} accessibilityRole="button">
-        <Text style={styles.buttonText}>Sačuvaj na uređaju</Text>
+      {/* Jedna velika primarna akcija (DESIGN.md „Mobilni“). */}
+      <Pressable
+        style={[styles.big, busy && styles.buttonDisabled]}
+        onPress={addNote}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel="Sačuvaj zapis na uređaju"
+      >
+        <Text style={styles.bigText}>Sačuvaj zapis</Text>
       </Pressable>
 
       <Pressable
@@ -189,53 +232,105 @@ export default function IndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceMuted },
-  container: {
-    padding: spacing.xl,
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceMuted,
-    flexGrow: 1,
-  },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
-  label: { ...typography.label, color: colors.text, marginTop: spacing.sm },
-  input: {
-    borderWidth: 2,
-    borderColor: colors.borderStrong, // 3,76:1 na bijelom — WCAG 1.4.11 traži 3:1 za ivicu polja
-    borderRadius: radius.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    minHeight: touchTarget,
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surface,
-  },
-  multiline: { minHeight: 96, textAlignVertical: "top" },
-  button: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.brand,
-    borderRadius: radius.card,
-    paddingVertical: spacing.lg,
-    minHeight: touchTarget,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { ...typography.button, color: colors.textInverse },
-  secondaryButton: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.brand,
-  },
-  secondaryText: { color: colors.brand },
-  error: {
-    ...typography.body,
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.input,
-    backgroundColor: colors.dangerSoft,
-    color: colors.danger,
-  },
-  hint: { marginTop: spacing.lg, ...typography.body, color: colors.textMuted },
-});
+/**
+ * Stilovi se grade iz tema tokena — iste vrijednosti kao `globals.css` (test ih poredi).
+ * `createStyles` se poziva u komponenti kroz `useMemo`, pa promjena teme mijenja cijeli ekran.
+ */
+function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
+  return StyleSheet.create({
+    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: t.bg },
+    container: {
+      padding: spacing.xl,
+      gap: spacing.sm,
+      backgroundColor: t.bg,
+      flexGrow: 1,
+    },
+    topRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    themeButton: {
+      minHeight: 40,
+      paddingHorizontal: spacing.md,
+      justifyContent: "center",
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: t.line,
+    },
+    themeButtonText: { ...typography.label, color: t.muted },
+    title: { ...typography.page, color: t.text },
+    subtitle: { ...typography.body, color: t.muted, marginBottom: spacing.lg },
+    label: { ...typography.label, color: t.text, marginTop: spacing.sm },
+    // Pločica sa stanjem reda: zaobljena površina, mono broj.
+    panel: {
+      padding: spacing.lg,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: t.line,
+      backgroundColor: t.panel,
+      gap: 2,
+    },
+    panelLabel: { ...typography.label, color: t.muted },
+    panelHint: { ...typography.body, color: t.muted },
+    timer: {
+      ...typography.mono,
+      fontSize: 34,
+      lineHeight: 40,
+      letterSpacing: -0.5,
+      color: t.text,
+    },
+    input: {
+      borderWidth: 1,
+      // Ivica polja je `--field` (prolazi 3:1 na pozadini u obje teme — test to mjeri).
+      borderColor: t.field,
+      borderRadius: radius.field,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      minHeight: touchTarget,
+      ...typography.body,
+      color: t.text,
+      backgroundColor: t.panel,
+    },
+    multiline: { minHeight: 96, textAlignVertical: "top" },
+    // Velika primarna akcija: 60 dp, pilula 20, puna širina.
+    big: {
+      marginTop: spacing.md,
+      backgroundColor: t.primary,
+      borderRadius: radius.tile,
+      paddingVertical: spacing.lg,
+      minHeight: 60,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bigText: { ...typography.button, fontSize: 17, color: t.onPrimary },
+    button: {
+      marginTop: spacing.lg,
+      backgroundColor: t.primary,
+      borderRadius: radius.card,
+      paddingVertical: spacing.lg,
+      minHeight: touchTarget,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { ...typography.button, color: t.onPrimary },
+    secondaryButton: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: t.line,
+      marginTop: spacing.md,
+    },
+    secondaryText: { color: t.text },
+    error: {
+      ...typography.body,
+      marginTop: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.field,
+      backgroundColor: t.dangerSoft,
+      color: t.danger,
+    },
+    hint: { marginTop: spacing.lg, ...typography.body, color: t.muted },
+  });
+}

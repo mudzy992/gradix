@@ -47,19 +47,19 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const groups: NavGroup[] = [
     {
       label: "Pregled",
-      items: [{ href: "/pregled", label: "Pregled", icon: "◫", description: "Mašine i offline zapisi" }],
+      items: [{ href: "/pregled", label: "Pregled", icon: "home", description: "Mašine i offline zapisi" }],
     },
     {
       label: "Ured",
       items: [
         ...(canManageUsers
-          ? [{ href: "/ured/korisnici", label: "Korisnici", icon: "◍", description: "Ljudi, role, pristup" }]
+          ? [{ href: "/ured/korisnici", label: "Korisnici", icon: "users" as const, description: "Ljudi, role, pristup" }]
           : []),
         ...(canViewRoles
-          ? [{ href: "/ured/role", label: "Matrica rola", icon: "▤", description: "Ko šta smije" }]
+          ? [{ href: "/ured/role", label: "Pristup i role", icon: "shield" as const, description: "Ko šta smije" }]
           : []),
         ...(canViewAudit
-          ? [{ href: "/ured/audit", label: "Audit trag", icon: "≡", description: "Ko je šta mijenjao" }]
+          ? [{ href: "/ured/audit", label: "Audit trag", icon: "list" as const, description: "Ko je šta mijenjao" }]
           : []),
       ],
     },

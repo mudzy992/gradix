@@ -2,9 +2,9 @@
  * API klijent za mobilni. Isti ugovor kao web (jedan API, B8), ali token ide u
  * `Authorization` zaglavlju — Expo ne može koristiti cookie sesiju.
  *
- * Tokeni se drže u expo-secure-store (Keychain/Keystore), nikad u AsyncStorage.
+ * Tokeni se drže u `lib/store` (na uređaju Keychain/Keystore, na webu `localStorage`), nikad u AsyncStorage.
  */
-import * as SecureStore from "expo-secure-store";
+import { deleteStore, readStore, writeStore } from "../lib/store";
 
 const ACCESS_KEY = "gx_access";
 const REFRESH_KEY = "gx_refresh";
@@ -32,17 +32,17 @@ export function getBaseUrl(): string {
 }
 
 export async function saveTokens(access: string, refresh: string): Promise<void> {
-  await SecureStore.setItemAsync(ACCESS_KEY, access);
-  await SecureStore.setItemAsync(REFRESH_KEY, refresh);
+  await writeStore(ACCESS_KEY, access);
+  await writeStore(REFRESH_KEY, refresh);
 }
 
 export async function clearTokens(): Promise<void> {
-  await SecureStore.deleteItemAsync(ACCESS_KEY);
-  await SecureStore.deleteItemAsync(REFRESH_KEY);
+  await deleteStore(ACCESS_KEY);
+  await deleteStore(REFRESH_KEY);
 }
 
 export async function getAccessToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(ACCESS_KEY);
+  return readStore(ACCESS_KEY);
 }
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
@@ -83,7 +83,7 @@ export async function login(email: string, password: string): Promise<{ mustChan
 }
 
 export async function refreshTokens(): Promise<boolean> {
-  const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
+  const refreshToken = await readStore(REFRESH_KEY);
   if (!refreshToken) return false;
   try {
     const response = await fetch(`${getBaseUrl()}/api/auth/refresh`, {

@@ -13,6 +13,8 @@
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@gradix/db": "workspace:*",
     "@gradix/domain": "workspace:*",
     "@tailwindcss/postcss": "4.3.5",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@gradix/config": "workspace:*",
+    "@gradix/design": "workspace:*",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

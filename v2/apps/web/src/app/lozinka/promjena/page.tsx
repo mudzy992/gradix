@@ -55,22 +55,24 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-md p-4 sm:p-6">
+    <div className="gx-page" style={{ maxWidth: 520, padding: 0 }}>
       <Card>
-        <h1 className="text-xl font-semibold">Postavite novu lozinku</h1>
-        <p className="mt-1 mb-4 text-sm text-[var(--color-text-muted)]">
+        <h1 className="gx-page-title" style={{ fontSize: 24 }}>
+          Postavite novu lozinku
+        </h1>
+        <p className="gx-page-sub" style={{ marginBottom: "var(--space-5)" }}>
           Dok ne postavite novu lozinku, ostatak sistema vam nije dostupan.
         </p>
 
         {state.kind === "error" ? (
-          <div className="mb-3">
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <Alert tone="error" role="alert">
               {state.message}
             </Alert>
           </div>
         ) : null}
         {state.kind === "success" ? (
-          <div className="mb-3">
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <Alert tone="success">
               Lozinka je promijenjena.
               {state.revoked > 0 ? ` Odjavljeno je još ${state.revoked} sesija.` : ""}
@@ -87,7 +89,6 @@ export default function ChangePasswordPage() {
               required
               autoComplete="current-password"
               className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
             />
           </Field>
           <Field
@@ -103,7 +104,6 @@ export default function ChangePasswordPage() {
               autoComplete="new-password"
               aria-describedby="newPassword-hint"
               className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
             />
           </Field>
           <Field label="Nova lozinka još jednom" htmlFor="repeat">
@@ -114,17 +114,16 @@ export default function ChangePasswordPage() {
               required
               autoComplete="new-password"
               className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
             />
           </Field>
-          <Button type="submit" variant="primary" fullWidthOnMobile disabled={state.kind === "busy"}>
+          <Button type="submit" variant="primary" disabled={state.kind === "busy"} className="gx-btn--block">
             {state.kind === "busy" ? "Postavljam…" : "Postavi lozinku i nastavi"}
           </Button>
         </form>
-        <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
+        <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
           Poslije promjene sve ostale sesije se gase — ako je neko drugi bio prijavljen, ispada.
         </p>
       </Card>
-    </main>
+    </div>
   );
 }

@@ -123,22 +123,22 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-md p-4 sm:p-6">
+    <div className="gx-page" style={{ maxWidth: 520, padding: 0 }}>
       <Card>
         {state.kind === "loading" ? (
           <>
-            <h1 className="mb-3 text-xl font-semibold">Provjeravam link…</h1>
+            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Provjeravam link…</h1>
             <Skeleton rows={3} />
           </>
         ) : null}
 
         {state.kind === "invalid" ? (
           <>
-            <h1 className="mb-3 text-xl font-semibold">Link ne važi</h1>
+            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Link ne važi</h1>
             <Alert tone="warning" role="alert">
               {state.message}
             </Alert>
-            <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
+            <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
               Iz bezbjednosnih razloga ne pravimo razliku između isteklog, iskorištenog i izmišljenog linka.
             </p>
           </>
@@ -146,11 +146,11 @@ export default function SetPasswordPage() {
 
         {state.kind === "done" ? (
           <>
-            <h1 className="mb-3 text-xl font-semibold">Lozinka je postavljena</h1>
+            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Lozinka je postavljena</h1>
             <Alert tone="success">
               {state.email ? `Nalog ${state.email} je spreman.` : "Nalog je spreman."} Možete se prijaviti.
             </Alert>
-            <div className="mt-4">
+            <div style={{ marginTop: "var(--space-4)" }}>
               <Button variant="primary" onClick={() => (window.location.href = "/login")}>
                 Na prijavu
               </Button>
@@ -160,22 +160,22 @@ export default function SetPasswordPage() {
 
         {state.kind === "form" || state.kind === "busy" || state.kind === "error" ? (
           <>
-            <h1 className="text-xl font-semibold">
+            <h1 className="gx-page-title" style={{ fontSize: 24 }}>
               {state.preview.kind === "reset" ? "Postavite novu lozinku" : "Dobro došli u Gradix"}
             </h1>
-            <p className="mt-1 mb-4 text-sm text-[var(--color-text-muted)]">
+            <p className="gx-page-sub" style={{ marginBottom: "var(--space-4)" }}>
               {state.preview.kind === "reset"
                 ? "Postavite lozinku. Sve stare sesije se gase."
                 : `${state.preview.companyName} · ${state.preview.email}`}
             </p>
             {state.preview.roles.length > 0 ? (
-              <p className="mb-4 text-sm">
+              <p style={{ marginBottom: "var(--space-4)" }}>
                 Rola: <strong>{state.preview.roles.map((role) => ROLE_BS[role] ?? role).join(", ")}</strong>
               </p>
             ) : null}
 
             {state.kind === "error" ? (
-              <div className="mb-3">
+              <div style={{ marginBottom: "var(--space-4)" }}>
                 <Alert tone="error" role="alert">
                   {state.message}
                 </Alert>
@@ -192,7 +192,6 @@ export default function SetPasswordPage() {
                       required
                       autoComplete="given-name"
                       className={inputClass}
-                      style={{ minHeight: "var(--control-height)" }}
                     />
                   </Field>
                   <Field label="Prezime" htmlFor="lastName">
@@ -202,7 +201,6 @@ export default function SetPasswordPage() {
                       required
                       autoComplete="family-name"
                       className={inputClass}
-                      style={{ minHeight: "var(--control-height)" }}
                     />
                   </Field>
                 </>
@@ -220,7 +218,6 @@ export default function SetPasswordPage() {
                   autoComplete="new-password"
                   aria-describedby="password-hint"
                   className={inputClass}
-                  style={{ minHeight: "var(--control-height)" }}
                 />
               </Field>
               <Field label="Lozinka još jednom" htmlFor="repeat">
@@ -231,19 +228,18 @@ export default function SetPasswordPage() {
                   required
                   autoComplete="new-password"
                   className={inputClass}
-                  style={{ minHeight: "var(--control-height)" }}
                 />
               </Field>
-              <Button type="submit" variant="primary" fullWidthOnMobile disabled={state.kind === "busy"}>
+              <Button type="submit" variant="primary" disabled={state.kind === "busy"} className="gx-btn--block">
                 {state.kind === "busy" ? "Postavljam…" : "Postavi lozinku"}
               </Button>
             </form>
-            <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
+            <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
               Link je jednokratan i važi 48 h od izdavanja.
             </p>
           </>
         ) : null}
       </Card>
-    </main>
+    </div>
   );
 }

@@ -107,7 +107,11 @@ describe("lista korisnika", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Role i opseg" });
     expect(within(dialog).getByRole("checkbox", { name: "Šef gradilišta" })).toBeChecked();
-    expect(within(dialog).getByRole("radio", { name: "Cijela firma" })).toBeChecked();
+    // Opseg je segmentirana pilula: stanje nosi `aria-pressed`, ne `checked`.
+    expect(within(dialog).getByRole("button", { name: "Cijela firma" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(within(dialog).getByRole("button", { name: "Sačuvaj" })).toBeDisabled();
   });
 
@@ -120,7 +124,7 @@ describe("lista korisnika", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Role i opseg" });
     await userEvent.click(within(dialog).getByRole("checkbox", { name: "Radnik" }));
-    await userEvent.click(within(dialog).getByRole("radio", { name: "Samo svoje" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Samo svoje" }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Sačuvaj" }));
 
     await waitFor(() => expect(patches).toHaveLength(1));

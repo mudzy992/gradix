@@ -60,9 +60,16 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 9. **v1 se ne dira.** Samo čitanje radi domena i infrastrukture. Preuzeto se označava
    `Izvor: v1/<putanja>`.
 10. **Paginacija:** cursor je zadana; offset samo za male administrativne tabele.
+11. **Dizajn:** izvor istine je **samo** `docs/design/DESIGN.md` + `docs/design/reference.html`;
+    referenca ima prednost. Paleta je zatvorena na šest boja — svaka druga nijansa je
+    `color-mix`. Nijedna komponenta ne sadrži heks. Fontovi samo `next/font` (Manrope, IBM Plex
+    Mono). Odstupanje od reference ili nova komponenta traži vlasnikovu riječ **i** dopunu
+    `reference.html` u istom commitu.
 
 ## Dublje
 
 `docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (0001 G0 odluke, 0002 Prisma blokada,
 0003 tenant/RLS, 0004 novac, 0005 sesije, 0006 MinIO bucket) · `docs/DEMO-G1.md` (kako pokazati)
+· `docs/design/DESIGN.md` + `reference.html` (dizajn) · `docs/DEMO-DIZAJN.md` (snimci i
+odstupanja od reference)
 · `docs/GH-SECRETS.md` (koje varijable trebaju) · `MASTER_BRIEF.md`.

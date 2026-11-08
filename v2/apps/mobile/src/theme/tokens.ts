@@ -1,60 +1,138 @@
 /**
- * Dizajn tokeni za mobilni — iste vrijednosti kao `apps/web/src/app/globals.css`.
- * Izvor odluke: docs/design/PALETA.md (vlasnik, 2026-11-08).
+ * Dizajn tokeni za mobilni — ISTE vrijednosti kao `apps/web/src/app/globals.css`.
+ * Izvor istine: `docs/design/DESIGN.md` + `reference.html`.
  *
- * React Native ne poznaje CSS varijable, pa su vrijednosti ovdje doslovno prepisane.
- * Da se dva fajla ne raziđu, `src/theme/tokens.test.ts` čita CSS i poredi svaki token.
+ * React Native ne poznaje CSS varijable ni `color-mix`, pa su vrijednosti razriješene u
+ * konkretne hex brojeve. Da se web i mobilni ne raziđu, `tokens.test.ts` razriješi CSS istim
+ * pravilom kao preglednik (`color-mix` po kanalima) i poredi svaki token.
  *
- * Pravila: `accent` je podloga i ivica, nikad tekst na svijetlom (1,55:1);
- * `borderStrong` je za ivice polja, ne za sitan tekst (3,76:1).
+ * Tema je ista kao na webu: prati sistem, može se ručno promijeniti. Boje se NIKAD ne uzimaju
+ * iz ovog fajla direktno po imenu brenda — uzimaju se iz `useTheme()` koji vraća semantičke
+ * tokene (`text`, `panel`, `muted`, `line`, `primary`…), isto kao `var(--text)` na webu.
  */
-export const colors = {
+
+/** Šest boja palete — jedine dopuštene „sirove“ boje (DESIGN.md „Paleta“). */
+export const palette = {
   brand: "#140a9a",
-  brandHover: "#0d0770",
-  brandSoft: "#e8e9fb",
-
   accent: "#ffc82f",
-  accentSoft: "#fdf3d6",
-
+  ink: "#1b232a",
   surface: "#ffffff",
-  surfaceMuted: "#f5f6f7",
-  surfaceInverse: "#1b232a",
-
-  text: "#1b232a",
-  textMuted: "#59656f",
-  textInverse: "#ffffff",
-
-  border: "#d7dbdf",
-  borderStrong: "#7b858d",
-
-  danger: "#c1121f",
-  dangerSoft: "#fdecec",
-  success: "#186b3e",
-  successSoft: "#e8f5ec",
-  warningText: "#8a5e06",
-  warningSoft: "#fdf3d6",
-
-  focus: "#140a9a",
-  focusInverse: "#ffc82f",
+  slate: "#59656f",
+  edge: "#7b858d",
 } as const;
 
-/** Ime tokena u CSS-u: `brandSoft` → `--color-brand-soft`. */
-export function cssVariableName(token: keyof typeof colors): string {
-  return `--color-${token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+/** Semantički tokeni — imena su ista kao CSS varijable bez `--`. */
+export type ThemeTokens = {
+  bg: string;
+  panel: string;
+  raise: string;
+  sunken: string;
+  text: string;
+  muted: string;
+  line: string;
+  field: string;
+  primary: string;
+  onPrimary: string;
+  link: string;
+  bar: string;
+  accent: string;
+  onAccent: string;
+  tint: string;
+  danger: string;
+  dangerSoft: string;
+  success: string;
+  successSoft: string;
+  warnSoft: string;
+};
+
+export const lightTheme: ThemeTokens = {
+  bg: "#f4f4f4",
+  panel: "#ffffff",
+  raise: "#f6f6f6",
+  sunken: "#eff0f0",
+  text: "#1b232a",
+  muted: "#59656f",
+  line: "#dadddf",
+  field: "#7b858d",
+  primary: "#140a9a",
+  onPrimary: "#ffffff",
+  link: "#140a9a",
+  bar: "#140a9a",
+  accent: "#ffc82f",
+  onAccent: "#1b232a",
+  tint: "#eae9f6",
+  danger: "#161081",
+  dangerSoft: "#f1f0f9",
+  success: "#2b343c",
+  successSoft: "#edeeef",
+  warnSoft: "#fff3d1",
+};
+
+export const darkTheme: ThemeTokens = {
+  bg: "#1b232a",
+  panel: "#262e35",
+  raise: "#30373d",
+  sunken: "#222a30",
+  text: "#ffffff",
+  muted: "#adb0b2",
+  line: "#394046",
+  field: "#72777b",
+  primary: "#ffc82f",
+  onPrimary: "#1b232a",
+  link: "#a19dd7",
+  bar: "#a19dd7",
+  accent: "#ffc82f",
+  onAccent: "#1b232a",
+  tint: "#181a55",
+  danger: "#deddf1",
+  dangerSoft: "#363d44",
+  success: "#ebedee",
+  successSoft: "#30373d",
+  warnSoft: "#524b2b",
+};
+
+export type ThemeName = "light" | "dark";
+
+export const themes: Record<ThemeName, ThemeTokens> = { light: lightTheme, dark: darkTheme };
+
+/** Ime tokena u CSS-u: `onPrimary` → `--on-primary`. Isto pravilo kao u `globals.css`. */
+export function cssVariableName(token: keyof ThemeTokens): string {
+  return `--${token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
 }
 
 /**
- * Terenski minimum: rukavice i sunce. Isti pragovi kao web, ali krupnije —
- * dodirna površina 48px, tijelo teksta 17px (na telefonu se ne zumira).
+ * Terenski minimum: rukavice i sunce. DESIGN.md traži mete ≥ 56 dp — krupnije od weba.
+ * Mreža je 4 px (8/12/16/20/24/28), isto kao na webu.
  */
-export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
-export const radius = { input: 10, card: 12, pill: 999 } as const;
-export const typography = {
-  title: { fontSize: 26, fontWeight: "700" },
-  heading: { fontSize: 20, fontWeight: "700" },
-  body: { fontSize: 17, fontWeight: "400" },
-  label: { fontSize: 15, fontWeight: "600" },
-  button: { fontSize: 18, fontWeight: "700" },
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 28 } as const;
+
+/** Oblik iz reference: ploča 18, kartica 16, polje 12, tile 20, dugme/chip pilula. */
+export const radius = { panel: 18, card: 16, field: 12, tile: 20, pill: 999 } as const;
+
+/**
+ * Manrope za interfejs, IBM Plex Mono za brojeve i vrijeme (DESIGN.md „Tipografija“).
+ *
+ * Imena su ista kao na webu (`--font-manrope`, `--font-plex-mono`) da jedan test može
+ * provjeriti da se web i mobilni ne raziđu. Fajlovi su statičke instance varijabilnog
+ * Manrope-a i Plex Mono-a iz `apps/web/src/fonts` (isti izvor, spojeni latin + latin-ext
+ * jer React Native ne poznaje `unicode-range`), učitani u `_layout.tsx` preko `expo-font`.
+ */
+export const fontFamily = {
+  sans: "Manrope_500Medium",
+  sansSemiBold: "Manrope_600SemiBold",
+  sansBold: "Manrope_700Bold",
+  sansExtraBold: "Manrope_800ExtraBold",
+  mono: "IBMPlexMono_500Medium",
 } as const;
-/** Minimalna dodirna površina — WCAG 2.2 (2.5.8) traži 24px, teren traži 48px. */
-export const touchTarget = 48;
+
+export const typography = {
+  page: { fontFamily: fontFamily.sansExtraBold, fontSize: 28, fontWeight: "800" as const },
+  section: { fontFamily: fontFamily.sansBold, fontSize: 18, fontWeight: "700" as const },
+  body: { fontFamily: fontFamily.sans, fontSize: 16, fontWeight: "500" as const },
+  label: { fontFamily: fontFamily.sansSemiBold, fontSize: 13, fontWeight: "600" as const },
+  button: { fontFamily: fontFamily.sansBold, fontSize: 17, fontWeight: "700" as const },
+  mono: { fontFamily: fontFamily.mono, fontSize: 15, fontWeight: "500" as const },
+} as const;
+
+/** Minimalna dodirna površina — DESIGN.md traži ≥ 56 dp za teren. */
+export const touchTarget = 56;

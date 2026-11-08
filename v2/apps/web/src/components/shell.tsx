@@ -1,23 +1,25 @@
 "use client";
 
 /**
- * Okvir aplikacije (R1c): sidebar + header + sadržaj.
+ * Okvir aplikacije — prema `docs/design/reference.html`: sidebar na pozadini, jedna velika
+ * ploča sa gornjom trakom (pretraga `Ctrl K`, tema, korisnik).
  *
- * Zašto klijentska komponenta, a ne server: sklapanje sidebara, drawer na telefonu i `Ctrl+K`
- * su stanje u pregledniku. Podaci (korisnik, dozvole) dolaze kao props sa servera — okvir ne
- * zna ništa o bazi i ne pravi nijedan zahtjev koji stranica već nije napravila.
+ * Zašto klijentska komponenta: drawer na telefonu, `Ctrl+K` i tema su stanje u pregledniku.
+ * Podaci (korisnik, dozvole, navigacija) dolaze kao props sa servera — okvir ne zna ništa o
+ * bazi i ne pravi nijedan zahtjev koji stranica već nije napravila.
  *
- * Tastatura (definicija gotovosti R1c):
+ * Tastatura:
  *  - sidebar: `↑`/`↓` po stavkama, `Home`/`End`, `Enter` prati link,
  *  - `Ctrl+K` (i `Cmd+K`) otvara pretragu, `↑`/`↓` biraju, `Enter` vodi, `Esc` zatvara,
  *  - `Esc` zatvara drawer i vraća fokus na dugme koje ga je otvorilo,
- *  - preskakanje na sadržaj („Preskoči na sadržaj“) je prvi fokusabilni element.
+ *  - „Preskoči na sadržaj“ je prvi fokusabilni element.
  */
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Icon, type IconName } from "./ui";
 
-export type NavItem = { href: string; label: string; icon: string; description?: string };
+export type NavItem = { href: string; label: string; icon: IconName; description?: string };
 export type NavGroup = { label: string; items: NavItem[] };
 export type ShellUser = { displayName: string; email: string; companyName: string; roles: string[] };
 
@@ -33,10 +35,56 @@ const ROLE_BS: Record<string, string> = {
   ACCOUNTANT: "Računovođa",
 };
 
-/** Prvo slovo imena i prezimena — isto u headeru i u tabeli. */
+/** Prvo slovo imena i prezimena — isto u traci i u tabeli. */
 export function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase() || "?";
+}
+
+const THEME_KEY = "gx-theme";
+type ThemeChoice = "light" | "dark" | "system";
+
+/**
+ * Tema: prati sistem, osim kad je korisnik ručno izabrao. Izbor se pamti u `localStorage`;
+ * „prati sistem“ briše ključ (tada odluku ponovo nosi `prefers-color-scheme`).
+ * Prvo iscrtavanje rješava inline skripta u `layout.tsx` — ovdje se samo održava stanje.
+ */
+function useTheme() {
+  const [choice, setChoice] = useState<ThemeChoice>("system");
+  const [resolved, setResolved] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    const initial: ThemeChoice = stored === "light" || stored === "dark" ? stored : "system";
+    setChoice(initial);
+    setResolved(initial === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : initial);
+  }, []);
+
+  useEffect(() => {
+    if (choice !== "system") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => setResolved(media.matches ? "dark" : "light");
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [choice]);
+
+  const apply = useCallback((next: ThemeChoice) => {
+    setChoice(next);
+    const effective =
+      next === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : next;
+    setResolved(effective);
+    // Atribut na <html> — isto mjesto koje čita inline skripta pri sljedećem učitavanju.
+    document.documentElement.dataset.theme = effective;
+    if (next === "system") window.localStorage.removeItem(THEME_KEY);
+    else window.localStorage.setItem(THEME_KEY, next);
+  }, []);
+
+  return { choice, resolved, apply };
 }
 
 export default function Shell({
@@ -51,15 +99,16 @@ export default function Shell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { choice, resolved, apply } = useTheme();
 
   const menuButton = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Zatvori drawer pri promjeni stranice — na telefonu bi inače ostao preko sadržaja.
+  // Zatvori drawer i meni pri promjeni stranice — na telefonu bi inače ostali preko sadržaja.
   useEffect(() => {
     setDrawerOpen(false);
     setUserMenuOpen(false);
@@ -81,6 +130,31 @@ export default function Shell({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [openSearch]);
+
+  /**
+   * Korisnički meni se zatvara na `Esc` i na klik van njega.
+   *
+   * Zašto globalno, a ne `onKeyDown` na meniju: fokus poslije klika na dugme ostaje na dugmetu,
+   * pa `Esc` nikad ne bi stigao do menija. Bez ovoga meni „visi“ i prekriva sadržaj.
+   */
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    }
+    function onPointerDown(event: PointerEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) setUserMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [userMenuOpen]);
 
   /** Strelicama kroz sidebar — isti redoslijed kao u DOM-u, bez preskakanja grupa. */
   function onNavKeyDown(event: React.KeyboardEvent<HTMLElement>) {
@@ -107,39 +181,29 @@ export default function Shell({
   }
 
   return (
-    <div className="gx-shell" data-collapsed={collapsed} data-open={drawerOpen}>
-      {/* Preskakanje navigacije je prvi fokusabilni element — bez njega je tastatura kroz
-          sidebar jedini put do sadržaja. */}
+    <div className="gx-shell" data-open={drawerOpen}>
       <a href="#sadrzaj" className="gx-skip">
         Preskoči na sadržaj
       </a>
 
       {drawerOpen ? (
-        <button
-          type="button"
-          className="gx-shell__scrim"
-          aria-label="Zatvori navigaciju"
-          onClick={closeDrawer}
-        />
+        <button type="button" className="gx-shell__scrim" aria-label="Zatvori navigaciju" onClick={closeDrawer} />
       ) : null}
 
-      <aside className="gx-sidebar" data-collapsed={collapsed}>
-        <div className="gx-sidebar__brand">
-          <span aria-hidden="true" className="gx-mono" style={{ fontSize: 16, fontWeight: 800 }}>
-            GX
-          </span>
-          {/* Puni naziv firme stoji u `title` — u sidebaru se skraćuje, ne lomi. */}
-          <span className="gx-sidebar__brand-text" title={user.companyName}>
-            {user.companyName}
+      <aside className="gx-sidebar">
+        <div className="gx-brand">
+          <span aria-hidden="true" className="gx-brand__mark" />
+          <span className="gx-brand__text" title={user.companyName}>
+            Gradix
           </span>
         </div>
 
         {/* Ime je na `<nav>` (landmark koji čitač ekrana nudi u spisku regija), ne na
             `<aside>` — inače navigacija nema pristupačno ime. */}
-        <nav ref={navRef} className="gx-sidebar__nav" aria-label="Glavna navigacija" onKeyDown={onNavKeyDown}>
+        <nav ref={navRef} className="gx-nav" aria-label="Glavna navigacija" onKeyDown={onNavKeyDown}>
           {groups.map((group) => (
-            <div className="gx-nav-group" key={group.label}>
-              <p className="gx-nav-group__label">{group.label}</p>
+            <div key={group.label}>
+              <p className="gx-nav__group">{group.label}</p>
               {group.items.map((item) => {
                 const active = item.href === current?.href;
                 return (
@@ -150,12 +214,11 @@ export default function Shell({
                     data-label={item.label}
                     aria-current={active ? "page" : undefined}
                     className="gx-nav-item"
-                    title={collapsed ? item.label : undefined}
                   >
-                    <span aria-hidden="true" className="gx-nav-item__icon gx-mono">
-                      {item.icon}
+                    <span className="gx-nav-item__icon">
+                      <Icon name={item.icon} />
                     </span>
-                    <span className="gx-nav-item__text">{item.label}</span>
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
@@ -163,49 +226,34 @@ export default function Shell({
           ))}
         </nav>
 
-        <div className="gx-sidebar__footer">
-          <button
-            type="button"
-            className="gx-sidebar__collapse"
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? "Proširi navigaciju" : "Skupi navigaciju"}
-            onClick={() => setCollapsed((value) => !value)}
-          >
-            <span aria-hidden="true" className="gx-mono">
-              {collapsed ? "»" : "«"}
+        <div className="gx-org">
+          <span aria-hidden="true" className="gx-avatar">
+            {initialsOf(user.displayName)}
+          </span>
+          <div className="gx-org__text">
+            <span className="gx-org__name" title={user.companyName}>
+              {user.companyName}
             </span>
-            {collapsed ? null : <span>Skupi</span>}
-          </button>
+            <span className="gx-org__person">
+              {user.displayName} · {user.roles.map((role) => ROLE_BS[role] ?? role).join(", ")}
+            </span>
+          </div>
         </div>
       </aside>
 
       <div className="gx-main">
-        <header className="gx-header">
+        <header className="gx-topbar">
           <button
             ref={menuButton}
             type="button"
-            className="gx-header__menu gx-icon-button"
+            className="gx-icon-btn gx-topbar__menu"
             aria-expanded={drawerOpen}
             aria-label={drawerOpen ? "Zatvori meni" : "Otvori meni"}
             onClick={() => (drawerOpen ? closeDrawer() : setDrawerOpen(true))}
           >
-            <span aria-hidden="true">☰</span>
+            <Icon name="menu" />
           </button>
 
-          <nav aria-label="Putanja" className="gx-breadcrumbs">
-            <Link href="/pregled" className="gx-breadcrumbs__root">
-              Gradix
-            </Link>
-            {current ? (
-              <>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page">{current.label}</span>
-              </>
-            ) : null}
-          </nav>
-
-          {/* Dvije verzije istog dugmeta: puno polje na desktopu, ikona na telefonu. Jedno od
-              njih je `display: none` po širini, pa čitač ekrana vidi samo jedno. */}
           <button
             type="button"
             className="gx-search"
@@ -213,50 +261,65 @@ export default function Shell({
             aria-keyshortcuts="Control+K Meta+K"
             aria-label="Traži (Ctrl K)"
           >
-            <span aria-hidden="true">⌕</span>
-            <span className="gx-search__label">Traži…</span>
+            <Icon name="search" />
+            <span className="gx-search__label">Traži projekte, radnike, mašine</span>
             <kbd className="gx-search__key" aria-hidden="true">
               Ctrl K
             </kbd>
           </button>
 
-          <div style={{ position: "relative" }}>
+          <span className="gx-topbar__spacer" />
+
+          {/* Tema: jedno dugme koje mijenja svijetlu i tamnu. Ime nosi stanje koje SLIJEDI,
+              jer se to dešava na klik („Pređi na tamnu“), a `title` objašnjava izvor. */}
+          <button
+            type="button"
+            className="gx-icon-btn"
+            aria-label={resolved === "dark" ? "Pređi na svijetlu temu" : "Pređi na tamnu temu"}
+            title={choice === "system" ? "Tema prati sistem" : "Tema je izabrana ručno"}
+            onClick={() => apply(resolved === "dark" ? "light" : "dark")}
+          >
+            <Icon name={resolved === "dark" ? "sun" : "moon"} />
+          </button>
+
+          <div style={{ position: "relative" }} ref={userMenuRef}>
             <button
               type="button"
-              className="gx-icon-button"
+              className="gx-avatar gx-avatar--lg"
               aria-haspopup="menu"
               aria-expanded={userMenuOpen}
               aria-label={`Korisnički meni: ${user.displayName}`}
               onClick={() => setUserMenuOpen((open) => !open)}
             >
-              <span className="gx-avatar" aria-hidden="true">
-                {initialsOf(user.displayName)}
-              </span>
+              {initialsOf(user.displayName)}
             </button>
 
             {userMenuOpen ? (
               <div
                 role="menu"
                 aria-label="Korisnički meni"
-                className="gx-dialog"
-                style={{ position: "absolute", right: 0, top: 36, width: 232, zIndex: 20, padding: 8 }}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") setUserMenuOpen(false);
-                }}
+                className="gx-menu"
+                style={{ top: "calc(100% + 8px)" }}
               >
-                <p style={{ fontWeight: 600 }}>{user.displayName}</p>
-                <p className="gx-mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                  {user.email}
-                </p>
-                <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>
-                  {user.roles.map((role) => ROLE_BS[role] ?? role).join(", ")}
-                </p>
-                <hr style={{ border: 0, borderTop: "1px solid var(--color-border)", margin: "6px 0" }} />
+                <div style={{ padding: "4px 12px 8px" }}>
+                  <p style={{ fontWeight: 700 }}>{user.displayName}</p>
+                  <p className="gx-mono" style={{ color: "var(--muted)" }}>
+                    {user.email}
+                  </p>
+                  <p style={{ fontSize: "var(--text-label)", color: "var(--muted)" }}>
+                    {user.roles.map((role) => ROLE_BS[role] ?? role).join(", ")}
+                  </p>
+                </div>
                 <Link role="menuitem" href="/lozinka/promjena" className="gx-menu-item">
                   Promijeni lozinku
                 </Link>
+                {choice !== "system" ? (
+                  <button role="menuitem" type="button" className="gx-menu-item" onClick={() => apply("system")}>
+                    Tema prati sistem
+                  </button>
+                ) : null}
                 <form action="/api/auth/logout" method="post">
-                  <button role="menuitem" type="submit" className="gx-menu-item" style={{ width: "100%" }}>
+                  <button role="menuitem" type="submit" className="gx-menu-item">
                     Odjavi se
                   </button>
                 </form>
@@ -265,7 +328,7 @@ export default function Shell({
           </div>
         </header>
 
-        <main id="sadrzaj" className="gx-content">
+        <main id="sadrzaj" className="gx-page">
           {children}
         </main>
       </div>
@@ -285,8 +348,8 @@ export default function Shell({
 }
 
 /**
- * `Ctrl+K` — pretraga po stavkama navigacije (R1c ne dodaje nove izvore: nema pretrage
- * korisnika ni zapisa, to bi bila nova funkcionalnost).
+ * `Ctrl+K` — pretraga po stavkama navigacije. Nova funkcionalnost (pretraga korisnika i
+ * zapisa) nije dio dizajna, pa je nema.
  */
 function CommandPalette({
   items,
@@ -307,8 +370,7 @@ function CommandPalette({
     if (!needle) return items;
     return items.filter(
       (item) =>
-        item.label.toLowerCase().includes(needle) ||
-        (item.description ?? "").toLowerCase().includes(needle),
+        item.label.toLowerCase().includes(needle) || (item.description ?? "").toLowerCase().includes(needle),
     );
   }, [items, query]);
 
@@ -350,11 +412,11 @@ function CommandPalette({
         aria-modal="true"
         aria-label="Brza navigacija"
         className="gx-dialog"
-        style={{ width: "min(560px, 100%)" }}
+        style={{ maxWidth: 560, padding: 0 }}
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div style={{ padding: 8, borderBottom: "1px solid var(--color-border)" }}>
+        <div style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
           <input
             ref={input}
             className="gx-input"
@@ -369,9 +431,9 @@ function CommandPalette({
           />
         </div>
 
-        <ul id={listId} role="listbox" aria-label="Stranice" style={{ maxHeight: 320, overflowY: "auto" }}>
+        <ul id={listId} role="listbox" aria-label="Stranice" style={{ maxHeight: 320, overflowY: "auto", padding: 8 }}>
           {results.length === 0 ? (
-            <li style={{ padding: 12, color: "var(--color-text-muted)" }}>Nema stranice s tim imenom.</li>
+            <li style={{ padding: 12, color: "var(--muted)" }}>Nema stranice s tim imenom.</li>
           ) : null}
           {results.map((item, position) => (
             <li
@@ -383,20 +445,17 @@ function CommandPalette({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                padding: "8px 12px",
+                gap: 10,
                 cursor: "pointer",
-                background: position === index ? "var(--color-brand-soft)" : undefined,
+                background: position === index ? "var(--raise)" : undefined,
               }}
               onMouseEnter={() => setIndex(position)}
               onClick={() => onNavigate(item.href)}
             >
-              <span aria-hidden="true" className="gx-mono" style={{ width: 18 }}>
-                {item.icon}
-              </span>
+              <Icon name={item.icon} />
               <span>{item.label}</span>
               {item.description ? (
-                <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--color-text-muted)" }}>
+                <span style={{ marginLeft: "auto", fontSize: "var(--text-label)", color: "var(--muted)" }}>
                   {item.description}
                 </span>
               ) : null}
@@ -408,10 +467,10 @@ function CommandPalette({
           style={{
             display: "flex",
             gap: 12,
-            padding: "6px 12px",
-            borderTop: "1px solid var(--color-border)",
-            fontSize: 11,
-            color: "var(--color-text-muted)",
+            padding: "8px 14px",
+            borderTop: "1px solid var(--line)",
+            fontSize: "var(--text-label)",
+            color: "var(--muted)",
           }}
         >
           <span>

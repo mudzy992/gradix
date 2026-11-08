@@ -1,456 +1,317 @@
 /*
-  Okvir aplikacije (R1c): fiksni sidebar + header + sadržaj.
+  Okvir po `docs/design/reference.html`: sidebar 232 px stoji NA pozadini (bez ivice i bez
+  ploče), a glavni sadržaj je JEDNA velika zaobljena ploča sa trakom na vrhu (pretraga,
+  tema, korisnik). Ispod 960 px sidebar je drawer, ploča ide od ivice do ivice.
 
-  Pravila koja ovaj fajl sprovodi (i koja test čuva):
-   - linije su 1 px, radijus je 2 px (dijalog 4 px), NEMA sjena ni gradijenata,
-   - sidebar je 240 px, sklopljen na 56 px (ikone) — stanje je atribut `data-collapsed`,
-   - ispod 1024 px sidebar je drawer preko sadržaja, otvara ga dugme u headeru,
-   - boje samo kroz `var(--color-*)`; `#140A9A` = aktivna stavka, `#FFC82F` = fokus/akcenat.
-
-  Sidebar se sklapa BEZ klijentskog stanja u JS-u kad je to moguće: DOM nosi `data-collapsed`,
-  pa isti CSS važi za server-render i za klik.
+  Sve boje dolaze iz semantičkih tokena (`--bg`, `--panel`, `--raise`, `--line`, `--text`,
+  `--muted`, `--primary`, `--link`, `--tint`) — nijedan hex ovdje.
 */
+
+/* ---------------------------------------------------------------- okvir */
 
 .gx-shell {
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  gap: var(--shell-gap);
+  padding: var(--shell-gap);
   min-height: 100vh;
+  background: var(--bg);
 }
 
-.gx-shell[data-collapsed="true"] {
-  grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
-}
-
-/* ------------------------------------------------------------------ sidebar */
+/* ------------------------------------------------ sidebar (na pozadini) */
 
 .gx-sidebar {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  overflow: hidden;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  position: sticky;
+  top: var(--shell-gap);
+  height: calc(100vh - var(--shell-gap) * 2);
+  min-width: 0;
 }
 
-.gx-sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: var(--header-h);
-  padding: 0 12px;
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  /* Naziv firme je jedan red: dug naziv se skraćuje, ne lomi zaglavlje sidebara. */
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.gx-sidebar__brand-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Manje od 13 px ne ide: naziv firme je podatak, ne dekoracija. */
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.gx-sidebar[data-collapsed="true"] .gx-sidebar__brand-text {
-  display: none;
-}
-
-.gx-sidebar__nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 0;
-}
-
-.gx-nav-group + .gx-nav-group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--color-border);
-}
-
-.gx-nav-group__label {
-  padding: 8px 12px 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.gx-sidebar[data-collapsed="true"] .gx-nav-group__label {
-  /* Sklopljeno: grupa ostaje vidljiva kao tanka linija, tekst se ne cijepa. */
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  border-top: 1px solid var(--color-border);
-  margin: 4px 8px;
-}
-
-.gx-nav-item {
+.gx-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 12px;
-  min-height: var(--row-height);
-  border-left: 3px solid transparent;
-  color: var(--color-text);
+  padding: var(--space-1) 10px var(--space-4);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* Znak firme: zaobljeni kvadrat u primarnoj boji sa akcentnom linijom. */
+.gx-brand__mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--primary);
+}
+
+.gx-brand__mark::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.gx-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gx-nav__group {
+  margin: var(--space-4) 10px var(--space-1);
+  font-size: var(--text-label);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.gx-nav__group:first-child {
+  margin-top: 0;
+}
+
+/*
+  Stavka navigacije. Aktivna je PODIGNUTA PILULA (ploča + sjena u svijetloj temi, 1 px linija),
+  ikona u `--link` boji. Ovo je jedini prepoznatljiv element okvira iz reference.
+*/
+.gx-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: var(--muted);
   text-decoration: none;
-  font-size: var(--body-size);
+  font-weight: 600;
+  font-size: var(--text-body);
 }
 
 .gx-nav-item:hover {
-  background: var(--color-surface-muted);
+  background: var(--raise);
+  color: var(--text);
 }
 
-/* Aktivna stavka: brend (štedljivo — samo ovdje i na primarnoj akciji). */
 .gx-nav-item[aria-current="page"] {
-  background: var(--color-brand-soft);
-  border-left-color: var(--color-brand);
-  font-weight: 600;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  outline: 1px solid var(--line);
+}
+
+.gx-nav-item[aria-current="page"] .gx-nav-item__icon {
+  color: var(--link);
 }
 
 .gx-nav-item__icon {
-  flex: none;
+  display: grid;
+  place-items: center;
   width: 18px;
-  text-align: center;
-  font-size: 14px;
+  height: 18px;
+  flex: none;
+  color: var(--muted);
 }
 
-.gx-sidebar[data-collapsed="true"] .gx-nav-item {
-  justify-content: center;
-  padding: 0;
-  gap: 0;
+.gx-nav-item__icon svg {
+  width: 18px;
+  height: 18px;
 }
 
-.gx-sidebar[data-collapsed="true"] .gx-nav-item__text,
-.gx-sidebar[data-collapsed="true"] .gx-nav-item__badge {
-  display: none;
-}
-
-/* Sklopljeno: naziv stavke se vidi na hover/fokus kao običan tooltip, bez sjenke. */
-.gx-sidebar[data-collapsed="true"] .gx-nav-item::after {
-  content: attr(data-label);
-  position: absolute;
-  left: calc(var(--sidebar-w-collapsed) + 6px);
-  padding: 4px 8px;
-  background: var(--color-surface-inverse);
-  color: var(--color-text-inverse);
-  border-radius: var(--radius);
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.gx-sidebar[data-collapsed="true"] .gx-nav-item {
-  position: relative;
-}
-
-.gx-sidebar[data-collapsed="true"] .gx-nav-item:hover::after,
-.gx-sidebar[data-collapsed="true"] .gx-nav-item:focus-visible::after {
-  opacity: 1;
-}
-
-.gx-sidebar__footer {
-  border-top: 1px solid var(--color-border);
-  padding: 8px;
-}
-
-.gx-sidebar__collapse {
-  width: 100%;
+/* Organizacija na dnu sidebara: avatar + firma + osoba. */
+.gx-org {
+  margin-top: auto;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: var(--control-height);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  cursor: pointer;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--raise);
+  min-width: 0;
 }
 
-.gx-sidebar__collapse:hover {
-  background: var(--color-surface-muted);
-  color: var(--color-text);
+.gx-org__text {
+  min-width: 0;
+  line-height: 1.2;
 }
 
-/* ------------------------------------------------------------------- header */
+.gx-org__name {
+  display: block;
+  font-size: var(--text-small);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gx-org__person {
+  display: block;
+  font-size: var(--text-label);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ glavna ploča */
 
 .gx-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow);
+  overflow: clip;
 }
 
-.gx-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* Gornja traka: pretraga, razmak, tema, avatar. */
+.gx-topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: var(--header-h);
-  padding: 0 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.gx-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.gx-breadcrumbs a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.gx-breadcrumbs a:hover {
-  color: var(--color-text);
-  text-decoration: underline;
-}
-
-.gx-breadcrumbs [aria-current="page"] {
-  color: var(--color-text);
-  font-weight: 600;
+  gap: var(--space-3);
+  min-height: var(--topbar-h);
+  padding: var(--space-3) var(--space-7);
+  border-bottom: 1px solid var(--line);
 }
 
 .gx-search {
-  margin-left: auto;
+  flex: 1;
+  max-width: 420px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* `min-width: 0` umjesto fiksne donje granice: na 360 px nema mjesta za 200 px pretragu
-     pored hamburgera, breadcrumbs-a i avatara. Ime „Traži…“ se skraćuje, polje ostaje. */
-  min-width: 0;
-  max-width: 320px;
-  flex: 1 1 160px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: 13px;
+  gap: 10px;
+  height: 38px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--raise);
+  color: var(--muted);
+  font-size: var(--text-body);
+  font-weight: 500;
   cursor: pointer;
+  text-align: left;
 }
 
 .gx-search:hover {
-  border-color: var(--color-text);
-  color: var(--color-text);
+  color: var(--text);
 }
 
 .gx-search__key {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 1px 4px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  padding: 1px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.gx-topbar__spacer {
+  flex: 1;
+}
+
+/* Okruglo dugme u traci (tema, meni). 38 px, 1 px linija, bez ispune. */
+.gx-icon-btn {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.gx-icon-btn:hover {
+  background: var(--raise);
+  color: var(--text);
 }
 
 .gx-avatar {
+  width: 30px;
+  height: 30px;
+  flex: none;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface-muted);
-  font-size: 11px;
+  border-radius: 50%;
+  background: var(--tint);
+  color: var(--link);
   font-weight: 700;
+  font-size: 12px;
+}
+.gx-avatar--lg {
+  width: 38px;
+  height: 38px;
+  font-size: 13px;
 }
 
-.gx-content {
-  padding: 16px;
+/* Sadržaj stranice: 32 px gore, 28 px sa strane, max 1240 px. */
+.gx-page {
+  padding: var(--space-6) var(--space-7) 56px;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
   min-width: 0;
 }
 
-/* ------------------------------------------------------------------ telefon */
-
-/*
-  Ispod 1024 px sidebar nije kolona nego drawer: pomjeren ulijevo, otvara se atributom
-  `data-open`. Bez sjenke — granica je 1 px linija, kako pravilo nalaže.
-*/
-@media (max-width: 1023px) {
-  /* Telefon: breadcrumbs se skraćuju umjesto da guraju pretragu van ekrana. */
-  .gx-header {
-    gap: 8px;
-    padding: 0 10px;
-  }
-
-  .gx-breadcrumbs {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .gx-breadcrumbs a,
-  .gx-breadcrumbs [aria-current="page"] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Polje sa 132 px pokazivalo je „Tra…“ — gore od ikone. Na telefonu je ikona sa imenom
-     (čitač ekrana čita `aria-label`), a Ctrl K i tako nije tastatura telefona. */
-  .gx-search {
-    flex: 0 0 auto;
-    min-width: 0;
-    padding: 0;
-    width: 32px;
-    justify-content: center;
-    gap: 0;
-    border-color: transparent;
-  }
-
-  .gx-search__label,
-  .gx-search__key {
-    display: none;
-  }
-
-  /* Putanja na telefonu: naziv ekrana je važniji od korijena. */
-  .gx-breadcrumbs__root,
-  .gx-breadcrumbs > span[aria-hidden="true"] {
-    display: none;
-  }
-
-  .gx-shell,
-  .gx-shell[data-collapsed="true"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .gx-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: var(--sidebar-w);
-    z-index: 30;
-    transform: translateX(-100%);
-    transition: transform 120ms linear;
-  }
-
-  .gx-shell[data-open="true"] .gx-sidebar {
-    transform: translateX(0);
-  }
-
-  /* Sklapanje na ikone nema smisla na telefonu — drawer je uvijek pun. */
-  .gx-shell[data-collapsed="true"] .gx-sidebar__brand-text,
-  .gx-shell[data-collapsed="true"] .gx-nav-item__text,
-  .gx-shell[data-collapsed="true"] .gx-nav-group__label {
-    display: revert;
-  }
-
-  .gx-sidebar[data-collapsed="true"] {
-    width: var(--sidebar-w);
-  }
-
-  .gx-sidebar[data-collapsed="true"] .gx-nav-item {
-    justify-content: flex-start;
-    padding: 7px 12px;
-    gap: 10px;
-  }
-
-  .gx-sidebar[data-collapsed="true"] .gx-nav-item::after {
-    content: none;
-  }
-
-  /* Sklapanje na ikone nema smisla kad je drawer pun: dugme se sklanja, ne nudi mrtvu akciju. */
-  .gx-sidebar__footer {
-    display: none;
-  }
-
-  .gx-shell__scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    background: var(--color-surface-inverse);
-    opacity: 0.4;
-    border: 0;
-    padding: 0;
-  }
-}
-
-@media (min-width: 1024px) {
-  .gx-shell__scrim {
-    display: none;
-  }
-  /* Na desktopu sidebar je uvijek tu — hamburger nema šta da otvori. Mora pobijediti
-     `.gx-icon-button { display: inline-flex }`, zato `!important` nije potreban: klasa je
-     ista specifičnost, a ovaj selektor je dvostruk (kasnije u fajlu). */
-  .gx-header .gx-header__menu {
-    display: none;
-  }
-}
-
-/* ------------------------------------------------------------------- panel */
-
-/* Kartica = 1 px linija + 2 px radijus. Nema sjene. */
-.gx-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
-.gx-panel__head {
+/* Zaglavlje stranice: naslov 30/800 + podnaslov, akcije desno (na telefonu ispod). */
+.gx-page-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 36px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+  flex-wrap: wrap;
 }
 
-/* ------------------------------------------------------------------- dijalog */
-
-/* Dijalog: 4 px (najviše dopušteno), 1 px ivica, bez sjene. */
-.gx-dialog {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-dialog);
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
+.gx-page-head__text {
+  flex: 1;
+  min-width: 0;
 }
 
-.gx-dialog__head {
+.gx-page-title {
+  font-size: var(--text-page);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.gx-page-sub {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-body);
+}
+
+.gx-page-head__actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
-/* --------------------------------------------------------- pomoćne klase okvira */
-
+/* Preskakanje navigacije: vidljivo samo na fokusu. */
 .gx-skip {
   position: absolute;
   left: -9999px;
   top: 0;
-  z-index: 40;
-  padding: 8px 12px;
-  background: var(--color-text);
-  color: var(--color-text-inverse);
-  border-radius: var(--radius);
+  z-index: 50;
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
 }
 
 .gx-skip:focus {
@@ -458,61 +319,739 @@
   top: 8px;
 }
 
-.gx-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--control-height);
-  min-height: var(--control-height);
-  padding: 0 6px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
+/* --------------------------------------------------------------- dijalozi */
+
+.gx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--text) 45%, transparent);
 }
 
-.gx-icon-button:hover {
-  background: var(--color-surface-muted);
-}
-
-.gx-input {
+.gx-dialog {
   width: 100%;
-  min-height: var(--control-height);
-  padding: 0 8px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--body-size);
+  max-width: 480px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-lift);
+}
+
+.gx-dialog__title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.gx-dialog__hint {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.gx-dialog__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}
+
+/* Lista u meniju (korisnički meni, „⋯“ meni reda). */
+.gx-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 224px;
+  padding: var(--space-2);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow-lift);
 }
 
 .gx-menu-item {
   display: block;
-  padding: 7px 8px;
+  width: 100%;
+  padding: 9px 12px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: 10px;
   background: transparent;
-  color: var(--color-text);
+  color: var(--text);
+  font-size: var(--text-body);
+  font-weight: 500;
   text-align: left;
   text-decoration: none;
-  font-size: var(--body-size);
   cursor: pointer;
 }
 
 .gx-menu-item:hover,
-.gx-menu-item:focus-visible {
-  background: var(--color-surface-muted);
+.gx-menu-item[data-active="true"] {
+  background: var(--raise);
 }
 
-/* Overlay dijaloga: bez sjene — samo zatamnjenje i 1 px okvir dijaloga. */
-.gx-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
+/* -------------------------------------------------------------- telefon */
+
+/*
+  Ispod 960 px sidebar nije kolona nego drawer: pomjeren ulijevo, otvara se atributom
+  `data-open` na okviru. Ploča je puna širina, bez radijusa i bez ivice (referenca).
+*/
+@media (max-width: 959px) {
+  .gx-shell {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+    gap: 0;
+  }
+
+  .gx-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: 264px;
+    height: 100%;
+    padding: var(--space-4) var(--space-3);
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    transform: translateX(-100%);
+  }
+
+  .gx-shell[data-open="true"] .gx-sidebar {
+    transform: translateX(0);
+  }
+
+  .gx-main {
+    border: 0;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .gx-topbar,
+  .gx-page {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  .gx-page {
+    padding-top: var(--space-5);
+  }
+
+  .gx-page-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gx-page-head__actions {
+    width: 100%;
+  }
+
+  .gx-page-head__actions > * {
+    flex: 1;
+  }
+
+  /* Pretraga na telefonu je ikona: polje od 130 px pokazivalo bi „Tra…“, gore od ikone. */
+  .gx-search {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: transparent;
+  }
+
+  .gx-search__label,
+  .gx-search__key {
+    display: none;
+  }
+
+  .gx-shell__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    padding: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--text) 45%, transparent);
+  }
+}
+
+@media (min-width: 960px) {
+  .gx-shell__scrim {
+    display: none;
+  }
+  /* Na desktopu je sidebar uvijek tu — hamburger nema šta da otvori. */
+  .gx-topbar .gx-topbar__menu {
+    display: none;
+  }
+}
+
+/* Navigacija u fokusu: 2 px, `--link`, isti prag kao svuda. */
+.gx-nav-item:focus-visible,
+.gx-search:focus-visible,
+.gx-icon-btn:focus-visible,
+.gx-menu-item:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* ================================================================ komponente
+   Iste klase koriste okvir i ekrani; definisane su ovdje (ne u Tailwind utility
+   klasama) da bi pravilo iz reference bilo na jednom mjestu i da tema radi sama.
+*/
+
+/* ------------------------------------------------------------------ ploča */
+
+.gx-card {
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--panel);
+  min-width: 0;
+}
+
+.gx-card + .gx-card {
+  margin-top: var(--space-5);
+}
+
+.gx-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.gx-section-head__text {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.gx-section-title {
+  font-size: var(--text-section);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.gx-section-hint {
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ dugmad */
+
+.gx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gx-btn:hover {
+  background: var(--raise);
+}
+
+.gx-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gx-btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.gx-btn--primary:hover {
+  /* Bez `filter`-a: u tamnoj temi bi akcent postao prljavožut. Miješanje sa tekstom
+     (svijetlo) ili sa bijelom (tamno) daje isti „malo jači“ ton u obje teme. */
+  background: color-mix(in srgb, var(--primary) 88%, var(--text));
+}
+
+.gx-btn--quiet {
+  border-color: transparent;
+  color: var(--text);
+}
+
+.gx-btn--quiet:hover {
+  background: var(--raise);
+}
+
+.gx-btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.gx-btn--danger:hover {
+  background: var(--danger-soft);
+}
+
+/* Primarna akcija je puna širina SAMO na telefonu (DESIGN.md „Mobilni“). */
+@media (max-width: 639px) {
+  .gx-btn--full-mobile {
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------ polja */
+
+.gx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+}
+
+.gx-field__label {
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gx-field__hint {
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+
+.gx-input {
+  height: 42px;
+  width: 100%;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--field);
+  border-radius: var(--radius-field);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 500;
+}
+
+textarea.gx-input {
+  height: auto;
+  min-height: 96px;
+  padding: 10px var(--space-4);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.gx-input::placeholder {
+  color: var(--muted);
+}
+
+.gx-input:disabled {
+  opacity: 0.6;
+}
+
+/*
+  Segmentirani izbor: pilula sa 3 px ispune, aktivni dio je podignuta ploča.
+  `aria-pressed` je stanje — izgled ga samo prati.
+*/
+.gx-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--raise);
+}
+
+.gx-seg button {
+  height: 34px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gx-seg button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  outline: 1px solid var(--line);
+}
+
+/* ------------------------------------------------------------------ poruke */
+
+.gx-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
+  border-radius: 14px;
+  font-size: var(--text-small);
+  font-weight: 500;
+}
+
+.gx-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.gx-note--info {
+  background: var(--tint);
+  color: var(--text);
+}
+
+.gx-note--info svg {
+  color: var(--link);
+}
+
+.gx-note--error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.gx-note--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.gx-note--warning {
+  background: var(--warn-soft);
+  color: var(--text);
+}
+
+.gx-note--warning svg {
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ chip */
+
+.gx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 26px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--raise);
+  color: var(--text);
+  font-size: var(--text-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gx-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--bar);
+}
+
+.gx-chip__dot--hot {
+  background: var(--accent);
+}
+
+.gx-chip__dot--hollow {
+  background: transparent;
+  border: 1.5px solid var(--muted);
+}
+
+/* Pilula broja dana (rokovi): žuta kad je blizu. */
+.gx-days {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--raise);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-label);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gx-days--hot {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ------------------------------------------------------------------ tabela */
+
+/* Bez zebre; hover podiže red. Cifre tabularne, naslovi kolona tihi i mali. */
+.gx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.gx-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.gx-table td {
+  padding: 14px 12px;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.gx-table tbody tr:hover {
+  background: var(--raise);
+}
+
+.gx-table .gx-num {
+  text-align: right;
+}
+
+/* Dvije linije u ćeliji: glavno + tiho (npr. ime + email, mašina + šifra). */
+.gx-who {
+  line-height: 1.3;
+}
+
+.gx-who span {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* ------------------------------------------------------------------ stanja */
+
+.gx-empty {
+  padding: var(--space-7) var(--space-4);
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-card);
+}
+
+.gx-empty__title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.gx-empty__text {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.gx-empty__action {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: center;
+}
+
+.gx-skeleton {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.gx-skeleton__row {
+  height: 44px;
+  border-radius: var(--radius-field);
+  background: var(--raise);
+  animation: gx-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes gx-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gx-skeleton__row {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------- raspored (mreža) */
+
+/* Dvije kolone na širokom (1.7fr / 1fr), jedna na uskom — kao u referenci. */
+.gx-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: var(--space-5);
+}
+
+.gx-cols + .gx-card {
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 959px) {
+  .gx-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Filteri: polja u mreži koja se lomi, nikad horizontalni skrol. */
+.gx-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: end;
+}
+
+.gx-filters .gx-field {
+  margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------------ prijava */
+
+/*
+  Prijava stoji na pozadini, bez okvira: prije prijave nema navigacije, pa ni ploče koja je
+  nosi. Jedna kartica, jedna akcija. Na telefonu kartica ide od ivice do ivice.
+*/
+.gx-auth {
+  min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 16px;
-  /* Preko sadržaja, ne preko boje: crna sa prozirnošću, bez gradijenta. */
-  background: rgb(27 35 42 / 45%);
+  padding: var(--space-6) var(--space-4);
+  background: var(--bg);
+}
+
+.gx-auth__card {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-7);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+/* Primarna akcija pune širine kad je jedina na ekranu (prijava, promjena lozinke). */
+.gx-btn--block {
+  width: 100%;
+}
+
+@media (max-width: 639px) {
+  .gx-auth {
+    padding: 0;
+    background: var(--panel);
+  }
+  .gx-auth__card {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: none;
+    min-height: 100vh;
+    padding: var(--space-6) var(--space-4);
+  }
+}
+
+/* --------------------------------------------------- izbor (checkbox/radio) */
+
+/* Red izbora u dijalogu: 44 px meta, 18 px polje, ceo red klikabilan preko `label`-e. */
+.gx-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 4px;
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.gx-check:hover {
+  background: var(--raise);
+}
+
+.gx-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  flex: none;
+}
+
+/* Mono kao drugi red u ćeliji (tehnički ključ role, šifra mašine). */
+.gx-mono--block {
+  display: block;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------- tabela na uskom ekranu */
+
+/*
+  Ispod 640 px tabela se preliva u kartice: svaka ćelija dobija svoj naslov iz `data-label`,
+  pa nema horizontalnog skrola ni odsječenih kolona. Isti redoslijed, isti podaci.
+*/
+@media (max-width: 639px) {
+  .gx-table--cards thead {
+    display: none;
+  }
+  .gx-table--cards,
+  .gx-table--cards tbody,
+  .gx-table--cards tr,
+  .gx-table--cards td {
+    display: block;
+    width: 100%;
+  }
+  .gx-table--cards tr {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+  .gx-table--cards tbody tr:hover {
+    background: transparent;
+  }
+  .gx-table--cards td {
+    border: 0;
+    padding: 5px 0;
+    text-align: left;
+  }
+  .gx-table--cards td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--text-label);
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  /* Ćelija sa akcijama ostaje desno poravnata i odvojena linijom. */
+  .gx-table--cards td[data-label="Akcija"],
+  .gx-table--cards td[data-label="Detalj"] {
+    border-top: 1px solid var(--line);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    text-align: right;
+  }
+}
+
+/* Kartice umjesto tabele: vidljive samo na uskom ekranu. */
+.gx-cards-mobile {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .gx-cards-mobile {
+    display: grid;
+    gap: var(--space-3);
+  }
 }

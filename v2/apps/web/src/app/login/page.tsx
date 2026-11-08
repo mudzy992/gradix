@@ -1,7 +1,14 @@
 "use client";
 
+/**
+ * Prijava. Ekran stoji na pozadini (bez okvira — nema šta da se navigira prije prijave) i
+ * ima JEDNU jasnu akciju, kako DESIGN.md traži.
+ *
+ * Stanja: prazno, slanje, greška (uključujući brojanje sekundi do novog pokušaja).
+ */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Alert, Button, Field, inputClass } from "@/components/ui";
 
 type State =
   | { kind: "idle" }
@@ -59,16 +66,20 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-[calc(100vh-2rem)] items-center justify-center p-4">
-      <div className="gx-panel w-full max-w-sm" style={{ padding: "var(--card-pad)" }}>
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Gradix</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">Prijava u sistem</p>
+    <main className="gx-auth">
+      <div className="gx-auth__card">
+        <div className="gx-brand" style={{ padding: "0 0 var(--space-5)" }}>
+          <span aria-hidden="true" className="gx-brand__mark" />
+          <span>Gradix</span>
+        </div>
 
-        <form className="mt-6 space-y-4" onSubmit={submit} noValidate>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
+        <h1 className="gx-page-title" style={{ fontSize: 24 }}>
+          Prijava
+        </h1>
+        <p className="gx-page-sub">Operativni sistem za niskogradnju.</p>
+
+        <form style={{ marginTop: "var(--space-6)" }} onSubmit={submit} noValidate>
+          <Field label="Email" htmlFor="email">
             <input
               id="email"
               name="email"
@@ -77,15 +88,11 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="gx-input mt-1"
-              style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
+              className={inputClass}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              Lozinka
-            </label>
+          <Field label="Lozinka" htmlFor="password">
             <input
               id="password"
               name="password"
@@ -94,29 +101,32 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="gx-input mt-1"
-              style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
+              className={inputClass}
             />
-          </div>
+          </Field>
 
-          {state.kind === "error" && (
-            <p role="alert" className="rounded-md bg-[var(--color-danger-soft)] px-3 py-2 text-sm text-[var(--color-danger)]">
-              {secondsLeft > 0
-                ? `Previše pokušaja. Pokušajte ponovo za ${secondsLeft} s.`
-                : state.message}
-            </p>
-          )}
+          {state.kind === "error" ? (
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <Alert tone="error" role="alert">
+                {secondsLeft > 0
+                  ? `Previše pokušaja. Pokušajte ponovo za ${secondsLeft} s.`
+                  : state.message}
+              </Alert>
+            </div>
+          ) : null}
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            fullWidthOnMobile
             disabled={state.kind === "busy" || secondsLeft > 0}
-            className="gx-primary-full gx-btn border border-[var(--color-brand)] bg-[var(--color-brand)] px-4 font-semibold text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-hover)] disabled:opacity-60"
-            style={{ minHeight: "var(--control-height)", borderRadius: "var(--radius)" }}
+            className="gx-btn--block"
           >
             {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
-          </button>
+          </Button>
         </form>
-        <p className="mt-4 text-[13px] text-[var(--color-text-muted)]">
+
+        <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
           Zaboravljena lozinka? Obratite se administratoru firme — on izdaje jednokratni link.
         </p>
       </div>

@@ -3,13 +3,19 @@ import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
+import { Card, Chip, Icon, Mono } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Zaštićena stranica (R0). Provjera ide na serveru, prije renderovanja:
- * cookie → JWT → sesija u bazi → membership → tenant scope → podaci.
- * Klijent ne dobija ništa što nije prošlo ovu provjeru.
+ * Pregled — ekran na koji se dolazi poslije prijave.
+ *
+ * Provjera ide na serveru, prije renderovanja: cookie → JWT → sesija u bazi → membership →
+ * tenant scope → podaci. Klijent ne dobija ništa što nije prošlo ovu provjeru.
+ *
+ * Sadržaj je postojeći: firma, osoba, mašine i broj offline zapisa. Nove funkcionalnosti nema —
+ * ravnalo stacionaže iz reference je prikaz istih podataka (kod mašine + stanje), bez novih
+ * polja u bazi.
  */
 export default async function PregledPage() {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
@@ -45,46 +51,121 @@ export default async function PregledPage() {
 
   if (!data) redirect("/login");
 
+  const firstName = data.profile?.first_name ?? "";
+  const machineCount = data.machines.length;
+
   return (
-    <main className="mx-auto w-full max-w-5xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{data.company?.name ?? "Firma"}</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
-            {data.profile?.first_name} {data.profile?.last_name} · {data.company?.currency}
+    <div>
+      <div className="gx-page-head">
+        <div className="gx-page-head__text">
+          <h1 className="gx-page-title">{firstName ? `Dobro došli, ${firstName}` : "Pregled"}</h1>
+          <p className="gx-page-sub">
+            {data.company?.name ?? "Firma"} · {data.profile?.first_name} {data.profile?.last_name} ·{" "}
+            {data.company?.currency}
           </p>
         </div>
-      </header>
+      </div>
 
-      <section aria-labelledby="machines-heading" className="mt-8">
-        <h2 id="machines-heading" className="text-lg font-medium">
-          Mašine ({data.machines.length})
-        </h2>
-        {data.machines.length === 0 ? (
-          <p className="mt-3 rounded-md border border-dashed border-[var(--color-border-strong)] p-4 text-sm text-[var(--color-text-muted)]">
-            Nema mašina u ovoj firmi. Dodajte prvu mašinu da biste počeli.
+      <div className="gx-cols">
+        <Card>
+          <h2 className="gx-section-title">Mehanizacija</h2>
+          <p className="gx-page-sub" style={{ marginTop: "var(--space-1)" }}>
+            {machineCount === 0
+              ? "U ovoj firmi još nema mašina."
+              : `${machineCount} ${machineCount === 1 ? "mašina" : "mašine"} u evidenciji.`}
           </p>
-        ) : (
-          <ul className="gx-panel mt-3 divide-y divide-[var(--color-border)]">
-            {data.machines.map((machine) => (
-              <li key={machine.code} className="flex justify-between px-4 py-3 hover:bg-[var(--color-brand-soft)]">
-                <span className="font-medium">{machine.name}</span>
-                <span className="text-sm text-[var(--color-text-muted)]">{machine.code}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
-      <section aria-labelledby="sync-heading" className="mt-8">
-        <h2 id="sync-heading" className="text-lg font-medium">
-          Offline zapisi
-        </h2>
-        <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-          U bazi je {data.noteCount} zapisa poslanih s terena. Ova stranica ne piše — upis ide kroz
-          mobilni offline red i <code>/api/sync/push</code>.
-        </p>
-      </section>
-    </main>
+          {machineCount === 0 ? (
+            <div className="gx-empty" style={{ marginTop: "var(--space-5)" }}>
+              <p className="gx-empty__title">Nema mašina</p>
+              <p className="gx-empty__text">
+                Mašine se dodaju u bazi; ekran ih samo prikazuje dok ne dođe unos iz interfejsa.
+              </p>
+            </div>
+          ) : (
+            <table className="gx-table" style={{ marginTop: "var(--space-4)" }}>
+              <thead>
+                <tr>
+                  <th>Mašina</th>
+                  <th>Šifra</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.machines.map((machine) => (
+                  <tr key={machine.code}>
+                    <td>
+                      <div className="gx-who">{machine.name}</div>
+                    </td>
+                    <td>
+                      <Mono>{machine.code}</Mono>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="gx-section-title">Sa terena</h2>
+          <p className="gx-page-sub" style={{ marginTop: "var(--space-1)" }}>
+            Zapisi poslani s mobilnog, kroz offline red.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: "var(--space-2)",
+              marginTop: "var(--space-5)",
+            }}
+          >
+            <span className="gx-mono" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em" }}>
+              {data.noteCount}
+            </span>
+            <span style={{ color: "var(--muted)" }}>
+              {data.noteCount === 1 ? "zapis u bazi" : "zapisa u bazi"}
+            </span>
+          </div>
+
+          <div style={{ marginTop: "var(--space-4)", display: "grid", gap: "var(--space-2)" }}>
+            <Chip tone="full">Sync radi</Chip>
+            <p style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
+              Ova stranica ne piše. Upis ide kroz mobilni red i <Mono>/api/sync/push</Mono>.
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <div className="gx-section-head">
+          <div className="gx-section-head__text">
+            <h2 className="gx-section-title">Šta dalje</h2>
+            <span className="gx-section-hint">ono što je otvoreno u ovoj fazi</span>
+          </div>
+        </div>
+        <ul style={{ display: "grid", gap: "var(--space-3)", listStyle: "none", padding: 0 }}>
+          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+            <Icon name="users" />
+            <span>
+              <strong>Korisnici</strong> — pozovite osobu, dodijelite rolu i opseg.
+            </span>
+          </li>
+          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+            <Icon name="shield" />
+            <span>
+              <strong>Pristup i role</strong> — pregled ko šta smije; dozvole se još ne mijenjaju iz
+              ekrana.
+            </span>
+          </li>
+          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+            <Icon name="list" />
+            <span>
+              <strong>Audit trag</strong> — svaka promjena pristupa ostaje zapisana.
+            </span>
+          </li>
+        </ul>
+      </Card>
+    </div>
   );
 }

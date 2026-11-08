@@ -10,7 +10,7 @@
  *  - sva stanja postoje: učitavanje, prazno, greška, uspjeh.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Card, EmptyState, Field, Pill, SectionTitle, Skeleton, inputClass } from "@/components/ui";
+import { Alert, Button, Card, Chip, EmptyState, Field, Icon, Segmented, Skeleton, inputClass } from "@/components/ui";
 
 export type User = {
   id: string;
@@ -207,8 +207,20 @@ export default function UsersClient({
   }
 
   return (
-    <div className="grid" style={{ gap: "var(--section-gap)" }}>
-      <SectionTitle hint="jedna akcija po osobi, ostalo u „⋯“">Korisnici</SectionTitle>
+    <div>
+      <div className="gx-page-head">
+        <div className="gx-page-head__text">
+          <h1 className="gx-page-title">Korisnici</h1>
+          <p className="gx-page-sub">Ljudi u firmi, njihove role i opseg pristupa.</p>
+        </div>
+        {canManage ? (
+          <div className="gx-page-head__actions">
+            <Button variant="primary" icon="users" onClick={() => setInviteOpen(true)}>
+              Pozovi osobu
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       {message ? (
         <Alert tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>
@@ -218,20 +230,20 @@ export default function UsersClient({
       {issued ? <IssuedLinkCard issued={issued} onClose={() => setIssued(null)} /> : null}
 
       <Card>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
+        <div className="gx-filters" style={{ marginBottom: "var(--space-5)" }}>
+          <Field label="Traži osobu" htmlFor="user-filter">
             <input
+              id="user-filter"
               className={inputClass}
-              style={{ maxWidth: 260, minHeight: "var(--control-height)" }}
-              placeholder="Traži po imenu ili emailu"
-              aria-label="Traži korisnika"
+              placeholder="Ime ili email"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
             />
+          </Field>
+          <Field label="Rola" htmlFor="user-role">
             <select
+              id="user-role"
               className={inputClass}
-              style={{ maxWidth: 190, minHeight: "var(--control-height)" }}
-              aria-label="Filtriraj po roli"
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value)}
             >
@@ -242,18 +254,13 @@ export default function UsersClient({
                 </option>
               ))}
             </select>
-          </div>
-          {canManage ? (
-            <Button variant="primary" fullWidthOnMobile onClick={() => setInviteOpen(true)}>
-              + Pozovi osobu
-            </Button>
-          ) : null}
+          </Field>
         </div>
 
         {state.kind === "loading" ? <Skeleton rows={4} /> : null}
 
         {state.kind === "error" ? (
-          <div className="grid gap-3">
+          <div style={{ display: "grid", gap: "var(--space-3)" }}>
             <Alert tone="error" role="alert">
               {state.message}
             </Alert>
@@ -295,15 +302,15 @@ export default function UsersClient({
         ) : null}
 
         {visible.length > 0 ? (
-          <table className="gx-table w-full text-[var(--body-size)]">
+          <table className="gx-table gx-table--cards">
             <thead>
-              <tr className="border-b-2 border-[var(--color-border)] text-left text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                <th className="px-3 py-2 font-semibold">Osoba</th>
-                <th className="px-3 py-2 font-semibold">Rola</th>
-                <th className="px-3 py-2 font-semibold">Opseg</th>
-                <th className="px-3 py-2 font-semibold">Status</th>
-                <th className="px-3 py-2 font-semibold">Dodan</th>
-                <th className="whitespace-nowrap px-3 py-2 text-right font-semibold">Akcija</th>
+              <tr>
+                <th>Osoba</th>
+                <th>Rola</th>
+                <th>Opseg</th>
+                <th>Status</th>
+                <th>Dodan</th>
+                <th style={{ textAlign: "right" }}>Akcija</th>
               </tr>
             </thead>
             <tbody>
@@ -340,10 +347,14 @@ export default function UsersClient({
   );
 }
 
+/**
+ * Status po referenci: puna tačka = aktivan, žuta = čeka prvu prijavu, prazna = deaktiviran.
+ * Stanje nosi i tekst, ne samo tačka — boja je treći signal, nikad jedini.
+ */
 function statusOf(user: User) {
-  if (!user.isActive) return { tone: "danger" as const, label: "Deaktiviran" };
-  if (user.mustChangePassword) return { tone: "accent" as const, label: "Čeka prvu prijavu" };
-  return { tone: "success" as const, label: "Aktivan" };
+  if (!user.isActive) return { tone: "hollow" as const, label: "Deaktiviran" };
+  if (user.mustChangePassword) return { tone: "hot" as const, label: "Čeka prvu prijavu" };
+  return { tone: "full" as const, label: "Aktivan" };
 }
 
 function UserRow({
@@ -397,38 +408,32 @@ function UserRow({
       : { label: "Reset lozinke", onClick: onReset };
 
   return (
-    <tr className="border-b border-[var(--color-border)] hover:bg-[var(--color-brand-soft)]">
+    <tr>
       <td data-label="Osoba">
-        <div className="flex items-center gap-2.5 font-semibold">
-          <span
-            aria-hidden="true"
-            className="gx-mono grid h-7 w-7 flex-none place-items-center border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[11px] font-extrabold text-[var(--color-text)]"
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span aria-hidden="true" className="gx-avatar">
             {initials(user)}
           </span>
-          <span>
+          <span className="gx-who" style={{ fontWeight: 600 }}>
             {user.firstName} {user.lastName}
-            <br />
-            <span className="font-normal text-[var(--color-text-muted)]">{user.email}</span>
+            <span>{user.email}</span>
           </span>
         </div>
       </td>
-      <td data-label="Rola">
-        <Pill tone="quiet">{rolesBs(user.roles)}</Pill>
-      </td>
-      <td data-label="Opseg" className="text-[var(--color-text-muted)]">
+      <td data-label="Rola">{rolesBs(user.roles)}</td>
+      <td data-label="Opseg" style={{ color: "var(--muted)" }}>
         {SCOPE_BS[user.scope] ?? user.scope}
       </td>
       <td data-label="Status">
-        <Pill tone={status.tone}>{status.label}</Pill>
+        <Chip tone={status.tone}>{status.label}</Chip>
       </td>
-      <td data-label="Dodan" className="whitespace-nowrap text-[var(--color-text-muted)]">
-        {dateBs(user.createdAt)}
+      <td data-label="Dodan" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
+        <span className="gx-mono">{dateBs(user.createdAt)}</span>
       </td>
       <td data-label="Akcija">
-        <div className="flex flex-nowrap items-center justify-end gap-2">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
           {canManage && protectedRow ? (
-            <span className="whitespace-nowrap text-xs text-[var(--color-text-muted)]">
+            <span style={{ whiteSpace: "nowrap", fontSize: "var(--text-small)", color: "var(--muted)" }}>
               {user.id === actorId ? "vi" : "samo vlasnik"}
             </span>
           ) : null}
@@ -451,20 +456,16 @@ function UserRow({
                 aria-expanded={menuOpen}
                 aria-label={`Više radnji za ${user.firstName} ${user.lastName}`}
                 onClick={() => setMenuOpen((open) => !open)}
-                className="gx-icon-button"
-                style={{ height: "var(--control-height)", width: "var(--control-height)" }}
+                className="gx-icon-btn"
               >
-                ⋯
+                <Icon name="more" />
               </button>
               {menuOpen ? (
-                <div
-                  role="menu"
-                  className="gx-dialog absolute right-0 z-10 mt-1 grid w-56 gap-1 p-1"
-                >
+                <div role="menu" className="gx-menu">
                   <button
                     role="menuitem"
                     type="button"
-                    className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
+                    className="gx-menu-item"
                     onClick={() => {
                       setMenuOpen(false);
                       onEdit(moreButton.current);
@@ -475,7 +476,7 @@ function UserRow({
                   <button
                     role="menuitem"
                     type="button"
-                    className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
+                    className="gx-menu-item"
                     onClick={() => {
                       void navigator.clipboard?.writeText(user.email);
                       setMenuOpen(false);
@@ -486,7 +487,7 @@ function UserRow({
                   <button
                     role="menuitem"
                     type="button"
-                    className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
+                    className="gx-menu-item"
                     onClick={() => {
                       setMenuOpen(false);
                       onReset();
@@ -497,7 +498,8 @@ function UserRow({
                   <button
                     role="menuitem"
                     type="button"
-                    className="rounded px-3 py-2 text-left text-sm text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)]"
+                    className="gx-menu-item"
+                    style={{ color: "var(--danger)" }}
                     onClick={() => {
                       setMenuOpen(false);
                       onToggle();
@@ -520,17 +522,16 @@ function IssuedLinkCard({ issued, onClose }: { issued: NonNullable<IssuedLink>; 
   const expires = dateTimeBs(issued.expiresAt);
   return (
     <Card>
-      <p className="mb-2 font-semibold">Link za {issued.email}</p>
+      <p style={{ fontWeight: 700, marginBottom: "var(--space-2)" }}>Link za {issued.email}</p>
       <Alert tone="success">Kopirajte link i pošaljite ga sami. Važi do {expires}, jednokratan je.</Alert>
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
         <input
           className={inputClass}
-          style={{ minHeight: "var(--control-height)" }}
           readOnly
           value={issued.link}
           aria-label="Link za kopiranje"
         />
-        <div className="flex gap-2">
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
           <Button
             variant="primary"
             onClick={() => {
@@ -545,7 +546,7 @@ function IssuedLinkCard({ issued, onClose }: { issued: NonNullable<IssuedLink>; 
           </Button>
         </div>
       </div>
-      <p className="mt-2 text-[13px] text-[var(--color-warning-text)]">
+      <p style={{ marginTop: "var(--space-2)", fontSize: "var(--text-small)", color: "var(--muted)" }}>
         Ako zatvorite bez kopiranja, link se više ne može prikazati — napravite novi.
       </p>
     </Card>
@@ -560,20 +561,14 @@ function InviteDialog({
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [scope, setScope] = useState("COMPANY");
   return (
-    <div
-      className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="invite-title"
-    >
-      <div
-        className="gx-dialog w-full max-w-md p-4"
-        style={{ maxHeight: "calc(100vh - 2rem)" }}
-      >
-        <h2 id="invite-title" className="mb-3 text-lg font-semibold">
-          Nova pozivnica
+    <div className="gx-overlay" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="invite-title" className="gx-dialog">
+        <h2 id="invite-title" className="gx-dialog__title">
+          Pozovi osobu
         </h2>
+        <p className="gx-dialog__hint">Dobiće jednokratni link za postavljanje lozinke.</p>
         <form
           onSubmit={async (event) => {
             event.preventDefault();
@@ -585,24 +580,13 @@ function InviteDialog({
             }
           }}
         >
-          <Field label="Email osobe" htmlFor="invite-email" hint="Link važi 48 h i jednokratan je.">
-            <input
-              id="invite-email"
-              name="email"
-              type="email"
-              required
-              className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
-            />
-          </Field>
+          <div style={{ marginTop: "var(--space-5)" }}>
+            <Field label="Email" htmlFor="invite-email" hint="Link važi 48 h i jednokratan je.">
+              <input id="invite-email" name="email" type="email" required className={inputClass} />
+            </Field>
+          </div>
           <Field label="Rola" htmlFor="invite-role">
-            <select
-              id="invite-role"
-              name="role"
-              className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
-              defaultValue="WORKER"
-            >
+            <select id="invite-role" name="role" className={inputClass} defaultValue="WORKER">
               {Object.entries(ROLE_BS)
                 .filter(([value]) => value !== "OWNER")
                 .map(([value, label]) => (
@@ -612,22 +596,26 @@ function InviteDialog({
                 ))}
             </select>
           </Field>
-          <Field label="Opseg" htmlFor="invite-scope">
-            <select
-              id="invite-scope"
-              name="scope"
-              className={inputClass}
-              style={{ minHeight: "var(--control-height)" }}
-              defaultValue="COMPANY"
-            >
-              {Object.entries(SCOPE_BS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {/* Opseg je izbor od dva stanja — segmentirana pilula, ne padajuća lista.
+              Skriveno polje nosi vrijednost u formu, pa `FormData` ostaje isti. */}
+          <div className="gx-field">
+            <span className="gx-field__label" id="invite-scope-label">
+              Opseg pristupa
+            </span>
+            <input type="hidden" name="scope" value={scope} />
+            <div role="group" aria-labelledby="invite-scope-label">
+              <Segmented
+                label="Opseg pristupa"
+                value={scope}
+                options={[
+                  { value: "COMPANY", label: "Cijela firma" },
+                  { value: "SELF", label: "Samo svoje" },
+                ]}
+                onChange={setScope}
+              />
+            </div>
+          </div>
+          <div className="gx-dialog__actions">
             <Button variant="quiet" onClick={onClose} disabled={busy}>
               Otkaži
             </Button>
@@ -699,28 +687,24 @@ function MembershipDialog({
 
   return (
     <div className="gx-overlay" role="presentation">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="membership-title"
-        className="gx-dialog w-full max-w-lg p-4"
-      >
-        <h2 id="membership-title" className="text-lg font-semibold">
+      <div role="dialog" aria-modal="true" aria-labelledby="membership-title" className="gx-dialog">
+        <h2 id="membership-title" className="gx-dialog__title">
           Role i opseg
         </h2>
-        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+        <p className="gx-dialog__hint">
           {user.firstName} {user.lastName} · {user.email}
         </p>
 
-        <fieldset className="mt-4">
-          <legend className="mb-2 text-sm font-semibold">Role</legend>
-          <div className="grid gap-1.5">
+        <fieldset style={{ marginTop: "var(--space-5)", border: 0, padding: 0 }}>
+          <legend className="gx-field__label" style={{ marginBottom: "var(--space-2)" }}>
+            Role
+          </legend>
+          <div style={{ display: "grid", gap: 6 }}>
             {options.map(([value, label]) => (
-              <label key={value} className="flex items-center gap-2 text-sm">
+              <label key={value} className="gx-check">
                 <input
                   ref={value === options[0]?.[0] ? firstField : undefined}
                   type="checkbox"
-                  className="h-4 w-4"
                   checked={roles.includes(value)}
                   onChange={() => toggle(value)}
                 />
@@ -730,33 +714,30 @@ function MembershipDialog({
           </div>
         </fieldset>
 
-        <fieldset className="mt-4">
-          <legend className="mb-2 text-sm font-semibold">Opseg</legend>
-          <div className="grid gap-1.5">
-            {Object.entries(SCOPE_BS).map(([value, label]) => (
-              <label key={value} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="membership-scope"
-                  className="h-4 w-4"
-                  checked={scope === value}
-                  onChange={() => setScope(value)}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
+        <fieldset style={{ marginTop: "var(--space-5)", border: 0, padding: 0 }}>
+          <legend className="gx-field__label" style={{ marginBottom: "var(--space-2)" }}>
+            Opseg
+          </legend>
+          <Segmented
+            label="Opseg"
+            value={scope}
+            options={[
+              { value: "COMPANY", label: "Cijela firma" },
+              { value: "SELF", label: "Samo svoje" },
+            ]}
+            onChange={setScope}
+          />
         </fieldset>
 
         {error ? (
-          <div className="mt-3">
+          <div style={{ marginTop: "var(--space-4)" }}>
             <Alert tone="error" role="alert">
               {error}
             </Alert>
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="gx-dialog__actions">
           <Button variant="quiet" onClick={onClose} disabled={busy || saving}>
             Otkaži
           </Button>

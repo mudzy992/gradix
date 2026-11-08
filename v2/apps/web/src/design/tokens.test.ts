@@ -1,129 +1,151 @@
 /**
- * Dizajn sistem v1 (R1c) — provjere koje se ne vide okom:
- *  - oblik: radijus 2 px (dijalog 4 px), nema sjena ni gradijenata, nema pilula,
- *  - gustina: web `gusto` 36 px red, terenski `udobno` 56 px,
- *  - tipografija: sans + mono postoje, cifre u tabelama su tabularne,
- *  - boje: `#FFC82F` nikad kao tekst, `#140A9A` samo akcija/aktivna stavka.
+ * Dizajn pravila iz `docs/design/DESIGN.md` — kao test, ne kao dogovor.
  *
- * Test čita STVARNE fajlove. Ako se pravilo prekrši u novoj komponenti, padne ovdje — ne
- * na demo snimku.
+ * Šta se ovdje čuva:
+ *  - paleta je šest boja; sve ostalo je `color-mix` (nema nove boje),
+ *  - oblik je iz reference (ploča 18, kartica 16, polje 12, dugme/chip pilula),
+ *  - nijedna komponenta ne sadrži hex — boje idu kroz semantičke tokene,
+ *  - obje teme postoje i imaju ista imena tokena,
+ *  - tipografija: Manrope kroz `next/font`, mono sa tabularnim ciframa,
+ *  - tema se mijenja atributom `data-theme`, ne klasom po komponenti.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { resolveTheme } from "@gradix/design/css-tokens";
 
 const here = dirname(fileURLToPath(import.meta.url));
-/**
- * Komentari u fajlovima objašnjavaju pravilo i često citiraju zabranjenu vrijednost
- * („nigdje `rounded-full`“). Test gleda kod, ne dokumentaciju — zato komentari ispadaju.
- */
+const read = (path: string) => readFileSync(join(here, "..", path), "utf8");
+
+/** Komentari citiraju zabranjene vrijednosti („nijedan hex“), zato se prije provjere brišu. */
 const stripComments = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-const read = (path: string) => stripComments(readFileSync(join(here, "..", path), "utf8"));
+const globals = stripComments(read("app/globals.css"));
+const shell = stripComments(read("app/shell.css"));
+const ui = stripComments(read("components/ui.tsx"));
+const shellTsx = stripComments(read("components/shell.tsx"));
 
-const globals = read("app/globals.css");
-const shell = read("app/shell.css");
-const density = read("components/density.css");
-const ui = read("components/ui.tsx");
-const shellTsx = read("components/shell.tsx");
+const PALETTE = ["#140a9a", "#ffc82f", "#1b232a", "#ffffff", "#59656f", "#7b858d"];
 
-const gusto = density.match(/\[data-density="gusto"\]\s*\{([^}]*)\}/)?.[1] ?? "";
-const udobno = density.match(/\[data-density="udobno"\]\s*\{([^}]*)\}/)?.[1] ?? "";
+describe("paleta i teme", () => {
+  it("u globals.css postoji samo šest boja palete kao hex", () => {
+    const found = new Set((globals.match(/#[0-9a-f]{6}\b/gi) ?? []).map((value) => value.toLowerCase()));
+    for (const value of found) expect(PALETTE, `neočekivan hex ${value}`).toContain(value);
+  });
 
-describe("oblik (R1c)", () => {
-  it("radijus je 2 px, dijalog 4 px — nigdje veći", () => {
-    expect(globals).toMatch(/--radius:\s*2px/);
-    expect(globals).toMatch(/--radius-dialog:\s*4px/);
-    // Nema starog mekanog radijusa (0.75rem) ni pilula.
-    for (const source of [globals, shell, density, ui, shellTsx]) {
-      expect(source).not.toMatch(/0\.75rem/);
-      expect(source).not.toMatch(/rounded-\[10px\]/);
-      expect(source).not.toMatch(/rounded-full/);
+  it("sve ostale nijanse nastaju color-mix-om", () => {
+    // Broj `color-mix` poziva mora biti veći od broja semantičkih tokena: svaka nijansa koja
+    // nije direktna paleta mora biti izmiješana, ne upisana.
+    expect((globals.match(/color-mix\(/g) ?? []).length).toBeGreaterThanOrEqual(20);
+  });
+
+  it("obje teme postoje i imaju iste semantičke tokene", () => {
+    // `shadow`/`shadow-lift` su izuzetak: u tamnoj temi su `none` (nema sjena), pa ih
+    // razrješivač preskoči. Sve boje moraju postojati u obje teme.
+    const colorsOnly = (keys: string[]) => keys.filter((key) => !key.startsWith("shadow")).sort();
+    const light = colorsOnly(Object.keys(resolveTheme(globals, "light")));
+    const dark = colorsOnly(Object.keys(resolveTheme(globals, "dark")));
+    expect(light).toEqual(dark);
+    // Semantički tokeni iz DESIGN.md moraju biti tu.
+    for (const token of ["panel", "raise", "line", "primary", "link", "text", "muted", "tint", "bar"]) {
+      expect(light).toContain(token);
     }
   });
 
-  it("nema sjena ni gradijenata", () => {
-    for (const source of [globals, shell, density, ui, shellTsx]) {
-      expect(source).not.toMatch(/shadow-(sm|md|lg|xl|2xl)/);
-      expect(source).not.toMatch(/box-shadow/);
-      expect(source).not.toMatch(/linear-gradient|radial-gradient/);
-    }
-  });
-
-  it("linije su 1 px (ivica polja je border-strong, razdjelnik border)", () => {
-    expect(globals).toMatch(/--color-border:/);
-    expect(globals).toMatch(/--color-border-strong:/);
-    // Nijedno polje nije sa 2 px ivicom (staro `border-2`).
-    expect(ui).not.toMatch(/border-2/);
-    expect(globals).not.toMatch(/border-2/);
+  it("tema je atribut, ne klasa po komponenti", () => {
+    expect(globals).toMatch(/\[data-theme="light"\]/);
+    expect(globals).toMatch(/\[data-theme="dark"\]/);
+    // Nijedna komponenta ne postavlja `data-theme` — to radi layout i prekidač.
+    expect(ui).not.toMatch(/data-theme/);
   });
 });
 
-describe("gustina", () => {
-  it("web `gusto` ima red 36 px, terenski `udobno` 56 px", () => {
-    expect(gusto).toMatch(/--row-height:\s*36px/);
-    expect(udobno).toMatch(/--row-height:\s*56px/);
+describe("oblik (DESIGN.md „Oblik“)", () => {
+  it("radijusi su iz reference", () => {
+    expect(globals).toMatch(/--radius-panel:\s*18px/);
+    expect(globals).toMatch(/--radius-card:\s*16px/);
+    expect(globals).toMatch(/--radius-field:\s*12px/);
+    expect(globals).toMatch(/--radius-tile:\s*20px/);
+    expect(globals).toMatch(/--radius-pill:\s*999px/);
   });
 
-  it("kontrola na terenu je 48 px (dodir), na webu 32 px", () => {
-    expect(gusto).toMatch(/--control-height:\s*32px/);
-    expect(udobno).toMatch(/--control-height:\s*48px/);
+  it("nema oštrih radijusa iz odbačenog R1c okvira", () => {
+    for (const source of [globals, shell, ui, shellTsx]) {
+      // 2–4 px radijus je bio R1c. Izuzetak su tanke trake (akcentna linija u znaku firme
+      // je 2 px visoka, pa joj radijus ne mijenja oblik). Fokus je `outline`, ne oblik.
+      expect(source).not.toMatch(/--radius[\w-]*:\s*[234]px/);
+      expect(source).not.toMatch(/border-radius:\s*[34]px/);
+    }
+    // Ploče i kartice su velike zaobljene površine, nikad oštre.
+    expect(globals).toMatch(/--radius-panel:\s*18px/);
+    expect(globals).toMatch(/--radius-card:\s*16px/);
   });
 
-  it("gustina se mijenja atributom, ne klasom po komponenti", () => {
-    expect(density).toMatch(/\[data-density="udobno"\]/);
-    // Nijedna komponenta ne postavlja `data-density` — to radi layout (jedno mjesto).
-    expect(ui).not.toMatch(/data-density/);
+  it("sjene postoje samo u svijetloj temi", () => {
+    const lightBlock = globals.slice(globals.indexOf('[data-theme="light"]'), globals.indexOf('[data-theme="dark"]'));
+    const darkBlock = globals.slice(globals.indexOf('[data-theme="dark"]'));
+    expect(lightBlock).toMatch(/--shadow:/);
+    expect(lightBlock).not.toMatch(/--shadow:\s*none/);
+    expect(darkBlock).toMatch(/--shadow:\s*none/);
+  });
+});
+
+describe("komponente", () => {
+  it("nijedna komponenta ne hardkodira boju", () => {
+    for (const source of [ui, shellTsx, shell]) {
+      expect(source).not.toMatch(/#[0-9a-f]{6}\b/i);
+    }
+  });
+
+  it("dugme i chip su pilule, polje ima 12 px", () => {
+    // Klase su u `shell.css` (jedno mjesto za pravilo), a primitive ih koriste.
+    expect(shell).toMatch(/\.gx-btn\s*\{[^}]*border-radius:\s*var\(--radius-pill\)/);
+    expect(shell).toMatch(/\.gx-chip\s*\{[^}]*border-radius:\s*var\(--radius-pill\)/);
+    expect(shell).toMatch(/\.gx-input\s*\{[^}]*border-radius:\s*var\(--radius-field\)/);
+    expect(ui).toMatch(/gx-btn--/);
+    expect(ui).toMatch(/gx-input|inputClass/);
+  });
+
+  it("fokus je `--link`, 2 px, vidljiv", () => {
+    expect(globals).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--link\)/);
+  });
+
+  it("prelaz traje 120 ms i poštuje `prefers-reduced-motion`", () => {
+    expect(globals).toMatch(/120ms/);
+    expect(globals).toMatch(/prefers-reduced-motion/);
   });
 });
 
 describe("tipografija", () => {
-  it("postoje sans i mono tokeni, mono bez mrežnog preuzimanja", () => {
-    expect(globals).toMatch(/--font-sans:/);
-    expect(globals).toMatch(/--font-mono:\s*ui-monospace/);
+  it("Manrope i IBM Plex Mono dolaze kroz next/font", () => {
+    const layout = stripComments(read("app/layout.tsx"));
+    expect(layout).toMatch(/next\/font/);
+    expect(layout.toLowerCase()).toMatch(/manrope/);
+    expect(layout.toLowerCase()).toMatch(/plex.?mono/);
+    // Bez mrežnog preuzimanja: `next/font/local` čita woff2 iz repoa.
+    expect(layout).toMatch(/localFont/);
   });
 
-  it("cifre u tabelama su tabularne", () => {
-    expect(globals).toMatch(/\.gx-tabular\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
-    expect(density).toMatch(/\.gx-table\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
+  it("mono ima tabularne cifre, a sans je Manrope", () => {
+    expect(globals).toMatch(/\.gx-mono\s*\{[^}]*font-variant-numeric:\s*tabular-nums/);
+    expect(globals).toMatch(/--font-sans:\s*var\(--font-manrope\)/);
+    expect(globals).toMatch(/--font-mono:\s*var\(--font-plex-mono\)/);
   });
 
-  it("mono klasa koristi mono font", () => {
-    expect(globals).toMatch(/\.gx-mono\s*\{[^}]*font-family:\s*var\(--font-mono\)/);
+  it("nema VELIKIH SLOVA u interfejsu (sentence case)", () => {
+    expect(ui).not.toMatch(/uppercase/);
+    expect(shellTsx).not.toMatch(/uppercase/);
+    expect(shell).not.toMatch(/text-transform:\s*uppercase/);
   });
 });
 
-describe("boje (R1c pravila upotrebe)", () => {
-  it("akcenat nikad nije tekst — koristi se kao podloga", () => {
-    for (const source of [ui, shellTsx, globals, shell, density]) {
-      expect(source).not.toMatch(/text-\[var\(--color-accent\)\]/);
-      expect(source).not.toMatch(/color:\s*var\(--color-accent\)/);
-    }
-  });
-
-  it("primarna akcija i aktivna stavka koriste brend", () => {
-    expect(ui).toMatch(/primary:[\s\S]*?bg-\[var\(--color-brand\)\]/);
-    expect(shell).toMatch(/\[aria-current="page"\][\s\S]*?border-left-color:\s*var\(--color-brand\)/);
-  });
-
-  it("brend boja je štedljiva: nema nijednog bedža u brend tonu", () => {
-    // Pravilo vlasnika: `#140A9A` = aktivna stavka + primarna akcija. Bedž role ili radnje
-    // u brend tonu znači da je brend na 25 mjesta u tabeli — tada više ne označava ništa.
-    const screens = [
-      read("app/ured/korisnici/users-client.tsx"),
-      read("app/ured/audit/audit-client.tsx"),
-      read("app/ured/role/roles-client.tsx"),
-    ];
-    for (const screen of screens) {
-      expect(screen).not.toMatch(/tone="brand"/);
-    }
-  });
-
-  it("nijedna komponenta ne hardkodira boju", () => {
-    for (const source of [ui, shellTsx]) {
-      expect(source).not.toMatch(/#[0-9a-fA-F]{6}\b/);
-    }
+describe("gustina i okvir", () => {
+  it("okvir je iz reference: sidebar 232 px, ploča sa gornjom trakom", () => {
+    expect(globals).toMatch(/--sidebar-w:\s*232px/);
+    expect(globals).toMatch(/--topbar-h:/);
+    expect(shell).toMatch(/\.gx-shell/);
+    expect(shell).toMatch(/\.gx-main\s*\{[^}]*border-radius:\s*var\(--radius-panel\)/);
   });
 });
