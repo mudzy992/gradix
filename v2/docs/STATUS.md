@@ -56,6 +56,8 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
   `PROJECTS` i `project_ids` su uklonjeni iz baze i API-ja. Dodjela projekta dobija **posebnu
   dozvolu `projects.assign`**, ne `users.manage`.
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
+- **Provjera privatnosti** (`pnpm check-privacy`) je CI korak prije testova: pada na JMBG, na polja
+  ličnih podataka u kodu i na emailove van `*.test`/`example.*`/`@demo.ba`; ima samoprovjeru.
 - **`packages/contracts`** drži envelope, kodove grešaka, šeme, registar ruta, tipizirani klijent i
   `openapi.json`. Web i mobilni koriste isti klijent; `pnpm --filter @gradix/contracts check` u CI-ju
   pada ako `openapi.json` nije regenerisan.
