@@ -1,8 +1,9 @@
 # STATUS — Gradix v2
 
 **Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b funkcionalno ✅**, **dizajn v2 urađen** ⇒ čeka vlasnikov pregled
-**Sljedeće:** vlasnikovo odobrenje `docs/PLAN-R2.md` (radnici, mašine, rokovi) → dizajn samo novih
-ekrana → kod R2. `packages/contracts` je gotov (OpenAPI iz šema, tipizirani klijent, CI provjera).
+**Sljedeće:** vlasnikovo odobrenje `docs/PLAN-R2.md` (radnici, mašine, rokovi — kategorije mašina
+kao podaci, brojilo samo trenutna vrijednost, radnik bez naloga) → dizajn samo novih ekrana → kod
+R2a. `packages/contracts` je gotov (OpenAPI iz šema, tipizirani klijent, CI provjera).
 **R3** (projekti, dodjele, opseg `PROJECTS`, dozvola `projects.assign`): `docs/PLAN-R3.md`.
 
 ## Gotovo
