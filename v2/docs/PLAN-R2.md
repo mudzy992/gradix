@@ -6,8 +6,8 @@
 **univerzalna obaveza s rokom** (R2b). **Projekti i dodjele su R3** (`docs/PLAN-R3.md`) —
 ranija verzija ovog plana ih je pogrešno stavljala na prvo mjesto; to je povučeno.
 
-**Redoslijed rada:** `packages/contracts` → ovaj plan na odobrenje → dizajn samo onoga što
-referenca ne pokriva → kod. **Kod R2 ne počinje prije odobrenja plana.**
+**Redoslijed rada:** ~~`packages/contracts`~~ (gotovo, `1ff1cd3`) → **ovaj plan na odobrenje** →
+dizajn samo onoga što referenca ne pokriva → kod. **Kod R2 ne počinje prije odobrenja plana.**
 
 ## R2a — radnici i mašine + uvoz iz Excela
 
