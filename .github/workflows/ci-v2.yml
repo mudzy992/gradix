@@ -77,7 +77,10 @@ jobs:
       # JMBG ili strani email u seedu bi prošao testove i otišao u repo.
       - name: Nema stvarnih ličnih podataka
         working-directory: v2
-        run: pnpm check-privacy
+        # Samoprovjera prvo: pravilo koje ne padne na stvarni JMBG izgleda kao zaštita, a nije.
+        run: |
+          node infra/scripts/check-privacy.mjs --self-test
+          pnpm check-privacy
 
       - name: OpenAPI je ažuran
         working-directory: v2
