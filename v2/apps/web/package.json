@@ -9,7 +9,7 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured",
+    "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured src/app/pregled",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

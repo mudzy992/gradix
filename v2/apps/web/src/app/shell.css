@@ -544,6 +544,32 @@
   color: var(--text);
 }
 
+/* Kartica „Rokovi“ na pregledu: broj i naziv stanja jedno pod drugim, u redu. */
+.gx-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gx-summary-list > li {
+  display: flex;
+  flex-direction: column;
+}
+
+.gx-summary-value {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.gx-summary-label {
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+
 .gx-section-hint {
   font-size: var(--text-small);
   color: var(--muted);

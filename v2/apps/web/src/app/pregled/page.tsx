@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
 import { Card, Chip, Icon, Mono } from "@/components/ui";
+import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
 import { listObligations } from "@/server/obligation-service";
 
@@ -153,41 +153,7 @@ export default async function PregledPage() {
         </Card>
       </div>
 
-      {obligationCounts ? (
-        <Card>
-          <div className="gx-section-head">
-            <div className="gx-section-head__text">
-              <h2 className="gx-section-title">Rokovi</h2>
-              <span className="gx-section-hint">ljekarski, registracije, licence</span>
-            </div>
-            <Link className="gx-btn gx-btn--quiet" href="/ured/rokovi">
-              Otvori rokove
-            </Link>
-          </div>
-          <div style={{ display: "flex", gap: "var(--space-6)", marginTop: "var(--space-3)" }}>
-            <div>
-              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
-                {obligationCounts.expired}
-              </div>
-              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>isteklo</span>
-            </div>
-            <div>
-              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
-                {obligationCounts.expiring}
-              </div>
-              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
-                uskoro istječe
-              </span>
-            </div>
-            <div>
-              <div className="gx-mono" style={{ fontSize: 24, fontWeight: 500 }}>
-                {obligationCounts.valid}
-              </div>
-              <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>važeće</span>
-            </div>
-          </div>
-        </Card>
-      ) : null}
+      {obligationCounts ? <ObligationSummary counts={obligationCounts} /> : null}
 
       <Card>
         <div className="gx-section-head">
