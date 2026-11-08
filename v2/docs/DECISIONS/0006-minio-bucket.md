@@ -13,6 +13,13 @@ v2 smije koristiti postojeću infrastrukturu (MinIO na hostu, Redis na `redis-co
 3. **Redis:** prefiks `gx2:` i zaseban ACL korisnik `gradix_v2` (komanda za `redis-cli` je u `infra/redis/acl-v2.txt`, izvršava vlasnik).
 4. **Privremeno stanje:** dok bucket ne postoji, v2 ne piše priloge. U R0 priloga nema, pa ovo ništa ne blokira. Bucket se koristi od R5 (gorivo, dnevni pregled mašine).
 
+   **Ažurirano 2026-11-08 (R2b):** prilozi uz obaveze (ljekarski, registracije, licence) uvode
+   bucket **ranije nego što je planirano** — R2b ih piše ako su `MINIO_*` postavljeni. Do tada
+   (i dok bucket `gradix-v2` ne postoji na serveru) upload se **odbija jasnom porukom**, a obaveza
+   se normalno čuva; nema tihe greške ni pisanja u v1 bucket. Putanja priloga prati odluku iz
+   PLAN-R2 §5.3: `gx2/{companyId}/obligations/{obligationId}/{attachmentId}` — tenant je u
+   putanji, a datum u putanji (`yyyy/mm`) se ne koristi jer prilog pripada obavezi, ne mjesecu.
+
 ## Alternative
 
 1. **Zajednički bucket `gradix`** — manje postavljanja, ali miješa vlasništvo i onemogućava čist prelazak i brisanje v1 podataka. Odbačeno.

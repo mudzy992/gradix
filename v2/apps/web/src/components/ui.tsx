@@ -32,6 +32,12 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
     </>
   ),
+  calendar: (
+    <>
+      <path d="M4 6h16v14H4zM4 10h16" />
+      <path d="M8 3v4M16 3v4" />
+    </>
+  ),
   truck: (
     <>
       <path d="M3 7h10v9H3zM13 10h4l4 3.5V16h-8z" />

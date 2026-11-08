@@ -42,6 +42,11 @@ const TENANT_TABLES = [
   "machines",
   "equipment_categories",
   "workers",
+  // R2b — sve četiri tabele nose `company_id` i imaju RLS politiku.
+  "obligation_types",
+  "obligations",
+  "obligation_versions",
+  "obligation_attachments",
   "audit_events",
   "invitations",
   "password_resets",
@@ -149,6 +154,24 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
           `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, phone)
            VALUES ($1, $2, 'Radnik', $3, '2025-01-15', '+387 00 000 001')`,
           [`wrk_r1b_${suffix}`, companyId, suffix.toUpperCase()],
+        );
+        // R2b: obaveza na radniku te firme (tip dolazi iz seeda pri kreiranju firme).
+        await client.query(
+          `INSERT INTO obligations (id, company_id, type_id, worker_id, created_by)
+           VALUES ($1, $2, $2 || '_obt_medical', $3, $4)`,
+          [`obl_r1b_${suffix}`, companyId, `wrk_r1b_${suffix}`, `usr_r1b_${suffix === "a" ? "admin" : "owner_b"}`],
+        );
+        await client.query(
+          `INSERT INTO obligation_versions (id, company_id, obligation_id, version, expires_at)
+           VALUES ($1, $2, $3, 1, '2027-01-15')`,
+          [`obv_r1b_${suffix}`, companyId, `obl_r1b_${suffix}`],
+        );
+        await client.query(
+          `INSERT INTO obligation_attachments (id, company_id, obligation_id, object_key, file_name,
+                                               content_type, size_bytes, sha256, status)
+           VALUES ($1, $2, $3, 'gx2/' || $2 || '/obligations/' || $3 || '/' || $1, 'rjesenje.pdf',
+                   'application/pdf', 1024, repeat('a', 64), 'ready')`,
+          [`att_r1b_${suffix}`, companyId, `obl_r1b_${suffix}`],
         );
         await client.query(
           `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at)

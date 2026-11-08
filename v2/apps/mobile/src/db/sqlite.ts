@@ -38,6 +38,16 @@ export async function openDb(): Promise<SQLite.SQLiteDatabase> {
       key   TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
     );
+    -- R2b: spisak rokova za offline prikaz. Ime tabele je namjerno "_cache" - ovo NIJE izvor
+    -- istine (server jeste), pa se smije obrisati i ponovo napuniti bez gubitka podataka.
+    CREATE TABLE IF NOT EXISTS obligations_cache (
+      id         TEXT PRIMARY KEY NOT NULL,
+      type_label TEXT NOT NULL,
+      target     TEXT NOT NULL,
+      expires_at TEXT,
+      state      TEXT NOT NULL,
+      days_left  INTEGER
+    );
   `);
   return db;
 }
@@ -108,4 +118,68 @@ export async function writeWatermark(db: SQLite.SQLiteDatabase, value: string): 
     "INSERT INTO sync_meta (key, value) VALUES ('last_sync', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     [value],
   );
+}
+
+/* ------------------------------------------------------------------ rokovi (R2b) */
+
+/**
+ * Lokalna kopija spiska rokova. Offline-first i ovdje: zadnji preuzet spisak ostaje vidljiv bez
+ * veze, uz vrijeme preuzimanja („od prije 2 sata“). Ne čuva se ništa što nije na ekranu — nema
+ * priloga ni brojeva dokumenata.
+ */
+export type LocalObligation = {
+  id: string;
+  typeLabel: string;
+  target: string;
+  expiresAt: string | null;
+  state: string;
+  daysLeft: number | null;
+};
+
+export async function saveObligations(
+  db: SQLite.SQLiteDatabase,
+  rows: LocalObligation[],
+  fetchedAt: string,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.execAsync("DELETE FROM obligations_cache");
+    for (const row of rows) {
+      await db.runAsync(
+        `INSERT INTO obligations_cache (id, type_label, target, expires_at, state, days_left)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [row.id, row.typeLabel, row.target, row.expiresAt, row.state, row.daysLeft],
+      );
+    }
+    await db.runAsync(
+      "INSERT INTO sync_meta (key, value) VALUES ('obligations_fetched_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      [fetchedAt],
+    );
+  });
+}
+
+export async function readObligations(
+  db: SQLite.SQLiteDatabase,
+): Promise<{ rows: LocalObligation[]; fetchedAt: string | null }> {
+  const rows = await db.getAllAsync<{
+    id: string;
+    type_label: string;
+    target: string;
+    expires_at: string | null;
+    state: string;
+    days_left: number | null;
+  }>("SELECT id, type_label, target, expires_at, state, days_left FROM obligations_cache");
+  const meta = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM sync_meta WHERE key = 'obligations_fetched_at'",
+  );
+  return {
+    rows: rows.map((row) => ({
+      id: row.id,
+      typeLabel: row.type_label,
+      target: row.target,
+      expiresAt: row.expires_at,
+      state: row.state,
+      daysLeft: row.days_left,
+    })),
+    fetchedAt: meta?.value ?? null,
+  };
 }

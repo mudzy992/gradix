@@ -39,6 +39,16 @@ export const AUDIT_ACTIONS = [
   "equipment.category_created",
   "equipment.category_updated",
   "import.applied",
+  // R2b
+  "obligation.created",
+  "obligation.updated",
+  "obligation.renewed",
+  "obligation.corrected",
+  "obligation.deleted",
+  "obligation.type_created",
+  "obligation.type_updated",
+  "obligation.attachment_added",
+  "obligation.attachment_removed",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -49,6 +59,9 @@ export const AUDIT_ENTITY_TYPES = [
   "equipment",
   "equipment_category",
   "import",
+  "obligation",
+  "obligation_type",
+  "obligation_attachment",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -76,6 +89,15 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "equipment.category_created": "Kategorija mašina dodana",
   "equipment.category_updated": "Kategorija mašina izmijenjena",
   "import.applied": "Uvoz iz Excela",
+  "obligation.created": "Obaveza dodana",
+  "obligation.updated": "Obaveza izmijenjena",
+  "obligation.renewed": "Obaveza obnovljena",
+  "obligation.corrected": "Obaveza ispravljena",
+  "obligation.deleted": "Obaveza obrisana",
+  "obligation.type_created": "Tip obaveze dodan",
+  "obligation.type_updated": "Tip obaveze izmijenjen",
+  "obligation.attachment_added": "Prilog dodan",
+  "obligation.attachment_removed": "Prilog uklonjen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

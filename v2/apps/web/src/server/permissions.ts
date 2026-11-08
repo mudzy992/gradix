@@ -44,6 +44,18 @@ export const PERMISSIONS = {
   "roles.view": ["OWNER", "ADMIN"],
   // R2a. `workers.view` je širi od `manage`: šef gradilišta mora vidjeti ljude, ali ne mijenja
   // njihove podatke. Isto za mašine — rukovalac vidi svoju mašinu, ne uređuje katalog.
+  // R2b. Rokovi su ono zbog čega aplikacija postoji u pilotu, pa ih vidi i rukovalac/mehaničar:
+  // bolje da vidi da mu ljekarski istječe nego da sazna na gradilištu. Mijenja ih ured.
+  "obligations.view": [
+    "OWNER",
+    "ADMIN",
+    "PROJECT_MANAGER",
+    "SITE_SUPERVISOR",
+    "MACHINE_OPERATOR",
+    "MECHANIC",
+    "ACCOUNTANT",
+  ],
+  "obligations.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "workers.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "workers.manage": ["OWNER", "ADMIN"],
   "equipment.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC"],
@@ -67,6 +79,14 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "roles.view": {
     label: "Pregled matrica rola",
     description: "Koja rola šta smije — samo pregled, ne mijenja dozvole.",
+  },
+  "obligations.view": {
+    label: "Pregled rokova",
+    description: "Obaveze, rokovi i stanje (isteklo / uskoro istječe / važeće) — bez izmjena.",
+  },
+  "obligations.manage": {
+    label: "Upravljanje rokovima",
+    description: "Nove obaveze, obnova, ispravke, tipovi obaveza i prilozi.",
   },
   "workers.view": {
     label: "Pregled radnika",

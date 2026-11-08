@@ -5,7 +5,15 @@
  * Tokeni se drže u `lib/store` (na uređaju Keychain/Keystore, na webu `localStorage`), nikad u AsyncStorage.
  */
 import { ApiError, createClient, type ErrorCode } from "@gradix/contracts";
-import type { LoginResponse, MeResponse, SyncPullResponse, SyncPushRequest, SyncPushResponse } from "@gradix/contracts";
+import type {
+  LoginResponse,
+  MachinesResponse,
+  MeResponse,
+  ObligationsResponse,
+  SyncPullResponse,
+  SyncPushRequest,
+  SyncPushResponse,
+} from "@gradix/contracts";
 import { deleteStore, readStore, writeStore } from "../lib/store";
 
 const ACCESS_KEY = "gx_access";
@@ -114,6 +122,20 @@ export async function pullChanges(
     client.get("/api/sync/pull", undefined, { query: { since }, accessToken }),
   );
   return { items: data.items, lastSyncTimestamp: String(meta?.lastSyncTimestamp ?? since) };
+}
+
+/** Rokovi na telefonu: samo čitanje (R2). Filter `mine=1` daje obaveze gdje sam odgovoran
+ * ili je radnik vezan za moj nalog — a to je jedino što terenski čovjek traži. */
+export async function myObligations(): Promise<ObligationsResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/obligations", undefined, { query: { mine: "1" }, accessToken }),
+  );
+  return data;
+}
+
+export async function machines(): Promise<MachinesResponse> {
+  const { data } = await withToken((accessToken) => client.get("/api/equipment", undefined, { accessToken }));
+  return data;
 }
 
 export type { LoginResponse };

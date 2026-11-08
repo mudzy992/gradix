@@ -44,6 +44,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const canViewWorkers = can(ctx.roles, "workers.view");
   const canManageWorkers = can(ctx.roles, "workers.manage");
   const canViewEquipment = can(ctx.roles, "equipment.view");
+  const canViewObligations = can(ctx.roles, "obligations.view");
   const canViewAudit = can(ctx.roles, "audit.view");
   const canViewRoles = can(ctx.roles, "roles.view");
 
@@ -56,6 +57,16 @@ export default async function AppShell({ children }: { children: React.ReactNode
       // Redoslijed je redoslijed rada: prvo ljudi i mašine, pa uvoz kad se prelazi sa papira.
       label: "Evidencija",
       items: [
+        ...(canViewObligations
+          ? [
+              {
+                href: "/ured/rokovi",
+                label: "Rokovi",
+                icon: "calendar" as const,
+                description: "Ljekarski, registracije, licence",
+              },
+            ]
+          : []),
         ...(canViewEquipment
           ? [
               {

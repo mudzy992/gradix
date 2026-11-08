@@ -5,6 +5,7 @@
  * Sve što ne radi ili nije implementirano — ne postoji na ekranu (A1.5).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -228,6 +229,16 @@ export default function IndexScreen() {
       </Pressable>
 
       {message && <Text style={styles.hint}>{message}</Text>}
+
+      {/*
+        Rokovi su odvojen ekran (R2b), samo čitanje. Link je ovdje, a ne u meniju: na terenu se
+        dolazi zbog dva pitanja — „šta nisam poslao“ i „šta mi istječe“.
+      */}
+      <Link href="/rokovi" asChild>
+        <Pressable style={[styles.button, styles.secondaryButton]} accessibilityRole="link">
+          <Text style={[styles.buttonText, styles.secondaryText]}>Moji rokovi</Text>
+        </Pressable>
+      </Link>
     </ScrollView>
   );
 }

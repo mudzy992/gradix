@@ -390,6 +390,144 @@ export const ImportResult = z.object({
 });
 export type ImportResult = z.infer<typeof ImportResult>;
 
+/* ------------------------------------------------------------------ obaveze (R2b) */
+
+export const ObligationEntityKind = z.enum(["WORKER", "MACHINE", "PROJECT", "COMPANY"]);
+export type ObligationEntityKind = z.infer<typeof ObligationEntityKind>;
+
+export const ObligationStateEnum = z.enum(["valid", "expiring", "expired", "superseded", "no_expiry"]);
+export type ObligationStateName = z.infer<typeof ObligationStateEnum>;
+
+export const ObligationType = z.object({
+  id: z.string(),
+  code: z.string(),
+  label: z.string(),
+  entityKind: ObligationEntityKind,
+  /** Pragovi podsjetnika u danima, najveći prvi. Prazan niz = nema upozorenja prije isteka. */
+  defaultReminderDays: z.array(z.number()),
+  requiresAttachment: z.boolean(),
+  isActive: z.boolean(),
+  sortOrder: z.number(),
+  obligationCount: z.number(),
+});
+export type ObligationType = z.infer<typeof ObligationType>;
+
+export const ObligationTypeInput = z.object({
+  code: z.string().min(2).max(40),
+  label: z.string().min(1).max(80),
+  entityKind: ObligationEntityKind,
+  defaultReminderDays: z.array(z.number().int().min(0).max(365)).max(8).optional(),
+  requiresAttachment: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+export type ObligationTypeInput = z.infer<typeof ObligationTypeInput>;
+
+export const ObligationTypesResponse = z.object({ types: z.array(ObligationType) });
+export const ObligationTypeResponse = z.object({ type: ObligationType });
+
+/** Verzija obaveze — obnova dodaje novu, stara ostaje za historiju. */
+export const ObligationVersion = z.object({
+  version: z.number(),
+  number: z.string().nullable(),
+  issuer: z.string().nullable(),
+  issuedAt: z.string().nullable(),
+  expiresAt: z.string().nullable(),
+  note: z.string().nullable(),
+  attachmentId: z.string().nullable(),
+  createdAt: IsoDate,
+  createdBy: z.string().nullable(),
+});
+export type ObligationVersion = z.infer<typeof ObligationVersion>;
+
+export const ObligationAttachment = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number(),
+  status: z.enum(["pending", "ready"]),
+  createdAt: IsoDate,
+});
+export type ObligationAttachment = z.infer<typeof ObligationAttachment>;
+
+export const Obligation = z.object({
+  id: z.string(),
+  typeId: z.string(),
+  typeLabel: z.string(),
+  typeCode: z.string(),
+  entityKind: ObligationEntityKind,
+  workerId: z.string().nullable(),
+  workerName: z.string().nullable(),
+  machineId: z.string().nullable(),
+  machineCode: z.string().nullable(),
+  machineName: z.string().nullable(),
+  number: z.string().nullable(),
+  issuer: z.string().nullable(),
+  issuedAt: z.string().nullable(),
+  expiresAt: z.string().nullable(),
+  currentVersion: z.number(),
+  responsibleUserId: z.string().nullable(),
+  responsibleName: z.string().nullable(),
+  note: z.string().nullable(),
+  /** Izvedeno iz roka i pragova tipa; nikad se ne čuva kao kolona. */
+  state: ObligationStateEnum,
+  daysLeft: z.number().nullable(),
+  reminderDays: z.array(z.number()),
+  attachments: z.array(ObligationAttachment),
+  createdAt: IsoDate,
+});
+export type Obligation = z.infer<typeof Obligation>;
+
+export const ObligationsResponse = z.object({
+  obligations: z.array(Obligation),
+  counts: z.object({
+    all: z.number(),
+    expired: z.number(),
+    expiring: z.number(),
+    valid: z.number(),
+    no_expiry: z.number(),
+  }),
+  /** Današnji poslovni datum firme — ekran ga prikazuje da se zna po kojoj se zoni računa. */
+  today: z.string(),
+});
+export type ObligationsResponse = z.infer<typeof ObligationsResponse>;
+
+export const ObligationResponse = z.object({
+  obligation: Obligation,
+  versions: z.array(ObligationVersion),
+});
+export type ObligationResponse = z.infer<typeof ObligationResponse>;
+
+export const ObligationInput = z.object({
+  typeId: z.string(),
+  workerId: z.string().nullable().optional(),
+  machineId: z.string().nullable().optional(),
+  scopeCompany: z.boolean().optional(),
+  number: z.string().max(120).nullable().optional(),
+  issuer: z.string().max(200).nullable().optional(),
+  issuedAt: z.string().nullable().optional(),
+  expiresAt: z.string().nullable().optional(),
+  responsibleUserId: z.string().nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+export type ObligationInput = z.infer<typeof ObligationInput>;
+
+/** Obnova = nova verzija. Stara ostaje; `expiresAt` je novi rok. */
+export const ObligationRenewInput = z.object({
+  number: z.string().max(120).nullable().optional(),
+  issuer: z.string().max(200).nullable().optional(),
+  issuedAt: z.string().nullable().optional(),
+  expiresAt: z.string(),
+  note: z.string().max(2000).nullable().optional(),
+});
+export type ObligationRenewInput = z.infer<typeof ObligationRenewInput>;
+
+/** Ispravka greške u unosu — dozvoljena 24 h od unosa, bilježi se sa starom i novom vrijednošću. */
+export const ObligationCorrectInput = ObligationRenewInput.partial({ expiresAt: true }).extend({
+  expiresAt: z.string().nullable().optional(),
+});
+export type ObligationCorrectInput = z.infer<typeof ObligationCorrectInput>;
+
 /* ------------------------------------------------------------------ sync */
 
 /** Vrijednosti moraju biti iste kao `SYNC_ENTITY_TYPES` u `@gradix/domain`. */

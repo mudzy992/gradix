@@ -364,6 +364,14 @@ stanje = 'expired'      ako expires_at < danas
   varijable su postavljene. Do tada prilozi rade **lokalno** (MinIO iz compose) i QA prolazi, a
   produkcijski upload je isključen sa jasnom porukom — a ne tihom greškom.
 - Prilozi su u R2b; R2a ih ne koristi.
+- **Kako je urađeno (2026-11-08):** `storageConfig()` čita `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
+  `MINIO_SECRET_KEY` i opciono `MINIO_BUCKET` (podrazumijevano `gradix-v2`). Ako ih nema, upload se
+  odbija sa `CONFLICT` i porukom „Prilozi još nisu uključeni na ovom serveru (nema MINIO_…)“ —
+  obaveza se normalno čuva, samo prilog ne može. Tip se određuje iz prvih 32 bajta koje klijent
+  šalje uz registraciju (pre uploada), pa pogrešan sadržaj ne stiže do bucketa. Red je `pending`
+  do `…/confirm`, a potvrda poredi veličinu sa onom u bucketu; napušteni `pending` redovi stariji
+  od 1 h brišu se pri sljedećem uploadu (najviše 20). Testovi u `obligations.integration.test.ts`
+  pokrivaju `.exe` pod imenom `ljekarski.pdf` i poruku kad MinIO nije podešen.
 
 ---
 
