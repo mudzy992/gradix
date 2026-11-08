@@ -44,3 +44,13 @@ export {
 } from "./sync";
 
 export { DEFAULT_TIMEZONE, businessDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";
+
+export {
+  SCOPES,
+  SCOPE_LABELS,
+  isScope,
+  resolveScope,
+  type Scope,
+  type ScopeActor,
+  type ScopedAction,
+} from "./scope";

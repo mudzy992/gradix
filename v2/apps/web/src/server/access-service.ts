@@ -15,9 +15,10 @@ import { withCompany, type CompanyId } from "@gradix/db";
 import { writeAudit, ipHash } from "./audit";
 import { hashPassword, checkPasswordPolicy, verifyPassword } from "./password";
 import { generateToken, hashToken, tokenExpiry, TOKEN_TTL_HOURS } from "./tokens";
+import { isScope } from "@gradix/domain";
 
-export type Role = "OWNER" | "ADMIN" | "PROJECT_MANAGER" | "SITE_SUPERVISOR" | "WORKER" | "DRIVER" | "MACHINE_OPERATOR" | "MECHANIC" | "ACCOUNTANT";
-export type Scope = "COMPANY" | "PROJECTS" | "SELF";
+import type { Role, Scope } from "./permissions";
+export type { Role, Scope };
 
 export type Actor = { userId: string; roles: string[] };
 
@@ -40,7 +41,6 @@ export type UserRow = {
   mustChangePassword: boolean;
   roles: string[];
   scope: string;
-  projectIds: string[];
   createdAt: Date;
 };
 
@@ -55,11 +55,10 @@ export async function listUsers(pool: Pool, companyId: CompanyId): Promise<UserR
       must_change_password: boolean;
       roles: string[];
       scope: string;
-      project_ids: string[];
       created_at: Date;
     }>(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.is_active, u.must_change_password,
-              m.roles::text[] AS roles, m.scope, m.project_ids, u.created_at
+              m.roles::text[] AS roles, m.scope, u.created_at
          FROM users u
          JOIN memberships m ON m.user_id = u.id
         WHERE m.company_id = $1
@@ -75,7 +74,6 @@ export async function listUsers(pool: Pool, companyId: CompanyId): Promise<UserR
       mustChangePassword: row.must_change_password,
       roles: row.roles,
       scope: row.scope,
-      projectIds: row.project_ids,
       createdAt: row.created_at,
     }));
   });
@@ -112,7 +110,7 @@ export async function issueInvitation(
   pool: Pool,
   companyId: CompanyId,
   actor: Actor,
-  input: { email: string; roles: Role[]; scope: Scope; projectIds?: string[]; baseUrl: string; ip?: string },
+  input: { email: string; roles: Role[]; scope: Scope; baseUrl: string; ip?: string },
 ): Promise<IssuedInvitation | ServiceError> {
   const email = input.email.trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -121,11 +119,9 @@ export async function issueInvitation(
   if (input.roles.length === 0) {
     return { code: "VALIDATION_FAILED", message: "Odaberite najmanje jednu rolu." };
   }
-  if (input.scope === "PROJECTS" && (input.projectIds ?? []).length === 0) {
-    return {
-      code: "VALIDATION_FAILED",
-      message: "Opseg „dodijeljeni projekti“ traži najmanje jedan projekat.",
-    };
+  // Opseg ima dvije vrijednosti (odluka vlasnika 2026-11-08): `PROJECTS` se vraća u R2.
+  if (!isScope(input.scope)) {
+    return { code: "VALIDATION_FAILED", message: "Opseg nije ispravan." };
   }
 
   const token = generateToken("invite");

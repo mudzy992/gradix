@@ -16,8 +16,8 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   email: z.string().min(3).max(200),
   roles: z.array(z.string()).min(1).max(5),
-  scope: z.enum(["COMPANY", "PROJECTS", "SELF"]).default("COMPANY"),
-  projectIds: z.array(z.string()).max(100).optional(),
+  // Opseg ima dvije vrijednosti; `PROJECTS` se vraća u R2 (docs/PLAN-R2.md).
+  scope: z.enum(["COMPANY", "SELF"]).default("COMPANY"),
 });
 
 const CODE_MAP: Record<string, ErrorCode> = {
@@ -42,7 +42,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       email: parsed.data.email,
       roles: parsed.data.roles as Role[],
       scope: parsed.data.scope as Scope,
-      projectIds: parsed.data.projectIds,
       baseUrl: request.nextUrl.origin,
       ip: clientIp(request),
     });

@@ -10,17 +10,41 @@
 import type { PoolClient } from "pg";
 import { createHash } from "node:crypto";
 
-export type AuditAction =
-  | "invitation.created"
-  | "invitation.accepted"
-  | "invitation.revoked"
-  | "password.reset_issued"
-  | "password.reset_used"
-  | "password.changed"
-  | "user.deactivated"
-  | "user.activated"
-  | "user.membership_changed"
-  | "session.revoked_all";
+/**
+ * Zatvoreni spiskovi za filter u UI-u. Isti izvor kao `AuditAction`, ali i kao vrijednosti u
+ * bazi (`action` je TEXT) — test tvrdi da su sve radnje iz koda u spisku.
+ */
+export const AUDIT_ACTIONS = [
+  "invitation.created",
+  "invitation.accepted",
+  "invitation.revoked",
+  "password.reset_issued",
+  "password.reset_used",
+  "password.changed",
+  "user.deactivated",
+  "user.activated",
+  "user.membership_changed",
+  "session.revoked_all",
+] as const;
+
+export const AUDIT_ENTITY_TYPES = ["invitation", "user", "session"] as const;
+
+/** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  "invitation.created": "Pozivnica poslana",
+  "invitation.accepted": "Pozivnica prihvaćena",
+  "invitation.revoked": "Pozivnica opozvana",
+  "password.reset_issued": "Reset lozinke izdat",
+  "password.reset_used": "Lozinka postavljena preko linka",
+  "password.changed": "Lozinka promijenjena",
+  "user.deactivated": "Osoba deaktivirana",
+  "user.activated": "Osoba aktivirana",
+  "user.membership_changed": "Promijenjene role ili opseg",
+  "session.revoked_all": "Sve sesije ugašene",
+};
+
+/** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** Polja koja se NIKAD ne upisuju u audit — provjerava se prije upisa, ne poslije. */
 const FORBIDDEN_METADATA_KEYS = /token|password|hash|secret/i;

@@ -61,6 +61,18 @@ export default async function PregledPage() {
           >
             Korisnici
           </a>
+          <a
+            href="/ured/role"
+            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
+          >
+            Matrica rola
+          </a>
+          <a
+            href="/ured/audit"
+            className="rounded-[10px] border-2 border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface-muted)]"
+          >
+            Audit trag
+          </a>
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"

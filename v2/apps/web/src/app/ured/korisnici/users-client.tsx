@@ -9,7 +9,7 @@
  *  - primarno dugme je pune širine samo na uskom ekranu (`gx-primary-full`),
  *  - sva stanja postoje: učitavanje, prazno, greška, uspjeh.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Card, EmptyState, Field, Pill, SectionTitle, Skeleton, inputClass } from "@/components/ui";
 
 export type User = {
@@ -45,7 +45,6 @@ const ROLE_BS: Record<string, string> = {
 
 const SCOPE_BS: Record<string, string> = {
   COMPANY: "Cijela firma",
-  PROJECTS: "Dodijeljeni projekti",
   SELF: "Samo svoje",
 };
 
@@ -82,6 +81,7 @@ export default function UsersClient({
   const [issued, setIssued] = useState<IssuedLink>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [editing, setEditing] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -172,6 +172,33 @@ export default function UsersClient({
           : `${user.firstName} je ponovo aktivan.`,
       });
       await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function changeMembership(user: User, roles: string[], scope: string) {
+    setBusyId(user.id);
+    try {
+      const response = await fetch(`/api/users/${user.id}/membership`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ roles, scope }),
+      });
+      const body = await response.json();
+      if (!response.ok || !body.success) {
+        // Greška ostaje u dijalogu: korisnik treba da vidi šta servis odbija i zašto.
+        return body?.error?.message ?? "Izmjena nije prošla.";
+      }
+      setEditing(null);
+      setMessage({
+        tone: "success",
+        text: `Role i opseg za ${user.firstName} su promijenjeni. Trag je zapisan.`,
+      });
+      await load();
+      return null;
+    } catch {
+      return "Nema veze sa serverom. Provjerite mrežu.";
     } finally {
       setBusyId(null);
     }
@@ -288,6 +315,7 @@ export default function UsersClient({
                   busy={busyId === user.id}
                   onReset={() => void issueReset(user)}
                   onToggle={() => void toggleActive(user)}
+                  onEdit={() => setEditing(user)}
                 />
               ))}
             </tbody>
@@ -296,6 +324,15 @@ export default function UsersClient({
       </Card>
 
       {inviteOpen ? <InviteDialog onSubmit={issueInvite} onClose={() => setInviteOpen(false)} /> : null}
+      {editing ? (
+        <MembershipDialog
+          user={editing}
+          actorIsOwner={actorIsOwner}
+          busy={busyId === editing.id}
+          onSave={(roles, scope) => changeMembership(editing, roles, scope)}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -314,6 +351,7 @@ function UserRow({
   busy,
   onReset,
   onToggle,
+  onEdit,
 }: {
   user: User;
   canManage: boolean;
@@ -322,6 +360,7 @@ function UserRow({
   busy: boolean;
   onReset: () => void;
   onToggle: () => void;
+  onEdit: () => void;
 }) {
   const status = statusOf(user);
   /**
@@ -422,6 +461,17 @@ function UserRow({
                     type="button"
                     className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
                     onClick={() => {
+                      setMenuOpen(false);
+                      onEdit();
+                    }}
+                  >
+                    Role i opseg
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
+                    className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
+                    onClick={() => {
                       void navigator.clipboard?.writeText(user.email);
                       setMenuOpen(false);
                     }}
@@ -512,7 +562,10 @@ function InviteDialog({
       aria-modal="true"
       aria-labelledby="invite-title"
     >
-      <div className="w-full max-w-md rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5">
+      <div
+        className="w-full max-w-md overflow-y-auto rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5"
+        style={{ maxHeight: "calc(100vh - 2rem)" }}
+      >
         <h2 id="invite-title" className="mb-3 text-lg font-semibold">
           Nova pozivnica
         </h2>
@@ -578,6 +631,146 @@ function InviteDialog({
             </Button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Dijalog „Role i opseg“.
+ *
+ * Zašto u dijalogu, a ne u redu tabele: mijenja se najviše pet rola i opseg — to je formular,
+ * ne jedna akcija. Red zadržava jednu kontekstualnu akciju, kako je vlasnik tražio.
+ *
+ * Greška servisa se prikazuje U dijalogu, ne iza njega: ako je izmjena odbijena (npr. vlasnik,
+ * posljednji vlasnik), korisnik treba da vidi razlog dok mu je forma još na ekranu.
+ */
+function MembershipDialog({
+  user,
+  actorIsOwner,
+  busy,
+  onSave,
+  onClose,
+}: {
+  user: User;
+  actorIsOwner: boolean;
+  busy: boolean;
+  onSave: (roles: string[], scope: string) => Promise<string | null>;
+  onClose: () => void;
+}) {
+  const [roles, setRoles] = useState<string[]>(user.roles);
+  const [scope, setScope] = useState(user.scope);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const firstField = useRef<HTMLInputElement>(null);
+
+  // Fokus ulazi u dijalog; `Escape` zatvara; fokus se vraća na dugme koje ga je otvorilo.
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    firstField.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previous?.focus?.();
+    };
+  }, [onClose]);
+
+  const options = Object.entries(ROLE_BS).filter(([value]) => value !== "OWNER" || actorIsOwner);
+  const changed = roles.slice().sort().join(",") !== user.roles.slice().sort().join(",") || scope !== user.scope;
+
+  function toggle(role: string) {
+    setRoles((current) =>
+      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-20 grid place-items-center bg-black/40 p-4" role="presentation">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="membership-title"
+        className="w-full max-w-lg overflow-y-auto rounded-[var(--radius-card)] bg-[var(--color-surface)] p-5"
+        // Dijalog je viši od ekrana na 360 px: skroluje SEBE, ne izlazi iz ekrana i ne
+        // ostavlja stranicu da probije ispod njega.
+        style={{ maxHeight: "calc(100vh - 2rem)" }}
+      >
+        <h2 id="membership-title" className="text-lg font-semibold">
+          Role i opseg
+        </h2>
+        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+          {user.firstName} {user.lastName} · {user.email}
+        </p>
+
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-sm font-semibold">Role</legend>
+          <div className="grid gap-1.5">
+            {options.map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm">
+                <input
+                  ref={value === options[0]?.[0] ? firstField : undefined}
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={roles.includes(value)}
+                  onChange={() => toggle(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-sm font-semibold">Opseg</legend>
+          <div className="grid gap-1.5">
+            {Object.entries(SCOPE_BS).map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="membership-scope"
+                  className="h-4 w-4"
+                  checked={scope === value}
+                  onChange={() => setScope(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {error ? (
+          <div className="mt-3">
+            <Alert tone="error" role="alert">
+              {error}
+            </Alert>
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="quiet" onClick={onClose} disabled={busy || saving}>
+            Otkaži
+          </Button>
+          <Button
+            variant="primary"
+            fullWidthOnMobile
+            disabled={busy || saving || roles.length === 0 || !changed}
+            onClick={async () => {
+              setSaving(true);
+              setError(null);
+              const message = await onSave(roles, scope);
+              setError(message);
+              setSaving(false);
+            }}
+          >
+            {saving ? "Čuvam…" : "Sačuvaj"}
+          </Button>
+        </div>
       </div>
     </div>
   );
