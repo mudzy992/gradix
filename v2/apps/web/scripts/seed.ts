@@ -46,6 +46,53 @@ const machines = [
 ];
 
 /**
+ * R3: projekti i tim. Namjerno JEDAN aktivan i jedan završen — lista mora pokazati oba stanja, a
+ * filter po stanju nešto da suzi.
+ */
+const projects = [
+  {
+    id: "prj_dionica",
+    companyId: "cmp_demo",
+    code: "P-01/2026",
+    name: "Dionica Visoko–Kiseljak, km 12+400",
+    status: "ACTIVE",
+    place: "Visoko",
+    address: "Magistralni put M5, km 12+400",
+    startsOn: "2026-03-02",
+    endsOn: "2026-12-15",
+  },
+  {
+    id: "prj_most",
+    companyId: "cmp_demo",
+    code: "P-02/2025",
+    name: "Rekonstrukcija mosta u Kaknju",
+    status: "FINISHED",
+    place: "Kakanj",
+    address: "Most na Bosni, Kakanj",
+    startsOn: "2025-04-01",
+    endsOn: "2025-11-20",
+  },
+];
+
+/**
+ * Tim na projektu. Radnici nastaju iz dodjele (prvi seed mašina i naloga); ovdje je samo veza,
+ * da demo ima „3 · 2“ u listi projekata i da se `PROJECTS` opseg ima na čemu pokazati.
+ */
+const assignments = [
+  { id: "pas_1", projectId: "prj_dionica", workerId: "wrk_demo_amar", from: "2026-03-02" },
+  { id: "pas_2", projectId: "prj_dionica", workerId: "wrk_demo_mario", from: "2026-04-01" },
+  { id: "pas_3", projectId: "prj_dionica", workerId: "wrk_demo_nedim", from: "2026-05-15" },
+  { id: "pas_4", projectId: "prj_dionica", machineId: "mch_bager", from: "2026-03-02" },
+  { id: "pas_5", projectId: "prj_dionica", machineId: "mch_kamion", from: "2026-03-16" },
+];
+
+const workers = [
+  { id: "wrk_demo_amar", first: "Amar", last: "Hadžić", job: "Rukovalac bagerom", hired: "2023-02-01" },
+  { id: "wrk_demo_mario", first: "Mario", last: "Perić", job: "Vozač kipera", hired: "2024-09-15" },
+  { id: "wrk_demo_nedim", first: "Nedim", last: "Softić", job: "Radnik na iskopu", hired: "2025-01-20" },
+];
+
+/**
  * Bitno: `memberships` i `machines` su tenant tabele sa FORCE RLS, pa se pišu isključivo
  * kroz `withCompany`. Kad je aplikacijska rola ujedno vlasnik šeme (Coolify/model B),
  * RLS važi i za ovu konekciju — seed bez scope-a bi pao na „new row violates RLS“.
@@ -100,7 +147,84 @@ try {
     });
   }
 
-  console.log(`Seed gotov: ${companies.length} firme, ${users.length} korisnika, ${machines.length} mašina.`);
+  for (const worker of workers) {
+    await withCompany(pool, companyId("cmp_demo"), async (client) => {
+      const updated = await client.query(
+        "UPDATE workers SET first_name = $2, last_name = $3, job_title = $4 WHERE id = $1",
+        [worker.id, worker.first, worker.last, worker.job],
+      );
+      if (updated.rowCount === 0) {
+        await client.query(
+          `INSERT INTO workers (id, company_id, first_name, last_name, job_title, hired_at)
+           VALUES ($1, 'cmp_demo', $2, $3, $4, $5)`,
+          [worker.id, worker.first, worker.last, worker.job, worker.hired],
+        );
+      }
+    });
+  }
+
+  for (const project of projects) {
+    await withCompany(pool, companyId(project.companyId), async (client) => {
+      const updated = await client.query(
+        `UPDATE projects SET code = $2, name = $3, status = $4, site_place = $5, site_address = $6,
+                             starts_on = $7, ends_on = $8
+          WHERE id = $1`,
+        [
+          project.id,
+          project.code,
+          project.name,
+          project.status,
+          project.place,
+          project.address,
+          project.startsOn,
+          project.endsOn,
+        ],
+      );
+      if (updated.rowCount === 0) {
+        await client.query(
+          `INSERT INTO projects (id, company_id, code, name, status, site_place, site_address, starts_on, ends_on)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            project.id,
+            project.companyId,
+            project.code,
+            project.name,
+            project.status,
+            project.place,
+            project.address,
+            project.startsOn,
+            project.endsOn,
+          ],
+        );
+      }
+    });
+  }
+
+  for (const assignment of assignments) {
+    await withCompany(pool, companyId("cmp_demo"), async (client) => {
+      // Triger brani preklapanje, a `ON CONFLICT` ne postoji za ovaj oblik — zato „probaj, pa
+      // upiši", isto kao kod mašina i članstava.
+      const exists = await client.query("SELECT 1 FROM project_assignments WHERE id = $1", [assignment.id]);
+      if (exists.rowCount === 0) {
+        await client.query(
+          `INSERT INTO project_assignments (id, company_id, project_id, worker_id, machine_id, from_date)
+           VALUES ($1, 'cmp_demo', $2, $3, $4, $5)`,
+          [
+            assignment.id,
+            assignment.projectId,
+            "workerId" in assignment ? assignment.workerId : null,
+            "machineId" in assignment ? assignment.machineId : null,
+            assignment.from,
+          ],
+        );
+      }
+    });
+  }
+
+  console.log(
+    `Seed gotov: ${companies.length} firme, ${users.length} korisnika, ${machines.length} mašina, ` +
+      `${projects.length} projekta, ${assignments.length} dodjela.`,
+  );
 } catch (error) {
   // `withCompany` sam radi ROLLBACK svoje transakcije; ovdje nema otvorene transakcije.
   console.error("Seed nije uspio:", error);
