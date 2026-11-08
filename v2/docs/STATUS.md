@@ -5,7 +5,8 @@
 testovi gotovi, čeka kapiju uživo**
 **Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom, zahtjev → odobrenje) →
 **odobrenje plana R4** → R4 (radni dan na terenu, offline). Planovi i odluke vlasnika:
-`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/DECISIONS/0009`, `0010`.
+`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md` (10 stavki),
+`docs/DECISIONS/0009`, `0010`.
 
 ## Gotovo
 
