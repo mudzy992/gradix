@@ -1,6 +1,14 @@
 # PLAN R2 — projekti i opseg „dodijeljeni projekti“
 
-**Datum:** 2026-11-08 · **Status:** samo stavke, pun plan kad R2 počne
+**Datum:** 2026-11-08 · **Status:** čeka vlasnikov „kreni“ (stavke su odluka; pun plan kad R2 počne)
+
+**Stanje prije početka:** R1a ✅, R1b funkcionalno ✅, dizajn v2 ✅ (vlasnik odobrio 2026-11-08,
+`docs/DEMO-DIZAJN.md`). R2 je prvi rez u kojem se dodaje novi entitet poslije R1 — zato ide
+prvo `projects`, pa sve što na njemu stoji.
+
+**Pitanje na koje čekam odgovor:** ko smije dodijeliti projekat osobi — samo ADMIN/OWNER (kao
+role danas) ili i vođa projekta (`PROJECT_MANAGER`) na svojim projektima? Od toga zavisi da li
+`project_assignments` dobija svoju dozvolu ili se veže na postojeću `users.manage`.
 
 ## Obavezno u R2 (odluka vlasnika, 2026-11-08)
 

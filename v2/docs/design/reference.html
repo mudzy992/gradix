@@ -9,14 +9,24 @@
   --brand:#140A9A;--accent:#FFC82F;--ink:#1B232A;--slate:#59656F;--edge:#7B858D;
   --bg:color-mix(in srgb,var(--ink) 5%,#fff);--panel:#fff;--raise:color-mix(in srgb,var(--ink) 4%,#fff);
   --line:color-mix(in srgb,var(--edge) 28%,#fff);--text:var(--ink);--muted:var(--slate);
-  --primary:var(--brand);--on-primary:#fff;--link:var(--brand);--bar:var(--brand);
+  --sunken:color-mix(in srgb,var(--ink) 7%,#fff);
+  --primary:var(--brand);--on-primary:#fff;--on-accent:var(--ink);--link:var(--brand);--bar:var(--brand);
   --tint:color-mix(in srgb,var(--brand) 9%,#fff);--shadow:0 1px 2px color-mix(in srgb,var(--ink) 9%,transparent);
+  --shadow-lift:0 2px 10px color-mix(in srgb,var(--ink) 8%,transparent);
+  --danger:color-mix(in srgb,var(--ink) 22%,var(--brand));--danger-soft:color-mix(in srgb,var(--brand) 6%,#fff);
+  --success:color-mix(in srgb,var(--ink) 74%,var(--slate));--success-soft:color-mix(in srgb,var(--edge) 14%,#fff);
+  --warn-soft:color-mix(in srgb,var(--accent) 22%,#fff);--scrim:color-mix(in srgb,var(--ink) 45%,transparent);
   --field:var(--edge);color-scheme:light}
 [data-theme=dark]{
   --bg:var(--ink);--panel:color-mix(in srgb,#fff 5%,var(--ink));--raise:color-mix(in srgb,#fff 9%,var(--ink));
   --line:color-mix(in srgb,#fff 13%,var(--ink));--text:#fff;--muted:color-mix(in srgb,#fff 64%,var(--ink));
-  --primary:var(--accent);--on-primary:var(--ink);--link:color-mix(in srgb,var(--brand) 40%,#fff);--bar:var(--link);
-  --tint:color-mix(in srgb,var(--brand) 38%,var(--ink));--shadow:none;--field:color-mix(in srgb,#fff 38%,var(--ink));color-scheme:dark}
+  --sunken:color-mix(in srgb,var(--ink) 88%,#fff);
+  --primary:var(--accent);--on-primary:var(--ink);--on-accent:var(--ink);--link:color-mix(in srgb,var(--brand) 40%,#fff);--bar:var(--link);
+  --tint:color-mix(in srgb,var(--brand) 38%,var(--ink));--shadow:none;--shadow-lift:none;
+  --danger:color-mix(in srgb,#fff 86%,var(--brand));--danger-soft:color-mix(in srgb,#fff 12%,var(--ink));
+  --success:color-mix(in srgb,#fff 88%,var(--slate));--success-soft:color-mix(in srgb,#fff 9%,var(--ink));
+  --warn-soft:color-mix(in srgb,var(--accent) 24%,var(--ink));--scrim:color-mix(in srgb,#fff 45%,var(--ink));
+  --field:color-mix(in srgb,#fff 38%,var(--ink));color-scheme:dark}
 *{box-sizing:border-box;margin:0}
 body{font:14px/1.55 Manrope,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
 .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:13px}
@@ -25,6 +35,7 @@ button,input,select{font:inherit;color:inherit}
 svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 .shell{display:grid;grid-template-columns:232px 1fr;gap:8px;padding:8px;min-height:100vh}
+.scrim{display:none}
 .side{display:flex;flex-direction:column;padding:12px 8px;position:sticky;top:8px;height:calc(100vh - 16px)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em;padding:4px 10px 16px}
 .logo i{width:22px;height:22px;border-radius:7px;background:var(--primary);position:relative}
@@ -106,7 +117,55 @@ td.r,th.r{text-align:right}
 .tile svg{color:var(--link)}
 .timer{font:500 34px "IBM Plex Mono",monospace;letter-spacing:-.03em;margin:6px 0 0}
 .sw{display:flex;gap:10px;flex-wrap:wrap}.sw i{width:56px;height:56px;border-radius:14px;border:1px solid var(--line);display:block}
-@media(max-width:960px){.shell{grid-template-columns:1fr;padding:0}.side{display:none}.main{border-radius:0;border:0}.cols{grid-template-columns:1fr}.top,.page{padding-left:16px;padding-right:16px}.stats{grid-template-columns:1fr 1fr}.ph{flex-direction:column;align-items:flex-start}.kbd{display:none}}
+/* Poruka (note iz „Komponente“) sada ima i stanja: greška, uspjeh, upozorenje. */
+.note.err{background:var(--danger-soft);color:var(--danger)}
+.note.err svg{color:var(--danger)}
+.note.ok{background:var(--success-soft);color:var(--success)}
+.note.ok svg{color:var(--success)}
+.note.warn{background:var(--warn-soft);color:var(--text)}
+.note.warn svg{color:var(--text)}
+
+/* Dijalog: ploča 18 px na zatamnjenoj pozadini. Isti primitivi, ništa novo. */
+.overlay{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:var(--scrim)}
+.overlay.static{position:relative;inset:auto;border-radius:18px}
+.dialog{width:100%;max-width:480px;max-height:calc(100vh - 32px);overflow-y:auto;padding:24px;
+  background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lift)}
+.dialog h2{font-size:20px;letter-spacing:-.01em}
+.dialog .hint{margin-top:4px}
+.check{display:flex;align-items:center;gap:10px;min-height:34px;font-weight:600}
+.check input{width:18px;height:18px;accent-color:var(--primary)}
+
+/* Prazno stanje: isprekidana ivica, naslov, jedna rečenica, najviše jedna akcija. */
+.empty{padding:28px 16px;text-align:center;border:1px dashed var(--line);border-radius:16px}
+.empty b{display:block;font-weight:700}
+.empty span{display:block;margin-top:4px;color:var(--muted);font-size:13px}
+.empty .btn{margin-top:16px}
+
+/* Učitavanje: skeleton trake, bez spinnera i bez teksta. */
+.skel{display:grid;gap:12px}
+.skel i{display:block;height:44px;border-radius:12px;background:var(--raise);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+
+/* Prijava: ploča na pozadini, bez okvira — prije prijave nema navigacije. */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.auth .card{width:100%;max-width:380px;padding:28px}
+.auth .logo{padding:0 0 16px}
+.auth .btn-p{width:100%;justify-content:center;margin-top:8px}
+
+@media(max-width:960px){.shell{grid-template-columns:1fr;padding:0}
+.side{position:fixed;inset:0 auto 0 0;z-index:60;width:264px;height:100%;padding:16px 12px;background:var(--bg);border-right:1px solid var(--line);transform:translateX(-100%)}
+.shell[data-open=true] .side{transform:translateX(0)}
+.shell[data-open=true] .scrim{display:block;position:fixed;inset:0;z-index:50;background:var(--scrim)}.main{border-radius:0;border:0}.cols{grid-template-columns:1fr}.top,.page{padding-left:16px;padding-right:16px}.stats{grid-template-columns:1fr 1fr}.ph{flex-direction:column;align-items:flex-start}.kbd{display:none}}
+@media(max-width:639px){
+  table.cards thead{display:none}
+  table.cards,table.cards tbody,table.cards tr,table.cards td{display:block;width:100%}
+  table.cards tr{border:1px solid var(--line);border-radius:16px;padding:6px 4px;margin-top:12px}
+  table.cards tr:hover{background:transparent}
+  table.cards td{border-top:0;padding:8px 12px;display:flex;gap:12px;align-items:center;justify-content:space-between;text-align:left}
+  table.cards td::before{content:attr(data-label);color:var(--muted);font-size:13px;font-weight:600;flex:none}
+  table.cards td[data-label=""]{display:none}
+}
+@media(min-width:961px){.menu-btn{display:none}}
 @media(prefers-reduced-motion:no-preference){.btn,.nav a,tbody tr,.icon-btn{transition:background .12s,color .12s}}
 </style>
 </head>
@@ -123,10 +182,12 @@ td.r,th.r{text-align:right}
 <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 012-2h6a2 2 0 012 2v16M4 21h10M14 9h2a2 2 0 012 2v5a1.5 1.5 0 003 0V8l-3-3"/></symbol>
 <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
 <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></symbol>
 </defs></svg>
 
-<div class="shell">
+<div class="shell" id="shell">
+  <div class="scrim" id="scrim"></div>
   <aside class="side" aria-label="Glavna navigacija">
     <div class="logo"><i aria-hidden="true"></i>Gradix</div>
     <nav class="nav">
@@ -144,6 +205,7 @@ td.r,th.r{text-align:right}
 
   <div class="main">
     <header class="top">
+      <button class="icon-btn menu-btn" id="menu" aria-label="Otvori navigaciju" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
       <div class="search"><svg><use href="#i-search"/></svg>Traži projekte, radnike, mašine<span class="kbd">Ctrl K</span></div>
       <div class="sp"></div>
       <button class="icon-btn" id="theme" aria-label="Promijeni temu"><svg><use href="#i-moon"/></svg></button>
@@ -185,13 +247,13 @@ td.r,th.r{text-align:right}
 
       <section class="card">
         <h2>Mehanizacija danas</h2>
-        <table>
+        <table class="cards">
           <thead><tr><th>Mašina</th><th>Lokacija</th><th>Rukovalac</th><th class="r">Radni sati</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td><div class="who">CAT 320 bager<span class="mono">BG-02</span></div></td><td>Dionica 2, km 3+100</td><td>Amina Begić</td><td class="r mono">6,5</td><td><span class="chip"><i class="dot"></i>Radi</span></td></tr>
-            <tr><td><div class="who">BOMAG BW 213 valjak<span class="mono">VL-01</span></div></td><td>Dionica 2, km 2+800</td><td>Dino Đurđević</td><td class="r mono">5,0</td><td><span class="chip"><i class="dot"></i>Radi</span></td></tr>
-            <tr><td><div class="who">Volvo A30 damper<span class="mono">DM-03</span></div></td><td>Kamenolom</td><td>Mario Šimić</td><td class="r mono">2,5</td><td><span class="chip"><i class="dot w"></i>Zastoj</span></td></tr>
-            <tr><td><div class="who">MAN TGS 8x4 kamion<span class="mono">K-04</span></div></td><td>Servis</td><td>—</td><td class="r mono">0,0</td><td><span class="chip"><i class="dot o"></i>Na servisu</span></td></tr>
+            <tr><td data-label="Mašina"><div class="who">CAT 320 bager<span class="mono">BG-02</span></div></td><td data-label="Lokacija">Dionica 2, km 3+100</td><td data-label="Rukovalac">Amina Begić</td><td class="r mono" data-label="Sati">6,5</td><td data-label="Status"><span class="chip"><i class="dot"></i>Radi</span></td></tr>
+            <tr><td data-label="Mašina"><div class="who">BOMAG BW 213 valjak<span class="mono">VL-01</span></div></td><td data-label="Lokacija">Dionica 2, km 2+800</td><td data-label="Rukovalac">Dino Đurđević</td><td class="r mono" data-label="Sati">5,0</td><td data-label="Status"><span class="chip"><i class="dot"></i>Radi</span></td></tr>
+            <tr><td data-label="Mašina"><div class="who">Volvo A30 damper<span class="mono">DM-03</span></div></td><td data-label="Lokacija">Kamenolom</td><td data-label="Rukovalac">Mario Šimić</td><td class="r mono" data-label="Sati">2,5</td><td data-label="Status"><span class="chip"><i class="dot w"></i>Zastoj</span></td></tr>
+            <tr><td data-label="Mašina"><div class="who">MAN TGS 8x4 kamion<span class="mono">K-04</span></div></td><td data-label="Lokacija">Servis</td><td data-label="Rukovalac">—</td><td class="r mono" data-label="Sati">0,0</td><td data-label="Status"><span class="chip"><i class="dot o"></i>Na servisu</span></td></tr>
           </tbody>
         </table>
       </section>
@@ -213,12 +275,85 @@ td.r,th.r{text-align:right}
         </section>
       </div>
 
+      <div class="lab"><h1 style="font-size:24px">Dijalozi, stanja i prijava</h1><p class="sub">Isti primitivi: ploča, pilula, polje, poruka. Ništa novo nije uvedeno — samo sastavljeno.</p></div>
+      <div class="grid">
+        <section class="card">
+          <h2 style="margin-bottom:16px">Dijalog: role i opseg</h2>
+          <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-t">
+            <h2 id="dlg-t">Role i opseg</h2>
+            <p class="hint">Mario Šimić · sef@demo.ba</p>
+            <div class="field" style="margin-top:16px">
+              <label>Role</label>
+              <label class="check"><input type="checkbox" checked> Šef gradilišta</label>
+              <label class="check"><input type="checkbox"> Administrator</label>
+              <label class="check"><input type="checkbox"> Radnik</label>
+            </div>
+            <div class="field">
+              <label>Opseg</label>
+              <div class="seg" role="group"><button aria-pressed="true">Cijela firma</button><button aria-pressed="false">Samo svoje</button></div>
+            </div>
+            <div class="row"><button class="btn">Otkaži</button><button class="btn btn-p">Sačuvaj</button></div>
+          </div>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom:16px">Prazno stanje</h2>
+          <div class="empty">
+            <b>U firmi još nema osoba</b>
+            <span>Pozovite prvog čovjeka — dobiće link za postavljanje lozinke.</span>
+            <button class="btn btn-p">+ Pozovi osobu</button>
+          </div>
+          <h2 style="margin:24px 0 16px">Učitavanje</h2>
+          <div class="skel" role="status" aria-label="Učitavam"><i></i><i></i><i></i></div>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom:16px">Poruke</h2>
+          <div class="note err" style="margin-bottom:10px"><svg><use href="#i-warn"/></svg><span>Email ili lozinka nisu ispravni.</span></div>
+          <div class="note ok" style="margin-bottom:10px"><svg><use href="#i-info"/></svg><span>Pozivnica je poslata na ured@demo.ba.</span></div>
+          <div class="note warn"><svg><use href="#i-warn"/></svg><span>Link je istekao ili je već iskorišten.</span></div>
+        </section>
+      </div>
+
+      <div class="grid" style="margin-top:20px">
+        <section class="card">
+          <h2 style="margin-bottom:16px">Prijava</h2>
+          <div class="auth" style="min-height:0;padding:16px 0;background:var(--bg);border-radius:16px">
+            <div class="card" style="box-shadow:none">
+              <div class="logo"><i aria-hidden="true"></i>Gradix</div>
+              <h2 style="font-size:24px;letter-spacing:-.02em">Prijava</h2>
+              <p class="sub" style="margin-bottom:20px">Operativni sistem za niskogradnju.</p>
+              <div class="field"><label for="pri-email">Email</label><input id="pri-email" class="input" placeholder="ime@firma.ba"></div>
+              <div class="field"><label for="pri-pass">Lozinka</label><input id="pri-pass" class="input" type="password" placeholder="••••••••"></div>
+              <button class="btn btn-p">Prijavi se</button>
+              <p class="hint" style="margin-top:16px">Zaboravljena lozinka? Obratite se administratoru firme — on izdaje jednokratni link.</p>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom:16px">Promjena lozinke</h2>
+          <div class="note" style="margin-bottom:16px"><svg><use href="#i-info"/></svg><span>Dok ne postavite novu lozinku, ostatak sistema vam je nedostupan.</span></div>
+          <div class="field"><label for="loz-1">Trenutna lozinka</label><input id="loz-1" class="input" type="password"></div>
+          <div class="field"><label for="loz-2">Nova lozinka</label><input id="loz-2" class="input" type="password"><span class="hint">Najmanje 10 znakova, slovo i broj. Ne smije biti ista kao trenutna.</span></div>
+          <div class="field"><label for="loz-3">Nova lozinka još jednom</label><input id="loz-3" class="input" type="password"></div>
+          <button class="btn btn-p" style="width:100%">Postavi lozinku i nastavi</button>
+          <p class="hint" style="margin-top:16px">Poslije promjene sve ostale sesije se gase — ako je neko drugi bio prijavljen, ispada.</p>
+        </section>
+      </div>
+
       <div class="lab"><h1 style="font-size:24px">Mobilni, teren</h1><p class="sub">Svijetla i tamna tema, krupne mete, jedna primarna akcija.</p></div>
       <div class="phones">
-        <div class="phone" data-theme="light"><div class="card"><span class="sub">M-17, dionica 2</span><div class="timer">00:00:00</div><button class="big"><svg style="width:22px;height:22px"><use href="#i-play"/></svg>Počni radni dan</button></div>
-          <div class="tiles"><div class="tile"><svg><use href="#i-fuel"/></svg>Gorivo</div><div class="tile"><svg><use href="#i-truck"/></svg>Tura</div><div class="tile"><svg><use href="#i-warn"/></svg>Prijavi kvar</div><div class="tile"><svg><use href="#i-shield"/></svg>HSE</div></div></div>
-        <div class="phone" data-theme="dark"><div class="card"><span class="sub">M-17, dionica 2</span><div class="timer">06:12:48</div><button class="big"><svg style="width:22px;height:22px"><use href="#i-play"/></svg>Završi radni dan</button></div>
-          <div class="tiles"><div class="tile"><svg><use href="#i-fuel"/></svg>Gorivo</div><div class="tile"><svg><use href="#i-truck"/></svg>Tura</div><div class="tile"><svg><use href="#i-warn"/></svg>Prijavi kvar</div><div class="tile"><svg><use href="#i-shield"/></svg>HSE</div></div></div>
+        <div class="phone" data-theme="light"><div class="card"><span class="sub">Red za slanje</span><div class="timer">0</div><span class="sub">Sve je poslano.</span>
+          <div class="field" style="margin:14px 0 0"><label for="mob-1">Novi zapis s terena</label><input id="mob-1" class="input" placeholder="npr. Iskop kanala, dionica 2, 40 m"></div>
+          <button class="big"><svg><use href="#i-play"/></svg>Sačuvaj zapis</button>
+          <div class="row" style="justify-content:stretch"><button class="btn" style="width:100%;height:56px;justify-content:center">Pošalji sve</button></div></div></div>
+        <div class="phone" data-theme="dark"><div class="card"><span class="sub">Red za slanje</span><div class="timer">3</div><span class="sub">3 zapisa čeka vezu.</span>
+          <div class="field" style="margin:14px 0 0"><label for="mob-2">Novi zapis s terena</label><input id="mob-2" class="input" placeholder="npr. Iskop kanala, dionica 2, 40 m"></div>
+          <button class="big"><svg><use href="#i-play"/></svg>Sačuvaj zapis</button>
+          <div class="row" style="justify-content:stretch"><button class="btn" style="width:100%;height:56px;justify-content:center">Pošalji sve</button></div></div></div>
+        <div class="phone" data-theme="dark"><div class="card"><div class="logo" style="padding:0 0 12px"><i aria-hidden="true"></i>Gradix</div>
+          <div class="row" style="justify-content:space-between;margin:0 0 12px"><h2 style="font-size:24px">Prijava</h2><button class="btn" style="height:40px">Svijetla</button></div>
+          <div class="field"><label for="mob-3">Email</label><input id="mob-3" class="input" placeholder="ime@firma.ba"></div>
+          <div class="field"><label for="mob-4">Lozinka</label><input id="mob-4" class="input" type="password"></div>
+          <button class="big" style="margin-top:0">Prijavi se</button></div></div>
       </div>
     </main>
   </div>
@@ -227,6 +362,11 @@ td.r,th.r{text-align:right}
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)");
 r.dataset.theme=m.matches?"dark":"light";
 document.getElementById("theme").onclick=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
+const sh=document.getElementById("shell"),mb=document.getElementById("menu"),sc=document.getElementById("scrim");
+const setOpen=(o)=>{sh.dataset.open=o;mb.setAttribute("aria-expanded",String(o))};
+mb.onclick=()=>setOpen(sh.dataset.open!=="true");
+sc.onclick=()=>setOpen(false);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")setOpen(false)});
 document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b)));
 </script>
 </body>

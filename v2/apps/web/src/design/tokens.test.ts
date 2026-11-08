@@ -26,6 +26,11 @@ const globals = stripComments(read("app/globals.css"));
 const shell = stripComments(read("app/shell.css"));
 const ui = stripComments(read("components/ui.tsx"));
 const shellTsx = stripComments(read("components/shell.tsx"));
+// Referenca je izvor istine: ono što piše ovdje mora postojati i u njoj, i obrnuto.
+const reference = readFileSync(
+  join(here, "../../../../docs/design/reference.html"),
+  "utf8",
+);
 
 const PALETTE = ["#140a9a", "#ffc82f", "#1b232a", "#ffffff", "#59656f", "#7b858d"];
 
@@ -147,5 +152,59 @@ describe("gustina i okvir", () => {
     expect(globals).toMatch(/--topbar-h:/);
     expect(shell).toMatch(/\.gx-shell/);
     expect(shell).toMatch(/\.gx-main\s*\{[^}]*border-radius:\s*var\(--radius-panel\)/);
+  });
+});
+
+describe("referenca i kod se ne raziđu", () => {
+  /**
+   * Referenca je izvor istine, ali je pišu ljudi — zato je i ona pod testom. Ne poredi se
+   * ime po ime (referenca koristi kraća imena klasa), nego tri stvari koje bi tiho pobjegle:
+   *  1. token koji postoji u kodu a ne u referenci,
+   *  2. nova boja u referenci (paleta je zatvorena),
+   *  3. komponenta koja je u kodu a nema primjer u referenci.
+   */
+  const referenca = (() => {
+    const bezKomentara = reference.replace(/<!--[\s\S]*?-->/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    return bezKomentara;
+  })();
+
+  it("svaki semantički token iz koda postoji i u referenci, u obje teme", () => {
+    const imena = (source: string) =>
+      new Set([...source.matchAll(/--([a-z][a-z0-9-]*)\s*:/gi)].map((match) => match[1].toLowerCase()));
+    const uKodu = imena(globals);
+    // Tokeni koji su samo za kod (okvir, skala, gradijent) ne moraju biti u statičnoj referenci.
+    const samoUKodu = new Set([
+      "sidebar-w", "topbar-h", "shell-gap", "page-max", "space-1", "space-2", "space-3", "space-4",
+      "space-5", "space-6", "space-7", "text-page", "text-section", "text-body", "text-small",
+      "text-label", "radius-panel", "radius-card", "radius-field", "radius-tile", "radius-pill",
+      "font-sans", "font-mono", "palette-brand", "palette-accent", "palette-ink", "palette-surface",
+      "palette-slate", "palette-edge",
+    ]);
+    const uReferenci = imena(referenca);
+    const nedostaju = [...uKodu].filter((name) => !samoUKodu.has(name) && !uReferenci.has(name));
+    expect(nedostaju, `tokeni kojih nema u reference.html: ${nedostaju.join(", ")}`).toEqual([]);
+  });
+
+  it("referenca ne uvodi nijednu boju van palete", () => {
+    const heksovi = [...referenca.matchAll(/#[0-9a-f]{3,8}\b/gi)].map((match) => match[0].toLowerCase());
+    const dozvoljeni = new Set([...PALETTE, "#fff"]);
+    const nove = [...new Set(heksovi)].filter((value) => !dozvoljeni.has(value));
+    expect(nove, `boje van palete u reference.html: ${nove.join(", ")}`).toEqual([]);
+  });
+
+  it("osam odobrenih komponenti ima primjer u referenci", () => {
+    // Ovo je spisak iz `docs/DEMO-DIZAJN.md` §4 — vlasnik ga je odobrio 2026-11-08.
+    const selektori = [
+      ".dialog", // dijalog
+      ".empty", // prazno stanje
+      ".skel", // učitavanje
+      ".auth", // prijava
+      ".note.err", // poruka (greška) + .ok/.warn u istoj sekciji
+      ".note.warn",
+      "table.cards", // tabela → kartice (matrica rola, liste)
+      ".menu-btn", // drawer ispod 960 px
+    ];
+    const nedostaju = selektori.filter((selector) => !referenca.includes(selector));
+    expect(nedostaju, `nema primjera u reference.html: ${nedostaju.join(", ")}`).toEqual([]);
   });
 });

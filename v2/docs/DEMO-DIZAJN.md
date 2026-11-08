@@ -51,7 +51,7 @@ Tri stanja (prazno, greška, učitavanje) ne postoje u demo bazi, pa skripta za 
 mrežu i vraća **isti ugovor koji API stvarno vraća**; ekran i stilovi su stvarni.
 Stanja koja ne mijenjaju bazu (pogrešna lozinka, nevažeći link) rade bez presretanja.
 
-## 4. Šta referenca NE pokriva (odstupanje — traži tvoju riječ)
+## 4. Odstupanja — **odobrena 2026-11-08, referenca dopunjena**
 
 `reference.html` pokriva: okvir i gornju traku, dugmad, polja, segment, chip, tabelu, rokove,
 poruku i mobilni ekran. **Ne pokriva** ovo, a ekrani ga imaju:
@@ -67,9 +67,16 @@ poruku i mobilni ekran. **Ne pokriva** ovo, a ekrani ga imaju:
 | 7 | Drawer ispod 960 px | sidebar klizi preko sadržaja, `Esc` i klik van zatvaraju | `360-*-korisnici-drawer` |
 | 8 | Mobilni ekran | ista tipografija i teme; umjesto „Počni radni dan“ je stvarna akcija R0 („Sačuvaj zapis“) + pločica reda za slanje | `apps/mobile` |
 
-**Odluka koju tražim:** (a) prihvataš ovih 8 kao „isto, bez novog jezika“ i onda dopunjavam
-`reference.html` u istom commitu, ili (b) mijenjaš nešto. Do odluke `reference.html` **nije**
-mijenjan.
+Dopuna reference u istom commitu: `docs/design/reference.html` (tokeni `--danger`, `--danger-soft`,
+`--success`, `--success-soft`, `--warn-soft`, `--scrim`, `--sunken`, `--shadow-lift`; sekcija
+„Dijalozi, stanja i prijava“; drawer s hamburgerom; `table.cards`; mobilni sa stvarnom akcijom) i
+`docs/design/DESIGN.md` (§ Stanja i slojevi, § Mobilni).
+
+**Vlasnik je 2026-11-08 prihvatio sve osam** kao „isto, bez novog jezika“. `reference.html` je
+zato dopunjen u istom commitu: tokeni stanja (`--danger`, `--danger-soft`, `--success`,
+`--success-soft`, `--warn-soft`, `--scrim`, `--sunken`, `--shadow-lift`), sekcija „Dijalozi,
+stanja i prijava“, drawer ispod 960 px s hamburgerom, tabela→kartice ispod 640 px i mobilni
+ekran sa stvarnom akcijom R0. Pisana pravila su u `docs/design/DESIGN.md` (§ Stanja i slojevi).
 
 ## 5. Šta je provjereno, a šta nije
 

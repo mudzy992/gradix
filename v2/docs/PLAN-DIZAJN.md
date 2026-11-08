@@ -1,6 +1,6 @@
 # PLAN — dizajn v2 po `DESIGN.md` (zamjena odbačenih smjerova A/B i R1c okvira)
 
-**Datum:** 2026-11-07 · **Izvor istine:** `docs/design/DESIGN.md` + `docs/design/reference.html`
+**Datum:** 2026-11-07 · **Status:** ✅ završeno 2026-11-08 (vlasnik odobrio; odstupanja dopunjena u referenci) · **Izvor istine:** `docs/design/DESIGN.md` + `docs/design/reference.html`
 **Obim:** samo vizuelno. Nijedna funkcionalnost se ne mijenja, nijedan API, nijedna dozvola.
 **Kapija:** vlasnik pregleda snimke u **obje teme**, 1440 i 360, sva stanja ekrana.
 
@@ -40,7 +40,13 @@ bez sjenki, 36 px red), `demo-r1a/`, `demo-r1b/`, `r1c-predlog/`, `PALETA.md`, `
 - Oblik iz reference: ploča 18 px, kartica 16 px, polje 12 px, dugme/chip pilula.
 - Tema: `data-theme` na `<html>`, obje vrijednosti moraju postojati.
 
-## Odstupanje od reference
+## Odstupanje od reference — riješeno
+
+Vlasnik je 2026-11-08 prihvatio osam elemenata kao „isto, bez novog jezika“, pa su dopunjeni u
+`reference.html` (tokeni stanja, sekcija „Dijalozi, stanja i prijava“, drawer, `table.cards`,
+mobilni) i u `DESIGN.md` (§ Stanja i slojevi). Popis sa snimkama: `docs/DEMO-DIZAJN.md` §4.
+
+<details><summary>Prvobitni tekst (prije odobrenja)</summary>
 
 Referenca pokriva: okvir, gornju traku, dugmad, polja, segment, chip, tabelu, rokove, poruku,
 mobilni ekran. **Ne pokriva**: dijaloge (pozivnica, role i opseg, detalj audita), prazna stanja,
@@ -49,6 +55,7 @@ učitavanje, ekran prijave i promjene lozinke, tabelu matrice rola.
 Za te dijelove ne izmišljam nov vizuelni jezik: koristim iste tokene i iste primitive (ploča,
 pilula, polje, chip, poruka). **To je odstupanje i traži tvoju riječ** — prije nego dopunim
 `reference.html`, ne mijenjam ga sam. Sve takve tačke su popisane u izvještaju.
+</details>
 
 ## Ne ulazi
 

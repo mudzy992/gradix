@@ -18,7 +18,7 @@
 | 7 | Mobilni kostur + offline zapis i sync | ✅ 5/5 testova; **native (android) bundle se builda** — `expo export -p android` |
 | R1a | Pristup: pozivnice, reset, obavezna promjena, deaktivacija, rate limit u bazi | ✅ 9/9 integracijskih testova, 24 snimka svih stanja |
 | R1b | Matrica rola (pregled), dodjela rola i opsega, audit trag sa filterima | ✅ funkcionalno (23/23 testa), dizajn prepisan u „dizajn v2“ |
-| Dizajn v2 | Tokeni (6 boja, obje teme), `next/font`, okvir, primitivi, svi ekrani, mobilni sa istim tokenima | ✅ kod + testovi + 68 snimaka; **čeka vlasnikovu riječ** (`docs/DEMO-DIZAJN.md`) |
+| Dizajn v2 | Tokeni (6 boja, obje teme), `next/font`, okvir, primitivi, svi ekrani, mobilni sa istim tokenima | ✅ kod + testovi + 68 snimaka; **vlasnik odobrio 2026-11-08**, referenca dopunjena |
 | 8 | `contracts` (OpenAPI iz koda) | ❌ nije urađeno — vidi „ne radi“ |
 | 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
@@ -56,9 +56,9 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 - **Mobilni ima jedan entitet (`note`)**; radni dan/ture/gorivo su R4/R5.
 - **Dizajn v2** je prepisan po `docs/design/DESIGN.md` + `reference.html` (okvir, primitivi, svi
   ekrani, obje teme, mobilni sa istim tokenima). Stari smjerovi A/B i R1c okvir su **obrisani**.
-- **Osam elemenata nije u referenci** (dijalozi, prazna stanja, učitavanje, prijava, lozinke,
-  matrica rola, drawer, mobilna akcija) — riješeni postojećim primitivima, čekaju vlasnikovu
-  riječ prije nego se dopuni `reference.html`. Popis i snimke: `docs/DEMO-DIZAJN.md` §4.
+- **Osam elemenata je bilo van reference** (dijalozi, prazna stanja, učitavanje, prijava, lozinke,
+  matrica rola, drawer, mobilna akcija). Vlasnik ih je 2026-11-08 odobrio, pa su dopunjeni u
+  `reference.html` i `DESIGN.md` u istom commitu (`docs/DEMO-DIZAJN.md` §4).
 - **Mobilni fontovi** su statičke instance istih `woff2` fajlova kao web (`manrope-500/600/700/800`,
   `plex-mono-500`), spojeni latin + latin-ext; web ostaje `next/font/local`.
 - **`expo-secure-store` nema web implementaciju** — sav pristup skladištu ide kroz
@@ -69,11 +69,10 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 ## Otvoreno za vlasnika
 
-1. **Dizajn v2 — kapija.** Pogledaj `docs/demo-dizajn/` (68 snimaka: 17 stanja × 1440/360 ×
-   svijetla/tamna) uz `docs/DEMO-DIZAJN.md`. Trebam: (a) prihvataš osam odstupanja iz §4
-   (dijalozi, prazna stanja, učitavanje, prijava, lozinke, matrica rola, drawer, mobilna akcija)
-   ili mijenjaš nešto, (b) potvrda da mobilni smije ostati na web izdanju do prvog uređaja
-   (u sandboxu nema emulatora).
+1. **R2 — potvrda redoslijeda.** Plan je u `docs/PLAN-R2.md`: `projects` + `project_assignments`,
+   opseg `PROJECTS` u `resolveScope`, izbor projekata u dijalogu i E2E izolacija. Prije koda
+   trebam tvoje „kreni“ i odgovor na jedno pitanje: **ko smije dodijeliti projekat** osobi —
+   samo ADMIN/OWNER (kao role danas) ili i vođa projekta?
 2. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
    `/infra/coolify/docker-compose.yml`, tri varijable (`DATABASE_URL`, `AUTH_SECRET`,
    `RUN_MIGRATIONS=true`), domena `https://gradix.ba101.top` → port 3000.

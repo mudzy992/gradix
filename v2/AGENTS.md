@@ -71,5 +71,5 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 `docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (0001 G0 odluke, 0002 Prisma blokada,
 0003 tenant/RLS, 0004 novac, 0005 sesije, 0006 MinIO bucket) · `docs/DEMO-G1.md` (kako pokazati)
 · `docs/design/DESIGN.md` + `reference.html` (dizajn) · `docs/DEMO-DIZAJN.md` (snimci i
-odstupanja od reference)
-· `docs/GH-SECRETS.md` (koje varijable trebaju) · `MASTER_BRIEF.md`.
+odobrena odstupanja od reference) · `docs/GH-SECRETS.md` (koje varijable trebaju) ·
+`MASTER_BRIEF.md`.
