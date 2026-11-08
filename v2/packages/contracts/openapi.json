@@ -4582,7 +4582,8 @@
                     "type": "string",
                     "enum": [
                       "COMPANY",
-                      "PROJECTS"
+                      "PROJECTS",
+                      "SELF"
                     ]
                   }
                 },
@@ -5601,7 +5602,8 @@
                     "type": "string",
                     "enum": [
                       "COMPANY",
-                      "PROJECTS"
+                      "PROJECTS",
+                      "SELF"
                     ]
                   }
                 },
@@ -13812,6 +13814,24 @@
                                   "null"
                                 ]
                               },
+                              "projectId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "projectCode": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "projectName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
                               "number": {
                                 "type": [
                                   "string",
@@ -13935,6 +13955,9 @@
                               "machineId",
                               "machineCode",
                               "machineName",
+                              "projectId",
+                              "projectCode",
+                              "projectName",
                               "number",
                               "issuer",
                               "issuedAt",
@@ -14488,6 +14511,24 @@
                                 "null"
                               ]
                             },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "number": {
                               "type": [
                                 "string",
@@ -14611,6 +14652,9 @@
                             "machineId",
                             "machineCode",
                             "machineName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
                             "number",
                             "issuer",
                             "issuedAt",
@@ -15135,6 +15179,12 @@
                       "null"
                     ]
                   },
+                  "projectId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "scopeCompany": {
                     "type": "boolean"
                   },
@@ -15286,6 +15336,24 @@
                                 "null"
                               ]
                             },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "number": {
                               "type": [
                                 "string",
@@ -15409,6 +15477,9 @@
                             "machineId",
                             "machineCode",
                             "machineName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
                             "number",
                             "issuer",
                             "issuedAt",
@@ -16008,6 +16079,24 @@
                                 "null"
                               ]
                             },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "number": {
                               "type": [
                                 "string",
@@ -16131,6 +16220,9 @@
                             "machineId",
                             "machineCode",
                             "machineName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
                             "number",
                             "issuer",
                             "issuedAt",
@@ -16660,6 +16752,12 @@
                     ]
                   },
                   "machineId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "projectId": {
                     "type": [
                       "string",
                       "null"
@@ -17278,6 +17376,24 @@
                                 "null"
                               ]
                             },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "number": {
                               "type": [
                                 "string",
@@ -17401,6 +17517,9 @@
                             "machineId",
                             "machineCode",
                             "machineName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
                             "number",
                             "issuer",
                             "issuedAt",
@@ -18059,6 +18178,24 @@
                                 "null"
                               ]
                             },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "number": {
                               "type": [
                                 "string",
@@ -18182,6 +18319,9 @@
                             "machineId",
                             "machineCode",
                             "machineName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
                             "number",
                             "issuer",
                             "issuedAt",
@@ -18818,6 +18958,9 @@
                               "requiresAttachment": {
                                 "type": "boolean"
                               },
+                              "blocksAssignment": {
+                                "type": "boolean"
+                              },
                               "isActive": {
                                 "type": "boolean"
                               },
@@ -18835,6 +18978,7 @@
                               "entityKind",
                               "defaultReminderDays",
                               "requiresAttachment",
+                              "blocksAssignment",
                               "isActive",
                               "sortOrder",
                               "obligationCount"
@@ -19321,6 +19465,9 @@
                             "requiresAttachment": {
                               "type": "boolean"
                             },
+                            "blocksAssignment": {
+                              "type": "boolean"
+                            },
                             "isActive": {
                               "type": "boolean"
                             },
@@ -19338,6 +19485,7 @@
                             "entityKind",
                             "defaultReminderDays",
                             "requiresAttachment",
+                            "blocksAssignment",
                             "isActive",
                             "sortOrder",
                             "obligationCount"
@@ -19798,6 +19946,9 @@
                   "requiresAttachment": {
                     "type": "boolean"
                   },
+                  "blocksAssignment": {
+                    "type": "boolean"
+                  },
                   "sortOrder": {
                     "type": "integer",
                     "minimum": -9007199254740991,
@@ -19881,6 +20032,9 @@
                             "requiresAttachment": {
                               "type": "boolean"
                             },
+                            "blocksAssignment": {
+                              "type": "boolean"
+                            },
                             "isActive": {
                               "type": "boolean"
                             },
@@ -19898,6 +20052,7 @@
                             "entityKind",
                             "defaultReminderDays",
                             "requiresAttachment",
+                            "blocksAssignment",
                             "isActive",
                             "sortOrder",
                             "obligationCount"
@@ -20366,6 +20521,9 @@
                     }
                   },
                   "requiresAttachment": {
+                    "type": "boolean"
+                  },
+                  "blocksAssignment": {
                     "type": "boolean"
                   },
                   "sortOrder": {
@@ -24686,6 +24844,4125 @@
             "name": "since",
             "in": "query",
             "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "operationId": "get_projects",
+        "summary": "Projekti firme; sa opsegom „dodijeljeni projekti“ samo oni na koje je osoba dodijeljena.",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PLANNED",
+                                  "ACTIVE",
+                                  "PAUSED",
+                                  "FINISHED",
+                                  "CANCELLED"
+                                ]
+                              },
+                              "siteAddress": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "sitePlace": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "startsOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "endsOn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "managerWorkerId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "managerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "note": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "isActive": {
+                                "type": "boolean"
+                              },
+                              "workerCount": {
+                                "type": "number"
+                              },
+                              "machineCount": {
+                                "type": "number"
+                              },
+                              "overdueObligations": {
+                                "type": "number"
+                              },
+                              "expiringObligations": {
+                                "type": "number"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "description": "ISO 8601, UTC"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "status",
+                              "siteAddress",
+                              "sitePlace",
+                              "startsOn",
+                              "endsOn",
+                              "managerWorkerId",
+                              "managerName",
+                              "note",
+                              "isActive",
+                              "workerCount",
+                              "machineCount",
+                              "overdueObligations",
+                              "expiringObligations",
+                              "createdAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "projects"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.view`.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "post_projects",
+        "summary": "Novi projekat (`projects.manage`).",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "project": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PLANNED",
+                                "ACTIVE",
+                                "PAUSED",
+                                "FINISHED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "siteAddress": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "sitePlace": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "startsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "endsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerWorkerId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "note": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "workerCount": {
+                              "type": "number"
+                            },
+                            "machineCount": {
+                              "type": "number"
+                            },
+                            "overdueObligations": {
+                              "type": "number"
+                            },
+                            "expiringObligations": {
+                              "type": "number"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "description": "ISO 8601, UTC"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "name",
+                            "status",
+                            "siteAddress",
+                            "sitePlace",
+                            "startsOn",
+                            "endsOn",
+                            "managerWorkerId",
+                            "managerName",
+                            "note",
+                            "isActive",
+                            "workerCount",
+                            "machineCount",
+                            "overdueObligations",
+                            "expiringObligations",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "project"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.manage`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PLANNED",
+                      "ACTIVE",
+                      "PAUSED",
+                      "FINISHED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "siteAddress": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sitePlace": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "endsOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "managerWorkerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "operationId": "get_projects_id",
+        "summary": "Jedan projekat; tuđi projekat u istoj firmi je 403, tuđa firma 404.",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "project": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PLANNED",
+                                "ACTIVE",
+                                "PAUSED",
+                                "FINISHED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "siteAddress": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "sitePlace": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "startsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "endsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerWorkerId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "note": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "workerCount": {
+                              "type": "number"
+                            },
+                            "machineCount": {
+                              "type": "number"
+                            },
+                            "overdueObligations": {
+                              "type": "number"
+                            },
+                            "expiringObligations": {
+                              "type": "number"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "description": "ISO 8601, UTC"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "name",
+                            "status",
+                            "siteAddress",
+                            "sitePlace",
+                            "startsOn",
+                            "endsOn",
+                            "managerWorkerId",
+                            "managerName",
+                            "note",
+                            "isActive",
+                            "workerCount",
+                            "machineCount",
+                            "overdueObligations",
+                            "expiringObligations",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "project"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.view`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "patch_projects_id",
+        "summary": "Izmjena projekta: naziv, status, lokacija, period, rukovodilac.",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "project": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PLANNED",
+                                "ACTIVE",
+                                "PAUSED",
+                                "FINISHED",
+                                "CANCELLED"
+                              ]
+                            },
+                            "siteAddress": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "sitePlace": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "startsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "endsOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerWorkerId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "managerName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "note": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "isActive": {
+                              "type": "boolean"
+                            },
+                            "workerCount": {
+                              "type": "number"
+                            },
+                            "machineCount": {
+                              "type": "number"
+                            },
+                            "overdueObligations": {
+                              "type": "number"
+                            },
+                            "expiringObligations": {
+                              "type": "number"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "description": "ISO 8601, UTC"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "code",
+                            "name",
+                            "status",
+                            "siteAddress",
+                            "sitePlace",
+                            "startsOn",
+                            "endsOn",
+                            "managerWorkerId",
+                            "managerName",
+                            "note",
+                            "isActive",
+                            "workerCount",
+                            "machineCount",
+                            "overdueObligations",
+                            "expiringObligations",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "project"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PLANNED",
+                      "ACTIVE",
+                      "PAUSED",
+                      "FINISHED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "siteAddress": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sitePlace": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "endsOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "managerWorkerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/assignments": {
+      "get": {
+        "operationId": "get_projects_id_assignments",
+        "summary": "Tim i mašine na projektu, sa blokadama zbog isteklih obaveza.",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "assignments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "projectId": {
+                                "type": "string"
+                              },
+                              "workerId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "workerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "machineId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "machineCode": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "machineName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fromDate": {
+                                "type": "string"
+                              },
+                              "toDate": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "note": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "blocked": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "obligationId": {
+                                      "type": "string"
+                                    },
+                                    "typeLabel": {
+                                      "type": "string"
+                                    },
+                                    "covered": {
+                                      "type": "boolean"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "obligationId",
+                                    "typeLabel",
+                                    "covered"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "description": "ISO 8601, UTC"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "projectId",
+                              "workerId",
+                              "workerName",
+                              "machineId",
+                              "machineCode",
+                              "machineName",
+                              "fromDate",
+                              "toDate",
+                              "note",
+                              "blocked",
+                              "createdAt"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "today": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "assignments",
+                        "today"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.view`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "activeOn",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "post_projects_id_assignments",
+        "summary": "Dodjela radnika ili mašine; blokada s razlogom i evidentirana iznimka (`projects.assign`).",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "assignment": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "projectId": {
+                              "type": "string"
+                            },
+                            "workerId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "workerName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "machineId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "machineCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "machineName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "fromDate": {
+                              "type": "string"
+                            },
+                            "toDate": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "note": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "blocked": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "obligationId": {
+                                    "type": "string"
+                                  },
+                                  "typeLabel": {
+                                    "type": "string"
+                                  },
+                                  "covered": {
+                                    "type": "boolean"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "obligationId",
+                                  "typeLabel",
+                                  "covered"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "description": "ISO 8601, UTC"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "projectId",
+                            "workerId",
+                            "workerName",
+                            "machineId",
+                            "machineCode",
+                            "machineName",
+                            "fromDate",
+                            "toDate",
+                            "note",
+                            "blocked",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "assignment"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.assign`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "machineId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "fromDate": {
+                    "type": "string"
+                  },
+                  "toDate": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "overrides": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "obligationId": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 10,
+                          "maxLength": 500
+                        },
+                        "validUntil": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "obligationId",
+                        "reason",
+                        "validUntil"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "fromDate"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/assignments/{assignmentId}": {
+      "delete": {
+        "operationId": "delete_projects_id_assignments_assignmentId",
+        "summary": "Skidanje dodjele; dodjela ostaje u auditu.",
+        "tags": [
+          "projects"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "ok"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_ENTITY_TYPE_UNKNOWN",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_CLIENT_AT_INVALID",
+                            "SYNC_SINCE_INVALID",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `projects.assign`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
             "schema": {
               "type": "string"
             }

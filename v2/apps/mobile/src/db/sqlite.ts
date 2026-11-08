@@ -40,6 +40,17 @@ export async function openDb(): Promise<SQLite.SQLiteDatabase> {
     );
     -- R2b: spisak rokova za offline prikaz. Ime tabele je namjerno "_cache" - ovo NIJE izvor
     -- istine (server jeste), pa se smije obrisati i ponovo napuniti bez gubitka podataka.
+    -- R3: projekti na koje je osoba dodijeljena. Isti obrazac kao rokova keš: server je izvor
+    -- istine, lokalna kopija postoji da ekran ne bude prazan bez veze.
+    CREATE TABLE IF NOT EXISTS projects_cache (
+      id         TEXT PRIMARY KEY NOT NULL,
+      code       TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      status     TEXT NOT NULL,
+      site_place TEXT,
+      starts_on  TEXT,
+      ends_on    TEXT
+    );
     CREATE TABLE IF NOT EXISTS obligations_cache (
       id         TEXT PRIMARY KEY NOT NULL,
       type_label TEXT NOT NULL,
@@ -179,6 +190,68 @@ export async function readObligations(
       expiresAt: row.expires_at,
       state: row.state,
       daysLeft: row.days_left,
+    })),
+    fetchedAt: meta?.value ?? null,
+  };
+}
+
+/* ---------------------------------------------------------------- projekti (R3) */
+
+export type LocalProject = {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  sitePlace: string | null;
+  startsOn: string | null;
+  endsOn: string | null;
+};
+
+export async function saveProjects(
+  db: SQLite.SQLiteDatabase,
+  rows: LocalProject[],
+  fetchedAt: string,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.execAsync("DELETE FROM projects_cache");
+    for (const row of rows) {
+      await db.runAsync(
+        `INSERT INTO projects_cache (id, code, name, status, site_place, starts_on, ends_on)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [row.id, row.code, row.name, row.status, row.sitePlace, row.startsOn, row.endsOn],
+      );
+    }
+    await db.runAsync(
+      "INSERT INTO sync_meta (key, value) VALUES ('projects_fetched_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      [fetchedAt],
+    );
+  });
+}
+
+export async function readProjects(
+  db: SQLite.SQLiteDatabase,
+): Promise<{ rows: LocalProject[]; fetchedAt: string | null }> {
+  const rows = await db.getAllAsync<{
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+    site_place: string | null;
+    starts_on: string | null;
+    ends_on: string | null;
+  }>("SELECT id, code, name, status, site_place, starts_on, ends_on FROM projects_cache ORDER BY code");
+  const meta = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM sync_meta WHERE key = 'projects_fetched_at'",
+  );
+  return {
+    rows: rows.map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      status: row.status,
+      sitePlace: row.site_place,
+      startsOn: row.starts_on,
+      endsOn: row.ends_on,
     })),
     fetchedAt: meta?.value ?? null,
   };

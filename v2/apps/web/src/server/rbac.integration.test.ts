@@ -268,7 +268,9 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
         expect(ROLE_LABELS[role].description.length).toBeGreaterThan(15);
       }
       expect(permissionsFor("OWNER").length).toBeGreaterThan(0);
-      expect(permissionsFor("WORKER")).toEqual([]);
+      // Radnik od R3 ima TAČNO `projects.view` — prije R3 nije imao ništa. Tvrdnja je namjerno
+      // tačna lista, a ne „prazno": dozvola koja se tiho doda radniku mora oboriti test.
+      expect(permissionsFor("WORKER")).toEqual(["projects.view"]);
     });
 
     it("ADMIN vidi matricu, WORKER dobija 403", async () => {

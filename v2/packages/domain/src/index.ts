@@ -58,10 +58,21 @@ export {
 } from "./obligations";
 
 export {
+  assignmentBlockMessage,
+  checkAssignment,
+  isOverrideActive,
+  type AssignmentBlocker,
+  type AssignmentCheck,
+  type AssignmentObligation,
+  type AssignmentOverride,
+} from "./assignments";
+
+export {
   SCOPES,
   SCOPE_LABELS,
   isScope,
   resolveScope,
+  visibleProjectIds,
   type Scope,
   type ScopeActor,
   type ScopedAction,

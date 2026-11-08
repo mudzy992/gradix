@@ -364,6 +364,8 @@ function CreateDialog({
   const selected = types.find((type) => type.id === typeId) ?? null;
   const [workerId, setWorkerId] = useState("");
   const [machineId, setMachineId] = useState("");
+  // R3: obaveza na projektu (dozvola, saglasnost, HSE elaborat).
+  const [projectId, setProjectId] = useState("");
   const [number, setNumber] = useState("");
   const [issuer, setIssuer] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
@@ -372,6 +374,7 @@ function CreateDialog({
   const [saving, setSaving] = useState(false);
   const [workers, setWorkers] = useState<WorkerOption[] | null>(null);
   const [machines, setMachines] = useState<MachineOption[] | null>(null);
+  const [projects, setProjects] = useState<{ id: string; code: string; name: string }[] | null>(null);
 
   const kind = selected?.entityKind ?? "WORKER";
 
@@ -389,7 +392,13 @@ function CreateDialog({
         if (result.ok) setMachines(result.data.machines);
       })();
     }
-  }, [kind, workers, machines]);
+    if (kind === "PROJECT" && projects === null) {
+      void (async () => {
+        const result = await apiCall<{ projects: { id: string; code: string; name: string }[] }>("/api/projects");
+        if (result.ok) setProjects(result.data.projects);
+      })();
+    }
+  }, [kind, workers, machines, projects]);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -402,6 +411,7 @@ function CreateDialog({
           typeId,
           workerId: kind === "WORKER" ? workerId : null,
           machineId: kind === "MACHINE" ? machineId : null,
+          projectId: kind === "PROJECT" ? projectId : null,
           scopeCompany: kind === "COMPANY",
           number: number.trim() || null,
           issuer: issuer.trim() || null,
@@ -486,6 +496,25 @@ function CreateDialog({
               {(machines ?? []).filter((machine) => machine.isActive).map((machine) => (
                 <option key={machine.id} value={machine.id}>
                   {machine.code} · {machine.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
+
+        {kind === "PROJECT" ? (
+          <Field label="Projekat" htmlFor="new-project">
+            <select
+              id="new-project"
+              className={inputClass}
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
+              required
+            >
+              <option value="">— izaberite —</option>
+              {(projects ?? []).map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.code} · {project.name}
                 </option>
               ))}
             </select>

@@ -59,6 +59,8 @@ export type ObligationTypeRow = {
   entityKind: string;
   defaultReminderDays: number[];
   requiresAttachment: boolean;
+  /** R3: istek ovog tipa blokira dodjelu radnika/mašine na projekat (B5.4). */
+  blocksAssignment: boolean;
   isActive: boolean;
   sortOrder: number;
   obligationCount: number;
@@ -66,7 +68,7 @@ export type ObligationTypeRow = {
 
 const TYPE_SELECT = `
   SELECT t.id, t.code, t.label, t.entity_kind, t.default_reminder_days::text AS reminder_days,
-         t.requires_attachment, t.is_active, t.sort_order,
+         t.requires_attachment, t.blocks_assignment, t.is_active, t.sort_order,
          (SELECT count(*)::int FROM obligations o WHERE o.type_id = t.id) AS obligation_count
     FROM obligation_types t
 `;
@@ -78,6 +80,7 @@ const toType = (row: Record<string, unknown>): ObligationTypeRow => ({
   entityKind: String(row.entity_kind),
   defaultReminderDays: parseThresholds(row.reminder_days),
   requiresAttachment: Boolean(row.requires_attachment),
+  blocksAssignment: Boolean(row.blocks_assignment),
   isActive: Boolean(row.is_active),
   sortOrder: Number(row.sort_order),
   obligationCount: Number(row.obligation_count),
@@ -253,6 +256,9 @@ export type ObligationRow = {
   machineId: string | null;
   machineCode: string | null;
   machineName: string | null;
+  projectId: string | null;
+  projectCode: string | null;
+  projectName: string | null;
   number: string | null;
   issuer: string | null;
   issuedAt: string | null;
@@ -272,6 +278,7 @@ const OBLIGATION_SELECT = `
   SELECT o.id, o.type_id, t.label AS type_label, t.code AS type_code, t.entity_kind,
          o.worker_id, w.first_name, w.last_name,
          o.machine_id, m.code AS machine_code, m.name AS machine_name,
+         o.project_id, p.code AS project_code, p.name AS project_name,
          o.number, o.issuer, o.issued_at, o.expires_at, o.current_version,
          o.responsible_user_id,
          ru.first_name AS ru_first_name, ru.last_name AS ru_last_name,
@@ -281,6 +288,7 @@ const OBLIGATION_SELECT = `
     JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
     LEFT JOIN workers w ON w.company_id = o.company_id AND w.id = o.worker_id
     LEFT JOIN machines m ON m.company_id = o.company_id AND m.id = o.machine_id
+    LEFT JOIN projects p ON p.company_id = o.company_id AND p.id = o.project_id
     LEFT JOIN users ru ON ru.id = o.responsible_user_id
 `;
 
@@ -332,6 +340,9 @@ function toObligation(
     machineId: (row.machine_id as string | null) ?? null,
     machineCode: (row.machine_code as string | null) ?? null,
     machineName: (row.machine_name as string | null) ?? null,
+    projectId: (row.project_id as string | null) ?? null,
+    projectCode: (row.project_code as string | null) ?? null,
+    projectName: (row.project_name as string | null) ?? null,
     number: (row.number as string | null) ?? null,
     issuer: (row.issuer as string | null) ?? null,
     issuedAt: toIsoDate(row.issued_at),
@@ -355,6 +366,8 @@ export type ObligationFilter = {
   typeId?: string;
   workerId?: string;
   machineId?: string;
+  /** R3: samo obaveze na tom projektu (detalj projekta). */
+  projectId?: string;
   /** Samo obaveze gdje je odgovoran ovaj korisnik (mobilni: „Moji rokovi“). */
   responsibleUserId?: string;
   /** Samo obaveze na radnicima vezanim za ovaj nalog. */
@@ -391,6 +404,7 @@ export async function listObligations(
     if (filter.entityKind) conditions.push(`t.entity_kind = ${param(filter.entityKind)}`);
     if (filter.workerId) conditions.push(`o.worker_id = ${param(filter.workerId)}`);
     if (filter.machineId) conditions.push(`o.machine_id = ${param(filter.machineId)}`);
+  if (filter.projectId) conditions.push(`o.project_id = ${param(filter.projectId)}`);
     if (filter.responsibleUserId) conditions.push(`o.responsible_user_id = ${param(filter.responsibleUserId)}`);
     if (filter.ofLinkedWorkerUserId) {
       conditions.push(
@@ -510,6 +524,8 @@ export type ObligationInput = {
   workerId?: string | null;
   machineId?: string | null;
   scopeCompany?: boolean;
+  /** R3: obaveza na projektu (dozvola, saglasnost, HSE elaborat). */
+  projectId?: string | null;
   number?: string | null;
   issuer?: string | null;
   issuedAt?: string | null;
@@ -532,19 +548,25 @@ function normaliseDate(value: string | null | undefined, field: string): string 
 }
 
 /** Tačno jedan entitet — isto pravilo kao `CHECK obligations_one_scope` u bazi. */
-function resolveScope(input: Pick<ObligationInput, "workerId" | "machineId" | "scopeCompany">):
-  | { workerId: string | null; machineId: string | null; scopeCompany: boolean }
-  | ServiceError {
-  const scopes = [Boolean(input.workerId), Boolean(input.machineId), Boolean(input.scopeCompany)];
+function resolveScope(
+  input: Pick<ObligationInput, "workerId" | "machineId" | "projectId" | "scopeCompany">,
+): { workerId: string | null; machineId: string | null; projectId: string | null; scopeCompany: boolean } | ServiceError {
+  const scopes = [
+    Boolean(input.workerId),
+    Boolean(input.machineId),
+    Boolean(input.projectId),
+    Boolean(input.scopeCompany),
+  ];
   if (scopes.filter(Boolean).length !== 1) {
     return {
       code: "VALIDATION_FAILED",
-      message: "Obaveza se veže za tačno jedno: radnika, mašinu ili firmu.",
+      message: "Obaveza se veže za tačno jedno: radnika, mašinu, projekat ili firmu.",
     };
   }
   return {
     workerId: input.workerId ?? null,
     machineId: input.machineId ?? null,
+    projectId: input.projectId ?? null,
     scopeCompany: Boolean(input.scopeCompany),
   };
 }
@@ -579,12 +601,20 @@ export async function createObligation(
     const matches =
       (kind === "WORKER" && scope.workerId !== null) ||
       (kind === "MACHINE" && scope.machineId !== null) ||
+      (kind === "PROJECT" && scope.projectId !== null) ||
       (kind === "COMPANY" && scope.scopeCompany);
     if (!matches) {
       return {
         code: "VALIDATION_FAILED",
-        message: `Tip „${kind === "WORKER" ? "radnik" : kind === "MACHINE" ? "mašina" : "firma"}“ ne odgovara izabranom entitetu.`,
+        message: `Tip „${
+          kind === "WORKER" ? "radnik" : kind === "MACHINE" ? "mašina" : kind === "PROJECT" ? "projekat" : "firma"
+        }“ ne odgovara izabranom entitetu.`,
       } as ServiceError;
+    }
+
+    if (scope.projectId) {
+      const project = await client.query("SELECT 1 FROM projects WHERE id = $1", [scope.projectId]);
+      if (project.rowCount === 0) return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
     }
 
     if (scope.workerId) {
@@ -608,13 +638,14 @@ export async function createObligation(
     await client.query(
       `INSERT INTO obligations (id, company_id, type_id, worker_id, machine_id, project_id, scope_company,
                                 responsible_user_id, note, created_by)
-       VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8, $9)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         id,
         companyId,
         input.typeId,
         scope.workerId,
         scope.machineId,
+        scope.projectId,
         scope.scopeCompany,
         input.responsibleUserId ?? null,
         input.note?.trim() || null,
@@ -729,6 +760,7 @@ export async function updateObligation(
     const matches =
       (kind === "WORKER" && scope.workerId !== null) ||
       (kind === "MACHINE" && scope.machineId !== null) ||
+      (kind === "PROJECT" && scope.projectId !== null) ||
       (kind === "COMPANY" && scope.scopeCompany);
     if (!matches) {
       return { code: "VALIDATION_FAILED", message: "Tip obaveze ne odgovara izabranom entitetu." } as ServiceError;
@@ -736,14 +768,15 @@ export async function updateObligation(
 
     await client.query(
       `UPDATE obligations
-          SET type_id = $2, worker_id = $3, machine_id = $4, scope_company = $5,
-              responsible_user_id = $6, note = $7, updated_at = now()
+          SET type_id = $2, worker_id = $3, machine_id = $4, project_id = $5,
+              scope_company = $6, responsible_user_id = $7, note = $8, updated_at = now()
         WHERE id = $1`,
       [
         obligationId,
         input.typeId,
         scope.workerId,
         scope.machineId,
+        scope.projectId,
         scope.scopeCompany,
         input.responsibleUserId ?? null,
         input.note?.trim() || null,

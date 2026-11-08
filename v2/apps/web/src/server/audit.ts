@@ -49,6 +49,14 @@ export const AUDIT_ACTIONS = [
   "obligation.type_updated",
   "obligation.attachment_added",
   "obligation.attachment_removed",
+  // R3
+  "project.created",
+  "project.updated",
+  "project.status_changed",
+  "project.worker_assigned",
+  "project.machine_assigned",
+  "project.assignment_removed",
+  "project.assignment_overridden",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -62,6 +70,8 @@ export const AUDIT_ENTITY_TYPES = [
   "obligation",
   "obligation_type",
   "obligation_attachment",
+  "project",
+  "project_assignment",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -98,6 +108,13 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "obligation.type_updated": "Tip obaveze izmijenjen",
   "obligation.attachment_added": "Prilog dodan",
   "obligation.attachment_removed": "Prilog uklonjen",
+  "project.created": "Projekat otvoren",
+  "project.updated": "Projekat izmijenjen",
+  "project.status_changed": "Promijenjen status projekta",
+  "project.worker_assigned": "Radnik dodijeljen projektu",
+  "project.machine_assigned": "Mašina dodijeljena projektu",
+  "project.assignment_removed": "Dodjela skinuta",
+  "project.assignment_overridden": "Iznimka od blokade odobrena",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

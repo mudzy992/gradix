@@ -10,6 +10,7 @@ import type {
   MachinesResponse,
   MeResponse,
   ObligationsResponse,
+  ProjectsResponse,
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
@@ -129,6 +130,19 @@ export async function pullChanges(
 export async function myObligations(): Promise<ObligationsResponse> {
   const { data } = await withToken((accessToken) =>
     client.get("/api/obligations", undefined, { query: { mine: "1" }, accessToken }),
+  );
+  return data;
+}
+
+/**
+ * Moji projekti (R3) — samo oni na koje je osoba dodijeljena.
+ *
+ * `mine=1` je filter na serveru, a opseg (`COMPANY`/`PROJECTS`) ostaje serverska stvar: telefon ne
+ * odlučuje šta vidi, samo traži svoje. Tako mobilni i web ne mogu dati različite spiskove.
+ */
+export async function myProjects(): Promise<ProjectsResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/projects", undefined, { query: { mine: "1" }, accessToken }),
   );
   return data;
 }

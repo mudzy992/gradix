@@ -38,6 +38,13 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M8 3v4M16 3v4" />
     </>
   ),
+  /** R3: projekti. Zastavica, a ne zgrada — projekat je lokacija i period, ne adresa sjedišta. */
+  pin: (
+    <>
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </>
+  ),
   truck: (
     <>
       <path d="M3 7h10v9H3zM13 10h4l4 3.5V16h-8z" />

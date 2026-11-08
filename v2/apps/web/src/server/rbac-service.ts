@@ -9,7 +9,7 @@ import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { writeAudit, ipHash } from "./audit";
 import type { Role } from "./permissions";
-import { PERMISSIONS, PERMISSION_INFO, ROLE_LABELS, ROLES, assignableRoles, can, permissionsFor } from "./permissions";
+import { PERMISSIONS, PERMISSION_INFO, ROLE_LABELS, ROLES, assignableRoles, can, isScope, permissionsFor } from "./permissions";
 
 export type Actor = { userId: string; roles: string[] };
 
@@ -123,13 +123,38 @@ export async function changeMembership(
   if (roles.some((role) => !(ROLES as readonly string[]).includes(role))) {
     return { code: "VALIDATION_FAILED", message: "Nepoznata rola." };
   }
-  if (input.scope !== "COMPANY" && input.scope !== "SELF") {
+  if (!isScope(input.scope)) {
     return { code: "VALIDATION_FAILED", message: "Opseg nije ispravan." };
   }
 
   return withCompany(pool, companyId, async (client) => {
     const target = await loadMembership(client, companyId, targetUserId);
     if (!target) return { code: "NOT_FOUND", message: "Osoba nije pronađena u ovoj firmi." } as MembershipError;
+
+    /*
+     * Opseg `PROJECTS` bez ijedne dodjele ne vidi NIŠTA. Takav opseg nije podešavanje nego zamka:
+     * čovjek se prijavi, ekran je prazan i izgleda da je sistem pokvaren. Zato se ovdje odbija, i
+     * to prije upisa — a ne da se poslije objašnjava.
+     *
+     * Provjera ide preko radnika vezanog za nalog, jer se dodjele vode na radniku, ne na nalogu.
+     */
+    if (input.scope === "PROJECTS") {
+      const assigned = await client.query(
+        `SELECT 1
+           FROM project_assignments a
+           JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
+          WHERE w.user_id = $1
+          LIMIT 1`,
+        [targetUserId],
+      );
+      if (assigned.rowCount === 0) {
+        return {
+          code: "VALIDATION_FAILED",
+          message:
+            "Opseg „dodijeljeni projekti“ traži barem jedan projekat. Dodijelite osobu na projekat, pa postavite opseg.",
+        } as MembershipError;
+      }
+    }
 
     const targetIsOwner = target.roles.includes("OWNER");
     const actorIsOwner = actor.roles.includes("OWNER");

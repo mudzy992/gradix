@@ -21,7 +21,7 @@ export const Role = z.enum([
 ]);
 export type Role = z.infer<typeof Role>;
 
-export const Scope = z.enum(["COMPANY", "PROJECTS"]);
+export const Scope = z.enum(["COMPANY", "PROJECTS", "SELF"]);
 export type Scope = z.infer<typeof Scope>;
 
 export const IsoDate = z.string().describe("ISO 8601, UTC");
@@ -406,6 +406,8 @@ export const ObligationType = z.object({
   /** Pragovi podsjetnika u danima, najveći prvi. Prazan niz = nema upozorenja prije isteka. */
   defaultReminderDays: z.array(z.number()),
   requiresAttachment: z.boolean(),
+  /** R3: blokira li istek ovog tipa dodjelu radnika/mašine na projekat (B5.4). */
+  blocksAssignment: z.boolean(),
   isActive: z.boolean(),
   sortOrder: z.number(),
   obligationCount: z.number(),
@@ -418,6 +420,7 @@ export const ObligationTypeInput = z.object({
   entityKind: ObligationEntityKind,
   defaultReminderDays: z.array(z.number().int().min(0).max(365)).max(8).optional(),
   requiresAttachment: z.boolean().optional(),
+  blocksAssignment: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
 });
@@ -461,6 +464,10 @@ export const Obligation = z.object({
   machineId: z.string().nullable(),
   machineCode: z.string().nullable(),
   machineName: z.string().nullable(),
+  /** R3: obaveza može visjeti na projektu (građevinska dozvola, saglasnosti). */
+  projectId: z.string().nullable(),
+  projectCode: z.string().nullable(),
+  projectName: z.string().nullable(),
   number: z.string().nullable(),
   issuer: z.string().nullable(),
   issuedAt: z.string().nullable(),
@@ -502,6 +509,7 @@ export const ObligationInput = z.object({
   typeId: z.string(),
   workerId: z.string().nullable().optional(),
   machineId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
   scopeCompany: z.boolean().optional(),
   number: z.string().max(120).nullable().optional(),
   issuer: z.string().max(200).nullable().optional(),
@@ -579,3 +587,114 @@ export const MembershipChange = z.object({
   after: z.object({ roles: z.array(z.string()), scope: z.string() }),
 });
 export type MembershipChange = z.infer<typeof MembershipChange>;
+
+/* ------------------------------------------------------- projekti i dodjele (R3) */
+
+export const ProjectStatus = z.enum(["PLANNED", "ACTIVE", "PAUSED", "FINISHED", "CANCELLED"]);
+export type ProjectStatus = z.infer<typeof ProjectStatus>;
+
+/**
+ * Projekt na listi i u detalju.
+ *
+ * `overdueObligations` je namjerno broj, a ne spisak: lista projekata prikazuje koliko toga gori, a
+ * pojedinačne rokove daje ekran rokova filtriran po projektu. Tako se ne šalje isti spisak dvaput.
+ */
+export const Project = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  status: ProjectStatus,
+  siteAddress: z.string().nullable(),
+  sitePlace: z.string().nullable(),
+  startsOn: z.string().nullable(),
+  endsOn: z.string().nullable(),
+  managerWorkerId: z.string().nullable(),
+  managerName: z.string().nullable(),
+  note: z.string().nullable(),
+  isActive: z.boolean(),
+  workerCount: z.number(),
+  machineCount: z.number(),
+  overdueObligations: z.number(),
+  expiringObligations: z.number(),
+  createdAt: IsoDate,
+});
+export type Project = z.infer<typeof Project>;
+
+export const ProjectsResponse = z.object({ projects: z.array(Project) });
+export type ProjectsResponse = z.infer<typeof ProjectsResponse>;
+
+export const ProjectResponse = z.object({ project: Project });
+export type ProjectResponse = z.infer<typeof ProjectResponse>;
+
+export const ProjectInput = z.object({
+  code: z.string().min(1).max(40),
+  name: z.string().min(1).max(200),
+  status: ProjectStatus.optional(),
+  siteAddress: z.string().max(300).nullable().optional(),
+  sitePlace: z.string().max(120).nullable().optional(),
+  startsOn: z.string().nullable().optional(),
+  endsOn: z.string().nullable().optional(),
+  managerWorkerId: z.string().nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+export type ProjectInput = z.infer<typeof ProjectInput>;
+
+/**
+ * Dodjela: radnik ILI mašina, sa periodom.
+ *
+ * `overrides` su iznimke od blokade — idu uz upis, jer odobrenje iznimke i sama dodjela su jedan
+ * čin (dodjela bez iznimke bi bila odbijena, a iznimka bez dodjele ne visi ni o čemu).
+ */
+export const AssignmentInput = z.object({
+  workerId: z.string().nullable().optional(),
+  machineId: z.string().nullable().optional(),
+  fromDate: z.string(),
+  toDate: z.string().nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+  overrides: z
+    .array(
+      z.object({
+        obligationId: z.string(),
+        reason: z.string().min(10).max(500),
+        validUntil: z.string(),
+      }),
+    )
+    .max(20)
+    .optional(),
+});
+export type AssignmentInput = z.infer<typeof AssignmentInput>;
+
+export const ProjectAssignment = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  workerId: z.string().nullable(),
+  workerName: z.string().nullable(),
+  machineId: z.string().nullable(),
+  machineCode: z.string().nullable(),
+  machineName: z.string().nullable(),
+  fromDate: z.string(),
+  toDate: z.string().nullable(),
+  note: z.string().nullable(),
+  /** Blokade zbog isteklih obaveza, sa iznimkom ili bez nje. */
+  blocked: z.array(
+    z.object({
+      obligationId: z.string(),
+      typeLabel: z.string(),
+      covered: z.boolean(),
+      reason: z.string().optional(),
+    }),
+  ),
+  createdAt: IsoDate,
+});
+export type ProjectAssignment = z.infer<typeof ProjectAssignment>;
+
+export const ProjectAssignmentsResponse = z.object({
+  assignments: z.array(ProjectAssignment),
+  /** Današnji poslovni datum firme — isti razlog kao kod rokova. */
+  today: z.string(),
+});
+export type ProjectAssignmentsResponse = z.infer<typeof ProjectAssignmentsResponse>;
+
+export const ProjectAssignmentResponse = z.object({ assignment: ProjectAssignment });
+export type ProjectAssignmentResponse = z.infer<typeof ProjectAssignmentResponse>;

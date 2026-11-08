@@ -1,10 +1,10 @@
 # STATUS — Gradix v2
 
-**Faza:** 1 · **Datum:** 2026-11-08 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b funkcionalno ✅**, **dizajn v2 urađen** ⇒ čeka vlasnikov pregled
-**Sljedeće:** vlasnikovo odobrenje `docs/PLAN-R2.md` (radnici, mašine, rokovi — kategorije mašina
-kao podaci, brojilo samo trenutna vrijednost, radnik bez naloga) → dizajn samo novih ekrana → kod
-R2a. `packages/contracts` je gotov (OpenAPI iz šema, tipizirani klijent, CI provjera).
-**R3** (projekti, dodjele, opseg `PROJECTS`, dozvola `projects.assign`): `docs/PLAN-R3.md`.
+**Faza:** 1 · **Datum:** 2026-11-09 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
+**dizajn v2 ✅**, **R2a ✅ (kapija prošla uživo)**, **R2b ✅ (kapija prošla uživo)**, **R3 🚧 kod i
+testovi gotovi, čeka kapiju uživo**
+**Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom) → R4 (radni dan na
+terenu, offline). R3 plan i odluke vlasnika: `docs/PLAN-R3.md`.
 
 ## Gotovo
 
@@ -24,6 +24,9 @@ R2a. `packages/contracts` je gotov (OpenAPI iz šema, tipizirani klijent, CI pro
 | 9 | CI | ✅ **zelen na GitHub Actions** (`daabf07`, 57 s): lint, typecheck, migracije, 49 testova, `prisma generate`, migracija na praznoj bazi |
 | 10 | Docker + staging | ✅ compose za Coolify (`infra/coolify/`), `.env.example`, entrypoint; slika **nije izgrađena lokalno** (nema Dockera) — standalone server dokazan |
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
+| R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
+| R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
+| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (16 integracijskih, 7 jsdom) |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 

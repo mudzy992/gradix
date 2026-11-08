@@ -56,6 +56,22 @@ export const PERMISSIONS = {
     "ACCOUNTANT",
   ],
   "obligations.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  // R3. `projects.view` je široko — radnik mora znati na kojem je projektu. Pravo i dodjele ljudi
+  // su odvojeni svjesno: `projects.assign` je NOVA dozvola, ne dio `users.manage` (odluka vlasnika
+  // iz R1b, preseljena u R3). Mijenjanje role i dodjela projekta su dvije različite radnje.
+  "projects.view": [
+    "OWNER",
+    "ADMIN",
+    "PROJECT_MANAGER",
+    "SITE_SUPERVISOR",
+    "WORKER",
+    "DRIVER",
+    "MACHINE_OPERATOR",
+    "MECHANIC",
+    "ACCOUNTANT",
+  ],
+  "projects.manage": ["OWNER", "ADMIN"],
+  "projects.assign": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "workers.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "workers.manage": ["OWNER", "ADMIN"],
   "equipment.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC"],
@@ -87,6 +103,19 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "obligations.manage": {
     label: "Upravljanje rokovima",
     description: "Nove obaveze, obnova, ispravke, tipovi obaveza i prilozi.",
+  },
+  "projects.view": {
+    label: "Pregled projekata",
+    description: "Lista projekata, lokacija, tim i rokovi na projektu — bez izmjena.",
+  },
+  "projects.manage": {
+    label: "Upravljanje projektima",
+    description: "Novi projekti, izmjena naziva, statusa, perioda i rukovodioca.",
+  },
+  "projects.assign": {
+    label: "Dodjela na projekte",
+    description:
+      "Dodjela radnika i mašina na projekat, uz iznimku od blokade zbog istekle obaveze. Odvojeno od upravljanja korisnicima.",
   },
   "workers.view": {
     label: "Pregled radnika",

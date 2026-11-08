@@ -246,6 +246,13 @@ export default function IndexScreen() {
           <Text style={[styles.buttonText, styles.secondaryText]}>Moji rokovi</Text>
         </Pressable>
       </Link>
+
+      {/* R3: projekti na koje je osoba dodijeljena — isto samo čitanje, isti razlog. */}
+      <Link href="/projekti" asChild>
+        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
+          <Text style={[styles.buttonText, styles.secondaryText]}>Moji projekti</Text>
+        </Pressable>
+      </Link>
     </ScrollView>
   );
 }

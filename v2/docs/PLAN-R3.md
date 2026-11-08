@@ -1,36 +1,117 @@
-# PLAN R3 — projekti i dodjele (+ opseg „dodijeljeni projekti“)
+# PLAN R3 — projekti i dodjele (+ opseg „dodijeljeni projekti")
 
-**Datum:** 2026-11-08 · **Status:** stavke, pun plan kad R3 počne
-**Odakle:** `MASTER_BRIEF.md` B11 — R3 je „projekti i dodjele“. Odluka vlasnika iz R1b se time
-ne mijenja, samo seli ovdje.
+**Datum:** 2026-11-09 · **Status:** plan odobren (*„možeš nastaviti dalje“*), kod i testovi gotovi,
+čeka **kapiju uživo**
+**Odakle:** `MASTER_BRIEF.md` B11 — R3 je „projekti i dodjele“.
 
-## Obavezno u R3 (odluka vlasnika, 2026-11-08)
+## Odluke vlasnika (2026-11-09)
 
-- [ ] **Tabela `projects`** (tenant, RLS `tenant_isolation`, `code`, `name`, `is_active`,
-      `created_at`) + `memberships.project_ids` FK → `projects(id)` sa `ON DELETE RESTRICT`
-      (projekat sa dodijeljenim ljudima se ne briše nego deaktivira).
-- [ ] **Vrijednost opsega `PROJECTS`** vraćena u `CHECK (scope IN ('COMPANY','PROJECTS','SELF'))`,
-      zajedno sa tabelom dodjela (`project_assignments(company_id, project_id, user_id)`),
-      FK na `projects` i `memberships`, i backfillom ako ga bude.
-- [ ] **`resolveScope`** u `@gradix/domain` dobija treći slučaj (`PROJECTS` = akcija dozvoljena
-      samo nad projektima iz dodjele) — jedan `switch`, jedan novi test, bez diranja R1b logike.
-- [ ] **Dozvola `projects.assign`** — **nova, posebna dozvola** za dodjelu projekata osobi
-      (odluka vlasnika). **Ne** ide kroz `users.manage`: mijenjanje role i dodjela projekta su
-      dvije različite radnje i moraju se moći dati odvojeno. Dodaje se u `PERMISSIONS` i u
-      matricu rola; podrazumijevano je imaju OWNER i ADMIN, a može se dati i `PROJECT_MANAGER`.
-- [ ] **UI:** izbor projekata u dijalogu „Rola i opseg“ + filter liste po projektu.
-- [ ] **Testovi:** tenant izolacija za `projects` i `project_assignments` (kroz generisani test
-      iz liste tenant tabela), `projects.assign` odvojeno od `users.manage` (test da dozvola
-      `users.manage` sama po sebi **ne** daje dodjelu projekta), E2E: čovjek sa opsegom
-      `PROJECTS` vidi samo svoje projekte.
+1. **Blokada dodjele** zbog istekle obaveze: dodjela se **odbija**, uz **evidentiranu iznimku** sa
+   obaveznim razlogom i rokom. Iznimka ide u audit trag. Firma odlučuje koji tipovi blokiraju
+   (`obligation_types.blocks_assignment`) — podatak, ne enum.
+2. **Faze projekta ne u R3.** Fazu traži radni dan („projekat/faza/zadatak“), a to je R4.
+3. **Mobilni u R3 je read-only**: „Moji projekti“ sa kešom, isti obrazac kao „Moji rokovi“.
+4. **Projekte prave i mijenjaju OWNER i ADMIN** (`projects.manage`); PROJECT_MANAGER **dodjeljuje**
+   (`projects.assign`).
 
-## Zavisnosti
+## Ispravka u odnosu na raniju skicu
 
-- R3 traži R2b (obaveze s rokom) ako projekat dobija rokove (građevinska dozvola, saglasnosti —
-  B5.4 ih vodi pod „Projekat“). Generički model iz R2b to pokriva bez izmjene.
-- Blokade iz B5.4 („radnik bez ovlaštenja ne može na mašinu“) traže **i** dodjele (R3) **i**
-  radne sate (R5) — zato se uvode u R3/R5, ne u R2.
+Skica je tražila `memberships.project_ids` (niz + FK na `projects`). To je **odbačeno**: niz ne
+može nositi FK, period važenja ni historiju, a dodjela mašine se u njega ne može upisati nikako.
+Umjesto toga je jedna tabela — `project_assignments(company_id, project_id, worker_id | machine_id,
+from_date, to_date)`. Iz nje izlazi i opseg (`PROJECTS` = preko radnika vezanog za nalog) i tim
+projekta, bez drugog izvora istine.
 
-**Zašto opseg nije bio u R1b:** u R1b ne postoji ekran ni entitet nad kojim bi opseg `PROJECTS`
-nešto mijenjao, pa bi bio polje koje nigdje ne važi. Opseg bez dejstva je gori od opsega koji još
-ne postoji. Isto pravilo važi i sada.
+## Šta je urađeno
+
+### Model (migracija `20261109120000_r3_projekti`)
+
+- `projects` — tenant, RLS, jedinstvena šifra **po firmi**, status kao podatak sa `CHECK`-om
+  (`PLANNED/ACTIVE/PAUSED/FINISHED/CANCELLED`), lokacija, period, rukovodilac (radnik iste firme).
+- `project_assignments` — radnik **ili** mašina (`CHECK`, tačno jedno), period, `CHECK` da kraj nije
+  prije početka. **Preklapanje** istog entiteta na istom projektu brani **triger** sa
+  `pg_advisory_xact_lock` — namjerno, a ne `EXCLUDE USING gist`: to traži `btree_gist`, ekstenziju
+  koju instalira nadzornik baze, pa bi migracija pala na produkciji, a ne u testu.
+- `project_assignment_overrides` — iznimka sa razlogom (≥ 10 znakova) i rokom; FK na dodjelu i na
+  obavezu.
+- `obligations.project_id` — skida se `obligations_project_not_before_r3`, dodaje pravi FK i
+  jedinstveni indeks „jedan aktivan tip po projektu“ (kao za radnika i mašinu).
+- `memberships.scope` vraća `PROJECTS` u `CHECK`.
+- `obligation_types.blocks_assignment` + **9 novih zadanih tipova za projekat** (građevinska
+  dozvola 90/60/30/15, saglasnost, obustava saobraćaja, zauzeće površine, okolišna saglasnost,
+  HSE elaborat, plan organizacije gradilišta, vanredni prijevoz, tehnički prijem). Postojeće firme
+  ih dobijaju kroz `ON CONFLICT DO NOTHING`.
+
+### Opseg
+
+`resolveScope` u `@gradix/domain` ima treći slučaj, uz `visibleProjectIds` kao ulaz za `WHERE`:
+
+| opseg | vidi | mijenja |
+|---|---|---|
+| `COMPANY` | sve u firmi | sve u firmi |
+| `PROJECTS` | samo dodijeljene projekte i zapise vezane za njih | samo njih |
+| `SELF` | samo svoje | samo svoje |
+
+- **Tuđi projekat u istoj firmi = 403** („Nisi dodijeljen ovom projektu.“), **tuđa firma = 404**.
+- **Opseg `PROJECTS` bez ijedne dodjele se odbija** pri snimanju članstva — opseg koji ne vidi
+  ništa je zamka, ne podešavanje.
+- Nepoznat opseg u bazi pada na `SELF` (najuži), nikad na `COMPANY` — nema tiho podignute dozvole.
+
+### Dozvole
+
+| dozvola | OWNER | ADMIN | PROJECT_MANAGER | SITE_SUPERVISOR | ostali |
+|---|---|---|---|---|---|
+| `projects.view` | ✅ | ✅ | ✅ | ✅ | ✅ (radnik mora znati gdje je) |
+| `projects.manage` | ✅ | ✅ | — | — | — |
+| `projects.assign` | ✅ | ✅ | ✅ | — | — |
+
+`projects.assign` je **odvojena** dozvola, ne dio `users.manage` — odluka vlasnika iz R1b.
+
+### API (7 novih ruta, OpenAPI 42 putanje)
+
+`GET/POST /api/projects`, `GET/PATCH /api/projects/{id}`,
+`GET/POST /api/projects/{id}/assignments`, `DELETE …/assignments/{assignmentId}`.
+Obaveze: `projectId` u unosu i `?projectId=` u listi.
+
+### Ekrani
+
+- **`/ured/projekti`** — lista (šifra, stanje riječima, lokacija, tim, rokovi), filter po stanju,
+  dijalog za novi/izmjenu, detalj sa dva taba: **Tim i mašine** (dodjele, skidanje, blokada PRIJE
+  upisa sa poljem za razlog iznimke) i **Rokovi na projektu**.
+- **`/ured/rokovi`** — projekat kao treći entitet u formi (uz radnika, mašinu, firmu).
+- **`/pregled`** — kartica rokova (iz R2b) ostaje; projekti se vide kroz meni.
+- **Mobilni `/projekti`** — „Moji projekti“, read-only, lokalni keš, „od prije X“, put nazad.
+
+## Kapija R3 (uživo)
+
+### R3a — projekti, dodjele, opseg
+
+1. Otvoriti projekat, dodijeliti 3 radnika i mašinu; sve se vidi u detalju.
+2. Pokušati dodijeliti istog radnika dvaput u istom periodu → odbijeno čitljivom porukom
+   („… u periodu koji se preklapa“), ne SQL greškom.
+3. Dati osobi opseg „dodijeljeni projekti“ sa jednim projektom; prijaviti se kao ona: vidi **samo**
+   taj projekat, tuđi u istoj firmi daje **403**, firma B daje **404**.
+4. Pokušati snimiti opseg `PROJECTS` osobi bez ijedne dodjele → **odbijeno**.
+5. PROJECT_MANAGER dodjeljuje, ali ne mijenja role; SITE_SUPERVISOR vidi projekat, ne dodjeljuje.
+6. Mašina sa isteklom registracijom ne može na projekat; **iznimka sa razlogom prolazi** i vidi se u
+   auditu (`project.assignment_overridden`).
+
+### R3b — projekti u rokovima
+
+1. Građevinska dozvola na projektu: rok za 100 dana → „Važeće“, za 5 dana → „Uskoro istječe“,
+   juče → „Isteklo“.
+2. Rokovi filtrirani po projektu; broj na redu projekta se poklapa sa listom.
+3. Mobilni: „Moji projekti“ u avionskom režimu prikazuje zadnje preuzeto.
+
+**Zeleni CI nije dokaz** — kapija je prolaz uživo.
+
+## Izričito van R3
+
+| Šta | Zašto |
+|---|---|
+| **Budžet i troškovi projekta** | R6 — novac traži obračun sati; struktura bez iznosa je prazna forma. |
+| **Faze projekta** | R4 — fazu traži radni dan, ne projekat (odluka vlasnika). |
+| **Blokade tura i radnih sati** | R4/R5 — R3 blokira samo dodjelu. |
+| **Kalendar zauzetosti mašina, Gantt** | R5/R6. |
+| **Lokacije i dionice (stacionaža)** | R5. |
+| **Dokumenti projekta kao zaseban modul** | Prilozi u R3 postoje samo uz obavezu; dokument bez roka je R9. |
