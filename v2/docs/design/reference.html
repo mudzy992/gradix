@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="bs" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradix — dizajn referenca</title>
+<style>
+:root,[data-theme=light]{
+  --brand:#140A9A;--accent:#FFC82F;--ink:#1B232A;--slate:#59656F;--edge:#7B858D;
+  --bg:color-mix(in srgb,var(--ink) 5%,#fff);--panel:#fff;--raise:color-mix(in srgb,var(--ink) 4%,#fff);
+  --line:color-mix(in srgb,var(--edge) 28%,#fff);--text:var(--ink);--muted:var(--slate);
+  --primary:var(--brand);--on-primary:#fff;--link:var(--brand);--bar:var(--brand);
+  --tint:color-mix(in srgb,var(--brand) 9%,#fff);--shadow:0 1px 2px color-mix(in srgb,var(--ink) 9%,transparent);
+  --field:var(--edge);color-scheme:light}
+[data-theme=dark]{
+  --bg:var(--ink);--panel:color-mix(in srgb,#fff 5%,var(--ink));--raise:color-mix(in srgb,#fff 9%,var(--ink));
+  --line:color-mix(in srgb,#fff 13%,var(--ink));--text:#fff;--muted:color-mix(in srgb,#fff 64%,var(--ink));
+  --primary:var(--accent);--on-primary:var(--ink);--link:color-mix(in srgb,var(--brand) 40%,#fff);--bar:var(--link);
+  --tint:color-mix(in srgb,var(--brand) 38%,var(--ink));--shadow:none;--field:color-mix(in srgb,#fff 38%,var(--ink));color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+body{font:14px/1.55 Manrope,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:13px}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.shell{display:grid;grid-template-columns:232px 1fr;gap:8px;padding:8px;min-height:100vh}
+.side{display:flex;flex-direction:column;padding:12px 8px;position:sticky;top:8px;height:calc(100vh - 16px)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em;padding:4px 10px 16px}
+.logo i{width:22px;height:22px;border-radius:7px;background:var(--primary);position:relative}
+.logo i::after{content:"";position:absolute;left:5px;right:5px;top:10px;height:2px;background:var(--accent);border-radius:2px;box-shadow:0 -4px 0 -0 transparent}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav small{color:var(--muted);font-size:12px;font-weight:600;margin:16px 10px 6px}
+.nav a{display:flex;align-items:center;gap:12px;height:38px;padding:0 10px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:600}
+.nav a:hover{background:var(--raise);color:var(--text)}
+.nav a[aria-current]{background:var(--panel);color:var(--text);box-shadow:var(--shadow);outline:1px solid var(--line)}
+.nav a[aria-current] svg{color:var(--link)}
+.org{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--raise)}
+.av{width:30px;height:30px;border-radius:50%;background:var(--tint);color:var(--link);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.org b{display:block;font-size:13px;line-height:1.2}.org span{font-size:12px;color:var(--muted)}
+
+.main{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+.top{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--line)}
+.search{flex:1;max-width:420px;display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;border-radius:999px;background:var(--raise);color:var(--muted)}
+.kbd{margin-left:auto;font:12px "IBM Plex Mono",monospace;padding:1px 7px;border-radius:6px;border:1px solid var(--line)}
+.sp{flex:1}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{background:var(--raise);color:var(--text)}
+.page{padding:32px 28px 56px;max-width:1240px}
+.ph{display:flex;gap:16px;align-items:flex-end;margin-bottom:28px}
+h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;font-weight:800}
+h2{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:transparent;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--raise)}
+.btn-p{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn-p:hover{background:var(--primary);filter:brightness(1.1)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:20px}
+.card{border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--panel)}
+.card+.card,.cols+.card{margin-top:20px}
+.meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);margin:6px 0 28px}
+.ruler{position:relative;height:84px;margin:0 4px}
+.track{position:absolute;left:0;right:0;top:34px;height:14px;border-radius:7px;background:var(--raise)}
+.fill{height:100%;width:62%;border-radius:7px;background:var(--bar)}
+.ticks{position:absolute;left:0;right:0;top:54px;height:8px;border-right:1px solid var(--line);background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 10%)}
+.here{position:absolute;left:62%;top:8px;bottom:22px;width:3px;margin-left:-1px;background:var(--accent);border-radius:2px}
+.here span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:4px;white-space:nowrap;background:var(--accent);color:var(--ink);font:600 12px "IBM Plex Mono",monospace;padding:3px 9px;border-radius:999px}
+.ends{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}
+.stats b{display:block;font-size:20px;letter-spacing:-.02em;font-weight:700}.stats span{color:var(--muted);font-size:13px}
+.list{display:flex;flex-direction:column;margin-top:8px}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}.item div{flex:1;line-height:1.35}.item span{display:block;color:var(--muted);font-size:13px}
+.days{font:600 12px "IBM Plex Mono",monospace;padding:3px 10px;border-radius:999px;background:var(--raise)}
+.days.hot{background:var(--accent);color:var(--ink)}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{text-align:left;font-weight:600;font-size:13px;color:var(--muted);padding:10px 12px}
+td{padding:14px 12px;border-top:1px solid var(--line)}
+tbody tr:hover{background:var(--raise)}
+td.r,th.r{text-align:right}
+.chip{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 12px;border-radius:999px;background:var(--raise);font-weight:600;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bar)}
+.dot.w{background:var(--accent)}.dot.o{background:transparent;border:1.5px solid var(--muted)}
+.who{line-height:1.3}.who span{display:block;color:var(--muted);font-size:13px}
+
+.lab{margin:56px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-weight:600;font-size:13px}
+.input{height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--field);background:transparent}
+.input::placeholder{color:var(--muted)}
+.hint{font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--raise)}
+.seg button{height:34px;padding:0 16px;border:0;border-radius:999px;background:transparent;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--text);box-shadow:var(--shadow);outline:1px solid var(--line)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.note{display:flex;gap:12px;padding:14px 16px;border-radius:14px;background:var(--tint)}
+.note svg{color:var(--link);margin-top:2px}
+.phones{display:flex;gap:20px;flex-wrap:wrap}
+.phone{width:270px;border:1px solid var(--line);border-radius:36px;padding:22px 18px;background:var(--bg);color:var(--text)}
+.phone .card{padding:16px;border-radius:20px}
+.big{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:60px;border-radius:20px;border:0;background:var(--primary);color:var(--on-primary);font-size:17px;font-weight:700;margin-top:14px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tile{height:84px;border-radius:18px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;padding:12px;font-weight:600}
+.tile svg{color:var(--link)}
+.timer{font:500 34px "IBM Plex Mono",monospace;letter-spacing:-.03em;margin:6px 0 0}
+.sw{display:flex;gap:10px;flex-wrap:wrap}.sw i{width:56px;height:56px;border-radius:14px;border:1px solid var(--line);display:block}
+@media(max-width:960px){.shell{grid-template-columns:1fr;padding:0}.side{display:none}.main{border-radius:0;border:0}.cols{grid-template-columns:1fr}.top,.page{padding-left:16px;padding-right:16px}.stats{grid-template-columns:1fr 1fr}.ph{flex-direction:column;align-items:flex-start}.kbd{display:none}}
+@media(prefers-reduced-motion:no-preference){.btn,.nav a,tbody tr,.icon-btn{transition:background .12s,color .12s}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 4.5a3.5 3.5 0 010 7M18 14a6 6 0 013.5 6"/></symbol>
+<symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 6h12v10H2zM14 9h4l4 4v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></symbol>
+<symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 012-2h6a2 2 0 012 2v16M4 21h10M14 9h2a2 2 0 012 2v5a1.5 1.5 0 003 0V8l-3-3"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></symbol>
+</defs></svg>
+
+<div class="shell">
+  <aside class="side" aria-label="Glavna navigacija">
+    <div class="logo"><i aria-hidden="true"></i>Gradix</div>
+    <nav class="nav">
+      <a href="#" aria-current="page"><svg><use href="#i-home"/></svg>Pregled</a>
+      <small>Posao</small>
+      <a href="#"><svg><use href="#i-folder"/></svg>Projekti</a>
+      <a href="#"><svg><use href="#i-users"/></svg>Radnici</a>
+      <a href="#"><svg><use href="#i-truck"/></svg>Mehanizacija</a>
+      <a href="#"><svg><use href="#i-cal"/></svg>Rokovi</a>
+      <small>Firma</small>
+      <a href="#"><svg><use href="#i-shield"/></svg>Pristup i role</a>
+    </nav>
+    <div class="org"><div class="av">NG</div><div><b>Niskogradnja Demo</b><span>Emir Hodžić · Vlasnik</span></div></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div class="search"><svg><use href="#i-search"/></svg>Traži projekte, radnike, mašine<span class="kbd">Ctrl K</span></div>
+      <div class="sp"></div>
+      <button class="icon-btn" id="theme" aria-label="Promijeni temu"><svg><use href="#i-moon"/></svg></button>
+      <div class="av">EH</div>
+    </header>
+
+    <main class="page">
+      <div class="ph">
+        <div style="flex:1"><h1>Dobro jutro, Emire</h1><p class="sub">Nedjelja, 8. novembar · 2 stvari traže vašu pažnju.</p></div>
+        <button class="btn">Izvezi</button><button class="btn btn-p">Novi projekat</button>
+      </div>
+
+      <div class="cols">
+        <section class="card">
+          <h2>Rekonstrukcija puta M-17, dionica 2</h2>
+          <div class="meta"><span>Visoko – Kakanj</span><span>14 radnika</span><span>6 mašina</span></div>
+          <div class="ruler" role="img" aria-label="Izvedeno 3 km i 120 m od 5 km">
+            <div class="track"><div class="fill"></div></div>
+            <div class="here"><span>km 3+120</span></div>
+            <div class="ticks"></div>
+            <div class="ends mono"><span>0+000</span><span>5+000</span></div>
+          </div>
+          <div class="stats">
+            <div><b class="mono">412.300 KM</b><span>od 680.000 KM budžeta</span></div>
+            <div><b class="mono">1.842 h</b><span>radnih sati ovaj mjesec</span></div>
+            <div><b class="mono">14.12.2026</b><span>planirani završetak</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Rokovi koji ističu</h2>
+          <div class="list">
+            <div class="item"><svg><use href="#i-truck"/></svg><div>Tehnički pregled, MAN TGS<span>Kamion K-04</span></div><span class="days hot">3 dana</span></div>
+            <div class="item"><svg><use href="#i-users"/></svg><div>Ljekarski pregled, M. Šimić<span>Šef gradilišta</span></div><span class="days hot">9 dana</span></div>
+            <div class="item"><svg><use href="#i-folder"/></svg><div>Dozvola za zatvaranje saobraćaja<span>M-17, dionica 2</span></div><span class="days">21 dan</span></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Mehanizacija danas</h2>
+        <table>
+          <thead><tr><th>Mašina</th><th>Lokacija</th><th>Rukovalac</th><th class="r">Radni sati</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><div class="who">CAT 320 bager<span class="mono">BG-02</span></div></td><td>Dionica 2, km 3+100</td><td>Amina Begić</td><td class="r mono">6,5</td><td><span class="chip"><i class="dot"></i>Radi</span></td></tr>
+            <tr><td><div class="who">BOMAG BW 213 valjak<span class="mono">VL-01</span></div></td><td>Dionica 2, km 2+800</td><td>Dino Đurđević</td><td class="r mono">5,0</td><td><span class="chip"><i class="dot"></i>Radi</span></td></tr>
+            <tr><td><div class="who">Volvo A30 damper<span class="mono">DM-03</span></div></td><td>Kamenolom</td><td>Mario Šimić</td><td class="r mono">2,5</td><td><span class="chip"><i class="dot w"></i>Zastoj</span></td></tr>
+            <tr><td><div class="who">MAN TGS 8x4 kamion<span class="mono">K-04</span></div></td><td>Servis</td><td>—</td><td class="r mono">0,0</td><td><span class="chip"><i class="dot o"></i>Na servisu</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="lab"><h1 style="font-size:24px">Komponente</h1><p class="sub">Isti tokeni na webu i mobilnom. Tema se mijenja dugmetom gore.</p></div>
+      <div class="grid">
+        <section class="card">
+          <h2 style="margin-bottom:16px">Pozovi korisnika</h2>
+          <div class="field"><label for="em">Email</label><input id="em" class="input" placeholder="ime@firma.ba"><span class="hint">Poslat ćemo link za postavljanje lozinke.</span></div>
+          <div class="field"><label>Opseg pristupa</label><div class="seg" role="group"><button aria-pressed="true">Cijela firma</button><button aria-pressed="false">Samo svoje</button></div></div>
+          <div class="note"><svg><use href="#i-info"/></svg><span>Šef gradilišta vidi samo svoje radnike i mašine.</span></div>
+          <div class="row"><button class="btn">Otkaži</button><button class="btn btn-p">Pošalji pozivnicu</button></div>
+        </section>
+        <section class="card">
+          <h2 style="margin-bottom:16px">Stanja i boje</h2>
+          <div class="row" style="justify-content:flex-start;margin:0 0 16px"><span class="chip"><i class="dot"></i>Radi</span><span class="chip"><i class="dot w"></i>Zastoj</span><span class="chip"><i class="dot o"></i>Servis</span><span class="days hot">3 dana</span></div>
+          <div class="sw" aria-label="Paleta"><i style="background:#140A9A"></i><i style="background:#FFC82F"></i><i style="background:#1B232A"></i><i style="background:#fff"></i><i style="background:#59656F"></i><i style="background:#7B858D"></i></div>
+          <p class="hint" style="margin-top:12px">Svijetlo: brend je primarna akcija. Tamno: akcent je primarna akcija, a brend se osvjetljava za tekst i oznake.</p>
+        </section>
+      </div>
+
+      <div class="lab"><h1 style="font-size:24px">Mobilni, teren</h1><p class="sub">Svijetla i tamna tema, krupne mete, jedna primarna akcija.</p></div>
+      <div class="phones">
+        <div class="phone" data-theme="light"><div class="card"><span class="sub">M-17, dionica 2</span><div class="timer">00:00:00</div><button class="big"><svg style="width:22px;height:22px"><use href="#i-play"/></svg>Počni radni dan</button></div>
+          <div class="tiles"><div class="tile"><svg><use href="#i-fuel"/></svg>Gorivo</div><div class="tile"><svg><use href="#i-truck"/></svg>Tura</div><div class="tile"><svg><use href="#i-warn"/></svg>Prijavi kvar</div><div class="tile"><svg><use href="#i-shield"/></svg>HSE</div></div></div>
+        <div class="phone" data-theme="dark"><div class="card"><span class="sub">M-17, dionica 2</span><div class="timer">06:12:48</div><button class="big"><svg style="width:22px;height:22px"><use href="#i-play"/></svg>Završi radni dan</button></div>
+          <div class="tiles"><div class="tile"><svg><use href="#i-fuel"/></svg>Gorivo</div><div class="tile"><svg><use href="#i-truck"/></svg>Tura</div><div class="tile"><svg><use href="#i-warn"/></svg>Prijavi kvar</div><div class="tile"><svg><use href="#i-shield"/></svg>HSE</div></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+<script>
+const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)");
+r.dataset.theme=m.matches?"dark":"light";
+document.getElementById("theme").onclick=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b)));
+</script>
+</body>
+</html>
