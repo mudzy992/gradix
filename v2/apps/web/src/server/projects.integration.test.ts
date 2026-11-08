@@ -490,6 +490,26 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(can(["SITE_SUPERVISOR"], "projects.view")).toBe(true);
   });
 
+  it("matrica (G3): radnik ima `obligations.view` za SVOJE, ali NE priloge; prilozi su uža dozvola", async () => {
+    const { can, permissionsFor } = await import("./permissions");
+
+    // Radnik mora vidjeti da mu rok istječe — inače telefon nema šta pokazati.
+    expect(can(["WORKER"], "obligations.view")).toBe(true);
+    expect(permissionsFor("WORKER")).toContain("obligations.view");
+
+    // Ali NE i sadržaj priloga: ljekarski nalaz je lični podatak, ne informacija za telefon.
+    expect(can(["WORKER"], "obligations.attachments.view")).toBe(false);
+    expect(permissionsFor("WORKER")).not.toContain("obligations.attachments.view");
+
+    // Ured ga vidi — prilog nije nestao, samo je radniku zatvoren.
+    for (const rola of ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"] as const) {
+      expect(can([rola], "obligations.attachments.view")).toBe(true);
+    }
+
+    // Radnik NE uređuje rokove.
+    expect(can(["WORKER"], "obligations.manage")).toBe(false);
+  });
+
   it("matrica: `projects.override` imaju SAMO OWNER i ADMIN — dodjela ga ne nosi", async () => {
     const { can, permissionsFor } = await import("./permissions");
 
@@ -650,7 +670,32 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
   });
 
   it("skidanje ZADNJE dodjele osobi sa opsegom PROJECTS spušta opseg na SELF i javlja zašto", async () => {
-    // Radnik-nalog je dodijeljen na projektA (iz testa opsega) i ima opseg PROJECTS.
+    /*
+     * Stanje se POSTAVLJA ovdje, a ne naslanja na prethodni test.
+     *
+     * Prvobitna verzija je koristila dodjelu iz testa opsega — pa je pod punim paralelnim
+     * opterećenjem (kad se fajlovi izvršavaju u drugom redu) ta dodjela znala već biti skinuta i
+     * test je padao bez promjene koda. Test koji mjeri „zadnja dodjela" mora sam biti na zadnjoj
+     * dodjeli; inače mjeri ono što je neko drugi ostavio.
+     */
+    await admin.query(
+      "DELETE FROM project_assignments WHERE company_id = $1 AND project_id = $2",
+      [COMPANY, projectA],
+    );
+    const created = await assignmentRoute(
+      authed("http://interni/api/projects/x/assignments", {
+        method: "POST",
+        body: { workerId: WORKER_USER_ROW, fromDate: "2026-03-01" },
+      }, cookieAdmin),
+      { params: Promise.resolve({ id: projectA }) },
+    );
+    expect(created.status).toBe(200);
+
+    await admin.query(
+      "UPDATE memberships SET scope = 'PROJECTS' WHERE company_id = $1 AND user_id = $2",
+      [COMPANY, WORKER_USER],
+    );
+
     const list = (await (
       await assignmentsRoute(get("http://interni/api/projects/x/assignments", cookieAdmin), {
         params: Promise.resolve({ id: projectA }),

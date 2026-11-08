@@ -6,7 +6,7 @@ testovi gotovi, čeka kapiju uživo**
 **Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom, zahtjev → odobrenje) →
 **odobrenje plana R4** → R4 (radni dan na terenu, offline). Planovi i odluke vlasnika:
 `docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md` (10 stavki),
-`docs/DECISIONS/0009`, `0010`.
+`docs/DECISIONS/0009`, `0010`, `0011`.
 
 ## Gotovo
 
@@ -28,7 +28,7 @@ testovi gotovi, čeka kapiju uživo**
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 | R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
 | R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
-| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (19 integracijskih, 4 trke, 9 jsdom); iznimku traži PM, odobrava vlasnik (`projects.override`) |
+| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (20 integracijskih, 5 trke, 9+4 jsdom); iznimku traži PM, odobrava vlasnik (`projects.override`); preklapanje provjereno na OBA mehanizma (`pnpm --filter @gradix/web check-preklapanje`) |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 

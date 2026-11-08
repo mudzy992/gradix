@@ -360,6 +360,23 @@ function toObligation(
   };
 }
 
+/**
+ * VIDNO POLJE nad rokovima — dolazi iz sesije, nikad iz zahtjeva (`G3`, odluka vlasnika).
+ *
+ * `SELF` nije „filter koji klijent pošalje", nego granica koju servis nameće: radnik vidi obaveze
+ * vezane za SVOJ nalog (radnika vezanog za nalog ili gdje je odgovoran). Tuđe ne vidi ni ako pošalje
+ * `?workerId=` tuđeg radnika — filter se tada sužava, ne širi.
+ */
+export type ObligationScope = "COMPANY" | "SELF";
+
+/** Prilozi su lični podatak: bez `obligations.attachments.view` se ne vraćaju u listi. */
+export type ObligationListOptions = {
+  scope?: ObligationScope;
+  /** `userId` za opseg `SELF` — čije obaveze. */
+  userId?: string;
+  includeAttachments?: boolean;
+};
+
 export type ObligationFilter = {
   state?: string;
   entityKind?: string;
@@ -386,6 +403,7 @@ export async function listObligations(
   pool: Pool,
   companyId: CompanyId,
   filter: ObligationFilter = {},
+  options: ObligationListOptions = {},
 ): Promise<ObligationsPage> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
@@ -398,6 +416,19 @@ export async function listObligations(
       params.push(value);
       return `$${params.length}`;
     };
+
+    /*
+     * Opseg `SELF` ide PRVI i uvijek. Redoslijed je namjeran: ako se doda poslije filtera iz upita,
+     * `?workerId=` bi mogao proširiti skup prije nego ga opseg suzi — a granica koja se primjenjuje
+     * poslije korisničkog filtera nije granica.
+     */
+    if (options.scope === "SELF") {
+      const korisnik = param(options.userId ?? "");
+      conditions.push(
+        `(o.responsible_user_id = ${korisnik}
+          OR o.worker_id IN (SELECT id FROM workers WHERE user_id = ${korisnik}))`,
+      );
+    }
 
     if (!filter.includeSuperseded) conditions.push("o.superseded_by IS NULL");
     if (filter.typeId) conditions.push(`o.type_id = ${param(filter.typeId)}`);
@@ -416,7 +447,11 @@ export async function listObligations(
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const result = await client.query(`${OBLIGATION_SELECT} ${where}`, params);
 
-    const attachments = await client.query(ATTACHMENTS_SELECT, [companyId]);
+    // Bez prava na priloge upit se NE izvršava — podatak koji se ne smije vidjeti ne treba ni doći
+    // iz baze, pa ne postoji put da ga neko „zaboravi" ukloniti iz odgovora.
+    const attachments = options.includeAttachments === false
+      ? { rows: [] as Array<Record<string, unknown>> }
+      : await client.query(ATTACHMENTS_SELECT, [companyId]);
     const byObligation = new Map<string, ObligationAttachmentRow[]>();
     for (const row of attachments.rows) {
       const key = String(row.obligation_id);
@@ -472,15 +507,33 @@ export async function getObligation(
   pool: Pool,
   companyId: CompanyId,
   obligationId: string,
+  options: ObligationListOptions = {},
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
-    const row = await client.query(`${OBLIGATION_SELECT} WHERE o.id = $1`, [obligationId]);
+
+    /*
+     * Opseg `SELF` i u detalju: `id` iz URL-a nije dozvola. Uslov je u ISTOM upitu kao i `id`, pa
+     * tuđi rok daje 404 — ne 403, jer radnik ne treba da zna da tuđi rok postoji.
+     */
+    const uslovi = ["o.id = $1"];
+    const params: unknown[] = [obligationId];
+    if (options.scope === "SELF") {
+      params.push(options.userId ?? "");
+      uslovi.push(
+        `(o.responsible_user_id = $${params.length}
+          OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $${params.length}))`,
+      );
+    }
+
+    const row = await client.query(`${OBLIGATION_SELECT} WHERE ${uslovi.join(" AND ")}`, params);
     if (row.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     }
 
-    const attachments = await client.query(
+    const attachments = options.includeAttachments === false
+      ? { rows: [] as Array<Record<string, unknown>> }
+      : await client.query(
       `SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
          FROM obligation_attachments WHERE obligation_id = $1 ORDER BY created_at DESC`,
       [obligationId],

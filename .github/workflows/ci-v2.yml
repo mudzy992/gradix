@@ -102,6 +102,16 @@ jobs:
         working-directory: v2
         run: pnpm test
 
+      # Zaštita preklapanja dodjela ima DVA nosioca i biraju se pri migraciji (ima li btree_gist).
+      # Jedan test zato ne može pokriti oba: ovaj korak vrti oba puta (prinudni fallback i stvarni)
+      # i tvrdi koji je mehanizam ostao aktivan. Bez njega fallback put nikad nije izvršen u CI-ju.
+      - name: Preklapanje dodjela — oba mehanizma (triger i EXCLUDE)
+        working-directory: v2
+        env:
+          DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          DATABASE_URL_APP: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+        run: pnpm --filter @gradix/web check-preklapanje
+
       # R1c kapija: pristupačnost i tastatura nisu ručna provjera. Isti testovi su dio
       # `pnpm test`; ovaj korak ih imenuje da u CI-ju bude VIDLJIV zelen a11y, a ne skriven
       # u zbirnom broju. Pad ovdje znači: ekran ili okvir ima serious/critical nalaz.

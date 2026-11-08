@@ -36,6 +36,11 @@ const OTHER = "cmp_r2b_b";
 const USER = "usr_r2b_admin";
 const USER_OTHER = "usr_r2b_other";
 const WORKER = "wrk_r2b_amina";
+/** G3: dva radnika u ISTOJ firmi — A ne smije vidjeti B-ove rokove. */
+const RADNIK_A = "usr_r2b_radnik_a";
+const RADNIK_B = "usr_r2b_radnik_b";
+const WRK_A = "wrk_r2b_a";
+const WRK_B = "wrk_r2b_b";
 const MACHINE = "mch_r2b_bager";
 
 const get = (url: string, cookie?: string) => new NextRequest(url, { headers: cookie ? { cookie } : {} });
@@ -67,13 +72,15 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
   const admin = new Pool({ connectionString: adminUrl });
   let cookieA = "";
   let cookieB = "";
+  let cookieRadnikA = "";
+
   let medicalTypeId = "";
   let registrationTypeId = "";
   let machineId = "";
 
   beforeAll(async () => {
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER]]);
-    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER, USER_OTHER]]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER, USER_OTHER, RADNIK_A, RADNIK_B]]);
     await admin.query(
       "INSERT INTO companies (id, name, slug) VALUES ($1, 'R2b Firma A', 'r2b-firma-a'), ($2, 'R2b Firma B', 'r2b-firma-b')",
       [COMPANY, OTHER],
@@ -83,27 +90,40 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
       // (pravilo iz R1a: dok je privremena lozinka, smije se samo promijeniti lozinka).
       `INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password)
        VALUES ($1, 'r2b-admin@test.example', 'x', 'Admin', 'A', false),
-              ($2, 'r2b-other@test.example', 'x', 'Admin', 'B', false)`,
-      [USER, USER_OTHER],
+              ($2, 'r2b-other@test.example', 'x', 'Admin', 'B', false),
+              ($3, 'r2b-radnik-a@test.example', 'x', 'Radnik', 'A', false),
+              ($4, 'r2b-radnik-b@test.example', 'x', 'Radnik', 'B', false)`,
+      [USER, USER_OTHER, RADNIK_A, RADNIK_B],
     );
 
     const { withCompany, companyId } = await import("@gradix/db");
     const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
-    for (const [company, memberId, userId, role] of [
-      [COMPANY, "mem_r2b_a", USER, "ADMIN"],
-      [OTHER, "mem_r2b_b", USER_OTHER, "OWNER"],
+    for (const [company, memberId, userId, role, scope] of [
+      [COMPANY, "mem_r2b_a", USER, "ADMIN", "COMPANY"],
+      [OTHER, "mem_r2b_b", USER_OTHER, "OWNER", "COMPANY"],
+      /*
+       * Radnici MORAJU imati eksplicitan `SELF`: kolona ima `DEFAULT 'COMPANY'` iz R1a, pa bi
+       * radnik bez ovoga vidio cijelu firmu. To nije detalj testa nego stvarna zamka — dozvola
+       * `obligations.view` sama po sebi NE ograničava redove; granicu drži opseg.
+       */
+      [COMPANY, "mem_r2b_ra", RADNIK_A, "WORKER", "SELF"],
+      [COMPANY, "mem_r2b_rb", RADNIK_B, "WORKER", "SELF"],
     ] as const) {
       await withCompany(app, companyId(company), async (client) => {
         await client.query(
-          "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[])",
-          [memberId, userId, company, role],
+          `INSERT INTO memberships (id, user_id, company_id, roles, scope)
+           VALUES ($1, $2, $3, ARRAY[$4]::"Role"[], $5)`,
+          [memberId, userId, company, role, scope],
         );
       });
     }
     await withCompany(app, companyId(COMPANY), async (client) => {
       await client.query(
-        "INSERT INTO workers (id, company_id, first_name, last_name, hired_at) VALUES ($1, $2, 'Amina', 'Karić', '2025-03-01')",
-        [WORKER, COMPANY],
+        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id) VALUES
+           ($1, $2, 'Amina', 'Karić', '2025-03-01', NULL),
+           ($3, $2, 'Radnik', 'A', '2025-01-01', $4),
+           ($5, $2, 'Radnik', 'B', '2025-01-01', $6)`,
+        [WORKER, COMPANY, WRK_A, RADNIK_A, WRK_B, RADNIK_B],
       );
       await client.query(
         `INSERT INTO machines (id, company_id, code, name, category_id)
@@ -115,6 +135,9 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
 
     cookieA = await signIn(USER, COMPANY);
     cookieB = await signIn(USER_OTHER, OTHER);
+    cookieRadnikA = await signIn(RADNIK_A, COMPANY);
+    // Nalog radnika B se koristi u testu; njegov cookie nije potreban — B-ove rokove gleda A.
+    await signIn(RADNIK_B, COMPANY);
 
     const types = (await (await typesRoute(get("http://interni/api/obligation-types", cookieA))).json()) as {
       data: { types: { id: string; code: string; entityKind: string; defaultReminderDays: number[] }[] };
@@ -188,7 +211,17 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
       return (await response.json()) as { data: { obligation: { id: string; state: string; daysLeft: number } } };
     };
 
-    const today = new Date();
+    /*
+     * „Danas" dolazi iz ZONE FIRME, ne iz Node sata.
+     *
+     * Bilo je `new Date()`: u 23h UTC firma (UTC+1) već je sutra, pa je „rok istječe danas" padao na
+     * „isteklo" — test je zavisio od doba dana u kojem se pušta. Datum firme je jedini datum koji
+     * `obligation_state` i koristi.
+     */
+    const danas = (await (
+      await obligationsRoute(get("http://interni/api/obligations", cookieA))
+    ).json()) as { data: { today: string } };
+    const today = new Date(`${danas.data.today}T00:00:00Z`);
     const iso = (offset: number) => {
       const date = new Date(today.getTime() + offset * 86_400_000);
       return date.toISOString().slice(0, 10);
@@ -555,6 +588,110 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
     }
 
     await admin.query("DELETE FROM obligations WHERE id = $1", [created.data.obligation.id]);
+  });
+
+  /* ------------------------------------------- G3: radnik vidi SAMO svoje */
+
+  it("radnik A vidi SVOJ rok, a rok radnika B u ISTOJ firmi mu je nevidljiv", async () => {
+    // Rukovodilac upisuje po jedan rok svakom radniku.
+    for (const [wrk, broj] of [[WRK_A, "LK-A-1"], [WRK_B, "LK-B-1"]] as const) {
+      const created = await createObligationRoute(
+        authed("http://interni/api/obligations", {
+          method: "POST",
+          body: { typeId: medicalTypeId, workerId: wrk, number: broj, expiresAt: "2027-06-30" },
+        }, cookieA),
+      );
+      expect(created.status).toBe(200);
+    }
+
+    const mine = (await (
+      await obligationsRoute(get("http://interni/api/obligations?mine=1", cookieRadnikA))
+    ).json()) as { data: { obligations: { workerId: string | null; number: string | null }[] } };
+
+    // Vidi tačno svoj — i to po BROJU, jer broj je ono što čovjek prepozna.
+    expect(mine.data.obligations.map((entry) => entry.number)).toEqual(["LK-A-1"]);
+    expect(mine.data.obligations.every((entry) => entry.workerId === WRK_A)).toBe(true);
+  });
+
+  it("radnik NE može proširiti opseg parametrom: `?workerId=` tuđeg radnika ne mijenja ništa", async () => {
+    /*
+     * Ovo je test koji brani granicu od „samo ga lijepo sakrij u UI-u". Bez provjere na serveru
+     * dovoljno je poslati tuđi `workerId` i vidio bi sve — pa opseg ne bi bio opseg.
+     */
+    const tuđi = (await (
+      await obligationsRoute(get(`http://interni/api/obligations?workerId=${WRK_B}`, cookieRadnikA))
+    ).json()) as { data: { obligations: { workerId: string | null }[] } };
+
+    expect(tuđi.data.obligations).toEqual([]);
+  });
+
+  it("radnik NE vidi priloge (skenove) — samo tip, rok i stanje; ruta za prilog mu je zatvorena", async () => {
+    // Jedan aktivan ljekarski po radniku (unique) — prethodni test ga je već upisao.
+    await admin.query(
+      "DELETE FROM obligations WHERE company_id = $1 AND worker_id = $2 AND superseded_by IS NULL",
+      [COMPANY, WRK_A],
+    );
+
+    const created = (await (
+      await createObligationRoute(
+        authed("http://interni/api/obligations", {
+          method: "POST",
+          body: { typeId: medicalTypeId, workerId: WRK_A, number: "LK-A-2", expiresAt: "2027-08-31" },
+        }, cookieA),
+      )
+    ).json()) as { data: { obligation: { id: string } } };
+    const obligationId = created.data.obligation.id;
+
+    // Prilog upisuje ured (u bazi, jer storage u testu nije podešen).
+    await admin.query(
+      `INSERT INTO obligation_attachments (id, company_id, obligation_id, file_name, content_type,
+                                           size_bytes, status, object_key, sha256)
+       VALUES ('att_r2b_nalaz', $1, $2, 'ljekarski.pdf', 'application/pdf', 1234, 'ready',
+               'gx2/' || $1 || '/obligations/' || $2 || '/att_r2b_nalaz', repeat('a', 64))`,
+      [COMPANY, obligationId],
+    );
+
+    // Radnik: u listi NEMA priloga, a tip/rok/stanje jesu.
+    const lista = (await (
+      await obligationsRoute(get("http://interni/api/obligations?mine=1", cookieRadnikA))
+    ).json()) as { data: { obligations: { number: string | null; attachments: unknown[]; expiresAt: string | null; state: string }[] } };
+    const svoj = lista.data.obligations.find((entry) => entry.number === "LK-A-2")!;
+    expect(svoj.attachments).toEqual([]);
+    expect(svoj.expiresAt).toBe("2027-08-31");
+    expect(svoj.state).toBeTruthy();
+
+    // Detalj: isto — bez priloga.
+    const detaljOdgovor = await obligationRoute(get("http://interni/api/obligations/x", cookieRadnikA), {
+      params: Promise.resolve({ id: obligationId }),
+    });
+    const detalj = (await detaljOdgovor.json()) as { data: { obligation: { attachments: unknown[] } } };
+    expect(detalj.data.obligation.attachments).toEqual([]);
+
+    // Ruta koja otvara SADRŽAJ priloga: radnik ne prolazi (403), ured prolazi.
+    const urlRoute = (await import("@/app/api/obligations/[id]/attachments/[attachmentId]/url/route")).GET;
+    const zaRadnika = await urlRoute(get("http://interni/api/obligations/x/attachments/y/url", cookieRadnikA), {
+      params: Promise.resolve({ id: obligationId, attachmentId: "att_r2b_nalaz" }),
+    });
+    expect(zaRadnika.status).toBe(403);
+
+    // Ured ga vidi u listi — znači prilog NIJE nestao, samo je radniku zatvoren.
+    const ured = (await (
+      await obligationsRoute(get("http://interni/api/obligations", cookieA))
+    ).json()) as { data: { obligations: { id: string; attachments: { fileName: string }[] }[] } };
+    const izUreda = ured.data.obligations.find((entry) => entry.id === obligationId)!;
+    expect(izUreda.attachments.map((entry) => entry.fileName)).toEqual(["ljekarski.pdf"]);
+  });
+
+  it("radnik NE može otvoriti TUĐI rok ni ako zna njegov `id` (404, ne 403)", async () => {
+    const tuđi = await admin.query<{ id: string }>(
+      "SELECT id FROM obligations WHERE company_id = $1 AND worker_id = $2 LIMIT 1",
+      [COMPANY, WRK_B],
+    );
+    const odgovor = await obligationRoute(get("http://interni/api/obligations/x", cookieRadnikA), {
+      params: Promise.resolve({ id: tuđi.rows[0]!.id }),
+    });
+    // 404, a ne 403: radnik ne treba da zna da tuđi rok postoji.
+    expect(odgovor.status).toBe(404);
   });
 });
 

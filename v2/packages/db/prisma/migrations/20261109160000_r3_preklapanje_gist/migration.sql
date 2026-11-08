@@ -16,7 +16,24 @@
 DO $$
 DECLARE
   ima_gist BOOLEAN := false;
+  prinudno_triger BOOLEAN := current_setting('gradix.bez_btree_gist', true) = 'on';
 BEGIN
+  /*
+   * PREKIDAČ ZA PROVJERU (`gradix.bez_btree_gist = on`).
+   *
+   * Zašto postoji: mehanizam se bira po tome POSTOJI li `btree_gist` na serveru, pa jedna baza ne
+   * može pokazati oba puta. Bez ovoga bi fallback put bio provjeren samo na serveru bez contrib-a —
+   * a to je tačno situacija u kojoj je greška (SQLSTATE 23P01 prepoznat kao „nepoznata") prošla
+   * lokalno i pala u CI-ju. Sa prekidačem `scripts/check-preklapanje.mjs` vrti OBA puta na istom
+   * serveru i tvrdi koji je aktivan.
+   *
+   * Prekidač NE mijenja ponašanje u produkciji: postavlja se po bazi (`ALTER DATABASE … SET`), i to
+   * samo u skripti za provjeru.
+   */
+  IF prinudno_triger THEN
+    RAISE NOTICE 'btree_gist preskočen prekidačem (gradix.bez_btree_gist): ide fallback put.';
+    ima_gist := false;
+  ELSE
   BEGIN
     CREATE EXTENSION IF NOT EXISTS btree_gist;
     ima_gist := true;
@@ -25,6 +42,7 @@ BEGIN
     RAISE NOTICE 'btree_gist nije dostupan (%): ostaje triger sa savjetodavnom bravom.', SQLERRM;
     ima_gist := false;
   END;
+  END IF;
 
   IF ima_gist THEN
     -- Dvije constraints, jedna po entitetu: `worker_id` i `machine_id` su naizmjenično NULL, pa

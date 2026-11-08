@@ -9,6 +9,7 @@ import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
+import { can } from "@/server/permissions";
 import {
   createObligation,
   isServiceError,
@@ -24,7 +25,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (!guardResult.ok) return guardResult.response;
 
     const params = request.nextUrl.searchParams;
-    const result = await listObligations(await getVerifiedPool(), guardResult.ctx.companyId, {
+    const ctx = guardResult.ctx;
+    /*
+     * Radnik (`SELF` opseg) vidi SAMO svoje rokove — granica se postavlja ovdje, iz sesije.
+     * Prilozi su lični podatak: bez `obligations.attachments.view` se ne vraćaju u listi.
+     */
+    const result = await listObligations(await getVerifiedPool(), ctx.companyId, {
       state: params.get("state") ?? undefined,
       entityKind: params.get("entityKind") ?? undefined,
       typeId: params.get("typeId") ?? undefined,
@@ -34,6 +40,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       responsibleUserId: params.get("responsibleUserId") ?? undefined,
       ofLinkedWorkerUserId: params.get("mine") === "1" ? guardResult.ctx.userId : undefined,
       includeSuperseded: params.get("includeSuperseded") === "1",
+    }, {
+      scope: ctx.scope === "SELF" ? "SELF" : "COMPANY",
+      userId: ctx.userId,
+      includeAttachments: can(ctx.roles, "obligations.attachments.view"),
     });
     return ok(result);
   } catch (error) {

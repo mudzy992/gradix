@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured src/app/pregled",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "check-preklapanje": "node scripts/check-preklapanje.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",

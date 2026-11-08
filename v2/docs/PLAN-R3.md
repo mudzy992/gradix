@@ -71,7 +71,15 @@ projekta, bez drugog izvora istine.
 | `projects.assign` | ✅ | ✅ | ✅ | — | — |
 | `projects.override` | ✅ | ✅ | — | — | — |
 
+| `obligations.view` | ✅ | ✅ | ✅ | ✅ | ✅ **samo `SELF`** za radnika i vozača (G3) |
+| `obligations.attachments.view` | ✅ | ✅ | ✅ | ✅ | — (radnik NE vidi skenove) |
+
 `projects.assign` je **odvojena** dozvola, ne dio `users.manage` — odluka vlasnika iz R1b.
+
+**Radnik i rokovi (G3).** `WORKER`/`DRIVER` dobijaju `obligations.view`, ali opseg `SELF` drži
+granicu na serveru: vidi obaveze vezane za svoj nalog, tuđe ne vidi ni uz `?workerId=`. Prilozi
+(skenovi, ljekarski nalazi) su **posebna** dozvola `obligations.attachments.view` — radnik vidi tip,
+rok i stanje, ne i dokument. Tuđi rok je 404, a ne 403. Detalji: ADR 0011.
 
 **`projects.override` (dodato u pregledu R3).** Odobrenje iznimke je posebno pravo, samo vlasnik i
 admin. Rukovodilac projekta (PM) ima `projects.assign`: dodjeljuje ljude svaki dan, ali iznimku —

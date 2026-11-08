@@ -4,6 +4,7 @@ import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
 import { Card, Chip, Icon, Mono } from "@/components/ui";
+import { ScopeNotice } from "@/components/scope-notice";
 import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
 import { listObligations } from "@/server/obligation-service";
@@ -44,17 +45,34 @@ export default async function PregledPage() {
       "SELECT code, name FROM machines ORDER BY code",
     );
     const notes = await client.query<{ count: string }>("SELECT count(*)::text AS count FROM sync_items");
-    const memberships = await client.query<{ roles: string[] }>(
-      "SELECT roles::text[] AS roles FROM memberships WHERE user_id = $1",
+    const memberships = await client.query<{ roles: string[]; scope: string }>(
+      "SELECT roles::text[] AS roles, scope FROM memberships WHERE user_id = $1",
       [claims.sub],
     );
     const roles = memberships.rows[0]?.roles ?? [];
+    /*
+     * `PROJECTS` opseg se računa ovdje da bi ekran mogao reći ISTINU kad dodjela nema. Samo za taj
+     * opseg — `COMPANY` i `SELF` ne plaćaju ni jedan upit.
+     */
+    const scope = memberships.rows[0]?.scope ?? "SELF";
+    const assignments =
+      scope === "PROJECTS"
+        ? await client.query<{ count: string }>(
+            `SELECT count(*)::text AS count
+               FROM project_assignments a
+               JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
+              WHERE w.user_id = $1`,
+            [claims.sub],
+          )
+        : null;
     return {
       profile: profile.rows[0],
       company: company.rows[0],
       machines: machines.rows,
       noteCount: Number(notes.rows[0]?.count ?? 0),
       roles,
+      scope,
+      assignmentCount: Number(assignments?.rows[0]?.count ?? 0),
     };
   });
 
@@ -64,8 +82,14 @@ export default async function PregledPage() {
   // koja bi rekla „0“ i time slagala da rokova nema).
   const canSeeObligations = can(data.roles, "obligations.view");
   const obligationCounts = canSeeObligations
-    ? (await listObligations(await getVerifiedPool(), claims.companyId as CompanyId)).counts
+    ? (
+        await listObligations(await getVerifiedPool(), claims.companyId as CompanyId, {}, {
+          scope: data.scope === "SELF" ? "SELF" : "COMPANY",
+          userId: claims.sub,
+        })
+      ).counts
     : null;
+
 
   const firstName = data.profile?.first_name ?? "";
   const machineCount = data.machines.length;
@@ -80,6 +104,10 @@ export default async function PregledPage() {
             {data.company?.currency}
           </p>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-4)" }}>
+        <ScopeNotice scope={data.scope} assignmentCount={data.assignmentCount} />
       </div>
 
       <div className="gx-cols">

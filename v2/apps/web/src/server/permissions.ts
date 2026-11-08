@@ -54,8 +54,27 @@ export const PERMISSIONS = {
     "MACHINE_OPERATOR",
     "MECHANIC",
     "ACCOUNTANT",
+    /*
+     * G3 (odluka vlasnika, 2026-11-09): radnik vidi SVOJE rokove, i to samo svoje.
+     *
+     * Bez ovoga telefon radniku ne pokaže ni jedan rok — a rokove i gleda baš onaj kome istječu.
+     * Dozvola je data, ali sa TRI ograničenja koja se provjeravaju na serveru, ne u UI-u:
+     *   1. samo obaveze vezane za taj nalog (`SELF` opseg) — tuđe ne vidi ni uz `?workerId=`,
+     *   2. prilozi (skenovi, ljekarski nalazi) se radniku NE prikazuju — vidi tip, rok i stanje,
+     *   3. ruta za preuzimanje priloga mu je zatvorena, jer link vodi u medicinski dokument.
+     */
+    "WORKER",
+    "DRIVER",
   ],
   "obligations.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  /*
+   * Prilozi uz obavezu (skenovi, ljekarski nalazi) — POSEBNA dozvola, uža od `obligations.view`.
+   *
+   * Radnik ima `obligations.view` (vidi da mu ljekarski istječe), ali ne i ovo: medicinski nalaz je
+   * lični podatak, a ne informacija koju treba da vidi na telefonu pred kolegama. Zato sve rute koje
+   * dotiču SADRŽAJ priloga traže ovu dozvolu, a ne `obligations.view`.
+   */
+  "obligations.attachments.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
   // R3. `projects.view` je široko — radnik mora znati na kojem je projektu. Pravo i dodjele ljudi
   // su odvojeni svjesno: `projects.assign` je NOVA dozvola, ne dio `users.manage` (odluka vlasnika
   // iz R1b, preseljena u R3). Mijenjanje role i dodjela projekta su dvije različite radnje.
@@ -109,6 +128,11 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "obligations.view": {
     label: "Pregled rokova",
     description: "Obaveze, rokovi i stanje (isteklo / uskoro istječe / važeće) — bez izmjena.",
+  },
+  "obligations.attachments.view": {
+    label: "Pregled priloga rokova",
+    description:
+      "Otvara skenove i nalaze uz obavezu. Radnik vidi svoj rok, ali ne i sam dokument — nalaz je lični podatak.",
   },
   "obligations.manage": {
     label: "Upravljanje rokovima",
