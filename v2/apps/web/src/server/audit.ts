@@ -25,9 +25,31 @@ export const AUDIT_ACTIONS = [
   "user.activated",
   "user.membership_changed",
   "session.revoked_all",
+  // R2a
+  "worker.created",
+  "worker.updated",
+  "worker.deactivated",
+  "worker.activated",
+  "worker.user_linked",
+  "worker.user_unlinked",
+  "equipment.created",
+  "equipment.updated",
+  "equipment.meter_updated",
+  "equipment.meter_corrected",
+  "equipment.category_created",
+  "equipment.category_updated",
+  "import.applied",
 ] as const;
 
-export const AUDIT_ENTITY_TYPES = ["invitation", "user", "session"] as const;
+export const AUDIT_ENTITY_TYPES = [
+  "invitation",
+  "user",
+  "session",
+  "worker",
+  "equipment",
+  "equipment_category",
+  "import",
+] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
@@ -41,6 +63,19 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "user.activated": "Osoba aktivirana",
   "user.membership_changed": "Promijenjene role ili opseg",
   "session.revoked_all": "Sve sesije ugašene",
+  "worker.created": "Radnik dodan",
+  "worker.updated": "Radnik izmijenjen",
+  "worker.deactivated": "Radnik deaktiviran",
+  "worker.activated": "Radnik aktiviran",
+  "worker.user_linked": "Radnik povezan sa nalogom",
+  "worker.user_unlinked": "Veza radnika i naloga raskinuta",
+  "equipment.created": "Mašina dodana",
+  "equipment.updated": "Mašina izmijenjena",
+  "equipment.meter_updated": "Brojilo ažurirano",
+  "equipment.meter_corrected": "Brojilo ispravljeno",
+  "equipment.category_created": "Kategorija mašina dodana",
+  "equipment.category_updated": "Kategorija mašina izmijenjena",
+  "import.applied": "Uvoz iz Excela",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

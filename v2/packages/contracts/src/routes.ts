@@ -8,10 +8,24 @@
 import { z } from "zod";
 import {
   ActivePatch,
+  CategoriesResponse,
+  CategoryInput,
+  ImportPreview,
+  ImportResult,
+  MachineInput,
+  MachineResponse,
+  MachinesResponse,
+  MeterPatch,
+  WorkerActivePatch,
+  WorkerInput,
+  WorkerLinkPatch,
+  WorkerResponse,
+  WorkersResponse,
   ApplyPasswordResetRequest,
   AuditResponse,
   ChangePasswordRequest,
   ChangePasswordResponse,
+  EquipmentCategory,
   InvitationPreview,
   InviteRequest,
   InviteResponse,
@@ -44,6 +58,8 @@ export type RouteSpec = {
   permission: string | null;
   request: z.ZodType | null;
   response: z.ZodType;
+  /** Za rute koje ne primaju JSON (uvoz): `multipart/form-data` umjesto `application/json`. */
+  contentType?: "application/json" | "multipart/form-data";
   /** Query parametri koje ruta čita (za OpenAPI; klijent ih dobija kroz `query` opciju). */
   query?: z.ZodObject;
   /** Neke rute vraćaju `meta` u envelope-u (sync pull, sync push). */
@@ -183,6 +199,128 @@ export const ROUTES = [
   },
   {
     method: "GET",
+    path: "/api/workers",
+    summary: "Radnici firme (uključujući neaktivne, sa oznakom).",
+    auth: true,
+    permission: "workers.view",
+    request: null,
+    response: WorkersResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/workers",
+    summary: "Novi radnik — ne pravi nalog.",
+    auth: true,
+    permission: "workers.manage",
+    request: WorkerInput,
+    response: WorkerResponse,
+  },
+  {
+    method: "PATCH",
+    path: "/api/workers/{id}",
+    summary: "Izmjena podataka radnika.",
+    auth: true,
+    permission: "workers.manage",
+    request: WorkerInput,
+    response: WorkerResponse,
+  },
+  {
+    method: "PATCH",
+    path: "/api/workers/{id}/active",
+    summary: "Aktivacija ili deaktivacija radnika (bez brisanja).",
+    auth: true,
+    permission: "workers.manage",
+    request: WorkerActivePatch,
+    response: WorkerResponse,
+  },
+  {
+    method: "PATCH",
+    path: "/api/workers/{id}/link-user",
+    summary: "Veza radnika sa nalogom; veza ne daje dozvole.",
+    auth: true,
+    permission: "users.manage",
+    request: WorkerLinkPatch,
+    response: WorkerResponse,
+  },
+  {
+    method: "GET",
+    path: "/api/equipment-categories",
+    summary: "Kategorije mašina firme (podaci, ne enum).",
+    auth: true,
+    permission: "equipment.view",
+    request: null,
+    response: CategoriesResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/equipment-categories",
+    summary: "Nova kategorija mašina.",
+    auth: true,
+    permission: "equipment.manage",
+    request: CategoryInput,
+    response: z.object({ category: EquipmentCategory }),
+  },
+  {
+    method: "GET",
+    path: "/api/equipment",
+    summary: "Mašine i vozila — jedna tabela.",
+    auth: true,
+    permission: "equipment.view",
+    request: null,
+    response: MachinesResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/equipment",
+    summary: "Nova mašina ili vozilo.",
+    auth: true,
+    permission: "equipment.manage",
+    request: MachineInput,
+    response: MachineResponse,
+  },
+  {
+    method: "PATCH",
+    path: "/api/equipment/{id}",
+    summary: "Izmjena mašine; vrsta brojila samo dok brojilo nema vrijednost.",
+    auth: true,
+    permission: "equipment.manage",
+    request: MachineInput,
+    response: MachineResponse,
+  },
+  {
+    method: "PATCH",
+    path: "/api/equipment/{id}/meter",
+    summary:
+      "Trenutna vrijednost brojila; manja vrijednost traži izričitu ispravku.",
+    auth: true,
+    permission: "equipment.view",
+    request: MeterPatch,
+    response: MachineResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/imports/preview",
+    summary: "Uvoz: fajl → pregled redova. Ne piše ništa u bazu.",
+    auth: true,
+    permission: "workers.manage",
+    request: null,
+    response: ImportPreview,
+    /** Multipart: fajl (5 MB) + `kind` + opciono `mapping`. */
+    contentType: "multipart/form-data",
+  },
+  {
+    method: "POST",
+    path: "/api/imports/apply",
+    summary:
+      "Uvoz: potvrda odluka po redu, u jednoj transakciji (sve ili ništa).",
+    auth: true,
+    permission: "workers.manage",
+    request: null,
+    response: ImportResult,
+    contentType: "multipart/form-data",
+  },
+  {
+    method: "GET",
     path: "/api/roles",
     summary: "Matrica rola (pregled, nije uređivanje).",
     auth: true,
@@ -236,7 +374,11 @@ export const ROUTES = [
     request: null,
     response: SyncPullResponse,
     query: z.object({ since: z.string().optional() }),
-    meta: z.object({ lastSyncTimestamp: z.string(), serverTime: z.string(), limit: z.number() }),
+    meta: z.object({
+      lastSyncTimestamp: z.string(),
+      serverTime: z.string(),
+      limit: z.number(),
+    }),
   },
   {
     method: "POST",
@@ -251,10 +393,14 @@ export const ROUTES = [
 ] as const;
 
 /** Putanja sa popunjenim parametrima, npr. `/api/users/{id}/active` + `{id: "u1"}`. */
-export function buildPath(path: string, params: Record<string, string> = {}): string {
+export function buildPath(
+  path: string,
+  params: Record<string, string> = {},
+): string {
   return path.replace(/\{(\w+)\}/g, (_, key: string) => {
     const value = params[key];
-    if (value === undefined) throw new Error(`Nedostaje parametar putanje: ${key}`);
+    if (value === undefined)
+      throw new Error(`Nedostaje parametar putanje: ${key}`);
     return encodeURIComponent(value);
   });
 }

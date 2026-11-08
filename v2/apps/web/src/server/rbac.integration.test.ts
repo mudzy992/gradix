@@ -40,6 +40,8 @@ const TENANT_TABLES = [
   "memberships",
   "sessions",
   "machines",
+  "equipment_categories",
+  "workers",
   "audit_events",
   "invitations",
   "password_resets",
@@ -139,8 +141,14 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
         await client.query("BEGIN");
         await client.query("SELECT set_config('app.company_id', $1, true)", [companyId]);
         await client.query(
-          `INSERT INTO machines (id, company_id, code, name) VALUES ($1, $2, $3, $3)`,
+          `INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $3, $2 || '_cat_other')`,
           [`mach_r1b_${suffix}`, companyId, `R1B-${suffix.toUpperCase()}`],
+        );
+        // R2a: radnik BEZ naloga (userId = null) — upravo slučaj koji tenant izolacija mora pokriti.
+        await client.query(
+          `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, phone)
+           VALUES ($1, $2, 'Radnik', $3, '2025-01-15', '+387 00 000 001')`,
+          [`wrk_r1b_${suffix}`, companyId, suffix.toUpperCase()],
         );
         await client.query(
           `INSERT INTO sessions (id, user_id, company_id, token_hash, expires_at)

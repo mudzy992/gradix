@@ -63,5 +63,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
 export type ApiMeta = Record<string, unknown>;
 
 export type ApiSuccess<T> = { success: true; data: T; meta?: ApiMeta };
-export type ApiFailure = { success: false; error: { code: ErrorCode; message: string } };
+export type ApiFailure = {
+  success: false;
+  error: { code: ErrorCode; message: string };
+};
 export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;

@@ -77,7 +77,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
         );
         await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
         await client.query(
-          "INSERT INTO machines (id, company_id, code, name) VALUES ($1, $2, $3, $4)",
+          "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $4, $2 || '_cat_other')",
           [machineId, company, code, name],
         );
       });

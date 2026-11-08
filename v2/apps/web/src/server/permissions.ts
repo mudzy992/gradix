@@ -42,6 +42,14 @@ export const PERMISSIONS = {
   "users.manage": ["OWNER", "ADMIN"],
   "audit.view": ["OWNER", "ADMIN"],
   "roles.view": ["OWNER", "ADMIN"],
+  // R2a. `workers.view` je širi od `manage`: šef gradilišta mora vidjeti ljude, ali ne mijenja
+  // njihove podatke. Isto za mašine — rukovalac vidi svoju mašinu, ne uređuje katalog.
+  "workers.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "workers.manage": ["OWNER", "ADMIN"],
+  "equipment.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC"],
+  // `equipment.manage` uključuje ispravku brojila (namjerno ne za rukovaoca: on unosi novo
+  // stanje, ali ne prepisuje staro — to je posao ureda).
+  "equipment.manage": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -59,6 +67,22 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "roles.view": {
     label: "Pregled matrica rola",
     description: "Koja rola šta smije — samo pregled, ne mijenja dozvole.",
+  },
+  "workers.view": {
+    label: "Pregled radnika",
+    description: "Lista radnika, kontakt i angažman — bez izmjena.",
+  },
+  "workers.manage": {
+    label: "Upravljanje radnicima",
+    description: "Dodavanje, izmjena, deaktivacija i veza radnika sa nalogom.",
+  },
+  "equipment.view": {
+    label: "Pregled mašina",
+    description: "Lista mašina i vozila, kategorije i stanje brojila — bez izmjena.",
+  },
+  "equipment.manage": {
+    label: "Upravljanje mašinama",
+    description: "Mašine, kategorije, brojilo i ispravke brojila.",
   },
 };
 

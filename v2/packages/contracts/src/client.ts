@@ -60,12 +60,19 @@ export type RequestOptions = {
 type Method = RouteSpec["method"];
 
 function findRoute(method: Method, path: string): RouteSpec {
-  const route = ROUTES.find((entry) => entry.method === method && entry.path === path);
+  const route = ROUTES.find(
+    (entry) => entry.method === method && entry.path === path,
+  );
   if (!route) throw new Error(`Ruta ${method} ${path} nije u ugovoru.`);
   return route;
 }
 
-function buildUrl(baseUrl: string, path: string, params?: Record<string, string>, query?: RequestOptions["query"]): string {
+function buildUrl(
+  baseUrl: string,
+  path: string,
+  params?: Record<string, string>,
+  query?: RequestOptions["query"],
+): string {
   const url = new URL(buildPath(path, params), baseUrl || "http://localhost");
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined) url.searchParams.set(key, String(value));
@@ -74,7 +81,11 @@ function buildUrl(baseUrl: string, path: string, params?: Record<string, string>
 }
 
 /** Zaglavlja odgovora koja klijent mora da vidi (npr. `Retry-After` na 429). */
-export type ClientResult<T> = { data: T; meta?: Record<string, unknown>; headers: Headers };
+export type ClientResult<T> = {
+  data: T;
+  meta?: Record<string, unknown>;
+  headers: Headers;
+};
 
 export function createClient(options: ClientOptions = {}) {
   const baseUrl = options.baseUrl ?? "";
@@ -88,18 +99,27 @@ export function createClient(options: ClientOptions = {}) {
     requestOptions: RequestOptions = {},
   ): Promise<ClientResult<RouteResponse<M, P>>> {
     const route = findRoute(method, path);
-    const token = requestOptions.accessToken !== undefined ? requestOptions.accessToken : options.accessToken;
+    const token =
+      requestOptions.accessToken !== undefined
+        ? requestOptions.accessToken
+        : options.accessToken;
 
-    const headers: Record<string, string> = { accept: "application/json", ...options.headers };
+    const headers: Record<string, string> = {
+      accept: "application/json",
+      ...options.headers,
+    };
     if (body !== undefined) headers["content-type"] = "application/json";
     if (token) headers.authorization = `Bearer ${token}`;
 
-    const response = await doFetch(buildUrl(baseUrl, path, params, requestOptions.query), {
-      method,
-      headers,
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      ...(requestOptions.signal ? { signal: requestOptions.signal } : {}),
-    });
+    const response = await doFetch(
+      buildUrl(baseUrl, path, params, requestOptions.query),
+      {
+        method,
+        headers,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(requestOptions.signal ? { signal: requestOptions.signal } : {}),
+      },
+    );
 
     const text = await response.text();
     let parsed: unknown = null;
@@ -188,8 +208,11 @@ export function createClient(options: ClientOptions = {}) {
   }
 
   return {
-    get: <P extends string>(path: P, params?: Record<string, string>, requestOptions?: RequestOptions) =>
-      call("GET", path, undefined, params, requestOptions),
+    get: <P extends string>(
+      path: P,
+      params?: Record<string, string>,
+      requestOptions?: RequestOptions,
+    ) => call("GET", path, undefined, params, requestOptions),
     post: <P extends string>(
       path: P,
       body: RouteRequest<"POST", P>,

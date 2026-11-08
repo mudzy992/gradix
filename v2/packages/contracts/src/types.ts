@@ -18,17 +18,27 @@ export type Route = (typeof ROUTES)[number] & RouteSpec;
 
 export type RouteMap = { [R in Route as `${R["method"]} ${R["path"]}`]: R };
 
-type Lookup<M extends string, P extends string> = `${M} ${P}` extends keyof RouteMap
-  ? RouteMap[`${M} ${P}`]
-  : never;
+type Lookup<
+  M extends string,
+  P extends string,
+> = `${M} ${P}` extends keyof RouteMap ? RouteMap[`${M} ${P}`] : never;
 
 export type RouteResponse<M extends string, P extends string> =
-  Lookup<M, P> extends { response: infer R } ? (R extends z.ZodType ? z.output<R> : never) : never;
+  Lookup<M, P> extends { response: infer R }
+    ? R extends z.ZodType
+      ? z.output<R>
+      : never
+    : never;
 
 export type RouteRequest<M extends string, P extends string> =
-  Lookup<M, P> extends { request: infer R } ? (R extends z.ZodType ? z.input<R> : undefined) : undefined;
+  Lookup<M, P> extends { request: infer R }
+    ? R extends z.ZodType
+      ? z.input<R>
+      : undefined
+    : undefined;
 
 /** Parametri putanje za datu rutu, npr. `{ id: string }` za `/api/users/{id}/active`. */
-export type RouteParams<P extends string> = P extends `${string}{${infer Param}}${infer Rest}`
-  ? { [K in Param]: string } & RouteParams<Rest>
-  : Record<string, never>;
+export type RouteParams<P extends string> =
+  P extends `${string}{${infer Param}}${infer Rest}`
+    ? { [K in Param]: string } & RouteParams<Rest>
+    : Record<string, never>;

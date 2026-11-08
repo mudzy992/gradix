@@ -36,7 +36,8 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
       await withCompany(pool, companyId(id), async (client) => {
         await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
         await client.query(
-          "INSERT INTO machines (id, company_id, code, name) VALUES ($1, $2, $3, $4)",
+          // `category_id` je obavezan od R2a; kategorije dobija svaka firma triggerom.
+          "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $4, $2 || '_cat_other')",
           [machineId, id, code, name],
         );
       });
@@ -157,7 +158,9 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
   it("upis u tuđu firmu je odbijen (WITH CHECK)", async () => {
     await expect(
       withCompany(pool, companyId(COMPANY_A), async (client) => {
-        await client.query("INSERT INTO machines (id, company_id, code, name) VALUES ('m_x', $1, 'X', 'X')", [
+        await client.query(
+          "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ('m_x', $1, 'X', 'X', $1 || '_cat_other')",
+          [
           COMPANY_B,
         ]);
       }),

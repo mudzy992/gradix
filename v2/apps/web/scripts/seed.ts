@@ -39,10 +39,10 @@ const users: SeedUser[] = [
 ];
 
 const machines = [
-  { id: "mch_bager", companyId: "cmp_demo", code: "BAG-01", name: "Bager CAT 320" },
-  { id: "mch_valjak", companyId: "cmp_demo", code: "VAL-01", name: "Valjak Bomag BW 213" },
-  { id: "mch_kamion", companyId: "cmp_demo", code: "KAM-01", name: "Kamion MAN TGS kiper" },
-  { id: "mch_tudji", companyId: "cmp_druga", code: "BAG-77", name: "Bager druge firme" },
+  { id: "mch_bager", companyId: "cmp_demo", code: "BAG-01", name: "Bager CAT 320", category: "EXCAVATOR" },
+  { id: "mch_valjak", companyId: "cmp_demo", code: "VAL-01", name: "Valjak Bomag BW 213", category: "ROLLER" },
+  { id: "mch_kamion", companyId: "cmp_demo", code: "KAM-01", name: "Kamion MAN TGS kiper", category: "TRUCK" },
+  { id: "mch_tudji", companyId: "cmp_druga", code: "BAG-77", name: "Bager druge firme", category: "EXCAVATOR" },
 ];
 
 /**
@@ -91,8 +91,8 @@ try {
       );
       if (updated.rowCount === 0) {
         await client.query(
-          "INSERT INTO machines (id, company_id, code, name) VALUES ($1, $2, $3, $4)",
-          [machine.id, machine.companyId, machine.code, machine.name],
+          "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $4, $2 || '_cat_' || lower($5))",
+          [machine.id, machine.companyId, machine.code, machine.name, machine.category],
         );
       }
     });
