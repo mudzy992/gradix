@@ -326,8 +326,12 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
   }, 30_000);
 
   it("licni podaci u koloni se prijavljuju kao nepodržani", async () => {
+    // 13 cifara sa pogrešnom kontrolnom cifrom: kolona se odbija po IMENU, ne po sadržaju.
     const parsed = await parse(
-      await makeWorkbook([[...WORKER_HEADER, "JMBG"], ["Amina", "Karić", null, null, null, "STALNO", "01.03.2025", null, null, "0101990151238"]]),
+      await makeWorkbook([
+        [...WORKER_HEADER, "JMBG"],
+        ["Amina", "Karić", null, null, null, "STALNO", "01.03.2025", null, null, "0101990151230"],
+      ]),
     );
     const preview = await previewImport(pool, COMPANY as never, "workers", parsed, workerMapping);
     if (isServiceError(preview)) throw new Error(preview.message);

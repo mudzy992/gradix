@@ -43,6 +43,16 @@ const SKIP_DIRS = new Set([
 const SKIP_FILES = new Set(["pnpm-lock.yaml", "openapi.json"]);
 
 const CODE_FILE = /\.(ts|tsx|js|mjs|cjs|sql)$/;
+
+/**
+ * Polje ličnog podatka se traži kao DEKLARACIJA, ne kao riječ:
+ *  - SQL: `jmbg TEXT`, `bankovni_racun VARCHAR(34)` …,
+ *  - TS: `jmbg:` / `iban?:` (objekat ili tip).
+ * Tako spisak zabranjenih imena („ne unosimo JMBG“) i komentar koji to objašnjava nisu nalaz —
+ * a stvarna kolona ili polje jesu. Prva verzija pravila je kažnjavala upravo spisak zabrana.
+ */
+const PERSONAL_SQL = /\b(jmbg|broj_licne|licna_karta|bankovni_racun|iban)\b\s+(text|varchar|char|bytea|bigint|numeric|uuid)/i;
+const PERSONAL_TS = /(^|[^\w.])(jmbg|brojLicne|licnaKarta|bankovniRacun|iban)\s*[?:]\s*/;
 const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|json|md|sql|ya?ml|html|css|txt|csv)$/;
 
 /**
@@ -90,7 +100,7 @@ export function scan(root) {
           if (isJmbg(match[0])) findings.push(`${where} JMBG (13 cifara, ispravna kontrolna cifra)`);
         }
 
-        if (isCode && /\b(jmbg|broj_licne|licna_karta|bankovni_racun|iban)\b/i.test(line)) {
+        if (isCode && (PERSONAL_SQL.test(line) || PERSONAL_TS.test(line))) {
           findings.push(`${where} polje ličnog podatka koje R2a ne smije imati`);
         }
 
@@ -114,7 +124,9 @@ const CASES = [
   { name: "13 cifara sa pogrešnom kontrolnom prolazi", file: "seed.ts", body: 'const t = "0101990151230";', expect: false },
   { name: "stvarni email domen se hvata", file: "a.md", body: "kontakt: pero.peric@gmail.com", expect: true },
   { name: "demo domen prolazi", file: "a.md", body: "kontakt: ured@demo.ba", expect: false },
-  { name: "polje JMBG-a u kodu se hvata", file: "schema.sql", body: "CREATE TABLE workers (jmbg TEXT);", expect: true },
+  { name: "kolona JMBG-a u SQL-u se hvata", file: "schema.sql", body: "CREATE TABLE workers (jmbg TEXT);", expect: true },
+  { name: "polje u TS tipu se hvata", file: "types.ts", body: "type Worker = { jmbg: string };", expect: true },
+  { name: "spisak zabranjenih polja prolazi", file: "guard.ts", body: 'const BLOCKED = ["jmbg", "iban"];', expect: false },
   { name: "imenovanje polja u dokumentaciji prolazi", file: "docs/x.md", body: "- JMBG, adresa i bankovni račun se NE unose.", expect: false },
 ];
 
