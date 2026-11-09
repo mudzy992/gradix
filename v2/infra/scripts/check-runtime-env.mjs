@@ -9,6 +9,8 @@ const diagnostics = read("infra/diagnostics/run.mjs");
 const compose = read("infra/coolify/docker-compose.yml");
 const webDockerfile = read("infra/docker/Dockerfile.web");
 const minioInitDockerfile = read("infra/minio/Dockerfile.init");
+const minioConsoleProxyDockerfile = read("infra/minio/Dockerfile.console-proxy");
+const minioConsoleProxyConf = read("infra/minio/console-proxy.conf");
 const envExample = read(".env.example");
 const redisAcl = read("infra/redis/acl-v2.txt");
 const minioInitScript = read("infra/minio/init-staging.sh");
@@ -21,10 +23,12 @@ const referencedNames = new Set();
 for (const match of source.matchAll(/\b(?:process\.env|env)\.([A-Z][A-Z0-9_]*)/g)) referencedNames.add(match[1]);
 
 const webSection = compose.match(/^ {2}web:\n([\s\S]*?)(?=^ {2}minio:\n)/m)?.[1];
-const minioSection = compose.match(/^ {2}minio:\n([\s\S]*?)(?=^ {2}minio-init:\n)/m)?.[1];
+const minioSection = compose.match(/^ {2}minio:\n([\s\S]*?)(?=^ {2}minio-console-proxy:\n)/m)?.[1];
+const minioConsoleProxySection = compose.match(/^ {2}minio-console-proxy:\n([\s\S]*?)(?=^ {2}minio-init:\n)/m)?.[1];
 const minioInitSection = compose.match(/^ {2}minio-init:\n([\s\S]*?)(?=^networks:\n)/m)?.[1];
 if (!webSection) throw new Error("Could not locate the Coolify web service in docker-compose.yml.");
 if (!minioSection) throw new Error("Could not locate the Coolify MinIO service in docker-compose.yml.");
+if (!minioConsoleProxySection) throw new Error("Could not locate the MinIO Console proxy service in docker-compose.yml.");
 if (!minioInitSection) throw new Error("Could not locate the MinIO bootstrap service in docker-compose.yml.");
 
 const webEnvironment = webSection.split(/^ {4}volumes:\s*$/m, 1)[0];
@@ -84,20 +88,31 @@ if (!/^\s{6}MINIO_API_CORS_ALLOW_ORIGIN:\s*\$\{MINIO_CORS_ALLOWED_ORIGIN:-https:
   throw new Error("MinIO server must receive the exact web origin via its global API CORS allowlist.");
 }
 const minioExpose = minioSection.match(/^ {4}expose:\n((?:^ {6}.*\n?)*)/m)?.[1] ?? "";
-if (!/^\s{6}- "9000"(?:\s|$)/m.test(minioExpose) || !/^\s{6}- "9001"(?:\s|$)/m.test(minioExpose)) {
-  throw new Error("MinIO must expose S3 API port 9000 and Console port 9001 to the Coolify proxy network.");
+if (!/^\s{6}- "9000"(?:\s|$)/m.test(minioExpose) || /^\s{6}- "9001"(?:\s|$)/m.test(minioExpose)) {
+  throw new Error("MinIO must expose only the S3 API port 9000 to Coolify; keep Console port 9001 behind the private proxy.");
 }
 if (/^ {4}ports:/m.test(minioSection)) {
-  throw new Error("MinIO ports must not be published directly on the host; use separate Coolify domain routes.");
+  throw new Error("MinIO ports must not be published directly on the host; use the Coolify service routes.");
 }
-const minioApiPortMarker = minioEnvironment.indexOf("SERVICE_FQDN_MINIO_9000:");
-const minioConsolePortMarker = minioEnvironment.indexOf("SERVICE_FQDN_MINIO_9001:");
 if (!/^\s{6}SERVICE_FQDN_MINIO:\s*\$\{SERVICE_FQDN_MINIO:-\}\s*$/m.test(minioEnvironment) ||
     !/^\s{6}SERVICE_FQDN_MINIO_9000:\s*\$\{SERVICE_FQDN_MINIO_9000:-\}\s*$/m.test(minioEnvironment) ||
-    !/^\s{6}SERVICE_FQDN_MINIO_9001:\s*\$\{SERVICE_FQDN_MINIO_9001:-\}\s*$/m.test(minioEnvironment) ||
-    minioApiPortMarker < 0 || minioConsolePortMarker < 0 || minioApiPortMarker >= minioConsolePortMarker ||
+    /^\s{6}SERVICE_FQDN_MINIO_9001:/m.test(minioEnvironment) ||
     !/^\s{6}MINIO_BROWSER_REDIRECT_URL:\s*\$\{MINIO_BROWSER_REDIRECT_URL:-https:\/\/minio-console\.gradix\.ba101\.top\}\s*$/m.test(minioEnvironment)) {
-  throw new Error("MinIO must keep the Coolify 9000 API marker before the 9001 Console marker and use the public Console redirect URL.");
+  throw new Error("MinIO must keep the API route on port 9000 and send Console redirects to the separate public hostname.");
+}
+const consoleProxyExpose = minioConsoleProxySection.match(/^ {4}expose:\n((?:^ {6}.*\n?)*)/m)?.[1] ?? "";
+if (!/^\s{6}dockerfile:\s*infra\/minio\/Dockerfile\.console-proxy\s*$/m.test(minioConsoleProxySection) ||
+    !/^\s{6}SERVICE_FQDN_MINIO_CONSOLE_PROXY:\s*\$\{SERVICE_FQDN_MINIO_CONSOLE_PROXY:-\}\s*$/m.test(minioConsoleProxySection) ||
+    !/^\s{6}- "8080"(?:\s|$)/m.test(consoleProxyExpose) ||
+    /^ {4}ports:/m.test(minioConsoleProxySection) ||
+    !/^FROM nginx:alpine$/m.test(minioConsoleProxyDockerfile) ||
+    !/COPY infra\/minio\/console-proxy\.conf \/etc\/nginx\/conf\.d\/default\.conf/.test(minioConsoleProxyDockerfile) ||
+    !/proxy_pass http:\/\/minio:9001;/.test(minioConsoleProxyConf) ||
+    !/map \$http_upgrade \$connection_upgrade/.test(minioConsoleProxyConf) ||
+    !/proxy_set_header Upgrade \$http_upgrade/.test(minioConsoleProxyConf) ||
+    !/proxy_set_header Connection \$connection_upgrade/.test(minioConsoleProxyConf) ||
+    !/proxy_set_header X-Forwarded-Proto \$http_x_forwarded_proto/.test(minioConsoleProxyConf)) {
+  throw new Error("MinIO Console must use the dedicated Coolify service on port 8080, proxying to private MinIO port 9001 with WebSocket and forwarded-header support.");
 }
 if (/^\s{6}MINIO_(?:ACCESS_KEY|SECRET_KEY):/m.test(minioEnvironment)) {
   throw new Error("App MinIO credentials must not be passed to the MinIO server process.");
@@ -130,6 +145,9 @@ if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
 for (const name of ["MINIO_PUBLIC_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY", "MINIO_ROOT_USER", "MINIO_ROOT_PASSWORD", "MINIO_CORS_ALLOWED_ORIGIN"]) {
   if (!new RegExp(`^${name}=`, "m").test(envExample)) throw new Error(`.env.example must retain configurable MinIO input ${name}.`);
 }
+if (!/^SERVICE_FQDN_MINIO_CONSOLE_PROXY=/m.test(envExample)) {
+  throw new Error(".env.example must document the Coolify-managed Console proxy domain marker.");
+}
 
 console.log(`Coolify env contract OK; code-read names: ${[...referencedNames].sort().join(", ")}`);
-console.log("Staging defaults OK: fixed MinIO/Redis contracts, server-wide MinIO API CORS, separate API/Console routes, shell-enabled mc init, required MinIO root secrets and persistent host bind.");
+console.log("Staging defaults OK: fixed MinIO/Redis contracts, server-wide MinIO API CORS, separate API/Console routes via private proxy, shell-enabled mc init, required MinIO root secrets and persistent host bind.");
