@@ -8,7 +8,7 @@
 import { NextRequest } from "next/server";
 import type { R4WorkEntryPushItem } from "@gradix/domain";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { POST as loginRoute } from "@/app/api/auth/login/route";
@@ -213,8 +213,11 @@ describeDb("API (integracija na pravoj bazi)", () => {
     const cookieWorkerA = cookieFrom(loginWorkerA, "gx_at");
     const payloadA = { items: [workEntryItem(randomUUID(), WORKDAY_A, WORK_ENTRY_A, "Iskop A")] };
 
+    const pushErrorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const first = await pushRoute(jsonRequest("http://localhost/api/sync/push", payloadA, cookieWorkerA));
-    expect(first.status).toBe(200);
+    const pushErrors = pushErrorLog.mock.calls.map((args) => args.map(String).join(" ")).join("\n");
+    pushErrorLog.mockRestore();
+    expect(first.status, pushErrors).toBe(200);
     const firstBody = await bodyOf<{ data: { results: { localId: string; status: string; entityId: string | null; cursor: string | null; canonicalWorkdayId?: string }[] } }>(first);
     expect(firstBody.data.results[0]).toMatchObject({
       status: "APPLIED",
