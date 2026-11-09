@@ -61,12 +61,26 @@ async function main() {
   assert.match(noConfig.output, /phase=s3\.config status=SKIP cause=s3_not_configured/);
   assert.doesNotMatch(noConfig.output, /https?:\/\/[^\s"']+:[^\s"']+@/i);
 
+  let redisCommandReceived = false;
   const redis = createServer((socket) => {
-    socket.on("data", () => socket.write("-WRONGPASS invalid username-password pair or user is disabled.\r\n"));
+    socket.on("data", () => {
+      redisCommandReceived = true;
+      socket.write("-WRONGPASS invalid username-password pair or user is disabled.\r\n");
+    });
   });
   const redisPort = await listen(redis);
   const redisSecret = "ci-redis-password-must-not-appear";
   try {
+    const noPassword = await runDiagnostic(cleanEnv({
+      REDIS_HOST: "127.0.0.1",
+      REDIS_PORT: String(redisPort),
+      REDIS_USER: "gradix_v2",
+      REDIS_PREFIX: "gradix:stg:",
+    }));
+    assert.equal(noPassword.code, 0, noPassword.output);
+    assert.match(noPassword.output, /phase=redis\.auth_rw status=SKIP cause=redis_password_not_configured/);
+    assert.equal(redisCommandReceived, false, "Redis commands were sent without an ACL password");
+
     const badPassword = await runDiagnostic(cleanEnv({
       REDIS_HOST: "127.0.0.1",
       REDIS_PORT: String(redisPort),
@@ -124,7 +138,7 @@ async function main() {
   assert.match(nonexistent.output, /phase=s3\.connection status=FAIL cause=s3_dns_not_found_same_stack_network/);
   assert.ok(!nonexistent.output.includes("ci-host-test-secret"), "MinIO secret leaked during DNS failure");
 
-  console.log("Diagnostics CI fault injection passed: bad Redis auth, missing CA, missing bucket, absent DNS host; no test secrets were printed.");
+  console.log("Diagnostics CI fault injection passed: missing Redis password skips commands, bad Redis auth, missing CA, missing bucket, absent DNS host; no test secrets were printed.");
 }
 
 await main();

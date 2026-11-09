@@ -59,15 +59,12 @@ build ponavlja sa starom greškom.
 | `PGSSLMODE` | `verify-full` | Ako je u `DATABASE_URL` već `sslmode=verify-full` + `sslrootcert`, ovo je suvišno ali ne smeta. |
 | `POSTGRES_CA_FILE` | `/data/coolify/ssl/coolify-ca.crt` | CA za TLS prema bazi. Compose ga montira na `/etc/ssl/certs/coolify-ca.crt`; ako je na drugom mjestu na hostu, promijeni ovdje. |
 | `POSTGRES_CA_MOUNT_CREATE_PATH` | `false` | `false` = deploy padne jasno ako CA na hostu ne postoji. |
-| `REDIS_HOST` / `REDIS_PORT` | `redis-core` / `6380` | Opcionalna dijagnostika nad Redisom iz `redis_net`; port 6380 je TLS. Redis nije runtime zavisnost aplikacije. |
-| `REDIS_USER` / `REDIS_PASSWORD` | `gradix_v2` / postojeća lozinka kao Coolify secret | `gradix_v2` već postoji prema `infra/redis/acl-v2.txt`; Compose podrazumijeva to ime. Dijagnostika radi AUTH, PING i prefiksirani SET/PTTL/GET/DEL. Ne resetovati/re-kreirati korisnika i nikad ne stavljati lozinku u repo ili log. |
-| `REDIS_PREFIX` | `gradix:stg:` | Odvojeni staging namespace; ACL ograniči na `~gradix:stg:*`. |
-| `REDIS_TLS_CA_FILE` | `/etc/ssl/certs/redis/redis-ca.crt` | Jedina Redis CA varijabla. Host fajl `/data/coolify/ssl/redis-core/redis-ca.crt` se montira u web kontejner; ne postavljati stari `REDIS_CA_FILE`. |
-| `MINIO_ENDPOINT` | `http://minio:9000` | Server-side S3 operacije koriste interni Compose DNS na default mreži. |
-| `MINIO_PUBLIC_ENDPOINT` | javni HTTPS URL koji vodi na MinIO port 9000 | Potpisani URL-ovi moraju imati host koji vidi browser; nikad `http://minio:9000`. Obavezan da bi se prilozi uključili. |
-| `MINIO_BUCKET` | `gradix-stg` | Izolovani staging bucket, odvojen od v1. Init usluga ga kreira i postavlja bucket-scoped app policy/CORS. |
-| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | samo MinIO server admin secrets | Identične vrijednosti idu u MinIO server i jednokratni `minio-init`, nikad u web kontejner. |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | Init kreira ograničeni bucket policy nalog; web dobija samo ove app ključeve. Ne koristiti root par. |
+| Redis dijagnostika (fiksno u Compose) | `redis-core:6380`, user `gradix_v2`, prefix `gradix:stg:`, CA `/run/secrets/redis-ca.crt` | Host, port, ACL user, prefix i CA putanja se ne override-uju preko Coolify env-a. Redis nije runtime zavisnost aplikacije. |
+| `REDIS_PASSWORD` | postojeća lozinka za `gradix_v2` kao Coolify secret | Jedina promjenljiva Redis postavka; potrebna za AUTH/probe. Ako nije unesena, autentifikovani Redis test se preskače — ne šalju se neautentifikovane komande. Nikad ne stavljati lozinku u repo ili log. |
+| `MINIO_ENDPOINT` | `http://minio:9000` | Fiksni interni Compose DNS za server-side S3; ne dodavati Coolify override. |
+| `MINIO_BUCKET` / `MINIO_REGION` | `gradix-stg` / `us-east-1` | Fiksni staging bucket i region; ne dodavati Coolify override. Init kreira bucket-scoped app policy/CORS. |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | MinIO server admin secrets | Oba su obavezna Coolify secrets; Compose odbija prazne vrijednosti umjesto da MinIO krene sa `minioadmin:minioadmin`. Identični su samo na MinIO serveru i `minio-init`, ne u web appu. |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | App-only creds za web i `minio-init`; ne postavljati ih na MinIO server. Ukloni stare server-side varijable istih naziva iz Coolify MinIO servisa. |
 | `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Bucket CORS dozvoljava GET/PUT, `Content-Type` i izlaže inline-display zaglavlja. Bez patha i završnog `/`. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
@@ -78,7 +75,10 @@ storage. Prije deploya pripremi host direktorij i prava za MinIO kontejner. Ako 
 named volume `gradix-stg-minio-data`, prvo kopiraj i provjeri postojeće podatke u novu putanju;
 volume se ovim ne briše, ali novi Compose ga više ne koristi — ne uklanjati ga dok migracija nije
 provjerena. MinIO koristi unutrašnji DNS `minio`, staging bucket `gradix-stg` i odvojene root/app
-ključeve. `MINIO_DATA_DIR` nije aplikacijska varijabla. MinIO i Redis nisu uslov za podizanje v2
+ključeve. Putanja `/data` je fiksna u Composeu, nije env varijabla. `minio-init` koristi
+`ghcr.io/coollabsio/minio-mc:latest` i pokreće read-only montirani `/init.sh` kroz `/bin/sh`.
+Ne vraćati upstream `minio/mc` scratch image: njegov `ENTRYPOINT=mc` tretira `/bin/sh` kao mc
+podkomandu i daje grešku „not a recognized command“. MinIO i Redis nisu uslov za podizanje v2
 aplikacije; njihova nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja
 PostgreSQL preflight.
 
@@ -106,9 +106,12 @@ browsera/telefona nakon deploya.
 
 ## 3. Nepotrebno za v2 staging
 
-`EXPO_PUBLIC_API_URL` (mobilni se gradi lokalno), `CORS_ORIGIN` (prazno = same-origin; API je na
-istom domenu) i `REDIS_CA_FILE` (zastarjeli duplikat; koristi samo `REDIS_TLS_CA_FILE`). Puni spisak:
-`v2/.env.example`.
+`EXPO_PUBLIC_API_URL` se postavlja samo u `apps/mobile/.env.example`; `CORS_ORIGIN` je naslijeđeni
+v1 naziv. Ne dodavati ručne override vrijednosti za `MINIO_ENDPOINT`, `MINIO_BUCKET`,
+`MINIO_REGION`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_USER`, `REDIS_PREFIX` ili
+`REDIS_TLS_CA_FILE` — staging Compose ih fiksira da odgovaraju internom DNS-u i postojećem ACL-u.
+Ukloniti i stari `REDIS_CA_FILE`; jedini Redis CA env je interni, fiksni `REDIS_TLS_CA_FILE`.
+Popis varijabli koje operator stvarno unosi je u `v2/.env.example`.
 
 ## 3.5. Mreže: `db_net` i `redis_net` su eksterne, MinIO je isti stack
 
@@ -151,19 +154,18 @@ Postgres i Redis CA su dva odvojena certifikata i mounta:
 | Namjena | HOST putanja | KONTEJNER putanja / varijabla |
 |---|---|---|
 | Postgres TLS | `/data/coolify/ssl/coolify-ca.crt` (`POSTGRES_CA_FILE`) | `/etc/ssl/certs/coolify-ca.crt`; ova putanja ide u `DATABASE_URL` kao `sslrootcert=` |
-| Redis TLS | `/data/coolify/ssl/redis-core/redis-ca.crt` | `/etc/ssl/certs/redis/redis-ca.crt`; Compose fallback `REDIS_TLS_CA_FILE` je tačno ova kontejnerska putanja |
+| Redis TLS | `/data/coolify/ssl/redis-core/redis-ca.crt` | `/run/secrets/redis-ca.crt`; `REDIS_TLS_CA_FILE` je fiksiran na ovu putanju |
 
-Za Postgres je `POSTGRES_CA_FILE` host putanja, dok `sslrootcert` pokazuje unutar kontejnera. Za
-Redis se ne koristi host putanja kao env vrijednost: Compose montira cijeli host direktorij
-`/data/coolify/ssl/redis-core` read-only u `/etc/ssl/certs/redis`, pa je CA fajl unutar kontejnera
-`/etc/ssl/certs/redis/redis-ca.crt`. To je i Compose fallback za `REDIS_TLS_CA_FILE`; override
-vrijednost mora biti putanja unutar kontejnera koja postoji na tom mountu. Ako CA fajl nedostaje,
-mount ne obara web; dijagnostika prijavi
-`ca_absent_in_container_likely_host_path_without_mount`. TLS verifikacija ostaje uključena (`rejectUnauthorized: true`); nedostajući ili pogrešan CA se prijavljuje kao greška, ne kao razlog da se verifikacija isključi.
+Za Postgres je `POSTGRES_CA_FILE` host putanja, dok `sslrootcert` pokazuje unutar kontejnera. Redis
+koristi direktan, read-only file bind:
+`/data/coolify/ssl/redis-core/redis-ca.crt` → `/run/secrets/redis-ca.crt`. `create_host_path: false`
+zahtijeva da host fajl postoji; provjeri da je certifikat čitljiv UID-u aplikacije (1001). Web image
+unaprijed kreira direktorij `/run/secrets`, a `REDIS_TLS_CA_FILE` je fiksiran na bind target. Ako je
+CA pogrešan ili neispravan, TLS probe pada; verifikacija je i dalje uključena (`rejectUnauthorized:
+true`) i ne smije se isključivati radi zaobilaženja certifikata.
 
-Ne postavljati `REDIS_CA_FILE`: jedini Redis CA env naziv je `REDIS_TLS_CA_FILE`. Ako Postgres
-uopšte ne koristi TLS (npr. ista Docker mreža), može se izostaviti `sslrootcert` uz `sslmode=disable`
-ili `require`.
+Ne postavljati `REDIS_CA_FILE` niti override `REDIS_TLS_CA_FILE`. Ako Postgres uopšte ne koristi TLS
+(npr. ista Docker mreža), može se izostaviti `sslrootcert` uz `sslmode=disable` ili `require`.
 
 ## 4. Baza: odvojena rola aplikacije i migratora
 

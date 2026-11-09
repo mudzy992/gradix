@@ -22,22 +22,22 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-1}
       PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
-      # App-side S3 client: internal endpoint for server I/O; public endpoint for signed browser URLs.
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      # Fixed same-stack S3 endpoint and isolated staging bucket; only the public URL is operator-configured.
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       MINIO_BUCKET: gradix-stg
-      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_REGION: us-east-1
       # Diagnostic target and MinIO bucket CORS origin; not a MinIO server credential.
       MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
-      # Redis is informational today; rate limiting remains PostgreSQL-backed.
-      REDIS_HOST: ${REDIS_HOST:-redis-core}
-      REDIS_PORT: ${REDIS_PORT:-6380}
-      REDIS_USER: ${REDIS_USER:-gradix_v2}
+      # Fixed to the existing ACL contract; only the password is supplied as a Coolify secret.
+      REDIS_HOST: redis-core
+      REDIS_PORT: "6380"
+      REDIS_USER: gradix_v2
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PREFIX: ${REDIS_PREFIX:-gradix:stg:}
-      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/etc/ssl/certs/redis/redis-ca.crt}
+      REDIS_PREFIX: "gradix:stg:"
+      REDIS_TLS_CA_FILE: /run/secrets/redis-ca.crt
     volumes:
       # PostgreSQL CA: host source -> stable in-container path used in DATABASE_URL.
       - type: bind
@@ -46,16 +46,13 @@ services:
         read_only: true
         bind:
           create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
-      # Redis CA directory mount: missing cert does not prevent the app container starting.
-      # The diagnostic distinguishes an absent in-container CA from TLS/auth/network failures.
-      # Host: /data/coolify/ssl/redis-core/redis-ca.crt
-      # Container: /etc/ssl/certs/redis/redis-ca.crt
+      # Bind the existing CA file as read-only; fail deploy if the host certificate is missing.
       - type: bind
-        source: /data/coolify/ssl/redis-core
-        target: /etc/ssl/certs/redis
+        source: /data/coolify/ssl/redis-core/redis-ca.crt
+        target: /run/secrets/redis-ca.crt
         read_only: true
         bind:
-          create_host_path: true
+          create_host_path: false
     networks:
       - default
       - db_net
@@ -85,8 +82,8 @@ services:
     command: ["server", "/data", "--console-address", ":9001"]
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in Coolify}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
       SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
     volumes:
       - type: bind
@@ -108,14 +105,14 @@ services:
       minio:
         condition: service_started
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in Coolify}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       MINIO_BUCKET: gradix-stg
       MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
     volumes:
-      # Paths are relative to the Coolify project directory (/v2), as for the web build context.
+      # Bootstrap script and least-privilege bucket policy, mounted read-only.
       - ./infra/minio/init-staging.sh:/init.sh:ro
       - ./infra/minio/staging-policy.json:/policy.json:ro
     networks:

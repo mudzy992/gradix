@@ -24,4 +24,4 @@ ACL GETUSER gradix_v2
 #   REDIS_PORT=6380
 #   REDIS_USER=gradix_v2
 #   REDIS_PREFIX=gradix:stg:
-#   REDIS_TLS_CA_FILE=/etc/ssl/certs/redis/redis-ca.crt
+#   REDIS_TLS_CA_FILE=/run/secrets/redis-ca.crt
