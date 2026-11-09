@@ -1,123 +1,212 @@
-# PLAN R4 — radni dan, evidencija sa terena i sinhronizacija
+# PLAN R4 — radni dani, terenski unos i offline sinhronizacija
 
-**Status:** predlog, čeka odobrenje vlasnika. **Bez koda dok plan nije odobren.**
-Ulazi: R3 zatvara dodjele i opseg. R4 uvodi prvi podatak koji **nastaje na telefonu**, pa uz njega
-ide offline red i pravilo šta kad se dva telefona ne slažu.
+**Status:** revidirani predlog, čeka odobrenje vlasnika. **Nema R4 koda prije odobrenja.**
+Ulaz: R3 zatvara projekte, dodjele i opsege. R4 uvodi dnevnu evidenciju rada sa telefona, uključujući
+unos šefa grupe bez mreže. Ovaj dokument je plan, ne odluka o početku implementacije.
 
-## 1. Model radnog dana
+## 1. Granice i podjela
 
-`workdays` — jedan red po **osobi, danu i izvoru** (`source`: `WORKER` | `FOREMAN`).
+R4 je samo evidencija stvarno unesenog rada: ko, kad, na kojem projektu i u kojem vremenskom
+segmentu. Ne pravi raspored i ne prepravlja R3 dodjele.
 
-| polje | napomena |
+Rad se dijeli na dvije isporuke, sa **kapijom između**:
+
+- **R4a — unos i prenos:** radnik i šef grupe unose offline; red ostaje na telefonu; push/pull
+  sinhronizuju podatke i sukobe; ured vidi unesene dane i oznake za provjeru.
+- **R4b — potvrda i zatvaranje:** šef potvrđuje dan; ured odobrava sedmicu; zaključavanje,
+  ispravke kao revizije i lista dana koji su predugo otvoreni. R4b ne počinje dok vlasnik ne prođe
+  i ne prihvati R4a.
+
+Pozadinska sinhronizacija nije pouzdana ni na iOS-u ni na Androidu. Red se šalje kad se aplikacija
+otvori i na „Pošalji sada“; background job je dodatak, ne uslov da podaci stignu.
+
+## 2. Model podataka
+
+### `workdays` — zaglavlje
+
+Jedan zapis nosi radnika, poslovni datum i stanje dana. Identitet je `id`; **nema**
+`UNIQUE (company_id, worker_id, work_date)` ni kolone `source`. Različiti klijenti mogu imati
+zasebne lokalne zapise za isti radnik/datum; sistem ih ne spaja tiho, nego koristi verzije i
+evidenciju sukoba.
+
+| polje | svrha |
 |---|---|
-| `worker_id`, `work_date` | `UNIQUE (company_id, worker_id, work_date)` — jedan dan = jedan red |
-| `started_at`, `ended_at` | stvarno vrijeme rada; `TIMESTAMPTZ` |
-| `breaks` | pauze kao zasebni redovi (`workday_breaks`) — ukupno trajanje se **računa**, ne upisuje |
-| `project_id`, `phase_id` | faza dolazi u R4 jer je traži dan, ne projekat (odluka iz R3) |
-| `task_id`/`task_note` | zadatak kao šifrarnik po projektu + slobodan opis |
-| `machine_id` | mašina kojom se radilo; `NULL` za ručni rad |
-| `status` | `DRAFT` → `SUBMITTED` → `APPROVED` → `LOCKED` |
-| `note` | kratak opis posla |
-| `local_id` | ID koji telefon dodijeli **prije** slanja (idempotencija) |
-| `version` | za detekciju sukoba pri sinhronizaciji |
+| `id`, `company_id` | identitet i tenant |
+| `worker_id`, `work_date` | osoba i poslovni datum po zoni firme |
+| `status` | R4a: `DRAFT` → `SUBMITTED`; R4b dodaje potvrdu, sedmično odobrenje i zaključavanje |
+| `version` | optimistic concurrency; svaki prihvaćeni sadržajni upis podiže verziju |
+| `created_by`, `updated_at` | ko je unio/izmijenio i kad je server obradio promjenu |
 
-**Sati se NE računaju u R4** — samo se evidentiraju početak, kraj i pauze. Obračun (normalno/noćno/
-prekovremeno) je R5, jer traži pravila koja vlasnik još nije potvrdio.
+### `work_entries` — vremenski segmenti
 
-**Prelazak ponoći:** jedan zapis, `work_date` = dan početka rada, `ended_at` može biti sljedeći dan.
-Izvještaj ga prikazuje pod danom početka; **ne cijepa se** na dva reda — cijepanje bi stvorilo dva
-dana koja niko nije radio i pokvarilo svaku sumu. (Ako vlasnik traži cijepanje, to je izmjena modela,
-ne prikaza.)
+Svaki red je jedan **radni** ili **pauza** segment: `id`, `workday_id`, `worker_id`, `kind`
+(`WORK` | `BREAK`), `started_at`, `ended_at`, `project_id`, opciono `machine_id` i slobodna
+`note`. Projekat je obavezan za `WORK`; `BREAK` pripada istom danu i ne nosi mašinu. Kraj može
+privremeno biti prazan dok segment traje.
 
-## 2. Stanja i ispravke
+Baza zabranjuje preklapanje vremenskih segmenata istog radnika, bez obzira na projekat ili izvor
+unosa. Predložena zaštita je exclusion constraint nad `worker_id` i `tstzrange(started_at, ended_at,
+'[)')`; susjedni segmenti (kraj u 10:00, početak u 10:00) su dozvoljeni. Aplikacijska provjera
+nije dovoljna za istovremene telefone.
 
-- `DRAFT` — telefon još piše; nije poslano.
-- `SUBMITTED` — poslano; vidi se u uredu.
-- `APPROVED` — prihvaćeno; dalje ide u obračun (R5).
-- `LOCKED` — zaključano po isteku roka za ispravke (npr. 7 dana) ili ručno.
+Prelazak ponoći ostaje **jedan `workday`** pod datumom početka. Primjer 22:00–02:00 ne cijepa se
+u dva datuma. Vrijeme se tumači po `companies.timezone`, ne po zoni telefona. Trajanja se izvode iz
+segmenata; R4 ne obračunava zaradu, noćni/prekovremeni rad niti novac.
 
-**Ispravka poslije zaključavanja nije izmjena reda.** Nastaje nova verzija (`workday_revisions`) sa
-obaveznim razlogom, autorom i vremenom; original ostaje čitljiv. Isto pravilo kao kod obaveza u R2b —
-jedan mehanizam za „podatak se ne mijenja, dopunjuje se".
+## 3. Ko smije unositi i kako se čuva istina
 
-## 3. Offline i sinhronizacija
+- **Radnik** unosi svoj dan i svoje segmente offline.
+- **Šef grupe** unosi grupu offline, ali samo za radnike koji su dodijeljeni projektu/projektima
+  unutar njegovog R3 opsega. Lista izbora i serverska autorizacija koriste postojeće R3 dodjele;
+  šefov unos nikad ne pravi niti mijenja R3 dodjelu. Ovo pravilo mora imati eksplicitan test:
+  šef može unositi dodijeljene radnike na svom projektu, a ne može unositi za radnika van tog
+  skupa ili za projekat van svog opsega.
+- Granica iznad je **ovlaštenje ko smije unositi tuđi red**, a ne provjera da li je rad „dozvoljen“.
+  Radnik može evidentirati stvarni rad na projektu kojem trenutno nije dodijeljen; zapis se
+  **prihvata** i dobija oznaku za ured. Ako ljekarski ili druga R3 obaveza istekne, evidentirani
+  rad se takođe **prihvata** i označava. R3 blokira novu dodjelu, ne briše niti odbija činjenicu da
+  se rad desio. Oznake idu u pregled ureda, ne u odbijanje sinhronizacije.
+- Šefov lokalni izbor dolazi iz posljednje povučene R3 liste dodjela. Ako je radnik bio u toj listi
+  kad je unos napravljen offline, pa je dodjela istekla/uklonjena prije sync-a, server **prihvata
+  činjenicu rada i označava je za ured**; ne gubi red zbog promijenjenog statusa dodjele. Ako radnik
+  nikad nije bio u šefovom R3 opsegu, šef nema ovlaštenje da šalje tuđi zapis; radnik i dalje može
+  sam prijaviti stvarni rad, koji se prihvata i označava. Tačan dokaz je dio
+  simulatora u §9.
+- Preklapanje unosa radnika i šefa **nije merge**: drugi segment ne ulazi u kanonski `work_entries`
+  jer bi prekršio zabranu preklapanja. Njegov izvorni payload i `local_id` ostaju sačuvani u
+  `sync_conflicts`, vezani za postojeći segment; ured vidi oba zapisa i čeka ljudsku odluku. Nijedan
+  pokušaj ne nestaje i nijedna novija verzija ne prepisuje tiho stariju.
 
-- Telefon piše **lokalno prvo** (SQLite), sa `local_id` (UUID na uređaju). Slanje je naknadno.
-- `POST /api/sync/push` prima **listu** stavki; odgovor je **po stavci** (`ok` / `conflict` / `locked`),
-  nikad jedan status za cijelu listu — jedna loša stavka ne smije blokirati deset dobrih.
-- **Idempotencija po `local_id`:** ponovljeni push ne pravi duplikat. To pokriva najčešći slučaj —
-  odgovor nije stigao, a zapis je upisan.
-- Red slanja: najstarije prvo; stavke ostaju u redu dok ne dobiju odgovor.
-- **Sukob po entitetu:** `workdays` — novija `version` pobjeđuje za `DRAFT`; za `SUBMITTED+` se ne
-  prepisuje, nego se šalje u ured kao „zahtjev za ispravku". Prisustvo (`attendance`) — spaja se po
-  `(worker, dan, tip)`; duplikat se odbacuje. Prilozi — isti `local_id` = isti fajl.
-- **Online-only** (i zašto): promjena **tuđeg** radnog dana, odobravanje/isključivanje, izmjena
-  šifrarnika (projekti, faze, zadaci), i unos sa **više radnika odjednom** iz foremanovog ekrana.
-  Razlog: sve to dira podatke koje telefon ne smije odlučiti sam, i sve to traži da vidiš stanje
-  koje je u međuvremenu promijenio neko drugi.
+**Online-only su samo:** izmjena već poslanog tuđeg dana i odobravanje. Grupni unos šefa nije
+online-only; mora se moći napraviti i sa ugašenom mrežom.
 
-### Vrijeme
+## 4. Push protokol
 
-Vrijeme početka/kraja je **ono koje je čovjek upisao**, ali se čuva sa **vremenskom zonom firme** iz
-`companies.timezone`, a ne sa zonom telefona: telefon u inostranstvu ne smije pomjeriti dan. Server
-odlučuje o `work_date` (dan po zoni firme), telefon samo prikazuje. Ljetno/zimsko računanje vremena
-rješava baza, ne aplikacija.
+`POST /api/sync/push` prima listu nezavisnih stavki. Svaka stavka nosi najmanje:
 
-## 4. Nevidljivo pravilo: zaboravljen radni dan
+- `local_id` — UUID napravljen na uređaju prije slanja, jedinstven po `(company_id, user_id)`;
+- `workday_id` / privremeni lokalni ID zaglavlja i promjene `work_entries`;
+- `base_version` — verzija koju je klijent posljednju preuzeo;
+- `device_sent_at` — sat uređaja u trenutku slanja (nije vrijeme kad je čovjek radio);
+- sadržaj unosa i njegova vremena događaja.
 
-**Nikad se ne zatvara tiho.** Ako dan nije završen do ponoći:
+Server procesuira stavke zasebno i vraća ishod po stavci. Isti `local_id` ponovljen nakon timeouta
+vraća isti serverski ishod i ne pravi duplikat. Ako `base_version` ne odgovara trenutnoj verziji,
+server odbija izmjenu kao `conflict`, vrati aktuelnu verziju/kursor i ne prepisuje podatak. Klijent
+ostavlja stavku u redu dok korisnik ne razriješi sukob ili ne povuče novije stanje.
 
-1. red ostaje `DRAFT` sa oznakom „nije završen" — **ne** dobija izmišljeni kraj;
-2. ujutro telefon pita: „Jučerašnji dan nije završen. Kada si prestao?" — ponuda: upiši kraj, „ne
-   sjećam se" (ostaje otvoreno, ide šefu), ili „radio sam i noćas" (produži);
-3. ako čovjek ne odgovori u 24 h, **šef dobija obavještenje** u uredu (lista „dani bez kraja");
-4. dan bez kraja **ne ulazi** u obračun i vidi se kao nezaokružen — nikad kao nula sati.
+Za dvije stavke koje se vremenski preklapaju, čak i kad su iz različitih telefona ili jedan unosi
+radnik a drugi šef, server ne spaja redove. Konflikt se čuva kao zaseban ishod za ured; nijedna
+ispravna stavka iz batcha ne smije nestati zato što je druga u sukobu.
 
-## 5. Ekrani
+## 5. Pull protokol i brisanja
 
-- **Telefon — moj dan:** veliko dugme „Počni rad", pa pauza/nastavi, pa „Završi". Ispod: projekat,
-  faza, zadatak, mašina. Sve radi bez mreže; stanje slanja je vidljivo („poslano", „čeka mrežu").
-- **Telefon — šef grupe:** jedan ekran, lista radnika sa stanjem dana, dodavanje cijele grupe na isti
-  projekat/zadatak u nekoliko dodira. Online-only.
-- **Ured — evidencija:** tabela dana sa filterima (projekat, osoba, stanje), detalj sa pauzama i
-  ispravkama, odobravanje u grupi, lista „dani bez kraja".
+`GET /api/sync/pull?cursor=<opaque>&limit=<n>` vraća promjene poslije kursora:
 
-## 6. Ograničenja koja moramo priznati (Expo)
+```text
+{ items: [...], nextCursor: "...", hasMore: true|false }
+```
 
-- **Pozadinska sinhronizacija nije zagarantovana** ni na Androidu ni na iOS-u: OS gasi aplikaciju.
-  Zato se red **šalje kad se aplikacija otvori** i uz „pošalji sada"; pozadina je dodatak, ne oslonac.
-- **Aplikacija ubijena usred slanja:** stavka ostaje u redu sa `local_id`; ponovni push ne duplira.
-- **Dugo offline (danima):** red raste; prilog se šalje tek kad je mreža, po redu, sa nastavkom
-  (chunked/retry) — prekinut upload se nastavlja, ne počinje iz početka.
-- **Minimalna verzija:** server odbija `local_id` protokol stariji od podržanog i vraća poruku
-  „ažurirajte aplikaciju" (obavezna nadogradnja), jer stara verzija bez idempotencije pravi duplikate.
-- **Prilozi:** slika se prije slanja smanjuje (max ~1600 px, JPEG ~80%), čuva se original do potvrde;
-  Ograničenje je 10 MB po fajlu i 3 fajla po danu.
+Kursor je opaque i monotoni redoslijed serverskog change-loga po firmi, ne klijentski sat niti samo
+`updated_at` (timestampi se mogu poklopiti, a sat klijenta može biti pogrešan). Svaki insert/update
+ima promjenu u logu; brisanje emituje **tombstone** sa entitetom, ID-em, verzijom i vremenom
+brisanja. Tombstone se čuva dok ga svi aktivni uređaji ne potvrde ili dok ne istekne definisani
+retention period; povrat kursora preko tombstonea nikad ne oživljava obrisani red.
 
-## 7. Kapija R4 (Maestro, na uređaju)
+Klijent primjenjuje cijelu stranicu i `nextCursor` u jednoj SQLite transakciji. Kursor se pomjeri
+tek nakon uspješnog upisa svih stavki; prekid usred pull-a ponavlja stranicu bez dupliranja.
 
-1. **Prekid mreže usred slanja** — uključi avionski režim poslije „Pošalji": stavka ostaje u redu, po
-   vraćanju mreže odlazi tačno **jednom**.
-2. **Dva telefona, isti dan** — oba upišu isti dan; drugi dobija jasan ishod (spojeno ili „zahtjev za
-   ispravku"), nikad tiho prepisivanje.
-3. **Ponovno slanje** — isti `local_id` dvaput: jedan red u bazi.
-4. **Zaključan dan** — pokušaj izmjene poslije `LOCKED`: telefon nudi ispravku sa razlogom, ne izmjenu.
-5. **Dan bez kraja** — sutradan telefon pita; bez odgovora šef vidi dan na listi „bez kraja".
-6. **Prelazak ponoći** — rad 22:00–02:00 ostaje jedan zapis pod danom početka.
+## 6. Sat telefona i server
 
-## 8. Izričito van R4
+Čuvamo vrijeme događaja koje je čovjek unio, vrijeme uređaja pri slanju (`device_sent_at`) i
+`server_received_at` koje postavlja server. Sat se provjerava poređenjem `device_sent_at` i
+`server_received_at`, **ne** vremena početka rada: uređaj može biti offline danima pa bi poređenje
+početka rada pogrešno protumačilo normalan offline red kao pokvaren sat.
+
+Ako je razlika preko praga, zapis se čuva i označava „sat uređaja odstupa“ za ured; vrijeme se ne
+prepisuje i unos se ne odbija. Prag je konfiguracija po firmi; **predloženo početno podešenje je
+5 minuta**, potvrđuje se odobrenjem ovog plana.
+
+## 7. Sesija, odjava i lokalna SQLite baza
+
+- Istek sesije ili odjava **ne briše** neposlane redove. Prije odjave aplikacija jasno prikaže broj
+  neposlanih stavki i traži izričitu potvrdu; „Odustani“ ostavlja sesiju i red netaknute.
+- Redovi su vezani za firmu i korisnika koji ih je napravio. Nakon ponovne prijave mogu se poslati
+  samo pod tim identitetom; promjena naloga ne smije ih poslati kao drugu osobu niti ih izbrisati.
+- SQLite ima svoj `user_version`. Svaka verzija aplikacije nosi uzastopnu migraciju šeme koja se
+  izvršava transakcijski. Migracija prvo čuva/backupira postojeći outbox, pa mijenja strukturu; ne
+  briše `local_id`, čeka-redove ni konflikte. Ako migracija ne uspije, rollback i jasna poruka —
+  nema tihog resetovanja baze.
+- Protokol klijenta ima minimalnu podržanu verziju. Server odbija nepodržan protokol porukom
+  „Ažurirajte aplikaciju“; aplikacija ne odbacuje lokalne podatke da bi nastavila.
+
+## 8. Otvoren radni dan — bez pravila ponoći
+
+Dan se smatra otvorenim dok postoji aktivan segment bez `ended_at`. Nije vezan za ponoć: noćna
+smjena koja pređe datum ostaje normalna. Ako je dan otvoren duže od `X` sati od početka prvog
+segmenta, označi se za provjeru i pojavi se u listi ureda; nema izmišljenog vremena završetka i dan
+se ne prikazuje kao nula sati.
+
+`X` je podesiv po firmi, **zadano 16 sati**. R4b jutarnji tok pita radnika/šefa kad je posao završen
+ili označi „ne sjećam se“; bez odgovora ured vidi otvoreni dan. Ne zatvara se automatski.
+
+## 9. Podjela i dokaz
+
+### R4a — unos + offline + sync + pregled ureda
+
+- Zaglavlje `workdays` i segmenti `work_entries`; radnik i šef unose bez mreže.
+- SQLite outbox, `local_id`, `base_version`, push rezultati po stavci, pull kursor i tombstones.
+- Ured vidi primljene dane, audit ko je šta unio, konflikte i oznake za provjeru (nedodijeljeni
+  projekat, istekla obaveza, odstupanje sata). Nema odobravanja/zaključavanja u R4a.
+- Kapija: simulator u CI-ju zelen; vlasnik prođe nekoliko dogovorenih tokova na telefonu i odobri
+  R4a. Tek onda se planira/počinje R4b.
+
+### R4b — potvrda, odobrenje, zaključavanje i ispravke
+
+- Predloženi tok (zadano vlasnika): šef potvrđuje svaki dan; ured odobrava sedmicu.
+- `SUBMITTED` → `FOREMAN_CONFIRMED` → `WEEK_APPROVED` → `LOCKED`.
+- Poslije zaključavanja se originalni red ne mijenja: nova revizija sa obaveznim razlogom, autorom,
+  vremenom i vezom na prethodnu verziju. Lista dana otvorenih duže od firmine granice `X` sati.
+- Maestro je samo pomoć za nekoliko tokova koje vlasnik prođe na svom uređaju; nije glavni CI dokaz.
+
+### Glavni dokaz u CI-ju — čist sync modul + simulator mreže
+
+Poslovna logika sinhronizacije je čist modul bez baze, Reacta i mreže. CI simulator koristi
+reproducibilno sjeme i nasumično ubacuje prekide prije/poslije slanja, duplikate `local_id`,
+promjenu redoslijeda, zakašnjele odgovore, dva klijenta i dva korisnika (radnik/šef). Tvrdi:
+
+1. retry istog `local_id` pravi tačno jedan zapis;
+2. `base_version` mismatch je konflikt, bez last-write-wins i bez tihog mergea;
+3. overlap radnik/šef ostaje vidljiv sukob;
+4. pull cursor nakon prekida ne preskače ni ne duplira; tombstone briše lokalni red;
+5. unos nedodijeljenog rada/istekle obaveze se prihvata i nosi oznaku za ured;
+6. lokalni outbox preživljava logout/istek sesije i migraciju SQLite šeme;
+7. pogrešan sat se označi, ali se vremenski podatak ne prepravlja.
+
+Maestro na uređaju pokriva samo nekoliko završnih tokova: radnik unosi offline, šef unosi grupu
+offline, vraćena mreža sinhronizuje jednom, i korisniku se pokaže sukob. Glavni dokaz ispravnosti
+ostaje simulator u CI-ju.
+
+## 10. Izričito van R4
 
 | Šta | Zašto |
 |---|---|
-| **Obračun sati, prekovremeno, noćni rad** | R5 — traži pravila koja vlasnik nije potvrdio (B5.7). |
-| **Satnica i obračun zarade** | R5/R6 — novac, ne evidencija. |
-| **GPS prisustvo i geofencing** | van obima pilotirane evidencije; privatnost radnika. |
-| **Ture, gorivo, dnevni pregled mašine** | R5. |
-| **Pisanje na mobilnom za više firmi** | ostaje jedna firma po nalogu. |
+| **Faze projekta** | nisu dio R4 modela; samo projekat iz R3. |
+| **Šifrarnik zadataka** | slobodna napomena je dovoljna za pilot. |
+| **Fotografije i prilozi uz radni dan** | van opsega R4; nema upload reda za ove zapise. |
+| **Obračun zarade, satnice i novac** | van evidencije R4; traži posebna pravila i odobrenje. |
+| **GPS/geofencing** | privatnost i van dogovorenog pilota. |
+| **Ture, gorivo, dnevni pregled mašine** | zaseban budući rez. |
+| **Automatsko zatvaranje otvorenog dana** | izmišljalo bi činjenicu; dan ostaje otvoren i ide na pregled. |
 
-## 9. Pitanja vlasniku (bez odgovora ne počinjem)
+## 11. Pitanja vlasniku — odgovori čekaju, kod ne počinje
 
-1. **Ko upisuje radni dan** — radnik sam, šef grupe za sve, ili oboje (i ko je onda „vlasnik" dana)?
-2. **Ko odobrava** — šef gradilišta, rukovodilac projekta ili ured; i da li se odobrava po danu ili
-   po sedmici?
-3. **Koliko radnika ima telefon** u pilotu — određuje da li je šefov ekran osnovni tok ili dodatak.
+1. **Ko upisuje radni dan?** Radnik sam, šef grupe za sve ili oboje (i ko je vlasnik zapisa)?
+   **Zadano u ovom predlogu: oboje** — radnik svoj dan, šef grupu samo u R3 dodijeljenom opsegu.
+2. **Ko odobrava?** Šef gradilišta, rukovodilac projekta ili ured; po danu ili sedmici?
+   **Zadano u ovom predlogu: šef potvrđuje dan, ured odobrava sedmicu.**
+3. **Koliko radnika ima telefon u pilotu?** To mijenja koji unos je najčešći; grupni unos šefa ipak
+   mora raditi offline. **Broj čeka tvoj odgovor.**
+
+Dok ne odobriš ovaj plan i ne odgovoriš na tri pitanja, R4 ostaje dokumentacija — nema R4 migracije,
+API-ja, SQLite promjene ni ekrana.
