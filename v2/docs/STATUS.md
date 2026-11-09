@@ -1,16 +1,18 @@
 # STATUS — Gradix v2
 
 **Faza:** 1 · **Datum:** 2026-11-07 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
-**dizajn v2 ✅**, **R2a ✅**, **R2b ✅**, **R3 ✅**, **A ✅**, **B ✅ lokalno**.
-**Sljedeće:** vlasnik provjerava B preflight na stagingu/proizvodnji → odobrava kompletan revidirani
-plan R4. R4 kod ne počinje prije odobrenja. Planovi i odluke:
+**dizajn v2 ✅**, **R2a ✅**, **R2b ✅**, **R3 ✅**, **A ✅**, **B ✅ lokalno + CI**.
+**Sljedeće:** vlasnik pokreće B preflight na stagingu/proizvodnji → potvrđuje aplikacijsku rolu i
+ACL → pregleda/odobrava revidirani plan R4. R4 kod ne počinje prije odobrenja. Planovi i odluke:
 `docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md`,
 `docs/DECISIONS/0009`–`0013`.
 
 **A:** commit `a9d3174`; GitHub Actions run `42582658045` prošao, uključujući ephemeral Docker build.
-Slika nije objavljena niti zadržana poslije runnera. **B:** promjene i integracijski testovi su u
-branchu; lokalno su migracija i preflight provjereni na praznoj i popunjenoj kopiji, uključujući
-seed pod ne-superuser migratorom. Staging/produkcija nisu nezavisno provjereni iz sandboxa.
+Slika nije objavljena niti zadržana poslije runnera. **B:** commit `d93ceb3`; GitHub Actions run
+`42588871034` prošao, uključujući negativni dokaz da preflight odbija višak prava i preflight poslije
+integracija na popunjenoj bazi. Lokalno su `pnpm lint`, `pnpm typecheck`, puni test suite, prazna/
+popunjena baza i seed pod ne-superuser migratorom prošli. Staging/produkcija nisu nezavisno
+provjereni iz sandboxa.
 
 ## Gotovo
 
@@ -32,7 +34,7 @@ seed pod ne-superuser migratorom. Staging/produkcija nisu nezavisno provjereni i
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 | R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
 | R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
-| R3 | Projekti, dodjele, opseg, blokada/iznimka | ✅ kod + lokalni testovi; `scope` novi red = `SELF` (bez izmjene postojećih); pozivnica/role traže izbor; entrypoint i CI workflow imaju preflight iz `DATABASE_URL`; CI oba mehanizma preklapanja pokreće, ali workflow ovog brancha još nije izvršen |
+| R3 | Projekti, dodjele, opseg, blokada/iznimka | ✅ kod + testovi; `scope` novi red = `SELF`; entrypoint i CI preflight koriste `DATABASE_URL`; oba mehanizma preklapanja prolaze u GitHub run `42588871034` |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 
@@ -57,7 +59,7 @@ tabela, superuser ili ima `BYPASSRLS`. Podržan deploy je model sa ne-vlasničko
 - **`packages/contracts` i OpenAPI iz koda** nisu urađeni; API je tipiziran ručno u `apps/mobile/src/api/client.ts`. Ovo je dug, ne zaborav.
 - **Docker slika nije izgrađena** (nema Dockera u sandboxu). Dokazano je ono što se dokazati može: `output: standalone` build + pokretanje `server.js` protiv prave baze. Prvi `docker build` se dešava na Coolifyju i to je prva prava provjera Dockerfilea.
 - **CI je bio mrtav kod** i to je otkriveno u ovoj kapiji: workflow je stajao u `v2/.github/workflows/`, a GitHub izvršava samo `.github/workflows/` u korijenu. Sada je `.github/workflows/ci-v2.yml` sa `paths: v2/**`. Prvi zelen run: `daabf07`.
-- **Staging:** vlasnik potvrđuje `EXCLUDE USING gist` (dva constraint-a, `btree_gist 1.8`, bez trigera), isto kao CI. Sandbox nema staging `DATABASE_URL`, pa aplikacijska rola/vlasništvo na stagingu nisu nezavisno provjereni. Produkcija čeka naknadnu provjeru. Novi runtime preflight će to ispisati i oboriti start ako je aplikacijska rola vlasnik. Uputstvo: `docs/COOLIFY.md`.
+- **Staging/produkcija:** sandbox nema njihove `DATABASE_URL` konekcije, pa aplikacijska rola, vlasništvo i ACL nisu nezavisno provjereni. Novi runtime preflight (RLS, app ACL matrix i višak/manjak prava) je u B; vlasnik ga mora pokrenuti baš kroz postojeći `DATABASE_URL` na svakoj okolini. Odbija start ako je aplikacijska rola vlasnik/superuser/BYPASSRLS. Uputstvo i jedna `psql` komanda: `docs/COOLIFY.md`.
 - **Skillovi** (`new-resource`, `db-migration`, `ui-screen`, `mobile-offline-entity`) nisu napisani.
 - **Rate limit prijave je u memoriji procesa** — ne dijeli se između replika. Redis dolazi kad bude druga replika.
 - ~~Nema `logout-all`, liste sesija, promjene lozinke, pozivnica~~ — **R1a urađen.**
