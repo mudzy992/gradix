@@ -45,7 +45,7 @@ build ponavlja sa starom greškom.
 | Varijabla | Vrijednost koju unosiš | Napomena |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://gradix_app:LOZINKA@HOST:5432/BAZA?sslmode=verify-full&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | `HOST` = **interni** hostname iz Coolify resource-a Postgres (`Connect to Predefined Network`), nikad javni UUID hostname. `BAZA` = tačno ime baze iz tog resource-a (`current_database()`), ne pretpostavka. `&` piši kao `&`, **nikad** `&amp;`. |
-| `DATABASE_ADMIN_URL` | isto, samo rola `gradix` | **Obavezno u modelu C** (§4). Bez njega migracije padaju sa „nema CREATE na šemi public“. |
+| `DATABASE_ADMIN_URL` | konekcija vlasnika šeme/migratora, odvojena od `DATABASE_URL` | Obavezno kad je `RUN_MIGRATIONS=true`; ne koristi se za aplikacijske upite. |
 | `AUTH_SECRET` | 48+ slučajnih bajtova, base64 | Generiši: `openssl rand -base64 48`. Min 32 znaka. Rotacija odjavljuje sve korisnike. |
 | `RUN_MIGRATIONS` | `true` | Prvi deploy `true`; poslije može ostati `true` (idempotentno). |
 
@@ -121,56 +121,33 @@ upišete obrnuto. Pravilo: **`POSTGRES_CA_FILE` = host, `sslrootcert` = kontejne
 Ako baza uopšte ne koristi TLS (npr. ista Docker mreža), najjednostavnije je:
 `DATABASE_URL` bez `sslrootcert`, sa `sslmode=disable` ili `require`.
 
-## 4. Baza: koja rola radi šta (modeli A / B / C)
+## 4. Baza: odvojena rola aplikacije i migratora
 
-Tri postavljanja rade. Razlika je **ko radi migracije**, i to je jedina stvar koju treba
-podesiti. Sva tri su provjerena testovima (db 10/10, web 8/8) na pravoj bazi.
+Za deploy se koriste dvije različite konekcije:
 
-| Model | Vlasnik šeme | Aplikacija | `DATABASE_ADMIN_URL` | Kada |
-|---|---|---|---|---|
-| **C** (tvoj, preporučen) | `gradix` | `gradix_app` | **obavezan** (rola `gradix`) | Coolify gdje je bazu kreirao administrator |
-| B | `gradix_app` | `gradix_app` | prazan | kad je `gradix_app` vlasnik baze |
-| A | `postgres` (superuser) | `gradix_app` | obavezan | stari lokalni setup |
+| Konekcija | Namjena | Obavezne osobine |
+|---|---|---|
+| `DATABASE_URL` | aplikacijski upiti | `gradix_app`; nije vlasnik nijedne tabele; nije superuser; nema `BYPASSRLS` |
+| `DATABASE_ADMIN_URL` | bootstrap i migracije | vlasnik šeme/objekata ili druga administratorska rola sa svim potrebnim bootstrap, DDL i grant pravima; koristi se samo kad `RUN_MIGRATIONS=true` |
 
-### Zašto `DATABASE_ADMIN_URL` mora biti `gradix` u modelu C
+`RUN_MIGRATIONS=true` traži `DATABASE_ADMIN_URL`; entrypoint ne koristi aplikacijsku rolu kao
+rezervni migrator. Ako se migracije izvršavaju izvan kontejnera, postavi `RUN_MIGRATIONS=false`;
+preflight se i dalje izvršava kao `DATABASE_URL` prije starta web procesa.
 
-Migracija kreira tabele i politike — to traži `CREATE` na šemi `public`. U modelu C tu
-privilegiju ima **samo vlasnik šeme** (`gradix`). `gradix_app` namjerno NEMA `CREATE`:
-aplikacijska rola ne smije sama sebi dodati tabelu bez RLS-a. Ako se `DATABASE_ADMIN_URL`
-ostavi prazan, entrypoint to kaže odmah i jasno:
+**Model u kojem je `gradix_app` vlasnik tabela nije podržan za deploy.** `FORCE ROW LEVEL SECURITY`
+ne mijenja pravilo: runtime preflight namjerno pada ako je aplikacijska rola vlasnik, superuser,
+ima `BYPASSRLS`, ili može preuzeti vlasničku rolu. Administratorska konekcija može biti superuser;
+ona se ne koristi za aplikacijske upite.
 
-```
-GREŠKA: rola koja radi migracije nema CREATE na šemi public.
-  Postavi DATABASE_ADMIN_URL na vlasnika šeme (u Coolifyju: konekcija role 'gradix'),
-```
+Poslije migracija, `infra/docker/entrypoint-web.sh` poziva `packages/db/preflight-checks/run.sh`
+**kroz `DATABASE_URL`**, a zatim tek pokreće server. Isti skup se vrti u CI-ju pod `gradix_app`.
+Kritični nalazi (RLS nije uključen, nema politike, neispravan overlap, pogrešan scope default ili
+nebezbjedna aplikacijska rola) zaustavljaju start. Redis i S3/MinIO su informativni: ako su
+podešeni, provjerava se Redis PING odnosno S3 bucket bez listanja; ti nalazi sami ne obaraju deploy.
 
-U Coolifyju: Postgres resource → **Terminal** → `psql -U gradix -d <baza>` je već otvoren,
-pa samo provjeri `\du gradix_app` (mora biti `NOSUPERUSER`, bez `BYPASSRLS`) i
-`\dn+ public` (vlasnik `gradix`).
-
-### RLS ostaje na snazi i u modelu C
-
-`FORCE ROW LEVEL SECURITY` važi i za vlasnika tabela, a `gradix_app` nije ni superuser ni
-`BYPASSRLS`, pa izolacija firmi drži. Provjera ide pri prvom upitu: ako rola može zaobići
-RLS, aplikacija pada sa `TenantSecurityError` (fail-closed) umjesto da tiho miješa firme.
-`/api/ready` prijavljuje `is_super`, `bypass_rls` i **`database`** (stvarno ime baze kojoj
-je pool spojen) — to je najbrža provjera da URL gleda pravu bazu.
-
-### SQL koji je vlasnik izvršio (ispravan, samo jedna dopuna)
-
-```sql
-CREATE ROLE gradix_app WITH LOGIN PASSWORD '...' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
-GRANT CONNECT ON DATABASE gradix TO gradix_app;
-GRANT USAGE ON SCHEMA public TO gradix_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE gradix IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gradix_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE gradix IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO gradix_app;
-```
-
-Ovo je tačno. Dvije napomene: `GRANT USAGE ON SCHEMA` važi za objekte koji **već** postoje,
-`ALTER DEFAULT PRIVILEGES` za one koje `gradix` kreira **poslije** — oba su potrebna, i oba
-su gore. `db-apply.sh` ih ionako primjenjuje sam (idempotentno) pri svakom deployu.
+Migrator mora imati `CREATE` na šemi `public` i potrebna prava za migracije/ekstenziju. Uobičajeni
+Coolify setup je odvojena rola `gradix` kao `DATABASE_ADMIN_URL` i `gradix_app` kao
+`DATABASE_URL`. `db-apply.sh` je idempotentan i bootstrap prava primjenjuje pri svakom deployu.
 
 ## 5. Demo podaci (opciono, jednom) — radi iz slike
 
@@ -184,7 +161,7 @@ cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
 ```
 
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
-kroz RLS scope, pa radi i kad je `gradix_app` vlasnik šeme. Nalozi: `ured@demo.ba`,
+kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ured@demo.ba`,
 `vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
@@ -196,18 +173,18 @@ curl -s https://gradix.ba101.top/api/health   # {"status":"ok"}
 curl -s https://gradix.ba101.top/api/ready    # postgres ok, migrations.applied, databaseRole
 ```
 
-Očekivani `/api/ready` (primjer, provjeren na modelu C):
+Očekivani `/api/ready` (primjer; stvarne provjere role/RLS odradi interni preflight):
 
 ```json
 {"status":"ok","checks":{"postgres":{"status":"ok","latencyMs":18},
- "migrations":{"applied":5},
+ "migrations":{"applied":14},
  "databaseRole":{"role":"gradix_app","is_super":false,"bypass_rls":false,
                  "database":"gradix","can_create":false}}}
 ```
 
 Tri stvari koje se čitaju iz ovoga:
 
-* `is_super:false` i `bypass_rls:false` — RLS stvarno štiti (inače §4).
+* `is_super:false` i `bypass_rls:false` — osnovni atributi role. **Vlasništvo tabela i RLS politike** provjerava interni preflight prije starta; `/api/ready` ih ne zamjenjuje.
 * `database` — **stvarno** ime baze kojoj je pool spojen. Ako piše nešto drugo od očekivanog
   (npr. `postgres` ili generisano ime), `DATABASE_URL` gleda pogrešnu bazu.
 * `can_create:false` — očekivano: aplikacijska rola ne kreira tabele, to radi migracija
@@ -225,10 +202,10 @@ Tri stvari koje se čitaju iz ovoga:
 | `network db_net declared as external, but could not be found` | mreža ne postoji na hostu | §3.5 |
 | `psql: error: missing "=" after "→" in connection info string` | dijagnostička poruka je ušla u URL (bug u entrypointu, popravljen) | ažuriraj granu; sve poruke sada idu na stderr |
 | `GREŠKA: DATABASE_URL traži CA na '/etc/ssl/certs/coolify-ca.crt', ali tog fajla nema u kontejneru` | CA nije montiran | §2, `POSTGRES_CA_FILE` |
-| `GREŠKA: rola koja radi migracije nema CREATE na šemi public` | model C bez `DATABASE_ADMIN_URL` | §4 |
+| `DATABASE_ADMIN_URL nedostaje` | `RUN_MIGRATIONS=true`, ali migrator nije podešen | §1, §4 |
 | `GREŠKA: DATABASE_URL sadrži HTML entity `&amp;`` | copy/paste iz HTML-a | zamijeni `&amp;` sa `&` |
-| `TenantSecurityError` / `/api/ready` vraća `is_super:true` | rola je superuser ili `BYPASSRLS` | `ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS;` |
-| `TenantSecurityError: Rola ... je SUPERUSER` | `gradix_app` je superuser | §4, `ALTER ROLE` |
+| `PREFLIGHT: DATABASE_URL je spojen kao superuser` / `PREFLIGHT: aplikacijska rola ... ima BYPASSRLS` | aplikacijska rola je previše privilegovana | Promijeni atribute role kao DBA, zatim ponovi deploy; preflight neće pustiti server. |
+| `PREFLIGHT: DATABASE_URL rola ... vlasnik je tabela` | migracijska i aplikacijska rola su spojene | Postavi odvojenu `DATABASE_URL` ne-vlasničku rolu i `DATABASE_ADMIN_URL` za migracije; preflight neće pustiti server. |
 | `permission denied for function auth_memberships` | stara baza bez lookup politika | migracije se primjenjuju same (`RUN_MIGRATIONS=true`) — provjeri log koraka „provjera baze i primjena migracija“ |
 | Healthcheck `unhealthy` | kontejner sluša, ali `/api/health` ne vraća 200 | provjeri `PORT`; aplikacija sluša na 3000 |
 | `Cannot find module 'argon2'` ili `.node` greška | slika je Alpine, a prebuilt argon2 traži glibc | slika je namjerno `node:22-slim` (§8) |

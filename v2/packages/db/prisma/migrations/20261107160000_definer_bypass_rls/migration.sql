@@ -1,11 +1,12 @@
--- Popravka: prijava i refresh nisu radili kad aplikacijska rola UJEDNO posjeduje
--- šemu (model B — Coolify, gdje `gradix_app` ima bazu i tabele).
+-- ISTORIJSKA POPRAVKA: prijava i refresh nisu radili u starom Coolify testnom setupu
+-- u kojem je aplikacijska rola (`gradix_app`) posjedovala šemu i tabele. Taj setup više
+-- nije podržan za deploy; runtime preflight zahtijeva odvojenu, ne-vlasničku DATABASE_URL rolu.
 --
--- Zašto: `FORCE ROW LEVEL SECURITY` važi i za VLASNIKA tabela. `SECURITY DEFINER`
--- se izvršava kao vlasnik funkcije, a u modelu B je to ista `gradix_app` rola — zato
--- je `auth_memberships()` vraćala 0 redova i prijava je davala 403 (u modelu A to je
--- „radilo“ samo slučajno, jer je vlasnik bio superuser, a superuser uvijek zaobilazi RLS).
--- `SET row_security = off` nije rješenje: PostgreSQL ga odbija uz FORCE RLS.
+-- Zašto je do greške dolazilo: `FORCE ROW LEVEL SECURITY` važi i za VLASNIKA tabela.
+-- `SECURITY DEFINER` se izvršava kao vlasnik funkcije, pa je u starom jednorolnom setupu
+-- lookup vraćao nula redova. U starom testu sa dvije role koji je koristio superusera je „radio“
+-- iz pogrešnog razloga, jer superuser uvijek zaobilazi RLS. `SET row_security = off` nije rješenje:
+-- PostgreSQL ga odbija uz FORCE RLS.
 --
 -- Rješenje: uske, SAMO-ČITAJUĆE politike vezane na TAČAN ključ pretrage.
 --   * `memberships`: red je vidljiv kad je `app.auth_lookup_user` jednak `user_id`
@@ -27,8 +28,9 @@ CREATE POLICY auth_lookup_session ON sessions
   FOR SELECT
   USING (token_hash = nullif(current_setting('app.auth_lookup_token', true), ''));
 
--- Funkcije više nisu SECURITY DEFINER: pravo pristupa sada nosi politika iznad, koja
--- radi isto i za vlasnika i za običnu rolu i za superusera. Manje magije, isti ishod.
+-- Funkcije više nisu SECURITY DEFINER: za podržanu ne-vlasničku aplikacijsku rolu pravo
+-- pristupa nosi politika iznad. Superuseri i vlasničke DATABASE_URL role nisu podržani;
+-- runtime preflight odbija takvu konfiguraciju.
 CREATE OR REPLACE FUNCTION auth_memberships(p_user_id TEXT)
 RETURNS TABLE (company_id TEXT, roles "Role"[], company_active BOOLEAN)
 LANGUAGE sql

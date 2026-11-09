@@ -50,12 +50,10 @@ DATABASE_URL_CLEAN=$(sanitize_pg_url "$DATABASE_URL")
 DATABASE_URL_CLEAN=$(strip_missing_ca "$DATABASE_URL_CLEAN" "DATABASE_URL")
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-  # Migracije idu ADMIN konekcijom (vlasnik šeme). Ako DATABASE_ADMIN_URL nije zadan,
-  # pretpostavlja se da je aplikacijska rola ujedno vlasnik šeme (model B).
-  # U modelu C (administrator `gradix` posjeduje šemu, `gradix_app` je samo aplikacija)
-  # DATABASE_ADMIN_URL je OBAVEZAN — inače `gradix_app` nema CREATE na public šemi.
-  ADMIN_URL="${DATABASE_ADMIN_URL:-$DATABASE_URL}"
-  ADMIN_URL_CLEAN=$(sanitize_pg_url "$ADMIN_URL")
+  # Migracije moraju ići odvojenom administratorskom/vlasničkom rolom. Nikad ne koristimo
+  # DATABASE_URL za DDL: aplikacijska rola ne smije biti vlasnik tabela jer bi zaobilazila RLS.
+  : "${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL nedostaje; RUN_MIGRATIONS=true traži odvojenu rolu vlasnika šeme}"
+  ADMIN_URL_CLEAN=$(sanitize_pg_url "$DATABASE_ADMIN_URL")
   ADMIN_URL_CLEAN=$(strip_missing_ca "$ADMIN_URL_CLEAN" "DATABASE_ADMIN_URL")
 
   echo "→ provjera baze i primjena migracija" >&2
@@ -83,8 +81,7 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     sleep 3
   done
 
-  # Tko radi migracije? U modelu C `gradix_app` nema CREATE na public šemi — bolje
-  # reći to odmah nego pustiti migraciju da padne na trećem koraku.
+  # Migrator mora imati CREATE na public šemi — provjeri odmah, prije djelimične migracije.
   can_create=$(psql "$ADMIN_URL_CLEAN" -Atc "SELECT has_schema_privilege(current_user, 'public', 'CREATE')" || echo "f")
   if [ "$can_create" != "t" ]; then
     echo "GREŠKA: rola koja radi migracije nema CREATE na šemi public." >&2
@@ -95,6 +92,11 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
 
   sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
+
+# Kritične provjere nakon migracija, ali prije starta. Skripta se spaja kao DATABASE_URL,
+# nikad kao admin; ako RLS/rola/mehanizam nisu ispravni, proces se ne podiže.
+echo "→ preflight okruženja" >&2
+./db/preflight-checks/run.sh "$DATABASE_URL_CLEAN"
 
 echo "→ start: node apps/web/server.js (port ${PORT:-3000})" >&2
 exec node apps/web/server.js

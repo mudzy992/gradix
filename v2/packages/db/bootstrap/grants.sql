@@ -1,22 +1,22 @@
 -- Prava za aplikacijsku rolu. Idempotentno; pokreće se POSLIJE svake migracije
 -- (db-apply.sh), pa promjena prava ne zavisi od toga je li migracija već evidentirana.
 --
--- Model A: admin radi migracije, `gradix_app` samo radi aplikaciju.
--- Model B: `gradix_app` je vlasnik šeme — tada su prava već tu, a GRANT-ovi su bezopasni
---          (i izvršavaju se samo ako je rola različita od tekuće).
+-- Produkcijski deploy: odvojeni migrator/vlasnik i `gradix_app` kao ne-vlasnička aplikacijska rola.
+-- Legacy model sa `gradix_app` kao vlasnikom ostaje samo radi starih izolovanih testova;
+-- runtime preflight ga odbija.
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_app') THEN
-    RAISE NOTICE 'Rola gradix_app ne postoji — preskačem GRANT (model B).';
+    RAISE NOTICE 'Rola gradix_app ne postoji — preskačem GRANT; provjeri bootstrap role.';
     RETURN;
   END IF;
 
   IF current_user <> 'gradix_app' THEN
-    -- Model C (preporučen na Coolifyju): migracije radi vlasnik šeme (`gradix`),
-    -- aplikacija radi kao `gradix_app`. Aplikacija NE dobija CREATE na šemi:
-    -- tabele i poglede kreira isključivo migracija. To je i zaštita — aplikacijska
-    -- rola ne može sama sebi dodati tabelu bez RLS-a.
+    -- Podržani Coolify setup: migracije radi vlasnik šeme (`gradix`), aplikacija
+    -- radi kao `gradix_app`. Aplikacija NE dobija CREATE na šemi: tabele i poglede
+    -- kreira isključivo migracija. To je i zaštita — aplikacijska rola ne može sama
+    -- sebi dodati tabelu bez RLS-a.
     GRANT USAGE ON SCHEMA public TO gradix_app;
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gradix_app;
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gradix_app;

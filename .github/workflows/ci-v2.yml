@@ -98,6 +98,12 @@ jobs:
           psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
           ./infra/scripts/db-apply.sh
 
+      # Isti runtime preflight, kao DATABASE_URL aplikacijska rola (gradix_app), prije testova.
+      # Time CI čita isti skup katalogâ kao staging, a ne administratorsku DATABASE_ADMIN_URL.
+      - name: Runtime preflight (RLS, aplikacijska rola, preklapanje, scope default)
+        working-directory: v2
+        run: ./packages/db/preflight-checks/run.sh
+
       - name: Testovi (jedinični + integracijski na pravoj bazi)
         working-directory: v2
         run: pnpm test

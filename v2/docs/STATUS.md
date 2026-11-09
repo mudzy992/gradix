@@ -1,12 +1,12 @@
 # STATUS — Gradix v2
 
 **Faza:** 1 · **Datum:** 2026-11-09 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
-**dizajn v2 ✅**, **R2a ✅ (kapija prošla uživo)**, **R2b ✅ (kapija prošla uživo)**, **R3 🚧 kod i
-testovi gotovi, čeka kapiju uživo**
-**Sljedeće:** kapija R3 uživo (projekat, dodjele, opseg, blokada s iznimkom, zahtjev → odobrenje) →
-**odobrenje plana R4** → R4 (radni dan na terenu, offline). Planovi i odluke vlasnika:
+**dizajn v2 ✅**, **R2a ✅ (kapija prošla uživo)**, **R2b ✅ (kapija prošla uživo)**,
+**R3 ✅ kod + lokalni testovi; CI workflow je podešen, ali još nije pokrenut; staging EXCLUDE vlasnik potvrdio, provjera staging role i produkcije otvorena**
+**Sljedeće:** potvrditi staging aplikacijsku rolu kroz runtime preflight → produkcijska provjera →
+**odobrenje revidiranog plana R4**. R4 kod ne počinje prije odobrenja. Planovi i odluke vlasnika:
 `docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md` (10 stavki),
-`docs/DECISIONS/0009`, `0010`, `0011`.
+`docs/DECISIONS/0009`, `0010`, `0011`, `0012`.
 
 ## Gotovo
 
@@ -28,7 +28,7 @@ testovi gotovi, čeka kapiju uživo**
 | 11 | Pravila kao kod + skillovi | ⚠️ lint/typecheck/granična validacija da; skillovi ne |
 | R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
 | R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
-| R3 | Projekti, dodjele radnika i mašina, opseg `PROJECTS`, blokada s iznimkom | 🚧 kod + testovi (20 integracijskih, 5 trke, 9+4 jsdom); iznimku traži PM, odobrava vlasnik (`projects.override`); preklapanje provjereno na OBA mehanizma (`pnpm --filter @gradix/web check-preklapanje`) |
+| R3 | Projekti, dodjele, opseg, blokada/iznimka | ✅ kod + lokalni testovi; `scope` novi red = `SELF` (bez izmjene postojećih); pozivnica/role traže izbor; entrypoint i CI workflow imaju preflight iz `DATABASE_URL`; CI oba mehanizma preklapanja pokreće, ali workflow ovog brancha još nije izvršen |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 
@@ -36,17 +36,16 @@ testovi gotovi, čeka kapiju uživo**
 
 **Mobilni native bundle:** `expo export -p android` prolazi (`entry-*.hbc`, 2,6 MB) — ovim je otkriven i popravljen bug `react-native/setup-env` (RN 0.86 → 0.88.1). `expo export -p web` prolazi i sa neusklađenim verzijama, zato je u CI dodata provjera `pnpm check-expo`.
 
-**Provjereno u oba modela baze** (ovo je bilo otvoreno, sada zatvoreno):
+**Historijski testovi u oba modela baze** (ne predstavljaju podržanost oba deploy modela):
 
 | Model | Rola | db testovi | web testovi | seed |
 |---|---|---|---|---|
 | A — dvije role | migracije: `postgres`, app: `gradix_app` | 10/10 | 8/8 | ✅ |
 | B — jedna rola (Coolify) | `gradix_app` vlasnik baze i tabela | 10/10 | 8/8 | ✅ (2× zaredom, idempotentno) |
 
-Model B je dodatno dokazan kroz **produkcijski standalone server** (`node apps/web/server.js`):
-`/api/health` 200, `/api/ready` (`is_super:false, bypass_rls:false`, 5 migracija),
-prijava 200, `/api/me` izolovan (3 mašine vs 1), sync push idempotentan (`duplicate:true`),
-batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
+Model B je istorijski bio testiran kroz **standalone server**, ali zatvaranje R3 sada zahtijeva
+odvojenu aplikacijsku rolu: runtime preflight namjerno ODBIJA `DATABASE_URL` rolu koja je vlasnik
+tabela, superuser ili ima `BYPASSRLS`. Podržan deploy je model sa ne-vlasničkom aplikacijskom rolom.
 
 ## Ne radi / nije urađeno
 
@@ -54,7 +53,7 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 - **`packages/contracts` i OpenAPI iz koda** nisu urađeni; API je tipiziran ručno u `apps/mobile/src/api/client.ts`. Ovo je dug, ne zaborav.
 - **Docker slika nije izgrađena** (nema Dockera u sandboxu). Dokazano je ono što se dokazati može: `output: standalone` build + pokretanje `server.js` protiv prave baze. Prvi `docker build` se dešava na Coolifyju i to je prva prava provjera Dockerfilea.
 - **CI je bio mrtav kod** i to je otkriveno u ovoj kapiji: workflow je stajao u `v2/.github/workflows/`, a GitHub izvršava samo `.github/workflows/` u korijenu. Sada je `.github/workflows/ci-v2.yml` sa `paths: v2/**`. Prvi zelen run: `daabf07`.
-- **Staging ne postoji** — čeka tvoj Coolify deploy; uputstvo i tačne varijable: `docs/COOLIFY.md`.
+- **Staging:** vlasnik potvrđuje `EXCLUDE USING gist` (dva constraint-a, `btree_gist 1.8`, bez trigera), isto kao CI. Sandbox nema staging `DATABASE_URL`, pa aplikacijska rola/vlasništvo na stagingu nisu nezavisno provjereni. Produkcija čeka naknadnu provjeru. Novi runtime preflight će to ispisati i oboriti start ako je aplikacijska rola vlasnik. Uputstvo: `docs/COOLIFY.md`.
 - **Skillovi** (`new-resource`, `db-migration`, `ui-screen`, `mobile-offline-entity`) nisu napisani.
 - **Rate limit prijave je u memoriji procesa** — ne dijeli se između replika. Redis dolazi kad bude druga replika.
 - ~~Nema `logout-all`, liste sesija, promjene lozinke, pozivnica~~ — **R1a urađen.**
@@ -86,18 +85,18 @@ batch >200 → 400, `since` u budućnosti → 400, odjava → `/api/me` 401.
 
 ## Otvoreno za vlasnika
 
-1. **Plan R2 na odobrenje** (`docs/PLAN-R2.md`, ispravljen): R2a radnici + mašine + uvoz iz
-   Excela s pregledom grešaka; R2b univerzalna obaveza s rokom + prilozi preko potpisanih
-   URL-ova + podsjetnici + pregled „Rokovi“. Kod ne počinje prije odobrenja. Prije njega ide
-   `packages/contracts`.
+1. **Revidirani plan R4 na odobrenje** (`docs/PLAN-R4.md`): radni dani, terenski/offline unos,
+   sync i kapija R4a → R4b. Odobrenje i vlasnikovi odgovori čekaju; R4 kod ne počinje prije toga.
 2. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
-   `/infra/coolify/docker-compose.yml`, tri varijable (`DATABASE_URL`, `AUTH_SECRET`,
-   `RUN_MIGRATIONS=true`), domena `https://gradix.ba101.top` → port 3000.
-2. **Rola u bazi** (jednom, kao superuser): `ALTER ROLE gradix_app NOSUPERUSER NOBYPASSRLS;`
-   — bez ovoga `/api/ready` prijavi `is_super:true` i aplikacija odbija poslovne upite.
-3. **GH secrets:** za sada **nijedan** nije potreban (`docs/GH-SECRETS.md`).
-4. **Demo** po `docs/DEMO-G1.md` — reci prolazi/ne prolazi.
-5. **Bucket `gradix-v2`** — potreban prije R5, ne prije G1.
-6. **Redis ACL** (`infra/redis/acl-v2.txt`) — nije potreban u ovoj fazi; javim kad bude.
-7. ~~Prisma u CI-ju~~ — **zatvoreno:** `prisma generate` je zelen u CI-ju (`daabf07`), ADR 0002
+   `/infra/coolify/docker-compose.yml`, `DATABASE_URL` aplikacijska rola + odvojeni
+   `DATABASE_ADMIN_URL` kad `RUN_MIGRATIONS=true`, `AUTH_SECRET`, domena
+   `https://gradix.ba101.top` → port 3000.
+3. **Staging aplikacijska rola:** potvrditi runtime preflight izlaz (`DATABASE_URL`, ne admin konekcija).
+   Vlasnička rola nije podržana; `infra/docker/entrypoint-web.sh` odbija start ako preflight
+   utvrdi da je `DATABASE_URL` superuser, vlasnik tabele ili ima `BYPASSRLS`.
+4. **GH secrets:** za sada **nijedan** nije potreban (`docs/GH-SECRETS.md`).
+5. **Demo** po `docs/DEMO-G1.md` — reci prolazi/ne prolazi.
+6. **Bucket `gradix-v2`** — potreban prije R5, ne prije G1.
+7. **Redis ACL** (`infra/redis/acl-v2.txt`) — nije potreban u ovoj fazi; javim kad bude.
+8. ~~Prisma u CI-ju~~ — **zatvoreno:** `prisma generate` je zelen u CI-ju (`daabf07`), ADR 0002
    je time potvrđen u modelu „Prisma u CI/Coolify, SQL-first lokalno“.

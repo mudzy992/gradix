@@ -4,10 +4,9 @@
 -- `FORCE ROW LEVEL SECURITY` (koji je uključen u migracijama). Dokazano u Fazi 1:
 -- bez FORCE-a i bez odvojene role izolacija tiho pada.
 --
--- Dva podržana modela postavljanja:
---   A) Dvije role (preporučeno): admin radi migracije, `gradix_app` radi aplikaciju.
---   B) Jedna rola (`gradix_app`) je i vlasnik šeme i aplikacijska rola. Radi ispravno
---      SAMO ako rola NIJE superuser — tada FORCE drži RLS i za vlasnika.
+-- Podržani deploy koristi odvojene role: admin/vlasnik radi migracije, `gradix_app` radi aplikaciju.
+-- Legacy testovi mogu koristiti vlasničku `gradix_app` rolu, ali runtime preflight takav deploy
+-- odbija — aplikacijska rola ne smije biti vlasnik tabela.
 --
 -- Ovaj fajl je idempotentan i siguran za ponovno pokretanje.
 
@@ -21,8 +20,9 @@ $$;
 
 -- Ako je rola već postojala sa pogrešnim atributima (npr. superuser), ovo ih ispravlja.
 -- NE mijenja lozinku: lozinku postavlja vlasnik infrastrukture.
--- Preskače se kad tekuća rola NIJE superuser (model B): tada `gradix_app` ne smije
--- sama sebi mijenjati atribute i to nije potrebno — ona je već NOSUPERUSER.
+-- Preskače se kad tekuća administratorska rola nije superuser: ona ne može mijenjati role
+-- atribute. U tom slučaju DBA mora unaprijed postaviti `gradix_app` kao NOSUPERUSER/NOBYPASSRLS;
+-- runtime preflight odbije start ako atributi nisu sigurni.
 DO $$
 DECLARE
   is_super BOOLEAN;
@@ -34,7 +34,7 @@ BEGIN
 END
 $$;
 
--- Prava za model B (kad je gradix_app vlasnik baze). U modelu A ovo samo dodaje prava.
+-- Prava za aplikacijsku rolu. U podržanom deployu tekuća rola je migrator, ne `gradix_app`.
 DO $$
 BEGIN
   IF current_user <> 'gradix_app' THEN

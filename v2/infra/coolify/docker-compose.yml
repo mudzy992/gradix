@@ -42,6 +42,12 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-1}
       PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
+      # --- S3/MinIO (opciono; runtime preflight provjeri bucket bez listanja) ---
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-v2}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
       # --- Redis (pripremljeno; u Fazi 1 se ne koristi) ---
       REDIS_HOST: ${REDIS_HOST:-}
       REDIS_PORT: ${REDIS_PORT:-6380}

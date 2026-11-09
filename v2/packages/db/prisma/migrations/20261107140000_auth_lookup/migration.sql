@@ -26,7 +26,8 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION auth_memberships(TEXT) FROM PUBLIC;
--- Izvršavanje: aplikacijska rola ako postoji (model A), inače vlasnik funkcije (model B).
+-- Istorijski testovi su imali i jednu vlasničku rolu; to nije podržani deploy model.
+-- Današnji runtime preflight zahtijeva ne-vlasničku DATABASE_URL rolu (ADR 0012).
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_app') THEN
