@@ -31,6 +31,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_OBLIGATION,
   detectContentType,
+  type AllowedContentType,
   objectKey,
   presignDownload,
   presignUpload,
@@ -1247,8 +1248,8 @@ export async function attachmentDownloadUrl(
   if (!config.configured) return { code: "CONFLICT", message: config.reason };
 
   const row = await withCompany(pool, companyId, async (client) => {
-    const found = await client.query<{ object_key: string; file_name: string; status: string }>(
-      "SELECT object_key, file_name, status FROM obligation_attachments WHERE id = $1 AND obligation_id = $2",
+    const found = await client.query<{ object_key: string; file_name: string; content_type: AllowedContentType; status: string }>(
+      "SELECT object_key, file_name, content_type, status FROM obligation_attachments WHERE id = $1 AND obligation_id = $2",
       [attachmentId, obligationId],
     );
     return found.rows[0] ?? null;
@@ -1256,7 +1257,7 @@ export async function attachmentDownloadUrl(
   if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
   if (row.status !== "ready") return { code: "NOT_FOUND", message: "Prilog još nije uploadovan." };
 
-  return presignDownload({ config, key: row.object_key, fileName: row.file_name });
+  return presignDownload({ config, key: row.object_key, fileName: row.file_name, contentType: row.content_type });
 }
 
 /**

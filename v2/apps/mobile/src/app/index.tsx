@@ -1,10 +1,8 @@
 /**
- * Ekran za teren (R0): prijava, jedan offline zapis, indikator stanja reda.
- *
- * Namjerno krupno i jednostavno: rukavice, sunce, jedan dodir za glavnu akciju.
- * Sve što ne radi ili nije implementirano — ne postoji na ekranu (A1.5).
+ * Privremeni teren ekran: auth and profile remain available while R4 local persistence is gated.
+ * R0 note submission is deliberately removed; SQLite outbox wiring follows its approved step.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "expo-router";
 import {
   ActivityIndicator,
@@ -15,14 +13,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { login, me, pushNotes, pullChanges, getAccessToken, type Me } from "../api/client";
-import { openDb, insertNote, markFailed, markSent, pendingCount, pendingNotes, readWatermark, writeWatermark } from "../db/sqlite";
-import { runSync } from "../sync/engine";
+import { login, me, getAccessToken, type Me } from "../api/client";
 import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
-
-const DEVICE_ID = "gradix-device-r0";
 
 type Phase = "loading" | "login" | "ready";
 
@@ -35,15 +29,8 @@ export default function IndexScreen() {
   const [profile, setProfile] = useState<Me | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [text, setText] = useState("");
-  const [pending, setPending] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const refreshPending = useCallback(async () => {
-    const db = await openDb();
-    setPending(await pendingCount(db));
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -55,12 +42,11 @@ export default function IndexScreen() {
       try {
         setProfile(await me());
         setPhase("ready");
-        await refreshPending();
       } catch {
         setPhase("login");
       }
     })();
-  }, [refreshPending]);
+  }, []);
 
   async function signIn() {
     setBusy(true);
@@ -69,51 +55,11 @@ export default function IndexScreen() {
       await login(email.trim(), password);
       setProfile(await me());
       setPhase("ready");
-      await refreshPending();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Prijava nije uspjela.");
     } finally {
       setBusy(false);
     }
-  }
-
-  async function addNote() {
-    if (!text.trim()) return;
-    setBusy(true);
-    const db = await openDb();
-    await insertNote(db, {
-      localId: `${DEVICE_ID}-${Date.now()}`,
-      text: text.trim(),
-      clientAt: new Date().toISOString(),
-    });
-    setText("");
-    await refreshPending();
-    setMessage("Zapis je sačuvan na uređaju. Poslat će se kad bude veza.");
-    setBusy(false);
-  }
-
-  async function sync() {
-    setBusy(true);
-    setMessage(null);
-    const db = await openDb();
-    const store = {
-      pending: () => pendingNotes(db),
-      markSent: (localId: string, serverId: string) => markSent(db, localId, serverId),
-      markFailed: (localId: string) => markFailed(db, localId),
-      readWatermark: () => readWatermark(db),
-      writeWatermark: (value: string) => writeWatermark(db, value),
-    };
-    const outcome = await runSync(store, {
-      push: (items) => pushNotes(DEVICE_ID, items),
-      pull: (since) => pullChanges(since),
-    });
-    await refreshPending();
-    setMessage(
-      outcome.error
-        ? `Nema veze. ${pending} zapisa čeka slanje.`
-        : `Poslano: ${outcome.sent}. Čeka: ${await pendingCount(db)}.`,
-    );
-    setBusy(false);
   }
 
   if (phase === "loading") {
@@ -189,45 +135,13 @@ export default function IndexScreen() {
         {themeToggle}
       </View>
 
-      {/* Pločica stanja: mono broj zapisa koji čekaju — isti ritam kao na webu. */}
       <View style={styles.panel}>
-        <Text style={styles.panelLabel}>Red za slanje</Text>
-        <Text style={styles.timer}>{pending === 0 ? "0" : String(pending)}</Text>
+        <Text style={styles.panelLabel}>Radni unos</Text>
         <Text style={styles.panelHint}>
-          {pending === 0 ? "Sve je poslano." : `${pending} zapisa čeka vezu.`}
+          R4 lokalni unos na telefonu slijedi nakon staging provjere i odobrenog SQLite outbox koraka.
+          Stare R0 bilješke se više ne šalju.
         </Text>
       </View>
-
-      <Text style={styles.label}>Novi zapis s terena</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={text}
-        onChangeText={setText}
-        placeholder="npr. Iskop kanala, dionica 2, 40 m"
-        placeholderTextColor={theme.muted}
-        multiline
-        accessibilityLabel="Tekst zapisa"
-      />
-
-      {/* Jedna velika primarna akcija (DESIGN.md „Mobilni“). */}
-      <Pressable
-        style={[styles.big, busy && styles.buttonDisabled]}
-        onPress={addNote}
-        disabled={busy}
-        accessibilityRole="button"
-        accessibilityLabel="Sačuvaj zapis na uređaju"
-      >
-        <Text style={styles.bigText}>Sačuvaj zapis</Text>
-      </Pressable>
-
-      <Pressable
-        style={[styles.button, styles.secondaryButton]}
-        onPress={sync}
-        disabled={busy}
-        accessibilityRole="button"
-      >
-        <Text style={[styles.buttonText, styles.secondaryText]}>Pošalji sve</Text>
-      </Pressable>
 
       {message && <Text style={styles.hint}>{message}</Text>}
 
@@ -299,13 +213,6 @@ function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
     },
     panelLabel: { ...typography.label, color: t.muted },
     panelHint: { ...typography.body, color: t.muted },
-    timer: {
-      ...typography.mono,
-      fontSize: 34,
-      lineHeight: 40,
-      letterSpacing: -0.5,
-      color: t.text,
-    },
     input: {
       borderWidth: 1,
       // Ivica polja je `--field` (prolazi 3:1 na pozadini u obje teme — test to mjeri).
@@ -318,18 +225,6 @@ function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
       color: t.text,
       backgroundColor: t.panel,
     },
-    multiline: { minHeight: 96, textAlignVertical: "top" },
-    // Velika primarna akcija: 60 dp, pilula 20, puna širina.
-    big: {
-      marginTop: spacing.md,
-      backgroundColor: t.primary,
-      borderRadius: radius.tile,
-      paddingVertical: spacing.lg,
-      minHeight: 60,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    bigText: { ...typography.button, fontSize: 17, color: t.onPrimary },
     button: {
       marginTop: spacing.lg,
       backgroundColor: t.primary,

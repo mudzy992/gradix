@@ -63,8 +63,13 @@ export function verifyAccessToken(token: string, now = new Date()): AccessClaims
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as AccessClaims;
-    if (typeof claims.sub !== "string" || typeof claims.sid !== "string") return null;
-    if (claims.exp * 1000 <= now.getTime()) return null;
+    if (typeof claims.sub !== "string" || claims.sub.length < 1 || claims.sub.length > 128) return null;
+    if (typeof claims.sid !== "string" || claims.sid.length < 1 || claims.sid.length > 128) return null;
+    if (typeof claims.companyId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(claims.companyId)) return null;
+    if (!Number.isSafeInteger(claims.iat) || !Number.isSafeInteger(claims.exp)) return null;
+    if (claims.exp <= claims.iat || claims.exp - claims.iat > ACCESS_TTL_SECONDS) return null;
+    if (claims.iat > Math.floor(now.getTime() / 1000) + 60 || claims.exp * 1000 <= now.getTime()) return null;
+    if (claims.pwd !== undefined && typeof claims.pwd !== "boolean") return null;
     return claims;
   } catch {
     return null;

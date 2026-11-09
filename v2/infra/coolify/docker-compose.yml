@@ -1,28 +1,10 @@
-# Gradix v2 — Coolify (testna domena gradix.ba101.top)
-#
-# OVAJ FAJL JE ZA COOLIFY, NE ZA LOKALNI RAZVOJ.
-#   putanja u repou:  v2/infra/coolify/docker-compose.yml
-#   u Coolifyju:      Base Directory = /v2   (korijen v2 radnog stabla)
-#                     Docker Compose Location = /infra/coolify/docker-compose.yml
-#
-# Šta ovdje NEMA i zašto:
-#   * nema Postgres servisa — baza je eksterni PostgreSQL na mreži `db_net` (v1 D-021).
-#   * nema Redis servisa — Redis dolazi kad bude potreban (2+ replike / pozadinski poslovi).
-#     Redis CA i mreža `redis_net` su pripremljeni, ali FAKULTATIVNI: uključuju se
-#     prekidačima (REDIS_CA_ENABLED / REDIS_NET_ENABLED). Razlog: Docker padne ako bind
-#     izvor ne postoji (`bind source path does not exist`), a u Fazi 1 nijedan dio koda
-#     ne čita REDIS_*. Zato „pripremljeno, ali ne obavezno“.
-#   * nema MinIO-a — dolazi u R5 (ADR 0006).
-#   * nema port mappinga — Coolify upravlja rutiranjem; `ports:` bi zaobišao TLS proxy.
-#
-# Tajne: NIJEDNA vrijednost nije u ovom fajlu. Sve dolazi iz Coolify environment
-# varijabli resource-a (šablon: v2/.env.example).
+# Gradix v2 staging — Coolify Docker Compose resource.
+# Base Directory: /v2  |  Compose file: /infra/coolify/docker-compose.yml
+# Secrets are supplied in Coolify only; this file contains names/defaults, never secret values.
 services:
   web:
     build:
-      # VAŽNO — kako Coolify razrješava putanje (provjereno na grešci iz deploya):
-      # `context` i `dockerfile` se odnose na BASE DIRECTORY, ne na lokaciju ovog fajla.
-      # Coolify pokreće `docker compose --project-directory <base>` gdje je <base> = /v2.
+      # Coolify resolves both paths against Base Directory (/v2), not the compose file directory.
       context: .
       dockerfile: infra/docker/Dockerfile.web
     restart: unless-stopped
@@ -30,60 +12,54 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
-      # Coolify postavlja SERVICE_FQDN_WEB sam kad u UI-ju dodaš domenu i port.
       SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-}
-      # --- obavezno (bez ovoga kontejner ne starta, namjerno) ---
+      # Database: required app principal plus optional separate migrator.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
       DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET mora biti postavljen u Coolifyju (min 32 znaka)}
-      # --- ponašanje ---
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       PGSSLMODE: ${PGSSLMODE:-verify-full}
       TZ: ${TZ:-Europe/Sarajevo}
-      # --- S3/MinIO (opciono; runtime preflight provjeri bucket bez listanja) ---
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      # App-side S3 client: internal endpoint for server I/O; public endpoint for signed browser URLs.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-v2}
+      MINIO_BUCKET: gradix-stg
       MINIO_REGION: ${MINIO_REGION:-us-east-1}
-      # --- Redis (pripremljeno; u Fazi 1 se ne koristi) ---
-      REDIS_HOST: ${REDIS_HOST:-}
+      # Diagnostic target and MinIO bucket CORS origin; not a MinIO server credential.
+      MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
+      # Redis is informational today; rate limiting remains PostgreSQL-backed.
+      REDIS_HOST: ${REDIS_HOST:-redis-core}
       REDIS_PORT: ${REDIS_PORT:-6380}
       REDIS_USER: ${REDIS_USER:-}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PREFIX: ${REDIS_PREFIX:-gx2:}
-      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
+      REDIS_PREFIX: ${REDIS_PREFIX:-gradix:stg:}
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/etc/ssl/certs/redis/redis-ca.crt}
     volumes:
-      # CA kojim se provjerava TLS prema Postgresu — JEDINI mount koji Faza 1 koristi.
-      # Coolify ga drži na hostu, a `sslrootcert` u DATABASE_URL ga traži unutar kontejnera.
-      # Može se ugasiti prekidačem: POSTGRES_CA_MOUNT=false (npr. ako je baza bez TLS-a
-      # ili je CA već u sistemskom trust storeu slike). Tada u DATABASE_URL treba
-      # `sslmode=disable` ili `require`, i NE smije stajati `sslrootcert=`.
+      # PostgreSQL CA: host source -> stable in-container path used in DATABASE_URL.
       - type: bind
         source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
         target: /etc/ssl/certs/coolify-ca.crt
         read_only: true
         bind:
           create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
-      # REDIS CA OVDJE NAMJERNO NIJE. Docker padne ako bind izvor ne postoji, a
-      # /data/coolify/ssl/redis-core/redis-ca.crt postoji samo kad je Redis resource
-      # na tom hostu — u Fazi 1 nijedan dio koda ne čita REDIS_*, pa mount nema svrhu.
-      # Kad Redis uđe u upotrebu, dodaj OVU liniju (i tada fajl mora postojati):
-      #   - type: bind
-      #     source: ${REDIS_CA_FILE:-/data/coolify/ssl/redis-core/redis-ca.crt}
-      #     target: /run/secrets/redis-ca.crt
-      #     read_only: true
-      #     bind: { create_host_path: false }
-      # Detalji: docs/COOLIFY.md §3.5.
+      # Redis CA directory mount: missing cert does not prevent the app container starting.
+      # The diagnostic distinguishes an absent in-container CA from TLS/auth/network failures.
+      # Host: /data/coolify/ssl/redis-core/redis-ca.crt
+      # Container: /etc/ssl/certs/redis/redis-ca.crt
+      - type: bind
+        source: /data/coolify/ssl/redis-core
+        target: /etc/ssl/certs/redis
+        read_only: true
+        bind:
+          create_host_path: true
     networks:
       - default
-      # Eksterne mreže: baza živi na postojećoj mreži hosta (v1 D-021).
       - db_net
       - redis_net
-    # Coolify proxy traži da port bude izložen iz kontejnera; javni domen se dodaje
-    # u UI-ju (https://gradix.ba101.top → 3000).
     expose:
       - "3000"
     healthcheck:
@@ -102,13 +78,52 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Staging-only MinIO. It has its own named data volume and is not attached to v1 storage.
+  minio:
+    image: minio/minio:RELEASE.2025-08-13T08-35-41Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+      SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
+    volumes:
+      - gradix_stg_minio_data:/data
+    networks:
+      - default
+    expose:
+      - "9000"
+
+  # One-shot bootstrap. Web does not depend on this service, so a MinIO outage never gates app startup.
+  minio-init:
+    image: minio/mc:RELEASE.2025-10-15T17-29-55Z
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: on-failure
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: gradix-stg
+      MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
+    volumes:
+      # Paths are relative to the Coolify project directory (/v2), as for the web build context.
+      - ./infra/minio/init-staging.sh:/init.sh:ro
+      - ./infra/minio/staging-policy.json:/policy.json:ro
+    networks:
+      - default
+
+volumes:
+  gradix_stg_minio_data:
+    name: gradix-stg-minio-data
+
 networks:
-  # Kad servis navede `networks:`, default mreža se više ne dodaje automatski —
-  # zato je eksplicitno ovdje. NAMJERNO bez `name:`: Coolifyjev proxy očekuje
-  # `<project>_default`; preimenovanje bi prekinulo rutiranje do kontejnera.
+  # Keep Coolify's default stack network for proxy routing and minio service DNS.
   default:
-  # Postojeće mreže na hostu. Compose ih NE kreira (v1 D-021).
-  # `redis_net` mora postojati na hostu čim je ovdje navedena.
+  # Existing external infrastructure networks; Compose does not create them.
   db_net:
     external: true
   redis_net:

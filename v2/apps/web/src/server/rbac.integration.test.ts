@@ -50,7 +50,6 @@ const TENANT_TABLES = [
   "audit_events",
   "invitations",
   "password_resets",
-  "sync_items",
 ] as const;
 
 const json = (url: string, body: unknown, cookie?: string) =>
@@ -94,7 +93,6 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
     await admin.query("DELETE FROM invitations WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM sessions WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM memberships WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
-    await admin.query("DELETE FROM sync_items WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM machines WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM users WHERE email LIKE '%@r1b.test'");
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
@@ -192,11 +190,6 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
           `INSERT INTO password_resets (id, company_id, user_id, token_hash, expires_at)
            VALUES ($1, $2, $3, $4, now() + interval '1 day')`,
           [`rst_r1b_${suffix}`, companyId, `usr_r1b_${suffix === "a" ? "admin" : "owner_b"}`, `rsthash_${suffix}`],
-        );
-        await client.query(
-          `INSERT INTO sync_items (id, company_id, user_id, device_id, local_id, entity_type, payload, client_at)
-           VALUES ($1, $2, $3, 'dev-1', $1, 'note', '{}'::jsonb, now())`,
-          [`syn_r1b_${suffix}`, companyId, `usr_r1b_${suffix === "a" ? "admin" : "owner_b"}`],
         );
         await client.query("COMMIT");
       } finally {

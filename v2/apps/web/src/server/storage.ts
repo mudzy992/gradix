@@ -8,8 +8,9 @@
  *     bajtovi nisu `%PDF-`.
  *  2. **Nema javnog pristupa.** Upload ide na potpisan PUT (5 min), download na potpisan GET
  *     (60 s). Bucket nije javan i nema listinga.
- *  3. **Dok bucket ne postoji, ne pišemo.** ADR 0006: v2 ne piše priloge dok `gradix-v2` ne
- *     postoji. Umjesto tihe greške, upload se odbija sa jasnom porukom koja kaže šta treba.
+ *  3. **Dok bucket ne postoji, ne pišemo.** ADR 0006: v2 ne piše priloge dok je bucket
+ *     nedostupan. Staging koristi izolovani `gradix-stg`; umjesto tihe greške, upload se odbija
+ *     sa jasnom porukom koja kaže šta treba.
  */
 import { createHash } from "node:crypto";
 import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
@@ -83,39 +84,72 @@ export function objectKey(companyId: string, obligationId: string, attachmentId:
 }
 
 export type StorageConfig =
-  | { configured: true; client: S3Client; bucket: string }
+  | { configured: true; client: S3Client; presignClient: S3Client; bucket: string; publicEndpoint: string }
   | { configured: false; reason: string };
 
 /**
  * Konfiguracija iz okruženja. **Nema podrazumijevanih tajni**: ako `MINIO_*` nisu postavljeni,
- * prijave se kao „nije podešeno“ umjesto da se piše u pogrešan bucket.
+ * prijave se kao „nije podešeno“ umjesto da se piše u pogrešan bucket. Backend koristi interni
+ * endpoint; browser-potpisani URL-ovi koriste zasebni `MINIO_PUBLIC_ENDPOINT` da nikad ne vrate
+ * hostname kao `minio` koji postoji samo unutar Compose mreže.
  */
 export function storageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig {
   const endpoint = env.MINIO_ENDPOINT?.trim();
+  const publicEndpoint = env.MINIO_PUBLIC_ENDPOINT?.trim();
   const accessKeyId = env.MINIO_ACCESS_KEY?.trim();
   const secretAccessKey = env.MINIO_SECRET_KEY?.trim();
   const bucket = env.MINIO_BUCKET?.trim() || ATTACHMENT_BUCKET;
+  const region = env.MINIO_REGION?.trim() || "us-east-1";
 
   if (!endpoint || !accessKeyId || !secretAccessKey) {
     return {
       configured: false,
       reason:
-        "Prilozi još nisu uključeni na ovom serveru (nema MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY). " +
+        "Prilozi još nisu uključeni na ovom serveru (nedostaje MINIO_ENDPOINT ili app access key). " +
         "Ostali podaci o obavezi se čuvaju normalno.",
     };
   }
+  if (!publicEndpoint) {
+    return {
+      configured: false,
+      reason: "MINIO_PUBLIC_ENDPOINT nedostaje; potpisani linkovi moraju koristiti browser-dostupan hostname.",
+    };
+  }
 
-  return {
-    configured: true,
-    bucket,
-    client: new S3Client({
-      endpoint,
-      region: env.MINIO_REGION?.trim() || "us-east-1",
-      // MinIO na hostu radi bez TLS-a u lokalnom razvoju; produkcija daje https endpoint.
-      forcePathStyle: true,
-      credentials: { accessKeyId, secretAccessKey },
-    }),
-  };
+  let parsedPublicEndpoint: URL;
+  try {
+    for (const value of [endpoint, publicEndpoint]) {
+      const parsed = new URL(value);
+      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || parsed.username || parsed.password || parsed.search || parsed.hash) {
+        return { configured: false, reason: "MINIO_ENDPOINT i MINIO_PUBLIC_ENDPOINT moraju biti čisti http(s) URL-ovi bez userinfo/query dijela." };
+      }
+      if (value === publicEndpoint) parsedPublicEndpoint = parsed;
+    }
+  } catch {
+    return { configured: false, reason: "MINIO_ENDPOINT ili MINIO_PUBLIC_ENDPOINT nije valjan http(s) URL." };
+  }
+  const publicHost = parsedPublicEndpoint!.hostname.toLowerCase();
+  const internalHost = publicHost === "minio" || publicHost === "localhost" || publicHost.endsWith(".localhost") ||
+    publicHost.endsWith(".local") || publicHost.endsWith(".lan") || publicHost.endsWith(".home.arpa") ||
+    publicHost.endsWith(".internal") || publicHost.endsWith(".svc") || !publicHost.includes(".") ||
+    /^(10\.|127\.|192\.168\.|169\.254\.)/.test(publicHost) || /^172\.(1[6-9]|2\d|3[01])\./.test(publicHost);
+  if (env.NODE_ENV === "production" && (internalHost || parsedPublicEndpoint!.protocol !== "https:")) {
+    return { configured: false, reason: "MINIO_PUBLIC_ENDPOINT mora biti javni HTTPS browser host; interni Compose host i HTTP URL se ne smiju potpisati." };
+  }
+
+  const credentials = { accessKeyId, secretAccessKey };
+  const client = new S3Client({
+    endpoint,
+    region,
+    // MinIO na hostu radi bez TLS-a u lokalnom razvoju; produkcija daje https endpoint.
+    forcePathStyle: true,
+    credentials,
+  });
+  const presignClient = publicEndpoint === endpoint
+    ? client
+    : new S3Client({ endpoint: publicEndpoint, region, forcePathStyle: true, credentials });
+
+  return { configured: true, bucket, client, presignClient, publicEndpoint };
 }
 
 export async function presignUpload(input: {
@@ -124,7 +158,7 @@ export async function presignUpload(input: {
   contentType: AllowedContentType;
 }): Promise<{ url: string; expiresAt: string }> {
   const url = await getSignedUrl(
-    input.config.client,
+    input.config.presignClient,
     new PutObjectCommand({ Bucket: input.config.bucket, Key: input.key, ContentType: input.contentType }),
     { expiresIn: UPLOAD_URL_TTL_SECONDS },
   );
@@ -135,13 +169,15 @@ export async function presignDownload(input: {
   config: Extract<StorageConfig, { configured: true }>;
   key: string;
   fileName: string;
+  contentType?: AllowedContentType;
 }): Promise<{ url: string; expiresAt: string }> {
   const url = await getSignedUrl(
-    input.config.client,
+    input.config.presignClient,
     new GetObjectCommand({
       Bucket: input.config.bucket,
       Key: input.key,
       ResponseContentDisposition: `inline; filename="${input.fileName.replace(/"/g, "")}"`,
+      ...(input.contentType ? { ResponseContentType: input.contentType } : {}),
     }),
     { expiresIn: DOWNLOAD_URL_TTL_SECONDS },
   );

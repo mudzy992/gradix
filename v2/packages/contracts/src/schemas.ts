@@ -543,47 +543,78 @@ export const ObligationCorrectInput = ObligationRenewInput.partial({ expiresAt: 
 });
 export type ObligationCorrectInput = z.infer<typeof ObligationCorrectInput>;
 
-/* ------------------------------------------------------------------ sync */
+/* ------------------------------------------------------------------ R4 sync */
 
-/** Vrijednosti moraju biti iste kao `SYNC_ENTITY_TYPES` u `@gradix/domain`. */
-export const SyncEntityType = z.enum(["note"]);
-export type SyncEntityType = z.infer<typeof SyncEntityType>;
+const OffsetDateTime = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/);
 
-export const SyncPushItem = z.object({
-  localId: z.string(),
-  entityType: SyncEntityType,
-  payload: z.record(z.string(), z.unknown()),
-  clientAt: IsoDate,
-});
+export const SyncWorkEntryPayload = z.object({
+  kind: z.enum(["WORK", "BREAK"]),
+  startedAt: OffsetDateTime,
+  endedAt: OffsetDateTime.nullable(),
+  endState: z.enum(["OPEN", "KNOWN_END", "UNKNOWN_END"]),
+  projectId: z.string().min(1).max(128).nullable(),
+  machineId: z.string().min(1).max(128).nullable(),
+  note: z.string().max(2000).nullable(),
+}).strict();
+
+export const SyncPushItem = z.discriminatedUnion("entityType", [
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("work_entry"),
+    workdayId: z.string().uuid(),
+    workEntryId: z.string().uuid(),
+    baseVersion: z.number().int().positive().optional(),
+    deviceSentAt: OffsetDateTime,
+    entry: SyncWorkEntryPayload,
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("workday"),
+    workdayId: z.string().uuid(),
+    baseVersion: z.number().int().positive(),
+    deviceSentAt: OffsetDateTime,
+    status: z.literal("SUBMITTED"),
+  }).strict(),
+]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
 export const SyncPushRequest = z.object({
-  deviceId: z.string().min(1).max(100),
-  items: z.array(SyncPushItem),
-});
+  items: z.array(SyncPushItem).min(1).max(100),
+}).strict();
 export type SyncPushRequest = z.infer<typeof SyncPushRequest>;
 
 export const SyncPushResponse = z.object({
-  results: z.array(
-    z.object({
-      localId: z.string(),
-      serverId: z.string(),
-      duplicate: z.boolean(),
-    }),
-  ),
+  results: z.array(z.object({
+    localId: z.string().uuid(),
+    status: z.enum(["APPLIED", "DUPLICATE", "CONFLICT", "REJECTED"]),
+    entityId: z.string().nullable(),
+    version: z.number().int().positive().nullable(),
+    cursor: z.string().nullable(),
+    canonicalWorkdayId: z.string().optional(),
+    conflictId: z.string().optional(),
+    code: z.string().optional(),
+  })),
 });
 export type SyncPushResponse = z.infer<typeof SyncPushResponse>;
 
-export const SyncPullItem = z.object({
-  serverId: z.string(),
-  localId: z.string(),
-  entityType: z.string(),
-  payload: z.record(z.string(), z.unknown()),
-  clientAt: IsoDate,
+export const SyncPullEvent = z.object({
+  id: z.string(),
+  cursorSeq: z.string(),
+  entityType: z.enum(["workday", "work_entry", "sync_conflict"]),
+  entityId: z.string(),
+  entityVersion: z.number().int().positive(),
+  payload: z.record(z.string(), z.unknown()).nullable(),
+  tombstone: z.boolean(),
+  createdAt: IsoDate,
 });
-export type SyncPullItem = z.infer<typeof SyncPullItem>;
+export type SyncPullEvent = z.infer<typeof SyncPullEvent>;
 
-export const SyncPullResponse = z.object({ items: z.array(SyncPullItem) });
+export const SyncPullResponse = z.object({
+  events: z.array(SyncPullEvent),
+  cursor: z.string(),
+  cursorFloor: z.string(),
+  hasMore: z.boolean(),
+});
 export type SyncPullResponse = z.infer<typeof SyncPullResponse>;
 
 /** Promjena rola i opsega — vraća stanje prije i poslije (UI prikazuje razliku). */

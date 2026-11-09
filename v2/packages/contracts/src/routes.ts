@@ -511,18 +511,13 @@ export const ROUTES = [
   {
     method: "GET",
     path: "/api/sync/pull",
-    summary: "Promjene od `since`; keyset preko `server_at`.",
+    summary: "Tenant-scoped R4 promjene nakon potpisanog opaque cursora.",
     auth: true,
-    // Sync ne provjerava dozvolu, samo sesiju (offline radnik nema `users.manage`).
+    // Worker vidi samo svoje dane; OWNER/ADMIN imaju read-only company pull.
     permission: null,
     request: null,
     response: SyncPullResponse,
-    query: z.object({ since: z.string().optional() }),
-    meta: z.object({
-      lastSyncTimestamp: z.string(),
-      serverTime: z.string(),
-      limit: z.number(),
-    }),
+    query: z.object({ cursor: z.string().optional(), limit: z.coerce.number().int().min(1).max(200).optional() }),
   },
   /* ------------------------------------------------------ projekti i dodjele (R3) */
   {
@@ -620,12 +615,11 @@ export const ROUTES = [
   {
     method: "POST",
     path: "/api/sync/push",
-    summary: "Idempotentan upis offline izmjena.",
+    summary: "Idempotentni, tenant-scoped R4 workday/work-entry push.",
     auth: true,
     permission: null,
     request: SyncPushRequest,
     response: SyncPushResponse,
-    meta: z.object({ accepted: z.number() }),
   },
 ] as const;
 

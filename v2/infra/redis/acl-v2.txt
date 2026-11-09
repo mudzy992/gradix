@@ -1,29 +1,30 @@
-# Gradix v2 — ACL usklađivanje Redisa (izvršava VLASNIK kroz redis-cli; agent ne dira Redis).
+# Gradix v2 staging — Redis ACL (vlasnik infrastrukture izvršava kroz redis-cli; agent ne dira Redis).
 #
-# Kontekst (G0/P3 i odluka o v2 resursima): v2 smije koristiti postojeći Redis, ali sa
-# SVOJIM prefiksom, da ključevi v1 i v2 ne dijele prostor. v1 koristi `gradix:`, v2 koristi `gx2:`.
+# Redis je u ovoj verziji samo opcionalno dijagnostičko odredište; aplikacija ga ne koristi.
+# Login rate limit ostaje u PostgreSQL-u i pri DB grešci odbija prijavu (fail-closed).
+# Ako se staging ACL uključi, namespace je obavezno odvojen od v1: `gradix:stg:*`.
 #
-# Prije izvršavanja: odluči da li v2 koristi Redis uopšte. U Fazi 1 se Redis NE koristi
-# (throttle je u memoriji; nema druge replike). Ova komanda je priprema za Fazu 2+.
-#
-# Izvor šeme: v1/docs/INFRASTRUCTURE.md §5.4 i v1 DECISIONS D-039 (ACL po prefiksu, TLS 6380).
+# Redis TLS ostaje na 6380; kontejneru se montira CA, a web koristi samo REDIS_TLS_CA_FILE.
+# Ne postavljati REDIS_CA_FILE — to je zastarjeli duplikat.
 
 # 1) Provjeri postojeće korisnike (read-only):
 ACL LIST
 
-# 2) Provjeri da v1 ključevi neće biti dirani:
-#    v2 smije pisati SAMO u `gx2:*`. Ako u bazi postoje v1 ključevi pod `gradix:*`, oni ostaju.
+# 2) Provjeri da v1 ključevi ostanu netaknuti:
 SCAN 0 MATCH gradix:* COUNT 100
 
-# 3) Kreiraj/uskadi korisnika za v2 (zamijeni <V2_LOZINKA> stvarnom lozinkom; ne u repo):
-#    Prava: samo gx2:* + komande koje aplikacija koristi (ping, multi/exec, incr, pexpire,
-#    pttl, get, set, del, exists, ttl). Bez @admin, bez KEYS, bez SCAN u produkciji.
-ACL SETUSER gradix_v2 reset on '>V2_LOZINKA' '~gx2:*' +ping +multi +exec +incr +pexpire +pttl +get +set +del +exists +ttl
+# 3) Kreiraj/uskadi staging ACL korisnika. Zamijeni placeholder van repozitorija.
+#    Trenutne dijagnostike trebaju samo PING i prefiksirani SET/PTTL/GET/DEL.
+#    Bez @all, KEYS, SCAN, administrativnih komandi ili pristupa v1 gradix:* namespace-u.
+ACL SETUSER gradix_v2 reset on '>STAGING_TAJNA_ZAMIJENITI_VAN_REPOA' '~gradix:stg:*' +ping +set +pttl +get +del
 
-# 4) Provjeri da je korisnik tačan (ne smije imati +@all ni ~*):
+# 4) Potvrdi obrazac ključa i komandi:
 ACL GETUSER gradix_v2
+# Očekuj samo ~gradix:stg:* i eksplicitno navedene komande; nikad ~* ili +@all.
 
-# 5) Opciono: ukloni v1 korisniku pravo na gx2:* ako je ikad dobio širi obrazac:
-#    (v1 korisnik ima ~gradix:*, pa nema šta mijenjati — provjeri sa ACL GETUSER gradix)
-
-# Napomena: TLS ostaje na 6380 (v1 D-039). v2 koristi REDIS_PORT=6380 i svoj CA.
+# 5) Staging web kontejner koristi:
+#    REDIS_HOST=redis-core (isti external redis_net)
+#    REDIS_PORT=6380
+#    REDIS_USER=gradix_v2
+#    REDIS_PREFIX=gradix:stg:
+#    REDIS_TLS_CA_FILE=/etc/ssl/certs/redis-ca.crt

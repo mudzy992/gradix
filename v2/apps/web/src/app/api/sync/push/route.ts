@@ -1,99 +1,110 @@
-/**
- * POST /api/sync/push — offline zapisi sa uređaja.
- *
- * Pravila (packages/domain/src/sync.ts):
- *  - cijeli batch se validira PRIJE ijednog upisa; greška validacije = 400 za cijeli batch
- *  - idempotentnost: unique (company, user, device, localId) — ponovljeni zapis vraća postojeći
- *  - greška jednog zapisa ne obara ostale; odgovor nosi `results[]` po zapisu
- */
+/** POST /api/sync/push — tenant-scoped R4 workday/work-entry operations. */
+import { Buffer } from "node:buffer";
 import type { NextRequest } from "next/server";
-import { withCompany } from "@gradix/db";
-import { validatePushBatch, type SyncPushItem } from "@gradix/domain";
-import { z } from "zod";
+import { SyncPushRequest } from "@gradix/contracts";
+import {
+  R4_SYNC_PUSH_MAX_BODY_BYTES,
+  R4_SYNC_PUSH_MAX_ITEM_BYTES,
+  validateR4SyncPush,
+  type R4SyncPushItem,
+} from "@gradix/domain";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
+import { pushR4SyncItems, SyncPushAccessError } from "@/server/r4-sync-service";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-const itemSchema = z.object({
-  localId: z.string(),
-  entityType: z.string(),
-  payload: z.record(z.string(), z.unknown()),
-  clientAt: z.string(),
-});
+async function readBoundedJson(request: NextRequest): Promise<
+  { ok: true; value: unknown } | { ok: false; code: "SYNC_BODY_TOO_LARGE" | "SYNC_ITEM_INVALID" }
+> {
+  const lengthHeader = request.headers.get("content-length");
+  if (lengthHeader && /^\d+$/.test(lengthHeader) && Number(lengthHeader) > R4_SYNC_PUSH_MAX_BODY_BYTES) {
+    return { ok: false, code: "SYNC_BODY_TOO_LARGE" };
+  }
+  if (!request.body) return { ok: false, code: "SYNC_ITEM_INVALID" };
 
-const bodySchema = z.object({
-  deviceId: z.string().min(1).max(100),
-  items: z.array(itemSchema),
-});
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > R4_SYNC_PUSH_MAX_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, code: "SYNC_BODY_TOO_LARGE" };
+      }
+      chunks.push(part.value);
+    }
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks, total));
+    return { ok: true, value: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false, code: "SYNC_ITEM_INVALID" };
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const guardResult = await guard(request);
-    if (!guardResult.ok) return guardResult.response;
-    const ctx = guardResult.ctx;
-
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return fail("VALIDATION_FAILED", "Neispravan oblik zahtjeva.");
-
-    const now = new Date();
-    const items: SyncPushItem[] = parsed.data.items.map((item) => ({
-      localId: item.localId,
-      entityType: item.entityType as SyncPushItem["entityType"],
-      payload: item.payload,
-      clientAt: new Date(item.clientAt),
-    }));
-
-    const validation = validatePushBatch(items, now);
-    if (!validation.ok) {
-      const messages: Record<string, string> = {
-        SYNC_BATCH_TOO_LARGE: "Batch mora imati između 1 i 200 zapisa.",
-        SYNC_ENTITY_TYPE_UNKNOWN: "Nepoznat tip zapisa.",
-        SYNC_LOCAL_ID_INVALID: "Neispravan ili dupli lokalni ID.",
-        SYNC_CLIENT_AT_INVALID: "Vrijeme uređaja nije ispravno.",
-      };
-      return fail(validation.code, messages[validation.code] ?? "Neispravan batch.");
+    const auth = await guard(request);
+    if (!auth.ok) return auth.response;
+    if (!auth.ctx.roles.includes("WORKER")) {
+      return fail("FORBIDDEN", "Samo radnik može slati vlastite radne zapise.");
     }
 
-    const results = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
-      const out: { localId: string; serverId: string; duplicate: boolean }[] = [];
-      for (const item of items) {
-        // ON CONFLICT DO NOTHING + ponovni SELECT: ponovljeni push vraća ISTI serverId.
-        const inserted = await client.query<{ id: string }>(
-          `INSERT INTO sync_items (id, company_id, user_id, device_id, local_id, entity_type, payload, client_at)
-           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6::jsonb, $7)
-           ON CONFLICT (company_id, user_id, device_id, local_id) DO NOTHING
-           RETURNING id`,
-          [
-            ctx.companyId,
-            ctx.userId,
-            parsed.data.deviceId,
-            item.localId,
-            item.entityType,
-            JSON.stringify(item.payload),
-            item.clientAt,
-          ],
-        );
-        const existing =
-          inserted.rows[0] ??
-          (
-            await client.query<{ id: string }>(
-              "SELECT id FROM sync_items WHERE company_id = $1 AND user_id = $2 AND device_id = $3 AND local_id = $4",
-              [ctx.companyId, ctx.userId, parsed.data.deviceId, item.localId],
-            )
-          ).rows[0];
-        out.push({
-          localId: item.localId,
-          serverId: existing?.id ?? "",
-          duplicate: inserted.rows.length === 0,
-        });
+    const body = await readBoundedJson(request);
+    if (!body.ok) {
+      const message = body.code === "SYNC_BODY_TOO_LARGE"
+        ? "JSON tijelo ne smije biti veće od 1 MiB."
+        : "Tijelo zahtjeva nije ispravan JSON.";
+      return fail(body.code, message);
+    }
+    if (!body.value || typeof body.value !== "object" || Array.isArray(body.value)) {
+      return fail("SYNC_ITEM_INVALID", "Neispravan oblik sync zahtjeva.");
+    }
+    const rawItems = (body.value as { items?: unknown }).items;
+    if (!Array.isArray(rawItems) || rawItems.length < 1 || rawItems.length > 100) {
+      return fail("SYNC_BATCH_TOO_LARGE", "Batch mora imati između 1 i 100 stavki.");
+    }
+    for (const item of rawItems) {
+      if (Buffer.byteLength(JSON.stringify(item), "utf8") > R4_SYNC_PUSH_MAX_ITEM_BYTES) {
+        return fail("SYNC_ITEM_TOO_LARGE", "Pojedinačna sync stavka ne smije biti veća od 16 KiB.");
       }
-      return out;
-    });
+    }
 
-    return ok({ results }, { accepted: results.filter((row) => !row.duplicate).length });
+    const parsed = SyncPushRequest.safeParse(body.value);
+    if (!parsed.success) {
+      return fail("SYNC_ITEM_INVALID", "Neispravan oblik sync stavke.");
+    }
+    const items = parsed.data.items as R4SyncPushItem[];
+    const validation = validateR4SyncPush(items);
+    if (!validation.ok) {
+      const messages: Record<string, string> = {
+        SYNC_BATCH_TOO_LARGE: "Batch mora imati između 1 i 100 stavki.",
+        SYNC_BODY_TOO_LARGE: "JSON tijelo ne smije biti veće od 1 MiB.",
+        SYNC_ITEM_TOO_LARGE: "Pojedinačna sync stavka ne smije biti veća od 16 KiB.",
+        SYNC_LOCAL_ID_INVALID: "Lokalni ID mora biti jedinstven UUID.",
+        SYNC_ITEM_INVALID: "Jedna ili više sync stavki nije ispravna.",
+      };
+      return fail(validation.code, messages[validation.code] ?? "Neispravan sync zahtjev.");
+    }
+
+    const results = await pushR4SyncItems(await getVerifiedPool(), {
+      userId: auth.ctx.userId,
+      companyId: auth.ctx.companyId,
+      roles: auth.ctx.roles,
+    }, items);
+    return ok({ results });
   } catch (error) {
+    if (error instanceof SyncPushAccessError) {
+      return error.code === "FORBIDDEN"
+        ? fail("FORBIDDEN", "Nije dozvoljeno slati radne zapise za ovaj nalog.")
+        : fail("NOT_FOUND", "Nalog nema aktivnu vezu s radnikom u ovoj firmi.");
+    }
     return internal(error, "sync.push");
   }
 }

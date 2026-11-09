@@ -149,6 +149,48 @@ describeDb("R4 cursor alokacija i change log (PostgreSQL)", () => {
     ).rejects.toThrow(/SYNC_CURSOR_RETRY_PAYLOAD_MISMATCH/);
   });
 
+  it("R4 item rezervacija je idempotentna, skip daje novu generaciju, committed retry vraća isti slot", async () => {
+    const key = RUN.padEnd(64, "a").slice(0, 64);
+    const reserveItem = () => withCompany(app, companyId(COMPANY_A), async (client) =>
+      client.query<{ cursor_seq: string; reservation_token: string; already_committed: boolean }>(
+        `SELECT cursor_seq::text, reservation_token, already_committed
+           FROM public.sync_cursor_reserve_item($1, $2, 300)`,
+        [COMPANY_A, key],
+      ),
+    );
+
+    const first = (await reserveItem()).rows[0]!;
+    const concurrentRetry = (await reserveItem()).rows[0]!;
+    expect(concurrentRetry).toMatchObject({
+      cursor_seq: first.cursor_seq,
+      reservation_token: first.reservation_token,
+      already_committed: false,
+    });
+
+    const skipped = await withCompany(app, companyId(COMPANY_A), async (client) =>
+      client.query<{ skipped: boolean }>(
+        "SELECT public.sync_cursor_skip($1, $2::bigint, $3) AS skipped",
+        [COMPANY_A, first.cursor_seq, first.reservation_token],
+      ),
+    );
+    expect(skipped.rows[0]?.skipped).toBe(true);
+
+    const nextGeneration = (await reserveItem()).rows[0]!;
+    expect(BigInt(nextGeneration.cursor_seq)).toBeGreaterThan(BigInt(first.cursor_seq));
+    expect(nextGeneration.reservation_token).not.toBe(first.reservation_token);
+    await withCompany(app, companyId(COMPANY_A), (client) =>
+      publish(client, COMPANY_A, Number(nextGeneration.cursor_seq), nextGeneration.reservation_token,
+        HASH_A, `wd-item-${RUN}`),
+    );
+
+    const committedRetry = (await reserveItem()).rows[0]!;
+    expect(committedRetry).toMatchObject({
+      cursor_seq: nextGeneration.cursor_seq,
+      reservation_token: nextGeneration.reservation_token,
+      already_committed: true,
+    });
+  });
+
   it("sweeper preskače samo istekli slot koji može zaključati i ne oživljava ga", async () => {
     const token = `expired-${RUN}`;
     const reservation = await withCompany(app, companyId(COMPANY_A), async (client) =>

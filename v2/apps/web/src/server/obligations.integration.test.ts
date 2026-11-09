@@ -25,7 +25,7 @@ import { POST as renewRoute } from "@/app/api/obligations/[id]/renew/route";
 import { POST as correctRoute } from "@/app/api/obligations/[id]/correct/route";
 import { POST as attachmentRoute } from "@/app/api/obligations/[id]/attachments/route";
 import { GET as typesRoute } from "@/app/api/obligation-types/route";
-import { detectContentType, objectKey, sanitiseFileName, sha256Hex, storageConfig } from "./storage";
+import { detectContentType, objectKey, presignDownload, presignUpload, sanitiseFileName, sha256Hex, storageConfig } from "./storage";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -726,5 +726,50 @@ describe("prilozi — provjere koje ne trebaju bazu", () => {
     const config = storageConfig({} as NodeJS.ProcessEnv);
     expect(config.configured).toBe(false);
     if (!config.configured) expect(config.reason).toContain("MINIO");
+  });
+
+  it("odbija presign ako browser endpoint nije podešen", () => {
+    const config = storageConfig({
+      NODE_ENV: "test",
+      MINIO_ENDPOINT: "http://minio:9000",
+      MINIO_ACCESS_KEY: "ci-access",
+      MINIO_SECRET_KEY: "ci-secret-value",
+      MINIO_BUCKET: "gradix-stg",
+    } as NodeJS.ProcessEnv);
+    expect(config.configured).toBe(false);
+    if (!config.configured) expect(config.reason).toContain("MINIO_PUBLIC_ENDPOINT");
+  });
+
+  it("potpisuje browser link na javnom hostu, a postavlja inline i Content-Type zaglavlja", async () => {
+    const config = storageConfig({
+      NODE_ENV: "test",
+      MINIO_ENDPOINT: "http://minio:9000",
+      MINIO_PUBLIC_ENDPOINT: "https://files.gradix.ba101.top",
+      MINIO_ACCESS_KEY: "ci-access",
+      MINIO_SECRET_KEY: "ci-secret-value",
+      MINIO_BUCKET: "gradix-stg",
+      MINIO_REGION: "us-east-1",
+    } as NodeJS.ProcessEnv);
+    expect(config.configured).toBe(true);
+    if (!config.configured) return;
+
+    try {
+      const upload = await presignUpload({ config, key: "gx2/cmp_a/obligations/obl_a/att_a", contentType: "image/png" });
+      const download = await presignDownload({
+        config,
+        key: "gx2/cmp_a/obligations/obl_a/att_a",
+        fileName: "document.png",
+        contentType: "image/png",
+      });
+      const uploadUrl = new URL(upload.url);
+      const downloadUrl = new URL(download.url);
+      expect(uploadUrl.hostname).toBe("files.gradix.ba101.top");
+      expect(downloadUrl.hostname).toBe("files.gradix.ba101.top");
+      expect(downloadUrl.searchParams.get("response-content-disposition")).toContain("inline");
+      expect(downloadUrl.searchParams.get("response-content-type")).toBe("image/png");
+    } finally {
+      config.client.destroy();
+      if (config.presignClient !== config.client) config.presignClient.destroy();
+    }
   });
 });

@@ -60,9 +60,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.sessions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machines TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.audit_events TO gradix_app;
 -- platform_users, schema_migrations, login_attempts: namjerno bez direktnih prava.
-GRANT SELECT, INSERT ON TABLE public.sync_items TO gradix_app;
--- Cursor internals have no direct table ACL. The tenant-checked definer functions below
--- are the only reservation/publish/sweep/pull path. `sync_change_log` is SELECT-only.
+-- Cursor internals have no direct table ACL. Tenant-checked definer functions are the only
+-- reservation/publish/sweep/pull path. `sync_change_log` is SELECT-only.
 GRANT SELECT ON TABLE public.sync_change_log TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.invitations TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.password_resets TO gradix_app;
@@ -91,6 +90,10 @@ GRANT EXECUTE ON FUNCTION public.auth_session_by_hash(TEXT) TO gradix_app;
 -- Cursor functions are narrow tenant APIs; each compares its tenant argument with app.company_id.
 REVOKE ALL ON FUNCTION public.sync_cursor_reserve(TEXT, TEXT, INTEGER) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.sync_cursor_reserve(TEXT, TEXT, INTEGER) TO gradix_app;
+REVOKE ALL ON FUNCTION public.sync_cursor_reserve_item(TEXT, TEXT, INTEGER) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_reserve_item(TEXT, TEXT, INTEGER) TO gradix_app;
+REVOKE ALL ON FUNCTION public.sync_cursor_skip(TEXT, BIGINT, TEXT) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_skip(TEXT, BIGINT, TEXT) TO gradix_app;
 REVOKE ALL ON FUNCTION public.sync_cursor_publish(TEXT, BIGINT, TEXT, TEXT, TEXT, TEXT, BIGINT, JSONB, BOOLEAN) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.sync_cursor_publish(TEXT, BIGINT, TEXT, TEXT, TEXT, TEXT, BIGINT, JSONB, BOOLEAN) TO gradix_app;
 REVOKE ALL ON FUNCTION public.sync_cursor_sweep(TEXT, INTEGER) FROM PUBLIC, gradix_app;

@@ -105,24 +105,21 @@ export async function me(): Promise<Me> {
   return data;
 }
 
-export async function pushNotes(
-  deviceId: string,
-  items: SyncPushRequest["items"],
-): Promise<SyncPushResponse> {
+/** R4 push carries workdays/work entries only; tenant and worker identity come from the session. */
+export async function pushSyncItems(items: SyncPushRequest["items"]): Promise<SyncPushResponse> {
   const { data } = await withToken((accessToken) =>
-    client.post("/api/sync/push", { deviceId, items }, undefined, { accessToken }),
+    client.post("/api/sync/push", { items }, undefined, { accessToken }),
   );
   return data;
 }
 
-/** `lastSyncTimestamp` je u `meta` — ugovor ga tamo i stavlja. */
-export async function pullChanges(
-  since: string,
-): Promise<{ items: SyncPullResponse["items"]; lastSyncTimestamp: string }> {
-  const { data, meta } = await withToken((accessToken) =>
-    client.get("/api/sync/pull", undefined, { query: { since }, accessToken }),
+/** Opaque cursors are persisted as-is; clients must not compare or derive their sequence. */
+export async function pullSyncChanges(cursor?: string, limit = 100): Promise<SyncPullResponse> {
+  const query = cursor ? { cursor, limit: String(limit) } : { limit: String(limit) };
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/sync/pull", undefined, { query, accessToken }),
   );
-  return { items: data.items, lastSyncTimestamp: String(meta?.lastSyncTimestamp ?? since) };
+  return data;
 }
 
 /** Rokovi na telefonu: samo čitanje (R2). Filter `mine=1` daje obaveze gdje sam odgovoran

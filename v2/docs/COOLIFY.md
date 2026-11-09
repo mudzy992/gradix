@@ -49,7 +49,7 @@ build ponavlja sa starom greškom.
 | `AUTH_SECRET` | 48+ slučajnih bajtova, base64 | Generiši: `openssl rand -base64 48`. Min 32 znaka. Rotacija odjavljuje sve korisnike. |
 | `RUN_MIGRATIONS` | `true` | Prvi deploy `true`; poslije može ostati `true` (idempotentno). |
 
-## 2. Preporučeno
+## 2. Preporučeno i staging servisi
 
 | Varijabla | Vrijednost | Zašto |
 |---|---|---|
@@ -58,68 +58,103 @@ build ponavlja sa starom greškom.
 | `TZ` | `Europe/Sarajevo` | Datumi u logovima i izvještajima. |
 | `PGSSLMODE` | `verify-full` | Ako je u `DATABASE_URL` već `sslmode=verify-full` + `sslrootcert`, ovo je suvišno ali ne smeta. |
 | `POSTGRES_CA_FILE` | `/data/coolify/ssl/coolify-ca.crt` | CA za TLS prema bazi. Compose ga montira na `/etc/ssl/certs/coolify-ca.crt`; ako je na drugom mjestu na hostu, promijeni ovdje. |
-| `POSTGRES_CA_MOUNT_CREATE_PATH` | `false` | `false` = deploy padne JASNO ako CA na hostu ne postoji. `true` = Docker tiho napravi prazan direktorij (izbjegni: `pg` onda pada sa ENOENT na `ca`). |
+| `POSTGRES_CA_MOUNT_CREATE_PATH` | `false` | `false` = deploy padne jasno ako CA na hostu ne postoji. |
+| `REDIS_HOST` / `REDIS_PORT` | `redis-core` / `6380` | Opcionalna dijagnostika nad Redisom iz `redis_net`; port 6380 je TLS. Redis nije runtime zavisnost aplikacije. |
+| `REDIS_USER` / `REDIS_PASSWORD` | staging ACL nalog i Coolify secret | Dijagnostika radi AUTH, PING i prefiksirani SET/PTTL/GET/DEL. Nikad ne stavljati stvarnu lozinku u repo ili log. |
+| `REDIS_PREFIX` | `gradix:stg:` | Odvojeni staging namespace; ACL ograniči na `~gradix:stg:*`. |
+| `REDIS_TLS_CA_FILE` | `/etc/ssl/certs/redis/redis-ca.crt` | Jedina Redis CA varijabla. Host fajl `/data/coolify/ssl/redis-core/redis-ca.crt` se montira u web kontejner; ne postavljati stari `REDIS_CA_FILE`. |
+| `MINIO_ENDPOINT` | `http://minio:9000` | Server-side S3 operacije koriste interni Compose DNS na default mreži. |
+| `MINIO_PUBLIC_ENDPOINT` | javni HTTPS URL koji vodi na MinIO port 9000 | Potpisani URL-ovi moraju imati host koji vidi browser; nikad `http://minio:9000`. Obavezan da bi se prilozi uključili. |
+| `MINIO_BUCKET` | `gradix-stg` | Izolovani staging bucket, odvojen od v1. Init usluga ga kreira i postavlja bucket-scoped app policy/CORS. |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | samo MinIO server admin secrets | Identične vrijednosti idu u MinIO server i jednokratni `minio-init`, nikad u web kontejner. |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | Init kreira ograničeni bucket policy nalog; web dobija samo ove app ključeve. Ne koristiti root par. |
+| `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Bucket CORS dozvoljava GET/PUT, `Content-Type` i izlaže inline-display zaglavlja. Bez patha i završnog `/`. |
+| `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
-> **Redis CA se NE montira u Fazi 1.** Nijedan dio koda ne čita `REDIS_*`, a mount je
-> RUŠIO deploy kad tog fajla nema (`bind source path does not exist`). Vraća se u istom
-> commitu u kojem Redis zaista uđe u upotrebu.
-| `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo ako pokrećeš demo seed ručno (vidi §5). Ne ostavljati trajno. |
+MinIO server je dio ovog Compose stacka: koristi vlastiti named volume `gradix-stg-minio-data`,
+unutrašnji DNS `minio`, bucket `gradix-stg` i odvojene root/app ključeve. `MINIO_DATA_DIR` nije
+aplikacijska varijabla. MinIO i Redis nisu uslov za podizanje v2 aplikacije; njihova nedostupnost
+prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja PostgreSQL preflight.
 
-## 3. Ne treba u Fazi 1
+### 2.1. Uključivanje priloga i browser URL-ova
 
-`MINIO_*`, `REDIS_*`, `EXPO_PUBLIC_API_URL` (mobilni se gradi lokalno), `CORS_ORIGIN`
-(prazno = same-origin, što je i cilj jer je jedan domen i `/api` na njemu).
-Puni spisak sa objašnjenjima: `v2/.env.example`.
+1. U Coolify dodaj javni HTTPS domain na Compose servis `minio`, port `9000` (S3 API). Ne izlaži
+   port `9001` — to je admin konzola. Po želji Coolifyjevu vrijednost `SERVICE_FQDN_MINIO` koristi
+   kao izvor hosta.
+2. Postavi `MINIO_PUBLIC_ENDPOINT` u web servis na `https://<taj-javni-host>` bez patha/query-a.
+   Web storage koristi `MINIO_ENDPOINT=http://minio:9000` za server-side I/O i odvojeni public
+   signer za URL-ove koje browser otvara. U produkciji interni hostname ili HTTP public URL odbija
+   storage config.
+3. Unesi odvojene Coolify secrets: `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` samo u MinIO server i
+   `minio-init`; `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` u web i `minio-init`. Ne dijeli root par sa
+   aplikacijom. Init skripta idempotentno napravi `gradix-stg`, bucket-scoped policy i CORS za
+   `MINIO_CORS_ALLOWED_ORIGIN` (GET/PUT, `Content-Type`, `Content-Disposition`, `Content-Length`).
+4. Sačekaj `phase=s3.browser_cors status=PASS` u app logu: taj probe koristi presigned PUT/GET kroz
+   javni hostname, provjerava CORS i `Content-Disposition: inline`, pa briše testni objekat. Ako
+   javni endpoint/CORS/policy nije spreman, prilozi ostaju isključeni umjesto da browser dobije
+   interni `minio` URL.
 
-## 3.5. Mreže: `db_net` i `redis_net` su eksterne (v1 D-021)
+`MINIO_PUBLIC_ENDPOINT` dijagnostika potvrđuje iz kontejnera da je endpoint javno oblikovan (HTTPS,
+ne-local hostname) i da odgovara; to ne zamjenjuje završnu provjeru otvaranja linka iz stvarnog
+browsera/telefona nakon deploya.
 
-Baza i Redis **nisu** na Coolifyjevoj default mreži — žive na postojećim mrežama hosta.
-Compose se na njih samo priključuje:
+## 3. Nepotrebno za v2 staging
+
+`EXPO_PUBLIC_API_URL` (mobilni se gradi lokalno), `CORS_ORIGIN` (prazno = same-origin; API je na
+istom domenu) i `REDIS_CA_FILE` (zastarjeli duplikat; koristi samo `REDIS_TLS_CA_FILE`). Puni spisak:
+`v2/.env.example`.
+
+## 3.5. Mreže: `db_net` i `redis_net` su eksterne, MinIO je isti stack
+
+Postgres i staging Redis su postojeći infrastrukturni servisi na `db_net` i `redis_net`.
+Compose ih **ne kreira**; web se samo priključuje. MinIO je drugačiji: `web`, `minio` i
+`minio-init` dijele Coolifyjev Compose `default` network, pa aplikacija koristi isti-stack DNS
+`http://minio:9000`. MinIO se ne spaja na v1 mrežu ni v1 storage.
 
 ```yaml
 networks:
-  default:            # Coolifyjev proxy (mora ostati da bi domen radio)
+  default:            # Coolify stack/proxy + web/minio same-stack DNS
   db_net:
-    external: true    # NE kreira se ovdje
+    external: true    # postojeći Postgres
+  redis_net:
+    external: true    # postojeći Redis
 ```
 
-`redis_net` je priključen (pripremljen za Redis), ali **Redis CA mount NIJE** — vidi §3.6.
-Svaka `external` mreža je uslov koji mora biti ispunjen na hostu: ako `redis_net` ne
-postoji, deploy pada sa `network redis_net declared as external, but could not be found`.
-Zato provjeri obje:
+Ako `db_net` ili `redis_net` ne postoji, deploy pada sa `network ... declared as external, but
+could not be found`. Provjeri obje prije deploya:
 
 ```sh
 docker network ls | grep -E "db_net|redis_net"
 ```
 
-Ako mreža ne postoji, deploy pada sa `network db_net declared as external, but could not
-be found`. Provjera na serveru:
+Ako mreža ne postoji, kreiraj je tek nakon što potvrdiš da Postgres/Redis resursi koriste baš tu
+mrežu. Coolify **ne** priključuje resource na te mreže automatski. Postgres resource mora imati
+`Connect to Predefined Network` uključen i biti na `db_net`; Redis mora biti dostupan webu kroz
+`redis_net` ako želiš da opcionalna dijagnostika do njega dođe.
 
-```sh
-docker network ls | grep db_net
-# ako fali:
-docker network create db_net 2>/dev/null || true
-```
+Za javne priloge dodaj Coolify domain/rutu na `minio` service port `9000` (ne `9001`; konzola nije
+izložena). Postavi `MINIO_PUBLIC_ENDPOINT` na javni HTTPS origin/URL koji je Coolify dodijelio.
+`MINIO_ENDPOINT` ostaje interni `http://minio:9000`; nikad ne zamjenjuj taj interni endpoint javnim
+za server-side operacije. Datoteke `infra/minio/init-staging.sh` i `staging-policy.json` mountaju se
+u odnosu na Base/Project Directory `/v2`.
 
-Coolify **ne** priključuje resource na te mreže automatski — zato su navedene u compose-u.
-Isto važi za Postgres resource: mora mu biti uključeno `Connect to Predefined Network`
-(inače nije na `db_net` i hostname iz `DATABASE_URL` se ne razrješava).
+## 3.6. CA putanje
 
-## 3.6. CA: dvije različite putanje (česta zabuna)
+Postgres i Redis CA su dva odvojena certifikata i mounta:
 
-Postoje **dvije** putanje i one nisu ista stvar:
-
-| Gdje | Putanja | Šta je |
+| Namjena | HOST putanja | KONTEJNER putanja / varijabla |
 |---|---|---|
-| HOST (server) | `/data/coolify/ssl/coolify-ca.crt` | fajl koji Coolify drži; vrijednost `POSTGRES_CA_FILE` |
-| KONTEJNER | `/etc/ssl/certs/coolify-ca.crt` | gdje ga mount čini vidljivim; ovo ide u `DATABASE_URL` |
+| Postgres TLS | `/data/coolify/ssl/coolify-ca.crt` (`POSTGRES_CA_FILE`) | `/etc/ssl/certs/coolify-ca.crt`; ova putanja ide u `DATABASE_URL` kao `sslrootcert=` |
+| Redis TLS | `/data/coolify/ssl/redis-core/redis-ca.crt` | `/etc/ssl/certs/redis/redis-ca.crt`; `REDIS_TLS_CA_FILE` pokazuje na ovu kontejnersku putanju |
 
-Ako u `POSTGRES_CA_FILE` upišeš putanju **u kontejneru**, Docker tumači da takav fajl
-postoji na hostu i deploy padne (`bind source path does not exist`). Greška je ista ako
-upišete obrnuto. Pravilo: **`POSTGRES_CA_FILE` = host, `sslrootcert` = kontejner.**
+Za Postgres je `POSTGRES_CA_FILE` host putanja, dok `sslrootcert` pokazuje unutar kontejnera. Za
+Redis se ne koristi host putanja kao env vrijednost: Compose montira cijeli host direktorij
+`/data/coolify/ssl/redis-core` read-only u `/etc/ssl/certs/redis`. Ako Redis CA nedostaje, mount
+ne obara web; dijagnostika prijavi `ca_absent_in_container_likely_host_path_without_mount`.
 
-Ako baza uopšte ne koristi TLS (npr. ista Docker mreža), najjednostavnije je:
-`DATABASE_URL` bez `sslrootcert`, sa `sslmode=disable` ili `require`.
+Ne postavljati `REDIS_CA_FILE`: jedini Redis CA env naziv je `REDIS_TLS_CA_FILE`. Ako Postgres
+uopšte ne koristi TLS (npr. ista Docker mreža), može se izostaviti `sslrootcert` uz `sslmode=disable`
+ili `require`.
 
 ## 4. Baza: odvojena rola aplikacije i migratora
 
@@ -140,15 +175,19 @@ ima `BYPASSRLS`, ili može preuzeti vlasničku rolu. Administratorska konekcija 
 ona se ne koristi za aplikacijske upite.
 
 Poslije migracija, `infra/docker/entrypoint-web.sh` poziva `packages/db/preflight-checks/run.sh`
-**kroz `DATABASE_URL`**, a zatim tek pokreće server. Isti skup se vrti u CI-ju pod `gradix_app`.
-Kritični nalazi (RLS nije uključen/nema politike na tenant tabeli, neispravan overlap, pogrešan
-scope default, nebezbjedna aplikacijska rola ili bilo kakav grant izvan pregledane matrice)
-zaustavljaju start. Preflight provjerava sve public tabele/sekvence prema
-`packages/db/preflight-checks/privilege-matrix.tsv`, obrazložen allowlist za svaku public tabelu
-bez RLS-a, RLS lookup politike na `users`/`companies`, nedostajuće i višak efektivnih table,
-column-level i sequence privilegija te pozivanje SECURITY DEFINER funkcija. Redis i S3/MinIO su
-informativni: ako su podešeni, provjerava se Redis PING odnosno S3 bucket bez listanja; ti nalazi
-sami ne obaraju deploy.
+**kroz `DATABASE_URL`**, a zatim tek pokreće server. Isti kritični DB preflight se vrti u CI-ju
+pod `gradix_app`. RLS, scope, privilegije ili nebezbjedna aplikacijska rola zaustavljaju start;
+preflight provjerava sve javne tabele/sekvence prema `packages/db/preflight-checks/privilege-matrix.tsv`,
+RLS politike, višak/manjak efektivnih prava i kontrolisane SECURITY DEFINER funkcije.
+
+Tek nakon uspješnog DB preflighta, entrypoint pokreće `node /app/diagnostics/run.mjs` u pozadini.
+Ova Redis/S3 dijagnostika je best-effort, ne mijenja exit code preflighta i ne blokira web `Ready`;
+svaka faza ima timeout, ukupni budžet je manji od 10 sekundi. Izvještava Redis config/prefix,
+DNS/TCP/TLS, CA/ACL/PING/prefiksirani SET/PTTL/GET/DEL i MinIO DNS/TCP/TLS, app kredencijale,
+bucket/object read-write-delete, browser presigned PUT/GET, CORS i inline display headers.
+Tajne i potpisani URL-ovi se nikad ne ispisuju. Redis trenutno ne koristi application code:
+rate limit prijave je PostgreSQL funkcijama i DB greška odbija prijavu (fail-closed), pa je Redis
+outage policy za app „not applicable“. Redis/S3 dijagnostički `FAIL` sam po sebi nikad ne obara deploy.
 
 Migrator mora imati `CREATE` na šemi `public` i potrebna prava za migracije/ekstenziju. Uobičajeni
 Coolify setup je odvojena rola `gradix` kao `DATABASE_ADMIN_URL` i `gradix_app` kao
@@ -188,6 +227,22 @@ Očekivani `/api/ready` (primjer; stvarne provjere role/RLS/prava odradi interni
  "databaseRole":{"role":"gradix_app","is_super":false,"bypass_rls":false,
                  "database":"gradix","can_create":false}}}
 ```
+
+Opcionalnu dijagnostiku možeš pokrenuti ručno i bez web restarta:
+
+```sh
+cd /app && node ./diagnostics/run.mjs
+```
+
+Svaki red ima `phase=... status=PASS|FAIL|SKIP cause=... action=...`. Dijagnostika ne emituje
+lozinke, ključeve, tokene ni signed URL-ove. Redis/S3 faze nisu `/api/ready` gate; `Ready` i
+PostgreSQL preflight ostaju kriteriji za app podizanje.
+
+**R4a-1 staging mini-gate nakon scoped push/pull API koraka 5:** deploy staging sa ovom granom,
+sačekaj da app log izričito kaže `Ready`, pa zalijepi ovdje cijeli DB preflight izlaz i sve
+`phase=redis...` / `phase=s3...` dijagnostičke redove. Pregled se radi prije koraka 6 (SQLite
+migracija/outbox); ne nastavljati korak 6 dok Ready i logovi nisu pregledani i staging stanje
+potvrđeno. `s3.browser_cors` mora biti `PASS` prije tvrdnje da browser prilozi rade.
 
 Tri stvari koje se čitaju iz ovoga:
 

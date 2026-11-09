@@ -63,6 +63,12 @@ jobs:
         working-directory: v2
         run: pnpm install --frozen-lockfile
 
+      - name: Opcionalna dijagnostika — fault injection i Coolify env contract
+        working-directory: v2
+        run: |
+          node infra/diagnostics/ci-smoke.mjs
+          node infra/scripts/check-runtime-env.mjs
+
       - name: Lint
         working-directory: v2
         run: pnpm lint

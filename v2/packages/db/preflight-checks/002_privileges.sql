@@ -38,6 +38,8 @@ DECLARE
     'public.login_attempt_clear(text)',
     'public.login_attempt_retry_after(text,integer)',
     'public.sync_cursor_reserve(text,text,integer)',
+    'public.sync_cursor_reserve_item(text,text,integer)',
+    'public.sync_cursor_skip(text,bigint,text)',
     'public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)',
     'public.sync_cursor_sweep(text,integer)',
     'public.sync_cursor_pull(text,bigint,integer)'
@@ -277,6 +279,8 @@ BEGIN
     FROM pg_proc p
    WHERE p.oid = ANY(ARRAY[
        to_regprocedure('public.sync_cursor_reserve(text,text,integer)')::oid,
+       to_regprocedure('public.sync_cursor_reserve_item(text,text,integer)')::oid,
+       to_regprocedure('public.sync_cursor_skip(text,bigint,text)')::oid,
        to_regprocedure('public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)')::oid,
        to_regprocedure('public.sync_cursor_sweep(text,integer)')::oid,
        to_regprocedure('public.sync_cursor_pull(text,bigint,integer)')::oid
@@ -311,6 +315,8 @@ BEGIN
            to_regprocedure('public.login_attempt_clear(text)')::oid,
            to_regprocedure('public.login_attempt_retry_after(text,integer)')::oid,
            to_regprocedure('public.sync_cursor_reserve(text,text,integer)')::oid,
+           to_regprocedure('public.sync_cursor_reserve_item(text,text,integer)')::oid,
+           to_regprocedure('public.sync_cursor_skip(text,bigint,text)')::oid,
            to_regprocedure('public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)')::oid,
            to_regprocedure('public.sync_cursor_sweep(text,integer)')::oid,
            to_regprocedure('public.sync_cursor_pull(text,bigint,integer)')::oid

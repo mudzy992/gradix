@@ -98,5 +98,11 @@ fi
 echo "→ preflight okruženja" >&2
 ./db/preflight-checks/run.sh "$DATABASE_URL_CLEAN"
 
+# Redis/S3 checks are informational and bounded; run after the blocking DB preflight without
+# delaying startup. The Node diagnostic always exits successfully and never prints credentials.
+if [ -f ./diagnostics/run.mjs ]; then
+  (node ./diagnostics/run.mjs || echo "UPOZORENJE: opcionalna Redis/S3 dijagnostika nije mogla završiti." >&2) &
+fi
+
 echo "→ start: node apps/web/server.js (port ${PORT:-3000})" >&2
 exec node apps/web/server.js

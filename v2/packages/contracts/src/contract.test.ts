@@ -19,6 +19,7 @@ import {
   MeResponse,
   RolesResponse,
   SyncPullResponse,
+  SyncPushRequest,
   SyncPushResponse,
   UsersResponse,
 } from "./schemas";
@@ -210,24 +211,61 @@ describe("šeme prihvataju stvarne odgovore", () => {
     expect(AuditResponse.parse(sample)).toEqual(sample);
   });
 
-  it("GET /api/sync/pull", () => {
+  it("GET /api/sync/pull returns a scoped R4 event page and opaque cursors", () => {
     const sample = {
-      items: [
-        {
-          serverId: "srv_1",
-          localId: "loc_1",
-          entityType: "machine",
-          payload: { code: "BG-01" },
-          clientAt: "2026-11-08T09:00:00.000Z",
-        },
-      ],
+      events: [{
+        id: "evt_1",
+        cursorSeq: "1",
+        entityType: "work_entry",
+        entityId: "we_1",
+        entityVersion: 1,
+        payload: { workdayId: "wd_1", kind: "WORK", workerName: "Amina K." },
+        tombstone: false,
+        createdAt: "2026-11-08T09:00:00.000Z",
+      }],
+      cursor: "signed-opaque-cursor",
+      cursorFloor: "signed-opaque-floor",
+      hasMore: false,
     };
     expect(SyncPullResponse.parse(sample)).toEqual(sample);
   });
 
-  it("POST /api/sync/push", () => {
+  it("POST /api/sync/push accepts only the strict R4 item protocol", () => {
+    const valid = {
+      items: [{
+        localId: "00000000-0000-4000-8000-000000000001",
+        entityType: "work_entry",
+        workdayId: "00000000-0000-4000-8000-000000000003",
+        workEntryId: "00000000-0000-4000-8000-000000000002",
+        deviceSentAt: "2026-11-07T10:00:00+01:00",
+        entry: {
+          kind: "WORK",
+          startedAt: "2026-11-07T08:00:00+01:00",
+          endedAt: "2026-11-07T09:00:00+01:00",
+          endState: "KNOWN_END",
+          projectId: "project_1",
+          machineId: null,
+          note: null,
+        },
+      }],
+    };
+    expect(SyncPushRequest.parse(valid)).toEqual(valid);
+    expect(SyncPushRequest.safeParse({
+      deviceId: "old-device",
+      items: [{ localId: "old", entityType: "note", payload: { text: "R0" }, clientAt: "2026-11-07T10:00:00Z" }],
+    }).success).toBe(false);
+  });
+
+  it("POST /api/sync/push returns per-item R4 outcomes, not the R0 note receipt", () => {
     const sample = {
-      results: [{ localId: "loc_1", serverId: "srv_1", duplicate: false }],
+      results: [{
+        localId: "00000000-0000-4000-8000-000000000001",
+        status: "APPLIED",
+        entityId: "00000000-0000-4000-8000-000000000002",
+        version: 1,
+        cursor: "signed-opaque-cursor",
+        canonicalWorkdayId: "00000000-0000-4000-8000-000000000003",
+      }],
     };
     expect(SyncPushResponse.parse(sample)).toEqual(sample);
   });

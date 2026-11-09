@@ -7,7 +7,6 @@ table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh c
 table	machines	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Equipment CRUD uses soft deactivation; no hard-delete path.
 table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
 table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
-table	sync_items	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Offline sync push is idempotent INSERT and pull reads; no update/delete path.
 table	sync_cursor_allocators	-	-		Internal cursor allocator; only tenant-checking SECURITY DEFINER reserve/pull functions may access it.
 table	sync_cursor_slots	-	-		Internal PENDING/COMMITTED/SKIPPED cursor slots; only tenant-checking SECURITY DEFINER cursor functions may access them.
 table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.

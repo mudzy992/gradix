@@ -69,11 +69,17 @@ echo "=== Empty database migration check ==="
 recreate_database gradix_ci_empty
 DATABASE_ADMIN_URL="$empty_admin_url" ./infra/scripts/db-apply.sh
 DATABASE_URL="$empty_app_url" ./packages/db/preflight-checks/run.sh
+assert_migration_recorded "$empty_admin_url" "20261110160000_r4_scoped_sync"
+empty_legacy_sync=$(psql "$empty_admin_url" -X -A -t -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.sync_items') IS NULL")
+if [ "$empty_legacy_sync" != "t" ]; then
+  echo "ERROR: R0 sync_items remains after the empty-database migration check." >&2
+  exit 1
+fi
 check_constraint_names "$empty_admin_url" "empty database"
 
 # Build a realistic pre-R4 cut: apply every migration before the R3 assignment-history guard,
 # then seed legacy business data. The normal forward-only migrator must preserve that row while
-# applying the assignment-history, cursor, and workday-core migrations.
+# applying the assignment-history, cursor, workday-core, and scoped-sync migrations.
 echo "=== Populated prior-cut migration check ==="
 recreate_database gradix_ci_prior_cut
 psql "$cut_admin_url" -X -v ON_ERROR_STOP=1 -q -f packages/db/bootstrap/roles.sql
@@ -146,6 +152,9 @@ BEGIN
      OR to_regclass('public.sync_conflicts') IS NULL THEN
     RAISE EXCEPTION 'R4_TABLES_MISSING_AFTER_POPULATED_MIGRATION';
   END IF;
+  IF to_regclass('public.sync_items') IS NOT NULL THEN
+    RAISE EXCEPTION 'R0_SYNC_ITEMS_MUST_BE_REMOVED';
+  END IF;
 END
 $verify$;
 SQL
@@ -153,7 +162,8 @@ SQL
 for migration in \
   20261110130000_r3_assignment_history_guard \
   20261110140000_r4_sync_cursor \
-  20261110150000_r4_workday_core
+  20261110150000_r4_workday_core \
+  20261110160000_r4_scoped_sync
 do
   assert_migration_recorded "$cut_admin_url" "$migration"
 done

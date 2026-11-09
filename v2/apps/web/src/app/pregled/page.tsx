@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
-import { Card, Chip, Icon, Mono } from "@/components/ui";
+import { Card, Icon, Mono } from "@/components/ui";
 import { ScopeNotice } from "@/components/scope-notice";
 import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
@@ -17,9 +17,8 @@ export const dynamic = "force-dynamic";
  * Provjera ide na serveru, prije renderovanja: cookie → JWT → sesija u bazi → membership →
  * tenant scope → podaci. Klijent ne dobija ništa što nije prošlo ovu provjeru.
  *
- * Sadržaj je postojeći: firma, osoba, mašine i broj offline zapisa. Nove funkcionalnosti nema —
- * ravnalo stacionaže iz reference je prikaz istih podataka (kod mašine + stanje), bez novih
- * polja u bazi.
+ * Sadržaj prikazuje firmu, osobu i mašine. R0 note counter je uklonjen zajedno sa legacy
+ * sync protokolom; mobilni R4 unos čeka lokalni SQLite outbox korak.
  */
 export default async function PregledPage() {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
@@ -44,7 +43,6 @@ export default async function PregledPage() {
     const machines = await client.query<{ code: string; name: string }>(
       "SELECT code, name FROM machines ORDER BY code",
     );
-    const notes = await client.query<{ count: string }>("SELECT count(*)::text AS count FROM sync_items");
     const memberships = await client.query<{ roles: string[]; scope: string }>(
       "SELECT roles::text[] AS roles, scope FROM memberships WHERE user_id = $1",
       [claims.sub],
@@ -73,7 +71,6 @@ export default async function PregledPage() {
       profile: profile.rows[0],
       company: company.rows[0],
       machines: machines.rows,
-      noteCount: Number(notes.rows[0]?.count ?? 0),
       roles,
       scope,
       assignmentCount: Number(assignments?.rows[0]?.count ?? 0),
@@ -155,33 +152,11 @@ export default async function PregledPage() {
         </Card>
 
         <Card>
-          <h2 className="gx-section-title">Sa terena</h2>
+          <h2 className="gx-section-title">Radni zapisi</h2>
           <p className="gx-page-sub" style={{ marginTop: "var(--space-1)" }}>
-            Zapisi poslani s mobilnog, kroz offline red.
+            R4 push/pull API je tenant-scoped. Mobilni unos će se uključiti nakon lokalnog SQLite outbox koraka;
+            stari R0 notes sync je isključen.
           </p>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: "var(--space-2)",
-              marginTop: "var(--space-5)",
-            }}
-          >
-            <span className="gx-mono" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em" }}>
-              {data.noteCount}
-            </span>
-            <span style={{ color: "var(--muted)" }}>
-              {data.noteCount === 1 ? "zapis u bazi" : "zapisa u bazi"}
-            </span>
-          </div>
-
-          <div style={{ marginTop: "var(--space-4)", display: "grid", gap: "var(--space-2)" }}>
-            <Chip tone="full">Sync radi</Chip>
-            <p style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
-              Ova stranica ne piše. Upis ide kroz mobilni red i <Mono>/api/sync/push</Mono>.
-            </p>
-          </div>
         </Card>
       </div>
 
