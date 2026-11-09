@@ -386,7 +386,7 @@ async function main() {
     if (redisCaPath && caReadable !== "yes") {
       emit("redis.config", {
         status: "FAIL", cause: "ca_absent_in_container_likely_host_path_without_mount",
-        action: "Mount the host Redis CA into the app container and set REDIS_TLS_CA_FILE to the readable in-container path.",
+        action: "Bind-mount /data/coolify/ssl/redis-core/redis-ca.crt read-only at /run/secrets/redis-ca.crt and set REDIS_TLS_CA_FILE=/run/secrets/redis-ca.crt.",
         details: { REDIS_HOST: "absent", REDIS_TLS_CA_FILE: `present(path_length=${Buffer.byteLength(redisCaPath)},readable=no)`, application: appBehavior },
       });
     } else {
@@ -401,7 +401,7 @@ async function main() {
   } else if (redisCaPath && caReadable !== "yes") {
     emit("redis.config", {
       status: "FAIL", cause: "ca_absent_in_container_likely_host_path_without_mount",
-      action: "Bind-mount the host Redis CA into the app container at /etc/ssl/certs/redis/redis-ca.crt and set REDIS_TLS_CA_FILE to that container path.",
+      action: "Bind-mount /data/coolify/ssl/redis-core/redis-ca.crt read-only at /run/secrets/redis-ca.crt and set REDIS_TLS_CA_FILE=/run/secrets/redis-ca.crt.",
       details: {
         REDIS_HOST: `present(length=${Buffer.byteLength(redisHost)})`, REDIS_PORT: redisPort,
         REDIS_USER: present(redisUser), REDIS_PASSWORD: present(redisPassword),
@@ -447,7 +447,7 @@ async function main() {
         state.redis.connected = false;
         return {
           status: "FAIL", cause: state.redis.ca ? "redis_tls_certificate_verification_failed" : "redis_tls_ca_not_trusted",
-          action: "Mount the correct Redis CA at /etc/ssl/certs/redis/redis-ca.crt and set REDIS_TLS_CA_FILE to that in-container path.",
+          action: "Bind-mount /data/coolify/ssl/redis-core/redis-ca.crt read-only at /run/secrets/redis-ca.crt and set REDIS_TLS_CA_FILE=/run/secrets/redis-ca.crt.",
           details: { dns: "PASS", tcp: "PASS", tls: "PASS", verification: socket.authorizationError || "failed", ...details },
         };
       }
@@ -481,6 +481,7 @@ async function main() {
     if (redisHostInvalid) return { status: "SKIP", cause: "redis_host_format_invalid", action: "Resolve redis.config before Redis authentication and key tests." };
     if (!redisHost) return { status: "SKIP", cause: "redis_host_not_configured", action: "Set REDIS_HOST to enable Redis authentication and key tests." };
     if (!state.redis.connected || !state.redis.socket) return { status: "SKIP", cause: "redis_connection_unavailable", action: "Resolve redis.connection first; startup remains non-blocking." };
+    if (!redisPassword) return { status: "SKIP", cause: "redis_password_not_configured", action: "Set the existing gradix_v2 ACL password as REDIS_PASSWORD to run authenticated Redis checks; no unauthenticated commands were sent." };
     const socket = state.redis.socket;
     let stage = "auth";
     try {
