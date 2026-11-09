@@ -8,6 +8,7 @@ const storage = read("apps/web/src/server/storage.ts");
 const diagnostics = read("infra/diagnostics/run.mjs");
 const compose = read("infra/coolify/docker-compose.yml");
 const webDockerfile = read("infra/docker/Dockerfile.web");
+const minioInitDockerfile = read("infra/minio/Dockerfile.init");
 const envExample = read(".env.example");
 const redisAcl = read("infra/redis/acl-v2.txt");
 
@@ -84,13 +85,14 @@ if (/^\s{6}MINIO_(?:ACCESS_KEY|SECRET_KEY):/m.test(minioEnvironment)) {
 if (!/source:\s*\/mnt\/shared-app-files\/gradix-v2\/minio\s+target:\s*\/data\s+bind:\s+create_host_path:\s*false/.test(minioSection)) {
   throw new Error("Staging MinIO /data must persist at /mnt/shared-app-files/gradix-v2/minio without creating an empty host path.");
 }
-if (!/^\s{4}image:\s*ghcr\.io\/coollabsio\/minio-mc:latest\s*$/m.test(minioInitSection) ||
-    !/entrypoint:\s*\["\/bin\/sh",\s*"\/init\.sh"\]/.test(minioInitSection)) {
-  throw new Error("MinIO init must use the Coollabs mc image with a shell entrypoint, not pass /bin/sh as an mc command.");
+if (!/dockerfile:\s*infra\/minio\/Dockerfile\.init/.test(minioInitSection) || /entrypoint:/i.test(minioInitSection)) {
+  throw new Error("MinIO init must use the custom shell image; do not override its baked-in entrypoint.");
 }
-if (!/\.\/infra\/minio\/init-staging\.sh:\/init\.sh:ro/.test(minioInitSection) ||
-    !/\.\/infra\/minio\/staging-policy\.json:\/policy\.json:ro/.test(minioInitSection)) {
-  throw new Error("MinIO init script and least-privilege policy must be mounted read-only.");
+if (!/COPY --from=mc \/usr\/bin\/mc \/usr\/local\/bin\/mc/.test(minioInitDockerfile) ||
+    !/COPY infra\/minio\/init-staging\.sh \/init\.sh/.test(minioInitDockerfile) ||
+    !/COPY infra\/minio\/staging-policy\.json \/policy\.json/.test(minioInitDockerfile) ||
+    !/ENTRYPOINT \["\/bin\/sh", "\/init\.sh"\]/.test(minioInitDockerfile)) {
+  throw new Error("MinIO init image must include the mc binary and bake in the real shell entrypoint.");
 }
 if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
   throw new Error("Coolify MinIO must use the required host bind, not the former named volume.");

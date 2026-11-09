@@ -96,10 +96,13 @@ services:
     expose:
       - "9000"
 
-  # One-shot bootstrap. Web does not depend on this service, so a MinIO outage never gates app startup.
+  # Shell-enabled wrapper around mc; the upstream mc image itself has mc as its entrypoint.
+  # Web does not depend on this one-shot bootstrap, so MinIO outages never gate app startup.
   minio-init:
-    image: ghcr.io/coollabsio/minio-mc:latest
-    entrypoint: ["/bin/sh", "/init.sh"]
+    build:
+      context: .
+      dockerfile: infra/minio/Dockerfile.init
+    image: gradix-v2-minio-init:shell
     restart: on-failure
     depends_on:
       minio:
@@ -111,10 +114,6 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       MINIO_BUCKET: gradix-stg
       MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
-    volumes:
-      # Bootstrap script and least-privilege bucket policy, mounted read-only.
-      - ./infra/minio/init-staging.sh:/init.sh:ro
-      - ./infra/minio/staging-policy.json:/policy.json:ro
     networks:
       - default
 

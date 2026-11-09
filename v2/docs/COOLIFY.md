@@ -75,12 +75,13 @@ storage. Prije deploya pripremi host direktorij i prava za MinIO kontejner. Ako 
 named volume `gradix-stg-minio-data`, prvo kopiraj i provjeri postojeće podatke u novu putanju;
 volume se ovim ne briše, ali novi Compose ga više ne koristi — ne uklanjati ga dok migracija nije
 provjerena. MinIO koristi unutrašnji DNS `minio`, staging bucket `gradix-stg` i odvojene root/app
-ključeve. Putanja `/data` je fiksna u Composeu, nije env varijabla. `minio-init` koristi
-`ghcr.io/coollabsio/minio-mc:latest` i pokreće read-only montirani `/init.sh` kroz `/bin/sh`.
-Ne vraćati upstream `minio/mc` scratch image: njegov `ENTRYPOINT=mc` tretira `/bin/sh` kao mc
-podkomandu i daje grešku „not a recognized command“. MinIO i Redis nisu uslov za podizanje v2
-aplikacije; njihova nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja
-PostgreSQL preflight.
+ključeve. Putanja `/data` je fiksna u Composeu, nije env varijabla. `minio-init` se gradi iz
+`infra/minio/Dockerfile.init`: taj image kopira statički `mc` u Alpine i ima `/bin/sh /init.sh`
+ugrađen kao image entrypoint. Ne koristimo upstream `minio/mc` direktno jer je `scratch` image s
+`ENTRYPOINT=mc`; u njemu se `/bin/sh` protumači kao mc podkomanda i nastane greška „not a recognized
+command“. Compose ne postavlja runtime `entrypoint` override. Ukloni i eventualni Command/Entrypoint override
+sa `minio-init` servisa u Coolify UI, kako bi se sačuvao image entrypoint. MinIO i Redis nisu uslov za podizanje v2 aplikacije; njihova
+nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja PostgreSQL preflight.
 
 ### 2.1. Uključivanje priloga i browser URL-ova
 
