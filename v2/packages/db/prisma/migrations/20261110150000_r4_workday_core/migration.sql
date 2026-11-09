@@ -72,7 +72,7 @@ CREATE TABLE public.work_entries (
   kind           TEXT NOT NULL CHECK (kind IN ('WORK', 'BREAK')),
   started_at     TIMESTAMPTZ NOT NULL,
   ended_at       TIMESTAMPTZ,
-  end_state      TEXT NOT NULL CHECK (end_state IN ('OPEN', 'KNOWN_END', 'UNKNOWN_END')),
+  end_state      TEXT NOT NULL,
   project_id     TEXT,
   machine_id     TEXT,
   note           TEXT CHECK (note IS NULL OR length(note) <= 2000),
