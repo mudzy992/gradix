@@ -11,6 +11,7 @@ const webDockerfile = read("infra/docker/Dockerfile.web");
 const minioInitDockerfile = read("infra/minio/Dockerfile.init");
 const envExample = read(".env.example");
 const redisAcl = read("infra/redis/acl-v2.txt");
+const minioInitScript = read("infra/minio/init-staging.sh");
 
 const source = `${storage}\n${diagnostics}`;
 if (!/rejectUnauthorized:\s*true/.test(diagnostics) || /rejectUnauthorized:\s*false/.test(diagnostics)) {
@@ -93,6 +94,14 @@ if (!/^FROM quay\.io\/minio\/aistor\/mc:RELEASE\.2025-12-19T20-11-44Z$/m.test(mi
     !/COPY infra\/minio\/staging-policy\.json \/policy\.json/.test(minioInitDockerfile) ||
     !/ENTRYPOINT \["\/bin\/bash", "\/init\.sh"\]/.test(minioInitDockerfile)) {
   throw new Error("MinIO init image must use the pinned official Quay mc image and its baked-in bash entrypoint.");
+}
+if (!/^#!\/bin\/bash/.test(minioInitScript) ||
+    !/MINIO_ACCESS_KEY must differ from MINIO_ROOT_USER/.test(minioInitScript) ||
+    !/MINIO_ACCESS_KEY is too short/.test(minioInitScript) ||
+    !/MINIO_SECRET_KEY is too short/.test(minioInitScript) ||
+    !/redact_credentials/.test(minioInitScript) ||
+    !/run_mc_or_explain/.test(minioInitScript)) {
+  throw new Error("MinIO init must validate app-user inputs and report mc failures without logging credentials.");
 }
 if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
   throw new Error("Coolify MinIO must use the required host bind, not the former named volume.");
