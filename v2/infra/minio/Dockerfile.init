@@ -1,10 +1,7 @@
-# Docker Hub cannot pull the minio/mc tag in the Coolify build. Reuse this stack's public
-# GHCR mc mirror, then copy its static client into Alpine so the bootstrap gets a real shell.
-FROM ghcr.io/coollabsio/minio-mc:latest AS mc
+# Use the official MinIO AIStor mc image from Quay, which includes bash and mc.
+# Bake the bootstrap into this image and set its entrypoint here; never pass /bin/sh to mc.
+FROM quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z
 
-FROM alpine:3.22
-RUN apk add --no-cache ca-certificates
-COPY --from=mc /usr/bin/mc /usr/local/bin/mc
 COPY infra/minio/init-staging.sh /init.sh
 COPY infra/minio/staging-policy.json /policy.json
-ENTRYPOINT ["/bin/sh", "/init.sh"]
+ENTRYPOINT ["/bin/bash", "/init.sh"]

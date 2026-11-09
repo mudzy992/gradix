@@ -88,12 +88,11 @@ if (!/source:\s*\/mnt\/shared-app-files\/gradix-v2\/minio\s+target:\s*\/data\s+b
 if (!/dockerfile:\s*infra\/minio\/Dockerfile\.init/.test(minioInitSection) || /entrypoint:/i.test(minioInitSection)) {
   throw new Error("MinIO init must use the custom shell image; do not override its baked-in entrypoint.");
 }
-if (!/^FROM ghcr\.io\/coollabsio\/minio-mc:latest AS mc$/m.test(minioInitDockerfile) ||
-    !/COPY --from=mc \/usr\/bin\/mc \/usr\/local\/bin\/mc/.test(minioInitDockerfile) ||
+if (!/^FROM quay\.io\/minio\/aistor\/mc:RELEASE\.2025-12-19T20-11-44Z$/m.test(minioInitDockerfile) ||
     !/COPY infra\/minio\/init-staging\.sh \/init\.sh/.test(minioInitDockerfile) ||
     !/COPY infra\/minio\/staging-policy\.json \/policy\.json/.test(minioInitDockerfile) ||
-    !/ENTRYPOINT \["\/bin\/sh", "\/init\.sh"\]/.test(minioInitDockerfile)) {
-  throw new Error("MinIO init image must include the mc binary and bake in the real shell entrypoint.");
+    !/ENTRYPOINT \["\/bin\/bash", "\/init\.sh"\]/.test(minioInitDockerfile)) {
+  throw new Error("MinIO init image must use the pinned official Quay mc image and its baked-in bash entrypoint.");
 }
 if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
   throw new Error("Coolify MinIO must use the required host bind, not the former named volume.");

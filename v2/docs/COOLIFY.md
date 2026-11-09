@@ -76,12 +76,12 @@ named volume `gradix-stg-minio-data`, prvo kopiraj i provjeri postojeće podatke
 volume se ovim ne briše, ali novi Compose ga više ne koristi — ne uklanjati ga dok migracija nije
 provjerena. MinIO koristi unutrašnji DNS `minio`, staging bucket `gradix-stg` i odvojene root/app
 ključeve. Putanja `/data` je fiksna u Composeu, nije env varijabla. `minio-init` se gradi iz
-`infra/minio/Dockerfile.init`: taj image uzima `mc` iz javnog Coolify GHCR mirror imagea, kopira
-binarij u Alpine i ima `/bin/sh /init.sh` ugrađen kao image entrypoint. Docker Hub `minio/mc`
-je `scratch` image s `ENTRYPOINT=mc`; u njemu se `/bin/sh` protumači kao mc podkomanda i nastane
-„not a recognized command“, a Coolify build ne može povući trenutni Docker Hub tag. Compose ne
-postavlja runtime `entrypoint` override. Ukloni eventualni Command/Entrypoint override sa `minio-init`
-servisa u Coolify UI, kako bi se sačuvao image entrypoint. MinIO i Redis nisu uslov za podizanje v2
+`infra/minio/Dockerfile.init`: taj image koristi zvanični Quay image
+`quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z`, kopira init skriptu i policy u image i
+postavlja `/bin/bash /init.sh` kao image entrypoint. Ovo izbjegava nedostupan Docker Hub `minio/mc`
+i 403 za GHCR mirror, a bash entrypoint sprečava da `mc` protumači `/bin/sh` kao svoju komandu.
+Compose ne postavlja runtime `entrypoint` override. Ukloni eventualni Command/Entrypoint override sa
+`minio-init` servisa u Coolify UI, kako bi se sačuvao image entrypoint. MinIO i Redis nisu uslov za podizanje v2
 aplikacije; njihova nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja
 PostgreSQL preflight.
 
