@@ -93,18 +93,21 @@ const workers = [
 ];
 
 /**
- * Bitno: `memberships` i `machines` su tenant tabele sa FORCE RLS, pa se pišu isključivo
- * kroz `withCompany`. Kad je aplikacijska rola ujedno vlasnik šeme (Coolify/model B),
- * RLS važi i za ovu konekciju — seed bez scope-a bi pao na „new row violates RLS“.
- * `companies` i `users` su globalni, njih pišemo direktno.
+ * Bitno: `memberships` i `machines` su tenant tabele sa FORCE RLS, pa se seed podaci pišu
+ * isključivo kroz `withCompany`, uključujući kad migrator posjeduje te tabele. `companies` i
+ * početni `users` se održavaju kroz DATABASE_ADMIN_URL; company scope se postavlja i za registry
+ * insert da SECURITY DEFINER triggeri za RLS-zaštićene kategorije/tipove dobiju tenant kontekst.
+ * Runtime user izmjene idu kroz pregledane invite/password RLS politike.
  */
 try {
   for (const company of companies) {
-    await pool.query(
-      `INSERT INTO companies (id, name, slug) VALUES ($1, $2, $3)
-       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-      [company.id, company.name, company.slug],
-    );
+    await withCompany(pool, companyId(company.id), async (client) => {
+      await client.query(
+        `INSERT INTO companies (id, name, slug) VALUES ($1, $2, $3)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+        [company.id, company.name, company.slug],
+      );
+    });
   }
 
   for (const user of users) {

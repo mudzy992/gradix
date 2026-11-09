@@ -93,6 +93,32 @@ describeDb("R1a — pristup (integracija na pravoj bazi)", () => {
     expect(adminCookie).not.toBe("");
   }, 60_000);
 
+  it("DB grants odbijaju metapodatke migracija, platform naloge i brisanje globalnih redova", async () => {
+    const denied = [
+      "SELECT count(*) FROM schema_migrations",
+      "INSERT INTO schema_migrations (name) VALUES ('app_must_not_write')",
+      "UPDATE schema_migrations SET name = name WHERE false",
+      "DELETE FROM schema_migrations WHERE false",
+      "SELECT count(*) FROM platform_users",
+      "INSERT INTO platform_users (id, email, password_hash) VALUES ('app_forbidden', 'forbidden@test.example', 'x')",
+      "UPDATE platform_users SET email = email WHERE false",
+      "DELETE FROM platform_users WHERE false",
+      "DELETE FROM users WHERE false",
+      "INSERT INTO companies (id, name, slug) VALUES ('app_company_forbidden', 'Forbidden', 'app-company-forbidden')",
+      "UPDATE companies SET name = name WHERE false",
+      "DELETE FROM companies WHERE false",
+    ];
+    for (const sql of denied) {
+      await expect(app.query(sql), sql).rejects.toThrow(/permission denied/i);
+    }
+    await expect(
+      app.query(
+        `INSERT INTO users (id, email, password_hash, first_name, last_name)
+         VALUES ('app_without_invitation', 'app-without-invitation@test.example', 'x', 'No', 'Invitation')`,
+      ),
+    ).rejects.toThrow(/row-level security policy/i);
+  });
+
   it("lista korisnika ne vraća hash lozinke ni tokene", async () => {
     const response = await usersRoute(get(`${BASE}/api/users`, adminCookie));
     expect(response.status).toBe(200);

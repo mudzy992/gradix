@@ -48,7 +48,7 @@ Mijenjaj kod → telefon se sam osvježi (Fast Refresh). `Ctrl+C` gasi Metro.
 curl -s https://gradix.ba101.top/api/ready
 ```
 
-Mora vratiti `"status":"ok"` i `"migrations":{"applied":5}`. Ako ne — problem je na serveru, ne u telefonu; vidi `docs/COOLIFY.md` §7.
+Mora vratiti `"status":"ok"`, a `checks.postgres.status` mora biti `"ok"`. Aplikacijska rola namjerno nema pristup `schema_migrations`; migracijski ledger provjerava samo interni preflight/migrator. Ako status nije u redu — problem je na serveru, ne u telefonu; vidi `docs/COOLIFY.md` §7.
 
 Prijava u app ide seed nalozima (isti kao web): `ured@demo.ba`, `vlasnik@demo.ba`, `vlasnik@druga.test`, lozinka iz `SEED_PASSWORD`.
 

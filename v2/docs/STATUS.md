@@ -1,12 +1,16 @@
 # STATUS — Gradix v2
 
-**Faza:** 1 · **Datum:** 2026-11-09 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
-**dizajn v2 ✅**, **R2a ✅ (kapija prošla uživo)**, **R2b ✅ (kapija prošla uživo)**,
-**R3 ✅ kod + lokalni testovi; CI workflow je podešen, ali još nije pokrenut; staging EXCLUDE vlasnik potvrdio, provjera staging role i produkcije otvorena**
-**Sljedeće:** potvrditi staging aplikacijsku rolu kroz runtime preflight → produkcijska provjera →
-**odobrenje revidiranog plana R4**. R4 kod ne počinje prije odobrenja. Planovi i odluke vlasnika:
-`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md` (10 stavki),
-`docs/DECISIONS/0009`, `0010`, `0011`, `0012`.
+**Faza:** 1 · **Datum:** 2026-11-07 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
+**dizajn v2 ✅**, **R2a ✅**, **R2b ✅**, **R3 ✅**, **A ✅**, **B ✅ lokalno**.
+**Sljedeće:** vlasnik provjerava B preflight na stagingu/proizvodnji → odobrava kompletan revidirani
+plan R4. R4 kod ne počinje prije odobrenja. Planovi i odluke:
+`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md`,
+`docs/DECISIONS/0009`–`0013`.
+
+**A:** commit `a9d3174`; GitHub Actions run `42582658045` prošao, uključujući ephemeral Docker build.
+Slika nije objavljena niti zadržana poslije runnera. **B:** promjene i integracijski testovi su u
+branchu; lokalno su migracija i preflight provjereni na praznoj i popunjenoj kopiji, uključujući
+seed pod ne-superuser migratorom. Staging/produkcija nisu nezavisno provjereni iz sandboxa.
 
 ## Gotovo
 

@@ -1,0 +1,23 @@
+kind	object	needed	current_before	rlS_exception_reason	rationale
+table	schema_migrations	-	SELECT;INSERT;UPDATE;DELETE	Only DATABASE_ADMIN_URL/db-apply.sh may use the migration ledger; runtime readiness never reads it.	Migration bookkeeping is administrator-only and has no app query path.
+table	companies	SELECT	SELECT;INSERT;UPDATE;DELETE		Global tenant registry; runtime reads are limited by RLS to the active tenant or exact login/invitation lookup. Seed and migrations use DATABASE_ADMIN_URL.
+table	users	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Global identity table; RLS scopes reads/updates to memberships and allows pre-login lookup only by exact normalized email; invitation acceptance is the sole app insert path.
+table	memberships	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Membership lookup, invitation acceptance, role/scope changes and deactivation; no hard-delete path.
+table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
+table	machines	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Equipment CRUD uses soft deactivation; no hard-delete path.
+table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
+table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
+table	sync_items	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Offline sync push is idempotent INSERT and pull reads; no update/delete path.
+table	invitations	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Invite management and exact-token preview/claim; use/revoke are updates; no hard-delete path.
+table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset issue/lookup/claim/revoke; no hard-delete path.
+table	login_attempts	-	-		Only SECURITY DEFINER rate-limit functions access this table; the app and sequence have no direct table rights.
+table	workers	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Worker CRUD uses soft deactivation; no hard-delete path.
+table	equipment_categories	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Read and create category API; no update/delete endpoint.
+table	obligation_types	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Type listing/create/update; no hard-delete endpoint.
+table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Obligation create/renew/correct/delete and read.
+table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
+table	obligation_attachments	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Attachment lifecycle includes upload-state updates and delete.
+table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/update and read; no hard-delete path.
+table	project_assignments	SELECT;INSERT;DELETE	SELECT;INSERT;UPDATE;DELETE		Assignment create/remove; removal is DELETE; no UPDATE path.
+table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
+sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

@@ -1,7 +1,6 @@
 /**
  * Readiness: baza je obavezna zavisnost, pa njen pad daje 503.
- * Broj primijenjenih migracija se PRIJAVLJUJE, ali u R0 ne obara readiness —
- * strogo gate-ovanje migracija dolazi u Fazi 2 uz pravi deploy pipeline.
+ * Aplikacijska rola nema pristup `schema_migrations`; migrator je jedini čita tu evidenciju.
  * Redis i MinIO nisu ovdje jer se u ovom rezu ne koriste (nema mrtve konfiguracije).
  */
 import { getPool } from "@/server/db";
@@ -42,14 +41,9 @@ async function probe(sql: string): Promise<Probe> {
 
 export async function GET(): Promise<Response> {
   const postgres = await probe("SELECT 1");
-  let applied = 0;
   let dbRole: DbInfo | null = null;
   if (postgres.status === "ok") {
     try {
-      const result = await getPool().query<{ count: string }>(
-        "SELECT count(*)::text AS count FROM schema_migrations",
-      );
-      applied = Number(result.rows[0]?.count ?? 0);
       const role = await getPool().query<DbInfo>(
         "SELECT current_user AS role, r.rolsuper AS is_super, r.rolbypassrls AS bypass_rls, " +
           "current_database() AS database, " +
@@ -58,7 +52,7 @@ export async function GET(): Promise<Response> {
       );
       dbRole = role.rows[0] ?? null;
     } catch {
-      applied = 0;
+      dbRole = null;
     }
   }
   const status = postgres.status === "ok" ? "ok" : "error";
@@ -67,8 +61,7 @@ export async function GET(): Promise<Response> {
       status,
       checks: {
         postgres,
-        migrations: { applied },
-        // Dijagnostika: ako je is_super ili bypass_rls true, RLS ne štiti (ADR 0003).
+        // Dijagnostika; detaljni privilegiji/RLS ostaju u internom preflightu.
         databaseRole: dbRole,
       },
     },

@@ -104,9 +104,44 @@ jobs:
         working-directory: v2
         run: ./packages/db/preflight-checks/run.sh
 
+      # Negativan dokaz: namjerno proširi ACL, potvrdi da matrix preflight pada BAŠ na tom
+      # dodatnom pravu, pa odmah vrati ACL. Trap uklanja testni grant i ako korak bude prekinut.
+      - name: Preflight odbija grant izvan matrice
+        working-directory: v2
+        run: |
+          set -eu
+          output="$(mktemp)"
+          revoke_test_grant() {
+            psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -q -c \
+              "REVOKE DELETE ON TABLE public.companies FROM gradix_app" || true
+            rm -f "$output"
+          }
+          trap revoke_test_grant EXIT
+          psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -q -c \
+            "GRANT DELETE ON TABLE public.companies TO gradix_app"
+          if ./packages/db/preflight-checks/run.sh >"$output" 2>&1; then
+            cat "$output"
+            echo "ERROR: preflight accepted an unreviewed DELETE grant on companies." >&2
+            exit 1
+          fi
+          cat "$output"
+          if ! grep -Fq "unexpected DELETE" "$output"; then
+            echo "ERROR: preflight failed, but did not identify the extra DELETE grant." >&2
+            exit 1
+          fi
+          revoke_test_grant
+          trap - EXIT
+          ./packages/db/preflight-checks/run.sh
+
       - name: Testovi (jedinični + integracijski na pravoj bazi)
         working-directory: v2
         run: pnpm test
+
+      # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
+      # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
+      - name: Runtime preflight nakon integracijskih testova (baza popunjena)
+        working-directory: v2
+        run: ./packages/db/preflight-checks/run.sh
 
       # Zaštita preklapanja dodjela ima DVA nosioca i biraju se pri migraciji (ima li btree_gist).
       # Jedan test zato ne može pokriti oba: ovaj korak vrti oba puta (prinudni fallback i stvarni)

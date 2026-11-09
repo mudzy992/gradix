@@ -1,14 +1,10 @@
--- Bootstrap rola — pokreće se ADMIN konekcijom (vlasnik šeme / superuser) PRIJE migracija.
+-- Bootstrap rola — pokreće se ADMIN konekcijom PRIJE migracija.
 --
--- Zašto postoji: PostgreSQL RLS ne važi za superusera, a vlasnika tabele štiti tek
--- `FORCE ROW LEVEL SECURITY` (koji je uključen u migracijama). Dokazano u Fazi 1:
--- bez FORCE-a i bez odvojene role izolacija tiho pada.
+-- `gradix_app` je samo runtime principal: NOSUPERUSER, NOBYPASSRLS, bez CREATE na `public`.
+-- Objekti dobijaju isključivo prava iz odobrene matrice u `bootstrap/grants.sql`, nakon
+-- migracija. Namjerno nema GRANT-a na sve tabele/sekvence ni širokih default privilegija.
 --
--- Podržani deploy koristi odvojene role: admin/vlasnik radi migracije, `gradix_app` radi aplikaciju.
--- Legacy testovi mogu koristiti vlasničku `gradix_app` rolu, ali runtime preflight takav deploy
--- odbija — aplikacijska rola ne smije biti vlasnik tabela.
---
--- Ovaj fajl je idempotentan i siguran za ponovno pokretanje.
+-- Idempotentno; lozinku postavlja vlasnik infrastrukture, ne ovaj fajl.
 
 DO $$
 BEGIN
@@ -18,11 +14,9 @@ BEGIN
 END
 $$;
 
--- Ako je rola već postojala sa pogrešnim atributima (npr. superuser), ovo ih ispravlja.
--- NE mijenja lozinku: lozinku postavlja vlasnik infrastrukture.
--- Preskače se kad tekuća administratorska rola nije superuser: ona ne može mijenjati role
--- atribute. U tom slučaju DBA mora unaprijed postaviti `gradix_app` kao NOSUPERUSER/NOBYPASSRLS;
--- runtime preflight odbije start ako atributi nisu sigurni.
+-- Ako je rola već postojala sa pogrešnim atributima (npr. superuser), ispravi je.
+-- Preskoči kad tekuća administratorska rola nije superuser; runtime preflight odbija
+-- konfiguraciju koja nije NOSUPERUSER/NOBYPASSRLS.
 DO $$
 DECLARE
   is_super BOOLEAN;
@@ -34,15 +28,13 @@ BEGIN
 END
 $$;
 
--- Prava za aplikacijsku rolu. U podržanom deployu tekuća rola je migrator, ne `gradix_app`.
-DO $$
-BEGIN
-  IF current_user <> 'gradix_app' THEN
-    EXECUTE 'GRANT USAGE ON SCHEMA public TO gradix_app';
-    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gradix_app';
-    EXECUTE 'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gradix_app';
-    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO gradix_app';
-    EXECUTE 'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO gradix_app';
-  END IF;
-END
-$$;
+-- Public schema nije prostor u koji aplikacijska ili PUBLIC rola smije kreirati objekte.
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+REVOKE CREATE ON SCHEMA public FROM gradix_app;
+
+-- Default ACL važi samo za objekte budućeg DDL-a trenutne migracijske role. Nema prava
+-- aplikaciji po defaultu; `grants.sql` daje samo matrice navedena prava nakon migracije.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE ALL PRIVILEGES ON TABLES FROM gradix_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE ALL PRIVILEGES ON SEQUENCES FROM gradix_app;

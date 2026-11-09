@@ -1,11 +1,10 @@
 /**
  * Uske „lookup“ transakcije za prijavu i refresh.
  *
- * Problem koji rješavaju: pri prijavi još ne znamo firmu (a `memberships` i `sessions`
- * su tenant tabele sa FORCE RLS), pa `withCompany` ne možemo koristiti. Rješenje je
- * namjenska RLS politika koja propušta red SAMO kad se poklopi tačan ključ pretrage
- * (`app.auth_lookup_user` / `app.auth_lookup_token`) — vidi migraciju
- * `definer_bypass_rls`.
+ * Pri prijavi/refreshu još ne znamo firmu, pa `withCompany` ne možemo koristiti. Ove uske
+ * transakcije postavljaju jedan tačan ključ (`app.auth_lookup_email`, `app.auth_lookup_user`
+ * ili `app.auth_lookup_token`), koji politike propuštaju isključivo za odgovarajući red/lookup.
+ * Definicije su u migracijama `definer_bypass_rls` i `b_tenant_global_rls_privileges`.
  *
  * Pravila koja ovaj fajl čuva:
  *  - ključ se postavlja isključivo ovdje, nikad iz zahtjeva klijenta,
@@ -17,7 +16,7 @@ import type { Pool, PoolClient } from "pg";
 
 async function inLookupTransaction<T>(
   pool: Pool,
-  setting: "app.auth_lookup_user" | "app.auth_lookup_token",
+  setting: "app.auth_lookup_email" | "app.auth_lookup_user" | "app.auth_lookup_token",
   value: string,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
@@ -38,6 +37,33 @@ async function inLookupTransaction<T>(
   } finally {
     client.release();
   }
+}
+
+export type LoginUserRow = {
+  id: string;
+  password_hash: string;
+  is_active: boolean;
+  must_change_password: boolean;
+  first_name: string;
+  last_name: string;
+};
+
+/**
+ * Login prije tenanta: RLS na `users` otvara samo red za tačan, normalizovani email.
+ * Hash mora doći do aplikacije jer Argon2id verifikacija je u Node-u; omotavanje istog
+ * rezultata u SECURITY DEFINER ne bi smanjilo šta `gradix_app` može dobiti.
+ */
+export async function lookupUserByEmail(pool: Pool, email: string): Promise<LoginUserRow | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+  return inLookupTransaction(pool, "app.auth_lookup_email", normalizedEmail, async (client) => {
+    const result = await client.query<LoginUserRow>(
+      `SELECT id, password_hash, is_active, must_change_password, first_name, last_name
+         FROM users
+        WHERE lower(email) = $1`,
+      [normalizedEmail],
+    );
+    return result.rows[0] ?? null;
+  });
 }
 
 export type MembershipRow = { company_id: string; roles: string[]; company_active: boolean };

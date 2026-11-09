@@ -9,7 +9,7 @@
  */
 import { withCompany, type CompanyId } from "@gradix/db";
 import { decideRefresh, refreshExpiry } from "@gradix/domain";
-import { lookupMemberships, lookupSessionByHash } from "./auth-lookup";
+import { lookupMemberships, lookupSessionByHash, lookupUserByEmail } from "./auth-lookup";
 import { getVerifiedPool } from "./db";
 import { hashRefreshToken, newRefreshToken } from "./session";
 
@@ -37,19 +37,8 @@ export async function login(
   const pool = await getVerifiedPool();
   const normalized = email.trim().toLowerCase();
 
-  // `users` nije tenant tabela: identitet je globalan (jedan email = jedan nalog).
-  const userResult = await pool.query<{
-    id: string;
-    password_hash: string;
-    is_active: boolean;
-    must_change_password: boolean;
-    first_name: string;
-    last_name: string;
-  }>(
-    "SELECT id, password_hash, is_active, must_change_password, first_name, last_name FROM users WHERE lower(email) = $1",
-    [normalized],
-  );
-  const user = userResult.rows[0];
+  // RLS na globalnom users registru dopušta samo tačan email lookup prije tenanta.
+  const user = await lookupUserByEmail(pool, normalized);
 
   // Uvijek se radi hash provjera (i za nepostojeći nalog), da vrijeme odgovora ne oda postojanje.
   const hash = user?.password_hash ?? "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHQ$0000000000000000000000000000000000000000000";

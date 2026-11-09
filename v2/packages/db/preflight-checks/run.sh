@@ -13,8 +13,12 @@ fi
 # psql ne razumije Prisma `?schema=public`; sačuvaj TLS parametre, ukloni samo schema.
 database_url=$(printf '%s' "$database_url" | sed -E 's/[?&]schema=[^&]*//' | sed -E '/\?/!s/&/?/')
 
-echo "→ preflight: kritične provjere baze (konekcija iz DATABASE_URL)"
-if ! PGCONNECT_TIMEOUT=10 psql "$database_url" -X -v ON_ERROR_STOP=1 -q -f "$script_dir/001_security.sql"; then
+echo "→ preflight: kritične provjere baze i privilege-matrix.tsv (konekcija iz DATABASE_URL)"
+if ! (
+  cd "$script_dir" &&
+  PGCONNECT_TIMEOUT=10 psql "$database_url" -X -v ON_ERROR_STOP=1 -q -f 001_security.sql &&
+  PGCONNECT_TIMEOUT=10 psql "$database_url" -X -v ON_ERROR_STOP=1 -q -f 002_privileges.sql
+); then
   echo "GREŠKA: kritični preflight nije prošao; aplikacija se neće pokrenuti." >&2
   exit 1
 fi

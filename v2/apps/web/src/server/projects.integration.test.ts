@@ -64,10 +64,14 @@ const authed = (url: string, init: { method?: string; body?: unknown } = {}, coo
 
 async function signIn(userId: string, companyId: string): Promise<string> {
   const { withCompany, companyId: cid } = await import("@gradix/db");
-  const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
   const sessionId = `ses_${userId}`;
-  await withCompany(app, cid(companyId), async (client) => {
+  const admin = new Pool({ connectionString: adminUrl, max: 1 });
+  await withCompany(admin, cid(companyId), async (client) => {
     await client.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
+  });
+  await admin.end();
+  const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+  await withCompany(app, cid(companyId), async (client) => {
     await client.query(
       "INSERT INTO sessions (id, company_id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4, now() + interval '1 day')",
       [sessionId, companyId, userId, `hash_${sessionId}`],

@@ -60,22 +60,21 @@ describeDb("API (integracija na pravoj bazi)", () => {
        VALUES ($1, 'it-a@test.example', $3, 'Test', 'A', false), ($2, 'it-b@test.example', $3, 'Test', 'B', false)`,
       [USER_A, USER_B, hash],
     );
-    // `companies` i `users` nisu tenant tabele; `memberships` i `machines` jesu.
-    // U modelu B (gradix_app je vlasnik šeme) RLS važi i za admin konekciju, pa seed
-    // mora ići kroz tenant scope — inače bi test dokazivao pogrešnu stvar.
+    // Tenant fixtures se brišu adminsko, a app rola dobija samo INSERT/UPDATE/SELECT
+    // (nema hard DELETE na memberships ni machines); stvarni upis i dalje ide kroz tenant scope.
     const { withCompany, companyId } = await import("@gradix/db");
     const appPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
     for (const [company, machineId, code, name, memberId, userId, role] of [
       [COMPANY_A, "mch_it_a", "IT-BAG", "Bager A", "mem_it_a", USER_A, "ADMIN"],
       [COMPANY_B, "mch_it_b", "IT-KAM", "Kamion B", "mem_it_b", USER_B, "OWNER"],
     ] as const) {
+      await admin.query("DELETE FROM memberships WHERE id = $1", [memberId]);
+      await admin.query("DELETE FROM machines WHERE id = $1", [machineId]);
       await withCompany(appPool, companyId(company), async (client) => {
-        await client.query("DELETE FROM memberships WHERE id = $1", [memberId]);
         await client.query(
           "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], 'COMPANY')",
           [memberId, userId, company, role],
         );
-        await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
         await client.query(
           "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $4, $2 || '_cat_other')",
           [machineId, company, code, name],

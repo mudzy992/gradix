@@ -11,7 +11,8 @@ import { companyId, withCompany } from "./tenant";
  */
 
 const connectionString = process.env.DATABASE_URL;
-const describeDb = connectionString ? describe : describe.skip;
+const adminConnectionString = process.env.DATABASE_ADMIN_URL;
+const describeDb = connectionString && adminConnectionString ? describe : describe.skip;
 
 const COMPANY_A = "cmp_spike_a";
 const COMPANY_B = "cmp_spike_b";
@@ -19,12 +20,26 @@ const COMPANY_B = "cmp_spike_b";
 describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
   // Namjerno mali pool: test mora dokazati da scope preživljava PONOVNU UPOTREBU konekcije.
   const pool = new Pool({ connectionString, max: 2 });
+  const admin = new Pool({ connectionString: adminConnectionString });
 
   beforeAll(async () => {
-    // `companies` nije tenant tabela (nema RLS) — briše se i piše direktno.
-    await pool.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY_A, COMPANY_B]]);
-    await pool.query(
+    // Fixture setup is a migrator/admin operation. Runtime app writes to the global registry
+    // and users table go only through reviewed, tenant-scoped policies.
+    await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY_A, COMPANY_B]]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [["u_lk_a", "u_lk_b", "u_rls_a", "u_rls_b"]]);
+    await admin.query(
       "INSERT INTO companies (id, name, slug) VALUES ($1, 'Spike A', 'spike-a'), ($2, 'Spike B', 'spike-b')",
+      [COMPANY_A, COMPANY_B],
+    );
+    await admin.query(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name)
+       VALUES ('u_rls_a', 'rls-a@test.example', 'x', 'RLS', 'A'),
+              ('u_rls_b', 'rls-b@test.example', 'x', 'RLS', 'B')`,
+    );
+    await admin.query(
+      `INSERT INTO memberships (id, user_id, company_id, roles, scope)
+       VALUES ('mem_rls_a', 'u_rls_a', $1, ARRAY['ADMIN']::"Role"[], 'COMPANY'),
+              ('mem_rls_b', 'u_rls_b', $2, ARRAY['ADMIN']::"Role"[], 'COMPANY')`,
       [COMPANY_A, COMPANY_B],
     );
 
@@ -33,8 +48,8 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
       [COMPANY_A, "m_a1", "BAG-01", "Bager A"],
       [COMPANY_B, "m_b1", "BAG-02", "Bager B"],
     ] as const) {
+      await admin.query("DELETE FROM machines WHERE id = $1", [machineId]);
       await withCompany(pool, companyId(id), async (client) => {
-        await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
         await client.query(
           // `category_id` je obavezan od R2a; kategorije dobija svaka firma triggerom.
           "INSERT INTO machines (id, company_id, code, name, category_id) VALUES ($1, $2, $3, $4, $2 || '_cat_other')",
@@ -44,8 +59,32 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
     }
   });
 
+  it("direktni users/companies upiti ne otkrivaju druge firme", async () => {
+    const unscoped = await pool.query<{ id: string }>(
+      "SELECT id FROM users WHERE id IN ('u_rls_a', 'u_rls_b') ORDER BY id",
+    );
+    expect(unscoped.rows).toEqual([]);
+
+    const companyA = await withCompany(pool, companyId(COMPANY_A), async (client) => {
+      const users = await client.query<{ id: string }>("SELECT id FROM users ORDER BY id");
+      const companies = await client.query<{ id: string }>("SELECT id FROM companies ORDER BY id");
+      return { users: users.rows.map((row) => row.id), companies: companies.rows.map((row) => row.id) };
+    });
+    expect(companyA.users).toEqual(["u_rls_a"]);
+    expect(companyA.companies).toEqual([COMPANY_A]);
+
+    const companyB = await withCompany(pool, companyId(COMPANY_B), async (client) => {
+      const users = await client.query<{ id: string }>("SELECT id FROM users ORDER BY id");
+      const companies = await client.query<{ id: string }>("SELECT id FROM companies ORDER BY id");
+      return { users: users.rows.map((row) => row.id), companies: companies.rows.map((row) => row.id) };
+    });
+    expect(companyB.users).toEqual(["u_rls_b"]);
+    expect(companyB.companies).toEqual([COMPANY_B]);
+  });
+
   afterAll(async () => {
     await pool.end();
+    await admin.end();
   });
 
   it("firma A vidi samo svoje mašine", async () => {
@@ -90,9 +129,14 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
   });
 
   it("lookup politika: bez ključa ništa, sa ključem samo taj korisnik", async () => {
-    // Priprema: dva korisnika u dvije firme. `users` nije tenant tabela.
+    // Priprema: dva dodatna identiteta kreira migrator; runtime app nema opšti INSERT.
+    await admin.query(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name)
+       VALUES ('u_lk_a', 'lk-a@test.example', 'x', 'A', 'A'),
+              ('u_lk_b', 'lk-b@test.example', 'x', 'B', 'B')
+       ON CONFLICT (id) DO NOTHING`,
+    );
     await withCompany(pool, companyId(COMPANY_A), async (client) => {
-      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_a', 'lk-a@test.example', 'x', 'A', 'A') ON CONFLICT DO NOTHING");
       await client.query(
         `INSERT INTO memberships (id, user_id, company_id, roles, scope)
          VALUES ('mem_lk_a', 'u_lk_a', $1, ARRAY['ADMIN']::"Role"[], 'COMPANY') ON CONFLICT DO NOTHING`,
@@ -100,7 +144,6 @@ describeDb("tenant izolacija (RLS na pravoj bazi)", () => {
       );
     });
     await withCompany(pool, companyId(COMPANY_B), async (client) => {
-      await client.query("INSERT INTO users (id, email, password_hash, first_name, last_name) VALUES ('u_lk_b', 'lk-b@test.example', 'x', 'B', 'B') ON CONFLICT DO NOTHING");
       await client.query(
         `INSERT INTO memberships (id, user_id, company_id, roles, scope)
          VALUES ('mem_lk_b', 'u_lk_b', $1, ARRAY['ADMIN']::"Role"[], 'COMPANY') ON CONFLICT DO NOTHING`,

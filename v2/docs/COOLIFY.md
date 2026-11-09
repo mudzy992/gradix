@@ -141,13 +141,21 @@ ona se ne koristi za aplikacijske upite.
 
 Poslije migracija, `infra/docker/entrypoint-web.sh` poziva `packages/db/preflight-checks/run.sh`
 **kroz `DATABASE_URL`**, a zatim tek pokreće server. Isti skup se vrti u CI-ju pod `gradix_app`.
-Kritični nalazi (RLS nije uključen, nema politike, neispravan overlap, pogrešan scope default ili
-nebezbjedna aplikacijska rola) zaustavljaju start. Redis i S3/MinIO su informativni: ako su
-podešeni, provjerava se Redis PING odnosno S3 bucket bez listanja; ti nalazi sami ne obaraju deploy.
+Kritični nalazi (RLS nije uključen/nema politike na tenant tabeli, neispravan overlap, pogrešan
+scope default, nebezbjedna aplikacijska rola ili bilo kakav grant izvan pregledane matrice)
+zaustavljaju start. Preflight provjerava sve public tabele/sekvence prema
+`packages/db/preflight-checks/privilege-matrix.tsv`, obrazložen allowlist za svaku public tabelu
+bez RLS-a, RLS lookup politike na `users`/`companies`, nedostajuće i višak efektivnih table,
+column-level i sequence privilegija te pozivanje SECURITY DEFINER funkcija. Redis i S3/MinIO su
+informativni: ako su podešeni, provjerava se Redis PING odnosno S3 bucket bez listanja; ti nalazi
+sami ne obaraju deploy.
 
 Migrator mora imati `CREATE` na šemi `public` i potrebna prava za migracije/ekstenziju. Uobičajeni
 Coolify setup je odvojena rola `gradix` kao `DATABASE_ADMIN_URL` i `gradix_app` kao
-`DATABASE_URL`. `db-apply.sh` je idempotentan i bootstrap prava primjenjuje pri svakom deployu.
+`DATABASE_URL`. `db-apply.sh` je idempotentan; `grants.sql` prvo skida stare široke ACL/default
+privilegije, pa dodaje samo `needed` prava iz matrice. Aplikacijska rola nema pristup
+`schema_migrations`, `platform_users` ili `login_attempts`/njegovoj sekvenci. `users` i `companies`
+su pod posebnim RLS pravilima za tenant, login i pozivnicu; procjenu i rollback vidi ADR 0013.
 
 ## 5. Demo podaci (opciono, jednom) — radi iz slike
 
@@ -170,14 +178,13 @@ Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 
 
 ```sh
 curl -s https://gradix.ba101.top/api/health   # {"status":"ok"}
-curl -s https://gradix.ba101.top/api/ready    # postgres ok, migrations.applied, databaseRole
+curl -s https://gradix.ba101.top/api/ready    # postgres ok, databaseRole (no schema_migrations access)
 ```
 
-Očekivani `/api/ready` (primjer; stvarne provjere role/RLS odradi interni preflight):
+Očekivani `/api/ready` (primjer; stvarne provjere role/RLS/prava odradi interni preflight):
 
 ```json
 {"status":"ok","checks":{"postgres":{"status":"ok","latencyMs":18},
- "migrations":{"applied":14},
  "databaseRole":{"role":"gradix_app","is_super":false,"bypass_rls":false,
                  "database":"gradix","can_create":false}}}
 ```
@@ -189,6 +196,18 @@ Tri stvari koje se čitaju iz ovoga:
   (npr. `postgres` ili generisano ime), `DATABASE_URL` gleda pogrešnu bazu.
 * `can_create:false` — očekivano: aplikacijska rola ne kreira tabele, to radi migracija
   kroz `DATABASE_ADMIN_URL`. Ako je `true`, rola ima više prava nego što joj treba.
+
+Za punu, read-only provjeru staginga/produkcije pokreni preflight kao postojeći
+`DATABASE_URL` aplikacijski principal (ne admin). U runtime slici ovo je jedna `psql` komanda:
+
+```sh
+cd /app/db/preflight-checks && psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f 001_security.sql -f 002_privileges.sql
+```
+
+Očekivani izlaz završava sa `PREFLIGHT OK` za RLS, matricu, non-RLS allowlist i funkcije; bilo
+koji višak ili manjak prava vraća non-zero exit code. TSV se učitava lokalno od psql klijenta,
+zato komanda radi iz direktorija `/app/db/preflight-checks`. Ako URL sadrži Prisma `schema`
+parametar, koristi `./run.sh` umjesto sirovog URL-a; skripta ga ukloni bez diranja TLS opcija.
 
 ## 7. Ako padne — šta znači koja poruka
 
