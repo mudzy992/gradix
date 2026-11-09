@@ -101,7 +101,7 @@ services:
 
   # One-shot bootstrap. Web does not depend on this service, so a MinIO outage never gates app startup.
   minio-init:
-    image: ghcr.io/coollabsio/minio-mc:latest
+    image: minio/mc:latest
     entrypoint: ["/bin/sh", "/init.sh"]
     restart: on-failure
     depends_on:
