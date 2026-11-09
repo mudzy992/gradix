@@ -66,6 +66,8 @@ build ponavlja sa starom greškom.
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | MinIO server admin secrets | Oba su obavezna Coolify secrets; Compose odbija prazne vrijednosti umjesto da MinIO krene sa `minioadmin:minioadmin`. Identični su samo na MinIO serveru i `minio-init`, ne u web appu. |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | Access key mora imati najmanje 3 znaka i razlikovati se od `MINIO_ROOT_USER`; secret najmanje 8 znakova. App-only creds za web i `minio-init`; ne postavljati ih na MinIO server. Ukloni stare server-side varijable istih naziva iz Coolify MinIO servisa. |
 | `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Compose ga postavlja kao MinIO server-wide `MINIO_API_CORS_ALLOW_ORIGIN`; nije bucket CORS. Bez patha i završnog `/`. |
+| `SERVICE_FQDN_MINIO`, `SERVICE_FQDN_MINIO_9000`, `SERVICE_FQDN_MINIO_9001` | Coolify-managed magic varijable | Compose navodi port markere redom `9000`, pa `9001`, tako da defaultna ruta servisa ostaje S3 API. Ne upisuj Console hostname u ove varijable; njegov port override podesi kroz Coolify Domains. |
+| `MINIO_BROWSER_REDIRECT_URL` | `https://minio-console.gradix.ba101.top` | Javni HTTPS redirect URL za Console; isti hostname kao zasebni Coolify domain sa internal port overrideom `9001`. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
 MinIO server je dio ovog Compose stacka i koristi sliku `ghcr.io/coollabsio/minio:latest`.
@@ -89,27 +91,36 @@ niti mijenja PostgreSQL preflight.
 
 ### 2.1. Uključivanje priloga i browser URL-ova
 
-1. U Coolify dodaj javni HTTPS domain na Compose servis `minio`, port `9000` (S3 API). Ne izlaži
-   port `9001` — to je admin konzola. Po želji Coolifyjevu vrijednost `SERVICE_FQDN_MINIO` koristi
-   kao izvor hosta.
-2. Postavi `MINIO_PUBLIC_ENDPOINT` u web servis na `https://<taj-javni-host>` bez patha/query-a.
-   Web storage koristi `MINIO_ENDPOINT=http://minio:9000` za server-side I/O i odvojeni public
-   signer za URL-ove koje browser otvara. U produkciji interni hostname ili HTTP public URL odbija
-   storage config.
-3. Unesi odvojene Coolify secrets: `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` samo u MinIO server i
-   `minio-init`; `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` u web i `minio-init`. Ne dijeli root par sa
-   aplikacijom. Init skripta idempotentno napravi `gradix-stg` i bucket-scoped app policy; MinIO
+1. Zadrži postojeći javni HTTPS S3 API domain na Compose servisu `minio`, port `9000` (npr.
+   `https://minio.gradix.ba101.top`). Compose navodi Coolify port markere `_9000` prije `_9001`, pa
+   defaultna ruta ostaje na API-ju; **ne** mijenjaj postojeći API host da pokazuje na Console.
+2. U Coolify → MinIO service → **Domains** dodaj zaseban public domain
+   `https://minio-console.gradix.ba101.top` i postavi njegov **internal port override** na `9001`
+   (ako se port zadaje u domain editoru, unesi `:9001` i potvrdi port override). Javni URL ostaje
+   HTTPS hostname bez `:9001`; port je samo Coolify-to-container routing. `SERVICE_FQDN_MINIO_9001`
+   je port marker, ne hostname. Compose izlaže portove samo unutar mreže (nema host `ports`). DNS
+   za oba hosta mora voditi na Coolify proxy, a oba Coolify domaina moraju imati TLS.
+3. Postavi `MINIO_BROWSER_REDIRECT_URL` na `https://minio-console.gradix.ba101.top` bez patha,
+   završnog `/` ili porta. Postavi `MINIO_PUBLIC_ENDPOINT` u web servis na HTTPS S3 API hostname
+   (port `9000`), bez patha/query-a. Web storage koristi `MINIO_ENDPOINT=http://minio:9000` za
+   server-side I/O i odvojeni public signer za browser URL-ove; u produkciji interni hostname ili
+   HTTP public URL odbija storage config.
+4. Console je namjerno javno routable uz **MinIO native login only**; nema dodatnog IP allowlist,
+   VPN ili SSO/access-gateway sloja. Koristi snažne, jedinstvene `MINIO_ROOT_USER`/
+   `MINIO_ROOT_PASSWORD` Coolify secrets za Console login. Te root tajne pripadaju samo MinIO
+   serveru i `minio-init`; `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` su odvojene app-only tajne za web i
+   `minio-init`. Init skripta idempotentno napravi `gradix-stg` i bucket-scoped app policy; MinIO
    server CORS allowlist se podesi globalno iz `MINIO_CORS_ALLOWED_ORIGIN`.
-4. Sačekaj `phase=s3.browser_cors status=PASS` u app logu: taj probe koristi presigned PUT/GET kroz
-   javni hostname, provjerava CORS i `Content-Disposition: inline`, pa briše testni objekat. Ako
-   javni endpoint/CORS/policy nije spreman, prilozi ostaju isključeni umjesto da browser dobije
+5. Sačekaj `phase=s3.browser_cors status=PASS` u app logu: probe koristi presigned PUT/GET kroz
+   S3 API hostname, provjerava CORS i `Content-Disposition: inline`, pa briše testni objekat. Ako
+   API endpoint/CORS/policy nije spreman, prilozi ostaju isključeni umjesto da browser dobije
    interni `minio` URL.
 
-`MINIO_PUBLIC_ENDPOINT` mora biti javni HTTPS hostname MinIO servisa (port 9000), ne interni
-`http://minio:9000`; to je odvojen endpoint od web origin-a koji se upisuje u
-`MINIO_CORS_ALLOWED_ORIGIN`. Dijagnostika potvrđuje da je public endpoint javno oblikovan (HTTPS,
-ne-local hostname) i da odgovara; to ne zamjenjuje završnu provjeru otvaranja linka iz stvarnog
-browsera/telefona nakon deploya.
+`MINIO_PUBLIC_ENDPOINT` mora biti javni HTTPS S3 API hostname (port 9000), ne interni
+`http://minio:9000`; to je odvojen endpoint od web origin-a u `MINIO_CORS_ALLOWED_ORIGIN` i od
+Console URL-a na portu 9001. `MINIO_BROWSER_REDIRECT_URL` mora pokazivati samo na Console hostname.
+Dijagnostika potvrđuje javni S3 API endpoint (HTTPS, ne-local hostname) i njegov odgovor; ne
+zamjenjuje završni test otvaranja Consolea i browser priloga nakon deploya.
 
 ## 3. Nepotrebno za v2 staging
 
@@ -149,11 +160,13 @@ mrežu. Coolify **ne** priključuje resource na te mreže automatski. Postgres r
 `Connect to Predefined Network` uključen i biti na `db_net`; Redis mora biti dostupan webu kroz
 `redis_net` ako želiš da opcionalna dijagnostika do njega dođe.
 
-Za javne priloge dodaj Coolify domain/rutu na `minio` service port `9000` (ne `9001`; konzola nije
-izložena). Postavi `MINIO_PUBLIC_ENDPOINT` na javni HTTPS origin/URL koji je Coolify dodijelio.
-`MINIO_ENDPOINT` ostaje interni `http://minio:9000`; nikad ne zamjenjuj taj interni endpoint javnim
-za server-side operacije. Datoteke `infra/minio/init-staging.sh` i `staging-policy.json` mountaju se
-u odnosu na Base/Project Directory `/v2`.
+Za javne priloge zadrži Coolify route za postojeći S3 API hostname na portu `9000`. Dodaj
+`minio-console.gradix.ba101.top` u Coolify Domains kao drugi hostname za isti MinIO service i postavi
+njegov internal port override na `9001`; ne preusmjeravaj S3 API hostname na taj port.
+`MINIO_PUBLIC_ENDPOINT` je javni HTTPS API hostname, a `MINIO_BROWSER_REDIRECT_URL` Console HTTPS
+hostname. `MINIO_ENDPOINT` ostaje interni `http://minio:9000`; nikad ne zamjenjuj taj interni
+endpoint javnim za server-side operacije. Datoteke `infra/minio/init-staging.sh` i
+`staging-policy.json` mountaju se u odnosu na Base/Project Directory `/v2`.
 
 ## 3.6. CA putanje
 

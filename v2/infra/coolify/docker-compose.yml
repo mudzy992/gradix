@@ -86,7 +86,12 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
       # The bundled MinIO server has global API CORS; bucket PUT-CORS is not implemented.
       MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
+      # Coolify port markers: keep 9000 first so the default service route remains the S3 API.
+      # Add the separate Console hostname in Coolify Domains with internal port override 9001.
       SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
+      SERVICE_FQDN_MINIO_9000: ${SERVICE_FQDN_MINIO_9000:-}
+      SERVICE_FQDN_MINIO_9001: ${SERVICE_FQDN_MINIO_9001:-}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-https://minio-console.gradix.ba101.top}
     volumes:
       - type: bind
         source: /mnt/shared-app-files/gradix-v2/minio
@@ -96,7 +101,8 @@ services:
     networks:
       - default
     expose:
-      - "9000"
+      - "9000" # S3 API; keep the existing API hostname routed here.
+      - "9001" # Console; route only the separate minio-console hostname here.
 
   # Shell-enabled wrapper around mc; the upstream mc image itself has mc as its entrypoint.
   # Web does not depend on this one-shot bootstrap, so MinIO outages never gate app startup.
