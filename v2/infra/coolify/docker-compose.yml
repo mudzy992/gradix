@@ -29,7 +29,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       MINIO_BUCKET: gradix-stg
       MINIO_REGION: us-east-1
-      # Diagnostic target and MinIO bucket CORS origin; not a MinIO server credential.
+      # Web-origin target used by diagnostics and mapped to the MinIO server-wide CORS allowlist.
       MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
       # Fixed to the existing ACL contract; only the password is supplied as a Coolify secret.
       REDIS_HOST: redis-core
@@ -84,6 +84,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in Coolify}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
+      # The bundled MinIO server has global API CORS; bucket PUT-CORS is not implemented.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
       SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
     volumes:
       - type: bind
@@ -113,7 +115,6 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
       MINIO_BUCKET: gradix-stg
-      MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
     networks:
       - default
 

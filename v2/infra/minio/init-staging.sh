@@ -66,15 +66,6 @@ run_mc_or_explain() {
   return 1
 }
 
-cors_origin=${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
-case "$cors_origin" in
-  http://*|https://*) ;;
-  *) echo "ERROR: MINIO_CORS_ALLOWED_ORIGIN must be an http(s) origin." >&2; exit 1 ;;
-esac
-case "$cors_origin" in
-  *'&'*|*'<'*|*'>'*|*'"'*) echo "ERROR: MINIO_CORS_ALLOWED_ORIGIN contains characters not allowed in the CORS XML origin." >&2; exit 1 ;;
-esac
-
 attempt=0
 until mc alias set gradix-stg http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
   attempt=$((attempt + 1))
@@ -108,25 +99,4 @@ if ! mc admin policy attach gradix-stg gradix-stg-app --user "$MINIO_ACCESS_KEY"
   exit 1
 fi
 
-cat >/tmp/gradix-stg-cors.xml <<EOF
-<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-  <CORSRule>
-    <AllowedOrigin>${cors_origin}</AllowedOrigin>
-    <AllowedMethod>GET</AllowedMethod>
-    <AllowedMethod>PUT</AllowedMethod>
-    <AllowedMethod>HEAD</AllowedMethod>
-    <AllowedHeader>*</AllowedHeader>
-    <ExposeHeader>ETag</ExposeHeader>
-    <ExposeHeader>Content-Type</ExposeHeader>
-    <ExposeHeader>Content-Disposition</ExposeHeader>
-    <ExposeHeader>Content-Length</ExposeHeader>
-    <MaxAgeSeconds>600</MaxAgeSeconds>
-  </CORSRule>
-</CORSConfiguration>
-EOF
-if ! run_mc_or_explain "could not apply staging bucket CORS for direct attachment uploads/displays" \
-  mc cors set "gradix-stg/$bucket" /tmp/gradix-stg-cors.xml; then
-  exit 1
-fi
-
-echo "PASS: isolated gradix-stg bucket, app policy, and direct-attachment CORS are configured (credentials hidden)."
+echo "PASS: isolated gradix-stg bucket and app policy are configured (credentials hidden); MinIO API CORS is configured globally by Compose."

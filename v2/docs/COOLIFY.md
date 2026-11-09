@@ -62,10 +62,10 @@ build ponavlja sa starom greškom.
 | Redis dijagnostika (fiksno u Compose) | `redis-core:6380`, user `gradix_v2`, prefix `gradix:stg:`, CA `/run/secrets/redis-ca.crt` | Host, port, ACL user, prefix i CA putanja se ne override-uju preko Coolify env-a. Redis nije runtime zavisnost aplikacije. |
 | `REDIS_PASSWORD` | postojeća lozinka za `gradix_v2` kao Coolify secret | Jedina promjenljiva Redis postavka; potrebna za AUTH/probe. Ako nije unesena, autentifikovani Redis test se preskače — ne šalju se neautentifikovane komande. Nikad ne stavljati lozinku u repo ili log. |
 | `MINIO_ENDPOINT` | `http://minio:9000` | Fiksni interni Compose DNS za server-side S3; ne dodavati Coolify override. |
-| `MINIO_BUCKET` / `MINIO_REGION` | `gradix-stg` / `us-east-1` | Fiksni staging bucket i region; ne dodavati Coolify override. Init kreira bucket-scoped app policy/CORS. |
+| `MINIO_BUCKET` / `MINIO_REGION` | `gradix-stg` / `us-east-1` | Fiksni staging bucket i region; ne dodavati Coolify override. Init kreira bucket i bucket-scoped app policy. |
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | MinIO server admin secrets | Oba su obavezna Coolify secrets; Compose odbija prazne vrijednosti umjesto da MinIO krene sa `minioadmin:minioadmin`. Identični su samo na MinIO serveru i `minio-init`, ne u web appu. |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | Access key mora imati najmanje 3 znaka i razlikovati se od `MINIO_ROOT_USER`; secret najmanje 8 znakova. App-only creds za web i `minio-init`; ne postavljati ih na MinIO server. Ukloni stare server-side varijable istih naziva iz Coolify MinIO servisa. |
-| `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Bucket CORS dozvoljava GET/PUT, `Content-Type` i izlaže inline-display zaglavlja. Bez patha i završnog `/`. |
+| `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Compose ga postavlja kao MinIO server-wide `MINIO_API_CORS_ALLOW_ORIGIN`; nije bucket CORS. Bez patha i završnog `/`. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
 MinIO server je dio ovog Compose stacka i koristi sliku `ghcr.io/coollabsio/minio:latest`.
@@ -81,9 +81,11 @@ ključeve. Putanja `/data` je fiksna u Composeu, nije env varijabla. `minio-init
 postavlja `/bin/bash /init.sh` kao image entrypoint. Ovo izbjegava nedostupan Docker Hub `minio/mc`
 i 403 za GHCR mirror, a bash entrypoint sprečava da `mc` protumači `/bin/sh` kao svoju komandu.
 Compose ne postavlja runtime `entrypoint` override. Ukloni eventualni Command/Entrypoint override sa
-`minio-init` servisa u Coolify UI, kako bi se sačuvao image entrypoint. MinIO i Redis nisu uslov za podizanje v2
-aplikacije; njihova nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače niti mijenja
-PostgreSQL preflight.
+`minio-init` servisa u Coolify UI, kako bi se sačuvao image entrypoint. Ovaj MinIO server build
+bucket `PutBucketCors` API vraća kao `NotImplemented`, zato `mc cors set` nije dio bootstrap-a;
+Compose podešava server-wide CORS kroz `MINIO_API_CORS_ALLOW_ORIGIN`. MinIO i Redis nisu uslov za
+podizanje v2 aplikacije; njihova nedostupnost prikazuje se u opcionalnoj dijagnostici, ali ne preskače
+niti mijenja PostgreSQL preflight.
 
 ### 2.1. Uključivanje priloga i browser URL-ova
 
@@ -96,8 +98,8 @@ PostgreSQL preflight.
    storage config.
 3. Unesi odvojene Coolify secrets: `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` samo u MinIO server i
    `minio-init`; `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` u web i `minio-init`. Ne dijeli root par sa
-   aplikacijom. Init skripta idempotentno napravi `gradix-stg`, bucket-scoped policy i CORS za
-   `MINIO_CORS_ALLOWED_ORIGIN` (GET/PUT, `Content-Type`, `Content-Disposition`, `Content-Length`).
+   aplikacijom. Init skripta idempotentno napravi `gradix-stg` i bucket-scoped app policy; MinIO
+   server CORS allowlist se podesi globalno iz `MINIO_CORS_ALLOWED_ORIGIN`.
 4. Sačekaj `phase=s3.browser_cors status=PASS` u app logu: taj probe koristi presigned PUT/GET kroz
    javni hostname, provjerava CORS i `Content-Disposition: inline`, pa briše testni objekat. Ako
    javni endpoint/CORS/policy nije spreman, prilozi ostaju isključeni umjesto da browser dobije

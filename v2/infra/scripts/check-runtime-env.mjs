@@ -80,6 +80,9 @@ if (!/MINIO_ROOT_USER:\s*\$\{MINIO_ROOT_USER:\?Set MINIO_ROOT_USER in Coolify\}/
     !/MINIO_ROOT_PASSWORD:\s*\$\{MINIO_ROOT_PASSWORD:\?Set MINIO_ROOT_PASSWORD in Coolify\}/.test(minioEnvironment)) {
   throw new Error("MinIO root secrets must be required; the server must not start with minioadmin defaults.");
 }
+if (!/^\s{6}MINIO_API_CORS_ALLOW_ORIGIN:\s*\$\{MINIO_CORS_ALLOWED_ORIGIN:-https:\/\/gradix\.ba101\.top\}\s*$/m.test(minioEnvironment)) {
+  throw new Error("MinIO server must receive the exact web origin via its global API CORS allowlist.");
+}
 if (/^\s{6}MINIO_(?:ACCESS_KEY|SECRET_KEY):/m.test(minioEnvironment)) {
   throw new Error("App MinIO credentials must not be passed to the MinIO server process.");
 }
@@ -101,9 +104,9 @@ if (!/^#!\/bin\/bash/.test(minioInitScript) ||
     !/MINIO_SECRET_KEY is too short/.test(minioInitScript) ||
     !/redact_credentials/.test(minioInitScript) ||
     !/run_mc_or_explain/.test(minioInitScript) ||
-    !minioInitScript.includes("could not apply staging bucket CORS") ||
-    !minioInitScript.includes("mc cors set")) {
-  throw new Error("MinIO init must validate app-user inputs and report mc failures without logging credentials.");
+    /mc cors set|CORSConfiguration/.test(minioInitScript) ||
+    /MINIO_CORS_ALLOWED_ORIGIN:/.test(minioInitSection)) {
+  throw new Error("MinIO init must validate app-user inputs; bucket CORS API must not be called because this server does not implement it.");
 }
 if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
   throw new Error("Coolify MinIO must use the required host bind, not the former named volume.");
@@ -113,4 +116,4 @@ for (const name of ["MINIO_PUBLIC_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_K
 }
 
 console.log(`Coolify env contract OK; code-read names: ${[...referencedNames].sort().join(", ")}`);
-console.log("Staging defaults OK: fixed MinIO/Redis contracts, shell-enabled mc init with credential-redacted bootstrap errors, required MinIO root secrets and persistent host bind.");
+console.log("Staging defaults OK: fixed MinIO/Redis contracts, server-wide MinIO API CORS, shell-enabled mc init, required MinIO root secrets and persistent host bind.");

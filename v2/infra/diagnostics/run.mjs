@@ -663,8 +663,14 @@ async function main() {
           } else if (!config.corsOrigin) {
             result = {
               status: "FAIL", cause: "cors_origin_not_configured_or_invalid",
-              action: "Set MINIO_CORS_ALLOWED_ORIGIN to the web app's exact HTTPS origin (origin only, no path) and apply it to the bucket.",
+              action: "Set MINIO_CORS_ALLOWED_ORIGIN to the web app's exact HTTPS origin (origin only, no path); Compose applies it as MinIO's server-wide CORS allowlist.",
               details: { presigned_host: publicHost, browser_host: "public_https", diagnostic_prefix: "gradix:diag/" },
+            };
+          } else if (config.corsOrigin === publicEndpoint.url.origin) {
+            result = {
+              status: "FAIL", cause: "cors_origin_is_minio_endpoint_not_web_origin",
+              action: "Set MINIO_CORS_ALLOWED_ORIGIN to the web app's HTTPS origin, not the MinIO hostname; Compose uses it for the server-wide CORS allowlist.",
+              details: { minio_public_host: publicHost, browser_host: "web_origin_required", diagnostic_prefix: "gradix:diag/" },
             };
           } else {
             const [{ S3Client, GetObjectCommand, PutObjectCommand }, { getSignedUrl }] = await Promise.all([
@@ -727,7 +733,7 @@ async function main() {
               cause: allPass ? "browser_presigned_put_get_cors_and_inline_headers_ok" :
                 !corsPutPass ? "cors_put_preflight_failed" : !putPass ? "presigned_put_failed" : !getPass ? "presigned_get_or_cors_failed" : "inline_display_headers_missing",
               action: allPass ? "No browser endpoint action required." :
-                !corsPutPass ? "Apply bucket CORS for the exact web origin, PUT, and Content-Type request header." :
+                !corsPutPass ? "Set the server-wide MINIO_API_CORS_ALLOW_ORIGIN to the exact web origin; the request needs PUT and Content-Type CORS support." :
                   !putPass ? "Check the Coolify MinIO public route and PUT-signing app policy; the direct upload probe failed." :
                     !getPass ? "Check public GET routing, CORS origin matching, and the app's bucket-scoped GetObject policy." :
                       "Keep Content-Disposition inline and expose Content-Disposition and Content-Type in MinIO CORS.",
@@ -748,7 +754,7 @@ async function main() {
         const classified = sanitizeS3Error(error);
         result = {
           status: "FAIL", cause: error?.name === "PresignedHostMismatch" ? "presigned_host_mismatch" : classified.cause,
-          action: "Check MINIO_PUBLIC_ENDPOINT routing, TLS, bucket CORS, and inline display headers; never log a presigned URL.",
+          action: "Check MINIO_PUBLIC_ENDPOINT routing, TLS, MinIO's server-wide CORS allowlist, and inline display headers; never log a presigned URL.",
           details: { public_host: publicEndpoint.hostname || "unknown", error_code: errorCode(error), diagnostic_prefix: "gradix:diag/" },
         };
       } finally {
