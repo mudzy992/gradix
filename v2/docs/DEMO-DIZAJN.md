@@ -3,7 +3,8 @@
 **Trajanje:** 10 minuta. **Cilj:** vlasnik sam prođe tok u **obje teme**, na 1440 i na 360.
 
 Izvor istine za sve što se vidi: `docs/design/DESIGN.md` + `docs/design/reference.html`.
-Snimci svih stanja: **`docs/demo-dizajn/`** (68 slika: 17 ekrana/stanja × 2 širine × 2 teme).
+Snimci postojećih stanja i R4a-1 prijedloga: **`docs/demo-dizajn/`** (68 postojećih slika + 4
+R4a-1 pregleda = 72). R4a-1 dizajn je zasebna kapija i čeka izričito odobrenje vlasnika.
 
 ## 1. Gdje se prolazi
 
@@ -46,10 +47,26 @@ LD_LIBRARY_PATH=/tmp/chlibs/lib BASE=http://127.0.0.1:3140 \
   node apps/web/scripts/demo-shots-dizajn.mjs
 ```
 
-Skripta pravi 17 stanja × {1440, 360} × {svijetla, tamna} i piše u `docs/demo-dizajn/`.
-Tri stanja (prazno, greška, učitavanje) ne postoje u demo bazi, pa skripta za njih presreće
+Skripta pravi 17 stanja × {1440, 360} × {svijetla, tamna} i četiri statička R4a-1 pregleda iz
+`docs/design/reference.html`, ukupno 72 PNG-a u `docs/demo-dizajn/`. Tri stanja (prazno, greška,
+učitavanje) ne postoje u demo bazi, pa skripta za njih presreće
 mrežu i vraća **isti ugovor koji API stvarno vraća**; ekran i stilovi su stvarni.
 Stanja koja ne mijenjaju bazu (pogrešna lozinka, nevažeći link) rade bez presretanja.
+
+## 3a. R4a-1 design gate — čeka odobrenje vlasnika
+
+U `docs/design/reference.html#r4a1-reference` dodana su dva predložena ekrana: radnik na 360 px
+(unos vlastitog dana, otvoreni segment i outbox) i ured na 1440 px (read-only dani, uključujući
+`UNKNOWN_END` oznaku). Svaki ima svijetlu i tamnu varijantu; četiri PNG pregleda su:
+
+- `docs/demo-dizajn/360-light-r4a1-worker.png`
+- `docs/demo-dizajn/360-dark-r4a1-worker.png`
+- `docs/demo-dizajn/1440-light-r4a1-office.png`
+- `docs/demo-dizajn/1440-dark-r4a1-office.png`
+
+Imena, projekat i mašina su iz seed-a Niskogradnja Demo; datumi i segmenti su samo ilustrativni,
+ne stvarni R4 podaci. Klikni četiri veze u odjeljku R4a-1 unutar reference za pune prikaze.
+Ovo je dizajn-only kapija; vlasnik mora izričito odobriti prije bilo kakvog R4a-1 product koda.
 
 ## 4. Odstupanja — **odobrena 2026-11-08, referenca dopunjena**
 

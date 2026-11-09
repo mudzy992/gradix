@@ -1,5 +1,5 @@
 /**
- * Snimci za kapiju dizajna v2: svaki ekran × {1440, 360} × {svijetla, tamna} × sva stanja.
+ * 68 postojećih snimaka za kapiju dizajna v2 + 4 R4a-1 dizajn-only prikaza (360/1440 × svijetlo/tamno).
  *
  * Pokretanje (server mora raditi, vidi `docs/DEMO-DIZAJN.md`):
  *   LD_LIBRARY_PATH=/tmp/chlibs/lib BASE=http://127.0.0.1:3140 \
@@ -14,12 +14,13 @@
  */
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "../../../docs/demo-dizajn");
+const referenceFile = join(here, "../../../docs/design/reference.html");
 mkdirSync(outDir, { recursive: true });
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3140";
@@ -110,6 +111,18 @@ async function shot({ path, name, api = "real", auth = true, before }) {
   }
 }
 
+async function r4aReferenceShot({ screen, theme, width, height }) {
+  const page = await browser.newPage();
+  await page.setViewport({ width, height, deviceScaleFactor: 1 });
+  const url = `${pathToFileURL(referenceFile).href}?preview=r4a1&screen=${screen}&theme=${theme}`;
+  await page.goto(url, { waitUntil: "load" });
+  await page.evaluate(() => document.fonts.ready);
+  const name = `${width}-${theme}-r4a1-${screen}.png`;
+  await page.screenshot({ path: join(outDir, name), fullPage: true });
+  console.log(name);
+  await page.close();
+}
+
 const typeInto = async (page, selector, value) => {
   await page.waitForSelector(selector, { timeout: 15000 });
   await page.click(selector);
@@ -191,6 +204,16 @@ await shot({ path: "/ured/audit", name: "audit" });
 await shot({ path: "/ured/audit", name: "audit-prazno", api: "empty" });
 await shot({ path: "/ured/audit", name: "audit-greska", api: "error" });
 await shot({ path: "/ured/audit", name: "audit-ucitavanje", api: "slow" });
+
+// 6. R4a-1 design-only views from the existing reference (no product route or R4 data).
+for (const view of [
+  { screen: "worker", theme: "light", width: 360, height: 900 },
+  { screen: "worker", theme: "dark", width: 360, height: 900 },
+  { screen: "office", theme: "light", width: 1440, height: 960 },
+  { screen: "office", theme: "dark", width: 1440, height: 960 },
+]) {
+  await r4aReferenceShot(view);
+}
 
 await browser.close();
 console.log(`\nSnimci: ${outDir}`);

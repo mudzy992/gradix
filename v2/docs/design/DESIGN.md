@@ -4,6 +4,8 @@ Vizuelna referenca: `reference.html`. Pisana pravila ispod. Referenca ima predno
 
 **Referenca pokriva i:** dijaloge, prazna stanja, učitavanje (skeleton), poruke u tri stanja, ekrane prijave i lozinke, matricu rola, drawer ispod 960 px i pretvaranje tabele u kartice ispod 640 px, te mobilni ekran (prijava i teren). Ta stanja su dopunjena 2026-11-08 vlasnikovim odobrenjem — vidi `docs/DEMO-DIZAJN.md`.
 
+**Predloženi R4a-1 dizajn — čeka odobrenje vlasnika:** `reference.html#r4a1-reference` dodaje mobilni unos radnika na 360 px i uredski read-only pregled dana na 1440 px, oba u svijetloj i tamnoj temi. Četiri tačna pregleda su linkovana u referenci; snimci su `docs/demo-dizajn/{360,1440}-{light,dark}-r4a1-{worker,office}.png`. Ovo je samo dizajn, ne implementacija R4.
+
 ## Karakter
 Moderno, smireno, “mekani industrijski”: velike zaobljene površine, mnogo prostora, jedna jasna akcija po ekranu. Kao alat na terenu, ne kao marketing. Jedini prepoznatljiv element je **ravnalo stacionaže** (km+m) kao prikaz napretka dionice; žuta oznaka pokazuje gdje smo.
 
@@ -36,7 +38,7 @@ Sidebar 232 px na pozadini (bez ivice); glavni sadržaj je jedna velika zaobljen
 Dugme 40 px pilula (primarno / tihо); polje 42 px, oznaka iznad; segmentirani izbor; chip sa tačkom (radi = puna, zastoj = žuta, servis = prazna; stanje nikad samo bojom); poruka kao obojena podloga s ikonom; tabela s razmakom, bez zebre i s hover podlogom; rokovi kao lista sa pilulom broja dana (žuta kad je blizu).
 
 ## Mobilni (Expo)
-Iste boje, tipografija i teme (isti tokeni kao web, test ih poredi). Mete ≥ 56 dp, jedna velika primarna akcija, pločica stanja sa mono brojem. Prekidač teme stoji u zaglavlju ekrana; fontovi su iste porodice kao na webu. Donja navigacija do 5 stavki dolazi s prvim modulom; danas je ekran jednokratan (prijava → zapis).
+Iste boje, tipografija i teme (isti tokeni kao web, test ih poredi). Mete ≥ 56 dp, jedna velika primarna akcija, pločica stanja sa mono brojem. Prekidač teme stoji u zaglavlju ekrana; fontovi su iste porodice kao na webu. R0 danas koristi jednokratan teren unos bez donje navigacije. Predloženi R4a-1 ekran (u referenci, čeka odobrenje) prikazuje vlastiti radni dan, segmente i outbox; otvoreni segment se mora eksplicitno završiti ili označiti `UNKNOWN_END` prije novog unosa. Grupni unos i ekran razrješenja sukoba nisu dio ovog dizajna.
 
 ## Pristupačnost
 Kontrast AA u obje teme, vidljiv fokus (`--link`, 2 px), cijela navigacija tastaturom, `prefers-reduced-motion`, bez ulaznih animacija; samo 120 ms prelazi na boji.
