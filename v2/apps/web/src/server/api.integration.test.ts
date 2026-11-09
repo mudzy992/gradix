@@ -132,9 +132,9 @@ describeDb("API (integracija na pravoj bazi)", () => {
     );
     await admin.query(
       `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id) VALUES
-       ($1, $3, 'Worker', 'A', '2025-01-01', $5),
-       ($2, $3, 'Worker', 'B', '2025-01-01', $6)`,
-      [WORKER_A, WORKER_B, COMPANY_A, COMPANY_B, USER_WORKER_A, USER_WORKER_B],
+       ($1, $3, 'Worker', 'A', '2025-01-01', $4),
+       ($2, $3, 'Worker', 'B', '2025-01-01', $5)`,
+      [WORKER_A, WORKER_B, COMPANY_A, USER_WORKER_A, USER_WORKER_B],
     );
     await admin.query(
       `INSERT INTO projects (id, company_id, code, name) VALUES
