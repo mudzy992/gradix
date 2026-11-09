@@ -24,7 +24,7 @@ services:
       retries: 10
 
   minio:
-    image: quay.io/minio/minio:latest
+    image: ghcr.io/coollabsio/minio:latest
     command: server /data --console-address ":9001"
     environment:
       # Lokalne razvojne vrijednosti, ne tajne. Produkcija ih unosi kroz Coolify.
