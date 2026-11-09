@@ -100,7 +100,9 @@ if (!/^#!\/bin\/bash/.test(minioInitScript) ||
     !/MINIO_ACCESS_KEY is too short/.test(minioInitScript) ||
     !/MINIO_SECRET_KEY is too short/.test(minioInitScript) ||
     !/redact_credentials/.test(minioInitScript) ||
-    !/run_mc_or_explain/.test(minioInitScript)) {
+    !/run_mc_or_explain/.test(minioInitScript) ||
+    !minioInitScript.includes("could not apply staging bucket CORS") ||
+    !minioInitScript.includes("mc cors set")) {
   throw new Error("MinIO init must validate app-user inputs and report mc failures without logging credentials.");
 }
 if (/gradix_stg_minio_data|gradix-stg-minio-data/.test(compose)) {
@@ -111,4 +113,4 @@ for (const name of ["MINIO_PUBLIC_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_K
 }
 
 console.log(`Coolify env contract OK; code-read names: ${[...referencedNames].sort().join(", ")}`);
-console.log("Staging defaults OK: MinIO fixed endpoint/bucket, required root secrets, shell-enabled mc init and persistent host bind; Redis ACL user/prefix and read-only CA file bind match the existing configuration.");
+console.log("Staging defaults OK: fixed MinIO/Redis contracts, shell-enabled mc init with credential-redacted bootstrap errors, required MinIO root secrets and persistent host bind.");
