@@ -13,9 +13,9 @@ const source = `${storage}\n${diagnostics}`;
 const referencedNames = new Set();
 for (const match of source.matchAll(/\b(?:process\.env|env)\.([A-Z][A-Z0-9_]*)/g)) referencedNames.add(match[1]);
 
-const webSection = compose.match(/^  web:\n([\s\S]*?)(?=^  minio:\n)/m)?.[1];
+const webSection = compose.match(/^ {2}web:\n([\s\S]*?)(?=^ {2}minio:\n)/m)?.[1];
 if (!webSection) throw new Error("Could not locate the Coolify web service in docker-compose.yml.");
-const webEnvironment = webSection.split(/^    volumes:\s*$/m, 1)[0];
+const webEnvironment = webSection.split(/^ {4}volumes:\s*$/m, 1)[0];
 const configuredNames = new Set(
   [...webEnvironment.matchAll(/^\s{6}([A-Z][A-Z0-9_]*):/gm)].map((match) => match[1]),
 );

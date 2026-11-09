@@ -1,6 +1,6 @@
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
-import { companyId, withCompany, type CompanyId } from "@gradix/db";
+import { withCompany, type CompanyId } from "@gradix/db";
 import {
   R4_SYNC_CLOCK_SKEW_SECONDS,
   type R4SyncPushItem,
