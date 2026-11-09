@@ -102,9 +102,9 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
       [COMPANY, "mem_r2b_a", USER, "ADMIN", "COMPANY"],
       [OTHER, "mem_r2b_b", USER_OTHER, "OWNER", "COMPANY"],
       /*
-       * Radnici MORAJU imati eksplicitan `SELF`: kolona ima `DEFAULT 'COMPANY'` iz R1a, pa bi
-       * radnik bez ovoga vidio cijelu firmu. To nije detalj testa nego stvarna zamka — dozvola
-       * `obligations.view` sama po sebi NE ograničava redove; granicu drži opseg.
+       * Radnici ovdje eksplicitno dobijaju `SELF`, iako je novi DEFAULT sada `SELF`: test mora
+       * jasno postaviti granicu koju provjerava, ne zavisiti od DEFAULT-a. Opseg `COMPANY` bi
+       * radniku otvorio cijelu firmu; `obligations.view` sama po sebi NE ograničava redove.
        */
       [COMPANY, "mem_r2b_ra", RADNIK_A, "WORKER", "SELF"],
       [COMPANY, "mem_r2b_rb", RADNIK_B, "WORKER", "SELF"],

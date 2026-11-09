@@ -118,12 +118,12 @@ try {
       // `ON CONFLICT DO UPDATE` traži da Postgres vidi postojeći red — a RLS ga krije
       // čim se promijeni `id`/`company_id`. Zato je putanja: probaj UPDATE, pa INSERT.
       const updated = await client.query(
-        "UPDATE memberships SET roles = ARRAY[$3]::\"Role\"[] WHERE user_id = $1 AND company_id = $2",
+        "UPDATE memberships SET roles = ARRAY[$3]::\"Role\"[], scope = 'COMPANY' WHERE user_id = $1 AND company_id = $2",
         [user.id, user.companyId, user.role],
       );
       if (updated.rowCount === 0) {
         await client.query(
-          "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[])",
+          "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], 'COMPANY')",
           [`mem_${user.id}`, user.id, user.companyId, user.role],
         );
       }

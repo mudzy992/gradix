@@ -61,6 +61,7 @@ projekta, bez drugog izvora istine.
   prikaže. Tiho gašenje vidnog polja je greška, ne detalj: čovjek bi se prijavio u prazan sistem i
   mislio da je pokvaren, a niko ne bi znao zašto od sutra vidi manje.
 - Nepoznat opseg u bazi pada na `SELF` (najuži), nikad na `COMPANY` — nema tiho podignute dozvole.
+- **Završetak G3:** `memberships.scope` novi red podrazumijevano dobija `SELF`; migracija mijenja samo DEFAULT i ne prepravlja postojeće opsege. Pozivnica i izmjena/dodjela role moraju poslati `scope` izričito (nema API ni DB podrazumijevanja na `COMPANY`). Dokaz: migracijski test sa postojećim `COMPANY` i `SELF` članom.
 
 ### Dozvole
 

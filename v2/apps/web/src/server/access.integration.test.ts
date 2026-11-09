@@ -101,6 +101,17 @@ describeDb("R1a — pristup (integracija na pravoj bazi)", () => {
     expect(raw).not.toMatch(/password_?hash|token_hash|"token"|"link"/i);
   });
 
+  it("pozivnica odbija zahtjev bez izričitog opsega", async () => {
+    const response = await inviteRoute(
+      json(`${BASE}/api/users/invitations`, {
+        email: "bez-opsega@r1a.test",
+        roles: ["WORKER"],
+      }, adminCookie),
+    );
+    expect(response.status).toBe(400);
+    expect((await bodyOf<Envelope<unknown>>(response)).success).toBe(false);
+  });
+
   it("pozivnica: link postoji jednom, u bazi je samo hash, audit ne sadrži token", async () => {
     const response = await inviteRoute(
       json(`${BASE}/api/users/invitations`, {

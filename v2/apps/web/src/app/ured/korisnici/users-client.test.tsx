@@ -98,6 +98,24 @@ describe("lista korisnika", () => {
     expect(within(row).queryByRole("button", { name: "Reset lozinke" })).toBeNull();
   });
 
+  it("pozivnica traži izričit opseg prije slanja", async () => {
+    const patches = mockApi();
+    renderList();
+    await userEvent.click(screen.getByRole("button", { name: "Pozovi osobu" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Pozovi osobu" });
+    const cijelaFirma = within(dialog).getByRole("button", { name: "Cijela firma" });
+    const samoSvoje = within(dialog).getByRole("button", { name: "Samo svoje" });
+    expect(cijelaFirma).toHaveAttribute("aria-pressed", "false");
+    expect(samoSvoje).toHaveAttribute("aria-pressed", "false");
+    expect(within(dialog).getByRole("button", { name: "Napravi link" })).toBeDisabled();
+
+    await userEvent.click(samoSvoje);
+    expect(samoSvoje).toHaveAttribute("aria-pressed", "true");
+    expect(within(dialog).getByRole("button", { name: "Napravi link" })).toBeEnabled();
+    expect(patches).toHaveLength(0);
+  });
+
   it("dijalog: fokus ulazi u njega, „Sačuvaj“ je zaključan dok ništa nije promijenjeno", async () => {
     mockApi();
     renderList();

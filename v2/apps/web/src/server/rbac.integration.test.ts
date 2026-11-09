@@ -293,6 +293,16 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
   /* -------------------------------------------------------------- dodjela */
 
   describe("dodjela rola i opsega", () => {
+    it("dodjela role odbija zahtjev bez izričitog opsega", async () => {
+      const adminCookie = await cookieFor("admin@r1b.test");
+      const response = await membershipRoute(
+        json(`${BASE}/api/users/usr_r1b_worker/membership`, { roles: ["WORKER", "DRIVER"] }, adminCookie),
+        params("usr_r1b_worker"),
+      );
+      expect(response.status).toBe(400);
+      expect((await bodyOf<Envelope<unknown>>(response)).success).toBe(false);
+    });
+
     it("ADMIN mijenja role radniku; promjena važi odmah i piše tačno jedan trag", async () => {
       const adminCookie = await cookieFor("admin@r1b.test");
 

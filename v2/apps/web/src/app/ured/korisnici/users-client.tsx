@@ -124,7 +124,7 @@ export default function UsersClient({
       body: JSON.stringify({
         email: String(formData.get("email") ?? ""),
         roles: [String(formData.get("role") ?? "WORKER")],
-        scope: String(formData.get("scope") ?? "COMPANY"),
+        scope: String(formData.get("scope") ?? ""),
       }),
     });
     const body = await response.json();
@@ -561,7 +561,7 @@ function InviteDialog({
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [scope, setScope] = useState("COMPANY");
+  const [scope, setScope] = useState<"COMPANY" | "SELF" | "">("");
   return (
     <div className="gx-overlay" role="presentation">
       <div role="dialog" aria-modal="true" aria-labelledby="invite-title" className="gx-dialog">
@@ -603,6 +603,7 @@ function InviteDialog({
               Opseg pristupa
             </span>
             <input type="hidden" name="scope" value={scope} />
+            <p className="gx-field__hint">Izaberite opseg; pozivnica se ne može poslati bez ovog izbora.</p>
             <div role="group" aria-labelledby="invite-scope-label">
               <Segmented
                 label="Opseg pristupa"
@@ -619,7 +620,7 @@ function InviteDialog({
             <Button variant="quiet" onClick={onClose} disabled={busy}>
               Otkaži
             </Button>
-            <Button type="submit" variant="primary" fullWidthOnMobile disabled={busy}>
+            <Button type="submit" variant="primary" fullWidthOnMobile disabled={busy || scope === ""}>
               {busy ? "Pravim…" : "Napravi link"}
             </Button>
           </div>

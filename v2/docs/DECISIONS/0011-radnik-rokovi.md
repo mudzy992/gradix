@@ -32,9 +32,10 @@ sakriveno u prikazu — podatak ne dolazi iz baze. Tako ga nije moguće „zabor
 
 ## Zamka koju treba znati
 
-Kolona `memberships.scope` ima `DEFAULT 'COMPANY'` iz R1a. Dozvola **sama po sebi ne ograničava
-redove** — granicu drži opseg. Radnik sa `obligations.view` i opsegom `COMPANY` vidio bi cijelu firmu.
-Zato:
+U R1a je `memberships.scope` dobio `DEFAULT 'COMPANY'`, pa dozvola **sama po sebi ne ograničava
+redove** — granicu drži opseg. Zatvaranjem R3, DEFAULT za nove članove je promijenjen na `SELF`
+bez izmjene postojećih redova. Postojeći radnik sa `obligations.view` i istorijskim opsegom
+`COMPANY` i dalje bi vidio cijelu firmu; zato se postojeći opseg ne mijenja automatski i zato:
 
 - testovi radnicima **eksplicitno** postavljaju `scope = 'SELF'`,
 - opseg dolazi iz sesije (`AuthContext`), nikad iz zahtjeva,

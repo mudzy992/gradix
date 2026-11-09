@@ -123,7 +123,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     ] as const) {
       await withCompany(app, companyId(company), async (client) => {
         await client.query(
-          "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[])",
+          "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], 'COMPANY')",
           [memberId, userId, company, role],
         );
       });

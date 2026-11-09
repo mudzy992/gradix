@@ -93,7 +93,7 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
     const seedPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
     await withCompany(seedPool, companyId(COMPANY), async (client) => {
       await client.query(
-        "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ('mem_imp', $1, $2, ARRAY['ADMIN']::\"Role\"[])",
+        "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ('mem_imp', $1, $2, ARRAY['ADMIN']::\"Role\"[], 'COMPANY')",
         [USER, COMPANY],
       );
     });

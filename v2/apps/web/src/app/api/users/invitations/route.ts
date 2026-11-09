@@ -17,7 +17,8 @@ const bodySchema = z.object({
   email: z.string().min(3).max(200),
   roles: z.array(z.string()).min(1).max(5),
   // Opseg ima dvije vrijednosti; `PROJECTS` se vraća u R2 (docs/PLAN-R2.md).
-  scope: z.enum(["COMPANY", "SELF"]).default("COMPANY"),
+  // Pozivnica ne bira opseg umjesto pozivaoca — izbor je obavezan.
+  scope: z.enum(["COMPANY", "SELF"]),
 });
 
 const CODE_MAP: Record<string, ErrorCode> = {

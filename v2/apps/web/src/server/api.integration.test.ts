@@ -72,7 +72,7 @@ describeDb("API (integracija na pravoj bazi)", () => {
       await withCompany(appPool, companyId(company), async (client) => {
         await client.query("DELETE FROM memberships WHERE id = $1", [memberId]);
         await client.query(
-          "INSERT INTO memberships (id, user_id, company_id, roles) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[])",
+          "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], 'COMPANY')",
           [memberId, userId, company, role],
         );
         await client.query("DELETE FROM machines WHERE id = $1", [machineId]);
