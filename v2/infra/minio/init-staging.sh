@@ -124,8 +124,8 @@ cat >/tmp/gradix-stg-cors.xml <<EOF
   </CORSRule>
 </CORSConfiguration>
 EOF
-if ! mc cors set "gradix-stg/$bucket" /tmp/gradix-stg-cors.xml >/dev/null 2>&1; then
-  echo "ERROR: could not apply staging bucket CORS for direct attachment uploads/displays." >&2
+if ! run_mc_or_explain "could not apply staging bucket CORS for direct attachment uploads/displays" \
+  mc cors set "gradix-stg/$bucket" /tmp/gradix-stg-cors.xml; then
   exit 1
 fi
 

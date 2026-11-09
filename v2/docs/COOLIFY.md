@@ -103,16 +103,19 @@ PostgreSQL preflight.
    javni endpoint/CORS/policy nije spreman, prilozi ostaju isključeni umjesto da browser dobije
    interni `minio` URL.
 
-`MINIO_PUBLIC_ENDPOINT` dijagnostika potvrđuje iz kontejnera da je endpoint javno oblikovan (HTTPS,
+`MINIO_PUBLIC_ENDPOINT` mora biti javni HTTPS hostname MinIO servisa (port 9000), ne interni
+`http://minio:9000`; to je odvojen endpoint od web origin-a koji se upisuje u
+`MINIO_CORS_ALLOWED_ORIGIN`. Dijagnostika potvrđuje da je public endpoint javno oblikovan (HTTPS,
 ne-local hostname) i da odgovara; to ne zamjenjuje završnu provjeru otvaranja linka iz stvarnog
 browsera/telefona nakon deploya.
 
 ## 3. Nepotrebno za v2 staging
 
 `EXPO_PUBLIC_API_URL` se postavlja samo u `apps/mobile/.env.example`; `CORS_ORIGIN` je naslijeđeni
-v1 naziv. Ne dodavati ručne override vrijednosti za `MINIO_ENDPOINT`, `MINIO_BUCKET`,
-`MINIO_REGION`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_USER`, `REDIS_PREFIX` ili
-`REDIS_TLS_CA_FILE` — staging Compose ih fiksira da odgovaraju internom DNS-u i postojećem ACL-u.
+v1 naziv. Ukloni stare/ručne override vrijednosti za `MINIO_ENDPOINT`, `MINIO_BUCKET`,
+`MINIO_REGION`, `MINIO_PORT`, `MINIO_USE_SSL` i `MINIO_DATA_DIR` — staging Compose fiksira interni
+endpoint, bucket, region i `/data` bind. Ne dodavati ni override za `REDIS_HOST`, `REDIS_PORT`,
+`REDIS_USER`, `REDIS_PREFIX` ili `REDIS_TLS_CA_FILE` — Compose ih fiksira prema postojećem ACL-u.
 Ukloniti i stari `REDIS_CA_FILE`; jedini Redis CA env je interni, fiksni `REDIS_TLS_CA_FILE`.
 Popis varijabli koje operator stvarno unosi je u `v2/.env.example`.
 
