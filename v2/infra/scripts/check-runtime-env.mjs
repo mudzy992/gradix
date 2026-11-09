@@ -88,7 +88,8 @@ if (!/source:\s*\/mnt\/shared-app-files\/gradix-v2\/minio\s+target:\s*\/data\s+b
 if (!/dockerfile:\s*infra\/minio\/Dockerfile\.init/.test(minioInitSection) || /entrypoint:/i.test(minioInitSection)) {
   throw new Error("MinIO init must use the custom shell image; do not override its baked-in entrypoint.");
 }
-if (!/COPY --from=mc \/usr\/bin\/mc \/usr\/local\/bin\/mc/.test(minioInitDockerfile) ||
+if (!/^FROM ghcr\.io\/coollabsio\/minio-mc:latest AS mc$/m.test(minioInitDockerfile) ||
+    !/COPY --from=mc \/usr\/bin\/mc \/usr\/local\/bin\/mc/.test(minioInitDockerfile) ||
     !/COPY infra\/minio\/init-staging\.sh \/init\.sh/.test(minioInitDockerfile) ||
     !/COPY infra\/minio\/staging-policy\.json \/policy\.json/.test(minioInitDockerfile) ||
     !/ENTRYPOINT \["\/bin\/sh", "\/init\.sh"\]/.test(minioInitDockerfile)) {

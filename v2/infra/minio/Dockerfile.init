@@ -1,6 +1,6 @@
-# The upstream mc image is scratch-based with ENTRYPOINT=mc and has no shell.
-# Copy its static client into Alpine, then bake the shell bootstrap into the image itself.
-FROM minio/mc:RELEASE.2025-10-15T17-29-55Z AS mc
+# Docker Hub cannot pull the minio/mc tag in the Coolify build. Reuse this stack's public
+# GHCR mc mirror, then copy its static client into Alpine so the bootstrap gets a real shell.
+FROM ghcr.io/coollabsio/minio-mc:latest AS mc
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates
