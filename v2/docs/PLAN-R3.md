@@ -55,11 +55,14 @@ projekta, bez drugog izvora istine.
 - **Tuđi projekat u istoj firmi = 403** („Nisi dodijeljen ovom projektu.“), **tuđa firma = 404**.
 - **Opseg `PROJECTS` bez ijedne dodjele se odbija** pri snimanju članstva — opseg koji ne vidi
   ništa je zamka, ne podešavanje.
-- **Skidanje ZADNJE dodjele takvoj osobi** ne smije je ostaviti sa opsegom koji ne vidi ništa.
-  Opseg se zato **automatski spušta na `SELF`** (najuži, nikad širi), radnja ide u audit sa
-  razlogom `last_project_assignment_removed`, a odgovor nosi `scopeNotice` koji ekran **obavezno**
-  prikaže. Tiho gašenje vidnog polja je greška, ne detalj: čovjek bi se prijavio u prazan sistem i
-  mislio da je pokvaren, a niko ne bi znao zašto od sutra vidi manje.
+- Opseg `PROJECTS` se računa po firmnom lokalnom datumu: vrijede samo neponištene dodjele čiji
+  period obuhvata taj datum. Normalni završetak postavlja `to_date`, ne briše historijski red; zato
+  raniji `work_date` ostaje provjerljiv. Raniji kraj se ne može skratiti.
+- Pogrešan unos se **poništava** uz razlog, autora i vrijeme — ne briše se. Baza odbija poništavanje
+  ako u periodu već postoji radni dan radnika ili upotreba dodijeljene mašine. Ako se poništi
+  posljednja važeća dodjela radniku sa opsegom `PROJECTS`, opseg se automatski spušta na `SELF`
+  (najuži, nikad širi), audit razlog je `last_project_assignment_voided`, a odgovor nosi
+  `scopeNotice` koji ekran **obavezno** prikaže. Tiho gašenje vidnog polja je greška, ne detalj.
 - Nepoznat opseg u bazi pada na `SELF` (najuži), nikad na `COMPANY` — nema tiho podignute dozvole.
 - **Završetak G3:** `memberships.scope` novi red podrazumijevano dobija `SELF`; migracija mijenja samo DEFAULT i ne prepravlja postojeće opsege. Pozivnica i izmjena/dodjela role moraju poslati `scope` izričito (nema API ni DB podrazumijevanja na `COMPANY`). Dokaz: migracijski test sa postojećim `COMPANY` i `SELF` članom.
 
@@ -97,16 +100,17 @@ iznimke ne nude, nudi se zahtjev). Test to tvrdi sa obje strane.
 ### API (9 novih ruta, OpenAPI 44 putanje)
 
 `GET/POST /api/projects`, `GET/PATCH /api/projects/{id}`,
-`GET/POST /api/projects/{id}/assignments`, `DELETE …/assignments/{assignmentId}`,
-`GET/POST /api/projects/{id}/override-requests`, `POST …/override-requests/{requestId}`.
+`GET/POST /api/projects/{id}/assignments`, `PATCH …/assignments/{assignmentId}` (`END` ili
+`VOID` uz razlog), `GET/POST /api/projects/{id}/override-requests`,
+`POST …/override-requests/{requestId}`. Brisanje dodjele ne postoji.
 Obaveze: `projectId` u unosu i `?projectId=` u listi.
 
 ### Ekrani
 
 - **`/ured/projekti`** — lista (šifra, stanje riječima, lokacija, tim, rokovi), filter po stanju,
-  dijalog za novi/izmjenu, detalj sa dva taba: **Tim i mašine** (dodjele, skidanje, blokada PRIJE
-  upisa sa poljem za razlog iznimke, ako osoba ima `projects.override`; bez njega dugme je
-  „Pošalji zahtjev") i **Rokovi na projektu**.
+  dijalog za novi/izmjenu, detalj sa dva taba: **Tim i mašine** (dodjele, auditan završetak za danas,
+  poništavanje pogrešne dodjele uz razlog, blokada PRIJE upisa sa poljem za razlog iznimke ako osoba
+  ima `projects.override`; bez njega dugme je „Pošalji zahtjev") i **Rokovi na projektu**.
 - **`/ured/rokovi`** — projekat kao treći entitet u formi (uz radnika, mašinu, firmu).
 - **`/pregled`** — kartica rokova (iz R2b) ostaje; projekti se vide kroz meni.
 - **Mobilni `/projekti`** — „Moji projekti“, read-only, lokalni keš, „od prije X“, put nazad.
@@ -127,9 +131,9 @@ Obaveze: `projectId` u unosu i `?projectId=` u listi.
 7. **Iznimku traži PM, odobrava vlasnik.** Kao PROJECT_MANAGER: pokušaj dodjele sa iznimkom →
    odbijeno (403); pošalji zahtjev → prolazi. Kao vlasnik: odobri uz rok → dodjela nastaje, a
    `project.assignment_overridden` je u auditu. PM koji pokuša odobriti svoj zahtjev → 403.
-8. **Skidanje zadnje dodjele:** osobi sa opsegom „dodijeljeni projekti“ skini njen jedini projekat →
-   ekran javlja da je opseg spušten na „samo svoje“, a u auditu stoji
-   `last_project_assignment_removed`. Lista projekata za tu osobu je **prazna, ne greška**.
+8. **Poništavanje zadnje pogrešne dodjele:** osobi sa opsegom „dodijeljeni projekti“ poništi jedinu
+   dodjelu uz razlog i bez radnog dana u njenom periodu → ekran javlja da je opseg spušten na „samo
+   svoje“, a audit bilježi `last_project_assignment_voided`. Historijski red ostaje sačuvan.
 
 ### R3b — projekti u rokovima
 

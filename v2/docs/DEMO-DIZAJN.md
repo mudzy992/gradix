@@ -3,8 +3,9 @@
 **Trajanje:** 10 minuta. **Cilj:** vlasnik sam prođe tok u **obje teme**, na 1440 i na 360.
 
 Izvor istine za sve što se vidi: `docs/design/DESIGN.md` + `docs/design/reference.html`.
-Snimci postojećih stanja i R4a-1 prijedloga: **`docs/demo-dizajn/`** (68 postojećih slika + 4
-R4a-1 pregleda = 72). R4a-1 dizajn je zasebna kapija i čeka izričito odobrenje vlasnika.
+Snimci postojećih stanja i odobrenog R4a-1 dizajna: **`docs/demo-dizajn/`** (68 postojećih
+slika + 4 R4a-1 pregleda = 72). R4a-1 dizajn je odobren „ovako“; implementacijske kapije su u
+`docs/PLAN-R4.md`.
 
 ## 1. Gdje se prolazi
 
@@ -53,7 +54,7 @@ učitavanje) ne postoje u demo bazi, pa skripta za njih presreće
 mrežu i vraća **isti ugovor koji API stvarno vraća**; ekran i stilovi su stvarni.
 Stanja koja ne mijenjaju bazu (pogrešna lozinka, nevažeći link) rade bez presretanja.
 
-## 3a. R4a-1 design gate — čeka odobrenje vlasnika
+## 3a. R4a-1 design gate — odobren „ovako“
 
 U `docs/design/reference.html#r4a1-reference` dodana su dva predložena ekrana: radnik na 360 px
 (unos vlastitog dana, otvoreni segment i outbox) i ured na 1440 px (read-only dani, uključujući
@@ -66,7 +67,7 @@ U `docs/design/reference.html#r4a1-reference` dodana su dva predložena ekrana: 
 
 Imena, projekat i mašina su iz seed-a Niskogradnja Demo; datumi i segmenti su samo ilustrativni,
 ne stvarni R4 podaci. Klikni četiri veze u odjeljku R4a-1 unutar reference za pune prikaze.
-Ovo je dizajn-only kapija; vlasnik mora izričito odobriti prije bilo kakvog R4a-1 product koda.
+Vlasnik je izričito odobrio postojeći dizajn „ovako“; grupni unos šefa ostaje R4a-2.
 
 ## 4. Odstupanja — **odobrena 2026-11-08, referenca dopunjena**
 

@@ -14,16 +14,17 @@
  *
  * Traži `DATABASE_URL` i `DATABASE_ADMIN_URL`; bez njih se PRESKAČE.
  */
+import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { Pool } from "pg";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { POST as createProjectRoute, GET as projectsRoute } from "@/app/api/projects/route";
 import { GET as projectRoute, PATCH as patchProjectRoute } from "@/app/api/projects/[id]/route";
 import {
   POST as assignmentRoute,
   GET as assignmentsRoute,
 } from "@/app/api/projects/[id]/assignments/route";
-import { DELETE as removeAssignmentRoute } from "@/app/api/projects/[id]/assignments/[assignmentId]/route";
+import { PATCH as changeAssignmentRoute } from "@/app/api/projects/[id]/assignments/[assignmentId]/route";
 import { POST as overrideRequestRoute } from "@/app/api/projects/[id]/override-requests/route";
 import { POST as approveOverrideRoute } from "@/app/api/projects/[id]/override-requests/[requestId]/route";
 import { POST as createObligationRoute, GET as obligationsRoute } from "@/app/api/obligations/route";
@@ -34,24 +35,25 @@ import { changeMembership } from "./rbac-service";
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
 
-const COMPANY = "cmp_r3_a";
-const OTHER = "cmp_r3_b";
-const ADMIN = "usr_r3_admin";       // ADMIN: users.manage + projects.manage + projects.assign
-const PM = "usr_r3_pm";             // PROJECT_MANAGER: projects.assign, ali NE users.manage
-const SUPERVISOR = "usr_r3_sef";    // SITE_SUPERVISOR: vidi, ne dodjeljuje
-const WORKER_USER = "usr_r3_radnik"; // radnik vezan za radnika → opseg PROJECTS
-const OWNER_B = "usr_r3_owner_b";
+const RUN = randomUUID().replace(/-/g, "").slice(0, 8);
+const COMPANY = `cmp_r3_a_${RUN}`;
+const OTHER = `cmp_r3_b_${RUN}`;
+const ADMIN = `usr_r3_admin_${RUN}`;       // ADMIN: users.manage + projects.manage + projects.assign
+const PM = `usr_r3_pm_${RUN}`;             // PROJECT_MANAGER: projects.assign, ali NE users.manage
+const SUPERVISOR = `usr_r3_sef_${RUN}`;    // SITE_SUPERVISOR: vidi, ne dodjeljuje
+const WORKER_USER = `usr_r3_radnik_${RUN}`; // radnik vezan za radnika → opseg PROJECTS
+const OWNER_B = `usr_r3_owner_b_${RUN}`;
 
-const WORKER = "wrk_r3_amar";
-const WORKER_USER_ROW = "wrk_r3_vezani";
-const MACHINE = "mch_r3_bager";
-const MACHINE_CLEAN = "mch_r3_valjak";
+const WORKER = `wrk_r3_amar_${RUN}`;
+const WORKER_USER_ROW = `wrk_r3_vezani_${RUN}`;
+const MACHINE = `mch_r3_bager_${RUN}`;
+const MACHINE_CLEAN = `mch_r3_valjak_${RUN}`;
 /*
  * Mašina SAMO za test iznimke. Ne dijeli se sa testom blokade: isti tip dokumenta na istoj mašini
  * ne može imati dva aktivna zapisa (unique), pa bi dijeljenje mašine padalo na tom pravilu — a ne
  * na onome što test mjeri.
  */
-const MACHINE_OVERRIDE = "mch_r3_iznimka";
+const MACHINE_OVERRIDE = `mch_r3_iznimka_${RUN}`;
 
 const get = (url: string, cookie = "") => new NextRequest(url, { headers: cookie ? { cookie } : {} });
 
@@ -61,6 +63,12 @@ const authed = (url: string, init: { method?: string; body?: unknown } = {}, coo
     ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     headers: { "content-type": "application/json", cookie },
   });
+
+function addDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00.000Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+}
 
 async function signIn(userId: string, companyId: string): Promise<string> {
   const { withCompany, companyId: cid } = await import("@gradix/db");
@@ -85,6 +93,10 @@ type Json<T> = { success: boolean; data: T; error?: { code: string; message: str
 
 describeDb("R3 (integracija na pravoj bazi)", () => {
   const admin = new Pool({ connectionString: adminUrl });
+  afterAll(async () => {
+    await admin.end();
+  });
+
   let cookieAdmin = "";
   let cookiePm = "";
   let cookieSupervisor = "";
@@ -97,33 +109,33 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
   let buildingPermitTypeId = "";
 
   beforeAll(async () => {
-    await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER]]);
-    await admin.query("DELETE FROM users WHERE id = ANY($1)", [
-      [ADMIN, PM, SUPERVISOR, WORKER_USER, OWNER_B],
-    ]);
     await admin.query(
-      "INSERT INTO companies (id, name, slug) VALUES ($1, 'R3 Firma A', 'r3-firma-a'), ($2, 'R3 Firma B', 'r3-firma-b')",
-      [COMPANY, OTHER],
+      "INSERT INTO companies (id, name, slug) VALUES ($1, 'R3 Firma A', $3), ($2, 'R3 Firma B', $4)",
+      [COMPANY, OTHER, `r3-firma-a-${RUN}`, `r3-firma-b-${RUN}`],
     );
     await admin.query(
       // `must_change_password = false`: inače ruta vraća 403 prije provjere dozvole (pravilo R1a).
       `INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password)
-       VALUES ($1, 'r3-admin@test.example', 'x', 'Admin', 'A', false),
-              ($2, 'r3-pm@test.example', 'x', 'Projekat', 'Menadžer', false),
-              ($3, 'r3-sef@test.example', 'x', 'Šef', 'Gradilišta', false),
-              ($4, 'r3-radnik@test.example', 'x', 'Amar', 'Radnik', false),
-              ($5, 'r3-owner-b@test.example', 'x', 'Vlasnik', 'B', false)`,
-      [ADMIN, PM, SUPERVISOR, WORKER_USER, OWNER_B],
+       VALUES ($1, $6, 'x', 'Admin', 'A', false),
+              ($2, $7, 'x', 'Projekat', 'Menadžer', false),
+              ($3, $8, 'x', 'Šef', 'Gradilišta', false),
+              ($4, $9, 'x', 'Amar', 'Radnik', false),
+              ($5, $10, 'x', 'Vlasnik', 'B', false)`,
+      [
+        ADMIN, PM, SUPERVISOR, WORKER_USER, OWNER_B,
+        `r3-admin-${RUN}@test.example`, `r3-pm-${RUN}@test.example`,
+        `r3-sef-${RUN}@test.example`, `r3-radnik-${RUN}@test.example`, `r3-owner-${RUN}@test.example`,
+      ],
     );
 
     const { withCompany, companyId } = await import("@gradix/db");
     const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
     for (const [memberId, userId, company, role] of [
-      ["mem_r3_admin", ADMIN, COMPANY, "ADMIN"],
-      ["mem_r3_pm", PM, COMPANY, "PROJECT_MANAGER"],
-      ["mem_r3_sef", SUPERVISOR, COMPANY, "SITE_SUPERVISOR"],
-      ["mem_r3_radnik", WORKER_USER, COMPANY, "WORKER"],
-      ["mem_r3_owner_b", OWNER_B, OTHER, "OWNER"],
+      [`mem_r3_admin_${RUN}`, ADMIN, COMPANY, "ADMIN"],
+      [`mem_r3_pm_${RUN}`, PM, COMPANY, "PROJECT_MANAGER"],
+      [`mem_r3_sef_${RUN}`, SUPERVISOR, COMPANY, "SITE_SUPERVISOR"],
+      [`mem_r3_radnik_${RUN}`, WORKER_USER, COMPANY, "WORKER"],
+      [`mem_r3_owner_b_${RUN}`, OWNER_B, OTHER, "OWNER"],
     ] as const) {
       await withCompany(app, companyId(company), async (client) => {
         await client.query(
@@ -257,7 +269,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     const machine = await assignmentRoute(
       authed("http://interni/api/projects/x/assignments", {
         method: "POST",
-        body: { machineId: MACHINE_CLEAN, fromDate: "2026-01-01", toDate: "2026-12-31" },
+        body: { machineId: MACHINE_CLEAN, fromDate: "2026-01-01", toDate: "2028-12-31" },
       }, cookieAdmin),
       { params: Promise.resolve({ id: projectA }) },
     );
@@ -280,7 +292,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     const response = await assignmentRoute(
       authed("http://interni/api/projects/x/assignments", {
         method: "POST",
-        body: { workerId: WORKER, fromDate: "2026-06-01", toDate: "2026-08-01" },
+        body: { workerId: WORKER, fromDate: "2028-06-01", toDate: "2028-08-01" },
       }, cookieAdmin),
       { params: Promise.resolve({ id: projectA }) },
     );
@@ -464,7 +476,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     const assignment = await assignmentRoute(
       authed("http://interni/api/projects/x/assignments", {
         method: "POST",
-        body: { workerId: WORKER, fromDate: "2027-01-01" },
+        body: { workerId: WORKER, fromDate: "2026-01-01" },
       }, cookiePm),
       { params: Promise.resolve({ id: projectB }) },
     );
@@ -545,21 +557,27 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(assignment.status).toBe(403);
   });
 
-  it("skidanje dodjele briše red i ostavlja trag", async () => {
+  it("završetak dodjele postavlja to_date i ostavlja trag", async () => {
     const list = (await (
       await assignmentsRoute(get("http://interni/api/projects/x/assignments", cookieAdmin), {
         params: Promise.resolve({ id: projectB }),
       })
-    ).json()) as Json<{ assignments: { id: string; workerName: string | null }[] }>;
-    const workerAssignment = list.data.assignments.find((entry) => entry.workerName?.includes("Amar"))!;
+    ).json()) as Json<{ assignments: { id: string; workerId: string | null; workerName: string | null }[] }>;
+    const workerAssignment = list.data.assignments.find((entry) => entry.workerId === WORKER)!;
 
-    const removed = await removeAssignmentRoute(get("http://interni/api/projects/x", cookieAdmin), {
-      params: Promise.resolve({ id: projectB, assignmentId: workerAssignment.id }),
-    });
-    expect(removed.status).toBe(200);
+    const ended = await changeAssignmentRoute(
+      authed("http://interni/api/projects/x", { method: "PATCH", body: { action: "END" } }, cookieAdmin),
+      { params: Promise.resolve({ id: projectB, assignmentId: workerAssignment.id }) },
+    );
+    expect(ended.status).toBe(200);
 
+    const history = await admin.query<{ to_date: Date | null }>(
+      "SELECT to_date FROM project_assignments WHERE id = $1",
+      [workerAssignment.id],
+    );
+    expect(history.rows[0]!.to_date).not.toBeNull();
     const audit = await admin.query(
-      "SELECT 1 FROM audit_events WHERE action = 'project.assignment_removed' AND entity_id = $1",
+      "SELECT 1 FROM audit_events WHERE action = 'project.assignment_ended' AND entity_id = $1",
       [workerAssignment.id],
     );
     expect(audit.rowCount).toBe(1);
@@ -649,6 +667,22 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     const requestBody = (await requested.json()) as Json<{ request: { id: string } }>;
     const requestId = requestBody.data.request.id;
 
+    // Past `toDate` mora dobiti čitljivu validaciju prije nego DB guard odbije INSERT.
+    const today = await admin.query<{ today: string }>(
+      "SELECT (clock_timestamp() AT TIME ZONE timezone)::date::text AS today FROM companies WHERE id = $1",
+      [COMPANY],
+    );
+    const pastEnd = await approveOverrideRoute(
+      authed(
+        "http://interni/api/projects/x",
+        { method: "POST", body: { validUntil: "2026-12-31", toDate: addDays(today.rows[0]!.today, -1) } },
+        cookieAdmin,
+      ),
+      { params: Promise.resolve({ id: projectA, requestId }) },
+    );
+    expect(pastEnd.status).toBe(400);
+    expect((await pastEnd.json() as Json<unknown>).error?.code).toBe("VALIDATION_FAILED");
+
     // 3) PM pokušava ODOBRITI svoj zahtjev → 403. Ovo je srce pravila.
     const pmApprove = await approveOverrideRoute(
       authed("http://interni/api/projects/x", { method: "POST", body: { validUntil: "2026-12-31" } }, cookiePm),
@@ -673,28 +707,9 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(again.status).toBe(404);
   });
 
-  it("skidanje ZADNJE dodjele osobi sa opsegom PROJECTS spušta opseg na SELF i javlja zašto", async () => {
-    /*
-     * Stanje se POSTAVLJA ovdje, a ne naslanja na prethodni test.
-     *
-     * Prvobitna verzija je koristila dodjelu iz testa opsega — pa je pod punim paralelnim
-     * opterećenjem (kad se fajlovi izvršavaju u drugom redu) ta dodjela znala već biti skinuta i
-     * test je padao bez promjene koda. Test koji mjeri „zadnja dodjela" mora sam biti na zadnjoj
-     * dodjeli; inače mjeri ono što je neko drugi ostavio.
-     */
-    await admin.query(
-      "DELETE FROM project_assignments WHERE company_id = $1 AND project_id = $2",
-      [COMPANY, projectA],
-    );
-    const created = await assignmentRoute(
-      authed("http://interni/api/projects/x/assignments", {
-        method: "POST",
-        body: { workerId: WORKER_USER_ROW, fromDate: "2026-03-01" },
-      }, cookieAdmin),
-      { params: Promise.resolve({ id: projectA }) },
-    );
-    expect(created.status).toBe(200);
-
+  it("poništavanje ZADNJE pogrešne dodjele spušta opseg na SELF i javlja zašto", async () => {
+    // Ova firma i radnik su jedinstveni za test-run. Ponovno koristi sečnu, postojeću dodjelu iz
+    // testa opsega; test poništava samo tu jednu historijsku činjenicu uz eksplicitan razlog.
     await admin.query(
       "UPDATE memberships SET scope = 'PROJECTS' WHERE company_id = $1 AND user_id = $2",
       [COMPANY, WORKER_USER],
@@ -704,15 +719,47 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
       await assignmentsRoute(get("http://interni/api/projects/x/assignments", cookieAdmin), {
         params: Promise.resolve({ id: projectA }),
       })
-    ).json()) as Json<{ assignments: { id: string; workerId: string | null }[] }>;
+    ).json()) as Json<{ assignments: { id: string; workerId: string | null }[]; today: string }>;
     const assignment = list.data.assignments.find((entry) => entry.workerId === WORKER_USER_ROW)!;
 
-    const removed = await removeAssignmentRoute(get("http://interni/api/projects/x", cookieAdmin), {
-      params: Promise.resolve({ id: projectA, assignmentId: assignment.id }),
-    });
-    const body = (await removed.json()) as Json<{ ok: true; scopeNotice: string | null }>;
+    // Buduća dodjela ne daje trenutni PROJECTS pristup; završetak/poništavanje zadnje važeće
+    // dodjele mora i dalje spustiti opseg iako postoji period koji počinje sutra.
+    const futureAssignment = await assignmentRoute(
+      authed(
+        "http://interni/api/projects/x/assignments",
+        { method: "POST", body: { workerId: WORKER_USER_ROW, fromDate: addDays(list.data.today, 1) } },
+        cookieAdmin,
+      ),
+      { params: Promise.resolve({ id: projectB }) },
+    );
+    expect(futureAssignment.status).toBe(200);
 
-    expect(removed.status).toBe(200);
+    const voided = await changeAssignmentRoute(
+      authed("http://interni/api/projects/x", {
+        method: "PATCH",
+        body: { action: "VOID", reason: "Dodjela je unesena na pogrešnog radnika." },
+      }, cookieAdmin),
+      { params: Promise.resolve({ id: projectA, assignmentId: assignment.id }) },
+    );
+    const body = (await voided.json()) as Json<{ ok: true; action: string; scopeNotice: string | null }>;
+
+    expect(voided.status).toBe(200);
+
+    const preserved = (await (
+      await assignmentsRoute(get("http://interni/api/projects/x/assignments", cookieAdmin), {
+        params: Promise.resolve({ id: projectA }),
+      })
+    ).json()) as Json<{ assignments: { id: string; voidedAt: string | null; voidedByName: string | null; voidReason: string | null }[] }>;
+    const preservedRow = preserved.data.assignments.find((entry) => entry.id === assignment.id)!;
+    expect(preservedRow.voidedAt).toBeTruthy();
+    expect(preservedRow.voidedByName).toBe("Admin A");
+    expect(preservedRow.voidReason).toBe("Dodjela je unesena na pogrešnog radnika.");
+    const voidAudit = await admin.query<{ actor_email: string | null }>(
+      "SELECT actor_email FROM audit_events WHERE action = 'project.assignment_voided' AND entity_id = $1",
+      [assignment.id],
+    );
+    expect(voidAudit.rows[0]?.actor_email).toBe(`r3-admin-${RUN}@test.example`);
+
     // Poruka mora postojati i imenovati osobu — inače se promjena opsega ne vidi nigdje.
     expect(body.data.scopeNotice).toContain("Amar");
     expect(body.data.scopeNotice).toContain("samo svoje");
@@ -728,7 +775,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
       "SELECT metadata FROM audit_events WHERE entity_id = $1 AND action = 'user.membership_changed'",
       [WORKER_USER],
     );
-    expect(audit.rows.at(-1)!.metadata).toMatchObject({ reason: "last_project_assignment_removed" });
+    expect(audit.rows.at(-1)!.metadata).toMatchObject({ reason: "last_project_assignment_voided" });
 
     // Osoba i dalje vidi svoje rokove — nije ostala bez ičega.
     // Bez dodjele opseg `SELF` više nema ni jedan projekat — i vraća PRAZNO, ne grešku. To je
@@ -740,7 +787,7 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(projectsAfter.data.projects).toEqual([]);
 
     /*
-     * „Moji projekti" na mobilnom traži ISTI filter po radniku — i poslije skidanja dodjele mora
+     * „Moji projekti" na mobilnom traži ISTI filter po radniku — i poslije poništavanja dodjele mora
      * vratiti prazno, ne grešku. Inače telefon pokazuje „greška" tamo gdje je istina „nemaš
      * projekata", pa čovjek zove ured da prijavi kvar koji ne postoji.
      */

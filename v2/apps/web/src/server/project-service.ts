@@ -14,12 +14,11 @@
  * Opseg se provjerava na JEDNOM mjestu (`projektiKojeVidim`), pa nema rasutih uslova po upitima.
  */
 import type { Pool, PoolClient } from "pg";
+import type { AssignmentChangeInput } from "@gradix/contracts";
 import { withCompany, type CompanyId } from "@gradix/db";
 import {
   assignmentBlockMessage,
   checkAssignment,
-  safeTimezone,
-  businessDate,
   visibleProjectIds,
   type AssignmentOverride,
   type Scope,
@@ -98,9 +97,11 @@ const PROJECT_SELECT = `
          p.starts_on, p.ends_on, p.manager_worker_id, p.note, p.is_active, p.created_at,
          COALESCE(mw.first_name || ' ' || mw.last_name, NULL) AS manager_name,
          (SELECT count(*)::int FROM project_assignments a
-           WHERE a.company_id = p.company_id AND a.project_id = p.id AND a.worker_id IS NOT NULL) AS worker_count,
+           WHERE a.company_id = p.company_id AND a.project_id = p.id AND a.worker_id IS NOT NULL
+             AND a.voided_at IS NULL AND a.from_date <= $1 AND (a.to_date IS NULL OR a.to_date >= $1)) AS worker_count,
          (SELECT count(*)::int FROM project_assignments a
-           WHERE a.company_id = p.company_id AND a.project_id = p.id AND a.machine_id IS NOT NULL) AS machine_count,
+           WHERE a.company_id = p.company_id AND a.project_id = p.id AND a.machine_id IS NOT NULL
+             AND a.voided_at IS NULL AND a.from_date <= $1 AND (a.to_date IS NULL OR a.to_date >= $1)) AS machine_count,
          (SELECT count(*)::int FROM obligations o
             JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
            WHERE o.company_id = p.company_id AND o.project_id = p.id
@@ -139,11 +140,14 @@ function toProject(row: Record<string, unknown>): ProjectRow {
 
 /** Poslovni datum firme — isto pravilo kao u rokovima: „danas" nije UTC. */
 export async function companyToday(client: PoolClient, companyId: CompanyId): Promise<string> {
-  const result = await client.query<{ timezone: string | null }>(
-    "SELECT timezone FROM companies WHERE id = $1",
+  const result = await client.query<{ today: string | null }>(
+    `SELECT (clock_timestamp() AT TIME ZONE timezone)::date::text AS today
+       FROM companies WHERE id = $1`,
     [companyId],
   );
-  return businessDate(new Date(), safeTimezone(result.rows[0]?.timezone));
+  const today = result.rows[0]?.today;
+  if (!today) throw new Error("Ne mogu odrediti poslovni datum firme.");
+  return today;
 }
 
 /**
@@ -170,6 +174,11 @@ export function isOverlapError(error: unknown): boolean {
   if (String(saPorukom.code ?? "") === "23P01") return true;
   if (String(saPorukom.constraint ?? "").includes("no_overlap")) return true;
   return String(saPorukom.message ?? "").includes("ASSIGNMENT_OVERLAP");
+}
+
+function isRetroactiveAssignmentEndError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "message" in error &&
+    String(error.message).includes("PROJECT_ASSIGNMENT_END_MUST_BE_TODAY_OR_FUTURE");
 }
 
 export const OVERLAP_MESSAGE = "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.";
@@ -216,7 +225,9 @@ export async function listProjects(
                    JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
                   WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = ${param(
                     filter.workerUserId,
-                  )})`,
+                  )}
+                    AND a.voided_at IS NULL AND a.from_date <= $1
+                    AND (a.to_date IS NULL OR a.to_date >= $1))`,
       );
     }
 
@@ -453,17 +464,23 @@ export type AssignmentRow = {
   fromDate: string;
   toDate: string | null;
   note: string | null;
+  voidedAt: string | null;
+  voidedByName: string | null;
+  voidReason: string | null;
   blocked: AssignmentBlockerRow[];
   createdAt: string;
 };
 
 const ASSIGNMENT_SELECT = `
-  SELECT a.id, a.project_id, a.worker_id, a.machine_id, a.from_date, a.to_date, a.note, a.created_at,
+  SELECT a.id, a.project_id, a.worker_id, a.machine_id, a.from_date, a.to_date, a.note,
+         a.voided_at, a.void_reason, a.created_at,
+         (voider.first_name || ' ' || voider.last_name) AS voided_by_name,
          (w.first_name || ' ' || w.last_name) AS worker_name,
          m.code AS machine_code, m.name AS machine_name
     FROM project_assignments a
     LEFT JOIN workers  w ON w.company_id = a.company_id AND w.id = a.worker_id
     LEFT JOIN machines m ON m.company_id = a.company_id AND m.id = a.machine_id
+    LEFT JOIN users voider ON voider.id = a.voided_by
 `;
 
 type ObligationForCheck = { id: string; typeLabel: string; state: "valid" | "expiring" | "expired" | "superseded" | "no_expiry"; blocksAssignment: boolean };
@@ -580,6 +597,12 @@ export async function createAssignment(
     }
 
     const today = await companyToday(client, companyId);
+    if (input.toDate && input.toDate < today) {
+      return {
+        code: "VALIDATION_FAILED",
+        message: "Kraj nove dodjele može biti samo današnji ili budući poslovni datum.",
+      } as ServiceError;
+    }
     const obligations = await entityObligations(client, today, {
       workerId: input.workerId,
       machineId: input.machineId,
@@ -647,6 +670,12 @@ export async function createAssignment(
       if (isOverlapError(error)) {
         return { code: "CONFLICT", message: OVERLAP_MESSAGE } as ServiceError;
       }
+      if (isRetroactiveAssignmentEndError(error)) {
+        return {
+          code: "VALIDATION_FAILED",
+          message: "Kraj nove dodjele mora biti današnji ili budući poslovni datum firme.",
+        } as ServiceError;
+      }
       throw error;
     }
 
@@ -690,6 +719,9 @@ function toAssignment(
     fromDate: toDate(row.from_date) ?? "",
     toDate: toDate(row.to_date),
     note: row.note ? String(row.note) : null,
+    voidedAt: row.voided_at ? new Date(row.voided_at as string).toISOString() : null,
+    voidedByName: row.voided_by_name ? String(row.voided_by_name) : null,
+    voidReason: row.void_reason ? String(row.void_reason) : null,
     blocked: [...check.blocked, ...check.overridden],
     createdAt: new Date(row.created_at as string).toISOString(),
   };
@@ -726,54 +758,145 @@ export async function listAssignments(
   });
 }
 
-export async function removeAssignment(
+export async function changeAssignment(
   pool: Pool,
   companyId: CompanyId,
   actor: ProjectActor,
   projectId: string,
   assignmentId: string,
-): Promise<{ ok: true; scopeNotice: string | null } | ServiceError> {
+  input: AssignmentChangeInput,
+): Promise<{ ok: true; action: "END" | "VOID"; scopeNotice: string | null } | ServiceError> {
+  if (input.action === "VOID" && input.reason.trim().length < 10) {
+    return { code: "VALIDATION_FAILED", message: "Za poništavanje unesite razlog od najmanje 10 znakova." };
+  }
+
   return withCompany(pool, companyId, async (client) => {
     const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
     if (ids !== null && !ids.includes(projectId)) {
       return { code: "FORBIDDEN", message: "Nisi dodijeljen ovom projektu." } as ServiceError;
     }
 
-    const existing = await client.query(
-      "SELECT worker_id, machine_id FROM project_assignments WHERE id = $1 AND project_id = $2",
+    const today = await companyToday(client, companyId);
+    const existing = await client.query<{
+      worker_id: string | null;
+      machine_id: string | null;
+      from_date: Date | string;
+      to_date: Date | string | null;
+      voided_at: Date | null;
+    }>(
+      `SELECT worker_id, machine_id, from_date, to_date, voided_at
+         FROM project_assignments
+        WHERE id = $1 AND project_id = $2
+        FOR UPDATE`,
       [assignmentId, projectId],
     );
     const row = existing.rows[0];
     if (!row) return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
+    if (row.voided_at) return { code: "CONFLICT", message: "Dodjela je već poništena; historijski red je zaključan." } as ServiceError;
 
-    // Dodjela se BRIŠE, a ne deaktivira: tim na projektu je trenutno stanje, a historija je u
-    // auditu. Red koji „postoji ali ne važi" pravi zabunu u svakom izvještaju koji ga zatekne.
-    await client.query("DELETE FROM project_assignments WHERE id = $1", [assignmentId]);
+    const actorIdentity = await client.query<{ email: string }>(
+      "SELECT email FROM users WHERE id = $1",
+      [actor.userId],
+    );
+    const actorEmail = actorIdentity.rows[0]?.email ?? null;
+
+    const fromDate = toDate(row.from_date) ?? "";
+    const currentToDate = toDate(row.to_date);
+
+    if (input.action === "END") {
+      if (fromDate > today) {
+        return {
+          code: "VALIDATION_FAILED",
+          message: "Dodjela još nije počela. Ako je unesena greškom, poništite je uz razlog.",
+        } as ServiceError;
+      }
+      if (currentToDate === today) {
+        return { ok: true, action: "END", scopeNotice: null };
+      }
+      if (currentToDate && currentToDate < today) {
+        return {
+          code: "CONFLICT",
+          message: `Dodjela je već završena ${currentToDate}; raniji kraj se ne može mijenjati.`,
+        } as ServiceError;
+      }
+      if (currentToDate && currentToDate > today) {
+        return {
+          code: "CONFLICT",
+          message: "Planirani kraj se ne može skratiti. Poništite dodjelu uz razlog samo ako nije bilo rada u njenom periodu.",
+        } as ServiceError;
+      }
+
+      try {
+        await client.query(
+          "UPDATE project_assignments SET to_date = $1 WHERE id = $2",
+          [today, assignmentId],
+        );
+      } catch (error) {
+        if (isRetroactiveAssignmentEndError(error)) {
+          return {
+            code: "CONFLICT",
+            message: "Poslovni datum firme se upravo promijenio. Osvježite stranicu pa završite dodjelu ponovo.",
+          } as ServiceError;
+        }
+        throw error;
+      }
+      await writeAudit(client, {
+        companyId,
+        actorId: actor.userId,
+        actorEmail,
+        action: "project.assignment_ended",
+        entityType: "project_assignment",
+        entityId: assignmentId,
+        metadata: {
+          projectId,
+          workerId: row.worker_id,
+          machineId: row.machine_id,
+          toDate: today,
+        },
+      });
+      return { ok: true, action: "END", scopeNotice: null };
+    }
+
+    let voidedAt: Date | null = null;
+    try {
+      const voided = await client.query<{ voided_at: Date }>(
+        `UPDATE project_assignments
+            SET voided_at = clock_timestamp(), voided_by = $1, void_reason = $2
+          WHERE id = $3
+          RETURNING voided_at`,
+        [actor.userId, input.reason.trim(), assignmentId],
+      );
+      voidedAt = voided.rows[0]?.voided_at ?? null;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("PROJECT_ASSIGNMENT_HAS_WORKDAYS")) {
+        return {
+          code: "CONFLICT",
+          message: "Dodjela se ne može poništiti: postoji radni dan ili evidentirana upotreba mašine u njenom periodu.",
+        } as ServiceError;
+      }
+      if (message.includes("PROJECT_ASSIGNMENT_VOID_REASON_REQUIRED")) {
+        return { code: "VALIDATION_FAILED", message: "Poništavanje traži razlog od 10 do 500 znakova." } as ServiceError;
+      }
+      throw error;
+    }
 
     await writeAudit(client, {
       companyId,
       actorId: actor.userId,
-      actorEmail: null,
-      action: "project.assignment_removed",
+      actorEmail,
+      action: "project.assignment_voided",
       entityType: "project_assignment",
       entityId: assignmentId,
       metadata: {
         projectId,
-        workerId: row.worker_id ?? null,
-        machineId: row.machine_id ?? null,
+        workerId: row.worker_id,
+        machineId: row.machine_id,
+        reason: input.reason.trim(),
+        voidedAt: voidedAt?.toISOString() ?? null,
       },
     });
 
-    /*
-     * POSLJEDNJA DODJELA OSOBI SA OPSEGOM `PROJECTS`.
-     *
-     * Do ovoga je ta osoba vidjela tačno jedan projekat; poslije ovoga ne vidi nijedan. Ako se to
-     * desi tiho, čovjek se prijavi u prazan sistem i misli da je pokvaren — a ništa ne piše.
-     *
-     * Zato: (1) opseg se automatski spušta na `SELF` — najuži, nikad širi; (2) radnja ide u audit
-     * sa razlogom; (3) pozivalac dobija `scopeNotice` koji UI OBAVEZNO prikaže. Ne ostavljamo osobu
-     * sa opsegom koji ne vidi ništa, jer je takav opseg već jednom odbijen pri snimanju (R3 odluka).
-     */
     let scopeNotice: string | null = null;
     if (row.worker_id) {
       const person = await client.query<{ user_id: string | null; scope: string; name: string }>(
@@ -785,12 +908,15 @@ export async function removeAssignment(
       );
       const affected = person.rows[0];
       if (affected?.user_id && affected.scope === "PROJECTS") {
-        const remaining = await client.query(
+        const remaining = await client.query<{ n: number }>(
           `SELECT count(*)::int AS n
              FROM project_assignments a
              JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
-            WHERE w.user_id = $1`,
-          [affected.user_id],
+            WHERE a.company_id = $1 AND w.user_id = $2
+              AND a.voided_at IS NULL
+              AND a.from_date <= $3
+              AND (a.to_date IS NULL OR a.to_date >= $3)`,
+          [companyId, affected.user_id, today],
         );
         if (Number(remaining.rows[0]?.n ?? 0) === 0) {
           await client.query(
@@ -800,24 +926,24 @@ export async function removeAssignment(
           await writeAudit(client, {
             companyId,
             actorId: actor.userId,
-            actorEmail: null,
+            actorEmail,
             action: "user.membership_changed",
             entityType: "user",
             entityId: affected.user_id,
             metadata: {
-              reason: "last_project_assignment_removed",
+              reason: "last_project_assignment_voided",
               from: { scope: "PROJECTS" },
               to: { scope: "SELF" },
             },
           });
           scopeNotice =
-            `${affected.name} više nije ni na jednom projektu, pa je opseg spušten sa „dodijeljeni ` +
-            `projekti" na „samo svoje". Vrati ga na „dodijeljeni projekti" kad ga dodijelite ponovo.`;
+            `${affected.name} više nema važećih dodjela na projektima, pa je opseg spušten sa „dodijeljeni ` +
+            `projekti“ na „samo svoje“.`;
         }
       }
     }
 
-    return { ok: true, scopeNotice };
+    return { ok: true, action: "VOID", scopeNotice };
   });
 }
 
@@ -1051,7 +1177,17 @@ export async function approveOverride(
     }
 
     const id = `pas_${crypto.randomUUID()}`;
-    const fromDate = input.fromDate ?? (await companyToday(client, companyId));
+    const today = await companyToday(client, companyId);
+    const fromDate = input.fromDate ?? today;
+    if (input.toDate && input.toDate < today) {
+      return {
+        code: "VALIDATION_FAILED",
+        message: "Kraj nove dodjele mora biti današnji ili budući poslovni datum firme.",
+      } as ServiceError;
+    }
+    if (input.toDate && input.toDate < fromDate) {
+      return { code: "VALIDATION_FAILED", message: "Kraj dodjele ne može biti prije početka." } as ServiceError;
+    }
     try {
       await client.query(
         `INSERT INTO project_assignments (id, company_id, project_id, worker_id, machine_id,
@@ -1071,6 +1207,12 @@ export async function approveOverride(
     } catch (error) {
       if (isOverlapError(error)) {
         return { code: "CONFLICT", message: OVERLAP_MESSAGE } as ServiceError;
+      }
+      if (isRetroactiveAssignmentEndError(error)) {
+        return {
+          code: "VALIDATION_FAILED",
+          message: "Kraj nove dodjele mora biti današnji ili budući poslovni datum firme.",
+        } as ServiceError;
       }
       throw error;
     }
@@ -1101,7 +1243,6 @@ export async function approveOverride(
     });
 
     const created = await client.query("SELECT * FROM project_assignments WHERE id = $1", [id]);
-    const today = await companyToday(client, companyId);
     const obligations = await entityObligations(client, today, {
       workerId: row.worker_id ? String(row.worker_id) : null,
       machineId: row.machine_id ? String(row.machine_id) : null,

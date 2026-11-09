@@ -61,6 +61,9 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.machines TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.audit_events TO gradix_app;
 -- platform_users, schema_migrations, login_attempts: namjerno bez direktnih prava.
 GRANT SELECT, INSERT ON TABLE public.sync_items TO gradix_app;
+-- Cursor internals have no direct table ACL. The tenant-checked definer functions below
+-- are the only reservation/publish/sweep/pull path. `sync_change_log` is SELECT-only.
+GRANT SELECT ON TABLE public.sync_change_log TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.invitations TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.password_resets TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.workers TO gradix_app;
@@ -70,8 +73,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.obligations TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_versions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.obligation_attachments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.projects TO gradix_app;
-GRANT SELECT, INSERT, DELETE ON TABLE public.project_assignments TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.project_assignments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.project_assignment_overrides TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.workdays TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.work_entries TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.sync_receipts TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.sync_conflicts TO gradix_app;
 -- No direct sequence rights; login_attempts_id_seq is used only by its definer function.
 
 -- App-callable lookup and rate-limit functions. Revoke default PUBLIC EXECUTE first; these
@@ -80,6 +87,16 @@ REVOKE ALL ON FUNCTION public.auth_memberships(TEXT) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.auth_memberships(TEXT) TO gradix_app;
 REVOKE ALL ON FUNCTION public.auth_session_by_hash(TEXT) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.auth_session_by_hash(TEXT) TO gradix_app;
+
+-- Cursor functions are narrow tenant APIs; each compares its tenant argument with app.company_id.
+REVOKE ALL ON FUNCTION public.sync_cursor_reserve(TEXT, TEXT, INTEGER) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_reserve(TEXT, TEXT, INTEGER) TO gradix_app;
+REVOKE ALL ON FUNCTION public.sync_cursor_publish(TEXT, BIGINT, TEXT, TEXT, TEXT, TEXT, BIGINT, JSONB, BOOLEAN) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_publish(TEXT, BIGINT, TEXT, TEXT, TEXT, TEXT, BIGINT, JSONB, BOOLEAN) TO gradix_app;
+REVOKE ALL ON FUNCTION public.sync_cursor_sweep(TEXT, INTEGER) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_sweep(TEXT, INTEGER) TO gradix_app;
+REVOKE ALL ON FUNCTION public.sync_cursor_pull(TEXT, BIGINT, INTEGER) FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.sync_cursor_pull(TEXT, BIGINT, INTEGER) TO gradix_app;
 
 REVOKE ALL ON FUNCTION public.login_attempt_record(TEXT, TEXT, INTEGER) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.login_attempt_record(TEXT, TEXT, INTEGER) TO gradix_app;
@@ -90,8 +107,23 @@ GRANT EXECUTE ON FUNCTION public.login_attempt_clear(TEXT) TO gradix_app;
 REVOKE ALL ON FUNCTION public.login_attempt_retry_after(TEXT, INTEGER) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.login_attempt_retry_after(TEXT, INTEGER) TO gradix_app;
 
--- SECURITY DEFINER trigger helpers run through their trigger, never by direct app invocation.
+-- Trigger helpers run through their trigger, never by direct app invocation.
 REVOKE ALL ON FUNCTION public.companies_seed_equipment_categories() FROM PUBLIC, gradix_app;
 REVOKE ALL ON FUNCTION public.companies_seed_obligation_types() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_project_assignment_history() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.reject_project_assignments_truncate() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_workday_identity() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_work_entry_overlap() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_sync_receipt_update() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_sync_conflict_update() FROM PUBLIC, gradix_app;
+
+-- The R3 overlap helper exists only on the no-btree_gist trigger fallback.
+DO $$
+BEGIN
+  IF to_regprocedure('public.project_assignment_no_overlap()') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.project_assignment_no_overlap() FROM PUBLIC, gradix_app';
+  END IF;
+END
+$$;
 
 COMMIT;

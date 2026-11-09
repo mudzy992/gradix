@@ -8,6 +8,9 @@ table	machines	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Equipment CRUD 
 table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
 table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
 table	sync_items	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Offline sync push is idempotent INSERT and pull reads; no update/delete path.
+table	sync_cursor_allocators	-	-		Internal cursor allocator; only tenant-checking SECURITY DEFINER reserve/pull functions may access it.
+table	sync_cursor_slots	-	-		Internal PENDING/COMMITTED/SKIPPED cursor slots; only tenant-checking SECURITY DEFINER cursor functions may access them.
+table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
 table	invitations	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Invite management and exact-token preview/claim; use/revoke are updates; no hard-delete path.
 table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset issue/lookup/claim/revoke; no hard-delete path.
 table	login_attempts	-	-		Only SECURITY DEFINER rate-limit functions access this table; the app and sequence have no direct table rights.
@@ -18,6 +21,10 @@ table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Oblig
 table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
 table	obligation_attachments	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Attachment lifecycle includes upload-state updates and delete.
 table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/update and read; no hard-delete path.
-table	project_assignments	SELECT;INSERT;DELETE	SELECT;INSERT;UPDATE;DELETE		Assignment create/remove; removal is DELETE; no UPDATE path.
+table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
 table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
+table	workdays	SELECT;INSERT;UPDATE	-		Canonical daily header; upsert/update lifecycle with immutable worker/date identity and no hard-delete path.
+table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overlap trigger protects OPEN/KNOWN_END intervals; no hard-delete path.
+table	sync_receipts	SELECT;INSERT	-		Idempotency receipts are append-only; server-side retention may purge result details but preserves the compact key/hash.
+table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.
 sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

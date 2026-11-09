@@ -36,15 +36,17 @@ enum Role {
 }
 
 model Company {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  timezone  String   @default("Europe/Sarajevo")
-  currency  String   @default("BAM")
-  locale    Locale   @default(bs)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  name                      String
+  slug                      String   @unique
+  timezone                  String   @default("Europe/Sarajevo")
+  currency                  String   @default("BAM")
+  locale                    Locale   @default(bs)
+  isActive                  Boolean  @default(true)
+  // Privremeni default; zakonska potvrda retention roka ostaje otvorena u R4 planu.
+  syncConflictRetentionDays Int      @default(90) @map("sync_conflict_retention_days") @db.SmallInt
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   memberships Membership[]
   machines    Machine[]

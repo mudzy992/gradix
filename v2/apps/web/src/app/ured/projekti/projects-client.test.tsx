@@ -58,7 +58,11 @@ const projects = [
 
 type Call = { method: string; url: string; body: unknown };
 
-function mockApi(overrides: { assignment?: { ok: boolean; body: unknown } } = {}) {
+function mockApi(overrides: {
+  assignment?: { ok: boolean; body: unknown };
+  assignmentRows?: { assignments: unknown[]; today: string };
+  assignmentChange?: { ok: boolean; body: unknown };
+} = {}) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -74,7 +78,7 @@ function mockApi(overrides: { assignment?: { ok: boolean; body: unknown } } = {}
 
       if (call.method === "GET") {
         if (call.url.includes("/api/projects/prj_1/assignments")) {
-          return json({ assignments: [], today: "2026-11-09" });
+          return json(overrides.assignmentRows ?? { assignments: [], today: "2026-11-09" });
         }
         if (call.url.includes("/api/projects")) return json({ projects });
         if (call.url.includes("/api/workers")) {
@@ -91,6 +95,14 @@ function mockApi(overrides: { assignment?: { ok: boolean; body: unknown } } = {}
           });
         }
         return json({});
+      }
+
+      if (call.method === "PATCH" && call.url.includes("/assignments/")) {
+        const result = overrides.assignmentChange ?? {
+          ok: true,
+          body: { success: true, data: { ok: true, action: "END", scopeNotice: null } },
+        };
+        return { ok: result.ok, json: async () => result.body } as unknown as Response;
       }
 
       if (call.url.endsWith("/assignments")) {
@@ -125,6 +137,87 @@ describe("projekti", () => {
     const paused = screen.getByText("Most preko Bosne").closest("tr")!;
     expect(within(paused).getByText("Pauziran")).toBeInTheDocument();
     expect(within(paused).getByText("2 uskoro")).toBeInTheDocument();
+  });
+
+  it("normalno završavanje šalje END PATCH i ostavlja jasnu poruku o historiji", async () => {
+    const calls = mockApi({
+      assignmentRows: {
+        today: "2026-11-09",
+        assignments: [
+          {
+            id: "pas_1", projectId: "prj_1", workerId: "wrk_1", workerName: "Amar Hadžić",
+            machineId: null, machineCode: null, machineName: null, fromDate: "2026-11-01",
+            toDate: null, note: null, voidedAt: null, voidedByName: null, voidReason: null,
+            blocked: [], createdAt: "2026-11-01T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    render(<ProjectsClient canManage canAssign canOverride />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Završi danas" }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
+    const patch = calls.find((call) => call.method === "PATCH")!;
+    expect(patch.url).toBe("/api/projects/prj_1/assignments/pas_1");
+    expect(patch.body).toEqual({ action: "END" });
+    expect(await screen.findByRole("status")).toHaveTextContent("Dodjela je završena za danas; historija ostaje.");
+  });
+
+  it("poništavanje traži razlog, šalje VOID i prikazuje podatke o historiji", async () => {
+    const calls = mockApi({
+      assignmentRows: {
+        today: "2026-11-09",
+        assignments: [
+          {
+            id: "pas_1", projectId: "prj_1", workerId: "wrk_1", workerName: "Amar Hadžić",
+            machineId: null, machineCode: null, machineName: null, fromDate: "2026-11-01",
+            toDate: null, voidedAt: null, voidedByName: null, voidReason: null, note: null,
+            blocked: [], createdAt: "2026-11-01T10:00:00.000Z",
+          },
+        ],
+      },
+      assignmentChange: {
+        ok: true,
+        body: { success: true, data: { ok: true, action: "VOID", scopeNotice: null } },
+      },
+    });
+    render(<ProjectsClient canManage canAssign canOverride />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Pogrešna dodjela" }));
+    const reason = "Dodjela je unesena za pogrešnu osobu.";
+    await userEvent.type(screen.getByLabelText("Razlog poništavanja"), reason);
+    await userEvent.click(screen.getByRole("button", { name: "Poništi uz razlog" }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === "PATCH")).toBe(true));
+    const patch = calls.find((call) => call.method === "PATCH")!;
+    expect(patch.body).toEqual({ action: "VOID", reason });
+    expect(await screen.findByRole("status")).toHaveTextContent("Dodjela je poništena uz razlog; historija ostaje.");
+  });
+
+  it("historija poništene dodjele prikazuje autora i nepromjenjivi razlog", async () => {
+    mockApi({
+      assignmentRows: {
+        today: "2026-11-09",
+        assignments: [
+          {
+            id: "pas_voided", projectId: "prj_1", workerId: "wrk_1", workerName: "Amar Hadžić",
+            machineId: null, machineCode: null, machineName: null, fromDate: "2026-11-01",
+            toDate: null, note: null, voidedAt: "2026-11-08T12:30:00.000Z",
+            voidedByName: "Admin A", voidReason: "Dodjela je unesena za pogrešnu osobu.",
+            blocked: [], createdAt: "2026-11-01T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    render(<ProjectsClient canManage canAssign canOverride />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
+    expect(await screen.findByText("Poništio/la: Admin A")).toBeInTheDocument();
+    expect(screen.getByText("Dodjela je unesena za pogrešnu osobu.")).toBeInTheDocument();
+    expect(screen.getByText(/Poništena ·/)).toBeInTheDocument();
   });
 
   it("filter po stanju sužava listu bez novog zahtjeva", async () => {

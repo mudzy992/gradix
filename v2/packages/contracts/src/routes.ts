@@ -66,7 +66,8 @@ import {
   OverrideRequestResponse,
   OverrideRequestsResponse,
   OverrideApproveInput,
-  AssignmentRemovedResponse,
+  AssignmentChangeInput,
+  AssignmentChangedResponse,
 } from "./schemas";
 
 export type RouteSpec = {
@@ -581,13 +582,13 @@ export const ROUTES = [
     response: ProjectAssignmentResponse,
   },
   {
-    method: "DELETE",
+    method: "PATCH",
     path: "/api/projects/{id}/assignments/{assignmentId}",
-    summary: "Skidanje dodjele; ako je to bila zadnja, opseg se spušta i javlja se `scopeNotice`.",
+    summary: "Auditan kraj dodjele ili poništavanje pogrešnog reda bez brisanja historije.",
     auth: true,
     permission: "projects.assign",
-    request: null,
-    response: AssignmentRemovedResponse,
+    request: AssignmentChangeInput,
+    response: AssignmentChangedResponse,
   },
   {
     method: "GET",

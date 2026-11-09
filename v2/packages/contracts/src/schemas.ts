@@ -81,14 +81,13 @@ export const RefreshResponse = z.object({
 export type RefreshResponse = z.infer<typeof RefreshResponse>;
 
 export const OkResponse = z.object({ ok: z.literal(true) });
-/**
- * Odgovor na skidanje dodjele: uz `ok` ide i `scopeNotice` kad je osoba ostala bez ijednog
- * projekta, pa joj je opseg spušten. UI ga OBAVEZNO prikaže — tiho gašenje vidnog polja je greška.
- */
-export const AssignmentRemovedResponse = z.object({
+/** Kraj dodjele ili jednokratno poništavanje pogrešnog reda; nema DELETE semantike. */
+export const AssignmentChangedResponse = z.object({
   ok: z.literal(true),
+  action: z.enum(["END", "VOID"]),
   scopeNotice: z.string().nullable(),
 });
+export type AssignmentChangedResponse = z.infer<typeof AssignmentChangedResponse>;
 export const LoggedOutResponse = z.object({ loggedOut: z.literal(true) });
 
 export const ChangePasswordRequest = z.object({
@@ -673,6 +672,12 @@ export const AssignmentInput = z.object({
 });
 export type AssignmentInput = z.infer<typeof AssignmentInput>;
 
+export const AssignmentChangeInput = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("END") }),
+  z.object({ action: z.literal("VOID"), reason: z.string().trim().min(10).max(500) }),
+]);
+export type AssignmentChangeInput = z.infer<typeof AssignmentChangeInput>;
+
 export const ProjectAssignment = z.object({
   id: z.string(),
   projectId: z.string(),
@@ -684,6 +689,9 @@ export const ProjectAssignment = z.object({
   fromDate: z.string(),
   toDate: z.string().nullable(),
   note: z.string().nullable(),
+  voidedAt: IsoDate.nullable(),
+  voidedByName: z.string().nullable(),
+  voidReason: z.string().nullable(),
   /** Blokade zbog isteklih obaveza, sa iznimkom ili bez nje. */
   blocked: z.array(
     z.object({

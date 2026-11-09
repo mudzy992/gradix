@@ -2,9 +2,12 @@
 
 **Faza:** 1 · **Datum:** 2026-11-07 · **Kapija:** **G1 odobren**, **R1a ✅**, **R1b ✅**,
 **dizajn v2 ✅**, **R2a ✅**, **R2b ✅**, **R3 ✅**, **A ✅**, **B ✅ lokalno + CI**.
-**Sljedeće:** vlasnik pokreće B preflight na stagingu/proizvodnji → potvrđuje aplikacijsku rolu i
-ACL → pregleda/odobrava revidirani plan R4. R4 kod ne počinje prije odobrenja. Planovi i odluke:
-`docs/PLAN-R3.md`, `docs/PLAN-R4.md` (predlog, bez koda), `docs/R3-ODSTUPANJA.md`,
+**Sljedeće:** R4a-1 implementacija je odobrena. Dizajn je odobren „ovako“: worker self-entry glavni
+tok, ured read-only na 360/1440 u obje teme; grupni unos šefa ostaje R4a-2. Kod za korake 1–3
+iz `docs/PLAN-R4.md` je pripremljen; R3/R4 migracije, PostgreSQL integracije i staging preflight
+nisu izvršeni. Ovdje je obavezan stop: prvo staging preflight i pregled loga vlasnika; bez te kapije
+ne počinju naredni koraci ni UI korak 7.
+Planovi i odluke: `docs/PLAN-R3.md`, `docs/PLAN-R4.md`, `docs/R3-ODSTUPANJA.md`,
 `docs/DECISIONS/0009`–`0013`.
 
 **A:** commit `a9d3174`; GitHub Actions run `42582658045` prošao, uključujući ephemeral Docker build.
@@ -35,6 +38,7 @@ provjereni iz sandboxa.
 | R2a | Radnici, mašine, kategorije kao podaci, uvoz iz Excela | ✅ kapija prošla uživo 2026-11-09 |
 | R2b | Obaveze s rokom: verzije, prilozi, izvedeno stanje, mobilni „Moji rokovi“ | ✅ kapija prošla uživo 2026-11-09 |
 | R3 | Projekti, dodjele, opseg, blokada/iznimka | ✅ kod + testovi; `scope` novi red = `SELF`; entrypoint i CI preflight koriste `DATABASE_URL`; oba mehanizma preklapanja prolaze u GitHub run `42588871034` |
+| R4a-1, koraci 1–3 | Assignment history, sync cursor, workday/entry/receipt/conflict baza | ⚠️ SQL, RLS/ACL/preflight i testovi pripremljeni; static checks prolaze, ali migracije, PostgreSQL integracije i staging preflight nisu izvršeni; stop prije koraka 4+ i UI 7 dok staging gate ne prođe |
 
 **Provjereno lokalno (2026-11-08, dizajn v2):** `pnpm lint` (0), `pnpm typecheck` (4/4), `pnpm turbo run test --force` (**152** testa: db 10, domain 34, mobile 20, web 88), `pnpm test:a11y` (33 testa, axe WCAG 2.1 AA), `next build` (sve rute), mobilni `expo export -p web` i `expo start --web` u obje teme, `expo export -p android` (od R1c, RN 0.88.1).
 
@@ -56,7 +60,7 @@ tabela, superuser ili ima `BYPASSRLS`. Podržan deploy je model sa ne-vlasničko
 ## Ne radi / nije urađeno
 
 - **Mobilni u Expo Go nije još otvoren na telefonu** — bundle i Metro su dokazani u sandboxu, veza telefon → Metro nije (mora vlasnik, `docs/MOBILE-EXPO-GO.md`).
-- **`packages/contracts` i OpenAPI iz koda** nisu urađeni; API je tipiziran ručno u `apps/mobile/src/api/client.ts`. Ovo je dug, ne zaborav.
+- **R4 push/pull API i offline outbox** još nisu urađeni; planirani su u koracima 4–6 `docs/PLAN-R4.md`. Ovaj rez staje nakon DB koraka 3; ne pravi se UI prije staging kapije.
 - **Docker slika nije izgrađena** (nema Dockera u sandboxu). Dokazano je ono što se dokazati može: `output: standalone` build + pokretanje `server.js` protiv prave baze. Prvi `docker build` se dešava na Coolifyju i to je prva prava provjera Dockerfilea.
 - **CI je bio mrtav kod** i to je otkriveno u ovoj kapiji: workflow je stajao u `v2/.github/workflows/`, a GitHub izvršava samo `.github/workflows/` u korijenu. Sada je `.github/workflows/ci-v2.yml` sa `paths: v2/**`. Prvi zelen run: `daabf07`.
 - **Staging/produkcija:** sandbox nema njihove `DATABASE_URL` konekcije, pa aplikacijska rola, vlasništvo i ACL nisu nezavisno provjereni. Novi runtime preflight (RLS, app ACL matrix i višak/manjak prava) je u B; vlasnik ga mora pokrenuti baš kroz postojeći `DATABASE_URL` na svakoj okolini. Odbija start ako je aplikacijska rola vlasnik/superuser/BYPASSRLS. Uputstvo i jedna `psql` komanda: `docs/COOLIFY.md`.
@@ -91,8 +95,8 @@ tabela, superuser ili ima `BYPASSRLS`. Podržan deploy je model sa ne-vlasničko
 
 ## Otvoreno za vlasnika
 
-1. **Revidirani plan R4 na odobrenje** (`docs/PLAN-R4.md`): radni dani, terenski/offline unos,
-   sync i kapija R4a → R4b. Odobrenje i vlasnikovi odgovori čekaju; R4 kod ne počinje prije toga.
+1. **R4a-1 plan i dizajn:** vlasnik je odobrio dizajn „ovako“ i odobreni plan (`docs/PLAN-R4.md`).
+   Izrada je ograničena na R4a-1 i po mini-kapijama; R4a-2/R4b se ne implementiraju u ovom rezu.
 2. **Coolify resource** po `docs/COOLIFY.md`: Base Directory `/v2`, compose
    `/infra/coolify/docker-compose.yml`, `DATABASE_URL` aplikacijska rola + odvojeni
    `DATABASE_ADMIN_URL` kad `RUN_MIGRATIONS=true`, `AUTH_SECRET`, domena
@@ -106,3 +110,7 @@ tabela, superuser ili ima `BYPASSRLS`. Podržan deploy je model sa ne-vlasničko
 7. **Redis ACL** (`infra/redis/acl-v2.txt`) — nije potreban u ovoj fazi; javim kad bude.
 8. ~~Prisma u CI-ju~~ — **zatvoreno:** `prisma generate` je zelen u CI-ju (`daabf07`), ADR 0002
    je time potvrđen u modelu „Prisma u CI/Coolify, SQL-first lokalno“.
+9. **R4 staging gate:** poslije primjene koraka 1–3, pokrenuti `cd /app/db/preflight-checks &&
+   psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f 001_security.sql -f 002_privileges.sql`
+   kroz aplikacijsku `DATABASE_URL` rolu (ne admin) i zalijepiti cijeli izlaz iz deploy loga prije
+   nastavka na kasnije korake ili UI korak 7 (`docs/COOLIFY.md` §6).

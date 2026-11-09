@@ -82,7 +82,7 @@ async function probaj(ime, prinudnoBezGist = false) {
   const stanje = await psql(
     `SELECT
        (SELECT count(*) FROM pg_constraint WHERE conrelid = 'project_assignments'::regclass AND contype = 'x') AS iskljucujuci,
-       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND NOT tgisinternal) AS trigera`,
+       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND tgname = 'project_assignments_no_overlap' AND NOT tgisinternal) AS trigera`,
     baza(ime),
   );
   const iskljucujuci = Number(stanje.rows[0].iskljucujuci);

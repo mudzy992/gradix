@@ -1,13 +1,14 @@
-/** DELETE /api/projects/:id/assignments/:assignmentId — skidanje dodjele (`projects.assign`). */
+/** PATCH /api/projects/:id/assignments/:assignmentId — auditan kraj ili poništavanje dodjele. */
 import type { NextRequest } from "next/server";
+import { AssignmentChangeInput } from "@gradix/contracts";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
-import { isServiceError, removeAssignment } from "@/server/project-service";
+import { changeAssignment, isServiceError } from "@/server/project-service";
 
 export const dynamic = "force-dynamic";
 
-export async function DELETE(
+export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string; assignmentId: string }> },
 ): Promise<Response> {
@@ -15,8 +16,13 @@ export async function DELETE(
     const guardResult = await guard(request, "projects.assign");
     if (!guardResult.ok) return guardResult.response;
 
+    const parsed = AssignmentChangeInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return fail("VALIDATION_FAILED", "Izaberite kraj dodjele ili poništavanje uz razlog od najmanje 10 znakova.");
+    }
+
     const { id, assignmentId } = await context.params;
-    const result = await removeAssignment(
+    const result = await changeAssignment(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
       {
@@ -27,11 +33,11 @@ export async function DELETE(
       },
       id,
       assignmentId,
+      parsed.data,
     );
     if (isServiceError(result)) return fail(result.code, result.message);
-    // `scopeNotice` ide u odgovor jer UI MORA reći da je osoba ostala bez vidnog polja.
-    return ok({ ok: true, scopeNotice: result.scopeNotice });
+    return ok({ ok: true, action: result.action, scopeNotice: result.scopeNotice });
   } catch (error) {
-    return internal(error, "projects.assignment.remove");
+    return internal(error, "projects.assignment.change");
   }
 }

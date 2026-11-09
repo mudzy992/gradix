@@ -143,9 +143,13 @@ export async function changeMembership(
         `SELECT 1
            FROM project_assignments a
            JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
-          WHERE w.user_id = $1
+           JOIN companies c ON c.id = a.company_id
+          WHERE a.company_id = $2 AND w.user_id = $1
+            AND a.voided_at IS NULL
+            AND a.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date
+            AND (a.to_date IS NULL OR a.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date)
           LIMIT 1`,
-        [targetUserId],
+        [targetUserId, companyId],
       );
       if (assigned.rowCount === 0) {
         return {

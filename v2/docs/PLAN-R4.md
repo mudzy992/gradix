@@ -1,9 +1,11 @@
 # PLAN R4 — radni dani, terenski unos i offline sinhronizacija
 
-**Status:** odobreno uz izmjene; **nema R4 koda prije odobrenja dizajna R4a-1.** · **Revidirano:** 2026-11-07.
+**Status:** odobreno; **dizajn R4a-1 izričito odobren „ovako“** · **Revidirano:** 2026-11-07.
 Vlasnik je potvrdio: oko 30 radnika, jednog vlasnika i dva administratora; radnik unosi svoj dan,
 šef unosi grupu za radnike dodijeljene projektu na `work_date`; šef potvrđuje dan, ured odobrava
 sedmicu ponedjeljak–nedjelja. R4 bilježi stvarno obavljeni rad, ne raspored i ne obračun zarade.
+R4a-1 dizajn je odobren bez izmjena: radnik vlastiti unos je glavni tok, uredski pregled je
+read-only; šefov grupni unos ostaje u R4a-2.
 
 ## 1. Granice, R4a kapije i jedan sync protokol
 
@@ -108,9 +110,10 @@ serveru od zadnjeg preuzimanja, ili novi segment ne prolazi overlap/validaciju. 
 `actor_id`, `local_id`, `work_entry_id` ako postoji, primljeni payload, serverovu verziju,
 `OPEN/RESOLVED`, autora/vrijeme/razlog razrješenja. Ne postoje zaglavlja sukoba za dupli dan.
 
-Neriješeni konfliktni payload čuva se do razrješenja **plus 90 dana**; poslije toga se briše puni
-payload, uz zadržavanje minimalnog audita/hash-a. Ovo je privremena retencija i čeka pravnu potvrdu
-prije produkcijske upotrebe.
+Neriješeni konfliktni payload ostaje dostupan do razrješenja. Nakon razrješenja puni payload se
+čuva još onoliko dana koliko je podešeno za konkretnu firmu; privremena podrazumijevana vrijednost
+je **90 dana**, nakon čega se briše puni payload, uz zadržavanje minimalnog audita/hash-a. Retencija
+je podesiva po firmi. Pravna potvrda ostaje otvoreno pitanje, ali nije blocker za R4a-1.
 
 `sync_receipts` bilježi `(company_id, actor_id, local_id)`, hash zahtjeva, ishod i vraćene ID-e/
 verzije da retry istog zahtjeva ne pravi duplikat. Detaljni receipt se čuva 90 dana, isto kao
@@ -127,33 +130,35 @@ a nepoznat ishod ide na provjeru.
   `from_date <= work_date AND (to_date IS NULL OR work_date <= to_date)`. Provjera je serverska,
   per segment/projekat; klijentova lista nije dokaz ovlaštenja. Pull šefa vraća samo segmente za
   radnike/projekte koji su mu vidljivi tim pravilom na `work_date`.
-- **Uredski pregled R4a-1:** prijedlog je read-only pristup postojećim `OWNER` i `ADMIN` nalozima;
+- **Uredski pregled R4a-1:** odobren je read-only pristup postojećim `OWNER` i `ADMIN` nalozima;
   nova/tačna uredska rola bira se u R4b.
 
-### R3 historija — trenutni kod ne ispunjava uslov
+### R3 historija — odobrena zaštita (prvi implementacijski korak)
 
-Danas se dodjele mogu hard-delete-ati kroz `DELETE /api/projects/:id/assignments/:assignmentId`;
-`project_assignments` ima DELETE grant, a FK-ovi prema projektu/radniku/mašini koriste
-`ON DELETE CASCADE`. Zato se ne može tvrditi da historija već ostaje sačuvana; hard delete može
-izbrisati dokaz za `work_date`.
+U početnom stanju prije R3 history-guard promjene, kod je dopuštao hard-delete kroz
+`DELETE /api/projects/:id/assignments/:assignmentId`, `project_assignments` je imao DELETE grant,
+a FK-ovi prema projektu/radniku/mašini kaskadno su brisali red. Korak 1 uvodi zabranu u aplikaciji
+i bazi; njegova migracija još zahtijeva staging preflight/deploy prije nego što zaštita važi za
+staging bazu. Migracija ne prepravlja niti briše postojeće dodjele.
 
-**Predloženi R3 preduvjet prije R4a-1 (nije implementiran):**
+1. Aplikacija i baza zabranjuju hard-delete `project_assignments`. Identitet dodjele, cilj, projekat,
+   `from_date` i početni podaci ostaju nepromjenjivi; `to_date` se postavlja samo na današnji ili
+   budući poslovni datum po zoni firme, a postojeći kraj se može samo produžiti, nikad skratiti.
+2. Normalni „Završi dodjelu“ postavlja auditan `to_date`; projekat/radnik/mašina se deaktivira, ne
+   fizički briše. FK-ovi prema njima postaju `RESTRICT`/`NO ACTION`.
+3. Pogrešnu dodjelu moguće je jednom označiti nevažećom uz razlog, autora i vrijeme. Baza odbija
+   void ako postoji `workday` tog radnika unutar perioda dodjele, odnosno upotreba mašine u nekom
+   `work_entry` u tom periodu. Void ne prepravlja originalne datume i ne briše trag; postojeći
+   redovi pri migraciji ostaju netaknuti.
+4. Privilege-matrix uklanja `DELETE`, dopušta samo potreban `UPDATE`; trigger, preflight i testovi
+   dokazuju zabranu DELETE-a, izmjene identiteta/`from_date` i retroaktivnog skraćenja.
+5. PostgreSQL regresija provjerava inkluzivni R3 period-uslov: završetak dodjele ne mijenja
+   ovlaštenost ranijeg `work_date`, a datum poslije `to_date` nije obuhvaćen. Ovo je test uslova,
+   ne end-to-end dokaz šefove autorizacijske rute: grupni push/pull još nije implementiran i mora
+   dobiti route-level test u R4a-2 prije isporuke grupnog unosa.
 
-1. Ukloniti hard-delete putanju; zamijeniti je zatvaranjem dodjele preko auditanog `to_date`.
-2. U bazi zabraniti brisanje `project_assignments`; projekat/radnik/mašina, identitet dodjele i
-   `from_date` su nepromjenjivi. `to_date` se može postaviti tek na današnji ili budući poslovni
-   datum po zoni firme, a postojeći `to_date` se može samo produžiti, nikad skratiti. Trigger mora
-   blokirati retroaktivno skraćenje; pogrešna dodjela dobija odvojeni append-only audit događaj
-   (razlog, autor, vrijeme), koji ne briše niti retroaktivno oduzima raniji R3 opseg.
-3. Zamijeniti FK `ON DELETE CASCADE` za dodjele sa `RESTRICT`/`NO ACTION`; projekat, radnik ili
-   mašina sa historijskim dodjelama se deaktivira, ne fizički briše.
-4. Ukloniti `DELETE` iz R3 app privilege-matrix; ograničeni update za zatvaranje mora biti zaštićen
-   triggerom i auditom. Preflight i test moraju dokazati da se ne može obrisati dodjela ni
-   promijeniti `from_date`/retroaktivni `to_date`.
-
-Prije R4a-1 vlasnik/DBA pregleda postojeće dodjele i ranije hard-delete tragove. Već obrisani redovi
-se ne mogu rekonstruisati automatski. Dok ovaj R3 preduvjet nije primijenjen i testiran, autoriza-
-cija šefa po istorijskom `work_date` nije pouzdana i R4a-1 ne može početi.
+Ranije hard-deleted dodjele se ne mogu rekonstruisati automatski; pregled postojećih redova ostaje
+DBA zadatak, ali ne blokira početak implementacije.
 
 ## 4. Verzije, push i ograničenja zahtjeva
 
@@ -220,8 +225,8 @@ kompaktiranje je dozvoljeno tek kad je slot
 ispod floor-a i nijedan važeći cursor ne zavisi od njega. `PENDING` se nikad ne briše dok lease i
 lock provjera nisu prošli. `next_seq` se nikad ne smanjuje niti ponovo koristi. Puni `sync_receipts`
 se čuvaju 90 dana; kompaktni idempotency ključ uz kanonski segment ostaje dok taj segment postoji.
-Neriješeni konfliktni payload čuva se do razrješenja + 90 dana, privremeno do pravne potvrde. Istek
-cursora ne briše lokalni outbox ni otvoreni konflikt.
+Konfliktni payload se čuva do razrješenja + podešeni per-company rok (privremeni default 90 dana);
+pravna potvrda je otvoreno pitanje, nije blocker. Istek cursora ne briše lokalni outbox ni konflikt.
 
 R0 `sync_items`, note rute i legacy cursor se uklanjaju; vlasnik potvrđuje da nema stvarnih
 podataka za backfill.
@@ -288,15 +293,32 @@ R4 nasljeđuje ADR 0013 i `packages/db/preflight-checks/privilege-matrix.tsv`:
   `foreman_scope_snapshots`.
 - Matrica navodi needed/current rights. Aplikacijska prava su samo potrebni `SELECT/INSERT/UPDATE`;
   fizički `DELETE` se ne daje ako poslovni tok ne traži baš to pravo. `sync_cursor_slots` i
-  `sync_cursor_allocators` su interni objekti bez direktnog app ACL-a; `sync_change_log` app čita za pull, a write ide kroz usku
-  pregledanu funkciju/trigger. SECURITY DEFINER samo ako je nužan, sa zatvorenim `search_path` i
-  bez direktnog app `EXECUTE`.
-- R3 historija immutable je preduvjet iz §3 i mora se uključiti u privilegijsku matricu/preflight.
-  R0 `sync_items` i note sync se uklanjaju; ne ostaje kompatibilnost starog protokola.
+  `sync_cursor_allocators` su interni objekti bez direktnog tabelnog ACL-a; ograničene,
+  `SECURITY DEFINER` funkcije za reserve/publish/sweep/pull su jedini app pozivni put, sa zatvorenim
+  `search_path`, provjerom tenant konteksta i eksplicitnim EXECUTE preflightom. `sync_change_log` je
+  read-only za aplikaciju; upis ide kroz publish funkciju.
+- R3 historija iz §3 je odobrena i implementira se kao prvi korak; preflight/matrica provjeravaju
+  immutable guard. R0 `sync_items` i note sync se uklanjaju u scoped push/pull koraku; ne ostaje
+  kompatibilnost starog protokola.
 
-**Rollout:** jedna migracija uklanja legacy note sync i dodaje novi protokol; R4a-1 se uključuje
-nakon staging preflighta i UI odobrenja. R4a-2 i R4b imaju zasebne kapije. Svaka migracija je
-naprijed-samo i prošla je na praznoj i popunjenoj bazi prije staginga.
+**Rollout i mini-kapije (tačan R4a-1 redoslijed):**
+
+1. R3 assignment-history guard: migracija, preflight/privilege-matrix i testovi.
+2. Change log + cursor: allocator/slots i dvije stvarne DB konekcije koje potvrđuju reverse commit
+   bez preskoka.
+3. `workdays`, `work_entries`, `sync_receipts`, `sync_conflicts` i firma-postavke retencije:
+   FORCE RLS, privilegijska matrica, generisani tenant-isolation testovi, EXCLUDE ili trigger
+   fallback, `UNKNOWN_END`. **Zaustaviti se i izvijestiti nakon koraka 3.** Izvršiti/reportovati
+   staging preflight i očekivati da vlasnik zalijepi izlaz iz loga prije nastavka.
+4. Čist sync modul i deterministički mrežni simulator u CI-ju.
+5. Scoped push/pull API; ukloniti stari R0 notes sync.
+6. SQLite migracija koja čuva postojeće podatke i dodaje outbox. **Zaustaviti se i izvijestiti nakon
+   koraka 6.**
+7. UI po već odobrenom R4a-1 dizajnu, svijetla i tamna tema.
+
+Staging rollout je nakon koraka 3, uz preflight izlaz vlasnika, i prije koraka 7. Svaka migracija je
+naprijed-samo i prolazi na praznoj/popunjenoj bazi i runtime preflightu. R4a-2 i R4b imaju zasebne
+kapije.
 
 **Rollback:** isključiti R4 feature za nove zahtjeve i vratiti kompatibilan server build bez
 brisanja R4 podataka, outboxa, slotova i konflikata. Ne vraćati stari široki `GRANT ALL`, ne vraćati
@@ -319,9 +341,9 @@ R4a-1 uključuje:
   krajeva, state `OPEN`/`UNKNOWN_END`/`SUBMITTED`, sync stanje i oznake za provjeru. Nema ekrana
   za razrješenje konflikta u ovom rezu.
 
-**R4a-1 gate:** dva prava DB connection concurrency test-a, DB/API/mobile testovi, preflight,
-R3 assignment-history guard, owner design approval i stvarni phone UAT su zeleni. Tek nakon
-vlasnikovog prihvatanja počinje R4a-2.
+**R4a-1 gate:** dizajn je već izričito odobren bez izmjena. Preostali gate-ovi su implementacijski:
+korak 3 i korak 6 imaju obavezni stop/report; rollout na staging je nakon koraka 3 i prije UI
+koraka 7; stvarni telefon/UAT i preflight su prije pilot-uključenja. Grupni unos ostaje R4a-2.
 
 ## 10. R4a-2 — grupni unos šefa i razrješenje
 
@@ -331,8 +353,8 @@ R4a-2 dodaje:
   za grupu; server svaku stavku autorizuje po neizmjenjivoj R3 historiji;
 - uredski ekran prikazuje konflikt na konkretnom `work_entry`: stara server verzija, dolazni
   payload, vrijeme, autor i razlog; ured može odabrati/urediti rješenje uz obavezni audit;
-- konfliktnom payloadu ne mijenja se sadržaj ni retencija: čuva se do razrješenja + 90 dana,
-  trenutno privremeno do pravne potvrde;
+- konfliktnom payloadu ne mijenja se sadržaj ni retencija: čuva se do razrješenja + per-company
+  rok (privremeni default 90 dana); pravna potvrda je otvoreno pitanje, nije blocker;
 - R4a-2 ne uvodi šefovu potvrdu dana niti uredsko sedmično odobrenje — to je R4b.
 
 **R4a-2 gate:** CI simulator, dvije realne DB konekcije, offline grupni tok i konfliktni UI prolaze;
@@ -384,7 +406,8 @@ ubacuje prekide, duplikate, promjenu redoslijeda, zakašnjele odgovore, paraleln
 10. Pull stranica i cursor se primjenjuju atomarno u SQLite-u; tombstone ne oživljava red; expired
     cursor traži resync, ali ne briše outbox.
 11. Retencija: sync change log/tombstone 90 dana; receipt 90 dana + compact idempotency key uz
-    canonical segment; konfliktni payload do razrješenja + 90 dana. Ograničenja push-a 100 stavki,
+    canonical segment; konfliktni payload do razrješenja + per-company rok (default 90 dana).
+    Ograničenja push-a 100 stavki,
     1 MiB ukupno, 16 KiB po stavci odbijaju zahtjev prije upisa.
 12. PostgreSQL testovi provjeravaju RLS, B privilege matrix, R3 no-delete/no-retroactive-shortening
     zaštitu i normalne login/invitation/reset/password-change tokove.
@@ -417,14 +440,16 @@ Potvrđeno:
 - Jedan kanonski dan po firmi/radniku/datumu; get-or-create; nema `DUPLICATE_DAY`.
 - Pragovi: 5 minuta za sat, 16 sati za otvoren dan, 90 dana za tombstone/cursor; DST offset bira se prije slanja.
 - R0 notes sync se uklanja jer nema stvarnih podataka; jedan protokol bez prijelaza.
-- Neriješen konfliktni payload se čuva do razrješenja + 90 dana, privremeno do pravne potvrde.
+- Konfliktni payload se čuva do razrješenja + podesivi per-company rok (privremeni default 90 dana);
+  pravna potvrda je otvoreno pitanje, nije blocker.
 
-Preostalo prije koda:
+Otvoreno, ali nije blocker za odobrenu implementaciju:
 
-1. R3 hard-delete/retroaktivna izmjena dodjele nije zaštićena u trenutnom kodu; vlasnik prihvata
-   predloženi R3 prerequisite iz §3 ili daje drugu provjerljivu historijsku garanciju.
-2. Pravna potvrda retencije konflikt payload-a.
-3. Vlasnikov pregled i odobrenje dizajna R4a-1 (svijetlo/tamno, 360/1440).
+1. Pravna potvrda trajanja konflikt-payload retencije; privremeni per-company default je 90 dana.
+2. DBA pregled historijskih hard-delete tragova; postojeći podaci se ne mijenjaju i izbrisana historija
+   se ne može automatski vratiti.
+3. Staging preflight/rollout nakon koraka 3, prije UI koraka 7; vlasnik dostavlja preflight izlaz.
+4. Stvarni telefon/UAT i pilot-uključenje nakon implementacije; nisu zamjena za CI/concurrency testove.
 
-Dok dizajn R4a-1 nije odobren, R4 ostaje plan i referenca. Nema R4 migracije, API-ja, SQLite/app
-izmjene, seed-a ni implementacijskog koda.
+Dizajn R4a-1 je odobren „ovako“: worker self-entry glavni tok, ured read-only, svijetla/tamna tema
+na 360/1440; grupni unos šefa nije dio ovog reza. Samo R4a-1 je u opsegu.

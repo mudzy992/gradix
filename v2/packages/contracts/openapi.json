@@ -27377,6 +27377,29 @@
                                   "null"
                                 ]
                               },
+                              "voidedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "description": "ISO 8601, UTC"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "voidedByName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "voidReason": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
                               "blocked": {
                                 "type": "array",
                                 "items": {
@@ -27419,6 +27442,9 @@
                               "fromDate",
                               "toDate",
                               "note",
+                              "voidedAt",
+                              "voidedByName",
+                              "voidReason",
                               "blocked",
                               "createdAt"
                             ],
@@ -27950,6 +27976,29 @@
                                 "null"
                               ]
                             },
+                            "voidedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "description": "ISO 8601, UTC"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "voidedByName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "voidReason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "blocked": {
                               "type": "array",
                               "items": {
@@ -27992,6 +28041,9 @@
                             "fromDate",
                             "toDate",
                             "note",
+                            "voidedAt",
+                            "voidedByName",
+                            "voidReason",
                             "blocked",
                             "createdAt"
                           ],
@@ -28498,9 +28550,9 @@
       }
     },
     "/api/projects/{id}/assignments/{assignmentId}": {
-      "delete": {
-        "operationId": "delete_projects_id_assignments_assignmentId",
-        "summary": "Skidanje dodjele; ako je to bila zadnja, opseg se spušta i javlja se `scopeNotice`.",
+      "patch": {
+        "operationId": "patch_projects_id_assignments_assignmentId",
+        "summary": "Auditan kraj dodjele ili poništavanje pogrešnog reda bez brisanja historije.",
         "tags": [
           "projects"
         ],
@@ -28534,6 +28586,13 @@
                           "type": "boolean",
                           "const": true
                         },
+                        "action": {
+                          "type": "string",
+                          "enum": [
+                            "END",
+                            "VOID"
+                          ]
+                        },
                         "scopeNotice": {
                           "type": [
                             "string",
@@ -28543,6 +28602,7 @@
                       },
                       "required": [
                         "ok",
+                        "action",
                         "scopeNotice"
                       ],
                       "additionalProperties": false
@@ -28974,7 +29034,48 @@
               "type": "string"
             }
           }
-        ]
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "const": "END"
+                      }
+                    },
+                    "required": [
+                      "action"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "const": "VOID"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 10,
+                        "maxLength": 500
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "reason"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
       }
     },
     "/api/projects/{id}/override-requests": {
@@ -30163,6 +30264,29 @@
                                 "null"
                               ]
                             },
+                            "voidedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "description": "ISO 8601, UTC"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "voidedByName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "voidReason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
                             "blocked": {
                               "type": "array",
                               "items": {
@@ -30205,6 +30329,9 @@
                             "fromDate",
                             "toDate",
                             "note",
+                            "voidedAt",
+                            "voidedByName",
+                            "voidReason",
                             "blocked",
                             "createdAt"
                           ],

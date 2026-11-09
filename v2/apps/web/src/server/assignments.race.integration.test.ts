@@ -15,17 +15,20 @@
  *
  * Traži `DATABASE_URL` i `DATABASE_ADMIN_URL`; bez njih se PRESKAČE.
  */
+import { randomUUID } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
 
-const COMPANY = "cmp_r3_race";
-const PROJECT = "prj_r3_race";
-const WORKER_A = "wrk_r3_race_a";
-const WORKER_B = "wrk_r3_race_b";
-const MACHINE = "mch_r3_race";
+const RUN = randomUUID().replace(/-/g, "").slice(0, 8);
+const COMPANY = `cmp_r3_race_${RUN}`;
+const PROJECT = `prj_r3_race_${RUN}`;
+const WORKER_A = `wrk_r3_race_a_${RUN}`;
+const WORKER_B = `wrk_r3_race_b_${RUN}`;
+const MACHINE = `mch_r3_race_${RUN}`;
+const ACTOR = `usr_r3_race_${RUN}`;
 
 describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
   const admin = new Pool({ connectionString: adminUrl, max: 4 });
@@ -61,9 +64,9 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     );
 
   beforeAll(async () => {
-    await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
-    await admin.query("INSERT INTO companies (id, name, slug) VALUES ($1, 'R3 Race', 'r3-race')", [
+    await admin.query("INSERT INTO companies (id, name, slug) VALUES ($1, 'R3 Race', $2)", [
       COMPANY,
+      `r3-race-${RUN}`,
     ]);
 
     const { withCompany, companyId } = await import("@gradix/db");
@@ -91,7 +94,6 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
 
   afterAll(async () => {
     await app?.end();
-    await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
     await admin.end();
   });
 
@@ -107,7 +109,7 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
       "SELECT conname FROM pg_constraint WHERE conrelid = 'project_assignments'::regclass AND contype = 'x'",
     );
     const trigger = await admin.query(
-      "SELECT tgname FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND NOT tgisinternal",
+      "SELECT tgname FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND tgname = 'project_assignments_no_overlap' AND NOT tgisinternal",
     );
     const hasGist = constraints.rowCount === 2;
     const hasTrigger = trigger.rowCount === 1;
@@ -133,15 +135,15 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     try {
       // Prva upisuje i NE commituje — red postoji, ali ga druga transakcija još ne smije vidjeti
       // bez brave. Bez `FOR UPDATE`/advisory brave druga bi prošla provjeru i obje bi se upisale.
-      await assignment(first, { id: "pas_race_1", workerId: WORKER_A, from: "2026-05-01", to: "2026-05-31" });
+      await assignment(first, { id: `pas_${RUN}_race_1`, workerId: WORKER_A, from: "2028-05-01", to: "2028-05-31" });
 
       // Druga ide u paraleli. Ako brava radi, ona ČEKA prvu; pošto prva ne commit-uje u ovom
       // trenutku, čekanje se rješava tek kad prva završi — zato puštamo obje i gledamo ishod.
       const secondRun = assignment(second, {
-        id: "pas_race_2",
+        id: `pas_${RUN}_race_2`,
         workerId: WORKER_A,
-        from: "2026-05-15",
-        to: "2026-06-15",
+        from: "2028-05-15",
+        to: "2028-06-15",
       }).then(
         () => "uspjela" as const,
         (error: unknown) => `pala: ${String((error as { message?: string }).message)}` as const,
@@ -182,12 +184,12 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     const first = await tenantClient();
     const second = await tenantClient();
     try {
-      await assignment(first, { id: "pas_race_m1", machineId: MACHINE, from: "2026-07-01", to: "2026-07-31" });
+      await assignment(first, { id: `pas_${RUN}_race_m1`, machineId: MACHINE, from: "2028-07-01", to: "2028-07-31" });
 
       const secondRun = assignment(second, {
-        id: "pas_race_m2",
+        id: `pas_${RUN}_race_m2`,
         machineId: MACHINE,
-        from: "2026-07-10",
+        from: "2028-07-10",
       }).then(
         () => "uspjela" as const,
         (error: unknown) => `pala: ${String((error as { message?: string }).message)}` as const,
@@ -216,17 +218,17 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     const first = await tenantClient();
     const second = await tenantClient();
     try {
-      await assignment(first, { id: "pas_race_3", workerId: WORKER_B, from: "2026-09-01", to: "2026-09-30" });
+      await assignment(first, { id: `pas_${RUN}_race_3`, workerId: WORKER_B, from: "2028-09-01", to: "2028-09-30" });
 
       // Različit entitet → druga brava → ne čeka prvu. Ako ovo padne ili visi, brava je presiroka.
       const started = Date.now();
-      await assignment(second, { id: "pas_race_4", workerId: WORKER_A, from: "2026-09-01", to: "2026-09-30" });
+      await assignment(second, { id: `pas_${RUN}_race_4`, workerId: WORKER_A, from: "2028-09-01", to: "2028-09-30" });
       await second.query("COMMIT");
       await first.query("COMMIT");
 
       expect(Date.now() - started).toBeLessThan(2000);
       const rows = await admin.query(
-        "SELECT count(*)::int AS n FROM project_assignments WHERE company_id = $1 AND from_date = '2026-09-01'",
+        "SELECT count(*)::int AS n FROM project_assignments WHERE company_id = $1 AND from_date = '2028-09-01'",
         [COMPANY],
       );
       expect(rows.rows[0]!.n).toBe(2);
@@ -246,17 +248,17 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
     // Nalog mora postojati: dodjela piše audit, a audit nosi FK na korisnika.
     await admin.query(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, must_change_password)
-       VALUES ($1, 'race@example.test', 'x', 'Trka', 'Test', false)
+       VALUES ($1, $2, 'x', 'Trka', 'Test', false)
        ON CONFLICT (id) DO NOTHING`,
-      ["usr_r3_race"],
+      [ACTOR, `race-${RUN}@test.example`],
     );
-    const actor = { userId: "usr_r3_race", roles: ["OWNER" as const], scope: "COMPANY" as const, projectIds: null };
+    const actor = { userId: ACTOR, roles: ["OWNER" as const], scope: "COMPANY" as const, projectIds: null };
     const first = await createAssignment(
       pool,
       COMPANY as never,
       actor,
       PROJECT,
-      { workerId: WORKER_A, fromDate: "2027-01-01", toDate: "2027-01-31" } as never,
+      { workerId: WORKER_A, fromDate: "2028-01-01", toDate: "2028-01-31" } as never,
     );
     expect("code" in first, `prva dodjela mora proći: ${JSON.stringify(first)}`).toBe(false);
 
@@ -265,7 +267,7 @@ describeDb("R3 — preklapanje pod paralelnim zahtjevima", () => {
       COMPANY as never,
       actor,
       PROJECT,
-      { workerId: WORKER_A, fromDate: "2027-01-15", toDate: "2027-02-15" } as never,
+      { workerId: WORKER_A, fromDate: "2028-01-15", toDate: "2028-02-15" } as never,
     );
 
     expect("code" in second).toBe(true);

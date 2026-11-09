@@ -459,6 +459,8 @@ function ProjectDetail({
   const [today, setToday] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [voiding, setVoiding] = useState<ProjectAssignment | null>(null);
+  const [voidReason, setVoidReason] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const loadAssignments = useCallback(async () => {
@@ -479,25 +481,33 @@ function ProjectDetail({
     void loadAssignments();
   }, [loadAssignments]);
 
-  async function remove(assignment: ProjectAssignment) {
-    const result = await apiCall<{ ok: true; scopeNotice: string | null }>(
+  async function change(assignment: ProjectAssignment, body: { action: "END" } | { action: "VOID"; reason: string }) {
+    setError(null);
+    const result = await apiCall<{ ok: true; action: "END" | "VOID"; scopeNotice: string | null }>(
       `/api/projects/${project.id}/assignments/${assignment.id}`,
-      { method: "DELETE" },
+      patchBody(body),
     );
     if (!result.ok) {
       setError(result.message);
-      return;
+      return false;
     }
-    /*
-     * `scopeNotice` se prikazuje UMJESTO obične poruke, ne uz nju.
-     *
-     * To nije detalj: posljedica je da je osoba ostala bez ijednog projekta i da joj je opseg
-     * spušten. Ako se to izgubi među „dodjela je skinuta", niko ne zna zašto radnik od sutra vidi
-     * manje — a promjena dozvole bez objašnjenja je tačno ono što ne smijemo raditi.
-     */
-    setMessage(result.data.scopeNotice ?? "Dodjela je skinuta. Ostaje u audit tragu.");
+    setMessage(
+      result.data.scopeNotice ??
+        (body.action === "END" ? "Dodjela je završena za danas; historija ostaje." : "Dodjela je poništena uz razlog; historija ostaje."),
+    );
     await loadAssignments();
     await onChanged();
+    return true;
+  }
+
+  async function submitVoid(event: React.FormEvent) {
+    event.preventDefault();
+    if (!voiding || voidReason.trim().length < 10) return;
+    const saved = await change(voiding, { action: "VOID", reason: voidReason.trim() });
+    if (saved) {
+      setVoiding(null);
+      setVoidReason("");
+    }
   }
 
   return (
@@ -576,7 +586,20 @@ function ProjectDetail({
                     <td>
                       {formatDate(assignment.fromDate)}
                       {" – "}
-                      {assignment.toDate ? formatDate(assignment.toDate) : "danas"}
+                      {assignment.toDate ? formatDate(assignment.toDate) : "bez kraja"}
+                      {assignment.voidedAt ? (
+                        <div style={{ display: "grid", gap: 4, marginTop: 4 }}>
+                          <Chip tone="hot">Poništena · {formatDate(assignment.voidedAt)}</Chip>
+                          {assignment.voidedByName ? (
+                            <span style={{ fontSize: "var(--text-small)" }}>Poništio/la: {assignment.voidedByName}</span>
+                          ) : null}
+                          {assignment.voidReason ? <span style={{ fontSize: "var(--text-small)" }}>{assignment.voidReason}</span> : null}
+                        </div>
+                      ) : assignment.toDate && assignment.toDate < today ? (
+                        <div style={{ marginTop: 4 }}><Chip tone="hollow">Završena</Chip></div>
+                      ) : assignment.toDate === today ? (
+                        <div style={{ marginTop: 4 }}><Chip tone="hollow">Završava danas</Chip></div>
+                      ) : null}
                     </td>
                     <td>
                       {/* Iznimka se prikazuje uz red — inače bi izgledalo da blokade nema. */}
@@ -599,9 +622,25 @@ function ProjectDetail({
                     </td>
                     {canAssign ? (
                       <td>
-                        <Button variant="quiet" onClick={() => void remove(assignment)}>
-                          Skini
-                        </Button>
+                        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                          {!assignment.voidedAt && !assignment.toDate && assignment.fromDate <= today ? (
+                            <Button variant="quiet" onClick={() => void change(assignment, { action: "END" })}>
+                              Završi danas
+                            </Button>
+                          ) : null}
+                          {!assignment.voidedAt ? (
+                            <Button
+                              variant="quiet"
+                              onClick={() => {
+                                setError(null);
+                                setVoiding(assignment);
+                                setVoidReason("");
+                              }}
+                            >
+                              Pogrešna dodjela
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     ) : null}
                   </tr>
@@ -626,6 +665,39 @@ function ProjectDetail({
                 await onChanged();
               }}
             />
+          ) : null}
+
+          {voiding ? (
+            <Dialog
+              title="Poništavanje pogrešne dodjele"
+              hint={`${voiding.workerName ?? voiding.machineCode ?? "Dodjela"} ostaje sačuvana u historiji. Poništiti je možete samo ako u tom periodu nije bilo evidentiranog rada.`}
+              returnFocusTo={null}
+              onClose={() => {
+                setVoiding(null);
+                setVoidReason("");
+              }}
+            >
+              <form onSubmit={submitVoid} style={{ display: "grid", gap: "var(--space-4)", marginTop: "var(--space-5)" }}>
+                <Field label="Razlog poništavanja" htmlFor="assignment-void-reason" hint="Najmanje 10, najviše 500 znakova. Ovaj razlog se ne može mijenjati.">
+                  <textarea
+                    id="assignment-void-reason"
+                    className={inputClass}
+                    rows={4}
+                    minLength={10}
+                    maxLength={500}
+                    required
+                    value={voidReason}
+                    onChange={(event) => setVoidReason(event.target.value)}
+                  />
+                </Field>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
+                  <Button variant="quiet" onClick={() => setVoiding(null)}>Otkaži</Button>
+                  <Button type="submit" variant="primary" disabled={voidReason.trim().length < 10}>
+                    Poništi uz razlog
+                  </Button>
+                </div>
+              </form>
+            </Dialog>
           ) : null}
         </div>
       ) : (
@@ -837,7 +909,7 @@ function AssignmentDialog({
               required
             />
           </Field>
-          <Field label="Do" htmlFor="assignment-to" hint="Prazno = do skidanja.">
+          <Field label="Do" htmlFor="assignment-to" hint="Prazno = bez planiranog kraja.">
             <input
               id="assignment-to"
               type="date"

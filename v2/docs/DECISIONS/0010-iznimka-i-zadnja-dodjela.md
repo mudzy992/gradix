@@ -1,4 +1,4 @@
-# ADR 0010 — Iznimka od blokade: odvojeno pravo, zahtjev, i zadnja dodjela
+# ADR 0010 — Iznimka od blokade, zahtjev i historija dodjele
 
 **Status:** prihvaćeno (2026-11-09, pregled R3)
 **Kontekst:** R3 §5 (blokada dodjele), B5.4 (dokumentacija prije rada), odluka vlasnika u pregledu R3
@@ -8,7 +8,8 @@
 1. **Iznimku odobrava `projects.override`, ne `projects.assign`.** Samo OWNER i ADMIN.
 2. **PM sa `projects.assign` može ZATRAŽITI iznimku** — to je zahtjev, ne odobrenje.
 3. **Odobrenje traži rok.** Iznimka bez roka je trajno gašenje pravila pod drugim imenom.
-4. **Skidanje zadnje dodjele osobi sa opsegom `PROJECTS` spušta opseg na `SELF`** i to se vidi u UI.
+4. **Poništavanje zadnje važeće dodjele** osobi sa opsegom `PROJECTS` spušta opseg na `SELF`;
+   red dodjele ostaje sačuvan, a promjena se vidi u UI i auditu.
 5. **Preklapanje dodjela brani jedan mehanizam** — `EXCLUDE USING gist` ako je `btree_gist` dostupan,
    inače triger sa `pg_advisory_xact_lock`.
 
@@ -30,15 +31,19 @@ odbijeno. Test tvrdi oboje: PM prolazi sa zahtjevom, pada sa odobrenjem i sa dir
 Do R3 je bilo moguće da osoba sa opsegom „dodijeljeni projekti“ ostane bez ijedne dodjele. Tada vidi
 **ništa**: prazna lista, bez objašnjenja. To je gore od greške, jer greška se prijavi.
 
-Zato skidanje zadnje dodjele:
+Dodjela se više ne briše. Ured je može završiti postavljanjem `to_date` (raniji kraj ostaje
+provjerljiv) ili poništiti pogrešan unos uz razlog. Poništenje je dozvoljeno samo ako nema radnog
+dana radnika niti evidentirane upotrebe dodijeljene mašine u periodu. Ako poništenje ukloni zadnju
+važeću dodjelu korisnika sa opsegom `PROJECTS`, sistem:
 
 - **spušta opseg na `SELF`** — najuži, nikad širi; nikad `COMPANY`,
-- **piše audit** `user.membership_changed` sa `reason: last_project_assignment_removed`,
+- **piše audit** `user.membership_changed` sa `reason: last_project_assignment_voided`,
 - **vraća `scopeNotice`** u odgovoru, koji ekran prikazuje umjesto obične poruke.
 
-Alternativa koju smo odbili: blokirati skidanje zadnje dodjele. To bi značilo da ured ne može
-prestati dodjeljivati čovjeka bez prethodne promjene opsega — pravilo bi tjeralo ljude da rade
-zaobilaznicu. Automatsko spuštanje je reverzibilno jednim klikom i ostavlja trag.
+Normalni završetak ne mijenja ranije datume i ne briše red. Važeće dodjele za trenutni opseg računaju
+se po zoni firme i datumu; zato historijska autorizacija po `work_date` ostaje provjerljiva i poslije
+završetka. Prazan `PROJECTS` opseg koji nastane prirodnim istekom se objašnjava kroz ekran, a ne
+pretvara se u širi pristup.
 
 ## Preklapanje: `EXCLUDE` kad može, triger kad ne može
 
@@ -67,5 +72,5 @@ nije zaštita, nego takmičenje. Zato fallback NIKAD nije goli triger.
 - Dvije nove rute (`override-requests`), `project_id`/`requested_by`/`approved_at` na
   `project_assignment_overrides`, `assignment_id` i `valid_until` postaju opcioni (zahtjev ih nema).
 - `CHECK` traži rok **samo za odobrenu** iznimku — zahtjev roka nema jer ga još niko nije odredio.
-- Skidanje dodjele mijenja **tuđe** članstvo. To je jedina radnja u R3 koja to radi; zato audit i
-  vidljiva poruka, i zato odluka stoji ovdje, a ne u kodu servisa.
+- Poništavanje posljednje važeće dodjele može promijeniti **tuđe** članstvo. Zato audit i vidljiva
+  poruka; sama dodjela se ne briše.

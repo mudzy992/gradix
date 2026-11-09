@@ -56,6 +56,8 @@ export const AUDIT_ACTIONS = [
   "project.worker_assigned",
   "project.machine_assigned",
   "project.assignment_removed",
+  "project.assignment_ended",
+  "project.assignment_voided",
   "project.assignment_overridden",
   "project.override_requested",
 ] as const;
@@ -116,6 +118,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "project.worker_assigned": "Radnik dodijeljen projektu",
   "project.machine_assigned": "Mašina dodijeljena projektu",
   "project.assignment_removed": "Dodjela skinuta",
+  "project.assignment_ended": "Dodjela završena",
+  "project.assignment_voided": "Pogrešna dodjela poništena",
   "project.assignment_overridden": "Iznimka od blokade odobrena",
   "project.override_requested": "Zatražena iznimka od blokade",
 };

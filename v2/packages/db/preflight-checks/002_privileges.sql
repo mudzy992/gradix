@@ -36,9 +36,24 @@ DECLARE
     'public.login_attempt_record(text,text,integer)',
     'public.login_attempt_count(text,integer)',
     'public.login_attempt_clear(text)',
-    'public.login_attempt_retry_after(text,integer)'
+    'public.login_attempt_retry_after(text,integer)',
+    'public.sync_cursor_reserve(text,text,integer)',
+    'public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)',
+    'public.sync_cursor_sweep(text,integer)',
+    'public.sync_cursor_pull(text,bigint,integer)'
   ];
   v_function_signature TEXT;
+  v_internal_trigger_functions TEXT[] := ARRAY[
+    'public.companies_seed_equipment_categories()',
+    'public.companies_seed_obligation_types()',
+    'public.guard_project_assignment_history()',
+    'public.reject_project_assignments_truncate()',
+    'public.guard_workday_identity()',
+    'public.guard_work_entry_overlap()',
+    'public.guard_sync_receipt_update()',
+    'public.guard_sync_conflict_update()'
+  ];
+  v_sync_function_unsafe TEXT;
 BEGIN
   IF NOT has_schema_privilege(current_user, 'public', 'USAGE') THEN
     RAISE EXCEPTION 'PREFLIGHT: aplikacijska rola nema USAGE na public šemi.';
@@ -242,8 +257,45 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- App ne smije direktno pozivati neočekivanu SECURITY DEFINER funkciju. Rate-limit funkcije
-  -- su jedini dozvoljeni definer API; trigger helperi nisu direktno izvršivi od gradix_app.
+  FOREACH v_function_signature IN ARRAY v_internal_trigger_functions LOOP
+    v_function := to_regprocedure(v_function_signature);
+    IF v_function IS NULL THEN
+      RAISE EXCEPTION 'PREFLIGHT: nedostaje interni trigger helper %.', v_function_signature;
+    END IF;
+    IF has_function_privilege(current_user, v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'PREFLIGHT: aplikacijska rola ne smije direktno izvršiti trigger helper %.', v_function_signature;
+    END IF;
+  END LOOP;
+
+  v_function := to_regprocedure('public.project_assignment_no_overlap()');
+  IF v_function IS NOT NULL AND has_function_privilege(current_user, v_function, 'EXECUTE') THEN
+    RAISE EXCEPTION 'PREFLIGHT: aplikacijska rola ne smije direktno izvršiti R3 overlap trigger helper.';
+  END IF;
+
+  SELECT string_agg(p.oid::regprocedure::TEXT, ', ' ORDER BY p.oid::regprocedure::TEXT)
+    INTO v_sync_function_unsafe
+    FROM pg_proc p
+   WHERE p.oid = ANY(ARRAY[
+       to_regprocedure('public.sync_cursor_reserve(text,text,integer)')::oid,
+       to_regprocedure('public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)')::oid,
+       to_regprocedure('public.sync_cursor_sweep(text,integer)')::oid,
+       to_regprocedure('public.sync_cursor_pull(text,bigint,integer)')::oid
+     ])
+     AND (
+       NOT p.prosecdef
+       OR position('app.company_id' IN p.prosrc) = 0
+       OR position('search_path=pg_catalog, public, pg_temp' IN
+                    array_to_string(COALESCE(p.proconfig, ARRAY[]::TEXT[]), ';')) = 0
+     );
+  IF v_sync_function_unsafe IS NOT NULL THEN
+    RAISE EXCEPTION
+      'PREFLIGHT: cursor SECURITY DEFINER funkcije nemaju tenant provjeru/search_path ili nisu definer: %.',
+      v_sync_function_unsafe;
+  END IF;
+
+  -- App ne smije direktno pozivati neočekivanu SECURITY DEFINER funkciju. Samo provjerene
+  -- lookup/rate-limit/cursor funkcije su dozvoljeni definer API; trigger helperi nisu direktno
+  -- izvršivi od gradix_app.
   SELECT string_agg(p.oid::regprocedure::TEXT, ', ' ORDER BY p.oid::regprocedure::TEXT)
     INTO v_unexpected_definers
     FROM pg_proc p
@@ -257,7 +309,11 @@ BEGIN
            to_regprocedure('public.login_attempt_record(text,text,integer)')::oid,
            to_regprocedure('public.login_attempt_count(text,integer)')::oid,
            to_regprocedure('public.login_attempt_clear(text)')::oid,
-           to_regprocedure('public.login_attempt_retry_after(text,integer)')::oid
+           to_regprocedure('public.login_attempt_retry_after(text,integer)')::oid,
+           to_regprocedure('public.sync_cursor_reserve(text,text,integer)')::oid,
+           to_regprocedure('public.sync_cursor_publish(text,bigint,text,text,text,text,bigint,jsonb,boolean)')::oid,
+           to_regprocedure('public.sync_cursor_sweep(text,integer)')::oid,
+           to_regprocedure('public.sync_cursor_pull(text,bigint,integer)')::oid
          ]) AS allowed(function_oid)
         WHERE allowed.function_oid = p.oid
      );
@@ -269,6 +325,6 @@ BEGIN
     (SELECT count(*) FROM privilege_matrix);
   RAISE NOTICE 'PREFLIGHT OK: svaka public tabela bez RLS-a ima obrazložen allowlist unos; users/companies imaju pregledane RLS politike.';
   RAISE NOTICE 'PREFLIGHT OK: schema_migrations, platform_users, login_attempts i login_attempts_id_seq nemaju direktna app prava.';
-  RAISE NOTICE 'PREFLIGHT OK: kritične lookup/rate-limit funkcije su dostupne; nema neočekivanog SECURITY DEFINER EXECUTE prava.';
+  RAISE NOTICE 'PREFLIGHT OK: lookup/rate-limit/cursor funkcije imaju ograničen EXECUTE i siguran tenant-checked SECURITY DEFINER; nema neočekivanog prava.';
 END
 $privilege_preflight$;
