@@ -135,6 +135,8 @@ jobs:
 
       - name: Testovi (jedinični + integracijski na pravoj bazi)
         working-directory: v2
+        env:
+          REQUIRE_DB_TESTS: "1"
         run: pnpm test
 
       # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
@@ -178,11 +180,9 @@ jobs:
           exit "$code"
         shell: bash
 
-      - name: Provjera da migracija radi na praznoj bazi
+      - name: Migracije na praznoj i popunjenoj prethodnoj bazi
         working-directory: v2
-        run: |
-          psql "$DATABASE_ADMIN_URL" -q -c "DROP DATABASE IF EXISTS gradix_check" -c "CREATE DATABASE gradix_check"
-          DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL%/*}/gradix_check" ./infra/scripts/db-apply.sh
+        run: ./infra/scripts/check-migrations.sh
 
       # Sandbox nema lokalni Docker daemon; hosted runner ipak mora dokazati da runtime slika gradi.
       # Ne objavljujemo je u registryju — ovaj korak samo izgradi image i provjeri Dockerfile/COPY.

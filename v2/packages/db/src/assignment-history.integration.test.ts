@@ -12,6 +12,28 @@ const PROJECT = `prj_history_${RUN}`;
 const WORKER_A = `wrk_history_a_${RUN}`;
 const WORKER_B = `wrk_history_b_${RUN}`;
 
+async function expectAdminFailure(
+  admin: Pool,
+  query: string,
+  values: unknown[],
+  expected: RegExp,
+): Promise<void> {
+  const client = await admin.connect();
+  let transactionOpen = false;
+  try {
+    await client.query("BEGIN");
+    transactionOpen = true;
+    await client.query("SAVEPOINT expected_guard_failure");
+    await expect(client.query(query, values)).rejects.toThrow(expected);
+    await client.query("ROLLBACK TO SAVEPOINT expected_guard_failure");
+    await client.query("COMMIT");
+    transactionOpen = false;
+  } finally {
+    if (transactionOpen) await client.query("ROLLBACK").catch(() => undefined);
+    client.release();
+  }
+}
+
 /**
  * R3 history guard on a real PostgreSQL database. Fixtures use unique IDs and are intentionally
  * retained: the database itself forbids deleting assignment history, and reruns must not mutate
@@ -82,22 +104,21 @@ describeDb("R3 assignment-history guard (PostgreSQL)", () => {
     );
     expect(rights.rows[0]).toMatchObject({ can_delete: false, can_truncate: false });
 
-    await expect(
-      admin.query("DELETE FROM public.project_assignments WHERE id = $1", [`pas_history_a_${RUN}`]),
-    ).rejects.toThrow(/PROJECT_ASSIGNMENT_DELETE_FORBIDDEN/);
+    await expectAdminFailure(
+      admin,
+      "DELETE FROM public.project_assignments WHERE id = $1",
+      [`pas_history_a_${RUN}`],
+      /PROJECT_ASSIGNMENT_DELETE_FORBIDDEN/,
+    );
 
-    const client = await admin.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SAVEPOINT before_forbidden_truncate");
-      await expect(client.query("TRUNCATE TABLE public.project_assignments")).rejects.toThrow(
-        /PROJECT_ASSIGNMENT_TRUNCATE_FORBIDDEN/,
-      );
-      await client.query("ROLLBACK TO SAVEPOINT before_forbidden_truncate");
-      await client.query("ROLLBACK");
-    } finally {
-      client.release();
-    }
+    // Without CASCADE PostgreSQL rejects the referenced table before ON TRUNCATE triggers run.
+    // CASCADE reaches our guard; the savepoint keeps the connection reusable after the expected error.
+    await expectAdminFailure(
+      admin,
+      "TRUNCATE TABLE public.project_assignments CASCADE",
+      [],
+      /PROJECT_ASSIGNMENT_TRUNCATE_FORBIDDEN/,
+    );
   });
 
   it("to_date se postavlja samo danas/ubuduće, može se produžiti, nikad skratiti", async () => {
@@ -240,7 +261,7 @@ describeDb("R3 assignment-history guard (PostgreSQL)", () => {
   });
 
   it("historical assignment FK-ovi sprječavaju brisanje projekta i radnika", async () => {
-    await expect(admin.query("DELETE FROM public.projects WHERE id = $1", [PROJECT])).rejects.toThrow(/foreign key/i);
-    await expect(admin.query("DELETE FROM public.workers WHERE id = $1", [WORKER_A])).rejects.toThrow(/foreign key/i);
+    await expectAdminFailure(admin, "DELETE FROM public.projects WHERE id = $1", [PROJECT], /foreign key/i);
+    await expectAdminFailure(admin, "DELETE FROM public.workers WHERE id = $1", [WORKER_A], /foreign key/i);
   });
 });

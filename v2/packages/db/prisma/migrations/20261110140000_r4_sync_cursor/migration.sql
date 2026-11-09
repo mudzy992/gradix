@@ -340,10 +340,10 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  SELECT next_seq, cursor_floor
+  SELECT allocator.next_seq, allocator.cursor_floor
     INTO v_next_seq, v_floor
-    FROM public.sync_cursor_allocators
-   WHERE company_id = p_company_id;
+    FROM public.sync_cursor_allocators AS allocator
+   WHERE allocator.company_id = p_company_id;
   IF FOUND THEN
     v_head := v_next_seq - 1;
   END IF;
