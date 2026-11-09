@@ -60,9 +60,9 @@ MVP (B4/B11 R0–R6): firme/korisnici/role/audit · projekti s fazama i budžeto
 ## d) Infrastruktura iz v1 koja se preuzima (bez tajni)
 
 - **Baza:** eksterni PostgreSQL, mreža `db_net`, TLS `verify-ca`; CA `/data/coolify/ssl/coolify-ca.crt` → `/etc/ssl/certs/coolify-ca.crt`; jedna `DATABASE_URL`; preflight na startu pada glasno.
-- **Redis:** `redis-core` na `redis_net`, TLS **6380** (6379 ugašen), ACL korisnik samo na `gradix:*`, CA `/data/coolify/ssl/redis-core/redis-ca.crt`. U v2 samo uz opravdanje i definisan fail-open.
+- **Redis:** `redis-core` na `redis_net`, TLS **6380** (6379 ugašen). V2 staging koristi postojeći ACL korisnik `gradix_v2`, ograničen na `~gradix:stg:*` prema `infra/redis/acl-v2.txt`; v1 namespace se ne mijenja. CA `/data/coolify/ssl/redis-core/redis-ca.crt`. U v2 samo za opcionalnu dijagnostiku; aplikacija ne zavisi od Redisa.
 - **Domene:** `gradix.ba101.top` + `api.gradix.ba101.top`, tri usklađene postavke (API URL, CSP `connect-src` **i** `img-src`, CORS bez trailing slash). Raspored [OTVORENO].
-- **Fajlovi:** MinIO `ghcr.io/coollabsio/minio:latest`, podaci `/mnt/shared-app-files/gradix/minio`, bucket `gradix`; prefiks po firmi, bez listinga.
+- **Fajlovi (v2 staging):** MinIO `ghcr.io/coollabsio/minio:latest`, host podaci `/mnt/shared-app-files/gradix-v2/minio`; staging bucket je `gradix-stg` (v1 bucket `gradix` ostaje odvojen), objekti su tenant-scoped bez listinga.
 - **Coolify/Docker:** bez `ports:` (blue/green), mreže `external`, CA mount `create_host_path: false`, entrypoint preflight → `migrate deploy` → `exec`, `HEALTHCHECK` na liveness, sve tajne kroz Coolify, ručni seed (produkcija = jedan platform-admin).
 - **Okoline:** lokalni compose + staging + produkcija; bez staginga pilot ide naslijepo. Provjereno u v1: CI servisi su Postgres 16 + MinIO, **bez Redisa** (u skladu s fail-open pravilom); backup/restore drill postoji kao noćni workflow sa `backup.sh`/`restore.sh` — preuzimam **ideju drilla**, ne skripte.
 - **Tajne:** preuzimam samo šemu varijabli, ne vrijednosti; rotacija prije prve deploy-a v2.

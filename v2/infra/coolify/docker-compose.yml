@@ -34,7 +34,7 @@ services:
       # Redis is informational today; rate limiting remains PostgreSQL-backed.
       REDIS_HOST: ${REDIS_HOST:-redis-core}
       REDIS_PORT: ${REDIS_PORT:-6380}
-      REDIS_USER: ${REDIS_USER:-}
+      REDIS_USER: ${REDIS_USER:-gradix_v2}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_PREFIX: ${REDIS_PREFIX:-gradix:stg:}
       REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/etc/ssl/certs/redis/redis-ca.crt}
@@ -78,9 +78,10 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Staging-only MinIO. It has its own named data volume and is not attached to v1 storage.
+  # Staging-only MinIO; persistent host data stays isolated from v1 storage.
+  # Prepare the host directory and migrate any existing named-volume data before deploying.
   minio:
-    image: minio/minio:RELEASE.2025-08-13T08-35-41Z
+    image: ghcr.io/coollabsio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     restart: unless-stopped
     environment:
@@ -88,7 +89,11 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
       SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
     volumes:
-      - gradix_stg_minio_data:/data
+      - type: bind
+        source: /mnt/shared-app-files/gradix-v2/minio
+        target: /data
+        bind:
+          create_host_path: false
     networks:
       - default
     expose:
@@ -115,10 +120,6 @@ services:
       - ./infra/minio/staging-policy.json:/policy.json:ro
     networks:
       - default
-
-volumes:
-  gradix_stg_minio_data:
-    name: gradix-stg-minio-data
 
 networks:
   # Keep Coolify's default stack network for proxy routing and minio service DNS.

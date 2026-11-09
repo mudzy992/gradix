@@ -1,30 +1,27 @@
-# Gradix v2 staging — Redis ACL (vlasnik infrastrukture izvršava kroz redis-cli; agent ne dira Redis).
+# Gradix v2 staging — read-only audit ugovora Redis ACL-a.
+# Ovu provjeru izvršava vlasnik infrastrukture privilegovanim redis-cli nalogom;
+# agent ne pristupa Redis serveru niti mijenja ACL.
 #
-# Redis je u ovoj verziji samo opcionalno dijagnostičko odredište; aplikacija ga ne koristi.
-# Login rate limit ostaje u PostgreSQL-u i pri DB grešci odbija prijavu (fail-closed).
-# Ako se staging ACL uključi, namespace je obavezno odvojen od v1: `gradix:stg:*`.
+# LIVE korisnik `gradix_v2` već postoji i napravljen je prema ovom ugovoru.
+# Ovaj fajl je namjerno samo za pregled: NE pokretati ACL SETUSER, posebno ne sa `reset`;
+# to bi moglo resetovati postojeću lozinku, ključeve i dozvole. Ne kreirati niti rotirati
+# live korisnika u okviru ove izmjene. Ako se live stanje razlikuje, zaustaviti se i prvo
+# dogovoriti zasebnu, kontrolisanu ACL promjenu.
 #
-# Redis TLS ostaje na 6380; kontejneru se montira CA, a web koristi samo REDIS_TLS_CA_FILE.
-# Ne postavljati REDIS_CA_FILE — to je zastarjeli duplikat.
+# Očekivani efektivni ugovor za `gradix_v2`:
+#   status: on
+#   key pattern: ~gradix:stg:*
+#   commands: +ping +set +pttl +get +del
+# Bez `~*`, `+@all`, pristupa v1 namespace-u, KEYS/SCAN ili administrativnih komandi.
+# Trenutna dijagnostika koristi samo PING i prefiksirani SET/PTTL/GET/DEL.
+# Redis TLS ostaje na 6380; CA i REDIS_TLS_CA_FILE putanje su opisane u docs/COOLIFY.md.
 
-# 1) Provjeri postojeće korisnike (read-only):
-ACL LIST
-
-# 2) Provjeri da v1 ključevi ostanu netaknuti:
-SCAN 0 MATCH gradix:* COUNT 100
-
-# 3) Kreiraj/uskadi staging ACL korisnika. Zamijeni placeholder van repozitorija.
-#    Trenutne dijagnostike trebaju samo PING i prefiksirani SET/PTTL/GET/DEL.
-#    Bez @all, KEYS, SCAN, administrativnih komandi ili pristupa v1 gradix:* namespace-u.
-ACL SETUSER gradix_v2 reset on '>STAGING_TAJNA_ZAMIJENITI_VAN_REPOA' '~gradix:stg:*' +ping +set +pttl +get +del
-
-# 4) Potvrdi obrazac ključa i komandi:
+# Read-only provjera postojećeg korisnika (pokrenuti kao Redis ACL administrator):
 ACL GETUSER gradix_v2
-# Očekuj samo ~gradix:stg:* i eksplicitno navedene komande; nikad ~* ili +@all.
 
-# 5) Staging web kontejner koristi:
-#    REDIS_HOST=redis-core (isti external redis_net)
-#    REDIS_PORT=6380
-#    REDIS_USER=gradix_v2
-#    REDIS_PREFIX=gradix:stg:
-#    REDIS_TLS_CA_FILE=/etc/ssl/certs/redis-ca.crt
+# Staging web kontejner koristi:
+#   REDIS_HOST=redis-core (isti external redis_net)
+#   REDIS_PORT=6380
+#   REDIS_USER=gradix_v2
+#   REDIS_PREFIX=gradix:stg:
+#   REDIS_TLS_CA_FILE=/etc/ssl/certs/redis/redis-ca.crt

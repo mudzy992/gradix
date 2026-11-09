@@ -10,7 +10,7 @@ v2 smije koristiti postojeću infrastrukturu (MinIO na hostu, Redis na `redis-co
 
 1. **Bucket:** `gradix-v2` (v1 zadržava `gradix`). Novi bucket, ne dijeljeni.
 2. **Prefiks unutar bucketa:** `gx2/` — svaki objekat je `gx2/{companyId}/{yyyy}/{mm}/{uuid}.{ext}`. Prefiks firme ostaje obavezan (tenant izolacija na nivou putanje).
-3. **Redis:** prefiks `gx2:` i zaseban ACL korisnik `gradix_v2` (komanda za `redis-cli` je u `infra/redis/acl-v2.txt`, izvršava vlasnik).
+3. **Redis:** `gx2:` je bio početni prijedlog; postojeći v2 staging ACL korisnik `gradix_v2` koristi namespace `gradix:stg:` prema `infra/redis/acl-v2.txt`. Staging konfiguracija je mjerodavna; ne preimenovati postojeći korisnik ili ključeve bez zasebne migracije.
 4. **Privremeno stanje:** dok bucket ne postoji, v2 ne piše priloge. U R0 priloga nema, pa ovo ništa ne blokira. Bucket se koristi od R5 (gorivo, dnevni pregled mašine).
 
    **Ažurirano 2026-11-08 (R2b):** prilozi uz obaveze (ljekarski, registracije, licence) uvode
