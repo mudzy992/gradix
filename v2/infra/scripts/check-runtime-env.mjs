@@ -83,6 +83,18 @@ if (!/MINIO_ROOT_USER:\s*\$\{MINIO_ROOT_USER:\?Set MINIO_ROOT_USER in Coolify\}/
 if (!/^\s{6}MINIO_API_CORS_ALLOW_ORIGIN:\s*\$\{MINIO_CORS_ALLOWED_ORIGIN:-https:\/\/gradix\.ba101\.top\}\s*$/m.test(minioEnvironment)) {
   throw new Error("MinIO server must receive the exact web origin via its global API CORS allowlist.");
 }
+const minioExpose = minioSection.match(/^ {4}expose:\n((?:^ {6}.*\n?)*)/m)?.[1] ?? "";
+if (!/^\s{6}- "9000"(?:\s|$)/m.test(minioExpose) || !/^\s{6}- "9001"(?:\s|$)/m.test(minioExpose)) {
+  throw new Error("MinIO must expose S3 API port 9000 and Console port 9001 to the Coolify proxy network.");
+}
+if (/^ {4}ports:/m.test(minioSection)) {
+  throw new Error("MinIO ports must not be published directly on the host; use separate Coolify domain routes.");
+}
+if (!/^\s{6}SERVICE_FQDN_MINIO:\s*\$\{SERVICE_FQDN_MINIO:-\}\s*$/m.test(minioEnvironment) ||
+    !/^\s{6}SERVICE_FQDN_MINIO_9001:\s*\$\{SERVICE_FQDN_MINIO_9001:-https:\/\/minio-console\.gradix\.ba101\.top\}\s*$/m.test(minioEnvironment) ||
+    !/^\s{6}MINIO_BROWSER_REDIRECT_URL:\s*\$\{MINIO_BROWSER_REDIRECT_URL:-https:\/\/minio-console\.gradix\.ba101\.top\}\s*$/m.test(minioEnvironment)) {
+  throw new Error("MinIO API and Console must retain separate Coolify routing variables and the Console redirect URL.");
+}
 if (/^\s{6}MINIO_(?:ACCESS_KEY|SECRET_KEY):/m.test(minioEnvironment)) {
   throw new Error("App MinIO credentials must not be passed to the MinIO server process.");
 }
@@ -116,4 +128,4 @@ for (const name of ["MINIO_PUBLIC_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_K
 }
 
 console.log(`Coolify env contract OK; code-read names: ${[...referencedNames].sort().join(", ")}`);
-console.log("Staging defaults OK: fixed MinIO/Redis contracts, server-wide MinIO API CORS, shell-enabled mc init, required MinIO root secrets and persistent host bind.");
+console.log("Staging defaults OK: fixed MinIO/Redis contracts, server-wide MinIO API CORS, separate API/Console routes, shell-enabled mc init, required MinIO root secrets and persistent host bind.");
