@@ -300,8 +300,13 @@ describeDb("API (integracija na pravoj bazi)", () => {
 
     const loginCompanyB = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD }));
     const cookieCompanyB = cookieFrom(loginCompanyB, "gx_at");
+    const companyBPullLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const companyBPull = await pullRoute(getRequest("http://localhost/api/sync/pull", cookieCompanyB));
-    const companyBBody = await bodyOf<{ data: { events: unknown[] } }>(companyBPull);
+    const companyBErrors = companyBPullLog.mock.calls.map((args) => args.map(String).join(" ")).join("\n");
+    companyBPullLog.mockRestore();
+    const companyBResponse = await bodyOf<Record<string, unknown>>(companyBPull);
+    expect(companyBPull.status, `${JSON.stringify(companyBResponse)} ${companyBErrors}`).toBe(200);
+    const companyBBody = companyBResponse as { data: { events: unknown[] } };
     expect(companyBBody.data.events).toHaveLength(0);
     const crossTenantCursor = await pullRoute(getRequest(
       `http://localhost/api/sync/pull?cursor=${encodeURIComponent(ownBody.data.cursor)}`,
