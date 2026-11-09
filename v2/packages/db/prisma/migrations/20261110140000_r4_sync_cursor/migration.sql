@@ -346,6 +346,10 @@ BEGIN
    WHERE allocator.company_id = p_company_id;
   IF FOUND THEN
     v_head := v_next_seq - 1;
+  ELSE
+    -- SELECT INTO clears targets on no row, so restore the empty-tenant floor explicitly.
+    v_next_seq := 1;
+    v_floor := 0;
   END IF;
   IF p_after_cursor < v_floor THEN
     RAISE EXCEPTION 'SYNC_CURSOR_EXPIRED'

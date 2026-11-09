@@ -60,6 +60,21 @@ describeDb("R4 cursor alokacija i change log (PostgreSQL)", () => {
     await admin.end();
   });
 
+  it("prazan tenant dobija prazan cursor na nultom floor-u", async () => {
+    const page = await withCompany(app, companyId(COMPANY_B), async (client) =>
+      client.query<{ events: unknown[]; next_cursor: string; cursor_floor: string; has_more: boolean }>(
+        "SELECT events, next_cursor::text, cursor_floor::text, has_more FROM public.sync_cursor_pull($1, 0, 100)",
+        [COMPANY_B],
+      ),
+    );
+    expect(page.rows[0]).toMatchObject({
+      events: [],
+      next_cursor: "0",
+      cursor_floor: "0",
+      has_more: false,
+    });
+  });
+
   it("ne preskače niži slot kad se viši poslovni upis commit-a prvi na drugoj konekciji", async () => {
     const first = await withCompany(app, companyId(COMPANY_A), async (client) =>
       client.query<{ seq: string }>(
