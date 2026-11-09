@@ -90,10 +90,14 @@ if (!/^\s{6}- "9000"(?:\s|$)/m.test(minioExpose) || !/^\s{6}- "9001"(?:\s|$)/m.t
 if (/^ {4}ports:/m.test(minioSection)) {
   throw new Error("MinIO ports must not be published directly on the host; use separate Coolify domain routes.");
 }
+const minioApiPortMarker = minioEnvironment.indexOf("SERVICE_FQDN_MINIO_9000:");
+const minioConsolePortMarker = minioEnvironment.indexOf("SERVICE_FQDN_MINIO_9001:");
 if (!/^\s{6}SERVICE_FQDN_MINIO:\s*\$\{SERVICE_FQDN_MINIO:-\}\s*$/m.test(minioEnvironment) ||
-    !/^\s{6}SERVICE_FQDN_MINIO_9001:\s*\$\{SERVICE_FQDN_MINIO_9001:-https:\/\/minio-console\.gradix\.ba101\.top\}\s*$/m.test(minioEnvironment) ||
+    !/^\s{6}SERVICE_FQDN_MINIO_9000:\s*\$\{SERVICE_FQDN_MINIO_9000:-\}\s*$/m.test(minioEnvironment) ||
+    !/^\s{6}SERVICE_FQDN_MINIO_9001:\s*\$\{SERVICE_FQDN_MINIO_9001:-\}\s*$/m.test(minioEnvironment) ||
+    minioApiPortMarker < 0 || minioConsolePortMarker < 0 || minioApiPortMarker >= minioConsolePortMarker ||
     !/^\s{6}MINIO_BROWSER_REDIRECT_URL:\s*\$\{MINIO_BROWSER_REDIRECT_URL:-https:\/\/minio-console\.gradix\.ba101\.top\}\s*$/m.test(minioEnvironment)) {
-  throw new Error("MinIO API and Console must retain separate Coolify routing variables and the Console redirect URL.");
+  throw new Error("MinIO must keep the Coolify 9000 API marker before the 9001 Console marker and use the public Console redirect URL.");
 }
 if (/^\s{6}MINIO_(?:ACCESS_KEY|SECRET_KEY):/m.test(minioEnvironment)) {
   throw new Error("App MinIO credentials must not be passed to the MinIO server process.");
