@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 # Idempotent, staging-only bucket/user/CORS bootstrap. Never prints credential values.
-set -eu
+set -euo pipefail
 
 bucket=${MINIO_BUCKET:-gradix-stg}
 if [ "$bucket" != "gradix-stg" ]; then
@@ -16,6 +16,55 @@ if [ -z "${MINIO_ACCESS_KEY:-}" ] || [ -z "${MINIO_SECRET_KEY:-}" ]; then
   echo "SKIP: MinIO app credentials are not configured; set MINIO_ACCESS_KEY and MINIO_SECRET_KEY in Coolify secrets."
   exit 0
 fi
+
+if [ "${#MINIO_ACCESS_KEY}" -lt 3 ]; then
+  echo "ERROR: MINIO_ACCESS_KEY is too short; MinIO requires at least 3 characters." >&2
+  exit 1
+fi
+if [ "${#MINIO_SECRET_KEY}" -lt 8 ]; then
+  echo "ERROR: MINIO_SECRET_KEY is too short; MinIO requires at least 8 characters." >&2
+  exit 1
+fi
+if [ "$MINIO_ACCESS_KEY" = "$MINIO_ROOT_USER" ]; then
+  echo "ERROR: MINIO_ACCESS_KEY must differ from MINIO_ROOT_USER; MinIO cannot create another user with the root access key." >&2
+  exit 1
+fi
+case "$MINIO_ACCESS_KEY" in
+  " "*|*" ")
+    echo "ERROR: MINIO_ACCESS_KEY must not have leading or trailing spaces." >&2
+    exit 1
+    ;;
+esac
+
+redact_credentials() {
+  local text="$1" value
+  local -a secrets=("$MINIO_ROOT_PASSWORD" "$MINIO_SECRET_KEY" "$MINIO_ROOT_USER" "$MINIO_ACCESS_KEY")
+  for value in "${secrets[@]}"; do
+    if [ -n "$value" ]; then
+      text=${text//"$value"/'[REDACTED]'}
+    fi
+  done
+  printf '%s' "$text"
+}
+
+run_mc_or_explain() {
+  local description="$1" output status
+  shift
+  if output=$("$@" 2>&1); then
+    return 0
+  else
+    status=$?
+  fi
+  output=$(redact_credentials "$output")
+  printf 'ERROR: %s (mc exit %s)' "$description" "$status" >&2
+  if [ -n "$output" ]; then
+    printf ': %s' "$output" >&2
+  else
+    printf ': mc returned no error detail' >&2
+  fi
+  printf '\n' >&2
+  return 1
+}
 
 cors_origin=${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
 case "$cors_origin" in
@@ -49,8 +98,8 @@ if ! mc admin policy info gradix-stg gradix-stg-app >/dev/null 2>&1; then
 fi
 
 if ! mc admin user info gradix-stg "$MINIO_ACCESS_KEY" >/dev/null 2>&1; then
-  if ! mc admin user add gradix-stg "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" >/dev/null 2>&1; then
-    echo "ERROR: could not create the staging MinIO app user." >&2
+  if ! run_mc_or_explain "could not create the staging MinIO app user" \
+    mc admin user add gradix-stg "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"; then
     exit 1
   fi
 fi

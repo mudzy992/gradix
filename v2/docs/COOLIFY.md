@@ -64,7 +64,7 @@ build ponavlja sa starom greškom.
 | `MINIO_ENDPOINT` | `http://minio:9000` | Fiksni interni Compose DNS za server-side S3; ne dodavati Coolify override. |
 | `MINIO_BUCKET` / `MINIO_REGION` | `gradix-stg` / `us-east-1` | Fiksni staging bucket i region; ne dodavati Coolify override. Init kreira bucket-scoped app policy/CORS. |
 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | MinIO server admin secrets | Oba su obavezna Coolify secrets; Compose odbija prazne vrijednosti umjesto da MinIO krene sa `minioadmin:minioadmin`. Identični su samo na MinIO serveru i `minio-init`, ne u web appu. |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | App-only creds za web i `minio-init`; ne postavljati ih na MinIO server. Ukloni stare server-side varijable istih naziva iz Coolify MinIO servisa. |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | zaseban staging app user | Access key mora imati najmanje 3 znaka i razlikovati se od `MINIO_ROOT_USER`; secret najmanje 8 znakova. App-only creds za web i `minio-init`; ne postavljati ih na MinIO server. Ukloni stare server-side varijable istih naziva iz Coolify MinIO servisa. |
 | `MINIO_CORS_ALLOWED_ORIGIN` | tačan web origin, npr. `https://gradix.ba101.top` | Bucket CORS dozvoljava GET/PUT, `Content-Type` i izlaže inline-display zaglavlja. Bez patha i završnog `/`. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
