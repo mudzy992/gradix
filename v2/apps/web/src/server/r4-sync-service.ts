@@ -652,7 +652,7 @@ async function applyReservedItem(
     // items. A second payload under the same localId observes the first committed receipt.
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
-      [`${actor.companyId}\u0000${actor.userId}\u0000${item.localId}`],
+      [reservationKey(actor.companyId, actor.userId, item.localId, "operation")],
     );
     const prior = await client.query<StoredReceipt>(
       `SELECT request_hash, result FROM public.sync_receipts
