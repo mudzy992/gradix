@@ -148,3 +148,9 @@ jobs:
         run: |
           psql "$DATABASE_ADMIN_URL" -q -c "DROP DATABASE IF EXISTS gradix_check" -c "CREATE DATABASE gradix_check"
           DATABASE_ADMIN_URL="${DATABASE_ADMIN_URL%/*}/gradix_check" ./infra/scripts/db-apply.sh
+
+      # Sandbox nema lokalni Docker daemon; hosted runner ipak mora dokazati da runtime slika gradi.
+      # Ne objavljujemo je u registryju — ovaj korak samo izgradi image i provjeri Dockerfile/COPY.
+      - name: Izgradi web Docker image
+        working-directory: v2
+        run: docker build --tag gradix-web:ci --file infra/docker/Dockerfile.web .
