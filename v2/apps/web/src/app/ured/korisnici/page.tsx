@@ -24,6 +24,7 @@ export default async function UsersPage() {
   const auth = await authenticate(request);
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
+  if (!can(auth.ctx.roles, "users.manage")) redirect("/pregled");
 
   return (
     <main className="mx-auto w-full max-w-6xl">

@@ -13,10 +13,10 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { authenticate } from "@/server/tenant-context";
 import { ACCESS_COOKIE } from "@/server/session";
-import { can } from "@/server/permissions";
 import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import Shell, { type NavGroup } from "./shell";
+import { navGroupsForRoles } from "./nav";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
@@ -40,85 +40,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
     return result.rows[0] ?? null;
   });
 
-  const canManageUsers = can(ctx.roles, "users.manage");
-  const canViewWorkers = can(ctx.roles, "workers.view");
-  const canManageWorkers = can(ctx.roles, "workers.manage");
-  const canViewEquipment = can(ctx.roles, "equipment.view");
-  const canViewObligations = can(ctx.roles, "obligations.view");
-  const canViewProjects = can(ctx.roles, "projects.view");
-  const canViewAudit = can(ctx.roles, "audit.view");
-  const canViewRoles = can(ctx.roles, "roles.view");
-
-  const groups: NavGroup[] = [
-    {
-      label: "Pregled",
-      items: [{ href: "/pregled", label: "Pregled", icon: "home", description: "Mašine i offline zapisi" }],
-    },
-    {
-      // Redoslijed je redoslijed rada: projekat je okvir u koji ljudi i mašine ulaze, pa ide prvi;
-      // zatim rokovi, pa mašine i radnici, pa uvoz kad se prelazi sa papira.
-      label: "Evidencija",
-      items: [
-        ...(canViewProjects
-          ? [
-              {
-                href: "/ured/projekti",
-                label: "Projekti",
-                icon: "pin" as const,
-                description: "Gradilišta, tim, mašine",
-              },
-            ]
-          : []),
-        ...(canViewObligations
-          ? [
-              {
-                href: "/ured/rokovi",
-                label: "Rokovi",
-                icon: "calendar" as const,
-                description: "Ljekarski, registracije, licence",
-              },
-            ]
-          : []),
-        ...(canViewEquipment
-          ? [
-              {
-                href: "/ured/masine",
-                label: "Mašine i vozila",
-                icon: "truck" as const,
-                description: "Inventar, kategorije, brojilo",
-              },
-            ]
-          : []),
-        ...(canViewWorkers
-          ? [
-              {
-                href: "/ured/radnici",
-                label: "Radnici",
-                icon: "users" as const,
-                description: "Ljudi, kontakt, angažman",
-              },
-            ]
-          : []),
-        ...(canManageWorkers
-          ? [{ href: "/ured/uvoz", label: "Uvoz iz Excela", icon: "upload" as const, description: "Spisak sa papira" }]
-          : []),
-      ],
-    },
-    {
-      label: "Ured",
-      items: [
-        ...(canManageUsers
-          ? [{ href: "/ured/korisnici", label: "Korisnici", icon: "users" as const, description: "Ljudi, role, pristup" }]
-          : []),
-        ...(canViewRoles
-          ? [{ href: "/ured/role", label: "Pristup i role", icon: "shield" as const, description: "Ko šta smije" }]
-          : []),
-        ...(canViewAudit
-          ? [{ href: "/ured/audit", label: "Audit trag", icon: "list" as const, description: "Ko je šta mijenjao" }]
-          : []),
-      ],
-    },
-  ].filter((group) => group.items.length > 0);
+  const groups: NavGroup[] = navGroupsForRoles(ctx.roles);
 
   // Ime za header: ime i prezime iz baze, ne iz tokena (token nosi samo id).
   const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "Korisnik";

@@ -21,6 +21,8 @@ import { openDb } from "../db/sqlite";
 import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
+import { mobileNavForRoles } from "../lib/mobile-nav";
+import { logoutExplanation } from "../teren/SignOutButton";
 
 type Phase = "loading" | "login" | "ready";
 
@@ -114,9 +116,7 @@ export default function IndexScreen() {
   async function requestSignOut() {
     const db = await openDb();
     const summary = await getLogoutSummary(db);
-    const explanation = summary.pendingCount + summary.legacyR0Count > 0
-      ? `R4 outbox redovi: ${summary.pendingCount}. Stari R0 zapisi koji nemaju vezan nalog: ${summary.legacyR0Count}. Odjava briše privatni keš i cursor, ali čuva R4 redove i konfliktne payload-e; R0 zapisi se ne šalju drugim protokolom.`
-      : "Odjava će obrisati lokalni keš i sync cursor. Neposlani redovi i konfliktni payload-i se nikad ne brišu automatski.";
+    const explanation = logoutExplanation(summary);
     Alert.alert("Potvrdi odjavu", explanation, [
       { text: "Ostani prijavljen", style: "cancel" },
       { text: "Odjavi se", style: "destructive", onPress: () => { void finishSignOut(db); } },
@@ -196,44 +196,16 @@ export default function IndexScreen() {
         {themeToggle}
       </View>
 
-      <Link href="/moj-dan" asChild>
-        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
-          <Text style={[styles.buttonText, styles.secondaryText]}>Moj dan</Text>
-        </Pressable>
-      </Link>
-
-      {profile?.user.roles.includes("SITE_SUPERVISOR") ? (
-        <Link href="/grupa" asChild>
+      {/* Stavke dolaze iz lib/mobile-nav (jedina definicija po roli). `asChild` + jedan
+          stil kroz jedanStil(...) je obavezno: niz stilova kroz Slot baca grešku. */}
+      {mobileNavForRoles(profile?.user.roles ?? []).map((entry) => (
+        <Link key={entry.href} href={entry.href} asChild>
           <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
-            <Text style={[styles.buttonText, styles.secondaryText]}>Grupa — unos za ekipu</Text>
+            <Text style={[styles.buttonText, styles.secondaryText]}>{entry.label}</Text>
           </Pressable>
         </Link>
-      ) : null}
+      ))}
 
-      {message && <Text style={styles.hint}>{message}</Text>}
-
-      {/*
-        Rokovi su odvojen ekran (R2b), samo čitanje. Link je ovdje, a ne u meniju: na terenu se
-        dolazi zbog dva pitanja — „šta nisam poslao“ i „šta mi istječe“.
-      */}
-      {/*
-        `asChild` NIJE upotrijebljen namjerno: expo-router 58 kroz `<Slot>` klonira dijete i baca
-        grešku ako ono dobije NIZ stilova (`style={[a, b]}`), a `Pressable` ovdje ima dva stila.
-        Zato stil ide kroz `jedanStil(...)` (jedan objekat, ne niz) — i to ne samo ovdje: pravilo
-        provjerava `src/lib/styles.test.ts`, jer ga ni `tsc` ni lint ne vide.
-      */}
-      <Link href="/rokovi" asChild>
-        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
-          <Text style={[styles.buttonText, styles.secondaryText]}>Moji rokovi</Text>
-        </Pressable>
-      </Link>
-
-      {/* R3: projekti na koje je osoba dodijeljena — isto samo čitanje, isti razlog. */}
-      <Link href="/projekti" asChild>
-        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
-          <Text style={[styles.buttonText, styles.secondaryText]}>Moji projekti</Text>
-        </Pressable>
-      </Link>
       <Pressable
         style={jedanStil(styles.button, styles.secondaryButton)}
         onPress={requestSignOut}
