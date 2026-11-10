@@ -88,8 +88,19 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
     function onPointerDown(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) setOpen(false);
     }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        // Fokus se vraća na „⋯“ koje je meni otvorilo — ne na <body>.
+        ref.current?.querySelector<HTMLElement>("button")?.focus();
+      }
+    }
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open ]);
   if (actions.length === 0) return null;
   const [primary, ...rest] = actions;
@@ -112,9 +123,10 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
                   type="button"
                   className="gx-menu-item"
                   style={action.danger ? { color: "var(--danger)" } : undefined}
-                  onClick={(event) => {
+                  onClick={() => {
                     setOpen(false);
-                    action.onSelect(event.currentTarget);
+                    // Fokus/cilj je „⋯“ okidač, ne stavka menija (ona nestaje).
+                    action.onSelect(ref.current?.querySelector<HTMLElement>("button") ?? null);
                   }}
                 >
                   {action.label}
