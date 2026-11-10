@@ -28,6 +28,7 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/login": "javna stranica prijave, prije sesije",
   "/lozinka/postavi": "dolazi se isključivo token-linkom iz pozivnice/reseta",
   "/lozinka/promjena": "korisnički meni u okviru + prisilna promjena poslije prijave",
+  "/katalog": "U5 katalog UI komponenti — razvojni alat, otvara se direktnim URL-om",
 };
 
 describe("dosegljivost stranica (A4a)", () => {

@@ -24,7 +24,7 @@ const stripComments = (source: string) =>
 
 const globals = stripComments(read("app/globals.css"));
 const shell = stripComments(read("app/shell.css"));
-const ui = stripComments(read("components/ui.tsx"));
+const ui = stripComments(read("components/ui/primitives.tsx"));
 const shellTsx = stripComments(read("components/shell.tsx"));
 // Referenca je izvor istine: ono što piše ovdje mora postojati i u njoj, i obrnuto.
 const reference = readFileSync(

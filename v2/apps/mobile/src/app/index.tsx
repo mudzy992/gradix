@@ -2,25 +2,15 @@
  * Privremeni teren ekran: auth and profile remain available while R4 local persistence is gated.
  * R0 note submission is deliberately removed; SQLite outbox wiring follows its approved step.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "expo-router";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 import { login, me, getAccessToken, type Me } from "../api/client";
 import { getLogoutSummary, logoutMobile, REVOKED_SESSION_MESSAGE } from "../api/session-lifecycle";
 import { activateLocalAccount, clearLocalAccountData } from "../db/r4-outbox";
 import { openDb } from "../db/sqlite";
-import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
-import { jedanStil } from "../lib/styles";
+import { Button, Text, TextField, useUiStyles } from "../ui";
 import { mobileNavForProfile } from "../lib/mobile-nav";
 import { logoutExplanation } from "../teren/SignOutButton";
 
@@ -29,7 +19,7 @@ type Phase = "loading" | "login" | "ready";
 export default function IndexScreen() {
   // Tema: prati sistem, prekidač je u zaglavlju. Ista pravila kao na webu.
   const { theme, name, toggle } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { styles } = useUiStyles();
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [profile, setProfile] = useState<Me | null>(null);
@@ -133,53 +123,24 @@ export default function IndexScreen() {
 
   // Prekidač teme: jedno dugme, ime nosi stanje koje SLIJEDI (kao na webu).
   const themeToggle = (
-    <Pressable
-      onPress={toggle}
-      accessibilityRole="button"
-      accessibilityLabel={name === "dark" ? "Pređi na svijetlu temu" : "Pređi na tamnu temu"}
-      style={styles.themeButton}
-      hitSlop={8}
-    >
-      <Text style={styles.themeButtonText}>{name === "dark" ? "Svijetla" : "Tamna"}</Text>
-    </Pressable>
+    <Button variant="secondary" label={name === "dark" ? "Svijetla" : "Tamna"} onPress={toggle}
+      accessibilityLabel={name === "dark" ? "Pređi na svijetlu temu" : "Pređi na tamnu temu"} />
   );
 
   if (phase === "login") {
     return (
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.topRow}>
-          <Text style={styles.title}>Gradix</Text>
+          <Text variant="page">Gradix</Text>
           {themeToggle}
         </View>
-        <Text style={styles.subtitle}>Prijava za teren.</Text>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="username"
-          accessibilityLabel="Email"
-        />
-        <Text style={styles.label}>Lozinka</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="current-password"
-          accessibilityLabel="Lozinka"
-        />
-        {message && <Text style={styles.error}>{message}</Text>}
-        <Pressable
-          style={[styles.button, busy && styles.buttonDisabled]}
-          onPress={signIn}
-          disabled={busy}
-          accessibilityRole="button"
-        >
-          <Text style={styles.buttonText}>{busy ? "Prijava…" : "Prijavi se"}</Text>
-        </Pressable>
+        <Text variant="muted">Prijava za teren.</Text>
+        <TextField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none"
+          keyboardType="email-address" autoComplete="username" accessibilityLabel="Email" />
+        <TextField label="Lozinka" value={password} onChangeText={setPassword} secureTextEntry
+          autoComplete="current-password" accessibilityLabel="Lozinka" />
+        {message && <Text>{message}</Text>}
+        <Button label="Prijavi se" busy={busy} onPress={signIn} />
       </ScrollView>
     );
   }
@@ -188,8 +149,8 @@ export default function IndexScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topRow}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.title}>{profile?.company?.name ?? "Firma"}</Text>
-          <Text style={styles.subtitle}>
+          <Text variant="page">{profile?.company?.name ?? "Firma"}</Text>
+          <Text variant="muted">
             {profile?.user.firstName} {profile?.user.lastName}
           </Text>
         </View>
@@ -200,104 +161,12 @@ export default function IndexScreen() {
           stil kroz jedanStil(...) je obavezno: niz stilova kroz Slot baca grešku. */}
       {mobileNavForProfile({ roles: profile?.user.roles ?? [], workerId: profile?.workerId ?? null, foremanScope: profile?.foremanScope ?? false }).map((entry) => (
         <Link key={entry.href} href={entry.href} asChild>
-          <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
-            <Text style={[styles.buttonText, styles.secondaryText]}>{entry.label}</Text>
-          </Pressable>
+          <Button variant="secondary" label={entry.label} accessibilityRole="link" />
         </Link>
       ))}
 
-      <Pressable
-        style={jedanStil(styles.button, styles.secondaryButton)}
-        onPress={requestSignOut}
-        disabled={busy}
-        accessibilityRole="button"
-      >
-        <Text style={[styles.buttonText, styles.secondaryText]}>Odjavi se</Text>
-      </Pressable>
+      <Button variant="secondary" label="Odjavi se" onPress={requestSignOut} disabled={busy} />
     </ScrollView>
   );
 }
 
-/**
- * Stilovi se grade iz tema tokena — iste vrijednosti kao `globals.css` (test ih poredi).
- * `createStyles` se poziva u komponenti kroz `useMemo`, pa promjena teme mijenja cijeli ekran.
- */
-function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
-  return StyleSheet.create({
-    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: t.bg },
-    container: {
-      padding: spacing.xl,
-      gap: spacing.sm,
-      backgroundColor: t.bg,
-      flexGrow: 1,
-    },
-    topRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: spacing.md,
-    },
-    themeButton: {
-      minHeight: 40,
-      paddingHorizontal: spacing.md,
-      justifyContent: "center",
-      borderRadius: radius.pill,
-      borderWidth: 1,
-      borderColor: t.line,
-    },
-    themeButtonText: { ...typography.label, color: t.muted },
-    title: { ...typography.page, color: t.text },
-    subtitle: { ...typography.body, color: t.muted, marginBottom: spacing.lg },
-    label: { ...typography.label, color: t.text, marginTop: spacing.sm },
-    // Pločica sa stanjem reda: zaobljena površina, mono broj.
-    panel: {
-      padding: spacing.lg,
-      borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: t.line,
-      backgroundColor: t.panel,
-      gap: 2,
-    },
-    panelLabel: { ...typography.label, color: t.muted },
-    panelHint: { ...typography.body, color: t.muted },
-    input: {
-      borderWidth: 1,
-      // Ivica polja je `--field` (prolazi 3:1 na pozadini u obje teme — test to mjeri).
-      borderColor: t.field,
-      borderRadius: radius.field,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      minHeight: touchTarget,
-      ...typography.body,
-      color: t.text,
-      backgroundColor: t.panel,
-    },
-    button: {
-      marginTop: spacing.lg,
-      backgroundColor: t.primary,
-      borderRadius: radius.card,
-      paddingVertical: spacing.lg,
-      minHeight: touchTarget,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    buttonDisabled: { opacity: 0.6 },
-    buttonText: { ...typography.button, color: t.onPrimary },
-    secondaryButton: {
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: t.line,
-      marginTop: spacing.md,
-    },
-    secondaryText: { color: t.text },
-    error: {
-      ...typography.body,
-      marginTop: spacing.sm,
-      padding: spacing.md,
-      borderRadius: radius.field,
-      backgroundColor: t.dangerSoft,
-      color: t.danger,
-    },
-    hint: { marginTop: spacing.lg, ...typography.body, color: t.muted },
-  });
-}
