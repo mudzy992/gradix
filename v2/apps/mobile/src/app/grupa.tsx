@@ -14,7 +14,7 @@ import {
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { TerenShell, createStyles } from "../teren/TerenShell";
-import { outcomeFor, syncBannerText, OUT_OF_SCOPE_NOTE } from "../teren/outcome";
+import { outcomeFor, syncBannerText, sendResultMessage, OUT_OF_SCOPE_NOTE } from "../teren/outcome";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
 
@@ -40,6 +40,7 @@ export default function GrupaScreen() {
   const [entries, setEntries] = useState<LocalOutboxEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   const loadRoster = useCallback(async (project: string, date: string) => {
     const db = await openDb();
@@ -142,9 +143,8 @@ export default function GrupaScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       const outcome = await runSqliteR4Sync(db, account);
       setEntries(await readOutboxEntries(db, account));
-      setMessage(outcome.error
-        ? "Nema veze sa serverom. Zapisi ostaju na telefonu i poslaće se kasnije."
-        : `Slanje završeno: poslano ${outcome.applied + outcome.duplicate}, za provjeru ${outcome.conflict}. Ishod po radniku je ispod.`);
+      setSyncFailed(outcome.retry > 0);
+      setMessage(`${sendResultMessage(outcome)} Ishod po radniku je ispod.`);
     } catch {
       setMessage("Slanje nije uspjelo. Zapisi ostaju na telefonu.");
     } finally { setBusy(false); }
@@ -160,7 +160,7 @@ export default function GrupaScreen() {
       onRetry={load}
     >
       <View style={styles.banner} accessibilityLiveRegion="polite">
-        <Text style={styles.bannerText}>{syncBannerText({ pending, offline: pending > 0 })}</Text>
+        <Text style={styles.bannerText}>{syncBannerText({ pending, syncFailed: syncFailed || entries.some((entry) => entry.status === "failed") })}</Text>
       </View>
 
       <View style={styles.card}>
@@ -188,14 +188,14 @@ export default function GrupaScreen() {
           ))}
         </View>
         <Text style={styles.label}>Datum (GGGG-MM-DD)</Text>
-        <TextInput style={styles.input} value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
         <Pressable style={styles.button} onPress={() => void loadRoster(projectId, workDate)} accessibilityRole="button">
           <Text style={styles.buttonText}>Osvježi ekipu za datum</Text>
         </Pressable>
         <Text style={styles.label}>Početak za sve (HH:MM)</Text>
-        <TextInput style={styles.input} value={started} onChangeText={setStarted} accessibilityLabel="Početak za sve" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={started} onChangeText={setStarted} accessibilityLabel="Početak za sve" />
         <Text style={styles.label}>Kraj za sve (HH:MM)</Text>
-        <TextInput style={styles.input} value={ended} onChangeText={setEnded} accessibilityLabel="Kraj za sve" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={ended} onChangeText={setEnded} accessibilityLabel="Kraj za sve" />
       </View>
 
       <View style={styles.card}>
@@ -214,6 +214,7 @@ export default function GrupaScreen() {
                 <Text style={styles.outcome}>{latest ? outcomeFor(latest.status, latest.lastError).label : "Nije poslano"}</Text>
               </View>
               <TextInput
+                placeholderTextColor={theme.muted}
                 style={styles.input}
                 value={override ? `${override.started}-${override.ended}` : ""}
                 placeholder={`${started}-${ended} (zajedničko)`}

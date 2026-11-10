@@ -9,7 +9,7 @@ import { getActiveLocalAccount, queueOwnWorkEntry, readOutboxEntries, type Local
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { TerenShell, createStyles } from "../teren/TerenShell";
-import { outcomeFor, syncBannerText } from "../teren/outcome";
+import { outcomeFor, syncBannerText, sendResultMessage } from "../teren/outcome";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
 
@@ -32,6 +32,7 @@ export default function MojDanScreen() {
   const [entries, setEntries] = useState<LocalOutboxEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,9 +88,8 @@ export default function MojDanScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       const outcome = await runSqliteR4Sync(db, account);
       setEntries(await readOutboxEntries(db, account));
-      setMessage(outcome.error
-        ? "Nema veze sa serverom. Zapisi ostaju na telefonu i poslaće se kasnije."
-        : `Slanje završeno: poslano ${outcome.applied + outcome.duplicate}, za provjeru ${outcome.conflict}.`);
+      setSyncFailed(outcome.retry > 0);
+      setMessage(sendResultMessage(outcome));
     } catch {
       setMessage("Slanje nije uspjelo. Zapisi ostaju na telefonu.");
     } finally { setBusy(false); }
@@ -105,7 +105,7 @@ export default function MojDanScreen() {
       onRetry={load}
     >
       <View style={styles.banner} accessibilityLiveRegion="polite">
-        <Text style={styles.bannerText}>{syncBannerText({ pending, offline: pending > 0 })}</Text>
+        <Text style={styles.bannerText}>{syncBannerText({ pending, syncFailed: syncFailed || entries.some((entry) => entry.status === "failed") })}</Text>
       </View>
 
       <View style={styles.card}>
@@ -132,11 +132,11 @@ export default function MojDanScreen() {
           ))}
         </View>
         <Text style={styles.label}>Datum (GGGG-MM-DD)</Text>
-        <TextInput style={styles.input} value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
         <Text style={styles.label}>Početak (HH:MM)</Text>
-        <TextInput style={styles.input} value={started} onChangeText={setStarted} accessibilityLabel="Početak rada" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={started} onChangeText={setStarted} accessibilityLabel="Početak rada" />
         <Text style={styles.label}>Kraj (HH:MM)</Text>
-        <TextInput style={styles.input} value={ended} onChangeText={setEnded} accessibilityLabel="Kraj rada" />
+        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={ended} onChangeText={setEnded} accessibilityLabel="Kraj rada" />
         <Pressable style={styles.button} onPress={save} disabled={busy} accessibilityRole="button">
           <Text style={styles.buttonText}>{busy ? "Radim…" : "Sačuvaj na telefon"}</Text>
         </Pressable>

@@ -18,9 +18,34 @@ export function outcomeFor(status: string, lastError: string | null): { kind: Ou
 export const OUT_OF_SCOPE_NOTE =
   "Van opsega: zapis ostaje na telefonu i vidljiv je šefu; server ga nije primio jer radnik nije u opsegu za taj projekat i datum.";
 
-export function syncBannerText(input: { pending: number; offline: boolean }): string {
+/**
+ * Banner NE smije tvrditi "bez veze" samo zato što nešto čeka slanje (telefon,
+ * 2026-11-07: banner je vikao "Bez veze" i na mreži). "Bez veze" se kaže tek kad je
+ * pokušaj slanja stvarno pao (syncFailed) — do tada samo broji koliko čeka.
+ */
+export function syncBannerText(input: { pending: number; syncFailed: boolean }): string {
   if (input.pending === 0) return "Sve je poslano.";
-  return input.offline
+  return input.syncFailed
     ? `Bez veze · ${input.pending} čeka slanje. Sačuvano na ovom telefonu.`
     : `${input.pending} čeka slanje.`;
+}
+
+export type SendOutcomeSummary = {
+  applied: number; duplicate: number; conflict: number; rejected: number; retry: number; error: string | null;
+};
+
+/**
+ * Poruka poslije "Pošalji sada" mora reći šta se STVARNO desilo: push rezultat i
+ * neuspjeli pull nisu "nema veze sa serverom". Kad server nije ni dosegnut (retry),
+ * tek tada je poruka o vezi; kad je push prošao a potvrda (pull) pala, kaže se oboje.
+ */
+export function sendResultMessage(outcome: SendOutcomeSummary): string {
+  const processed = outcome.applied + outcome.duplicate + outcome.conflict + outcome.rejected;
+  if (processed === 0 && outcome.retry > 0) {
+    return "Nema veze sa serverom. Zapisi ostaju na telefonu i poslaće se kasnije.";
+  }
+  const base = `Slanje završeno: poslano ${outcome.applied + outcome.duplicate}, za provjeru ${outcome.conflict}.`;
+  return outcome.error
+    ? `${base} Potvrda sa servera nije stigla do kraja — ishod po zapisu je ispod, a ponovno slanje je sigurno (server prepoznaje duplikate).`
+    : base;
 }

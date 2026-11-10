@@ -14,8 +14,9 @@ Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.
 
 ## Offline scenario (avionski režim)
 
-5. Uključi **avionski režim**. Banner pokazuje „Bez veze · 5 čeka slanje. Sačuvano na ovom telefonu.“
-6. Dodirni **Pošalji sada** — slanje ne prolazi, zapisi ostaju na telefonu (ništa se ne gubi).
+5. Uključi **avionski režim**. Banner pokazuje „5 čeka slanje“ (telefon još ne zna da veze nema).
+6. Dodirni **Pošalji sada** — slanje ne prolazi, zapisi ostaju na telefonu (ništa se ne gubi),
+   a banner tek tada kaže „Bez veze · 5 čeka slanje. Sačuvano na ovom telefonu.“
 7. Isključi avionski režim i ponovo dodirni **Pošalji sada**.
 8. Ishod po radniku se mijenja u **Poslano**; zapis koji server nije primio u opseg šefa ostaje
    vidljiv kao **Van opsega — ostaje na telefonu** (ne briše se i ne zove se odbijenim).
