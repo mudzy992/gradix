@@ -31,12 +31,12 @@ describeDb("workday review scope (PostgreSQL)", () => {
               ('usr_wdr_ss_${RUN}', 'ss@test.example', 'x', 'SS', 'Test', false)`,
     );
     await admin.query(
-      `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id)
-       VALUES ('wrk_wdr_pm_${RUN}', $1, 'Pera', 'Vodja', 'usr_wdr_pm_${RUN}'),
-              ('wrk_wdr_ss_${RUN}', $1, 'Sef', 'Ekipe', 'usr_wdr_ss_${RUN}'),
-              ('wrk_wdr_in_${RUN}', $1, 'Radnik', 'UOpsegu', NULL),
-              ('wrk_wdr_out_${RUN}', $1, 'Radnik', 'IzvanOpsega', NULL),
-              ('wrk_wdr_other_${RUN}', $2, 'Radnik', 'DrugaFirma', NULL)`,
+      `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id, hired_at)
+       VALUES ('wrk_wdr_pm_${RUN}', $1, 'Pera', 'Vodja', 'usr_wdr_pm_${RUN}', '2024-01-01'),
+              ('wrk_wdr_ss_${RUN}', $1, 'Sef', 'Ekipe', 'usr_wdr_ss_${RUN}', '2024-01-01'),
+              ('wrk_wdr_in_${RUN}', $1, 'Radnik', 'UOpsegu', NULL, '2024-01-01'),
+              ('wrk_wdr_out_${RUN}', $1, 'Radnik', 'IzvanOpsega', NULL, '2024-01-01'),
+              ('wrk_wdr_other_${RUN}', $2, 'Radnik', 'DrugaFirma', NULL, '2024-01-01')`,
       [CO, OTHER],
     );
     await admin.query(
@@ -56,9 +56,9 @@ describeDb("workday review scope (PostgreSQL)", () => {
     );
     await admin.query(
       `INSERT INTO public.workdays (id, company_id, worker_id, work_date, status, created_by, updated_by)
-       VALUES ('wd_wdr_in_${RUN}', $1, 'wrk_wdr_in_${RUN}', $3::date, 'SUBMITTED', 'test', 'test'),
-              ('wd_wdr_out_${RUN}', $1, 'wrk_wdr_out_${RUN}', $3::date, 'SUBMITTED', 'test', 'test'),
-              ('wd_wdr_x_${RUN}', $2, 'wrk_wdr_other_${RUN}', $3::date, 'SUBMITTED', 'test', 'test')`,
+       VALUES ('wd_wdr_in_${RUN}', $1, 'wrk_wdr_in_${RUN}', $3::date, 'SUBMITTED', 'usr_wdr_pm_${RUN}', 'usr_wdr_pm_${RUN}'),
+              ('wd_wdr_out_${RUN}', $1, 'wrk_wdr_out_${RUN}', $3::date, 'SUBMITTED', 'usr_wdr_pm_${RUN}', 'usr_wdr_pm_${RUN}'),
+              ('wd_wdr_x_${RUN}', $2, 'wrk_wdr_other_${RUN}', $3::date, 'SUBMITTED', 'usr_wdr_pm_${RUN}', 'usr_wdr_pm_${RUN}')`,
       [CO, OTHER, DATE],
     );
   }, 60_000);

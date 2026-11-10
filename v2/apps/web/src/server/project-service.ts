@@ -232,7 +232,19 @@ export async function listProjects(
     }
 
     // Opseg ide POSLIJE ostalih uslova i uvijek prisutan — nema puta koji ga preskače.
-    const scope = scopeClause(actor, "p.id");
+    // SELF (A2.4): "samo svoje" za projekte znači projekti na kojima je povezani radnik
+    // dodijeljen — inače bi radnik u listi vidio prazninu iako dodjele ima (i `mine=1`
+    // na mobilnom je vraćao prazno). Dodjela se provjerava iz sesije, ne iz zahtjeva.
+    const scope = actor.scope === "SELF"
+      ? {
+          sql: ` AND EXISTS (SELECT 1 FROM project_assignments a
+                   JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
+                  WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = ${param(actor.userId)}
+                    AND a.voided_at IS NULL AND a.from_date <= $1
+                    AND (a.to_date IS NULL OR a.to_date >= $1))`,
+          params: [] as unknown[],
+        }
+      : scopeClause(actor, "p.id");
     let sql = `${PROJECT_SELECT} WHERE ${conditions.length > 0 ? conditions.join(" AND ") : "true"}`;
     /*
      * `AND false` (prazan opseg) nema parametar — i to je bilo mjesto gdje je lista projekata

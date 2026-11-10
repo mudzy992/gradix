@@ -68,8 +68,8 @@ describeDb("scope po rolama: projekti i rokovi (PostgreSQL)", () => {
         void key;
       }
       await client.query(
-        `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id) VALUES
-           ($1, $4, 'Vozac', 'Test', $5), ($2, $4, 'Radnik', 'Test', $6), ($3, $4, 'Drugi', 'Radnik', NULL)`,
+        `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id, hired_at) VALUES
+           ($1, $4, 'Vozac', 'Test', $5, '2024-01-01'), ($2, $4, 'Radnik', 'Test', $6, '2024-01-01'), ($3, $4, 'Drugi', 'Radnik', NULL, '2024-01-01')`,
         [WRK_DRIVER, WRK_WORKER, WRK_OTHER, CO, USERS.driver, USERS.worker],
       );
       await client.query(
