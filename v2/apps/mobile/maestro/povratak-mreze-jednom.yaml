@@ -1,0 +1,27 @@
+# Povratak mreže: zapis nastao offline šalje se TAČNO jednom (idempotency dokaz na uređaju).
+# Koraci s avionskim režimom radi čovjek/uređaj — Maestro ne gasi mrežu sam,
+# pa tok ima eksplicitne tačke pauze (runScript/čekanje nisu automatski).
+# Preduslov: prijavljen radnik (radnik1@demo.ba), ekran Moj dan.
+appId: ba.gradix.teren
+---
+- launchApp
+- tapOn: "Moj dan"
+# 1) UKLJUČI avionski režim ručno, zatim nastavi tok.
+- tapOn:
+    id: "Početak rada"
+- inputText: "07:00"
+- tapOn:
+    id: "Kraj rada"
+- inputText: "15:30"
+- tapOn: "Sačuvaj na telefon"
+- tapOn: "Pošalji sada"
+- assertVisible: "Čeka slanje"
+# 2) ISKLJUČI avionski režim ručno, zatim nastavi tok.
+- tapOn: "Pošalji sada"
+- assertVisible: "Poslano"
+- assertVisible: "Sve je poslano."
+# 3) Ponovno slanje ne smije napraviti duplikat: red je prazan, stanje se ne mijenja.
+- tapOn: "Pošalji sada"
+- assertVisible: "Sve je poslano."
+# Konačnu provjeru "tačno jednom" radi ured u Radni dani (jedan zapis za taj dan)
+# i serverski idempotency testovi u CI-ju; ovaj tok dokazuje ponašanje na uređaju.

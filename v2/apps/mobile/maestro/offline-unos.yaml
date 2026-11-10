@@ -1,0 +1,30 @@
+# Offline unos (radnik): avionski režim -> unos se sprema na telefon i čeka slanje.
+# Preduslov: uređaj u avionskom režimu PRIJE pokretanja; demo radnik postoji (radnik1@demo.ba).
+appId: ba.gradix.teren
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Prijava za teren."
+- tapOn:
+    id: "Email"
+- inputText: "radnik1@demo.ba"
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- tapOn: "Prijavi se"
+# Bez mreže prijava ne prolazi; unos dana se radi već prijavljenog korisnika,
+# pa ako prijava ne prođe, tok staje ovdje (to je očekivano ponašanje offline prijave).
+- tapOn: "Moj dan"
+- assertVisible: "Moj dan"
+- tapOn:
+    id: "Početak rada"
+- inputText: "07:00"
+- tapOn:
+    id: "Kraj rada"
+- inputText: "15:30"
+- tapOn: "Sačuvaj na telefon"
+- tapOn: "Pošalji sada"
+# Offline: zapis ostaje na telefonu i to mora pisati.
+- assertVisible: "Čeka slanje"
+- assertVisible:
+    text: ".*ostaje na telefonu.*|.*Sačuvano na ovom telefonu.*"

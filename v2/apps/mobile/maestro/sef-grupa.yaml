@@ -1,0 +1,29 @@
+# Šef grupni unos: jedan projekat/mašina, zajedničko vrijeme, ishod po radniku.
+# Preduslov: mreža dostupna; demo šef postoji (sef@demo.ba), ekipa od 5 radnika u opsegu.
+appId: ba.gradix.teren
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Prijava za teren."
+- tapOn:
+    id: "Email"
+- inputText: "sef@demo.ba"
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- tapOn: "Prijavi se"
+- tapOn: "Grupa — unos za ekipu"
+- assertVisible: "Grupa"
+- tapOn:
+    id: "Početak za sve"
+- inputText: "07:00"
+- tapOn:
+    id: "Kraj za sve"
+- inputText: "15:30"
+- tapOn:
+    text: "Sačuvaj za .* radnika"
+- tapOn: "Pošalji sada"
+# Poslije slanja ishod je vidljiv po radniku; riječ "odbijeno" se ne smije pojaviti.
+- assertVisible: "Poslano"
+- assertNotVisible:
+    text: ".*[Oo]dbijen.*"

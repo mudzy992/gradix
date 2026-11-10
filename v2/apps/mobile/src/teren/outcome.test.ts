@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { outcomeFor, syncBannerText } from "./outcome";
+import { outcomeFor, syncBannerText, OUT_OF_SCOPE_NOTE } from "./outcome";
 
 describe("ishod slanja za UI", () => {
   it("van opsega se nikad ne prikazuje kao odbijeno i ostaje na telefonu", () => {
     const outcome = outcomeFor("rejected", "FOREMAN_SCOPE_FORBIDDEN");
-    expect(outcome.label).toContain("Van opsega");
-    expect(outcome.label).toContain("ostaje na telefonu");
+    expect(outcome.label).toBe("Van opsega");
+    expect(OUT_OF_SCOPE_NOTE).toContain("ostaje na telefonu");
     expect(outcome.label.toLowerCase()).not.toContain("odbijen");
   });
 
