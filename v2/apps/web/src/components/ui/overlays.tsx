@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * U1 — preklopi i meniji: Dialog/ConfirmDialog (oko postojećeg Dialog primitiva),
  * Tabs i RowActions (jedna vidljiva akcija + „⋯“ meni, kao u referenci).

@@ -10,7 +10,8 @@
  * ekran ne može prikazati dozvolu koju ruta ne provjerava: jedan izvor, dva prikaza.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Card, Mono, Skeleton } from "@/components/ui";
+import { apiCall } from "@/api-client";
+import { Alert, Button, Card, DataTable, Mono, PageHeader, Skeleton, Stack } from "@/components/ui/index";
 
 type Permission = { key: string; label: string; description: string };
 type RoleRow = {
@@ -29,17 +30,12 @@ export default function RolesClient() {
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
-    try {
-      const response = await fetch("/api/roles", { cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok || !body.success) {
-        setState({ kind: "error", message: body?.error?.message ?? "Ne mogu da učitam matricu." });
-        return;
-      }
-      setState({ kind: "ready", data: body.data as Matrix });
-    } catch {
-      setState({ kind: "error", message: "Nema veze sa serverom. Provjerite mrežu i pokušajte ponovo." });
+    const result = await apiCall<Matrix>("/api/roles");
+    if (!result.ok) {
+      setState({ kind: "error", message: result.message });
+      return;
     }
+    setState({ kind: "ready", data: result.data });
   }, []);
 
   useEffect(() => {
@@ -48,25 +44,20 @@ export default function RolesClient() {
 
   return (
     <div>
-      <div className="gx-page-head">
-        <div className="gx-page-head__text">
-          <h1 className="gx-page-title">Pristup i role</h1>
-          <p className="gx-page-sub">Ko šta smije u firmi. Dozvole se ne mijenjaju iz ekrana.</p>
-        </div>
-      </div>
+      <PageHeader title="Pristup i role" subtitle="Ko šta smije u firmi. Dozvole se ne mijenjaju iz ekrana." />
 
       {state.kind === "loading" ? <Skeleton rows={6} /> : null}
 
       {state.kind === "error" ? (
         <Card>
-          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <Stack>
             <Alert tone="error" role="alert">
               {state.message}
             </Alert>
             <div>
               <Button onClick={() => void load()}>Pokušaj ponovo</Button>
             </div>
-          </div>
+          </Stack>
         </Card>
       ) : null}
 
@@ -76,111 +67,49 @@ export default function RolesClient() {
             Ovo je pregled: koja rola šta smije. Izmjena dozvola po roli nije dio ove faze.
           </Alert>
 
-          {/* Tabela ≥ 640 px — vidi se na širokom ekranu */}
-          <Card className="hidden sm:block">
-            <table className="gx-table">
-              <caption
-                style={{
-                  marginBottom: "var(--space-2)",
-                  textAlign: "left",
-                  fontSize: "var(--text-small)",
-                  color: "var(--muted)",
-                }}
-              >
-                Rola × dozvola. Kvačica znači da rola ima dozvolu.
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Rola</th>
-                  {state.data.permissions.map((permission) => (
-                    <th key={permission.key} scope="col">
-                      {permission.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {state.data.roles.map((role) => (
-                  <tr key={role.role}>
-                    <th scope="row" style={{ textAlign: "left", fontWeight: 600, padding: "14px 12px" }}>
-                      {role.label}
-                      <Mono className="gx-mono--block">{role.role}</Mono>
-                      <span
-                        style={{
-                          display: "block",
-                          fontSize: "var(--text-small)",
-                          fontWeight: 500,
-                          color: "var(--muted)",
-                        }}
-                      >
-                        {role.description}
+          <Card>
+            <p className="gx-page-sub">Rola × dozvola. Kvačica znači da rola ima dozvolu.</p>
+            <DataTable
+              caption="Matrica rola i dozvola"
+              rows={state.data.roles}
+              rowKey={(role) => role.role}
+              emptyText="Nema rola za prikaz."
+              columns={[
+                {
+                  key: "role",
+                  header: "Rola",
+                  cell: (role) => (
+                    <Stack>
+                      <strong>{role.label}</strong>
+                      <Mono>{role.role}</Mono>
+                      <span className="gx-page-sub">{role.description}</span>
+                      <span className="gx-page-sub">
+                        Dodjeljuje: {role.assignableBy.map((r) => (r === "OWNER" ? "vlasnik" : "administrator")).join(", ")}
                       </span>
-                    </th>
-                    {state.data.permissions.map((permission) => {
-                      const has = role.permissions.includes(permission.key);
-                      return (
-                        <td key={permission.key}>
-                          {has ? (
-                            <span style={{ fontWeight: 700, color: "var(--success, var(--text))" }}>
-                              <span aria-hidden="true">✓</span>
-                              <span className="sr-only">ima dozvolu</span>
-                            </span>
-                          ) : (
-                            <span style={{ color: "var(--muted)" }}>
-                              <span aria-hidden="true">—</span>
-                              <span className="sr-only">nema dozvolu</span>
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-
-          {/* Kartice < 640 px — ista informacija, drugi ritam */}
-          <div className="gx-cards-mobile">
-            {state.data.roles.map((role) => (
-              <Card key={role.role}>
-                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                  <p style={{ fontWeight: 700 }}>{role.label}</p>
-                  {/* Tehnički ključ je za podršku, ne za čitanje — zato mono i tiho. */}
-                  <Mono className="text-[11px] text-[var(--color-text-muted)]">{role.role}</Mono>
-                </div>
-                <p style={{ marginTop: "var(--space-1)", fontSize: "var(--text-small)", color: "var(--muted)" }}>
-                  {role.description}
-                </p>
-                <ul style={{ marginTop: "var(--space-2)", display: "grid", gap: "var(--space-1)", listStyle: "none", padding: 0 }}>
-                  {state.data.permissions.map((permission) => {
+                    </Stack>
+                  ),
+                },
+                ...state.data.permissions.map((permission) => ({
+                  key: permission.key,
+                  header: permission.label,
+                  cell: (role: RoleRow) => {
                     const has = role.permissions.includes(permission.key);
-                    return (
-                      <li key={permission.key} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                        <span
-                          aria-hidden="true"
-                          className={
-                            has
-                              ? "font-bold text-[var(--color-success)]"
-                              : "text-[var(--color-text-muted)]"
-                          }
-                        >
-                          {has ? "✓" : "—"}
-                        </span>
-                        <span className={has ? "" : "text-[var(--color-text-muted)]"}>
-                          {permission.label}
-                          <span className="sr-only">{has ? " — ima dozvolu" : " — nema dozvolu"}</span>
-                        </span>
-                      </li>
+                    return has ? (
+                      <span>
+                        <span aria-hidden="true">✓</span>
+                        <span className="sr-only">ima dozvolu</span>
+                      </span>
+                    ) : (
+                      <span className="gx-page-sub">
+                        <span aria-hidden="true">—</span>
+                        <span className="sr-only">nema dozvolu</span>
+                      </span>
                     );
-                  })}
-                </ul>
-                <p className="mt-2 text-[13px] text-[var(--color-text-muted)]">
-                  Dodjeljuje: {role.assignableBy.map((r) => (r === "OWNER" ? "vlasnik" : "administrator")).join(", ")}
-                </p>
-              </Card>
-            ))}
-          </div>
+                  },
+                })),
+              ]}
+            />
+          </Card>
         </>
       ) : null}
     </div>

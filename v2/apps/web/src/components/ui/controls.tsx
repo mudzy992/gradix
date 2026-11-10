@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * U1 — kontrole. Ekrani ne koriste sirove <input>/<select>/<textarea>/<button> (lint U3);
  * sve ide kroz ove komponente, a izgled živi u gx-* klasama (shell.css), na jednom mjestu.
