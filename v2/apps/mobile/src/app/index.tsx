@@ -21,7 +21,7 @@ import { openDb } from "../db/sqlite";
 import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
-import { mobileNavForRoles } from "../lib/mobile-nav";
+import { mobileNavForProfile } from "../lib/mobile-nav";
 import { logoutExplanation } from "../teren/SignOutButton";
 
 type Phase = "loading" | "login" | "ready";
@@ -198,7 +198,7 @@ export default function IndexScreen() {
 
       {/* Stavke dolaze iz lib/mobile-nav (jedina definicija po roli). `asChild` + jedan
           stil kroz jedanStil(...) je obavezno: niz stilova kroz Slot baca grešku. */}
-      {mobileNavForRoles(profile?.user.roles ?? []).map((entry) => (
+      {mobileNavForProfile({ roles: profile?.user.roles ?? [], workerId: profile?.workerId ?? null, foremanScope: profile?.foremanScope ?? false }).map((entry) => (
         <Link key={entry.href} href={entry.href} asChild>
           <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
             <Text style={[styles.buttonText, styles.secondaryText]}>{entry.label}</Text>

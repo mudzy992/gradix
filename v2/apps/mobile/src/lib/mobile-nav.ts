@@ -1,25 +1,35 @@
 /**
- * Mobilna navigacija po roli (A3/A4b, 2026-11-07) — jedina definicija, kao nav.ts na webu.
+ * Mobilna navigacija (A2, 2026-11-07) — jedina definicija, kao nav.ts na webu.
  *
- * Pravilo: svaka prijavljena rola ima Moj dan, Moje rokove, Moje projekte i Odjavu;
- * Grupa je samo za šefa (SITE_SUPERVISOR). Odjava nije stavka liste jer nije ekran —
- * ali je obavezna za svaku rolu i stoji na početnom i na terenskim ekranima
- * (TerenShell), što testovi ovdje i u render testovima dokazuju.
+ * A2 izmjena nakon pregleda tabela: "Moj dan" ne zavisi od role nego od veze
+ * korisnik-radnik (bez povezanog radnika nema čiji dan da se unosi), a "Grupa" traži
+ * VEZU + ulogu šefa + bar jednu aktivnu dodjelu (foremanScope sa /api/me).
+ * Rokovi/Projekti i Odjava su za svaki prijavljeni nalog; odjava stoji na početnom
+ * i na terenskim ekranima (TerenShell) za svaku rolu.
  */
+export type MobileNavProfile = {
+  roles: readonly string[];
+  workerId: string | null;
+  foremanScope: boolean;
+};
+
 export type MobileNavEntry = {
   href: "/moj-dan" | "/grupa" | "/rokovi" | "/projekti";
   label: string;
-  /** null = sve prijavljene role. */
-  roles: readonly string[] | null;
+  visible: (profile: MobileNavProfile) => boolean;
 };
 
 export const MOBILE_NAV: readonly MobileNavEntry[] = [
-  { href: "/moj-dan", label: "Moj dan", roles: null },
-  { href: "/grupa", label: "Grupa — unos za ekipu", roles: ["SITE_SUPERVISOR"] },
-  { href: "/rokovi", label: "Moji rokovi", roles: null },
-  { href: "/projekti", label: "Moji projekti", roles: null },
+  { href: "/moj-dan", label: "Moj dan", visible: (p) => p.workerId !== null },
+  {
+    href: "/grupa",
+    label: "Grupa — unos za ekipu",
+    visible: (p) => p.workerId !== null && p.foremanScope && p.roles.includes("SITE_SUPERVISOR"),
+  },
+  { href: "/rokovi", label: "Moji rokovi", visible: () => true },
+  { href: "/projekti", label: "Moji projekti", visible: () => true },
 ];
 
-export function mobileNavForRoles(roles: readonly string[]): MobileNavEntry[] {
-  return MOBILE_NAV.filter((entry) => entry.roles === null || entry.roles.some((role) => roles.includes(role)));
+export function mobileNavForProfile(profile: MobileNavProfile): MobileNavEntry[] {
+  return MOBILE_NAV.filter((entry) => entry.visible(profile));
 }

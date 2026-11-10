@@ -110,7 +110,9 @@ export const PERMISSIONS = {
   // Step 7 + A (2026-11-07): uredski pregled radnih dana. Stranica je prije živjela izvan
   // matrice (ručni OWNER/ADMIN uslov u page.tsx) pa nije ušla u navigaciju — matrica je
   // jedini izvor i za meni i za stranicu.
-  "workdays.view": ["OWNER", "ADMIN"],
+  // A2: PM i šef vide samo radnike/projekte iz svog R3 opsega, ACCOUNTANT cijelu firmu
+  // (samo čitanje) — opseg provodi server (workday-review), ne meni.
+  "workdays.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -178,7 +180,7 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   },
   "workdays.view": {
     label: "Pregled radnih dana",
-    description: "Radni dani sa terena (Moj dan / Grupa) — samo pregled, uz oznake „Za provjeru“.",
+    description: "Radni dani sa terena — samo pregled, uz oznake „Za provjeru“. Vlasnik/admin i računovođa vide cijelu firmu; vođa projekta i šef samo svoj R3 opseg.",
   },
 };
 

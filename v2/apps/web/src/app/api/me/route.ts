@@ -28,6 +28,25 @@ export async function GET(request: NextRequest): Promise<Response> {
       const machines = await client.query<{ count: string }>(
         "SELECT count(*)::text AS count FROM machines",
       );
+      const worker = await client.query<{ id: string }>(
+        "SELECT id FROM public.workers WHERE company_id = $1 AND user_id = $2 AND is_active",
+        [auth.ctx.companyId, auth.ctx.userId],
+      );
+      const workerId = worker.rows[0]?.id ?? null;
+      let foremanScope = false;
+      if (workerId && auth.ctx.roles.includes("SITE_SUPERVISOR")) {
+        const scope = await client.query<{ allowed: boolean }>(
+          `SELECT EXISTS (
+             SELECT 1 FROM public.project_assignments a
+             JOIN public.companies c ON c.id = a.company_id
+            WHERE a.company_id = $1 AND a.worker_id = $2 AND a.voided_at IS NULL
+              AND a.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date
+              AND (a.to_date IS NULL OR a.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date)
+          ) AS allowed`,
+          [auth.ctx.companyId, workerId],
+        );
+        foremanScope = scope.rows[0]?.allowed ?? false;
+      }
       const row = profile.rows[0];
       return {
         user: {
@@ -40,6 +59,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         },
         company: company.rows[0] ?? null,
         machineCount: Number(machines.rows[0]?.count ?? 0),
+        workerId,
+        foremanScope,
       };
     });
 

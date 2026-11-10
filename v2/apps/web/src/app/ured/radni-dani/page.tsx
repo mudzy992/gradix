@@ -7,6 +7,7 @@ import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
 import { reviewLabel } from "./review-label";
 import { can } from "@/server/permissions";
+import { listWorkdaysForReview, resolveViewerWorkerId, workdayReviewScopeFor } from "@/server/workday-review";
 
 export const dynamic = "force-dynamic";
 
@@ -16,17 +17,6 @@ export const dynamic = "force-dynamic";
  * Oznake za provjeru se računaju iz serverovog stanja, ne iz klijenta: nepoznat kraj,
  * otvoren segment, sukob u sync-u. Potvrđivanje/razrješenje nije dio ovog koraka (R4b).
  */
-type DayRow = {
-  id: string;
-  work_date: string;
-  status: string;
-  worker_name: string;
-  entries: number;
-  unknown_end: number;
-  open_entries: number;
-  project_codes: string | null;
-};
-
 export default async function RadniDaniPage() {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
@@ -37,27 +27,11 @@ export default async function RadniDaniPage() {
   const auth = await authenticate(request);
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
-  if (!can(auth.ctx.roles, "workdays.view")) redirect("/pregled");
+  if (!can(auth.ctx.roles, "workdays.view")) redirect("/nemate-pristup");
 
   const days = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
-    const result = await client.query<DayRow>(
-      `SELECT d.id,
-              d.work_date::text AS work_date,
-              d.status,
-              (w.first_name || ' ' || w.last_name) AS worker_name,
-              count(e.id)::int AS entries,
-              count(e.id) FILTER (WHERE e.end_state = 'UNKNOWN_END')::int AS unknown_end,
-              count(e.id) FILTER (WHERE e.ended_at IS NULL AND e.end_state = 'OPEN')::int AS open_entries,
-              string_agg(DISTINCT p.code, ', ') AS project_codes
-         FROM public.workdays d
-         JOIN public.workers w ON w.company_id = d.company_id AND w.id = d.worker_id
-         LEFT JOIN public.work_entries e ON e.company_id = d.company_id AND e.workday_id = d.id
-         LEFT JOIN public.projects p ON p.company_id = d.company_id AND p.id = e.project_id
-        GROUP BY d.id, d.work_date, d.status, w.first_name, w.last_name
-        ORDER BY d.work_date DESC, worker_name
-        LIMIT 200`,
-    );
-    return result.rows;
+    const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
+    return listWorkdaysForReview(client, auth.ctx.companyId, workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId));
   });
 
   return (

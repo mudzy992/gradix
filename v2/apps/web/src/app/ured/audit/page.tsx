@@ -25,7 +25,7 @@ export default async function AuditPage() {
   const auth = await authenticate(request);
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
-  if (!can(auth.ctx.roles, "audit.view")) redirect("/pregled");
+  if (!can(auth.ctx.roles, "audit.view")) redirect("/nemate-pristup");
 
   const users = await listUsers(await getVerifiedPool(), auth.ctx.companyId);
   const actors = users.map((user) => ({

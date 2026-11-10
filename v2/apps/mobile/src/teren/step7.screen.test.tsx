@@ -39,7 +39,7 @@ vi.mock("../api/client", () => ({
   login: async () => ({}),
   me: async () => {
     if (state.meError) throw new Error("network down");
-    return { user: { id: "u1", firstName: "Mario", lastName: "Perić", roles: ["SITE_SUPERVISOR"] }, company: { id: "c1", name: "Demo" } };
+    return { user: { id: "u1", firstName: "Mario", lastName: "Perić", roles: ["SITE_SUPERVISOR"] }, company: { id: "c1", name: "Demo" }, workerId: "w-sef", foremanScope: true };
   },
   myProjects: async () => ({ projects: state.projects }),
   machines: async () => ({ machines: [{ id: "m1", code: "BAG-01", name: "Bager CAT 320" }] }),

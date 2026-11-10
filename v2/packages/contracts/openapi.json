@@ -3349,12 +3349,23 @@
                         },
                         "machineCount": {
                           "type": "number"
+                        },
+                        "workerId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "foremanScope": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
                         "user",
                         "company",
-                        "machineCount"
+                        "machineCount",
+                        "workerId",
+                        "foremanScope"
                       ],
                       "additionalProperties": false
                     },
@@ -9653,6 +9664,15 @@
                               },
                               "machineCount": {
                                 "type": "number"
+                              },
+                              "workerId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "foremanScope": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -9662,7 +9682,9 @@
                               "meter",
                               "isActive",
                               "sortOrder",
-                              "machineCount"
+                              "machineCount",
+                              "workerId",
+                              "foremanScope"
                             ],
                             "additionalProperties": false
                           }
@@ -10171,6 +10193,15 @@
                             },
                             "machineCount": {
                               "type": "number"
+                            },
+                            "workerId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "foremanScope": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -10180,7 +10211,9 @@
                             "meter",
                             "isActive",
                             "sortOrder",
-                            "machineCount"
+                            "machineCount",
+                            "workerId",
+                            "foremanScope"
                           ],
                           "additionalProperties": false
                         }

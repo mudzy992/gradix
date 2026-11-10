@@ -44,6 +44,14 @@ test("radnik: meni nema uredske stavke (ni Radne dane ni Korisnike)", async ({ p
   expect(labels).not.toContain("Radnici");
 });
 
+test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu, ne tihi redirect", async ({ page }) => {
+  await login(page, "radnik@demo.ba");
+  await page.goto("/ured/korisnici");
+  await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
+  await page.getByRole("link", { name: "Nazad na pregled" }).click();
+  await page.waitForURL("**/pregled");
+});
+
 test("šef: vidi Radnike, ne vidi Radne dane ni Korisnike", async ({ page }) => {
   await login(page, "sef@demo.ba");
   const labels = await navLabels(page);

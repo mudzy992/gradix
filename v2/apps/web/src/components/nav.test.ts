@@ -63,10 +63,11 @@ describe("meni po roli == matrica dozvola (A4b, web)", () => {
     expect(visible).toEqual(expected);
   });
 
-  it("Radni dani su u meniju vlasnika i admina, nikog drugog", () => {
+  it("Radni dani po A2: OWNER/ADMIN/ACCOUNTANT cijela firma, PM/šef opseg, ostali ništa", () => {
+    const allowed = ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"];
     for (const role of ROLES) {
       const visible = navEntriesForRoles([role]).some((entry) => entry.href === "/ured/radni-dani");
-      expect(visible).toBe(role === "OWNER" || role === "ADMIN");
+      expect(visible).toBe(allowed.includes(role));
     }
   });
 });
