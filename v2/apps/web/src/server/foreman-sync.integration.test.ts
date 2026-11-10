@@ -296,8 +296,6 @@ describeDb("R4 SITE_SUPERVISOR roster and group push (PostgreSQL)", () => {
     expect(pullBody.data.events.map((event) => event.entityType).sort())
       .toEqual(["work_entry", "workday", "sync_conflict"].sort());
     expect(pullBody.data.events).toHaveLength(3);
-    expect(new Set(pullBody.data.events.map((event) => event.entityId)))
-      .toEqual(expect.objectContaining ? new Set([allowedEntry, visibleConflictId]) : new Set());
     expect(pullBody.data.events.map((event) => event.entityId)).toEqual(
       expect.arrayContaining([allowedEntry, visibleConflictId]),
     );
