@@ -6,6 +6,7 @@
  */
 import { ApiError, createClient, type ErrorCode } from "@gradix/contracts";
 import type {
+  ForemanWorkersResponse,
   LoginResponse,
   MachinesResponse,
   MeResponse,
@@ -16,6 +17,7 @@ import type {
   SyncPushResponse,
 } from "@gradix/contracts";
 import { deleteStore, readStore, writeStore } from "../lib/store";
+import { assertSyncAccount, type AccountIdentity } from "./account-binding";
 
 const ACCESS_KEY = "gx_access";
 const REFRESH_KEY = "gx_refresh";
@@ -44,6 +46,23 @@ export async function saveTokens(access: string, refresh: string): Promise<void>
 export async function clearTokens(): Promise<void> {
   await deleteStore(ACCESS_KEY);
   await deleteStore(REFRESH_KEY);
+}
+
+/** Revoke the current server session when online, then always remove local auth tokens. */
+export async function logoutServerSession(): Promise<boolean> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    await clearTokens();
+    return false;
+  }
+  try {
+    await withToken((token) => client.post("/api/auth/logout", undefined, undefined, { accessToken: token }));
+    await clearTokens();
+    return true;
+  } catch {
+    await clearTokens();
+    return false;
+  }
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -105,19 +124,50 @@ export async function me(): Promise<Me> {
   return data;
 }
 
-/** R4 push carries workdays/work entries only; tenant and worker identity come from the session. */
-export async function pushSyncItems(items: SyncPushRequest["items"]): Promise<SyncPushResponse> {
-  const { data } = await withToken((accessToken) =>
-    client.post("/api/sync/push", { items }, undefined, { accessToken }),
-  );
+/** Resolve and pin the current bearer token to the account that owns a local outbox partition. */
+async function tokenForAccount(account: AccountIdentity): Promise<string> {
+  const token = await getAccessToken();
+  if (!token) throw Object.assign(new Error("Prijava je istekla; sačuvani redovi nisu poslani."), { code: "AUTH_REQUIRED" });
+  const { data } = await client.get("/api/me", undefined, { accessToken: token });
+  assertSyncAccount(account, {
+    companyId: data.company?.id ?? "",
+    userId: data.user.id,
+  });
+  return token;
+}
+
+/** Account-bound push never refreshes/re-reads a token mid-request under a different login. */
+export async function pushSyncItems(
+  account: AccountIdentity,
+  items: readonly SyncPushRequest["items"][number][],
+): Promise<SyncPushResponse> {
+  const token = await tokenForAccount(account);
+  const { data } = await client.post("/api/sync/push", { items: [...items] }, undefined, { accessToken: token });
   return data;
 }
 
-/** Opaque cursors are persisted as-is; clients must not compare or derive their sequence. */
-export async function pullSyncChanges(cursor?: string, limit = 100): Promise<SyncPullResponse> {
-  const query = cursor ? { cursor, limit: String(limit) } : { limit: String(limit) };
+/** Opaque cursors are persisted as-is; clients must not compare or derive their sequence.
+ * The expected account is mandatory so a stale account's cursor cannot use the current login. */
+export async function pullSyncChanges(
+  account: AccountIdentity,
+  cursor: string,
+  limit = 100,
+): Promise<SyncPullResponse> {
+  const token = await tokenForAccount(account);
+  const { data } = await client.get("/api/sync/pull", undefined, {
+    query: cursor ? { cursor, limit: String(limit) } : { limit: String(limit) },
+    accessToken: token,
+  });
+  return data;
+}
+
+/** Šefov minimalni worker roster; server ograničava ga na R3 dodjele važeće na workDate. */
+export async function pullForemanWorkers(projectId: string, workDate: string): Promise<ForemanWorkersResponse> {
   const { data } = await withToken((accessToken) =>
-    client.get("/api/sync/pull", undefined, { query, accessToken }),
+    client.get("/api/sync/foreman-workers", undefined, {
+      query: { projectId, workDate },
+      accessToken,
+    }),
   );
   return data;
 }

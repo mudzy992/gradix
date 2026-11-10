@@ -21,8 +21,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         "SELECT email, first_name, last_name, must_change_password FROM users WHERE id = $1",
         [auth.ctx.userId],
       );
-      const company = await client.query<{ name: string; slug: string; currency: string; timezone: string }>(
-        "SELECT name, slug, currency, timezone FROM companies WHERE id = $1",
+      const company = await client.query<{ id: string; name: string; slug: string; currency: string; timezone: string }>(
+        "SELECT id, name, slug, currency, timezone FROM companies WHERE id = $1",
         [auth.ctx.companyId],
       );
       const machines = await client.query<{ count: string }>(

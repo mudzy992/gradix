@@ -2,6 +2,7 @@
 import type { NextRequest } from "next/server";
 import type { SyncPullEvent } from "@gradix/contracts";
 import { R4_SYNC_PULL_MAX_ITEMS, isValidCursorSequence } from "@gradix/domain";
+import { foremanVisibleR4EventIds, sanitizeForemanPullPayload } from "@/server/r4-foreman-pull";
 import { withCompany } from "@gradix/db";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
@@ -72,22 +73,32 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const officeRead = ctx.roles.includes("OWNER") || ctx.roles.includes("ADMIN");
     const isWorker = ctx.roles.includes("WORKER");
-    if (!officeRead && !isWorker) {
+    const isForeman = ctx.roles.includes("SITE_SUPERVISOR");
+    if (!officeRead && !isWorker && !isForeman) {
       return fail("FORBIDDEN", "Ovaj nalog nema pristup radnom sync toku.");
     }
 
     const pool = await getVerifiedPool();
     const result = await withCompany(pool, ctx.companyId, async (client) => {
       let workerId: string | null = null;
-      if (!officeRead) {
+      let foremanWorkerId: string | null = null;
+      if (!officeRead && isWorker) {
         const worker = await client.query<{ id: string }>(
           `SELECT id FROM public.workers
             WHERE company_id = $1 AND user_id = $2 AND is_active`,
           [ctx.companyId, ctx.userId],
         );
         workerId = worker.rows[0]?.id ?? null;
-        if (!workerId) return { forbidden: true as const };
       }
+      if (!officeRead && isForeman) {
+        const worker = await client.query<{ id: string }>(
+          `SELECT id FROM public.workers
+            WHERE company_id = $1 AND user_id = $2 AND is_active`,
+          [ctx.companyId, ctx.userId],
+        );
+        foremanWorkerId = worker.rows[0]?.id ?? null;
+      }
+      if (!officeRead && !workerId && !foremanWorkerId) return { forbidden: true as const };
 
       // Lease expiry alone cannot prove a writer is gone; this definer function takes each
       // expired slot's row lock with SKIP LOCKED before marking it SKIPPED.
@@ -111,30 +122,41 @@ export async function GET(request: NextRequest): Promise<Response> {
       if (events.length !== page.events.length) throw new Error("SYNC_PULL_RESPONSE_INVALID");
 
       let visible: DbEvent[] = events;
-      if (!officeRead && workerId) {
-        const workdayIds = events.filter((event) => event.entityType === "workday").map((event) => event.entityId);
-        const workEntryIds = events.filter((event) => event.entityType === "work_entry").map((event) => event.entityId);
-        const conflictIds = events.filter((event) => event.entityType === "sync_conflict").map((event) => event.entityId);
-        const [days, entries, conflicts] = await Promise.all([
-          workdayIds.length ? client.query<{ id: string }>(
-            "SELECT id FROM public.workdays WHERE company_id = $1 AND worker_id = $2 AND id = ANY($3::text[])",
-            [ctx.companyId, workerId, workdayIds],
-          ) : Promise.resolve({ rows: [] as { id: string }[] }),
-          workEntryIds.length ? client.query<{ id: string }>(
-            "SELECT id FROM public.work_entries WHERE company_id = $1 AND worker_id = $2 AND id = ANY($3::text[])",
-            [ctx.companyId, workerId, workEntryIds],
-          ) : Promise.resolve({ rows: [] as { id: string }[] }),
-          conflictIds.length ? client.query<{ id: string }>(
-            "SELECT id FROM public.sync_conflicts WHERE company_id = $1 AND actor_id = $2 AND id = ANY($3::text[])",
-            [ctx.companyId, ctx.userId, conflictIds],
-          ) : Promise.resolve({ rows: [] as { id: string }[] }),
-        ]);
-        const allowed = new Set([
-          ...days.rows.map((row) => `workday:${row.id}`),
-          ...entries.rows.map((row) => `work_entry:${row.id}`),
-          ...conflicts.rows.map((row) => `sync_conflict:${row.id}`),
-        ]);
-        visible = events.filter((event) => allowed.has(`${event.entityType}:${event.entityId}`));
+      if (!officeRead) {
+        const allowedEntityKeys = new Set<string>();
+        if (workerId) {
+          const workdayIds = events.filter((event) => event.entityType === "workday").map((event) => event.entityId);
+          const workEntryIds = events.filter((event) => event.entityType === "work_entry").map((event) => event.entityId);
+          const conflictIds = events.filter((event) => event.entityType === "sync_conflict").map((event) => event.entityId);
+          const [days, entries, conflicts] = await Promise.all([
+            workdayIds.length ? client.query<{ id: string }>(
+              "SELECT id FROM public.workdays WHERE company_id = $1 AND worker_id = $2 AND id = ANY($3::text[])",
+              [ctx.companyId, workerId, workdayIds],
+            ) : Promise.resolve({ rows: [] as { id: string }[] }),
+            workEntryIds.length ? client.query<{ id: string }>(
+              "SELECT id FROM public.work_entries WHERE company_id = $1 AND worker_id = $2 AND id = ANY($3::text[])",
+              [ctx.companyId, workerId, workEntryIds],
+            ) : Promise.resolve({ rows: [] as { id: string }[] }),
+            conflictIds.length ? client.query<{ id: string }>(
+              "SELECT id FROM public.sync_conflicts WHERE company_id = $1 AND actor_id = $2 AND id = ANY($3::text[])",
+              [ctx.companyId, ctx.userId, conflictIds],
+            ) : Promise.resolve({ rows: [] as { id: string }[] }),
+          ]);
+          for (const row of days.rows) allowedEntityKeys.add(`workday:${row.id}`);
+          for (const row of entries.rows) allowedEntityKeys.add(`work_entry:${row.id}`);
+          for (const row of conflicts.rows) allowedEntityKeys.add(`sync_conflict:${row.id}`);
+        }
+        const allowedEventIds = new Set(
+          events.filter((event) => allowedEntityKeys.has(`${event.entityType}:${event.entityId}`))
+            .map((event) => event.id),
+        );
+        if (foremanWorkerId) {
+          const scopedIds = await foremanVisibleR4EventIds(
+            client, ctx.companyId, foremanWorkerId, ctx.userId, events,
+          );
+          for (const eventId of scopedIds) allowedEventIds.add(eventId);
+        }
+        visible = events.filter((event) => allowedEventIds.has(event.id));
       }
 
       return {
@@ -145,7 +167,9 @@ export async function GET(request: NextRequest): Promise<Response> {
           entityType: event.entityType,
           entityId: event.entityId,
           entityVersion: event.version,
-          payload: event.payload,
+          payload: foremanWorkerId && !officeRead
+            ? sanitizeForemanPullPayload(event.entityType, event.payload)
+            : event.payload,
           tombstone: event.tombstone,
           createdAt: event.createdAt,
         })),
@@ -155,7 +179,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       };
     });
 
-    if (result.forbidden) return fail("FORBIDDEN", "Ovaj nalog nema aktivnu vezu s radnikom.");
+    if (result.forbidden) return fail("FORBIDDEN", "Nalog nema aktivnu vezu s radnikom ili šefom gradilišta.");
     return ok(result);
   } catch (error) {
     if (messageIncludes(error, "SYNC_CURSOR_EXPIRED")) {

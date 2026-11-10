@@ -165,6 +165,21 @@ td.r,th.r{text-align:right}
 }
 @media(min-width:961px){.menu-btn{display:none}}
 @media(prefers-reduced-motion:no-preference){.btn,.nav a,tbody tr,.icon-btn{transition:background .12s,color .12s}}
+
+.r4b-workers{display:flex;flex-direction:column}
+.r4b-worker{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.r4b-worker:first-child{border-top:0}
+.r4b-check{width:22px;height:22px;border-radius:7px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-size:12px;font-weight:800;flex:none;margin-top:1px}
+.r4b-check.off{background:transparent;border:1.5px solid var(--field);color:transparent}
+.r4b-worker b{display:block;font-size:12px;line-height:1.3}
+.r4b-worker span{display:block;color:var(--muted);font-size:11px;line-height:1.35}
+.r4b-outcome{margin-left:auto;flex:none;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--raise);white-space:nowrap}
+.r4b-outcome.ok{background:var(--tint)}
+.r4b-outcome.bad{background:var(--danger-soft);color:var(--danger)}
+.r4b-common{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.r4b-common .r4b-cell{border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+.r4b-cell small{display:block;color:var(--muted);font-size:10px;font-weight:700}
+.r4b-cell b{font-size:12px}
 .r4a-reference{max-width:1360px;margin:56px auto 40px;padding:0 24px 48px}
 .r4a-reference-head{display:flex;gap:20px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
 .r4a-reference-head h1{font-size:26px}
@@ -652,6 +667,89 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
         </div>
       </div>
     </article>
+  </div>
+</section>
+
+<section class="r4a-reference" id="r4b-foreman-reference" aria-labelledby="r4b-heading">
+  <div class="r4a-reference-head">
+    <div class="r4a-reference-copy">
+      <span class="r4a-pending">Prijedlog · čeka odobrenje vlasnika — bez UI koda do odobrenja</span>
+      <h1 id="r4b-heading">R4b · Šef: grupni unos (GLAVNI tok: 1 šef · 5 radnika)</h1>
+      <p class="sub">Šef iz svog R3 opsega bira radnike, zajednički projekat i mašinu, zajednički početak/kraj (uz pojedinačno odstupanje), vidi stanje slanja i ishod po svakom radniku. Obje teme, 360 px.</p>
+    </div>
+    <nav class="r4a-preview-links" aria-label="Prikazi grupnog unosa">
+      <a href="reference.html?preview=r4b&amp;screen=foreman&amp;theme=light">360 · Šef · Svijetlo</a>
+      <a href="reference.html?preview=r4b&amp;screen=foreman&amp;theme=dark">360 · Šef · Tamno</a>
+    </nav>
+  </div>
+  <div class="r4a-seed-note"><svg aria-hidden="true"><use href="#i-info"/></svg><span><b>Podaci:</b> projekat P-01/2026, mašina BAG-01 Bager CAT 320 i radnici Amar Hadžić, Mario Perić i Nedim Softić su iz seed-a (apps/web/scripts/seed.ts); Adnan Hodžić i Selmir Begić dopunjuju pilot ekipu od 5 radnika po odluci vlasnika (5 radnika · 1 šef). Bez telefona i emaila.</span></div>
+  <div class="r4a-artboards">
+    <article class="r4a-artboard" aria-label="Grupni unos šefa, svijetla tema, 360 piksela"><div class="r4a-artboard-label"><b>360 px · Šef · Svijetlo</b><span>Grupni unos · ishod po radniku</span></div><div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="light">
+          <header class="r4m-header"><div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>TEREN</small></div></div><span class="r4m-pill"><i class="dot" aria-hidden="true"></i>Šef</span></header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-worker-name"><div class="av" aria-hidden="true">MP</div><div><b>Mario Perić</b><span>Šef gradilišta · ekipa 5 radnika</span></div></div>
+            <div class="r4m-title-row"><div><h1>Grupni unos</h1><p>Subota, 7. novembar 2026.</p></div><span class="r4m-pill">GLAVNI tok</span></div>
+            <div class="r4m-sync" role="status"><svg aria-hidden="true"><use href="#i-cloud-off"/></svg><div><b>Stanje slanja: 5 zapisa na uređaju</b><span>Sačuvano lokalno. Svaki radnik dobija vlastiti zapis i vlastiti ishod.</span></div><button class="r4m-send" type="button">Pošalji sada</button></div>
+            <section class="r4m-card" aria-label="Zajednički podaci">
+              <div class="r4m-card-head"><h2>Zajednički podaci</h2><span>za sve izabrane</span></div>
+              <div class="r4m-project"><svg aria-hidden="true"><use href="#i-folder"/></svg><div><b>P-01/2026 · Dionica Visoko–Kiseljak, km 12+400</b><span>Projekat iz R3 opsega šefa</span></div></div>
+              <div class="r4b-common">
+                <div class="r4b-cell"><small>Mašina (zajednička)</small><b>BAG-01 · Bager CAT 320</b></div>
+                <div class="r4b-cell"><small>Raspored</small><b>Za sve / pojedinačno</b></div>
+                <div class="r4b-cell"><small>Početak za sve</small><b class="mono">07:30</b></div>
+                <div class="r4b-cell"><small>Kraj za sve</small><b class="mono">15:30</b></div>
+              </div>
+            </section>
+            <section class="r4m-card" style="margin-top:14px" aria-label="Izbor radnika iz opsega">
+              <div class="r4m-card-head"><h2>Radnici iz opsega</h2><span>izabrano 5 / 5</span></div>
+              <div class="r4b-workers">
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Amar Hadžić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Mario Perić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Nedim Softić</b><span>pojedinačno: 08:00–16:00 · Uredi</span></div><span class="r4b-outcome">Čeka slanje</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Adnan Hodžić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Selmir Begić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome bad">Odbijeno · van opsega</span></div>
+              </div>
+              <p class="hint" style="margin-top:10px">Ishod je po radniku: poslano / čeka / odbijeno. Odbijeni zapis ostaje vidljiv šefu sa razlogom; tuđi podaci se ne šalju.</p>
+            </section>
+            <button class="big" type="button">Sačuvaj za 5 radnika</button>
+            <p class="r4m-footnote">Glavni tok za ekipu: 1 šef unosi za 5 radnika. Pojedinačni unos radnika ostaje dostupan, ali nije glavni tok ovog ekrana.</p>
+          </main>
+        </div></div></article>
+    <article class="r4a-artboard" aria-label="Grupni unos šefa, tamna tema, 360 piksela"><div class="r4a-artboard-label"><b>360 px · Šef · Tamno</b><span>Grupni unos · ishod po radniku</span></div><div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="dark">
+          <header class="r4m-header"><div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>TEREN</small></div></div><span class="r4m-pill"><i class="dot" aria-hidden="true"></i>Šef</span></header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-worker-name"><div class="av" aria-hidden="true">MP</div><div><b>Mario Perić</b><span>Šef gradilišta · ekipa 5 radnika</span></div></div>
+            <div class="r4m-title-row"><div><h1>Grupni unos</h1><p>Subota, 7. novembar 2026.</p></div><span class="r4m-pill">GLAVNI tok</span></div>
+            <div class="r4m-sync" role="status"><svg aria-hidden="true"><use href="#i-cloud-off"/></svg><div><b>Stanje slanja: 5 zapisa na uređaju</b><span>Sačuvano lokalno. Svaki radnik dobija vlastiti zapis i vlastiti ishod.</span></div><button class="r4m-send" type="button">Pošalji sada</button></div>
+            <section class="r4m-card" aria-label="Zajednički podaci">
+              <div class="r4m-card-head"><h2>Zajednički podaci</h2><span>za sve izabrane</span></div>
+              <div class="r4m-project"><svg aria-hidden="true"><use href="#i-folder"/></svg><div><b>P-01/2026 · Dionica Visoko–Kiseljak, km 12+400</b><span>Projekat iz R3 opsega šefa</span></div></div>
+              <div class="r4b-common">
+                <div class="r4b-cell"><small>Mašina (zajednička)</small><b>BAG-01 · Bager CAT 320</b></div>
+                <div class="r4b-cell"><small>Raspored</small><b>Za sve / pojedinačno</b></div>
+                <div class="r4b-cell"><small>Početak za sve</small><b class="mono">07:30</b></div>
+                <div class="r4b-cell"><small>Kraj za sve</small><b class="mono">15:30</b></div>
+              </div>
+            </section>
+            <section class="r4m-card" style="margin-top:14px" aria-label="Izbor radnika iz opsega">
+              <div class="r4m-card-head"><h2>Radnici iz opsega</h2><span>izabrano 5 / 5</span></div>
+              <div class="r4b-workers">
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Amar Hadžić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Mario Perić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Nedim Softić</b><span>pojedinačno: 08:00–16:00 · Uredi</span></div><span class="r4b-outcome">Čeka slanje</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Adnan Hodžić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome ok">Poslano</span></div>
+                <div class="r4b-worker"><span class="r4b-check">✓</span><div><b>Selmir Begić</b><span>07:30–15:30 · zajedničko vrijeme</span></div><span class="r4b-outcome bad">Odbijeno · van opsega</span></div>
+              </div>
+              <p class="hint" style="margin-top:10px">Ishod je po radniku: poslano / čeka / odbijeno. Odbijeni zapis ostaje vidljiv šefu sa razlogom; tuđi podaci se ne šalju.</p>
+            </section>
+            <button class="big" type="button">Sačuvaj za 5 radnika</button>
+            <p class="r4m-footnote">Glavni tok za ekipu: 1 šef unosi za 5 radnika. Pojedinačni unos radnika ostaje dostupan, ali nije glavni tok ovog ekrana.</p>
+          </main>
+        </div></div></article>
   </div>
 </section>
 <script>

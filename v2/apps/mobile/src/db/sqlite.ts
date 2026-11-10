@@ -8,8 +8,9 @@
  * ture i gorivo, ali obrazac ostaje isti: `status` + `serverId` + `attempts`.
  */
 import * as SQLite from "expo-sqlite";
+import { DB_NAME, migrateLocalDatabase } from "./migrations";
 
-export const DB_NAME = "gradix.db";
+export { DB_NAME, LOCAL_SCHEMA_VERSION, LocalDatabaseMigrationError, migrateLocalDatabase } from "./migrations";
 
 export type SyncStatus = "pending" | "syncing" | "sent" | "failed";
 
@@ -22,45 +23,29 @@ export type LocalNote = {
   attempts: number;
 };
 
-export async function openDb(): Promise<SQLite.SQLiteDatabase> {
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
-  await db.execAsync(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS notes (
-      local_id  TEXT PRIMARY KEY NOT NULL,
-      text      TEXT NOT NULL,
-      client_at TEXT NOT NULL,
-      status    TEXT NOT NULL DEFAULT 'pending',
-      server_id TEXT,
-      attempts  INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS sync_meta (
-      key   TEXT PRIMARY KEY NOT NULL,
-      value TEXT NOT NULL
-    );
-    -- R2b: spisak rokova za offline prikaz. Ime tabele je namjerno "_cache" - ovo NIJE izvor
-    -- istine (server jeste), pa se smije obrisati i ponovo napuniti bez gubitka podataka.
-    -- R3: projekti na koje je osoba dodijeljena. Isti obrazac kao rokova keš: server je izvor
-    -- istine, lokalna kopija postoji da ekran ne bude prazan bez veze.
-    CREATE TABLE IF NOT EXISTS projects_cache (
-      id         TEXT PRIMARY KEY NOT NULL,
-      code       TEXT NOT NULL,
-      name       TEXT NOT NULL,
-      status     TEXT NOT NULL,
-      site_place TEXT,
-      starts_on  TEXT,
-      ends_on    TEXT
-    );
-    CREATE TABLE IF NOT EXISTS obligations_cache (
-      id         TEXT PRIMARY KEY NOT NULL,
-      type_label TEXT NOT NULL,
-      target     TEXT NOT NULL,
-      expires_at TEXT,
-      state      TEXT NOT NULL,
-      days_left  INTEGER
-    );
-  `);
-  return db;
+let openDbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+/** Open one shared handle and run the versioned, backup-before-change migration exactly once. */
+export function openDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!openDbPromise) {
+    openDbPromise = (async () => {
+      const db = await SQLite.openDatabaseAsync(DB_NAME);
+      try {
+        // Keep the database untouched until the migration helper has made a verified backup.
+        await db.execAsync("PRAGMA foreign_keys = ON;");
+        await migrateLocalDatabase(db);
+        await db.execAsync("PRAGMA journal_mode = WAL;");
+        return db;
+      } catch (error) {
+        await db.closeAsync().catch(() => undefined);
+        throw error;
+      }
+    })().catch((error) => {
+      openDbPromise = null;
+      throw error;
+    });
+  }
+  return openDbPromise;
 }
 
 export async function insertNote(

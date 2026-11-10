@@ -15,6 +15,7 @@ import { buildOpenApi } from "./openapi";
 import { ROUTES } from "./routes";
 import {
   AuditResponse,
+  ForemanWorkersResponse,
   LoginResponse,
   MeResponse,
   RolesResponse,
@@ -128,6 +129,7 @@ describe("šeme prihvataju stvarne odgovore", () => {
         mustChangePassword: false,
       },
       company: {
+        id: "cmp_demo",
         name: "Demo gradnja",
         slug: "demo",
         currency: "BAM",
@@ -228,6 +230,18 @@ describe("šeme prihvataju stvarne odgovore", () => {
       hasMore: false,
     };
     expect(SyncPullResponse.parse(sample)).toEqual(sample);
+  });
+
+  it("foreman worker pull carries only worker ID and display name", () => {
+    const sample = {
+      workDate: "2026-11-09",
+      workers: [{ id: "worker_1", name: "Amina K." }],
+    };
+    expect(ForemanWorkersResponse.parse(sample)).toEqual(sample);
+    expect(ForemanWorkersResponse.safeParse({
+      ...sample,
+      workers: [{ ...sample.workers[0], phone: "+38760000000", email: "private@test.example" }],
+    }).success).toBe(false);
   });
 
   it("POST /api/sync/push accepts only the strict R4 item protocol", () => {

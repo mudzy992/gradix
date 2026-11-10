@@ -26,6 +26,8 @@ export type R4WorkEntryPayload = {
 export type R4WorkEntryPushItem = {
   localId: string;
   entityType: "work_entry";
+  /** Present only for SITE_SUPERVISOR group entry; the server rechecks R3 scope on work_date. */
+  workerId?: string;
   workdayId: string;
   workEntryId: string;
   /** Absent only for a new entry; updates require optimistic concurrency. */
@@ -37,6 +39,8 @@ export type R4WorkEntryPushItem = {
 export type R4WorkdayPushItem = {
   localId: string;
   entityType: "workday";
+  /** Present only for SITE_SUPERVISOR group submission; the server checks assignment history. */
+  workerId?: string;
   workdayId: string;
   baseVersion: number;
   deviceSentAt: string;
@@ -151,6 +155,9 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
     }
     localIds.add(item.localId);
     if (!isR4Uuid(item.workdayId) || !isOffsetDateTime(item.deviceSentAt)) {
+      return { ok: false, code: "SYNC_ITEM_INVALID" };
+    }
+    if (item.workerId !== undefined && (typeof item.workerId !== "string" || item.workerId.length < 1 || item.workerId.length > 128)) {
       return { ok: false, code: "SYNC_ITEM_INVALID" };
     }
     if (item.entityType === "work_entry") {

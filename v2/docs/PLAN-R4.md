@@ -267,12 +267,13 @@ prepisuje. Ovi pragovi su potvrđeni za plan.
 - Pri odjavi se brišu auth tokeni, keš tuđih workdays/segmenata, keš opsega/tima i serverov cursor.
   **Neposlani redovi i konfliktni payloadi se ne brišu**; ostaju lokalno vezani za prvobitni
   `company_id`/`user_id` i mogu se slati tek nakon prijave istog korisnika.
-- Kod izgubljenog telefona server odmah opoziva refresh/access sesije i označi uređaj nevažećim.
-  Server ne može garantovati brisanje podataka sa offline uređaja: lokalni outbox ostaje šifrovan
-  do OS/MDM wipe-a ili dok se uređaj ponovo ne poveže. Pri sljedećem pokretanju/online provjeri
-  aplikacija uklanja auth i keš; ne šalje ništa kroz opozvanu sesiju. Organizacijska procedura
-  uključuje opoziv sesija i, gdje postoji, OS/MDM remote wipe. Ovaj limit se jasno objašnjava
-  korisniku.
+- **Izgubljen telefon (pilot, odluka vlasnika):** administrator opoziva sesije naloga; server od
+  tog trenutka odbija push i pull tog uređaja (401), a aplikacija pri sljedećoj online provjeri
+  uklanja auth i keš i prikazuje poruku da prijava više ne važi i da neposlani zapisi ostaju na
+  uređaju. Za pilot se **ne** uvodi remote wipe ni SQLCipher. Poznat i prihvaćen rizik: podaci
+  koji su već na izgubljenom offline uređaju ne mogu se obrisati na daljinu; zato je
+  **zaključavanje ekrana (PIN/biometrija) obavezno** za svaki pilot uređaj, a na uređaju se čuvaju
+  samo minimalni podaci (ID i ime radnika, vlastiti zapisi u outboxu).
 
 SQLite ima `PRAGMA user_version`. Migracija R4 čuva R4 redove/outbox/cursore transakcijski i ne
 radi reset baze. Vlasnik potvrđuje da se legacy R0 note redovi mogu ukloniti jer nema stvarnih

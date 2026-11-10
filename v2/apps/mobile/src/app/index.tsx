@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,9 @@ import {
   View,
 } from "react-native";
 import { login, me, getAccessToken, type Me } from "../api/client";
+import { getLogoutSummary, logoutMobile, REVOKED_SESSION_MESSAGE } from "../api/session-lifecycle";
+import { activateLocalAccount, clearLocalAccountData } from "../db/r4-outbox";
+import { openDb } from "../db/sqlite";
 import { radius, spacing, touchTarget, typography } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
@@ -33,19 +37,38 @@ export default function IndexScreen() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const token = await getAccessToken();
-      if (!token) {
-        setPhase("login");
-        return;
-      }
+    let mounted = true;
+    void (async () => {
+      let db: Awaited<ReturnType<typeof openDb>> | null = null;
       try {
-        setProfile(await me());
-        setPhase("ready");
-      } catch {
-        setPhase("login");
+        db = await openDb();
+        const token = await getAccessToken();
+        if (!token) {
+          // No authenticated account may see a server-derived cache left by a previous session.
+          await clearLocalAccountData(db);
+          if (mounted) setPhase("login");
+          return;
+        }
+        const current = await me();
+        if (current.company?.id) {
+          await activateLocalAccount(db, { companyId: current.company.id, userId: current.user.id });
+        }
+        if (mounted) {
+          setProfile(current);
+          setPhase("ready");
+        }
+      } catch (error) {
+        // A revoked session clears tokens in the auth client; purge private caches on the next
+        // online check, but preserve every outbox row for its original account.
+        const tokenCleared = db ? !(await getAccessToken()) : false;
+        if (db && tokenCleared) await clearLocalAccountData(db);
+        if (mounted) {
+          setMessage(tokenCleared ? REVOKED_SESSION_MESSAGE : error instanceof Error ? error.message : "Baza na telefonu se nije mogla otvoriti.");
+          setPhase("login");
+        }
       }
     })();
+    return () => { mounted = false; };
   }, []);
 
   async function signIn() {
@@ -53,13 +76,51 @@ export default function IndexScreen() {
     setMessage(null);
     try {
       await login(email.trim(), password);
-      setProfile(await me());
+      const current = await me();
+      if (!current.company?.id) throw new Error("Nalog nije vezan za aktivnu firmu.");
+      const db = await openDb();
+      const switched = await activateLocalAccount(db, {
+        companyId: current.company.id,
+        userId: current.user.id,
+      });
+      setProfile(current);
       setPhase("ready");
+      if (switched.pendingForOtherAccounts > 0) {
+        setMessage(`Na uređaju je ${switched.pendingForOtherAccounts} neposlanih redova drugog naloga; ovaj nalog ih ne može poslati.`);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Prijava nije uspjela.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function finishSignOut(db: Awaited<ReturnType<typeof openDb>>) {
+    setBusy(true);
+    try {
+      const outcome = await logoutMobile(db, true);
+      setMessage(outcome.serverRevoked
+        ? "Odjavljeni ste. Keš je obrisan; neposlani redovi su sačuvani za isti nalog."
+        : "Lokalno ste odjavljeni i keš je obrisan. Server sesija nije mogla biti opozvana bez mreže; kontaktiraj ured za opoziv ili MDM wipe.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Lokalni podaci nisu mogli biti očišćeni.");
+    } finally {
+      setProfile(null);
+      setPhase("login");
+      setBusy(false);
+    }
+  }
+
+  async function requestSignOut() {
+    const db = await openDb();
+    const summary = await getLogoutSummary(db);
+    const explanation = summary.pendingCount + summary.legacyR0Count > 0
+      ? `R4 outbox redovi: ${summary.pendingCount}. Stari R0 zapisi koji nemaju vezan nalog: ${summary.legacyR0Count}. Odjava briše privatni keš i cursor, ali čuva R4 redove i konfliktne payload-e; R0 zapisi se ne šalju drugim protokolom.`
+      : "Odjava će obrisati lokalni keš i sync cursor. Neposlani redovi i konfliktni payload-i se nikad ne brišu automatski.";
+    Alert.alert("Potvrdi odjavu", explanation, [
+      { text: "Ostani prijavljen", style: "cancel" },
+      { text: "Odjavi se", style: "destructive", onPress: () => { void finishSignOut(db); } },
+    ]);
   }
 
   if (phase === "loading") {
@@ -138,8 +199,7 @@ export default function IndexScreen() {
       <View style={styles.panel}>
         <Text style={styles.panelLabel}>Radni unos</Text>
         <Text style={styles.panelHint}>
-          R4 lokalni unos na telefonu slijedi nakon staging provjere i odobrenog SQLite outbox koraka.
-          Stare R0 bilješke se više ne šalju.
+          R4 lokalni unos je sljedeći UI korak. Stare R0 bilješke se ne šalju novim sync protokolom.
         </Text>
       </View>
 
@@ -167,6 +227,14 @@ export default function IndexScreen() {
           <Text style={[styles.buttonText, styles.secondaryText]}>Moji projekti</Text>
         </Pressable>
       </Link>
+      <Pressable
+        style={jedanStil(styles.button, styles.secondaryButton)}
+        onPress={requestSignOut}
+        disabled={busy}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Odjavi se</Text>
+      </Pressable>
     </ScrollView>
   );
 }

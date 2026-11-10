@@ -68,6 +68,12 @@ describe("R4 sync protocol validation", () => {
     })])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
   });
 
+  it("supports an optional group target ID, which still requires server-side R3 authorization", () => {
+    expect(validateR4SyncPush([entryItem({ workerId: "wrk_group_1" })])).toEqual({ ok: true });
+    expect(validateR4SyncPush([entryItem({ workerId: "" })])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
+    expect(validateR4SyncPush([entryItem({ workerId: "x".repeat(129) })])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
+  });
+
   it("enforces WORK/BREAK target rules and version constraints", () => {
     expect(validateR4SyncPush([entryItem({
       entry: { ...entryItem().entry, kind: "BREAK", projectId: null, machineId: null },
