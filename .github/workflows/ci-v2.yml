@@ -99,6 +99,13 @@ jobs:
         # Hvata slučaj react-native !== ono što SDK traži — `expo export -p web` to propusti.
         run: pnpm check-expo
 
+      # Pravi Android bundle: jedini dokaz da Metro ne povuče test/dev kod u aplikaciju.
+      # (Regresija 2026-11-07: render test u src/app/ je kao ruta povukao vitest->vite
+      # i `expo start` za Android je padao na `import(filepath)` u vite modulu.)
+      - name: Android bundle (Metro)
+        working-directory: v2
+        run: pnpm --filter @gradix/mobile exec expo export --platform android --output-dir /tmp/export-android
+
       - name: Migracije i role
         working-directory: v2
         run: |
