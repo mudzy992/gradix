@@ -196,12 +196,19 @@ export default function IndexScreen() {
         {themeToggle}
       </View>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelLabel}>Radni unos</Text>
-        <Text style={styles.panelHint}>
-          R4 lokalni unos je sljedeći UI korak. Stare R0 bilješke se ne šalju novim sync protokolom.
-        </Text>
-      </View>
+      <Link href="/moj-dan" asChild>
+        <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
+          <Text style={[styles.buttonText, styles.secondaryText]}>Moj dan</Text>
+        </Pressable>
+      </Link>
+
+      {profile?.user.roles.includes("SITE_SUPERVISOR") ? (
+        <Link href="/grupa" asChild>
+          <Pressable style={jedanStil(styles.button, styles.secondaryButton)} accessibilityRole="link">
+            <Text style={[styles.buttonText, styles.secondaryText]}>Grupa — unos za ekipu</Text>
+          </Pressable>
+        </Link>
+      ) : null}
 
       {message && <Text style={styles.hint}>{message}</Text>}
 
