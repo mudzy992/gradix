@@ -41,6 +41,7 @@ import {
   ResetPasswordResponse,
   RolesResponse,
   SetActiveResponse,
+  ForemanWorkersResponse,
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
@@ -518,6 +519,19 @@ export const ROUTES = [
     request: null,
     response: SyncPullResponse,
     query: z.object({ cursor: z.string().optional(), limit: z.coerce.number().int().min(1).max(200).optional() }),
+  },
+  {
+    method: "GET",
+    path: "/api/sync/foreman-workers",
+    summary: "Minimalni R3 worker roster za šefa, po projektu i work_date.",
+    auth: true,
+    permission: "workers.view",
+    request: null,
+    response: ForemanWorkersResponse,
+    query: z.object({
+      projectId: z.string().min(1).max(128),
+      workDate: z.string().regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/),
+    }),
   },
   /* ------------------------------------------------------ projekti i dodjele (R3) */
   {

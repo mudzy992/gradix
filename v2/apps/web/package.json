@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/run-tests.mjs",
     "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured src/app/pregled",
     "seed": "tsx scripts/seed.ts",
     "check-preklapanje": "node scripts/check-preklapanje.mjs"

@@ -42,6 +42,7 @@ export const MeResponse = z.object({
   }),
   company: z
     .object({
+      id: z.string(),
       name: z.string(),
       slug: z.string(),
       currency: z.string(),
@@ -561,6 +562,8 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
   z.object({
     localId: z.string().uuid(),
     entityType: z.literal("work_entry"),
+    /** Only group submissions include this; the server enforces R3 assignment scope by work_date. */
+    workerId: z.string().min(1).max(128).optional(),
     workdayId: z.string().uuid(),
     workEntryId: z.string().uuid(),
     baseVersion: z.number().int().positive().optional(),
@@ -570,6 +573,7 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
   z.object({
     localId: z.string().uuid(),
     entityType: z.literal("workday"),
+    workerId: z.string().min(1).max(128).optional(),
     workdayId: z.string().uuid(),
     baseVersion: z.number().int().positive(),
     deviceSentAt: OffsetDateTime,
@@ -616,6 +620,19 @@ export const SyncPullResponse = z.object({
   hasMore: z.boolean(),
 });
 export type SyncPullResponse = z.infer<typeof SyncPullResponse>;
+
+/** Minimalni R3-scoped worker roster for SITE_SUPERVISOR group-entry; no PII beyond display name. */
+export const ForemanWorker = z.object({
+  id: z.string().min(1).max(128),
+  name: z.string().min(1).max(260),
+}).strict();
+export type ForemanWorker = z.infer<typeof ForemanWorker>;
+
+export const ForemanWorkersResponse = z.object({
+  workDate: z.string().regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/),
+  workers: z.array(ForemanWorker),
+}).strict();
+export type ForemanWorkersResponse = z.infer<typeof ForemanWorkersResponse>;
 
 /** Promjena rola i opsega — vraća stanje prije i poslije (UI prikazuje razliku). */
 export const MembershipChange = z.object({

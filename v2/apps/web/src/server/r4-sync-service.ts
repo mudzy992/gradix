@@ -141,6 +141,62 @@ async function readWorker(pool: Pool, actor: SyncPushActor): Promise<Worker | nu
   });
 }
 
+async function readTargetWorker(pool: Pool, actor: SyncPushActor, workerId: string): Promise<Worker | null> {
+  return withCompany(pool, actor.companyId, async (client) => {
+    const result = await client.query<Worker>(
+      `SELECT id, first_name, last_name
+         FROM public.workers
+        WHERE company_id = $1 AND id = $2 AND is_active`,
+      [actor.companyId, workerId],
+    );
+    return result.rows[0] ?? null;
+  });
+}
+
+async function foremanHasAssignmentScope(
+  client: PoolClient,
+  actor: SyncPushActor,
+  foremanWorkerId: string,
+  targetWorkerId: string,
+  workDate: string,
+  projectId: string | null,
+): Promise<boolean> {
+  const result = await client.query<{ allowed: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM public.project_assignments foreman_assignment
+         JOIN public.project_assignments worker_assignment
+           ON worker_assignment.company_id = foreman_assignment.company_id
+          AND worker_assignment.project_id = foreman_assignment.project_id
+        WHERE foreman_assignment.company_id = $1
+          AND foreman_assignment.worker_id = $2
+          AND worker_assignment.worker_id = $3
+          AND EXISTS (
+            SELECT 1 FROM public.workers supervisor_worker
+             WHERE supervisor_worker.company_id = $1
+               AND supervisor_worker.id = $2
+               AND supervisor_worker.user_id = $6
+               AND supervisor_worker.is_active
+          )
+          AND EXISTS (
+            SELECT 1 FROM public.workers target_worker
+             WHERE target_worker.company_id = $1
+               AND target_worker.id = $3
+               AND target_worker.is_active
+          )
+          AND ($5::text IS NULL OR foreman_assignment.project_id = $5)
+          AND foreman_assignment.voided_at IS NULL
+          AND foreman_assignment.from_date <= $4::date
+          AND (foreman_assignment.to_date IS NULL OR foreman_assignment.to_date >= $4::date)
+          AND worker_assignment.voided_at IS NULL
+          AND worker_assignment.from_date <= $4::date
+          AND (worker_assignment.to_date IS NULL OR worker_assignment.to_date >= $4::date)
+     ) AS allowed`,
+    [actor.companyId, foremanWorkerId, targetWorkerId, workDate, projectId, actor.userId],
+  );
+  return result.rows[0]?.allowed === true;
+}
+
 async function businessDate(client: PoolClient, company: CompanyId, instant: string): Promise<string | null> {
   const result = await client.query<{ work_date: string }>(
     `SELECT ($1::timestamptz AT TIME ZONE c.timezone)::date::text AS work_date
@@ -336,6 +392,7 @@ async function createConflict(
   actor: SyncPushActor,
   worker: Worker,
   item: R4SyncPushItem,
+  workDate: string,
   requestHash: string,
   reservation: Reservation,
   workEntryId: string | null,
@@ -358,6 +415,7 @@ async function createConflict(
     workEntryId,
     workerId: worker.id,
     workerName: `${worker.first_name} ${worker.last_name}`.trim(),
+    workDate,
     reason,
     receivedPayload,
     serverVersion,
@@ -408,6 +466,7 @@ async function applyItem(
   client: PoolClient,
   actor: SyncPushActor,
   worker: Worker,
+  foremanWorkerId: string | null,
   item: R4SyncPushItem,
   requestHash: string,
   reservation: Reservation,
@@ -424,6 +483,13 @@ async function applyItem(
     );
     const day = current.rows[0];
     if (!day) return rejectInTransaction(client, actor, item, requestHash, reservation, invalidItem(item));
+    if (foremanWorkerId && !(await foremanHasAssignmentScope(
+      client, actor, foremanWorkerId, worker.id, day.work_date, null,
+    ))) {
+      return rejectInTransaction(
+        client, actor, item, requestHash, reservation, invalidItem(item, "FOREMAN_SCOPE_FORBIDDEN"),
+      );
+    }
     if (day.header_version !== item.baseVersion || day.status !== "DRAFT") {
       return rejectInTransaction(client, actor, item, requestHash, reservation, {
         ...invalidItem(item),
@@ -484,13 +550,19 @@ async function applyItem(
   const reject = (result = invalidItem(item)) =>
     rejectInTransaction(client, actor, item, requestHash, reservation, result, workdaySlot);
 
-  const existing = await findExistingEntry(client, actor, worker.id, item.workEntryId);
   const date = await businessDate(client, actor.companyId, item.entry.startedAt);
   if (!date) return reject();
+  const projectId = item.entry.kind === "WORK" ? item.entry.projectId : null;
+  if (foremanWorkerId && !(await foremanHasAssignmentScope(
+    client, actor, foremanWorkerId, worker.id, date, projectId,
+  ))) {
+    return reject(invalidItem(item, "FOREMAN_SCOPE_FORBIDDEN"));
+  }
+  const existing = await findExistingEntry(client, actor, worker.id, item.workEntryId);
 
   if (item.baseVersion !== undefined) {
     if (!existing) {
-      return createConflict(client, actor, worker, item, requestHash, reservation,
+      return createConflict(client, actor, worker, item, date, requestHash, reservation,
         null, null, "SYNC_VERSION_CONFLICT", workdaySlot);
     }
     const currentDay = await client.query<{ work_date: string; status: "DRAFT" | "SUBMITTED" }>(
@@ -502,7 +574,7 @@ async function applyItem(
       return reject();
     }
     if (existing.version !== item.baseVersion) {
-      return createConflict(client, actor, worker, item, requestHash, reservation,
+      return createConflict(client, actor, worker, item, date, requestHash, reservation,
         existing.id, existing.version, "SYNC_VERSION_CONFLICT", workdaySlot);
     }
     if (currentDay.rows[0]?.status === "SUBMITTED") {
@@ -594,7 +666,7 @@ async function applyItem(
     await client.query("RELEASE SAVEPOINT sync_workday_apply");
     if (databaseCode === "23P01" || constraint === "work_entries_one_open_per_worker"
         || (error instanceof Error && error.message.includes("WORK_ENTRY_OVERLAP"))) {
-      return createConflict(client, actor, worker, item, requestHash, reservation,
+      return createConflict(client, actor, worker, item, date, requestHash, reservation,
         item.baseVersion === undefined ? null : item.workEntryId,
         existing?.version ?? null,
         constraint === "work_entries_one_open_per_worker" ? "WORK_ENTRY_OPEN_EXISTS" : "WORK_ENTRY_OVERLAP",
@@ -642,6 +714,7 @@ async function applyReservedItem(
   pool: Pool,
   actor: SyncPushActor,
   worker: Worker,
+  foremanWorkerId: string | null,
   item: R4SyncPushItem,
   requestHash: string,
   reservation: Reservation,
@@ -670,7 +743,7 @@ async function applyReservedItem(
       if (workdayReservation) await skipReservationInTransaction(client, actor, workdayReservation);
       return invalidItem(item, "SYNC_ITEM_REJECTED");
     }
-    return applyItem(client, actor, worker, item, requestHash, reservation, new Date(), workdayReservation);
+    return applyItem(client, actor, worker, foremanWorkerId, item, requestHash, reservation, new Date(), workdayReservation);
   });
 }
 
@@ -680,15 +753,39 @@ export async function pushR4SyncItems(
   actor: SyncPushActor,
   items: readonly R4SyncPushItem[],
 ): Promise<R4SyncPushItemResult[]> {
-  if (!actor.roles.includes("WORKER")) throw new SyncPushAccessError("FORBIDDEN");
-  const worker = await readWorker(pool, actor);
-  if (!worker) throw new SyncPushAccessError("NOT_FOUND");
+  const isWorker = actor.roles.includes("WORKER");
+  const isForeman = actor.roles.includes("SITE_SUPERVISOR");
+  if (!isWorker && !isForeman) throw new SyncPushAccessError("FORBIDDEN");
+  const actorWorker = await readWorker(pool, actor);
+  if (!actorWorker) throw new SyncPushAccessError("NOT_FOUND");
   await withCompany(pool, actor.companyId, async (client) => {
     await client.query("SELECT public.sync_cursor_sweep($1, 100)", [actor.companyId]);
   });
 
   const results: R4SyncPushItemResult[] = [];
   for (const item of items) {
+    let worker: Worker;
+    let foremanWorkerId: string | null = null;
+    if (item.workerId !== undefined) {
+      if (!isForeman) {
+        results.push(invalidItem(item, "WORKER_TARGET_FORBIDDEN"));
+        continue;
+      }
+      const target = await readTargetWorker(pool, actor, item.workerId);
+      if (!target) {
+        results.push(invalidItem(item, "FOREMAN_SCOPE_FORBIDDEN"));
+        continue;
+      }
+      worker = target;
+      foremanWorkerId = actorWorker.id;
+    } else {
+      if (!isWorker) {
+        results.push(invalidItem(item, "FOREMAN_WORKER_REQUIRED"));
+        continue;
+      }
+      worker = actorWorker;
+    }
+
     const requestHash = sha256(canonical(item));
     const prior = await readReceipt(pool, actor, item, requestHash);
     if (prior) {
@@ -704,7 +801,7 @@ export async function pushR4SyncItems(
     // Failed or ambiguous business transactions intentionally leave slots PENDING. The lease
     // sweeper can mark them SKIPPED only after expiry and a successful row lock.
     results.push(await applyReservedItem(
-      pool, actor, worker, item, requestHash, reservation, workdayReservation,
+      pool, actor, worker, foremanWorkerId, item, requestHash, reservation, workdayReservation,
     ));
   }
   return results;

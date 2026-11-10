@@ -159,8 +159,8 @@ describeDb("R3 assignment-history guard (PostgreSQL)", () => {
         [assignmentId, COMPANY, PROJECT, WORKER_A, yesterday, tomorrow],
       ),
     );
-    // Predicate regression only: foreman work_date push/pull is not implemented yet (it is an
-    // R4a-2 gate). The route-level authorization test must exercise this same inclusive condition.
+    // Predicate regression plus route-level R4 foreman tests use this same inclusive work_date
+    // condition for both the roster pull and group push authorization.
     expect(historical.rows[0]).toMatchObject({
       authorized_yesterday: true,
       authorized_tomorrow: false,
