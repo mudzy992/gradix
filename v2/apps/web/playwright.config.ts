@@ -15,4 +15,6 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
+  // CI: github reporter pretvara padove u anotacije (logovi runa nisu uvijek dostupni).
+  reporter: process.env.CI ? "github" : "list",
 });
