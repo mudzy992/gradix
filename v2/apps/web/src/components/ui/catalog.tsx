@@ -11,10 +11,12 @@
  */
 import { useState, type ReactNode } from "react";
 import {
-  Alert, Button, Card, Checkbox, Chip, ConfirmDialog, DataTable, DescriptionList, Dialog,
-  EmptyState, FilterBar, FormGrid, FormSection, Icon, IconButton, Inline, Input, Mono,
-  PageHeader, Pagination, Radio, RowActions, SectionTitle, Segmented, Select, Skeleton,
-  Stack, Stat, StatusDot, Switch, Tabs, Textarea,
+  Accordion, ActionCard, Alert, Avatar, Badge, Breadcrumbs, Button, Card, Checkbox, Chip,
+  ConfirmDialog, DataTable, DescriptionList, Dialog, EmptyState, FigureImage, FileUpload,
+  FilterBar, FormGrid, FormSection, Icon, IconButton, Inline, Input, Mono, PageHeader,
+  Pagination, QuantityStepper, Radio, RowActions, SectionTitle, Segmented, Select, Skeleton,
+  SpeedDial, Stack, Stat, StatusDot, Stepper, Switch, Tabs, TextLink, Textarea, ToastStack,
+  useToasts,
 } from "./index";
 
 const TOKENS = ["--bg", "--panel", "--raise", "--sunken", "--text", "--muted", "--line", "--field", "--primary", "--accent", "--tint", "--danger"];
@@ -42,6 +44,8 @@ export function ComponentCatalog() {
   const [page, setPage] = useState(false);
   const [tableState, setTableState] = useState<"ready" | "loading" | "error" | "empty">("ready");
   const [seg, setSeg] = useState("svi");
+  const [qty, setQty] = useState(8);
+  const { toasts, push, dismiss } = useToasts();
   return (
     <Stack>
       <PageHeader title="Katalog komponenti" subtitle="UI sistem (Dio U) — sve komponente i stanja, web i mobilni isti inventar. Obje teme: prekidač u zaglavlju. Ispod 640 px tabela postaje kartice — suzi prozor i provjeri." />
@@ -254,6 +258,118 @@ export function ComponentCatalog() {
           />
         </Card>
       </Section>
+
+
+      <Section title="Layout i shell" hint="Okvir aplikacije: bočna navigacija 232 px, gornja traka 66 px, sadržaj do 1240 px. Ispod — živi okvir u malom.">
+        <Card>
+          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", border: "1px solid var(--line)", borderRadius: "var(--radius-card)", overflow: "hidden", minHeight: 220 }}>
+            <div style={{ borderRight: "1px solid var(--line)", padding: "var(--space-3)", background: "var(--panel)" }}>
+              <p className="gx-nav__group">Pregled</p>
+              <a className="gx-nav-item" aria-current="page" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="home" /></span>Pregled</a>
+              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="users" /></span>Radnici</a>
+              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="truck" /></span>Mašine</a>
+              <p className="gx-nav__group">Ured</p>
+              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="calendar" /></span>Radni dani <Badge>2</Badge></a>
+            </div>
+            <div>
+              <div className="gx-topbar" style={{ borderBottom: "1px solid var(--line)" }}>
+                <strong>Topbar (shell)</strong>
+                <span className="gx-topbar__spacer" />
+                <IconButton icon="search" label="Pretraga (shell primjer)" />
+                <IconButton icon="sun" label="Tema (shell primjer)" />
+                <Avatar name="Amina Karić" size="sm" />
+              </div>
+              <div style={{ padding: "var(--space-4)" }}>
+                <Breadcrumbs items={[{ label: "Pregled", href: "#katalog-layout" }, { label: "Radnici", href: "#katalog-layout" }, { label: "Amina Karić" }]} />
+                <p className="gx-page-sub" style={{ marginTop: "var(--space-3)" }}>Sadržaj ide u gx-main: naslov stranice, filteri, kartice i tabele — uvijek istim redom.</p>
+              </div>
+            </div>
+          </div>
+          <p style={{ marginTop: "var(--space-3)" }}>Layout primitivi: <Mono>Stack</Mono> (vertikalno), <Mono>Inline</Mono> (vodoravno), <Mono>FormGrid</Mono> (2 kolone → 1 na mobilnom), <Mono>PageHeader</Mono>, <Mono>FilterBar</Mono>.</p>
+        </Card>
+      </Section>
+
+      <Section title="Razmaci (spacing) i tipografija" hint="Mreža 4 px: --space-1 … --space-7. Tipografija: page 30 / section 16 / body 14 / small 13 / label 12.">
+        <Card>
+          <Stack>
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+                <Mono>--space-{n}</Mono>
+                <span aria-hidden="true" style={{ height: 12, width: `var(--space-${n})`, background: "var(--primary)", borderRadius: 2, display: "inline-block" }} />
+                <span className="gx-page-sub">{n * 4} px</span>
+              </div>
+            ))}
+          </Stack>
+          <p style={{ fontSize: "var(--text-page)", fontWeight: 800 }}>Page 30 — naslov stranice</p>
+          <p style={{ fontSize: "var(--text-section)", fontWeight: 700 }}>Section 16 — naslov sekcije</p>
+          <p style={{ fontSize: "var(--text-body)" }}>Body 14 — osnovni tekst interfejsa.</p>
+          <p style={{ fontSize: "var(--text-small)" }}>Small 13 — meta i pomoćni tekst.</p>
+          <p style={{ fontSize: "var(--text-label)", fontWeight: 600 }}>Label 12 — oznake polja i chipovi.</p>
+        </Card>
+      </Section>
+
+      <Section title="Navigacija, breadcrumbs, link" hint="Stavka navigacije ima ikonu + tekst; trenutna stranica je aria-current.">
+        <Card>
+          <Stack>
+            <Breadcrumbs items={[{ label: "Ured", href: "#nav" }, { label: "Radnici", href: "#nav" }, { label: "Novi radnik" }]} />
+            <p>Ovo je <TextLink href="#nav">TextLink u tekstu</TextLink> — podvučen, boja --link, vidljiv i bez boje (podvlačenje).</p>
+            <Stepper steps={["Podaci", "Angažman", "Potvrda"]} current={1} />
+            <p className="gx-page-sub">Stepper (koraci): završeni ✓, trenutni pun, sljedeći prazni — stanje nije samo boja.</p>
+          </Stack>
+        </Card>
+      </Section>
+
+      <Section title="Kartice, avatar, badge" hint="Card je jedina ploča; ActionCard je cijela klikabilna; Stat je brojčana kartica.">
+        <Stack>
+          <Inline>
+            <Avatar name="Amina Karić" />
+            <Avatar name="Mujo Softić" size="lg" />
+            <Avatar name="Amar Hodžić" size="sm" />
+            <span>Amina Karić <Badge>3</Badge></span>
+            <span>Obavijesti <Badge tone="danger">5</Badge></span>
+            <span>Arhiva <Badge tone="quiet">12</Badge></span>
+          </Inline>
+          <Inline>
+            <ActionCard title="ActionCard: Dodaj radnika" hint="Cijela kartica je jedna akcija (meta ≥48 px)." onClick={() => push("info", "ActionCard kliknut")} />
+            <ActionCard title="ActionCard: Uvezi iz Excela" hint="Isti obrazac za ulaze u procese." onClick={() => push("info", "Uvoz iz kataloga — demo")} />
+          </Inline>
+          <Inline>
+            <Stat label="Stat: Otvoreni dani" value="3" hint="Čekaju unos" />
+            <Stat label="Stat: Sukobi" value="1" hint="Čeka razrješenje" />
+          </Inline>
+        </Stack>
+      </Section>
+
+      <Section title="Upload i slika" hint="Upload: klik ili prevlačenje; slika uvijek s opisom (alt) i omjerom.">
+        <Card>
+          <FormGrid>
+            <FileUpload label="Dodaj dokument ili fotografiju" hint="Klikni ili prevuci fajl ovdje (demo — fajl se ne šalje)." accept="image/*,.pdf" onFiles={() => push("success", "Fajl izabran (demo)")} />
+            <FigureImage src="https://placehold.co/640x360/png" alt="Primjer fotografije gradilišta (placeholder)" caption="FigureImage: slika + potpis, omjer 16/9." />
+          </FormGrid>
+        </Card>
+      </Section>
+
+      <Section title="Accordion, količina, speed dial, toast" hint="Sve što se otvara/zatvara ima aria stanje; toast nestaje sam za 5 s ili na X.">
+        <Stack>
+          <Accordion title="Accordion — detalji koji ne moraju uvijek biti otvoreni" defaultOpen>
+            <p>Sadržaj akordeona: sekundarne informacije, napredne opcije, istorija. Naslov je dugme (aria-expanded), sadržaj se ne gubi iz DOM-a bez razloga.</p>
+          </Accordion>
+          <Accordion title="Accordion — zatvoreni primjer">
+            <p>Drugi sadržaj.</p>
+          </Accordion>
+          <Card>
+            <Inline>
+              <span>Sati rada:</span>
+              <QuantityStepper label="Sati rada" value={qty} onChange={setQty} />
+              <Button onClick={() => push("success", "Toast: sačuvano", "Primjer uspješne poruke.")}>Toast uspjeh</Button>
+              <Button variant="danger" onClick={() => push("error", "Toast: greška", "Primjer poruke o grešci.")}>Toast greška</Button>
+              <SpeedDial label="Brze akcije (speed dial)" actions={[{ key: "a", label: "Novi unos", onSelect: () => push("info", "Speed dial: novi unos") }, { key: "b", label: "Nova fotografija", onSelect: () => push("info", "Speed dial: fotografija") }]} />
+            </Inline>
+          </Card>
+        </Stack>
+      </Section>
+
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
 
       <Section title="Mobilni katalog (isti inventar)" hint="Mobilne komponente žive u apps/mobile/src/ui; ekran „katalog“ u aplikaciji (dev prekidač) prikazuje ih uživo.">
         <Card>

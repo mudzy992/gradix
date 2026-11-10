@@ -89,6 +89,13 @@ jobs:
           node infra/scripts/check-privacy.mjs --self-test
           pnpm check-privacy
 
+      # U: kontrast tokena (AA, obje teme) i zabrana hardkodiranja u UI sistemu — pad = crven build.
+      - name: UI kontrast i hardkodiranje (U)
+        working-directory: v2
+        run: |
+          pnpm check-contrast
+          pnpm check-ui
+
       - name: OpenAPI je ažuran
         working-directory: v2
         run: pnpm --filter @gradix/contracts check

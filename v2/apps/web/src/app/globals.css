@@ -98,6 +98,7 @@
   --danger-soft: color-mix(in srgb, var(--palette-danger) 9%, var(--palette-surface));
   --warn-soft: color-mix(in srgb, var(--palette-accent) 22%, var(--palette-surface));
 
+  --backdrop: color-mix(in srgb, var(--palette-ink) 55%, transparent);
   --shadow: 0 1px 2px color-mix(in srgb, var(--palette-ink) 9%, transparent);
   --shadow-lift: 0 2px 10px color-mix(in srgb, var(--palette-ink) 8%, transparent);
   color-scheme: light;
@@ -134,6 +135,7 @@
   --danger-soft: color-mix(in srgb, var(--danger) 18%, var(--palette-ink));
   --warn-soft: color-mix(in srgb, var(--palette-accent) 24%, var(--palette-ink));
 
+  --backdrop: color-mix(in srgb, var(--palette-ink) 72%, transparent);
   /* U tamnoj temi nema sjena — dubinu nosi podignuta podloga. */
   --shadow: none;
   --shadow-lift: none;
