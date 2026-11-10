@@ -56,6 +56,17 @@ const failed = assertions.filter((test) => test.status === "failed").length;
 const skipped = assertions.filter((test) => ["skipped", "pending", "todo"].includes(test.status)).length;
 const executed = passed + failed;
 
+// Padajući testovi idu i kao anotacije: logovi runa nisu uvijek dostupni svim klijentima,
+// a bez imena testa CI crvenilo ne govori ništa (isti razlog kao prisma korak u workflowu).
+for (const suite of report.testResults ?? []) {
+  for (const test of suite.assertionResults ?? []) {
+    if (test.status !== "failed") continue;
+    const message = String(test.failureMessages?.[0] ?? "failed").split("\n").slice(0, 3).join(" | ").slice(0, 900);
+    const clean = (value) => value.replace(/%/g, "%25").replace(/\r/g, "").replace(/\n/g, " ");
+    console.log(`::error title=web test failed: ${clean(test.fullName ?? test.title ?? "unknown")}::${clean(message)}`);
+  }
+}
+
 const summary = `PostgreSQL web integration tests: ${passed} passed, ${failed} failed, ${skipped} skipped (${executed} executed; ${assertions.length} total in ${integrationSuites.length} integration suites).`;
 console.log(`\n[web-db-test-summary] ${summary}`);
 if (process.env.GITHUB_STEP_SUMMARY) {
