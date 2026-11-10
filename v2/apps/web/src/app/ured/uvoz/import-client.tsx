@@ -58,6 +58,11 @@ const FIELDS: Record<Kind, { key: string; label: string; required: boolean }[]> 
   ],
 };
 
+/** Početna odluka po redu: ono što pregled predlaže, ništa više. */
+function defaultAction(row: ImportPreviewRow): ImportDecision["action"] {
+  return row.outcome === "import" ? "import" : "skip";
+}
+
 export default function ImportClient() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [kind, setKind] = useState<Kind>("workers");
