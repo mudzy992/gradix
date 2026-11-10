@@ -73,7 +73,6 @@ export default function GrupaScreen() {
       setLoading(false);
     }
     // workDate je početni datum ekrana; promjena datuma ide kroz dugme Osvježi ekipu.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadRoster]);
 
   useEffect(() => { void load(); }, [load]);
