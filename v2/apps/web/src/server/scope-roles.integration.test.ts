@@ -48,7 +48,7 @@ describeDb("scope po rolama: projekti i rokovi (PostgreSQL)", () => {
     for (const [key, id] of Object.entries(USERS)) {
       await admin.query(
         "INSERT INTO public.users (id, email, password_hash, first_name, last_name, must_change_password) VALUES ($1, $2, 'x', $3, 'Test', false)",
-        [id, `${key}@test.example`, key],
+        [id, `${key}-${RUN}@test.example`, key],
       );
     }
     await withCompany(app, companyId(CO), async (client) => {

@@ -27,8 +27,8 @@ describeDb("workday review scope (PostgreSQL)", () => {
     }
     await admin.query(
       `INSERT INTO public.users (id, email, password_hash, first_name, last_name, must_change_password)
-       VALUES ('usr_wdr_pm_${RUN}', 'pm@test.example', 'x', 'PM', 'Test', false),
-              ('usr_wdr_ss_${RUN}', 'ss@test.example', 'x', 'SS', 'Test', false)`,
+       VALUES ('usr_wdr_pm_${RUN}', 'pm-${RUN}@test.example', 'x', 'PM', 'Test', false),
+              ('usr_wdr_ss_${RUN}', 'ss-${RUN}@test.example', 'x', 'SS', 'Test', false)`,
     );
     await admin.query(
       `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id, hired_at)
