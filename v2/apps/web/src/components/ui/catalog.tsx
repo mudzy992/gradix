@@ -68,7 +68,7 @@ export function ComponentCatalog() {
           <FormGrid>
             <Input label="Tekst" id="cat-text" placeholder="Placeholder" hint="Pomoćni tekst ispod polja." />
             <Input label="Obavezno (greška)" id="cat-err" error="Obavezno polje." defaultValue="" />
-            <Input label="Email" id="cat-email" type="email" placeholder="ime@firma.ba" />
+            <Input label="Email" id="cat-email" type="email" placeholder="ime@firma.test" />
             <Input label="Lozinka" id="cat-pass" type="password" defaultValue="tajna" />
             <Input label="Pretraga" id="cat-search" type="search" placeholder="Traži…" />
             <Input label="Broj" id="cat-num" type="number" defaultValue={8} hint="Sati, količine, brojila." />

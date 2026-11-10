@@ -37,7 +37,7 @@ export default function KatalogScreen() {
       <Text variant="label">Kontrole</Text>
       <CardView>
         <TextField label="Tekstualno polje" placeholder="Placeholder iz tokena" />
-        <TextField label="Email" placeholder="ime@firma.ba" keyboardType="email-address" autoCapitalize="none" />
+        <TextField label="Email" placeholder="ime@firma.test" keyboardType="email-address" autoCapitalize="none" />
         <TextField label="Lozinka" secureTextEntry />
         <TextField label="Datum (GGGG-MM-DD)" placeholder="2026-11-07" />
         <Segmented label="Segmented (jedan izbor)" value={seg} onChange={setSeg} options={[{ value: "a", label: "Prva" }, { value: "b", label: "Druga" }]} />
