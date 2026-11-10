@@ -29,16 +29,21 @@ export function ConfirmDialog({
 }) {
   if (!open) return null;
   return (
-    <Dialog title={title} onClose={onCancel}>
-      <p className="gx-dialog__hint">{text}</p>
-      <div className="gx-dialog__actions">
-        <Button variant="quiet" onClick={onCancel} disabled={busy}>
-          Odustani
-        </Button>
-        <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
-          {busy ? "Radim…" : confirmLabel}
-        </Button>
-      </div>
+    <Dialog
+      title={title}
+      onClose={onCancel}
+      footer={(
+        <div className="gx-dialog__actions">
+          <Button variant="quiet" onClick={onCancel} disabled={busy}>
+            Odustani
+          </Button>
+          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+            {busy ? "Radim…" : confirmLabel}
+          </Button>
+        </div>
+      )}
+    >
+      <p>{text}</p>
     </Dialog>
   );
 }

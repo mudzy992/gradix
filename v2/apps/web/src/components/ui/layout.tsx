@@ -2,7 +2,7 @@
  * U1 — raspored i prikaz: zaglavlja, sekcije forme, filteri, tabele, paginacija, status.
  * Bez inline stilova po ekranima: razmaci i mreža su ovdje (gx-* klase / tokeni).
  */
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { RowAction } from "./overlays";
 
 export function Stack({ children, gap = "var(--space-4)" }: { children: ReactNode; gap?: string }) {
@@ -106,6 +106,8 @@ export type DataColumn<Row> = {
   cell: (row: Row) => ReactNode;
   numeric?: boolean;
   label?: string; // data-label za kartice ispod 640 px
+  /** Sortabilna kolona: vrijednost po kojoj se redovi poređaju klikom na zaglavlje. */
+  sortValue?: (row: Row) => string | number;
 };
 
 export function DataTable<Row>({
@@ -148,6 +150,17 @@ export function DataTable<Row>({
     }
     return <p className="gx-page-sub">Nema zapisa.</p>;
   }
+  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const sortedRows = useMemo(() => {
+    const col = sort ? columns.find((c) => c.key === sort.key && c.sortValue) : undefined;
+    if (!col?.sortValue || !sort) return rows;
+    return [...rows].sort((a, b) => {
+      const va = col.sortValue!(a);
+      const vb = col.sortValue!(b);
+      const cmp = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb), "bs");
+      return cmp * sort.dir;
+    });
+  }, [rows, columns, sort]);
   const allColumns = actions
     ? [...columns, { key: "__actions", header: "Akcija", cell: () => null }]
     : columns;
@@ -156,14 +169,30 @@ export function DataTable<Row>({
       <thead>
         <tr>
           {allColumns.map((col) => (
-            <th key={col.key} style={col.numeric ? { textAlign: "right" } : undefined}>
-              {col.header}
+            <th
+              key={col.key}
+              style={col.numeric ? { textAlign: "right" } : undefined}
+              aria-sort={sort?.key === col.key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
+            >
+              {col.sortValue ? (
+                <button
+                  type="button"
+                  className="gx-linkbtn"
+                  aria-label={`Sortiraj po: ${col.header}`}
+                  onClick={() => setSort((cur) => (cur?.key === col.key ? { key: col.key, dir: cur.dir === 1 ? -1 : 1 } : { key: col.key, dir: 1 }))}
+                >
+                  {col.header}
+                  {sort?.key === col.key ? (sort.dir === 1 ? " ↑" : " ↓") : ""}
+                </button>
+              ) : (
+                col.header
+              )}
             </th>
           ))}
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
+        {sortedRows.map((row) => (
           <tr key={rowKey(row)}>
             {columns.map((col) => (
               <td key={col.key} data-label={col.label ?? col.header}>
@@ -188,4 +217,15 @@ function RowActionsCell<Row>({ row, actions, label }: { row: Row; actions: (row:
   const list = actions(row);
   if (list.length === 0) return null;
   return <RowActions label={label} actions={list} />;
+}
+
+/** Brojčana kartica za pregledne ploče (Pregled): oznaka, velika vrijednost, pomoć. */
+export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="gx-card">
+      <p className="gx-page-sub">{label}</p>
+      <p className="gx-page-title">{value}</p>
+      {hint ? <p className="gx-page-sub">{hint}</p> : null}
+    </div>
+  );
 }

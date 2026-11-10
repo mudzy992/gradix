@@ -146,8 +146,18 @@ export function WorkerDialog({
       returnFocusTo={returnFocusTo}
       onClose={onClose}
       wide
+      footer={(
+        <div className="gx-dialog__actions">
+          <Button variant="quiet" onClick={onClose} disabled={saving}>
+            Otkaži
+          </Button>
+          <Button type="submit" form="worker-form" variant="primary" fullWidthOnMobile disabled={saving}>
+            {saving ? "Čuvam…" : worker ? "Sačuvaj izmjene" : "Dodaj radnika"}
+          </Button>
+        </div>
+      )}
     >
-      <form onSubmit={save}>
+      <form id="worker-form" onSubmit={save}>
         {error ? (
           <Alert tone="error" role="alert">
             {error}
@@ -187,14 +197,6 @@ export function WorkerDialog({
           </Select>
         </FormGrid>
 
-        <div className="gx-dialog__actions">
-          <Button variant="quiet" onClick={onClose} disabled={saving}>
-            Otkaži
-          </Button>
-          <Button type="submit" variant="primary" fullWidthOnMobile disabled={saving}>
-            {saving ? "Čuvam…" : worker ? "Sačuvaj izmjene" : "Dodaj radnika"}
-          </Button>
-        </div>
       </form>
 
       {worker && canLinkUser ? (

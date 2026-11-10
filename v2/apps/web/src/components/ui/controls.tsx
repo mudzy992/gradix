@@ -91,3 +91,35 @@ export function Checkbox({
     </div>
   );
 }
+
+export function Radio({
+  label,
+  id,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  return (
+    <div className="gx-radio">
+      <input id={inputId} type="radio" {...props} />
+      <label htmlFor={inputId}>{label}</label>
+    </div>
+  );
+}
+
+/** Prekidač (da/ne postavka): checkbox ispod haube, aria stanje nosi input. */
+export function Switch({
+  label,
+  id,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  return (
+    <label className="gx-switch" htmlFor={inputId}>
+      <input id={inputId} type="checkbox" role="switch" {...props} />
+      <span className="gx-switch__track" aria-hidden="true" />
+      <span>{label}</span>
+    </label>
+  );
+}
