@@ -63,13 +63,9 @@ describeDb("workday review scope (PostgreSQL)", () => {
     );
   }, 60_000);
 
+  // Čišćenje kao u ostalim suiteovima: dodjele se ne brišu (historijski dokaz,
+  // PROJECT_ASSIGNMENT_DELETE_FORBIDDEN), a RUN-jedinstveni ID-evi izoluju fixture.
   afterAll(async () => {
-    await admin.query("DELETE FROM public.workdays WHERE company_id = ANY($1)", [[CO, OTHER]]);
-    await admin.query("DELETE FROM public.project_assignments WHERE company_id = ANY($1)", [[CO, OTHER]]);
-    await admin.query("DELETE FROM public.projects WHERE company_id = ANY($1)", [[CO, OTHER]]);
-    await admin.query("DELETE FROM public.workers WHERE company_id = ANY($1)", [[CO, OTHER]]);
-    await admin.query("DELETE FROM public.users WHERE id = ANY($1)", [[`usr_wdr_pm_${RUN}`, `usr_wdr_ss_${RUN}`]]);
-    await admin.query("DELETE FROM public.companies WHERE id = ANY($1)", [[CO, OTHER]]);
     await admin.end();
     await app.end();
   });

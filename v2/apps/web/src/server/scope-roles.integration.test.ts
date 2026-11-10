@@ -102,15 +102,9 @@ describeDb("scope po rolama: projekti i rokovi (PostgreSQL)", () => {
     }
   }, 60_000);
 
+  // Čišćenje kao u ostalim suiteovima: dodjele se ne brišu (historijski dokaz,
+  // PROJECT_ASSIGNMENT_DELETE_FORBIDDEN), a RUN-jedinstveni ID-evi izoluju fixture.
   afterAll(async () => {
-    await admin.query("DELETE FROM public.obligations WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.project_assignments WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.projects WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.workers WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.sessions WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.memberships WHERE company_id = $1", [CO]);
-    await admin.query("DELETE FROM public.users WHERE id = ANY($1)", [Object.values(USERS)]);
-    await admin.query("DELETE FROM public.companies WHERE id = $1", [CO]);
     await admin.end();
     await app.end();
   });
