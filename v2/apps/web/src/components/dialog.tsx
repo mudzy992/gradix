@@ -3,19 +3,23 @@
 /**
  * Dijalog — jedan obrazac za sve dijaloge (fokus ulazi, `Escape` zatvara, fokus se vraća).
  *
- * Zašto komponenta: ista tri pravila su se do sada ponavljala u svakom dijalogu. Kad se u
- * jednom zaborave, tastatura ostane van dijaloga ili fokus padne na `<body>` — a to je upravo
- * ono što a11y provjera (i korisnik) primijeti prvo.
+ * Obrazac (U, katalog): zaglavlje s naslovom i **X za izlazak**, tijelo koje se skrola
+ * **bez vidljivog scrollbar-a**, i podnožje (`footer`) u kojem stoje akcije — uvijek na
+ * istom mjestu, i kad je sadržaj dug. Zašto komponenta: ista pravila su se do sada
+ * ponavljala u svakom dijalogu; kad se u jednom zaborave, tastatura ostane van dijaloga
+ * ili fokus padne na `<body>` — a to je upravo ono što a11y provjera primijeti prvo.
  *
  * Fokus se vraća na `returnFocusTo` (element koji je dijalog otvorio), a ne na
  * `document.activeElement` u trenutku zatvaranja — taj element često više ne postoji.
  */
 import { useEffect, useRef, type ReactNode } from "react";
+import { Icon } from "@/components/ui";
 
 export function Dialog({
   title,
   hint,
   children,
+  footer,
   returnFocusTo,
   onClose,
   wide = false,
@@ -23,6 +27,8 @@ export function Dialog({
   title: string;
   hint?: ReactNode;
   children: ReactNode;
+  /** Akcije u podnožju (npr. Otkaži / Sačuvaj). Stoje i kad tijelo skrola. */
+  footer?: ReactNode;
   returnFocusTo?: HTMLElement | null;
   onClose: () => void;
   wide?: boolean;
@@ -62,11 +68,21 @@ export function Dialog({
         className="gx-dialog"
         style={wide ? { maxWidth: 880 } : undefined}
       >
-        <h2 id="gx-dialog-title" className="gx-dialog__title">
-          {title}
-        </h2>
-        {hint ? <p className="gx-dialog__hint">{hint}</p> : null}
-        <div ref={firstField}>{children}</div>
+        <div className="gx-dialog__header">
+          <div>
+            <h2 id="gx-dialog-title" className="gx-dialog__title">
+              {title}
+            </h2>
+            {hint ? <p className="gx-dialog__hint">{hint}</p> : null}
+          </div>
+          <button type="button" className="gx-icon-btn" aria-label="Zatvori" onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </div>
+        <div ref={firstField} className="gx-dialog__body">
+          {children}
+        </div>
+        {footer ? <div className="gx-dialog__footer">{footer}</div> : null}
       </div>
     </div>
   );
