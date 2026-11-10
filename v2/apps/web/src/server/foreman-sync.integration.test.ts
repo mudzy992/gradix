@@ -304,12 +304,13 @@ describeDb("R4 SITE_SUPERVISOR roster and group push (PostgreSQL)", () => {
   });
   it("izgubljen telefon: administratorski opoziv sesije zaustavlja push i pull tog uređaja (401)", async () => {
     const adminUser = `usr_admin_${RUN}`;
+    // users je posebno RLS-zaštićena tabela: admin fixture ide admin konekcijom, kao u beforeAll.
+    await admin.query(
+      `INSERT INTO public.users (id, email, password_hash, first_name, last_name, must_change_password)
+       VALUES ($1, $2, 'test-hash', 'Admin', 'Test', false)`,
+      [adminUser, `admin-${RUN}@test.example`],
+    );
     await withCompany(app, companyId(COMPANY), async (client) => {
-      await client.query(
-        `INSERT INTO public.users (id, email, password_hash, first_name, last_name, must_change_password)
-         VALUES ($1, $2, 'test-hash', 'Admin', 'Test', false)`,
-        [adminUser, `admin-${RUN}@test.example`],
-      );
       await client.query(
         `INSERT INTO public.memberships (id, user_id, company_id, roles, scope)
          VALUES ($1, $2, $3, ARRAY['OWNER']::"Role"[], 'COMPANY')`,
