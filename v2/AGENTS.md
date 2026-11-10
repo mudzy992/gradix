@@ -56,7 +56,9 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 6. **Zavisnost:** nova biblioteka traži ADR (problem, alternative, rizik).
 7. **Dokumentacija:** `STATUS.md` ≤ 100 linija, ADR ≤ 1 stranica, ukupno `docs/` ≤ 30 stranica.
    Nema dnevnika, ledžera nalaza ni samoinicijativnih audita.
-8. **Rez je gotov** kad ga vlasnik prođe uživo i odobri; zeleni CI nije dokaz.
+8. **Rez je gotov** kad ga vlasnik prođe uživo i odobri; zeleni CI nije dokaz. Rez nije
+   gotov dok svaka rola ne može iz menija stići do svake funkcije koju smije i odjaviti
+   se; E2E to dokazuje (Playwright u CI-ju, dio A).
 9. **v1 se ne dira.** Samo čitanje radi domena i infrastrukture. Preuzeto se označava
    `Izvor: v1/<putanja>`.
 10. **Paginacija:** cursor je zadana; offset samo za male administrativne tabele.

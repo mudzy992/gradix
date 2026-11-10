@@ -6,6 +6,7 @@ import { authenticate } from "@/server/tenant-context";
 import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
 import { reviewLabel } from "./review-label";
+import { can } from "@/server/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,7 @@ export default async function RadniDaniPage() {
   const auth = await authenticate(request);
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
-  const office = auth.ctx.roles.includes("OWNER") || auth.ctx.roles.includes("ADMIN");
-  if (!office) redirect("/pregled");
+  if (!can(auth.ctx.roles, "workdays.view")) redirect("/pregled");
 
   const days = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const result = await client.query<DayRow>(

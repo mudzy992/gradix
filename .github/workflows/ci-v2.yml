@@ -153,6 +153,21 @@ jobs:
           REQUIRE_DB_TESTS: "1"
         run: pnpm test
 
+      # E2E (A4c): pravi preglednik protiv seedovane baze — prijava po rolama, meni po roli,
+      # odjava -> prijava, sesija u drugom tabu. Najmanji skup, namjerno bez poslovnih tokova.
+      - name: E2E navigacija i sesija (Playwright)
+        working-directory: v2
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+        run: |
+          pnpm --filter @gradix/web exec playwright install --with-deps chromium
+          pnpm --filter @gradix/web seed
+          pnpm --filter @gradix/web build
+          (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
+          pnpm --filter @gradix/web test:e2e
+
       # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
       # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
       - name: Runtime preflight nakon integracijskih testova (baza popunjena)

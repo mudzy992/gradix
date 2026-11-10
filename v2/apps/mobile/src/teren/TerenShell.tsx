@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { spacing, touchTarget, typography, radius } from "../theme/tokens";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
+import { SignOutButton } from "./SignOutButton";
 
 /** Zajednički okvir terenskih ekrana: učitavanje, greška i prazno stanje uvijek isto izgledaju. */
 export function TerenShell(props: {
@@ -44,6 +45,7 @@ export function TerenShell(props: {
         </View>
       ) : null}
       {props.children}
+      <SignOutButton />
     </ScrollView>
   );
 }

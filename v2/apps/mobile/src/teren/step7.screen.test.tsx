@@ -24,6 +24,7 @@ vi.mock("expo-router", async () => {
   const { View } = await import("react-native");
   return {
     Link: ({ children }: { children?: React.ReactNode }) => React.createElement(View, null, children),
+    useRouter: () => ({ replace: () => undefined }),
   };
 });
 
@@ -107,6 +108,8 @@ describe("Moj dan — stanja", () => {
     render(<MojDanScreen />);
     await waitFor(() => expect(screen.getByText("Poslano")).toBeTruthy());
     expect(screen.getAllByText("Sve je poslano.").length).toBeGreaterThan(0);
+    // A3: odjava je na terenskom ekranu, za svaku rolu — ne samo na početnom ekranu šefa.
+    expect(screen.getAllByText("Odjavi se").length).toBeGreaterThan(0);
   });
 });
 

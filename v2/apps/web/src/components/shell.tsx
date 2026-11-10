@@ -108,6 +108,35 @@ export default function Shell({
   const navRef = useRef<HTMLElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Sesija u drugom tabu / istek / opoziv (A2): okvir povremeno i pri povratku fokusa
+   * provjeri sesiju; 401 znači da ovaj tab više nije prijavljen, pa ide na prijavu.
+   * Bez ovoga drugi tab ostaje "prijavljen" dok korisnik ne klikne nešto što puca.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/me", { cache: "no-store" });
+        if (!cancelled && response.status === 401) window.location.assign("/login");
+      } catch {
+        // Mrežna greška nije istek sesije — ne izbacuj korisnika zbog nje.
+      }
+    }
+    function onVisible() {
+      if (document.visibilityState === "visible") void checkSession();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const timer = window.setInterval(() => void checkSession(), 60_000);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(timer);
+    };
+  }, []);
+
   // Zatvori drawer i meni pri promjeni stranice — na telefonu bi inače ostali preko sadržaja.
   useEffect(() => {
     setDrawerOpen(false);
