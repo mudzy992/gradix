@@ -357,3 +357,45 @@ export function createSqliteR4SyncStore(db: LocalSqlite, account: LocalAccount) 
     },
   };
 }
+
+export type LocalOutboxEntry = {
+  localId: string;
+  workerId: string | null;
+  status: string;
+  lastError: string | null;
+  createdAt: string;
+};
+
+/** Redovi trenutnog naloga za ekrane Moj dan / Grupa — ishod se prikazuje po radniku. */
+export async function readOutboxEntries(db: LocalSqlite, account: LocalAccount): Promise<LocalOutboxEntry[]> {
+  await assertActiveAccount(db, account);
+  const rows = await db.getAllAsync<{ local_id: string; worker_id: string | null; status: string; last_error: string | null; created_at: string }>(
+    `SELECT local_id, worker_id, status, last_error, created_at FROM outbox
+      WHERE company_id = ? AND user_id = ? ORDER BY created_at DESC, local_id DESC`,
+    [account.companyId, account.userId],
+  );
+  return rows.map((row) => ({
+    localId: row.local_id, workerId: row.worker_id, status: row.status,
+    lastError: row.last_error, createdAt: row.created_at,
+  }));
+}
+
+/** Vlastiti unos radnika: bez workerId — server iz sesije zna čiji je dan. */
+export async function queueOwnWorkEntry(
+  db: LocalSqlite,
+  account: LocalAccount,
+  entry: R4WorkEntryPayload,
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "work_entry",
+    workdayId: makeId(),
+    workEntryId: makeId(),
+    deviceSentAt,
+    entry,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}

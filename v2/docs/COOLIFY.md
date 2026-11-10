@@ -94,8 +94,8 @@ postojati u Coolify env-u.
 | `PGSSLMODE` | M | `verify-full` |
 | `POSTGRES_CA_FILE` | M | host putanja CA; Compose je montira u kontejner |
 | `MINIO_ENDPOINT` | F | `http://minio:9000` |
-| `MINIO_BUCKET` | F | `gradix-stg` |
-| `MINIO_REGION` | F | `us-east-1` |
+| `MINIO_BUCKET` | podesiva (default `gradix-stg`) | ne smije biti `gradix` (v1); aplikacija odbija start inače |
+| `MINIO_REGION` | podesiva (default `us-east-1`) | |
 | `MINIO_PUBLIC_ENDPOINT` | S, M za priloge | javni HTTPS S3 API hostname (port 9000) |
 | `MINIO_CORS_ALLOWED_ORIGIN` | M | tačan web origin, npr. `https://gradix.ba101.top` |
 | `MINIO_ACCESS_KEY` | S, M | app-only, **≥20 znakova**, različit od `MINIO_ROOT_USER` |
@@ -105,8 +105,9 @@ postojati u Coolify env-u.
 | `MINIO_BROWSER_REDIRECT_URL` | M | `https://minio-console.gradix.ba101.top` |
 | `SERVICE_FQDN_MINIO`, `SERVICE_FQDN_MINIO_9000` | F (Coolify magic) | upravlja Coolify, ne upisivati ručno |
 | `SERVICE_FQDN_MINIO_CONSOLE_PROXY` | F (Coolify magic) | upravlja Coolify, ne upisivati ručno |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_USER` / `REDIS_PREFIX` / `REDIS_TLS_CA_FILE` | F | `redis-core` / `6380` / `gradix_v2` / `gradix:stg:` / `/run/secrets/redis-ca.crt` |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_USER` / `REDIS_PREFIX` / `REDIS_TLS_CA_FILE` | podesive (zadane vrijednosti u Compose-u) | `redis-core` / `6380` / `gradix_v2` / `gradix:stg:` / `/run/secrets/redis-ca.crt`; `REDIS_PREFIX` mora počinjati sa `gradix:` i ne smije biti v1 prefiks `gradix:` — aplikacija odbija start s jasnom porukom. Korisnik nije hard-kodiran u kodu, samo je zadana Compose vrijednost |
 | `REDIS_PASSWORD` | S | jedina Redis tajna; postojeća ACL lozinka za `gradix_v2` |
+| `SEED_DEMO` | podesiva (default `false`) | kad je `false` i demo firma postoji, preflight samo upozorava (nikad ne briše) |
 | `SEED_PASSWORD` | S, privremeno | samo za ručni seed (§5); poslije ukloniti. Entrypoint je briše iz okruženja procesa |
 | `REDIS_CA_FILE` | **X** | uklonjen; jedini CA env je `REDIS_TLS_CA_FILE` |
 | `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_DATA_DIR` | **X** | naslijeđeni v1 nazivi; Compose ih ne čita |
@@ -312,15 +313,21 @@ kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ur
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
 
-### 5.1. SEED_DEMO — prijedlog (čeka odobrenje vlasnika, NIJE implementirano)
+### 5.1. SEED_DEMO — uklanjanje demo firme (implementirano)
 
-Kad krenu stvarni podaci, demo podaci ne smiju ostati na javnoj domeni. Prijedlog, bez
-promjene ponašanja dok ga vlasnik ne odobri: (1) seed firma nosi trajnu oznaku
-`companies.slug = 'niskogradnja-demo'` i imena naloga na `@demo.ba`; (2) posebna, eksplicitna
-naredba za uklanjanje (administratorska skripta koja u jednoj transakciji briše demo firmu i
-sve njene redove kroz postojeći tenant model, uz potvrdu kucanjem slug-a); (3) javna domena
-se prije prvog stvarnog unosa provjerava upitom da demo firma više ne postoji. Do odobrenja
-se ništa od ovoga ne radi; seed ostaje ručna, jednokratna operacija iz §5.
+- Seed radi samo ručno (§5). Varijabla `SEED_DEMO` (default `false`) govori da je demo
+  očekivan; kad je `SEED_DEMO=false`, a firma `niskogradnja-demo` postoji u bazi,
+  entrypoint pri startu ispisuje **upozorenje i ništa ne briše**.
+- Uklanjanje je eksplicitna naredba u jednoj transakciji i traži doslovnu potvrdu slug-a:
+
+```sh
+DATABASE_ADMIN_URL=... REMOVE_DEMO_CONFIRM=niskogradnja-demo \
+  pnpm --filter @gradix/web exec tsx scripts/remove-demo.ts
+```
+
+Bez `REMOVE_DEMO_CONFIRM=niskogradnja-demo` skripta staje prije bilo kakve izmjene.
+Briše sve redove demo firme (tenant tabele se otkrivaju iz kataloga), samu firmu i demo
+korisnike (`@demo.ba`) koji ne pripadaju nijednoj drugoj firmi — sve ili ništa.
 
 ## 6. Provjera poslije deploya
 
