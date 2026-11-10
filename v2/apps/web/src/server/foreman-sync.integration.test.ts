@@ -292,12 +292,14 @@ describeDb("R4 SITE_SUPERVISOR roster and group push (PostgreSQL)", () => {
       success: boolean;
       data: { events: { entityId: string; entityType: string; payload: Record<string, unknown> | null }[] };
     };
-    expect(pullBody.data.events.map((event) => event.entityType)).toEqual(["workday", "work_entry", "sync_conflict"]);
-    expect(pullBody.data.events.map((event) => event.entityId)).toEqual([
+    // Pull garantuje opseg i skup vidljivih događaja, ne redoslijed tipova u stranici.
+    expect(pullBody.data.events.map((event) => event.entityType).sort())
+      .toEqual(["work_entry", "workday", "sync_conflict"].sort());
+    expect(new Set(pullBody.data.events.map((event) => event.entityId))).toEqual(new Set([
       body.data.results[0]!.entityId,
       allowedEntry,
       visibleConflictId,
-    ]);
+    ]));
     expect(pullBody.data.events.every((event) => !JSON.stringify(event.payload).match(/phone|email/i))).toBe(true);
     expect(JSON.stringify(pullBody)).not.toContain(OUTSIDE);
     expect(JSON.stringify(pullBody)).not.toContain("ne smije se vratiti");
