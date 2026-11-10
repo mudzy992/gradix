@@ -67,6 +67,11 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
     `color-mix`. Nijedna komponenta ne sadrži heks. Fontovi samo `next/font` (Manrope, IBM Plex
     Mono). Odstupanje od reference ili nova komponenta traži vlasnikovu riječ **i** dopunu
     `reference.html` u istom commitu.
+    **UI sistem (U):** ekran se slaže od postojećih komponenti (`components/ui` web,
+    `src/ui` mobile — katalog `/katalog`, mobilni ekran iza dev prekidača) i to **ne traži
+    odobrenje**. Nova vrsta komponente ili novi vizuelni obrazac traži vlasnikovo odobrenje
+    i dopunu kataloga i `reference.html` u istom commitu. Sirovi elementi po ekranima su
+    zabranjeni lintom (U3); izuzeci žive u `docs/UI-EXCEPTIONS.md` i smiju se samo smanjivati.
 
 ## Dublje
 

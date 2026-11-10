@@ -59,12 +59,37 @@ const executed = passed + failed;
 // Padajući testovi idu i kao anotacije: logovi runa nisu uvijek dostupni svim klijentima,
 // a bez imena testa CI crvenilo ne govori ništa (isti razlog kao prisma korak u workflowu).
 for (const suite of report.testResults ?? []) {
+  // Pad u beforeAll/afterAll ne pripada ni jednom testu — bez ovoga anotacija ne postoji
+  // i CI kaže samo "test je pao", bez ijednog imena ili poruke.
+  if (suite.status === "failed" && !(suite.assertionResults ?? []).some((t) => t.status === "failed")) {
+    const cleanSuite = (value) => String(value ?? "").replace(/%/g, "%25").replace(/\r/g, "").replace(/\n/g, " ");
+    const suiteMessage = String(suite.message ?? "suite failed").split("\n").slice(0, 3).join(" | ").slice(0, 900);
+    console.log(`::error title=web test suite failed: ${cleanSuite(basename(suite.name ?? "unknown"))}::${cleanSuite(suiteMessage)}`);
+  }
   for (const test of suite.assertionResults ?? []) {
     if (test.status !== "failed") continue;
     const message = String(test.failureMessages?.[0] ?? "failed").split("\n").slice(0, 3).join(" | ").slice(0, 900);
     const clean = (value) => value.replace(/%/g, "%25").replace(/\r/g, "").replace(/\n/g, " ");
     console.log(`::error title=web test failed: ${clean(test.fullName ?? test.title ?? "unknown")}::${clean(message)}`);
   }
+}
+
+// Imenovani padovi u fajl koji CI diže kao artefakt: turbo prefiksira izlaz paketa, pa
+// `::error::` linije iz ovog procesa GitHub ne pretvara u anotacije.
+const failureLines = [];
+for (const suite of report.testResults ?? []) {
+  if (suite.status === "failed" && !(suite.assertionResults ?? []).some((t) => t.status === "failed")) {
+    failureLines.push(`SUITE ${basename(suite.name ?? "unknown")}: ${String(suite.message ?? "").slice(0, 2000)}`);
+  }
+  for (const test of suite.assertionResults ?? []) {
+    if (test.status === "failed") {
+      failureLines.push(`TEST ${test.fullName ?? test.title}: ${String(test.failureMessages?.[0] ?? "").slice(0, 2000)}`);
+    }
+  }
+}
+if (failureLines.length > 0) {
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(join(process.cwd(), "web-test-failures.txt"), failureLines.join("\n\n"));
 }
 
 const summary = `PostgreSQL web integration tests: ${passed} passed, ${failed} failed, ${skipped} skipped (${executed} executed; ${assertions.length} total in ${integrationSuites.length} integration suites).`;

@@ -50,6 +50,11 @@ export const MeResponse = z.object({
     })
     .nullable(),
   machineCount: z.number(),
+  // A2 (2026-11-07): mobilna navigacija zavisi od veze korisnik-radnik, ne samo role.
+  // workerId = povezani radnički zapis (ili null); foremanScope = šef ima bar jednu
+  // aktivnu R3 dodjelu danas (pa mu Grupa ima smisla).
+  workerId: z.string().nullable(),
+  foremanScope: z.boolean(),
 });
 export type MeResponse = z.infer<typeof MeResponse>;
 
@@ -277,6 +282,11 @@ export const EquipmentCategory = z.object({
   isActive: z.boolean(),
   sortOrder: z.number(),
   machineCount: z.number(),
+  // A2 (2026-11-07): mobilna navigacija zavisi od veze korisnik-radnik, ne samo role.
+  // workerId = povezani radnički zapis (ili null); foremanScope = šef ima bar jednu
+  // aktivnu R3 dodjelu danas (pa mu Grupa ima smisla).
+  workerId: z.string().nullable(),
+  foremanScope: z.boolean(),
 });
 export type EquipmentCategory = z.infer<typeof EquipmentCategory>;
 

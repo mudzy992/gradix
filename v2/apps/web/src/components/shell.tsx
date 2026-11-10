@@ -18,6 +18,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon, type IconName } from "./ui";
+import { startSessionWatch } from "./session-watch";
 
 export type NavItem = { href: string; label: string; icon: IconName; description?: string };
 export type NavGroup = { label: string; items: NavItem[] };
@@ -109,35 +110,13 @@ export default function Shell({
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Sesija u drugom tabu / istek / opoziv (A2): okvir povremeno i pri povratku fokusa
-   * provjeri sesiju; 401 znači da ovaj tab više nije prijavljen, pa ide na prijavu.
-   * Bez ovoga drugi tab ostaje "prijavljen" dok korisnik ne klikne nešto što puca.
+   * Sesija u drugom tabu / istek / opoziv (A2): čuvar je u session-watch.ts —
+   * odjavljuje samo na 401, nikad na mrežnu grešku.
    */
-  useEffect(() => {
-    let cancelled = false;
-    async function checkSession() {
-      try {
-        const response = await fetch("/api/me", { cache: "no-store" });
-        if (!cancelled && response.status === 401) window.location.assign("/login");
-      } catch {
-        // Mrežna greška nije istek sesije — ne izbacuj korisnika zbog nje.
-      }
-    }
-    function onVisible() {
-      if (document.visibilityState === "visible") void checkSession();
-    }
-    document.addEventListener("visibilitychange", onVisible);
-    // Fokus prozora/taba provjerava bez uslova vidljivosti: headless i neki preglednici
-    // visibilityState prijavljuju kasno, a fokus je pouzdan signal povratka korisnika.
-    window.addEventListener("focus", checkSession);
-    const timer = window.setInterval(() => void checkSession(), 60_000);
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", checkSession);
-      window.clearInterval(timer);
-    };
-  }, []);
+  useEffect(
+    () => startSessionWatch({ onUnauthorized: () => window.location.assign("/login") }),
+    [],
+  );
 
   // Zatvori drawer i meni pri promjeni stranice — na telefonu bi inače ostali preko sadržaja.
   useEffect(() => {

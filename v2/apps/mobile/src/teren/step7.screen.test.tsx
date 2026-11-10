@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   projects: [] as { id: string; code: string; name: string }[],
   workers: [] as { id: string; name: string }[],
   entries: [] as { localId: string; workerId: string | null; status: string; lastError: string | null; createdAt: string }[],
+  pullError: false,
 }));
 
 vi.mock("expo-secure-store", () => ({
@@ -39,11 +40,14 @@ vi.mock("../api/client", () => ({
   login: async () => ({}),
   me: async () => {
     if (state.meError) throw new Error("network down");
-    return { user: { id: "u1", firstName: "Mario", lastName: "Perić", roles: ["SITE_SUPERVISOR"] }, company: { id: "c1", name: "Demo" } };
+    return { user: { id: "u1", firstName: "Mario", lastName: "Perić", roles: ["SITE_SUPERVISOR"] }, company: { id: "c1", name: "Demo" }, workerId: "w-sef", foremanScope: true };
   },
   myProjects: async () => ({ projects: state.projects }),
   machines: async () => ({ machines: [{ id: "m1", code: "BAG-01", name: "Bager CAT 320" }] }),
-  pullForemanWorkers: async () => ({ workDate: "2026-11-07", workers: state.workers }),
+  pullForemanWorkers: async () => {
+    if (state.pullError) throw new Error("forbidden or network");
+    return { workDate: "2026-11-07", workers: state.workers };
+  },
 }));
 
 vi.mock("../db/sqlite", () => ({ openDb: async () => ({}) }));
@@ -78,6 +82,7 @@ beforeEach(() => {
   state.projects = [];
   state.workers = [];
   state.entries = [];
+  state.pullError = false;
 });
 
 describe("Moj dan — stanja", () => {
@@ -133,6 +138,13 @@ describe("Grupa — stanja i ishod po radniku", () => {
     state.projects = [project];
     render(<GrupaScreen />);
     await waitFor(() => expect(screen.getByText(/Nema radnika u tvom opsegu/)).toBeTruthy());
+  });
+
+  it("neuspjelo preuzimanje ekipe se ne prikazuje kao prazan opseg", async () => {
+    state.projects = [project];
+    state.pullError = true;
+    render(<GrupaScreen />);
+    await waitFor(() => expect(screen.getByText(/Ekipa se nije mogla preuzeti/)).toBeTruthy());
   });
 
   it("ishod po radniku: poslano, čeka, van opsega (bez riječi odbijeno)", async () => {

@@ -176,6 +176,23 @@ jobs:
           path: v2/apps/web/test-results
           retention-days: 3
 
+      # Dijagnostika pri padu: anotacije su jedini kanal koji pouzdano stiže iz CI-ja
+      # (turbo prefiksira `::error::`, artefakti/logovi nisu uvijek dostupni).
+      - name: Dijagnostika — novi scope suite s anotacijama
+        if: failure()
+        working-directory: v2/apps/web
+        env:
+          REQUIRE_DB_TESTS: "1"
+        run: pnpm exec vitest run src/server/workday-review.integration.test.ts src/server/scope-roles.integration.test.ts --reporter=github-actions
+
+      - name: Web test padovi kao artefakt (imena i poruke)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-failures
+          path: v2/apps/web/web-test-failures.txt
+          retention-days: 3
+
       # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
       # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
       - name: Runtime preflight nakon integracijskih testova (baza popunjena)

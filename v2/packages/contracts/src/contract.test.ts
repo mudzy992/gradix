@@ -136,6 +136,8 @@ describe("šeme prihvataju stvarne odgovore", () => {
         timezone: "Europe/Sarajevo",
       },
       machineCount: 3,
+      workerId: "wrk_1",
+      foremanScope: true,
     };
     expect(MeResponse.parse(sample)).toEqual(sample);
   });

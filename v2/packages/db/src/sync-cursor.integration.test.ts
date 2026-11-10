@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, setTenant, withCompany } from "./tenant";
@@ -73,6 +75,38 @@ describeDb("R4 cursor alokacija i change log (PostgreSQL)", () => {
       cursor_floor: "0",
       has_more: false,
     });
+  });
+
+  it("REGRESIJA staging 2026-11-07: popravka migracije liječi vec primijenjenu buggy funkciju", async () => {
+    // Staging je imao prvu verziju funkcije: nekvalifikovan `cursor_floor` u SELECT-u
+    // iz sync_cursor_allocators sudara se s OUT parametrom i svaki pull pada sa
+    // "column reference cursor_floor is ambiguous". Svježa baza to ne može uhvatiti
+    // (fajl je u međuvremenu ispravljen), pa se ovdje bolest rekonstruiše, pa liječi.
+    const migrationsDir = fileURLToPath(new URL("../prisma/migrations", import.meta.url));
+    const original = readFileSync(`${migrationsDir}/20261110140000_r4_sync_cursor/migration.sql`, "utf8");
+    const fnStart = original.indexOf("CREATE OR REPLACE FUNCTION public.sync_cursor_pull(");
+    const fnEnd = original.indexOf("$pull$;", fnStart) + "$pull$;".length;
+    const correctFn = original.slice(fnStart, fnEnd);
+    const buggyFn = correctFn.replace(
+      "SELECT allocator.next_seq, allocator.cursor_floor",
+      "SELECT next_seq, cursor_floor",
+    );
+    expect(buggyFn).not.toBe(correctFn);
+    await admin.query(buggyFn);
+    await expect(
+      withCompany(app, companyId(COMPANY_B), (client) =>
+        client.query("SELECT * FROM public.sync_cursor_pull($1, 0, 100)", [COMPANY_B])),
+    ).rejects.toThrow(/cursor_floor.*ambiguous|ambiguous.*cursor_floor/i);
+
+    const fix = readFileSync(`${migrationsDir}/20261110170000_r4_sync_pull_floor_fix/migration.sql`, "utf8");
+    await admin.query(fix);
+    const page = await withCompany(app, companyId(COMPANY_B), async (client) =>
+      client.query<{ cursor_floor: string }>(
+        "SELECT cursor_floor::text FROM public.sync_cursor_pull($1, 0, 100)",
+        [COMPANY_B],
+      ),
+    );
+    expect(page.rows[0]?.cursor_floor).toBe("0");
   });
 
   it("ne preskače niži slot kad se viši poslovni upis commit-a prvi na drugoj konekciji", async () => {

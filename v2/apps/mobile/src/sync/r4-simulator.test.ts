@@ -9,6 +9,7 @@ import type {
 } from "@gradix/domain";
 import { businessDate } from "@gradix/domain";
 import { chunkR4, runR4Sync, type R4SyncStore, type R4SyncTransport } from "./r4-engine";
+import { sendResultMessage } from "../teren/outcome";
 
 const uuid = (tail: string) => `00000000-0000-4000-8000-${tail.padStart(12, "0")}`;
 
@@ -273,6 +274,27 @@ describe("R4 deterministic sync simulator", () => {
     expect(complete.cursor).toBe("2");
     expect(complete.pulledEvents).toBe(2);
     expect(store.applied.map((event) => event.cursorSeq)).toEqual(["1", "2"]);
+  });
+
+  it("REGRESIJA telefon 2026-11-07: pull padne (serverski 500) poslije uspješnog pusha — push ishod ostaje, poruka ne laže", async () => {
+    // Na stagingu je pull pucao u bazi (cursor_floor), a aplikacija je to prikazala kao
+    // "Nema veze sa serverom" iako je push prošao. Motor mora sačuvati push rezultate,
+    // a poruka korisniku mora reći da je poslano, uz napomenu da potvrda nije stigla.
+    const server = new SimulatedNetwork();
+    const store = memoryStore([item(21)]);
+    const brokenPull: R4SyncTransport = {
+      push: (items) => server.push(items),
+      pull: async () => {
+        throw Object.assign(new Error('column reference "cursor_floor" is ambiguous'), { code: "SYNC_PULL_RESPONSE_INVALID" });
+      },
+    };
+    const outcome = await runR4Sync(store, brokenPull);
+    expect(outcome.applied).toBe(1);
+    expect(outcome.error).toBe("SYNC_PULL_RESPONSE_INVALID");
+    expect(store.pendingItems).toHaveLength(0);
+    const message = sendResultMessage(outcome);
+    expect(message).toContain("poslano 1");
+    expect(message).not.toContain("Nema veze sa serverom");
   });
 
   it("rolls back a failed local pull-page transaction and applies the whole page on retry", async () => {
