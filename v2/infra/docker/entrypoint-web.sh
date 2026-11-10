@@ -93,6 +93,17 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
 
+# SEED_DEMO kapija: ako demo firma postoji, a SEED_DEMO nije uključen, samo UPOZORI.
+# Nikad se ovdje ništa ne briše; uklanjanje je eksplicitna naredba (scripts/remove-demo.ts).
+if [ "${SEED_DEMO:-false}" != "true" ] && [ -n "${DATABASE_ADMIN_URL:-}" ]; then
+  demo_exists=$(psql "${ADMIN_URL_CLEAN:-$DATABASE_ADMIN_URL}" -Atc "SELECT 1 FROM public.companies WHERE slug = 'niskogradnja-demo'" 2>/dev/null || echo "")
+  if [ "$demo_exists" = "1" ]; then
+    echo "UPOZORENJE: demo firma 'niskogradnja-demo' postoji u bazi, a SEED_DEMO nije true." >&2
+    echo "  Ako kreću stvarni podaci, ukloni je eksplicitnom naredbom (docs/COOLIFY.md §5.1)." >&2
+  fi
+fi
+
+
 # Poslije migracija administratorske varijable više ne smiju postojati u okruženju
 # nijednog procesa (ni dijagnostike u pozadini ni Node servera). Ne "export" — brišu se.
 unset DATABASE_ADMIN_URL SEED_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD ADMIN_URL_CLEAN DATABASE_ADMIN_URL_CLEAN || true

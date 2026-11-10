@@ -27,17 +27,18 @@ services:
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_BUCKET: gradix-stg
-      MINIO_REGION: us-east-1
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
       # Web-origin target used by diagnostics and mapped to the MinIO server-wide CORS allowlist.
       MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
       # Fixed to the existing ACL contract; only the password is supplied as a Coolify secret.
-      REDIS_HOST: redis-core
-      REDIS_PORT: "6380"
-      REDIS_USER: gradix_v2
+      REDIS_HOST: ${REDIS_HOST:-redis-core}
+      REDIS_PORT: "${REDIS_PORT:-6380}"
+      REDIS_USER: ${REDIS_USER:-gradix_v2}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_PREFIX: "gradix:stg:"
-      REDIS_TLS_CA_FILE: /run/secrets/redis-ca.crt
+      REDIS_PREFIX: "${REDIS_PREFIX:-gradix:stg:}"
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
+      SEED_DEMO: ${SEED_DEMO:-false}
     volumes:
       # PostgreSQL CA: host source -> stable in-container path used in DATABASE_URL.
       - type: bind
@@ -134,7 +135,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_BUCKET: gradix-stg
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
     networks:
       - default
 

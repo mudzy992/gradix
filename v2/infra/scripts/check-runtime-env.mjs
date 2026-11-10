@@ -49,17 +49,23 @@ if (/^(?:MINIO_ENDPOINT|MINIO_BUCKET|MINIO_REGION|REDIS_HOST|REDIS_PORT|REDIS_US
   throw new Error("Fixed MinIO/Redis Compose defaults must not be overrideable through .env.example.");
 }
 if (!/^\s{6}MINIO_ENDPOINT:\s*http:\/\/minio:9000\s*$/m.test(webEnvironment) ||
-    !/^\s{6}MINIO_BUCKET:\s*gradix-stg\s*$/m.test(webEnvironment) ||
-    !/^\s{6}MINIO_REGION:\s*us-east-1\s*$/m.test(webEnvironment)) {
-  throw new Error("Staging MinIO endpoint, bucket, and region must use the fixed Compose defaults.");
+    !/^\s{6}MINIO_BUCKET:\s*\$\{MINIO_BUCKET:-gradix-stg\}\s*$/m.test(webEnvironment) ||
+    !/^\s{6}MINIO_REGION:\s*\$\{MINIO_REGION:-us-east-1\}\s*$/m.test(webEnvironment)) {
+  throw new Error("Staging MinIO bucket/region must be env-configurable with defaults gradix-stg / us-east-1; only the internal endpoint stays structural.");
 }
-if (!/^\s{6}REDIS_HOST:\s*redis-core\s*$/m.test(webEnvironment) ||
-    !/^\s{6}REDIS_PORT:\s*"6380"\s*$/m.test(webEnvironment) ||
-    !/^\s{6}REDIS_USER:\s*gradix_v2\s*$/m.test(webEnvironment) ||
-    !/^\s{6}REDIS_PREFIX:\s*"gradix:stg:"\s*$/m.test(webEnvironment)) {
-  throw new Error("Staging Redis endpoint, existing ACL user, and namespace must match the repository ACL.");
+if (!/^\s{6}REDIS_HOST:\s*\$\{REDIS_HOST:-redis-core\}\s*$/m.test(webEnvironment) ||
+    !/^\s{6}REDIS_PORT:\s*"\$\{REDIS_PORT:-6380\}"\s*$/m.test(webEnvironment) ||
+    !/^\s{6}REDIS_USER:\s*\$\{REDIS_USER:-gradix_v2\}\s*$/m.test(webEnvironment) ||
+    !/^\s{6}REDIS_PREFIX:\s*"\$\{REDIS_PREFIX:-gradix:stg:\}"\s*$/m.test(webEnvironment)) {
+  throw new Error("Staging Redis host/port/user/prefix must be env-configurable with defaults redis-core / 6380 / gradix_v2 / gradix:stg:.");
 }
-if (!/^\s{6}REDIS_TLS_CA_FILE:\s*\/run\/secrets\/redis-ca\.crt\s*$/m.test(webEnvironment)) {
+// Prazna varijabla u .env.example koja bi nadjačala Compose default je greška, ne postavka.
+for (const name of ["REDIS_HOST", "REDIS_PORT", "REDIS_USER", "REDIS_PREFIX", "REDIS_TLS_CA_FILE", "MINIO_BUCKET", "MINIO_REGION"]) {
+  if (new RegExp(`^${name}=\\s*$`, "m").test(envExample)) {
+    throw new Error(`.env.example: ${name} is empty and would override the Compose default.`);
+  }
+}
+if (!/^\s{6}REDIS_TLS_CA_FILE:\s*\$\{REDIS_TLS_CA_FILE:-\/run\/secrets\/redis-ca\.crt\}\s*$/m.test(webEnvironment)) {
   throw new Error("REDIS_TLS_CA_FILE must use the mounted /run/secrets/redis-ca.crt path.");
 }
 if (!/source:\s*\/data\/coolify\/ssl\/redis-core\/redis-ca\.crt\s+target:\s*\/run\/secrets\/redis-ca\.crt\s+read_only:\s*true\s+bind:\s+create_host_path:\s*false/.test(webSection)) {

@@ -14,6 +14,20 @@ const schema = z.object({
   // daje prozor od 0 sekundi i time efektivno gasi ograničenje pokušaja prijave.
   AUTH_LOGIN_LIMIT: z.coerce.number().int().min(1, "AUTH_LOGIN_LIMIT mora biti najmanje 1").max(50, "AUTH_LOGIN_LIMIT ne smije biti veći od 50").default(5),
   AUTH_LOGIN_WINDOW_MS: z.coerce.number().int().min(10_000, "AUTH_LOGIN_WINDOW_MS mora biti najmanje 10000 ms (10 s)").max(3_600_000, "AUTH_LOGIN_WINDOW_MS ne smije biti veći od 3600000 ms (1 h)").default(60_000),
+  // Okruženje je podesivo kroz env (A9); odvajanje od v1 je VALIDACIJA, ne zabrana:
+  // v2 prefiks mora biti imenovani prostor unutar gradix: (v1 koristi tačno "gradix:"),
+  // a v1 bucket se zove tačno "gradix". Pogrešna vrijednost obara start s jasnom porukom.
+  REDIS_HOST: z.string().regex(/^[A-Za-z0-9_.-]{1,253}$/, "REDIS_HOST mora biti hostname ili IP, bez šeme/porta").default("redis-core"),
+  REDIS_PORT: z.coerce.number().int().min(1).max(65535).default(6380),
+  REDIS_USER: z.string().min(1).default("gradix_v2"),
+  REDIS_PREFIX: z.string().refine(
+    (value) => value.startsWith("gradix:") && value !== "gradix:" && value.endsWith(":"),
+    "REDIS_PREFIX mora počinjati sa gradix:, završavati sa : i ne smije biti v1 prefiks (tačno 'gradix:')",
+  ).default("gradix:stg:"),
+  REDIS_TLS_CA_FILE: z.string().default("/run/secrets/redis-ca.crt"),
+  MINIO_BUCKET: z.string().min(3).refine((value) => value !== "gradix", "MINIO_BUCKET ne smije biti 'gradix' (to je v1 bucket)").default("gradix-stg"),
+  MINIO_REGION: z.string().min(1).default("us-east-1"),
+  SEED_DEMO: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
 });
 
 export type Config = z.infer<typeof schema>;

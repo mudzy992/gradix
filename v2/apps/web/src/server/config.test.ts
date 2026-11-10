@@ -22,6 +22,21 @@ describe("login rate-limit konfiguracija (vrijednosti su u milisekundama)", () =
     expect(() => loadConfig({ ...base, AUTH_LOGIN_WINDOW_MS: "86400000" })).toThrow(/AUTH_LOGIN_WINDOW_MS/);
   });
 
+  it("A9: v1 Redis prefiks i v1 bucket obaraju start; podesive zadane vrijednosti prolaze", () => {
+    resetConfigForTests();
+    expect(() => loadConfig({ ...base, REDIS_PREFIX: "gradix:" })).toThrow(/REDIS_PREFIX/);
+    resetConfigForTests();
+    expect(() => loadConfig({ ...base, REDIS_PREFIX: "shared:" })).toThrow(/REDIS_PREFIX/);
+    resetConfigForTests();
+    expect(() => loadConfig({ ...base, MINIO_BUCKET: "gradix" })).toThrow(/MINIO_BUCKET/);
+    resetConfigForTests();
+    const config = loadConfig({ ...base, REDIS_HOST: "redis-custom", REDIS_PREFIX: "gradix:pilot:", MINIO_BUCKET: "gradix-pilot" });
+    expect(config.REDIS_HOST).toBe("redis-custom");
+    expect(config.REDIS_PREFIX).toBe("gradix:pilot:");
+    expect(config.MINIO_BUCKET).toBe("gradix-pilot");
+    expect(config.SEED_DEMO).toBe(false);
+  });
+
   it("prihvata podrazumijevano: 5 pokušaja u 60000 ms", () => {
     resetConfigForTests();
     const config = loadConfig({ ...base });
