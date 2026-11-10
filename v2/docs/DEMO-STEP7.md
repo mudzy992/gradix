@@ -1,8 +1,8 @@
 # Demo — UI Step 7 (telefon)
 
 Ekrani: **Moj dan** (radnik), **Grupa** (šef, glavni tok), **Radni dani** (ured, samo čitanje).
-Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-r4b-grupa.png`
-(generiše ih `apps/web/scripts/step7-shots.mjs` iz `docs/design/reference.html#r4b-foreman-reference`).
+Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.png`
+(generiše ih `apps/web/scripts/step7-shots.mjs` iz `docs/design/reference.html#step7-grupa-reference`).
 
 ## Koraci na telefonu (šef, grupni unos)
 

@@ -20,24 +20,24 @@ for (const theme of ["light", "dark"]) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 1100 });
   await page.goto(`${reference}?theme=${theme}`, { waitUntil: "networkidle0" });
-  const section = await page.$("#r4b-foreman-reference");
+  const section = await page.$("#step7-grupa-reference");
   await section.scrollIntoView();
   await new Promise((resolve) => setTimeout(resolve, 400));
-  await section.screenshot({ path: join(outDir, `1440-${theme}-r4b-grupa.png`) });
+  await section.screenshot({ path: join(outDir, `1440-${theme}-step7-grupa.png`) });
   await page.close();
 }
 {
   const page = await browser.newPage();
   await page.setViewport({ width: 360, height: 1100 });
   await page.goto(`${reference}?theme=light`, { waitUntil: "networkidle0" });
-  const boards = await page.$$("#r4b-foreman-reference .r4a-artboard");
+  const boards = await page.$$("#step7-grupa-reference .r4a-artboard");
   const names = ["light", "dark"];
   for (let i = 0; i < boards.length; i += 1) {
     await boards[i].scrollIntoView();
     await new Promise((resolve) => setTimeout(resolve, 300));
-    await boards[i].screenshot({ path: join(outDir, `360-${names[i]}-r4b-grupa.png`) });
+    await boards[i].screenshot({ path: join(outDir, `360-${names[i]}-step7-grupa.png`) });
   }
   await page.close();
 }
 await browser.close();
-console.log("Step 7 demo snimci: docs/demo-dizajn/{360,1440}-{light,dark}-r4b-grupa.png");
+console.log("Step 7 demo snimci: docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.png");

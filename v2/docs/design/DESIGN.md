@@ -43,4 +43,4 @@ Iste boje, tipografija i teme (isti tokeni kao web, test ih poredi). Mete ≥ 56
 ## Pristupačnost
 Kontrast AA u obje teme, vidljiv fokus (`--link`, 2 px), cijela navigacija tastaturom, `prefers-reduced-motion`, bez ulaznih animacija; samo 120 ms prelazi na boji.
 
-**R4b prijedlog — čeka odobrenje (bez koda):** `reference.html#r4b-foreman-reference` prikazuje šefov grupni unos na 360 px u obje teme. GLAVNI tok je šef grupno za ekipu od 5 radnika (odluka vlasnika); ekran ima izbor radnika iz R3 opsega, zajednički projekat/mašinu, početak/kraj za sve ili pojedinačno, stanje slanja i ishod po radniku.
+**Šef grupni unos (odobreno, isporučeno kao UI Step 7):** `reference.html#step7-grupa-reference` prikazuje šefov grupni unos na 360 px u obje teme. GLAVNI tok je šef grupno za ekipu od 5 radnika (odluka vlasnika); ekran ima izbor radnika iz R3 opsega, zajednički projekat/mašinu, početak/kraj za sve ili pojedinačno, stanje slanja i ishod po radniku.

@@ -8,11 +8,15 @@ export function outcomeFor(status: string, lastError: string | null): { kind: Ou
   if (status === "sent") return { kind: "poslano", label: "Poslano" };
   if (status === "conflict") return { kind: "za-provjeru", label: "Za provjeru" };
   if (status === "rejected" && lastError === "FOREMAN_SCOPE_FORBIDDEN") {
-    return { kind: "van-opsega", label: "Van opsega — ostaje na telefonu" };
+    return { kind: "van-opsega", label: "Van opsega" };
   }
-  if (status === "rejected") return { kind: "van-opsega", label: "Nije primljeno — ostaje na telefonu" };
+  if (status === "rejected") return { kind: "van-opsega", label: "Van opsega" };
   return { kind: "ceka", label: "Čeka slanje" };
 }
+
+/** Objašnjenje ispod bedža "Van opsega" (bedž je kratak da se ne lomi na 360 px). */
+export const OUT_OF_SCOPE_NOTE =
+  "Van opsega: zapis ostaje na telefonu i vidljiv je šefu; server ga nije primio jer radnik nije u opsegu za taj projekat i datum.";
 
 export function syncBannerText(input: { pending: number; offline: boolean }): string {
   if (input.pending === 0) return "Sve je poslano.";

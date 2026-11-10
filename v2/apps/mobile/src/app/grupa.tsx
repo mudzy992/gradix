@@ -14,7 +14,7 @@ import {
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { TerenShell, createStyles } from "../teren/TerenShell";
-import { outcomeFor, syncBannerText } from "../teren/outcome";
+import { outcomeFor, syncBannerText, OUT_OF_SCOPE_NOTE } from "../teren/outcome";
 import { useTheme } from "../theme/use-theme";
 import { jedanStil } from "../lib/styles";
 
@@ -220,6 +220,7 @@ export default function GrupaScreen() {
             </View>
           );
         })}
+        <Text style={styles.muted}>{OUT_OF_SCOPE_NOTE}</Text>
         <Pressable style={styles.button} onPress={saveGroup} disabled={busy} accessibilityRole="button">
           <Text style={styles.buttonText}>{busy ? "Radim…" : `Sačuvaj za ${selected.size} radnika`}</Text>
         </Pressable>
