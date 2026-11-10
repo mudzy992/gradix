@@ -66,8 +66,13 @@ test("istek/opoziv sesije: drugi tab završava na prijavi", async ({ browser }) 
   await tabA.getByRole("menuitem", { name: "Odjavi se" }).click();
   await tabA.waitForURL("**/login");
 
+  // Dijagnostika granice: bez sesije /api/me mora biti 401 i u drugom tabu.
+  const status = await tabB.evaluate(async () => (await fetch("/api/me", { cache: "no-store" })).status);
+  expect(status).toBe(401);
+
   // Tab B pri sljedećoj provjeri sesije (fokus/vidljivost) ide na prijavu.
   await tabB.bringToFront();
+  await tabB.evaluate(() => window.dispatchEvent(new Event("focus")));
   await tabB.waitForURL("**/login", { timeout: 15_000 });
   await context.close();
 });
