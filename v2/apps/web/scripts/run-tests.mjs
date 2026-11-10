@@ -59,6 +59,13 @@ const executed = passed + failed;
 // Padajući testovi idu i kao anotacije: logovi runa nisu uvijek dostupni svim klijentima,
 // a bez imena testa CI crvenilo ne govori ništa (isti razlog kao prisma korak u workflowu).
 for (const suite of report.testResults ?? []) {
+  // Pad u beforeAll/afterAll ne pripada ni jednom testu — bez ovoga anotacija ne postoji
+  // i CI kaže samo "test je pao", bez ijednog imena ili poruke.
+  if (suite.status === "failed" && !(suite.assertionResults ?? []).some((t) => t.status === "failed")) {
+    const cleanSuite = (value) => String(value ?? "").replace(/%/g, "%25").replace(/\r/g, "").replace(/\n/g, " ");
+    const suiteMessage = String(suite.message ?? "suite failed").split("\n").slice(0, 3).join(" | ").slice(0, 900);
+    console.log(`::error title=web test suite failed: ${cleanSuite(basename(suite.name ?? "unknown"))}::${cleanSuite(suiteMessage)}`);
+  }
   for (const test of suite.assertionResults ?? []) {
     if (test.status !== "failed") continue;
     const message = String(test.failureMessages?.[0] ?? "failed").split("\n").slice(0, 3).join(" | ").slice(0, 900);
