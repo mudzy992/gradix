@@ -62,9 +62,9 @@ vi.mock("../sync/r4-sqlite", () => ({
   runSqliteR4Sync: async () => ({ applied: 0, duplicate: 0, conflict: 0, rejected: 0, retry: 1, pulledEvents: 0, cursor: "0", cursorBlockedByPendingSlot: false, error: "NETWORK_ERROR" }),
 }));
 
-import MojDanScreen from "./moj-dan";
-import GrupaScreen from "./grupa";
-import IndexScreen from "./index";
+import MojDanScreen from "../app/moj-dan";
+import GrupaScreen from "../app/grupa";
+import IndexScreen from "../app/index";
 import { Alert } from "react-native";
 import { fireEvent } from "@testing-library/react";
 
