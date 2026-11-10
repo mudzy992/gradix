@@ -45,13 +45,20 @@ export default function GrupaScreen() {
     const db = await openDb();
     const account = await getActiveLocalAccount(db);
     if (!account || !project) return;
+    let pullFailed = false;
     try {
       const roster = await pullForemanWorkers(project, date);
       await saveForemanWorkerRoster(db, account, project, date, roster.workers);
     } catch {
       // Offline: ostaje zadnji preuzet roster sa telefona (server opseg ponovo provjerava pri slanju).
+      pullFailed = true;
     }
     const cached = await readForemanWorkerRoster(db, account, project, date);
+    if (pullFailed && cached.workers.length === 0) {
+      // Ne glumi prazan opseg kad preuzimanje nije uspjelo (nema mreže ili nema dodjele):
+      // prazan keš + neuspjeo poziv nije isto što i prazna ekipa.
+      setMessage("Ekipa se nije mogla preuzeti (mreža ili dodjela na projektu). Pokušaj dugme „Osvježi ekipu za datum“.");
+    }
     setWorkers(cached.workers);
     setSelected(new Set(cached.workers.map((worker) => worker.id)));
     setEntries(await readOutboxEntries(db, account));

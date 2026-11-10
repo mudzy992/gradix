@@ -35,6 +35,7 @@ const users: SeedUser[] = [
   { id: "usr_vlasnik", email: "vlasnik@demo.ba", first: "Emir", last: "Hadžić", role: "OWNER", companyId: "cmp_demo" },
   { id: "usr_ured", email: "ured@demo.ba", first: "Amina", last: "Karić", role: "ADMIN", companyId: "cmp_demo" },
   { id: "usr_sef", email: "sef@demo.ba", first: "Mario", last: "Perić", role: "SITE_SUPERVISOR", companyId: "cmp_demo" },
+  { id: "usr_radnik", email: "radnik@demo.ba", first: "Amar", last: "Hadžić", role: "WORKER", companyId: "cmp_demo" },
   { id: "usr_stranac", email: "vlasnik@druga.test", first: "Nikola", last: "Jović", role: "OWNER", companyId: "cmp_druga" },
 ];
 
@@ -84,12 +85,21 @@ const assignments = [
   { id: "pas_3", projectId: "prj_dionica", workerId: "wrk_demo_nedim", from: "2026-05-15" },
   { id: "pas_4", projectId: "prj_dionica", machineId: "mch_bager", from: "2026-03-02" },
   { id: "pas_5", projectId: "prj_dionica", machineId: "mch_kamion", from: "2026-03-16" },
+  { id: "pas_6", projectId: "prj_dionica", workerId: "wrk_demo_selmir", from: "2026-06-01" },
+  { id: "pas_7", projectId: "prj_dionica", workerId: "wrk_demo_haris", from: "2026-06-01" },
 ];
 
+/**
+ * userId veza je OBAVEZNA za demo tokove: bez nje server šefa ne prepoznaje u R3 opsegu
+ * (roster traži workers.user_id = prijavljeni korisnik) i Grupa je uvijek prazna, a radnik
+ * se ne može prijaviti za Moj dan. Regresija uhvaćena na telefonu 2026-11-07.
+ */
 const workers = [
-  { id: "wrk_demo_amar", first: "Amar", last: "Hadžić", job: "Rukovalac bagerom", hired: "2023-02-01" },
-  { id: "wrk_demo_mario", first: "Mario", last: "Perić", job: "Vozač kipera", hired: "2024-09-15" },
+  { id: "wrk_demo_amar", first: "Amar", last: "Hadžić", job: "Rukovalac bagerom", hired: "2023-02-01", userId: "usr_radnik" },
+  { id: "wrk_demo_mario", first: "Mario", last: "Perić", job: "Vozač kipera", hired: "2024-09-15", userId: "usr_sef" },
   { id: "wrk_demo_nedim", first: "Nedim", last: "Softić", job: "Radnik na iskopu", hired: "2025-01-20" },
+  { id: "wrk_demo_selmir", first: "Selmir", last: "Begić", job: "Rukovalac valjkom", hired: "2024-03-11" },
+  { id: "wrk_demo_haris", first: "Haris", last: "Kovačević", job: "Radnik na asfaltiranju", hired: "2025-05-05" },
 ];
 
 /**
@@ -153,14 +163,14 @@ try {
   for (const worker of workers) {
     await withCompany(pool, companyId("cmp_demo"), async (client) => {
       const updated = await client.query(
-        "UPDATE workers SET first_name = $2, last_name = $3, job_title = $4 WHERE id = $1",
-        [worker.id, worker.first, worker.last, worker.job],
+        "UPDATE workers SET first_name = $2, last_name = $3, job_title = $4, user_id = $5 WHERE id = $1",
+        [worker.id, worker.first, worker.last, worker.job, "userId" in worker ? worker.userId : null],
       );
       if (updated.rowCount === 0) {
         await client.query(
-          `INSERT INTO workers (id, company_id, first_name, last_name, job_title, hired_at)
-           VALUES ($1, 'cmp_demo', $2, $3, $4, $5)`,
-          [worker.id, worker.first, worker.last, worker.job, worker.hired],
+          `INSERT INTO workers (id, company_id, first_name, last_name, job_title, hired_at, user_id)
+           VALUES ($1, 'cmp_demo', $2, $3, $4, $5, $6)`,
+          [worker.id, worker.first, worker.last, worker.job, worker.hired, "userId" in worker ? worker.userId : null],
         );
       }
     });

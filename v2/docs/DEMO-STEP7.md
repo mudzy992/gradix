@@ -25,6 +25,6 @@ Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.
 ## Radnik i ured
 
 10. Odjavi se (odjava sa neposlanim stavkama prvo traži izričitu potvrdu) i prijavi se kao radnik:
-    **Moj dan** — izaberi projekat i mašinu, sačuvaj, pošalji.
+    **Moj dan** (`radnik@demo.ba`) — izaberi projekat i mašinu, sačuvaj, pošalji.
 11. Na webu (`/ured/radni-dani`, OWNER/ADMIN) dan je vidljiv u pregledu; dan sa otvorenim
     segmentom ili nepoznatim krajem nosi oznaku **Za provjeru**.
