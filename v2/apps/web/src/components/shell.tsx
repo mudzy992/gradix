@@ -127,12 +127,14 @@ export default function Shell({
       if (document.visibilityState === "visible") void checkSession();
     }
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
+    // Fokus prozora/taba provjerava bez uslova vidljivosti: headless i neki preglednici
+    // visibilityState prijavljuju kasno, a fokus je pouzdan signal povratka korisnika.
+    window.addEventListener("focus", checkSession);
     const timer = window.setInterval(() => void checkSession(), 60_000);
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("focus", checkSession);
       window.clearInterval(timer);
     };
   }, []);
