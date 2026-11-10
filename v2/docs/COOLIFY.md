@@ -71,6 +71,47 @@ build ponavlja sa starom greškom.
 | `MINIO_BROWSER_REDIRECT_URL` | `https://minio-console.gradix.ba101.top` | Javni HTTPS redirect URL za Console; isti hostname kao Coolify domain na `minio-console-proxy`. |
 | `SEED_PASSWORD` | jaka lozinka (≥10 znakova) | Samo za ručni demo seed (vidi §5). Ne ostavljati trajno. |
 
+### 1.1. Tačna tabela varijabli (čišćenje Coolifyja radi se po ovoj tabeli)
+
+Legenda: **F** = fiksirano u Compose-u (ne unositi u Coolify env), **S** = Coolify tajna koju
+unosi operator, **M** = mora biti postavljena (može i nejavna vrijednost), **X** = ne smije
+postojati u Coolify env-u.
+
+| Varijabla | Vrsta | Gdje / napomena |
+|---|---|---|
+| `DATABASE_URL` | S, M | Coolify secret; aplikacijska rola `gradix_app` |
+| `DATABASE_ADMIN_URL` | S, M kad je `RUN_MIGRATIONS=true` | Coolify secret; entrypoint je **briše iz okruženja procesa** poslije migracija |
+| `AUTH_SECRET` | S, M | ≥32 znaka |
+| `AUTH_LOGIN_LIMIT` | M (default iz koda 5) | 1–50; aplikacija odbija start izvan raspona |
+| `AUTH_LOGIN_WINDOW_MS` | M (default iz koda 60000) | **milisekunde**, 10000–3600000; `5` je greška i aplikacija neće startati |
+| `RUN_MIGRATIONS` | M | `true` na stagingu |
+| `NODE_ENV` | F | `production` u Compose-u |
+| `PORT` | F | `3000` u Compose-u |
+| `HOSTNAME` | F | `0.0.0.0` u Compose-u |
+| `LOG_LEVEL` | M | `info` (Coolify default iz Compose-a) |
+| `TRUST_PROXY` | M | `1` (jedan Coolify proxy hop) |
+| `TZ` | M | `Europe/Sarajevo` |
+| `PGSSLMODE` | M | `verify-full` |
+| `POSTGRES_CA_FILE` | M | host putanja CA; Compose je montira u kontejner |
+| `MINIO_ENDPOINT` | F | `http://minio:9000` |
+| `MINIO_BUCKET` | F | `gradix-stg` |
+| `MINIO_REGION` | F | `us-east-1` |
+| `MINIO_PUBLIC_ENDPOINT` | S, M za priloge | javni HTTPS S3 API hostname (port 9000) |
+| `MINIO_CORS_ALLOWED_ORIGIN` | M | tačan web origin, npr. `https://gradix.ba101.top` |
+| `MINIO_ACCESS_KEY` | S, M | app-only, **≥20 znakova**, različit od `MINIO_ROOT_USER` |
+| `MINIO_SECRET_KEY` | S, M | app-only, **≥32 znaka** |
+| `MINIO_ROOT_USER` | S, M | samo `minio` i `minio-init` servisi; nikad web |
+| `MINIO_ROOT_PASSWORD` | S, M | samo `minio` i `minio-init` servisi; nikad web |
+| `MINIO_BROWSER_REDIRECT_URL` | M | `https://minio-console.gradix.ba101.top` |
+| `SERVICE_FQDN_MINIO`, `SERVICE_FQDN_MINIO_9000` | F (Coolify magic) | upravlja Coolify, ne upisivati ručno |
+| `SERVICE_FQDN_MINIO_CONSOLE_PROXY` | F (Coolify magic) | upravlja Coolify, ne upisivati ručno |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_USER` / `REDIS_PREFIX` / `REDIS_TLS_CA_FILE` | F | `redis-core` / `6380` / `gradix_v2` / `gradix:stg:` / `/run/secrets/redis-ca.crt` |
+| `REDIS_PASSWORD` | S | jedina Redis tajna; postojeća ACL lozinka za `gradix_v2` |
+| `SEED_PASSWORD` | S, privremeno | samo za ručni seed (§5); poslije ukloniti. Entrypoint je briše iz okruženja procesa |
+| `REDIS_CA_FILE` | **X** | uklonjen; jedini CA env je `REDIS_TLS_CA_FILE` |
+| `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_DATA_DIR` | **X** | naslijeđeni v1 nazivi; Compose ih ne čita |
+| `EXPO_PUBLIC_API_URL` | nije Coolify web varijabla | **build-time za mobilnu aplikaciju**: pripada `apps/mobile/.env` odnosno EAS build okruženju, ne web kontejneru |
+
 MinIO server je dio ovog Compose stacka i koristi sliku `ghcr.io/coollabsio/minio:latest`.
 Njegov `/data` je read/write bind na tačnu host putanju `/mnt/shared-app-files/gradix-v2/minio`;
 Compose traži da direktorij već postoji (`create_host_path: false`) kako ne bi tiho pokrenuo prazan
@@ -122,6 +163,31 @@ niti mijenja PostgreSQL preflight.
 Console URL-a na portu 9001. `MINIO_BROWSER_REDIRECT_URL` mora pokazivati samo na Console hostname.
 Dijagnostika potvrđuje javni S3 API endpoint (HTTPS, ne-local hostname) i njegov odgovor; ne
 zamjenjuje završni test otvaranja Consolea i browser priloga nakon deploya.
+
+### 2.2. Redis ACL koji dijagnostika traži (Redis se ne koristi u aplikaciji)
+
+Aplikacija Redis uopšte ne koristi (rate limit prijave je PostgreSQL); dijagnostika je
+informativna i ništa ne blokira. Da `redis.auth_rw` bude PASS, ACL korisnik `gradix_v2` treba:
+
+- ključ-obrazac: `~gradix:stg:*` (dijagnostika piše isključivo pod `gradix:stg:diag:`),
+- komande: `+ping +set +get +del +pttl` (dijagnostika koristi i `expire` obrazac kroz
+  `SET ... PX`, pa gdje ACL to razdvaja dodati i `+expire`),
+- AUTH sa korisnikom i lozinkom preko TLS-a (port 6380, CA po §3.6).
+
+Dijagnostika u `redis.auth_rw` ispisuje sanitizovano ime Redis greške (npr. `WRONGPASS`,
+`NOPERM`), komandu koja je pala (`failed_command`) i `key_pattern` — bez lozinke i bez
+vrijednosti ključeva. Audit postojećeg korisnika: `v2/infra/redis/acl-v2.txt`.
+
+### 2.3. Čišćenje probnih objekata dijagnostike u bucketu
+
+Dijagnostika svoj probni objekat briše u `finally` bloku i na kraju runa (`phase=s3.cleanup`).
+Ako je stari run (prije ove popravke) ostavio objekte pod prefiksom `gradix:diag/` u bucketu
+`gradix-stg`, uklanjaju se jednom naredbom sa hosta koji ima `mc` i app/root kredencijale:
+
+```sh
+mc alias set stg http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+mc rm --recursive --force "stg/gradix-stg/gradix:diag/"
+```
 
 ## 3. Nepotrebno za v2 staging
 
@@ -245,6 +311,16 @@ kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ur
 `vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
+
+### 5.1. SEED_DEMO — prijedlog (čeka odobrenje vlasnika, NIJE implementirano)
+
+Kad krenu stvarni podaci, demo podaci ne smiju ostati na javnoj domeni. Prijedlog, bez
+promjene ponašanja dok ga vlasnik ne odobri: (1) seed firma nosi trajnu oznaku
+`companies.slug = 'niskogradnja-demo'` i imena naloga na `@demo.ba`; (2) posebna, eksplicitna
+naredba za uklanjanje (administratorska skripta koja u jednoj transakciji briše demo firmu i
+sve njene redove kroz postojeći tenant model, uz potvrdu kucanjem slug-a); (3) javna domena
+se prije prvog stvarnog unosa provjerava upitom da demo firma više ne postoji. Do odobrenja
+se ništa od ovoga ne radi; seed ostaje ručna, jednokratna operacija iz §5.
 
 ## 6. Provjera poslije deploya
 

@@ -10,6 +10,10 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET mora imati najmanje 32 znaka"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
+  // Jedinica je u imenu: MILISEKUNDE. Raspon je namjerno uzak — vrijednost poput 5 (ms)
+  // daje prozor od 0 sekundi i time efektivno gasi ograničenje pokušaja prijave.
+  AUTH_LOGIN_LIMIT: z.coerce.number().int().min(1, "AUTH_LOGIN_LIMIT mora biti najmanje 1").max(50, "AUTH_LOGIN_LIMIT ne smije biti veći od 50").default(5),
+  AUTH_LOGIN_WINDOW_MS: z.coerce.number().int().min(10_000, "AUTH_LOGIN_WINDOW_MS mora biti najmanje 10000 ms (10 s)").max(3_600_000, "AUTH_LOGIN_WINDOW_MS ne smije biti veći od 3600000 ms (1 h)").default(60_000),
 });
 
 export type Config = z.infer<typeof schema>;

@@ -90,6 +90,9 @@ async function main() {
     }));
     assert.equal(badPassword.code, 0, badPassword.output);
     assert.match(badPassword.output, /phase=redis\.auth_rw status=FAIL cause=redis_auth_or_acl_failed/);
+    assert.match(badPassword.output, /WRONGPASS/);
+    assert.match(badPassword.output, /failed_command='AUTH'/);
+    assert.match(badPassword.output, /key_pattern='gradix:stg:diag:\*'/);
     assert.match(badPassword.output, /prefix='gradix:stg:diag:'/);
     assert.ok(!badPassword.output.includes(redisSecret), "Redis password leaked to diagnostic output");
   } finally {
