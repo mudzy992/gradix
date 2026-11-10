@@ -52,11 +52,11 @@ test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu, ne 
   await page.waitForURL("**/pregled");
 });
 
-test("šef: vidi Radnike, ne vidi Radne dane ni Korisnike", async ({ page }) => {
+test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
   await login(page, "sef@demo.ba");
   const labels = await navLabels(page);
   expect(labels).toContain("Radnici");
-  expect(labels).not.toContain("Radni dani");
+  expect(labels).toContain("Radni dani");
   expect(labels).not.toContain("Korisnici");
 });
 
