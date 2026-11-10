@@ -49,7 +49,7 @@ function makeStyles(t: ThemeTokens) {
     rowText: { ...typography.body, color: t.text, flex: 1 },
     outcome: { ...typography.label, color: t.text },
     tile: { padding: spacing.lg, borderRadius: radius.tile, borderWidth: 1, borderColor: t.line, backgroundColor: t.panel, gap: spacing.xs },
-    skeleton: { height: 18, borderRadius: radius.field, backgroundColor: t.sunken },
+    skeleton: { height: spacing.lg, borderRadius: radius.field, backgroundColor: t.sunken },
     topRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md },
     themeBtn: { minHeight: 40, paddingHorizontal: spacing.md, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: t.line },
   });
@@ -221,5 +221,112 @@ export function Tile(props: { title: string; hint?: string; onPress: () => void 
       <RNText style={styles.body}>{props.title}</RNText>
       {props.hint ? <RNText style={styles.caption}>{props.hint}</RNText> : null}
     </Pressable>
+  );
+}
+
+/* --- Proširenje kataloga (paritet s webom): Avatar, Badge, Accordion, Stepper,
+       Link, Upload, Image, Toast, Breadcrumbs. Stilovi i dalje samo ovdje, iz tokena. */
+import { Image as RNImage } from "react-native";
+import { useState as useStateUi } from "react";
+
+export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  const { theme } = useUiStyles();
+  const initials = name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.tint, alignItems: "center", justifyContent: "center" }}>
+      <RNText style={{ color: theme.text, fontWeight: "700" }}>{initials}</RNText>
+    </View>
+  );
+}
+
+export function Badge({ label, tone = "primary" }: { label: string; tone?: "primary" | "danger" | "quiet" }) {
+  const { theme } = useUiStyles();
+  const bg = tone === "danger" ? theme.danger : tone === "quiet" ? theme.sunken : theme.primary;
+  const fg = tone === "quiet" ? theme.text : theme.onPrimary;
+  return (
+    <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, minWidth: 22, height: 22, alignItems: "center", justifyContent: "center" }}>
+      <RNText style={{ ...typography.label, color: fg }}>{label}</RNText>
+    </View>
+  );
+}
+
+export function Accordion({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useStateUi(false);
+  const { styles } = useUiStyles();
+  return (
+    <View style={styles.card}>
+      <Pressable onPress={() => setOpen((v) => !v)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.row}>
+        <RNText style={styles.rowText}>{title}</RNText>
+        <RNText style={styles.outcome}>{open ? "▾" : "▸"}</RNText>
+      </Pressable>
+      {open ? children : null}
+    </View>
+  );
+}
+
+export function Stepper({ steps, current }: { steps: string[]; current: number }) {
+  const { styles, theme } = useUiStyles();
+  return (
+    <View style={styles.chipRow} accessibilityLabel="Koraci">
+      {steps.map((step, index) => (
+        <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: index === current ? theme.primary : theme.sunken }}>
+            <RNText style={{ color: index === current ? theme.onPrimary : theme.text, fontWeight: "700" }}>{index < current ? "✓" : index + 1}</RNText>
+          </View>
+          <RNText style={index === current ? styles.body : styles.caption}>{step}</RNText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const { theme } = useUiStyles();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="link" style={{ minHeight: 40, justifyContent: "center" }}>
+      <RNText style={{ color: theme.link, fontWeight: "600", textDecorationLine: "underline" }}>{label}</RNText>
+    </Pressable>
+  );
+}
+
+export function UploadTile({ label, hint, onPress }: { label: string; hint?: string; onPress: () => void }) {
+  return <Tile title={label} hint={hint ?? "Dodaj fotografiju ili dokument"} onPress={onPress} />;
+}
+
+export function ImageTile({ uri, caption }: { uri: string; caption?: string }) {
+  const { styles } = useUiStyles();
+  return (
+    <View style={styles.card}>
+      <RNImage source={{ uri }} style={{ width: "100%", height: 160, borderRadius: 12 }} accessibilityLabel={caption ?? "Slika"} />
+      {caption ? <RNText style={styles.caption}>{caption}</RNText> : null}
+    </View>
+  );
+}
+
+export function ToastBanner({ text, tone = "info", onClose }: { text: string; tone?: "info" | "error"; onClose?: () => void }) {
+  const { styles } = useUiStyles();
+  if (tone === "error") return <AlertBox>{text}</AlertBox>;
+  return (
+    <View style={styles.banner} accessibilityLiveRegion="polite">
+      <RNText style={styles.bannerText}>{text}</RNText>
+      {onClose ? (
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Zatvori obavijest" style={styles.retry}>
+          <RNText style={styles.retryText}>Zatvori</RNText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+export function Breadcrumbs({ items }: { items: string[] }) {
+  const { styles } = useUiStyles();
+  return (
+    <View style={styles.chipRow} accessibilityLabel="Putanja">
+      {items.map((item, index) => (
+        <RNText key={item} style={index === items.length - 1 ? styles.body : styles.caption}>
+          {index > 0 ? "/ " : ""}{item}
+        </RNText>
+      ))}
+    </View>
   );
 }

@@ -7,7 +7,7 @@
 <style>
 :root,[data-theme=light]{
   --brand:#140A9A;--accent:#FFC82F;--ink:#1B232A;--slate:#59656F;--edge:#7B858D;--danger-raw:#B42318;
-  --bg:color-mix(in srgb,var(--ink) 5%,#fff);--panel:#fff;--raise:color-mix(in srgb,var(--ink) 4%,#fff);
+  --backdrop:color-mix(in srgb,var(--ink) 55%,transparent);--bg:color-mix(in srgb,var(--ink) 5%,#fff);--panel:#fff;--raise:color-mix(in srgb,var(--ink) 4%,#fff);
   --line:color-mix(in srgb,var(--edge) 28%,#fff);--text:var(--ink);--muted:var(--slate);
   --sunken:color-mix(in srgb,var(--ink) 7%,#fff);
   --primary:var(--brand);--on-primary:#fff;--on-accent:var(--ink);--link:var(--brand);--bar:var(--brand);
@@ -17,7 +17,7 @@
   --warn-soft:color-mix(in srgb,var(--accent) 22%,#fff);--scrim:color-mix(in srgb,var(--ink) 45%,transparent);
   --field:var(--edge);color-scheme:light}
 [data-theme=dark]{
-  --bg:var(--ink);--panel:color-mix(in srgb,#fff 5%,var(--ink));--raise:color-mix(in srgb,#fff 9%,var(--ink));
+  --backdrop:color-mix(in srgb,var(--ink) 72%,transparent);--bg:var(--ink);--panel:color-mix(in srgb,#fff 5%,var(--ink));--raise:color-mix(in srgb,#fff 9%,var(--ink));
   --line:color-mix(in srgb,#fff 13%,var(--ink));--text:#fff;--muted:color-mix(in srgb,#fff 64%,var(--ink));
   --sunken:color-mix(in srgb,var(--ink) 88%,#fff);
   --primary:var(--accent);--on-primary:var(--ink);--on-accent:var(--ink);--link:color-mix(in srgb,var(--brand) 40%,#fff);--bar:var(--link);
@@ -429,8 +429,8 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
 
       <section class="card">
           <h2 style="margin-bottom:16px">Inventar UI sistema (Dio U, prema kodu)</h2>
-          <p class="hint">Web <b>components/ui</b>: Input, Select, Textarea, Checkbox, Field, FormSection/FormGrid, Button, IconButton, PageHeader, FilterBar, DataTable (kartice &lt;640 px, jedna akcija + meni), RowActions, Pagination, Dialog/ConfirmDialog, Tabs, StatusDot/Chip, Alert, EmptyState, Skeleton, Card/Stat, DescriptionList, Stack/Inline. Katalog: <b>/katalog</b>.</p>
-          <p class="hint" style="margin-top:8px">Mobile <b>src/ui</b>: Screen, Text, Button, BigActionButton, TextField, Segmented, ListItem, StatusChip, Banner, EmptyState, Skeleton, Tile. Katalog: ekran „katalog“ iza dev prekidača. Sirovi elementi po ekranima zabranjeni su lintom (U3, docs/UI-EXCEPTIONS.md).</p>
+          <p class="hint">Web <b>components/ui</b>: Input, Select, Textarea, Checkbox, Radio, Switch, Field, FormSection/FormGrid, Button, IconButton, PageHeader, FilterBar, DataTable (sortiranje, kartice &lt;640 px, jedna akcija + meni), RowActions, Pagination, Dialog/ConfirmDialog (X + footer, bez scrollbar-a, tamni --backdrop u obje teme), Tabs, StatusDot/Chip, Alert, EmptyState, Skeleton, Card/Stat, DescriptionList, Stack/Inline, Avatar, Badge, Breadcrumbs, TextLink, Accordion, Stepper, QuantityStepper, FileUpload, FigureImage, ActionCard, SpeedDial, Toast. Layout/shell i spacing prikazani su u katalogu. Katalog: <b>/katalog</b>.</p>
+          <p class="hint" style="margin-top:8px">Mobile <b>src/ui</b>: Screen, Text, Button, BigActionButton, TextField, Segmented, ListItem, StatusChip, Banner, EmptyState, Skeleton, Tile, CardView, Avatar, Badge, Accordion, Stepper, TextLink, UploadTile, ImageTile, ToastBanner, Breadcrumbs. Katalog: ekran „katalog“ iza dev prekidača — isti inventar i redoslijed kao web. Sirovi elementi po ekranima zabranjeni su lintom (U3, docs/UI-EXCEPTIONS.md); kontrast i hardkodiranje čuvaju CI skripte check-contrast/check-ui.</p>
         </section>
       </div>
 

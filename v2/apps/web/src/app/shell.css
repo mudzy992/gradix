@@ -328,7 +328,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--text) 45%, transparent);
+  background: var(--backdrop);
 }
 
 .gx-dialog {
@@ -508,7 +508,7 @@
     z-index: 50;
     padding: 0;
     border: 0;
-    background: color-mix(in srgb, var(--text) 45%, transparent);
+    background: var(--backdrop);
   }
 }
 
@@ -1252,3 +1252,45 @@ select.gx-input option, select.gx-input optgroup {
 .gx-switch input:checked + .gx-switch__track::after { left: 23px; }
 .gx-switch input:focus-visible + .gx-switch__track { outline: 2px solid var(--link); outline-offset: 2px; }
 .gx-switch input:disabled + .gx-switch__track { opacity: 0.5; }
+
+/* U katalog proširenje: badge, avatar veličine, accordion, breadcrumbs, link, stepper,
+   speed dial, upload, slika, toast, akcijska kartica. Sve iz tokena. */
+.gx-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--primary); color: var(--on-primary); font-size: var(--text-label); font-weight: 700; }
+.gx-badge--danger { background: var(--danger); color: var(--panel); }
+.gx-badge--quiet { background: var(--sunken); color: var(--text); }
+.gx-avatar--lg { width: 56px; height: 56px; font-size: var(--text-section); }
+.gx-avatar--sm { width: 28px; height: 28px; font-size: var(--text-label); }
+.gx-link { color: var(--link); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.gx-link:hover { text-decoration-thickness: 2px; }
+.gx-crumbs { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; color: var(--muted); font-size: var(--text-small); }
+.gx-crumbs a { color: var(--link); text-decoration: none; font-weight: 600; }
+.gx-crumbs [aria-current] { color: var(--text); font-weight: 600; }
+.gx-accordion { border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--panel); }
+.gx-accordion + .gx-accordion { margin-top: var(--space-2); }
+.gx-accordion__head { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); background: none; border: 0; font: inherit; font-weight: 700; color: var(--text); padding: var(--space-4); min-height: 48px; cursor: pointer; text-align: left; }
+.gx-accordion__body { padding: 0 var(--space-4) var(--space-4); color: var(--text); }
+.gx-accordion__chev { transition: transform 120ms ease; }
+.gx-accordion__chev[data-open="true"] { transform: rotate(180deg); }
+.gx-stepper { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.gx-step { display: flex; align-items: center; gap: var(--space-2); color: var(--muted); font-weight: 600; font-size: var(--text-small); }
+.gx-step__dot { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; background: var(--panel); color: var(--text); flex: none; }
+.gx-step[data-state="current"] { color: var(--text); }
+.gx-step[data-state="current"] .gx-step__dot { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.gx-step[data-state="done"] .gx-step__dot { background: var(--tint); }
+.gx-qty { display: inline-flex; align-items: center; gap: var(--space-2); }
+.gx-qty__value { min-width: 48px; text-align: center; font-weight: 700; }
+.gx-upload { border: 1.5px dashed var(--field); border-radius: var(--radius-card); padding: var(--space-5); display: grid; gap: var(--space-2); justify-items: center; text-align: center; background: var(--panel); cursor: pointer; }
+.gx-upload:hover { background: var(--raise); }
+.gx-upload input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.gx-figure { margin: 0; display: grid; gap: var(--space-2); }
+.gx-figure img { width: 100%; border-radius: var(--radius-card); border: 1px solid var(--line); display: block; }
+.gx-figure figcaption { color: var(--muted); font-size: var(--text-small); }
+.gx-toast-stack { position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: 60; display: grid; gap: var(--space-2); max-width: min(420px, calc(100vw - 32px)); }
+.gx-toast { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: var(--radius-card); box-shadow: var(--shadow-lift); padding: var(--space-3) var(--space-4); }
+.gx-toast--error { border-left-color: var(--danger); }
+.gx-toast--warning { border-left-color: var(--accent); }
+.gx-action-card { display: grid; gap: var(--space-1); text-align: left; font: inherit; cursor: pointer; width: 100%; }
+.gx-speeddial { position: relative; display: inline-grid; justify-items: end; gap: var(--space-2); }
+.gx-speeddial__fab { width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--primary); color: var(--on-primary); font-size: 24px; cursor: pointer; box-shadow: var(--shadow-lift); }
+.gx-speeddial__actions { display: grid; gap: var(--space-2); justify-items: end; }
+.gx-upload:focus-within { outline: 2px solid var(--link); outline-offset: 2px; }

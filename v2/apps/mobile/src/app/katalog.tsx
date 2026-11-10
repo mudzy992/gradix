@@ -6,8 +6,9 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import {
-  Banner, BigActionButton, Button, CardView, EmptyState, ListItem, Segmented, Skeleton,
-  StatusChip, Text, TextField, Tile,
+  Accordion, Avatar, Badge, Banner, BigActionButton, Breadcrumbs, Button, CardView,
+  EmptyState, ImageTile, ListItem, Segmented, Skeleton, StatusChip, Stepper, Text,
+  TextField, TextLink, Tile, ToastBanner, UploadTile,
 } from "../ui";
 
 export default function KatalogScreen() {
@@ -64,6 +65,31 @@ export default function KatalogScreen() {
       </CardView>
       <Skeleton rows={3} />
       <EmptyState text="EmptyState: nema zapisa — objasni zašto i šta dalje." />
+
+      <Text variant="label">Layout, navigacija, koraci</Text>
+      <CardView>
+        <Breadcrumbs items={["Moj dan", "Unos", "Potvrda"]} />
+        <Stepper steps={["Podaci", "Vrijeme", "Potvrda"]} current={1} />
+        <TextLink label="TextLink — veza u tekstu" onPress={() => undefined} />
+      </CardView>
+
+      <Text variant="label">Kartice, avatar, badge</Text>
+      <CardView>
+        <ListItem title="Amina Karić" meta="Zidar · Ekipa 1" right="Badge →" />
+        <Avatar name="Amina Karić" size={48} />
+        <Badge label="3" />
+        <Badge label="5" tone="danger" />
+        <Badge label="12" tone="quiet" />
+      </CardView>
+
+      <Text variant="label">Upload, slika, accordion, toast</Text>
+      <UploadTile label="Dodaj fotografiju" hint="Kamera ili galerija — meta ≥56 dp" onPress={() => undefined} />
+      <ImageTile uri="https://placehold.co/640x360/png" caption="ImageTile: slika + potpis" />
+      <Accordion title="Accordion — detalji unosa">
+        <Text>Sekundarne informacije unosa: napomena, istorija slanja, ishodi.</Text>
+      </Accordion>
+      <ToastBanner text="ToastBanner: zapis je sačuvan na telefonu." />
+      <ToastBanner text="ToastBanner greška: slanje nije uspjelo, zapis ostaje." tone="error" />
     </ScrollView>
   );
 }
