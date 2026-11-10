@@ -176,6 +176,14 @@ jobs:
           path: v2/apps/web/test-results
           retention-days: 3
 
+      - name: Web test padovi kao artefakt (imena i poruke)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-failures
+          path: v2/apps/web/web-test-failures.txt
+          retention-days: 3
+
       # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
       # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
       - name: Runtime preflight nakon integracijskih testova (baza popunjena)

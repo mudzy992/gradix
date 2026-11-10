@@ -74,6 +74,24 @@ for (const suite of report.testResults ?? []) {
   }
 }
 
+// Imenovani padovi u fajl koji CI diže kao artefakt: turbo prefiksira izlaz paketa, pa
+// `::error::` linije iz ovog procesa GitHub ne pretvara u anotacije.
+const failureLines = [];
+for (const suite of report.testResults ?? []) {
+  if (suite.status === "failed" && !(suite.assertionResults ?? []).some((t) => t.status === "failed")) {
+    failureLines.push(`SUITE ${basename(suite.name ?? "unknown")}: ${String(suite.message ?? "").slice(0, 2000)}`);
+  }
+  for (const test of suite.assertionResults ?? []) {
+    if (test.status === "failed") {
+      failureLines.push(`TEST ${test.fullName ?? test.title}: ${String(test.failureMessages?.[0] ?? "").slice(0, 2000)}`);
+    }
+  }
+}
+if (failureLines.length > 0) {
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(join(process.cwd(), "web-test-failures.txt"), failureLines.join("\n\n"));
+}
+
 const summary = `PostgreSQL web integration tests: ${passed} passed, ${failed} failed, ${skipped} skipped (${executed} executed; ${assertions.length} total in ${integrationSuites.length} integration suites).`;
 console.log(`\n[web-db-test-summary] ${summary}`);
 if (process.env.GITHUB_STEP_SUMMARY) {
