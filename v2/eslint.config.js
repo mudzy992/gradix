@@ -56,7 +56,6 @@ export default tseslint.config(
       "apps/web/src/app/layout.tsx",
       "apps/web/src/app/page.tsx",
       "apps/web/src/app/ured/page.tsx",
-      "apps/web/src/app/ured/audit/**",
       "apps/web/src/app/ured/korisnici/**",
       "apps/web/src/app/ured/masine/**",
       "apps/web/src/app/ured/projekti/**",

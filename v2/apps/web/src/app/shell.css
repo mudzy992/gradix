@@ -1297,3 +1297,6 @@ select.gx-input option, select.gx-input optgroup {
 
 /* Uski auth okvir (lozinka stranice): 520 px, bez gornjeg razmaka stranice. */
 .gx-auth-narrow { max-width: 520px; padding: 0; }
+
+/* Kod/detalji blok (audit metadata): udubljena ploha, skrol bez isticanja. */
+.gx-codeblock { max-height: 224px; overflow: auto; background: var(--raise); padding: var(--space-3); border-radius: var(--radius-field); line-height: 1.6; }

@@ -9,8 +9,12 @@
  * Detalj se otvara u `<dialog>`-u (isti obrazac kao pozivnica), fokus ide u dijalog, `Escape`
  * zatvara i fokus se vraća na red koji ga je otvorio.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Button, Card, EmptyState, Field, Skeleton, inputClass } from "@/components/ui";
+import { useCallback, useEffect, useState } from "react";
+import { apiCall } from "@/api-client";
+import {
+  Alert, Button, Card, DataTable, DescriptionList, Dialog, EmptyState, FilterBar,
+  Input, PageHeader, Select, Skeleton, Stack,
+} from "@/components/ui/index";
 
 type AuditRow = {
   id: string;
@@ -80,17 +84,12 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
-    try {
-      const response = await fetch(`/api/audit?${toQuery(filters)}`, { cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok || !body.success) {
-        setState({ kind: "error", message: body?.error?.message ?? "Ne mogu da učitam trag." });
-        return;
-      }
-      setState({ kind: "ready", rows: body.data.rows as AuditRow[], nextCursor: body.data.nextCursor });
-    } catch {
-      setState({ kind: "error", message: "Nema veze sa serverom. Provjerite mrežu i pokušajte ponovo." });
+    const result = await apiCall<{ rows: AuditRow[]; nextCursor: string | null }>(`/api/audit?${toQuery(filters)}`);
+    if (!result.ok) {
+      setState({ kind: "error", message: result.message });
+      return;
     }
+    setState({ kind: "ready", rows: result.data.rows, nextCursor: result.data.nextCursor });
   }, [filters]);
 
   useEffect(() => {
@@ -102,18 +101,15 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
     if (state.kind !== "ready" || !state.nextCursor) return;
     setLoadingMore(true);
     try {
-      const response = await fetch(`/api/audit?${toQuery(filters, state.nextCursor)}`, { cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok || !body.success) {
-        setState({ kind: "error", message: body?.error?.message ?? "Ne mogu da učitam još zapisa." });
+      const result = await apiCall<{ rows: AuditRow[]; nextCursor: string | null }>(`/api/audit?${toQuery(filters, state.nextCursor)}`);
+      if (!result.ok) {
+        setState({ kind: "error", message: result.message });
         return;
       }
       // Dedup po `id`: ako se zapis ipak nađe na granici, ne prikazuje se dvaput.
       const seen = new Set(state.rows.map((row) => row.id));
-      const merged = [...state.rows, ...(body.data.rows as AuditRow[]).filter((row) => !seen.has(row.id))];
-      setState({ kind: "ready", rows: merged, nextCursor: body.data.nextCursor });
-    } catch {
-      setState({ kind: "error", message: "Nema veze sa serverom." });
+      const merged = [...state.rows, ...result.data.rows.filter((row) => !seen.has(row.id))];
+      setState({ kind: "ready", rows: merged, nextCursor: result.data.nextCursor });
     } finally {
       setLoadingMore(false);
     }
@@ -123,19 +119,11 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
 
   return (
     <div>
-      <div className="gx-page-head">
-        <div className="gx-page-head__text">
-          <h1 className="gx-page-title">Audit trag</h1>
-          <p className="gx-page-sub">Ko je šta mijenjao. Trag se ne mijenja i ne briše iz ekrana.</p>
-        </div>
-      </div>
+      <PageHeader title="Audit trag" subtitle="Ko je šta mijenjao. Trag se ne mijenja i ne briše iz ekrana." />
 
       <Card>
-        <div className="gx-filters">
-          <Field label="Radnja" htmlFor="audit-action">
-            <select
-              id="audit-action"
-              className={inputClass}
+        <FilterBar>
+          <Select label="Radnja" id="audit-action"
               value={filters.action}
               onChange={(event) => setFilters((f) => ({ ...f, action: event.target.value }))}
             >
@@ -145,13 +133,9 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
                   {label}
                 </option>
               ))}
-            </select>
-          </Field>
+            </Select>
 
-          <Field label="Tip zapisa" htmlFor="audit-entity">
-            <select
-              id="audit-entity"
-              className={inputClass}
+          <Select label="Tip zapisa" id="audit-entity"
               value={filters.entityType}
               onChange={(event) => setFilters((f) => ({ ...f, entityType: event.target.value }))}
             >
@@ -161,13 +145,9 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
                   {label}
                 </option>
               ))}
-            </select>
-          </Field>
+            </Select>
 
-          <Field label="Osoba" htmlFor="audit-actor">
-            <select
-              id="audit-actor"
-              className={inputClass}
+          <Select label="Osoba" id="audit-actor"
               value={filters.actorId}
               onChange={(event) => setFilters((f) => ({ ...f, actorId: event.target.value }))}
             >
@@ -177,50 +157,32 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
                   {actor.label}
                 </option>
               ))}
-            </select>
-          </Field>
+            </Select>
 
-          <Field label="Od" htmlFor="audit-from">
-            <input
-              id="audit-from"
-              type="date"
-              className={inputClass}
-              value={filters.from}
-              onChange={(event) => setFilters((f) => ({ ...f, from: event.target.value }))}
-            />
-          </Field>
+          <Input label="Od" id="audit-from" type="date" value={filters.from} onChange={(event) => setFilters((f) => ({ ...f, from: event.target.value }))} />
+          <Input label="Do" id="audit-to" type="date" value={filters.to} onChange={(event) => setFilters((f) => ({ ...f, to: event.target.value }))} />
 
-          <Field label="Do" htmlFor="audit-to">
-            <input
-              id="audit-to"
-              type="date"
-              className={inputClass}
-              value={filters.to}
-              onChange={(event) => setFilters((f) => ({ ...f, to: event.target.value }))}
-            />
-          </Field>
-
-          <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <div>
             <Button variant="quiet" onClick={() => setFilters(EMPTY_FILTERS)} disabled={!hasFilter}>
               Obriši filtere
             </Button>
           </div>
-        </div>
+        </FilterBar>
       </Card>
 
       {state.kind === "loading" ? <Skeleton rows={5} /> : null}
 
       {state.kind === "error" ? (
         <Card>
-          <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <Stack>
             <Alert tone="error" role="alert">
               {state.message}
             </Alert>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <Stack>
               <Button onClick={() => setReloadKey((key) => key + 1)}>Pokušaj ponovo</Button>
               {hasFilter ? <Button variant="quiet" onClick={() => setFilters(EMPTY_FILTERS)}>Obriši filtere</Button> : null}
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </Card>
       ) : null}
 
@@ -240,52 +202,32 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
 
       {state.kind === "ready" && state.rows.length > 0 ? (
         <Card>
-          <table className="gx-table gx-table--cards">
-            <thead>
-              <tr>
-                <th scope="col">Kad</th>
-                <th scope="col">Ko</th>
-                <th scope="col">Šta</th>
-                <th scope="col" style={{ textAlign: "right" }}>Detalj</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.rows.map((row) => (
-                <tr key={row.id}>
-                  <td data-label="Kad" style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
-                    <span className="gx-mono">{dateTimeBs(row.createdAt)}</span>
-                  </td>
-                  <td data-label="Ko">{row.actorEmail ?? "sistem"}</td>
-                  <td data-label="Šta">
+          <DataTable
+            caption="Audit trag"
+            rows={state.rows}
+            rowKey={(row) => row.id}
+            emptyText="Nema zapisa."
+            columns={[
+              { key: "when", header: "Kad", cell: (row) => <span className="gx-mono">{dateTimeBs(row.createdAt)}</span> },
+              { key: "who", header: "Ko", cell: (row) => row.actorEmail ?? "sistem" },
+              {
+                key: "what",
+                header: "Šta",
+                cell: (row) => (
+                  <span>
                     {ACTION_LABELS[row.action] ?? row.action}{" "}
-                    <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
-                      · {ENTITY_LABELS[row.entityType] ?? row.entityType}
-                    </span>
-                  </td>
-                  <td data-label="Detalj" style={{ textAlign: "right" }}>
-                    <Button
-                      variant="quiet"
-                      onClick={(event) => setOpen({ row, returnTo: event.currentTarget })}
-                    >
-                      Otvori
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div
-            style={{
-              marginTop: "var(--space-4)",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "var(--space-2)",
-            }}
-          >
-            <p style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
+                    <span className="gx-page-sub">· {ENTITY_LABELS[row.entityType] ?? row.entityType}</span>
+                  </span>
+                ),
+              },
+            ]}
+            rowActionLabel={(row) => `Detalj zapisa ${row.id}`}
+            actions={(row) => [
+              { key: "open", label: "Otvori", onSelect: (returnTo) => setOpen({ row, returnTo: returnTo ?? null }) },
+            ]}
+          />
+          <Stack>
+            <p className="gx-page-sub">
               Prikazano {state.rows.length}. {state.nextCursor ? "Ima još zapisa." : "To je cijeli trag za ovaj filter."}
             </p>
             {state.nextCursor ? (
@@ -293,7 +235,7 @@ export default function AuditClient({ actors }: { actors: { id: string; label: s
                 {loadingMore ? "Učitavam…" : "Učitaj još"}
               </Button>
             ) : null}
-          </div>
+          </Stack>
         </Card>
       ) : null}
 
@@ -311,76 +253,35 @@ function AuditDetail({
   returnFocusTo: HTMLElement | null;
   onClose: () => void;
 }) {
-  const panel = useRef<HTMLDivElement>(null);
-
-  // Fokus ulazi u dijalog; `Escape` zatvara; fokus se vraća na dugme koje ga je otvorilo.
-  useEffect(() => {
-    panel.current?.focus();
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      returnFocusTo?.focus?.();
-    };
-  }, [onClose, returnFocusTo]);
-
   return (
-    <div className="gx-overlay" role="presentation">
-      <div
-        ref={panel}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="audit-detail-title"
-        className="gx-dialog"
-        style={{ maxWidth: 560, outline: "none" }}
-      >
-        <h2 id="audit-detail-title" className="gx-dialog__title">
-          {ACTION_LABELS[row.action] ?? row.action}
-        </h2>
-        <p className="gx-dialog__hint">
-          <span className="gx-mono">{dateTimeBs(row.createdAt)}</span>
-        </p>
-
-        <dl style={{ marginTop: "var(--space-4)", display: "grid", gap: "var(--space-2)" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
-            <dt style={{ fontWeight: 600 }}>Osoba koja je radila</dt>
-            <dd>{row.actorEmail ?? "sistem"}</dd>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
-            <dt style={{ fontWeight: 600 }}>Zapis</dt>
-            <dd style={{ color: "var(--muted)" }}>
-              {ENTITY_LABELS[row.entityType] ?? row.entityType} · <span className="gx-mono">{row.entityId}</span>
-            </dd>
-          </div>
-        </dl>
-
-        <p style={{ marginTop: "var(--space-4)", marginBottom: "var(--space-1)", fontWeight: 600 }}>Detalji</p>
-        <pre
-          className="gx-mono"
-          style={{
-            maxHeight: 224,
-            overflow: "auto",
-            background: "var(--raise)",
-            padding: "var(--space-3)",
-            borderRadius: "var(--radius-field)",
-            lineHeight: 1.6,
-          }}
-        >
-          {JSON.stringify(row.metadata, null, 2)}
-        </pre>
-
+    <Dialog
+      title={ACTION_LABELS[row.action] ?? row.action}
+      hint={<span className="gx-mono">{dateTimeBs(row.createdAt)}</span>}
+      returnFocusTo={returnFocusTo}
+      onClose={onClose}
+      footer={(
         <div className="gx-dialog__actions">
           <Button variant="primary" onClick={onClose}>
             Zatvori
           </Button>
         </div>
-      </div>
-    </div>
+      )}
+    >
+      <DescriptionList
+        items={[
+          { term: "Osoba koja je radila", value: row.actorEmail ?? "sistem" },
+          {
+            term: "Zapis",
+            value: (
+              <span>
+                {ENTITY_LABELS[row.entityType] ?? row.entityType} · <span className="gx-mono">{row.entityId}</span>
+              </span>
+            ),
+          },
+        ]}
+      />
+      <p><strong>Detalji</strong></p>
+      <pre className="gx-mono gx-codeblock">{JSON.stringify(row.metadata, null, 2)}</pre>
+    </Dialog>
   );
 }

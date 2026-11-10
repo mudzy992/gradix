@@ -78,7 +78,7 @@ export function Tabs({
   );
 }
 
-export type RowAction = { key: string; label: string; danger?: boolean; onSelect: () => void };
+export type RowAction = { key: string; label: string; danger?: boolean; onSelect: (returnTo?: HTMLElement | null) => void };
 
 export function RowActions({ actions, label }: { actions: RowAction[]; label: string }) {
   const [open, setOpen] = useState(false);
@@ -95,7 +95,7 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
   const [primary, ...rest] = actions;
   return (
     <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end", alignItems: "center" }}>
-      <Button variant="quiet" onClick={primary!.onSelect}>
+      <Button variant="quiet" onClick={(event) => primary!.onSelect(event.currentTarget)}>
         {primary!.label}
       </Button>
       {rest.length > 0 ? (
@@ -112,9 +112,9 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
                   type="button"
                   className="gx-menu-item"
                   style={action.danger ? { color: "var(--danger)" } : undefined}
-                  onClick={() => {
+                  onClick={(event) => {
                     setOpen(false);
-                    action.onSelect();
+                    action.onSelect(event.currentTarget);
                   }}
                 >
                   {action.label}
