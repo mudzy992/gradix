@@ -152,7 +152,7 @@ export default function GrupaScreen() {
       empty={workers.length === 0 ? "Nema radnika u tvom opsegu za ovaj projekat i datum." : null}
       onRetry={load}
     >
-      <View style={styles.banner} accessibilityRole="status">
+      <View style={styles.banner} accessibilityLiveRegion="polite">
         <Text style={styles.bannerText}>{syncBannerText({ pending, offline: pending > 0 })}</Text>
       </View>
 
@@ -227,7 +227,7 @@ export default function GrupaScreen() {
         <Pressable style={styles.button} onPress={send} disabled={busy} accessibilityRole="button">
           <Text style={styles.buttonText}>Pošalji sada</Text>
         </Pressable>
-        {message ? <Text style={styles.text} accessibilityRole="status">{message}</Text> : null}
+        {message ? <Text style={styles.text} accessibilityLiveRegion="polite">{message}</Text> : null}
       </View>
     </TerenShell>
   );
