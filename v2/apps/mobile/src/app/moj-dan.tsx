@@ -104,7 +104,7 @@ export default function MojDanScreen() {
       empty={projects.length === 0 ? "Nema dodijeljenih projekata za unos. Obrati se šefu ili uredu." : null}
       onRetry={load}
     >
-      <View style={styles.banner} accessibilityRole="status">
+      <View style={styles.banner} accessibilityLiveRegion="polite">
         <Text style={styles.bannerText}>{syncBannerText({ pending, offline: pending > 0 })}</Text>
       </View>
 
@@ -143,7 +143,7 @@ export default function MojDanScreen() {
         <Pressable style={styles.button} onPress={send} disabled={busy} accessibilityRole="button">
           <Text style={styles.buttonText}>Pošalji sada</Text>
         </Pressable>
-        {message ? <Text style={styles.text} accessibilityRole="status">{message}</Text> : null}
+        {message ? <Text style={styles.text} accessibilityLiveRegion="polite">{message}</Text> : null}
       </View>
 
       <View style={styles.card}>
