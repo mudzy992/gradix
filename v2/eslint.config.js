@@ -60,7 +60,6 @@ export default tseslint.config(
       "apps/web/src/app/ured/masine/**",
       "apps/web/src/app/ured/projekti/**",
       "apps/web/src/app/ured/rokovi/**",
-      "apps/web/src/app/ured/uvoz/**",
       "apps/web/src/app/**/*.test.tsx",
     ],
     rules: {

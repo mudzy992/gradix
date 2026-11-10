@@ -19,7 +19,11 @@
  */
 import { useRef, useState } from "react";
 import type { ImportDecision, ImportPreview, ImportPreviewRow, ImportResult } from "@gradix/contracts";
-import { Alert, Button, Card, Chip, EmptyState, Field, Icon, Mono, SectionTitle, Skeleton, inputClass } from "@/components/ui";
+import { apiCall } from "@/api-client";
+import {
+  Alert, Button, Card, EmptyState, Input, PageHeader, SectionTitle, Segmented, Select, Skeleton,
+} from "@/components/ui/index";
+import { DecisionRow, PreviewTable, ResultCard } from "./import-tables";
 
 type Kind = "workers" | "equipment";
 
@@ -52,25 +56,6 @@ const FIELDS: Record<Kind, { key: string; label: string; required: boolean }[]> 
     { key: "ownership", label: "Vlasništvo", required: false },
     { key: "meterValue", label: "Stanje brojila", required: false },
   ],
-};
-
-const OUTCOME_LABEL: Record<ImportPreviewRow["outcome"], string> = {
-  import: "Uvozi se",
-  skip: "Postoji — preskočeno",
-  error: "Greška",
-  duplicate: "Mogući duplikat",
-};
-
-/** Početna odluka po redu: ono što pregled predlaže, ništa više. */
-function defaultAction(row: ImportPreviewRow): ImportDecision["action"] {
-  return row.outcome === "import" ? "import" : "skip";
-}
-
-const availableActions = (row: ImportPreviewRow): { value: ImportDecision["action"]; label: string }[] => {
-  if (row.outcome === "error") return [];
-  if (row.outcome === "skip") return [{ value: "update", label: "Ažuriraj postojeće" }];
-  if (row.outcome === "duplicate") return [{ value: "import", label: "Uvezi kao novog" }];
-  return [{ value: "import", label: "Uvezi" }];
 };
 
 export default function ImportClient() {
@@ -112,62 +97,47 @@ export default function ImportClient() {
     const id = ++requestId.current;
     setBusy("preview");
     setError(null);
-    try {
-      const response = await fetch("/api/imports/preview", { method: "POST", body: formFor(target, nextMapping) });
-      const body = await response.json().catch(() => null);
-      if (id !== requestId.current) return; // stariji odgovor — ignoriši
-      if (!response.ok || !body?.success) {
-        setError(body?.error?.message ?? "Fajl nije pročitan. Provjerite da je .xlsx ili .csv.");
-        return;
-      }
-      const data = body.data as ImportPreview;
-      setPreview(data);
-      setMapping(data.mapping);
-      setDecisions(Object.fromEntries(data.rows.map((row) => [row.rowNumber, defaultAction(row)])));
-      setStep(2);
-    } catch {
-      if (id !== requestId.current) return;
-      setError("Nema veze sa serverom. Provjerite mrežu i pokušajte ponovo.");
-    } finally {
-      if (id === requestId.current) setBusy(null);
+    const result = await apiCall<ImportPreview>("/api/imports/preview", { method: "POST", body: formFor(target, nextMapping) });
+    if (id !== requestId.current) return; // stariji odgovor — ignoriši
+    if (!result.ok) {
+      setError(result.message);
+      return;
     }
+    const data = result.data;
+    setPreview(data);
+    setMapping(data.mapping);
+    setDecisions(Object.fromEntries(data.rows.map((row) => [row.rowNumber, defaultAction(row)])));
+    setStep(2);
+    if (id === requestId.current) setBusy(null);
   }
 
   async function apply() {
     if (!file || !preview) return;
     setBusy("apply");
     setError(null);
-    try {
-      const form = formFor(file, mapping);
-      form.set(
-        "decisions",
-        JSON.stringify(
-          Object.entries(decisions).map(([rowNumber, action]) => ({ rowNumber: Number(rowNumber), action })),
-        ),
-      );
-      const response = await fetch("/api/imports/apply", { method: "POST", body: form });
-      const body = await response.json().catch(() => null);
-      if (!body) {
-        setError("Server nije vratio odgovor koji razumijem.");
-        return;
-      }
-      if (response.ok && body.success) {
-        setResult({ result: body.data as ImportResult, aborted: null });
-        setStep(4);
-        return;
-      }
-      // Prekinut uvoz: `data` nosi izvještaj (koji red, zašto), a `error` poruku za čovjeka.
-      if (body.data) {
-        setResult({ result: body.data as ImportResult, aborted: body.error?.message ?? "Uvoz je prekinut." });
-        setStep(4);
-        return;
-      }
-      setError(body.error?.message ?? "Uvoz nije prošao.");
-    } catch {
-      setError("Nema veze sa serverom. Ništa nije uvezeno — provjerite mrežu i pokušajte ponovo.");
-    } finally {
+    const form = formFor(file, mapping);
+    form.set(
+      "decisions",
+      JSON.stringify(
+        Object.entries(decisions).map(([rowNumber, action]) => ({ rowNumber: Number(rowNumber), action })),
+      ),
+    );
+    const result = await apiCall<ImportResult>("/api/imports/apply", { method: "POST", body: form });
+    if (result.ok) {
+      setResult({ result: result.data, aborted: null });
+      setStep(4);
       setBusy(null);
+      return;
     }
+    // Prekinut uvoz: `data` nosi izvještaj (koji red, zašto), a poruka razlog za čovjeka.
+    if (result.data) {
+      setResult({ result: result.data, aborted: result.message });
+      setStep(4);
+      setBusy(null);
+      return;
+    }
+    setError(result.message);
+    setBusy(null);
   }
 
   const changeMapping = (field: string, column: string) => {
@@ -181,19 +151,11 @@ export default function ImportClient() {
 
   return (
     <div>
-      <div className="gx-page-head">
-        <div className="gx-page-head__text">
-          <h1 className="gx-page-title">Uvoz iz Excela</h1>
-          <p className="gx-page-sub">
-            Spisak radnika ili mašina. Pregled ne mijenja ništa — uvoz se potvrđuje red po red.
-          </p>
-        </div>
-        {step > 1 ? (
-          <div className="gx-page-head__actions">
-            <Button onClick={reset}>Novi uvoz</Button>
-          </div>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Uvoz iz Excela"
+        subtitle="Spisak radnika ili mašina. Pregled ne mijenja ništa — uvoz se potvrđuje red po red."
+        actions={step > 1 ? <Button onClick={reset}>Novi uvoz</Button> : null}
+      />
 
       <ol className="gx-steps" aria-label="Koraci uvoza">
         {[
@@ -220,30 +182,16 @@ export default function ImportClient() {
       {step === 1 ? (
         <Card>
           <SectionTitle hint="Fajl se čita, ali se ništa ne upisuje u bazu.">1. Izaberite fajl</SectionTitle>
-          <div style={{ display: "grid", gap: "var(--space-4)", marginTop: "var(--space-4)" }}>
-            <div className="gx-field">
-              <span className="gx-field__label" id="import-kind-label">
-                Vrsta uvoza
-              </span>
-              <div role="group" aria-labelledby="import-kind-label" className="gx-seg">
-                <button type="button" aria-pressed={kind === "workers"} onClick={() => setKind("workers")}>
-                  Radnici
-                </button>
-                <button type="button" aria-pressed={kind === "equipment"} onClick={() => setKind("equipment")}>
-                  Mašine i vozila
-                </button>
-              </div>
-            </div>
+          <div className="gx-stack">
+            <Segmented
+              label="Vrsta uvoza"
+              value={kind}
+              onChange={(v) => setKind(v as Kind)}
+              options={[{ value: "workers", label: "Radnici" }, { value: "equipment", label: "Mašine i vozila" }]}
+            />
 
-            <Field
-              label="Datoteka"
-              htmlFor="import-file"
-              hint=".xlsx ili .csv, do 5 MB i 5000 redova. Prvi list se čita; ostali se prijavljuju."
-            >
-              <input
-                ref={fileInput}
+            <Input label="Datoteka" hint=".xlsx ili .csv, do 5 MB i 5000 redova. Prvi list se čita; ostali se prijavljuju." ref={fileInput}
                 id="import-file"
-                className={inputClass}
                 type="file"
                 accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={(event) => {
@@ -253,9 +201,8 @@ export default function ImportClient() {
                   setError(null);
                 }}
               />
-            </Field>
 
-            <p style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
+            <p className="gx-page-sub">
               {kind === "workers"
                 ? "Obavezno: ime, prezime, datum početka. Lični podaci (JMBG, adresa, račun) se ne uvoze."
                 : "Obavezno: inventarska oznaka, naziv, kategorija. Nepoznata kategorija se prijavljuje, ne stvara."}
@@ -278,11 +225,11 @@ export default function ImportClient() {
       {busy === "preview" && step > 1 ? <Skeleton rows={3} /> : null}
 
       {step === 2 && preview ? (
-        <div style={{ display: "grid", gap: "var(--space-5)" }}>
+        <div className="gx-stack">
           <Card>
             <SectionTitle hint={`${preview.fileName} · list „${preview.sheetName}“`}>2. Mapiranje kolona</SectionTitle>
             {preview.blockers.length > 0 ? (
-              <div style={{ marginTop: "var(--space-3)" }}>
+              <div className="gx-mt-3">
                 <Alert tone="error" role="alert">
                   <span>
                     Uvoz ne može da krene dok se ne mapira: {preview.blockers.join(" ")}
@@ -291,16 +238,9 @@ export default function ImportClient() {
               </div>
             ) : null}
 
-            <div className="gx-filters" style={{ marginTop: "var(--space-4)" }}>
+            <div className="gx-filters gx-mt-4">
               {fields.map((field) => (
-                <Field
-                  key={field.key}
-                  label={`${field.label}${field.required ? " *" : ""}`}
-                  htmlFor={`map-${field.key}`}
-                >
-                  <select
-                    id={`map-${field.key}`}
-                    className={inputClass}
+                <Select label={`${field.label}${field.required ? " *" : ""}`}id={`map-${field.key}`}
                     value={mapping[field.key] ?? ""}
                     onChange={(event) => changeMapping(field.key, event.target.value)}
                   >
@@ -310,13 +250,12 @@ export default function ImportClient() {
                         {header}
                       </option>
                     ))}
-                  </select>
-                </Field>
+                  </Select>
               ))}
             </div>
 
             {preview.notices.length > 0 ? (
-              <div style={{ marginTop: "var(--space-4)" }}>
+              <div className="gx-mt-4">
                 <Alert tone="warning">
                   <span>
                     {preview.notices.length === 1
@@ -327,14 +266,14 @@ export default function ImportClient() {
               </div>
             ) : null}
 
-            <p style={{ marginTop: "var(--space-3)", fontSize: "var(--text-small)", color: "var(--muted)" }}>
+            <p className="gx-page-sub gx-mt-3">
               Pregled ne mijenja podatke. Promjena mapiranja ponovo čita isti fajl.
             </p>
           </Card>
 
           <PreviewTable preview={preview} />
 
-          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          <div className="gx-inline-flex">
             <Button
               variant="primary"
               fullWidthOnMobile
@@ -351,15 +290,15 @@ export default function ImportClient() {
       ) : null}
 
       {step === 3 && preview ? (
-        <div style={{ display: "grid", gap: "var(--space-5)" }}>
+        <div className="gx-stack">
           <Card>
             <SectionTitle hint="Ništa se ne prepisuje bez vašeg izbora.">3. Odluke po redu</SectionTitle>
-            <p style={{ marginTop: "var(--space-2)", fontSize: "var(--text-small)", color: "var(--muted)" }}>
+            <p className="gx-page-sub gx-mt-2">
               Redovi sa greškom se ne mogu uvesti — popravite fajl i pokrenite pregled ponovo.
             </p>
 
             {actionable.length === 0 ? (
-              <div style={{ marginTop: "var(--space-4)" }}>
+              <div className="gx-mt-4">
                 <EmptyState
                   title="Nema redova za uvoz"
                   description="Svi redovi imaju grešku ili je fajl prazan."
@@ -367,7 +306,7 @@ export default function ImportClient() {
                 />
               </div>
             ) : (
-              <div style={{ marginTop: "var(--space-4)", display: "grid", gap: "var(--space-2)" }}>
+              <div className="gx-stack">
                 {actionable.map((row) => (
                   <DecisionRow
                     key={row.rowNumber}
@@ -380,7 +319,7 @@ export default function ImportClient() {
             )}
           </Card>
 
-          <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center" }}>
+          <div className="gx-inline-flex">
             <Button
               variant="primary"
               fullWidthOnMobile
@@ -394,7 +333,7 @@ export default function ImportClient() {
             <Button variant="quiet" onClick={() => setStep(2)} disabled={busy !== null}>
               Nazad na pregled
             </Button>
-            <span style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
+            <span className="gx-page-sub">
               Sve ili ništa: ako jedan red padne, nijedan se ne upisuje.
             </span>
           </div>
@@ -409,177 +348,5 @@ export default function ImportClient() {
         />
       ) : null}
     </div>
-  );
-}
-
-function PreviewTable({ preview }: { preview: ImportPreview }) {
-  const rows = preview.rows;
-  return (
-    <Card>
-      <SectionTitle
-        hint={`${preview.counts.import} za uvoz · ${preview.counts.skip} postoji · ${preview.counts.duplicate} mogućih duplikata · ${preview.counts.error} grešaka${
-          preview.ignoredSheets > 0 ? ` · ${preview.ignoredSheets} list(ova) nije čitan` : ""
-        }`}
-      >
-        Pregled redova
-      </SectionTitle>
-
-      {rows.length === 0 ? (
-        <div style={{ marginTop: "var(--space-4)" }}>
-          <EmptyState title="Fajl nema redova" description="Provjerite da prvi list sadrži zaglavlje i podatke." />
-        </div>
-      ) : (
-        <div style={{ overflowX: "auto", marginTop: "var(--space-3)" }}>
-          <table className="gx-table gx-table--cards">
-            <thead>
-              <tr>
-                <th style={{ width: 70 }}>Red</th>
-                <th>Šta piše u fajlu</th>
-                <th>Ishod</th>
-                <th>Zašto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.rowNumber}>
-                  <td data-label="Red">
-                    <Mono>{row.rowNumber}</Mono>
-                  </td>
-                  <td data-label="Šta piše u fajlu">{row.summary}</td>
-                  <td data-label="Ishod">
-                    <Chip tone={row.outcome === "import" ? "full" : row.outcome === "error" ? "hot" : "hollow"}>
-                      {OUTCOME_LABEL[row.outcome]}
-                    </Chip>
-                  </td>
-                  <td data-label="Zašto" style={{ color: "var(--muted)" }}>
-                    {row.reason ?? "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function DecisionRow({
-  row,
-  value,
-  onChange,
-}: {
-  row: ImportPreviewRow;
-  value: ImportDecision["action"];
-  onChange: (action: ImportDecision["action"]) => void;
-}) {
-  const options = availableActions(row);
-  const chosen = options.some((option) => option.value === value) ? value : "skip";
-  const inputId = `decision-${row.rowNumber}`;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: "var(--space-3)",
-        alignItems: "flex-start",
-        flexWrap: "wrap",
-        padding: "var(--space-3) 0",
-        borderBottom: "1px solid var(--line)",
-      }}
-    >
-      <Mono>Red {row.rowNumber}</Mono>
-      <div style={{ flex: 1, minWidth: 180 }}>
-        <div style={{ fontWeight: 600 }}>{row.summary}</div>
-        <div style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
-          {OUTCOME_LABEL[row.outcome]}
-          {row.reason ? ` — ${row.reason}` : ""}
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-        {options.map((option) => (
-          <label key={option.value} htmlFor={`${inputId}-${option.value}`} className="gx-check">
-            <input
-              id={`${inputId}-${option.value}`}
-              type="radio"
-              name={inputId}
-              checked={chosen === option.value}
-              onChange={() => onChange(option.value)}
-            />
-            {option.label}
-          </label>
-        ))}
-        <label htmlFor={`${inputId}-skip`} className="gx-check">
-          <input
-            id={`${inputId}-skip`}
-            type="radio"
-            name={inputId}
-            checked={chosen === "skip"}
-            onChange={() => onChange("skip")}
-          />
-          Preskoči
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function ResultCard({
-  result,
-  aborted,
-  onReset,
-}: {
-  result: ImportResult;
-  aborted: string | null;
-  onReset: () => void;
-}) {
-  const nothingWritten = aborted !== null;
-  return (
-    <Card>
-      <SectionTitle hint="Izvještaj se ne čuva kao fajl — u trag ide broj uvezenih, ne sadržaj.">
-        4. Rezultat
-      </SectionTitle>
-
-      <div style={{ marginTop: "var(--space-4)", display: "grid", gap: "var(--space-3)" }}>
-        {nothingWritten ? (
-          <Alert tone="error" role="alert">
-            {aborted}
-          </Alert>
-        ) : (
-          <Alert tone="success">
-            Uvezeno {result.imported}, ažurirano {result.updated}, preskočeno {result.skipped}.
-          </Alert>
-        )}
-
-        {result.errors.length > 0 ? (
-          <div>
-            <p style={{ fontWeight: 600, marginBottom: "var(--space-2)" }}>Redovi koji nisu prošli</p>
-            <ul style={{ display: "grid", gap: 6, paddingLeft: 20 }}>
-              {result.errors.map((entry) => (
-                <li key={`${entry.rowNumber}-${entry.message}`}>
-                  Red {entry.rowNumber}: {entry.message}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-          <Button variant="primary" onClick={onReset}>
-            Novi uvoz
-          </Button>
-          <Button variant="quiet" onClick={() => (window.location.href = "/ured/radnici")}>
-            Otvori radnike
-          </Button>
-          <Button variant="quiet" onClick={() => (window.location.href = "/ured/masine")}>
-            Otvori mašine
-          </Button>
-        </div>
-
-        <p style={{ fontSize: "var(--text-small)", color: "var(--muted)" }}>
-          <Icon name="info" /> Uvoz je zabilježen u audit tragu kao jedna radnja — bez imena i kontakata.
-        </p>
-      </div>
-    </Card>
   );
 }

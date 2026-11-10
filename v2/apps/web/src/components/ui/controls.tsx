@@ -6,7 +6,7 @@
  * Field povezuje labelu, pomoć i grešku preko id/aria — isto ponašanje na svakom ekranu.
  */
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 
 export function Field({
   label,
@@ -39,17 +39,17 @@ export function Field({
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean; label?: string; hint?: string; error?: string };
 
-export function Input({ invalid, id, label, hint, error, ...props }: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ invalid, id, label, hint, error, ...props }, ref) {
   const autoId = useId();
   const inputId = id ?? autoId;
-  const field = <input id={inputId} className="gx-input" aria-invalid={invalid || error ? true : undefined} aria-describedby={hint || error ? `${inputId}-hint` : undefined} {...props} />;
+  const field = <input ref={ref} id={inputId} className="gx-input" aria-invalid={invalid || error ? true : undefined} aria-describedby={hint || error ? `${inputId}-hint` : undefined} {...props} />;
   if (!label) return field;
   return (
     <Field label={label} htmlFor={inputId} hint={hint} error={error}>
       {field}
     </Field>
   );
-}
+});
 
 export function Select({ id, label, hint, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label?: string; hint?: string }) {
   const autoId = useId();

@@ -12,13 +12,13 @@ import { apiCall, jsonBody } from "@/api-client";
 import { Alert, Button, Card, Input } from "@/components/ui/index";
 
 type State =
-  | { kind: " idle" }
+  | { kind: "idle" }
   | { kind: "busy" }
   | { kind: "error"; message: string }
   | { kind: "success"; revoked: number };
 
 export default function ChangePasswordPage() {
-  const [state, setState] = useState<State>({ kind: " idle" });
+  const [state, setState] = useState<State>({ kind: "idle" });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
