@@ -68,6 +68,7 @@ jobs:
         run: |
           node infra/diagnostics/ci-smoke.mjs
           node infra/scripts/check-runtime-env.mjs
+          node infra/docker/entrypoint-env.test.mjs
 
       - name: Lint
         working-directory: v2
@@ -195,3 +196,24 @@ jobs:
       - name: Izgradi web Docker image
         working-directory: v2
         run: docker build --tag gradix-web:ci --file infra/docker/Dockerfile.web .
+
+      # Dijagnostika mora raditi iz IZGRAĐENE slike, ne iz repoa: staging je pao sa
+      # ERR_MODULE_NOT_FOUND jer runtime slika nema @aws-sdk pored /app/diagnostics.
+      # Ovaj korak pokreće baš /app/diagnostics/run.mjs unutar image-a, sa namjerno
+      # pokvarenim S3/Redis podešavanjima, i pada ako se greška modula ikad vrati.
+      - name: Dijagnostika unutar izgrađene slike (bez ERR_MODULE_NOT_FOUND)
+        working-directory: v2
+        run: |
+          set -eu
+          docker run --rm --entrypoint node \
+            -e MINIO_ENDPOINT=http://gradix-minio-ci-probe-does-not-exist.invalid:9000 \
+            -e MINIO_PUBLIC_ENDPOINT=https://minio.example.test \
+            -e MINIO_ACCESS_KEY=ci-diagnostic-access-key \
+            -e MINIO_SECRET_KEY=ci-diagnostic-secret-key-value \
+            -e MINIO_BUCKET=gradix-stg -e MINIO_REGION=us-east-1 \
+            -e MINIO_CORS_ALLOWED_ORIGIN=https://gradix.example.test \
+            gradix-web:ci /app/diagnostics/run.mjs > /tmp/diag-image.log 2>&1
+          cat /tmp/diag-image.log
+          ! grep -q "ERR_MODULE_NOT_FOUND" /tmp/diag-image.log
+          grep -q "phase=s3.connection status=FAIL" /tmp/diag-image.log
+          grep -q "phase=redis.config" /tmp/diag-image.log

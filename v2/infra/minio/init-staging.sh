@@ -17,12 +17,12 @@ if [ -z "${MINIO_ACCESS_KEY:-}" ] || [ -z "${MINIO_SECRET_KEY:-}" ]; then
   exit 0
 fi
 
-if [ "${#MINIO_ACCESS_KEY}" -lt 3 ]; then
-  echo "ERROR: MINIO_ACCESS_KEY is too short; MinIO requires at least 3 characters." >&2
+if [ "${#MINIO_ACCESS_KEY}" -lt 20 ]; then
+  echo "ERROR: MINIO_ACCESS_KEY is too short; staging policy requires at least 20 characters." >&2
   exit 1
 fi
-if [ "${#MINIO_SECRET_KEY}" -lt 8 ]; then
-  echo "ERROR: MINIO_SECRET_KEY is too short; MinIO requires at least 8 characters." >&2
+if [ "${#MINIO_SECRET_KEY}" -lt 32 ]; then
+  echo "ERROR: MINIO_SECRET_KEY is too short; staging policy requires at least 32 characters." >&2
   exit 1
 fi
 if [ "$MINIO_ACCESS_KEY" = "$MINIO_ROOT_USER" ]; then
@@ -88,11 +88,12 @@ if ! mc admin policy info gradix-stg gradix-stg-app >/dev/null 2>&1; then
   fi
 fi
 
-if ! mc admin user info gradix-stg "$MINIO_ACCESS_KEY" >/dev/null 2>&1; then
-  if ! run_mc_or_explain "could not create the staging MinIO app user" \
-    mc admin user add gradix-stg "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"; then
-    exit 1
-  fi
+# Idempotentno: `mc admin user add` kreira korisnika ILI ažurira lozinku postojećeg.
+# Zato promjena MINIO_SECRET_KEY u Coolifyju vrijedi nakon sljedećeg init pokretanja,
+# bez ručnog brisanja korisnika; policy attach ispod je takođe idempotentan.
+if ! run_mc_or_explain "could not create/update the staging MinIO app user" \
+  mc admin user add gradix-stg "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"; then
+  exit 1
 fi
 if ! mc admin policy attach gradix-stg gradix-stg-app --user "$MINIO_ACCESS_KEY" >/dev/null 2>&1; then
   echo "ERROR: could not attach the bucket-scoped staging app policy." >&2

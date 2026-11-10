@@ -236,7 +236,11 @@ function redisReplyParser(buffer, offset = 0) {
   if (lineEnd < 0) return null;
   const line = buffer.toString("utf8", offset + 1, lineEnd);
   if (type === "+") return { value: line, next: lineEnd + 2 };
-  if (type === "-") return { error: true, next: lineEnd + 2 };
+  if (type === "-") {
+    // Samo prva riječ Redis greške (WRONGPASS, NOPERM, ...) — nikad ostatak poruke ni argumenti.
+    const redisError = /^[A-Z][A-Z0-9_]{1,30}/.test(line) ? line.split(" ")[0] : "REDIS_ERROR";
+    return { error: true, redisError, next: lineEnd + 2 };
+  }
   if (type === ":") return { value: Number(line), next: lineEnd + 2 };
   if (type === "$") {
     const length = Number(line);
@@ -275,7 +279,7 @@ function redisCommand(socket, parts, signal) {
       buffer = Buffer.concat([buffer, chunk]);
       const parsed = redisReplyParser(buffer);
       if (!parsed) return;
-      if (parsed.error) finish(Object.assign(new Error("redis error reply"), { code: "REDIS_REPLY" }));
+      if (parsed.error) finish(Object.assign(new Error("redis error reply"), { code: "REDIS_REPLY", redisError: parsed.redisError ?? "REDIS_ERROR" }));
       else finish(null, parsed.value);
     };
     const onError = (error) => finish(error);
@@ -344,6 +348,22 @@ function parseWebOrigin(value) {
     return url.origin;
   } catch {
     return "";
+  }
+}
+
+/** Brisanje probnog objekta: poziva se iz finally blokova i na samom kraju, i kad faza padne. */
+async function deleteDiagnosticObject() {
+  if (!state.s3.client || !state.s3.key || !state.s3.config) return true;
+  try {
+    const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    await state.s3.client.send(
+      new DeleteObjectCommand({ Bucket: state.s3.config.bucket, Key: state.s3.key }),
+      { abortSignal: AbortSignal.timeout(1_000) },
+    );
+    state.s3.key = null;
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -528,7 +548,11 @@ async function main() {
         action: authFailed
           ? "Check REDIS_USER and REDIS_PASSWORD against the Redis ACL; values are never printed."
           : "Check Redis ACL permissions for PING, SET, PTTL, GET, and DEL on REDIS_PREFIX*.",
-        details: { stage, error_code: errorCode(error), prefix: `${redisPrefix}diag:` },
+        details: {
+          stage, failed_command: { auth: "AUTH", ping: "PING", set: "SET", ttl: "PTTL", get: "GET", delete: "DEL" }[stage] ?? stage.toUpperCase(),
+          error_code: errorCode(error), redis_error: error?.redisError ?? "none",
+          key_pattern: `${redisPrefix}diag:*`, prefix: `${redisPrefix}diag:`,
+        },
       };
     }
   });
@@ -758,12 +782,8 @@ async function main() {
           details: { public_host: publicEndpoint.hostname || "unknown", error_code: errorCode(error), diagnostic_prefix: "gradix:diag/" },
         };
       } finally {
-        try {
-          const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
-          await state.s3.client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }), { abortSignal: AbortSignal.timeout(350) });
-          state.s3.key = null;
-        } catch {
-          // Expiry is not available for S3 objects; a failed cleanup is visible in the final line.
+        // Čišćenje se izvršava i kad faza padne; neuspjeh se prijavi, ne proguta.
+        if (!(await deleteDiagnosticObject())) {
           result.details = { ...(result.details ?? {}), cleanup: "FAIL(retry delete or remove gradix:diag/ objects)" };
           if (result.status === "PASS") {
             result.status = "FAIL";
@@ -775,6 +795,14 @@ async function main() {
     }
     return result;
   });
+
+  // Čišćenje i kad je browser faza preskočena ili pala: probni objekat ne smije ostati u bucketu.
+  if (state.s3.key) {
+    const cleaned = await deleteDiagnosticObject();
+    emit("s3.cleanup", cleaned
+      ? { status: "PASS", cause: "diagnostic_object_deleted", action: "No cleanup action required.", details: { diagnostic_prefix: "gradix:diag/" } }
+      : { status: "FAIL", cause: "diagnostic_object_cleanup_failed", action: "Remove objects under gradix:diag/ in gradix-stg (mc rm --recursive --force gradix-stg/gradix-stg/gradix:diag/); check DeleteObject permission for the app key.", details: { diagnostic_prefix: "gradix:diag/" } });
+  }
 
   if (state.redis.socket && !state.redis.socket.destroyed) state.redis.socket.destroy();
   state.s3.client?.destroy?.();

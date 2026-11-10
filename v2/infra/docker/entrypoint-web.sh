@@ -93,6 +93,10 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   sh ./db/apply.sh "$ADMIN_URL_CLEAN"
 fi
 
+# Poslije migracija administratorske varijable više ne smiju postojati u okruženju
+# nijednog procesa (ni dijagnostike u pozadini ni Node servera). Ne "export" — brišu se.
+unset DATABASE_ADMIN_URL SEED_PASSWORD MINIO_ROOT_USER MINIO_ROOT_PASSWORD ADMIN_URL_CLEAN DATABASE_ADMIN_URL_CLEAN || true
+
 # Kritične provjere nakon migracija, ali prije starta. Skripta se spaja kao DATABASE_URL,
 # nikad kao admin; ako RLS/rola/mehanizam nisu ispravni, proces se ne podiže.
 echo "→ preflight okruženja" >&2
@@ -105,4 +109,4 @@ if [ -f ./diagnostics/run.mjs ]; then
 fi
 
 echo "→ start: node apps/web/server.js (port ${PORT:-3000})" >&2
-exec node apps/web/server.js
+exec env -u DATABASE_ADMIN_URL -u SEED_PASSWORD -u MINIO_ROOT_USER -u MINIO_ROOT_PASSWORD node apps/web/server.js

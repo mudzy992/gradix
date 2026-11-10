@@ -28,6 +28,7 @@ RUN pnpm install --frozen-lockfile --filter @gradix/web...
 FROM deps AS builder
 COPY packages packages
 COPY apps/web apps/web
+COPY infra/diagnostics infra/diagnostics
 # `next build` traži DATABASE_URL i AUTH_SECRET jer se konfiguracija validira pri uvozu.
 # Sve poslovne stranice su `force-dynamic`, pa placeholder ne utiče na izlaz slike.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
@@ -41,6 +42,9 @@ ENV AUTH_SECRET=build-time-placeholder-secret-min-32-chars
 # `ERR_MODULE_NOT_FOUND: Cannot find package '@gradix/db'`. Unutra je samo `pg` kao
 # type import (briše se pri transpile-u), pa u bundle ne uvlači ništa dodatno.
 RUN pnpm --filter @gradix/web build \
+ && pnpm --filter @gradix/web exec esbuild ../../infra/diagnostics/run.mjs \
+      --bundle --platform=node --format=esm --target=node22 \
+      --outfile=/app/diagnostics.bundle.mjs \
  && cd apps/web \
  && pnpm exec esbuild scripts/seed.ts \
       --bundle --platform=node --format=esm --target=node22 \
@@ -74,7 +78,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma/migrations ./db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/bootstrap ./db/bootstrap
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db/preflight-checks
-COPY --chown=nextjs:nodejs infra/diagnostics/run.mjs ./diagnostics/run.mjs
+# Dijagnostika je JEDAN bundlovani fajl: u runtime slici nema @aws-sdk u node_modules stazi
+# koju bi `import("@aws-sdk/...")` iz /app/diagnostics našao (ERR_MODULE_NOT_FOUND na stagingu).
+COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
 COPY --chown=nextjs:nodejs infra/docker/entrypoint-web.sh ./entrypoint.sh
 COPY --chown=nextjs:nodejs infra/docker/seed-web.sh ./seed.sh

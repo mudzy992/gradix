@@ -12,8 +12,13 @@ import { createHmac } from "node:crypto";
 import type { Pool } from "pg";
 import { loadConfig } from "./config";
 
-export const LOGIN_WINDOW_SECONDS = Number(process.env.AUTH_LOGIN_WINDOW_MS ?? 60_000) / 1000;
-export const LOGIN_MAX_ATTEMPTS = Number(process.env.AUTH_LOGIN_LIMIT ?? 5);
+/** Prozor je u MILISEKUNDAMA (ime varijable); validiran raspon je u config.ts (10 s – 1 h). */
+export function loginWindowSeconds(): number {
+  return loadConfig().AUTH_LOGIN_WINDOW_MS / 1000;
+}
+export function loginMaxAttempts(): number {
+  return loadConfig().AUTH_LOGIN_LIMIT;
+}
 
 function pepper(): string {
   return loadConfig().AUTH_SECRET;
@@ -27,7 +32,7 @@ export function identifierHash(value: string): string {
 export async function countAttempts(pool: Pool, email: string): Promise<number> {
   const result = await pool.query<{ count: number }>(
     "SELECT login_attempt_count($1, $2) AS count",
-    [identifierHash(email), Math.round(LOGIN_WINDOW_SECONDS)],
+    [identifierHash(email), Math.round(loginWindowSeconds())],
   );
   return Number(result.rows[0]?.count ?? 0);
 }
@@ -36,7 +41,7 @@ export async function countAttempts(pool: Pool, email: string): Promise<number> 
 export async function recordAttempt(pool: Pool, email: string, ip: string): Promise<number> {
   const result = await pool.query<{ count: number }>(
     "SELECT login_attempt_record($1, $2, $3) AS count",
-    [identifierHash(email), identifierHash(`ip:${ip}`), Math.round(LOGIN_WINDOW_SECONDS)],
+    [identifierHash(email), identifierHash(`ip:${ip}`), Math.round(loginWindowSeconds())],
   );
   return Number(result.rows[0]?.count ?? 0);
 }
@@ -45,7 +50,7 @@ export async function recordAttempt(pool: Pool, email: string, ip: string): Prom
 export async function retryAfterSeconds(pool: Pool, email: string): Promise<number> {
   const result = await pool.query<{ seconds: number }>(
     "SELECT login_attempt_retry_after($1, $2) AS seconds",
-    [identifierHash(email), Math.round(LOGIN_WINDOW_SECONDS)],
+    [identifierHash(email), Math.round(loginWindowSeconds())],
   );
   return Number(result.rows[0]?.seconds ?? 0);
 }
@@ -65,7 +70,7 @@ export async function clearAttempts(pool: Pool, email: string): Promise<void> {
  * fiksna laž kad se prozor otvara za pet sekundi.
  */
 export async function rateLimitWait(pool: Pool, email: string): Promise<number> {
-  if ((await countAttempts(pool, email)) < LOGIN_MAX_ATTEMPTS) return 0;
+  if ((await countAttempts(pool, email)) < loginMaxAttempts()) return 0;
   // `count` je već rekao da je blokirano; kad bi retry_after iz nekog razloga vratio 0,
   // poruka bez broja je bolja od „sačekajte 0 sekundi".
   return Math.max(1, await retryAfterSeconds(pool, email));
