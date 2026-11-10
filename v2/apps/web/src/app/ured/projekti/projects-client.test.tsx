@@ -186,7 +186,8 @@ describe("projekti", () => {
     render(<ProjectsClient canManage canAssign canOverride />);
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Pogrešna dodjela" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Više radnji za Amar/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Pogrešna dodjela" }));
     const reason = "Dodjela je unesena za pogrešnu osobu.";
     await userEvent.type(screen.getByLabelText("Razlog poništavanja"), reason);
     await userEvent.click(screen.getByRole("button", { name: "Poništi uz razlog" }));
