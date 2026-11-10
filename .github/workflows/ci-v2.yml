@@ -166,7 +166,15 @@ jobs:
           pnpm --filter @gradix/web build
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
-          pnpm --filter @gradix/web test:e2e
+          pnpm --filter @gradix/web test:e2e || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+
+      - name: Playwright artefakti pri padu E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: v2/apps/web/test-results
+          retention-days: 3
 
       # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
       # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
