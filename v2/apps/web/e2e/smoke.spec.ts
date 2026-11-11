@@ -32,7 +32,11 @@ for (const user of USERS) {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
     page.on("console", (msg) => {
-      if (msg.type() === "error") errors.push(`console: ${msg.text()}`);
+      if (msg.type() !== "error") return;
+      // Zabranjene rute namjerno vraćaju 403 — preglednik to sam upiše u konzolu kao
+      // grešku resursa; to nije JS greška stranice i ne smije rušiti smoke.
+      if (/Failed to load resource.*\b403\b/.test(msg.text())) return;
+      errors.push(`console: ${msg.text()}`);
     });
 
     await login(page, user.email);
