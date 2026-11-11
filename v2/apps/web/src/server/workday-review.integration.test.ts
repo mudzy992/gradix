@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
-import { canResolveConflict, listWorkdaysForReview, resolveViewerWorkerId, workdayResolveScopeFor, workdayResolveScopeFor } from "./workday-review";
+import { canResolveConflict, listWorkdaysForReview, resolveViewerWorkerId, workdayResolveScopeFor, workdayReviewScopeFor } from "./workday-review";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
