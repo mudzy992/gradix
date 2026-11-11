@@ -84,7 +84,7 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
       [CO],
     );
     await admin.query(
-      "INSERT INTO public.projects (id, company_id, code, name) VALUES ('prj_rsv_a_${RUN}', $1, 'A-${RUN}', 'A')",
+      `INSERT INTO public.projects (id, company_id, code, name) VALUES ('prj_rsv_a_${RUN}', $1, 'A-${RUN}', 'Projekat A')`,
       [CO],
     );
     await admin.query(
