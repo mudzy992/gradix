@@ -56,7 +56,6 @@ export default tseslint.config(
       "apps/web/src/app/layout.tsx",
       "apps/web/src/app/page.tsx",
       "apps/web/src/app/ured/page.tsx",
-      "apps/web/src/app/ured/rokovi/**",
       "apps/web/src/app/**/*.test.tsx",
     ],
     rules: {
