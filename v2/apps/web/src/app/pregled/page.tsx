@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
-import { Card, DataTable, EmptyState, Icon, Inline, Mono, PageHeader, Stack } from "@/components/ui/index";
+import { Card, EmptyState, Icon, Inline, PageHeader, Stack } from "@/components/ui/index";
+import { MachinesTable } from "./machines-table";
 import { ScopeNotice } from "@/components/scope-notice";
 import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
@@ -119,16 +120,7 @@ export default async function PregledPage() {
               description="Mašine se dodaju u bazi; ekran ih samo prikazuje dok ne dođe unos iz interfejsa."
             />
           ) : (
-            <DataTable
-              caption="Mašine u evidenciji"
-              rows={data.machines}
-              rowKey={(machine) => machine.code}
-              emptyText="Nema mašina."
-              columns={[
-                { key: "name", header: "Mašina", cell: (machine) => machine.name },
-                { key: "code", header: "Šifra", cell: (machine) => <Mono>{machine.code}</Mono> },
-              ]}
-            />
+<MachinesTable machines={data.machines} />
           )}
         </Card>
 

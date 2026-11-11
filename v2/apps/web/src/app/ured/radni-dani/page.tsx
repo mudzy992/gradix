@@ -5,9 +5,9 @@ import { withCompany } from "@gradix/db";
 import { authenticate } from "@/server/tenant-context";
 import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
-import { reviewLabel } from "./review-label";
 import { can } from "@/server/permissions";
-import { DataTable, PageHeader } from "@/components/ui/index";
+import { PageHeader } from "@/components/ui/index";
+import { WorkdaysTable } from "./workdays-table";
 import { listWorkdaysForReview, resolveViewerWorkerId, workdayReviewScopeFor } from "@/server/workday-review";
 
 export const dynamic = "force-dynamic";
@@ -41,29 +41,7 @@ export default async function RadniDaniPage() {
         title="Radni dani"
         subtitle="Pregled dana pristiglih sa terena. Samo čitanje — potvrda i razrješenje nisu dio ovog koraka."
       />
-      <DataTable
-        caption="Radni dani"
-        rows={days}
-        rowKey={(day) => day.id}
-        emptyText="Još nema pristiglih radnih dana."
-        columns={[
-          {
-            key: "worker",
-            header: "Radnik · datum",
-            cell: (day) => (
-              <span>
-                <strong>{day.worker_name}</strong>
-                <br />
-                {day.work_date}
-              </span>
-            ),
-          },
-          { key: "projects", header: "Projekti", cell: (day) => day.project_codes ?? "—" },
-          { key: "entries", header: "Unosi", cell: (day) => day.entries },
-          { key: "status", header: "Stanje", cell: (day) => (day.status === "SUBMITTED" ? "Poslano" : "Nacrt") },
-          { key: "label", header: "Oznaka", cell: (day) => reviewLabel(day) ?? "—" },
-        ]}
-      />
+<WorkdaysTable days={days} />
     </main>
   );
 }
