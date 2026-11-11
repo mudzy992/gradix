@@ -28,6 +28,8 @@ const schema = z.object({
   MINIO_BUCKET: z.string().min(3).refine((value) => value !== "gradix", "MINIO_BUCKET ne smije biti 'gradix' (to je v1 bucket)").default("gradix-stg"),
   MINIO_REGION: z.string().min(1).default("us-east-1"),
   SEED_DEMO: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  // Platformski administratori (izvan firmi) — npr. za /katalog u produkciji. Prazno = niko.
+  PLATFORM_ADMIN_EMAILS: z.string().default(""),
 });
 
 export type Config = z.infer<typeof schema>;

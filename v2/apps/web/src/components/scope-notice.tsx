@@ -1,4 +1,4 @@
-import { Alert } from "@/components/ui";
+import { Alert } from "@/components/ui/index";
 
 /**
  * Obavještenje kad opseg „samo dodijeljeni projekti" nema ni jednu dodjelu.

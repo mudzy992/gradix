@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
-import { Button } from "@/components/ui";
+import { Button } from "./primitives";
 
 export { Dialog };
 

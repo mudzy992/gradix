@@ -89,6 +89,8 @@ td{padding:14px 12px;border-top:1px solid var(--line)}
 tbody tr:hover{background:var(--raise)}
 td.r,th.r{text-align:right}
 .chip{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 12px;border-radius:999px;background:var(--raise);font-weight:600;font-size:13px}
+.chip--hot{background:var(--accent);color:var(--on-accent)}
+.desc{display:grid;gap:8px;margin:0 0 14px}.desc>div{display:flex;justify-content:space-between;gap:16px}.desc dt{color:var(--muted)}.desc dd{margin:0;font-weight:600;text-align:right}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--bar)}
 .dot.w{background:var(--accent)}.dot.o{background:transparent;border:1.5px solid var(--muted)}
 .who{line-height:1.3}.who span{display:block;color:var(--muted);font-size:13px}
@@ -758,6 +760,51 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
           </main>
         </div></div></article>
   </div>
+</section>
+<section class="r4a-reference" id="r4a2-design" aria-labelledby="r4a2-heading">
+  <div class="r4a-reference-head">
+    <div>
+      <h1 id="r4a2-heading">R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje vlasnika)</h1>
+      <p class="hint">Samo dizajn od postojećih komponenti kataloga (DataTable, DescriptionList, Button, Chip, dijalog s razlogom). Nije implementirano. Navigacija pri implementaciji: Ured → Radni dani → „Za provjeru" (ulazi i u E2E smoke iz Dijela 3).</p>
+    </div>
+  </div>
+  <section class="card" style="margin-bottom:16px">
+    <h2 style="margin-bottom:12px">Lista sukoba (DataTable)</h2>
+    <table class="table">
+      <thead><tr><th>Radnik</th><th>Projekat</th><th>Datum</th><th>Čeka</th><th>Stanje</th></tr></thead>
+      <tbody>
+        <tr><td>Amar Hadžić</td><td>P-24/2026 · Dionica Visoko–Kiseljak</td><td>7. 11. 2026.</td><td>prije 1 dan</td><td><span class="chip chip--hot">Za provjeru</span></td></tr>
+        <tr><td>Mario Perić</td><td>P-24/2026 · Dionica Visoko–Kiseljak</td><td>6. 11. 2026.</td><td>prije 4 dana</td><td><span class="chip chip--hot">Podsjetnik poslan</span></td></tr>
+      </tbody>
+    </table>
+    <p class="hint" style="margin-top:10px">Podsjetnik uredu nakon 3 dana bez razrješenja (podesivo po firmi). Nerazriješen sukob u R4b blokira odobravanje te sedmice.</p>
+  </section>
+  <div class="grid grid--2">
+    <section class="card">
+      <h2 style="margin-bottom:12px">Unos sa servera</h2>
+      <dl class="desc">
+        <div><dt>Radnik</dt><dd>Amar Hadžić</dd></div>
+        <div><dt>Početak–kraj</dt><dd class="mono">07:30–15:30</dd></div>
+        <div><dt>Projekat</dt><dd>P-24/2026 · Dionica Visoko–Kiseljak</dd></div>
+        <div><dt>Mašina</dt><dd class="mono">BAG-01 · Bager CAT 320</dd></div>
+      </dl>
+      <button class="btn btn--primary" type="button">Prihvati ovaj unos</button>
+    </section>
+    <section class="card">
+      <h2 style="margin-bottom:12px">Unos s telefona</h2>
+      <dl class="desc">
+        <div><dt>Radnik</dt><dd>Amar Hadžić</dd></div>
+        <div><dt>Početak–kraj</dt><dd class="mono">08:00–16:00</dd></div>
+        <div><dt>Projekat</dt><dd>P-24/2026 · Dionica Visoko–Kiseljak</dd></div>
+        <div><dt>Mašina</dt><dd class="mono">BAG-01 · Bager CAT 320</dd></div>
+      </dl>
+      <button class="btn btn--primary" type="button">Prihvati ovaj unos</button>
+    </section>
+  </div>
+  <section class="card" style="margin-top:16px">
+    <h2 style="margin-bottom:12px">Ispravi vremena / odbaci</h2>
+    <p class="hint">Vremena se NE spajaju automatski: ured bira jedan unos i smije ručno ispraviti vremena (24 h, HH:MM) prije prihvatanja; original ostaje u auditu. „Odbaci uz razlog" otvara dijalog s obaveznim razlogom (prijedlog: ConfirmDialog + opciono polje razloga) — razlog radnik vidi na telefonu, interne napomene ne vidi. Nakon razrješenja red prelazi u stanje „Razriješeno" s odlukom, autorom i vremenom u audit tragu, a telefon ishod povlači sljedećim syncom.</p>
+  </section>
 </section>
 <script>
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),params=new URLSearchParams(location.search);

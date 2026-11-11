@@ -19,7 +19,8 @@ import { formatDate } from "@/format";
 import {
   Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Input, PageHeader, Select, Skeleton,
 } from "@/components/ui/index";
-import { CreateDialog, DetailDialog, RenewDialog } from "./obligations-dialogs";
+import { CreateDialog, RenewDialog } from "./obligations-dialogs";
+import { DetailDialog } from "./obligation-detail";
 
 type LoadState =
   | { kind: "loading" }

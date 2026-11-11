@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card } from "@/components/ui";
+import { Card } from "@/components/ui/index";
 
 /**
  * Kartica „Rokovi“ na pregledu.

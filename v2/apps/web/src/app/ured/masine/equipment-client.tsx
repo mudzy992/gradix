@@ -27,7 +27,8 @@ import {
   Alert, Button, Card, Checkbox, Chip, DataTable, EmptyState, FilterBar, Input, Mono,
   PageHeader, Select, Skeleton,
 } from "@/components/ui/index";
-import { CategoriesDialog, MachineDialog, MeterDialog } from "./equipment-dialogs";
+import { MachineDialog, MeterDialog } from "./equipment-dialogs";
+import { CategoriesDialog } from "./equipment-categories";
 
 type LoadState =
   | { kind: "loading" }

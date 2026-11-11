@@ -16,77 +16,18 @@
  */
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Icon, type IconName } from "./ui";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Icon, type IconName } from "./ui/index";
 import { startSessionWatch } from "./session-watch";
+import { useTheme } from "./shell-theme";
+import { ROLE_BS, initialsOf } from "./shell-user";
+import { CommandPalette } from "./shell-palette";
+
+export { initialsOf };
 
 export type NavItem = { href: string; label: string; icon: IconName; description?: string };
 export type NavGroup = { label: string; items: NavItem[] };
 export type ShellUser = { displayName: string; email: string; companyName: string; roles: string[] };
-
-const ROLE_BS: Record<string, string> = {
-  OWNER: "Vlasnik",
-  ADMIN: "Administrator",
-  PROJECT_MANAGER: "Vođa projekta",
-  SITE_SUPERVISOR: "Šef gradilišta",
-  WORKER: "Radnik",
-  DRIVER: "Vozač",
-  MACHINE_OPERATOR: "Rukovalac",
-  MECHANIC: "Mehaničar",
-  ACCOUNTANT: "Računovođa",
-};
-
-/** Prvo slovo imena i prezimena — isto u traci i u tabeli. */
-export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase() || "?";
-}
-
-const THEME_KEY = "gx-theme";
-type ThemeChoice = "light" | "dark" | "system";
-
-/**
- * Tema: prati sistem, osim kad je korisnik ručno izabrao. Izbor se pamti u `localStorage`;
- * „prati sistem“ briše ključ (tada odluku ponovo nosi `prefers-color-scheme`).
- * Prvo iscrtavanje rješava inline skripta u `layout.tsx` — ovdje se samo održava stanje.
- */
-function useTheme() {
-  const [choice, setChoice] = useState<ThemeChoice>("system");
-  const [resolved, setResolved] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    const initial: ThemeChoice = stored === "light" || stored === "dark" ? stored : "system";
-    setChoice(initial);
-    setResolved(initial === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : initial);
-  }, []);
-
-  useEffect(() => {
-    if (choice !== "system") return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => setResolved(media.matches ? "dark" : "light");
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, [choice]);
-
-  const apply = useCallback((next: ThemeChoice) => {
-    setChoice(next);
-    const effective =
-      next === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : next;
-    setResolved(effective);
-    // Atribut na <html> — isto mjesto koje čita inline skripta pri sljedećem učitavanju.
-    document.documentElement.dataset.theme = effective;
-    if (next === "system") window.localStorage.removeItem(THEME_KEY);
-    else window.localStorage.setItem(THEME_KEY, next);
-  }, []);
-
-  return { choice, resolved, apply };
-}
 
 export default function Shell({
   groups,
@@ -361,139 +302,3 @@ export default function Shell({
  * `Ctrl+K` — pretraga po stavkama navigacije. Nova funkcionalnost (pretraga korisnika i
  * zapisa) nije dio dizajna, pa je nema.
  */
-function CommandPalette({
-  items,
-  onClose,
-  onNavigate,
-}: {
-  items: NavItem[];
-  onClose: () => void;
-  onNavigate: (href: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [index, setIndex] = useState(0);
-  const input = useRef<HTMLInputElement>(null);
-  const listId = useId();
-
-  const results = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return items;
-    return items.filter(
-      (item) =>
-        item.label.toLowerCase().includes(needle) || (item.description ?? "").toLowerCase().includes(needle),
-    );
-  }, [items, query]);
-
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    input.current?.focus();
-    return () => previous?.focus?.();
-  }, []);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [query]);
-
-  function onKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setIndex((value) => Math.min(value + 1, results.length - 1));
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setIndex((value) => Math.max(value - 1, 0));
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const target = results[index];
-      if (target) onNavigate(target.href);
-    }
-  }
-
-  return (
-    <div className="gx-overlay" role="presentation" onMouseDown={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Brza navigacija"
-        className="gx-dialog"
-        style={{ maxWidth: 560, padding: 0 }}
-        onMouseDown={(event) => event.stopPropagation()}
-        onKeyDown={onKeyDown}
-      >
-        <div style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
-          <input
-            ref={input}
-            className="gx-input"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls={listId}
-            aria-activedescendant={results[index] ? `${listId}-${index}` : undefined}
-            aria-label="Traži stranicu"
-            placeholder="Traži stranicu…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-
-        <ul id={listId} role="listbox" aria-label="Stranice" style={{ maxHeight: 320, overflowY: "auto", padding: 8 }}>
-          {results.length === 0 ? (
-            <li style={{ padding: 12, color: "var(--muted)" }}>Nema stranice s tim imenom.</li>
-          ) : null}
-          {results.map((item, position) => (
-            <li
-              key={item.href}
-              id={`${listId}-${position}`}
-              role="option"
-              aria-selected={position === index}
-              className="gx-menu-item"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                cursor: "pointer",
-                background: position === index ? "var(--raise)" : undefined,
-              }}
-              onMouseEnter={() => setIndex(position)}
-              onClick={() => onNavigate(item.href)}
-            >
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-              {item.description ? (
-                <span style={{ marginLeft: "auto", fontSize: "var(--text-label)", color: "var(--muted)" }}>
-                  {item.description}
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            padding: "8px 14px",
-            borderTop: "1px solid var(--line)",
-            fontSize: "var(--text-label)",
-            color: "var(--muted)",
-          }}
-        >
-          <span>
-            <kbd className="gx-search__key">↑↓</kbd> biraj
-          </span>
-          <span>
-            <kbd className="gx-search__key">Enter</kbd> otvori
-          </span>
-          <span>
-            <kbd className="gx-search__key">Esc</kbd> zatvori
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
