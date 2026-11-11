@@ -87,11 +87,6 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
       `INSERT INTO public.projects (id, company_id, code, name) VALUES ('prj_rsv_a_${RUN}', $1, 'A-${RUN}', 'Projekat A')`,
       [CO],
     );
-    await admin.query(
-      `INSERT INTO public.workdays (id, company_id, worker_id, work_date, status, created_by, updated_by)
-       VALUES ('wd_rsv_1_${RUN}', $1, 'wrk_rsv_worker_${RUN}', '2026-11-10', 'DRAFT', 'usr_rsv_worker_${RUN}', 'usr_rsv_worker_${RUN}')`,
-      [CO],
-    );
   }, 60_000);
 
   afterAll(async () => { await admin.end(); await app.end(); });
