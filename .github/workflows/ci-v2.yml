@@ -304,14 +304,19 @@ jobs:
           grep -q "phase=s3.connection status=FAIL" /tmp/diag-image.log
           grep -q "phase=redis.config" /tmp/diag-image.log
 
-  # E2E stabilnost (R4a-2/A): N uzastopnih pokretanja BEZ retryja; svaki pad
-  # ostaje pad i ulazi u izvještaj. Nije kapija za push — samo ručno mjerenje.
+  # E2E stabilnost (R4a-2/A): 20 pokretanja BEZ retryja, raspoređeno kao
+  # matrica 5 jobova x 4 pokretanja (izolacija: pad/istek jednog joba ne
+  # gubi ostala mjerenja; svaki job javlja svoje rezultate anotacijama).
   # Preglednik ide iz cachea ključanog zaključanom verzijom Playwrighta
   # (@playwright/test 1.57.0), pa instalacija ne može biti uzrok padova.
   e2e-stabilnost:
     if: ${{ inputs.e2e_stabilnost }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        dio: [1, 2, 3, 4, 5]
     services:
       postgres:
         image: postgres:16-alpine
@@ -362,57 +367,32 @@ jobs:
         run: |
           pnpm --filter @gradix/web seed
           pnpm --filter @gradix/web build
-      - name: Mjerenje — N pokretanja bez retryja
+      - name: Mjerenje — 4 pokretanja bez retryja (dio ${{ matrix.dio }}/5)
         working-directory: v2/apps/web
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
-          BROJ: ${{ inputs.broj_pokretanja }}
+          DIO: ${{ matrix.dio }}
         run: |
           set -u
           mkdir -p /tmp/e2e-stabilnost
           (pnpm start > /tmp/e2e-stabilnost/server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
-          curl -sf http://127.0.0.1:3000/login >/dev/null || { echo "Server se nije digao"; tail -n 40 /tmp/e2e-stabilnost/server.log; exit 1; }
-          ukupno="${BROJ:-20}"
+          curl -sf http://127.0.0.1:3000/login >/dev/null || { echo "::error::STAB dio=$DIO server se nije digao"; tail -n 20 /tmp/e2e-stabilnost/server.log; exit 1; }
           proslo=0
           palo=0
-          : > /tmp/e2e-stabilnost/sazetak.txt
-          for n in $(seq 1 "$ukupno"); do
+          pocetak=$(( (DIO - 1) * 4 + 1 ))
+          for n in $(seq "$pocetak" $((pocetak + 3))); do
             log="/tmp/e2e-stabilnost/run-$n.log"
             if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then
-              echo "run $n: PASS" >> /tmp/e2e-stabilnost/sazetak.txt
+              echo "::notice::STAB dio=$DIO run $n: PASS"
               proslo=$((proslo+1))
             else
-              echo "run $n: FAIL" >> /tmp/e2e-stabilnost/sazetak.txt
-              # Samo imena palih testova (list reporter ih na kraju ponovi
-              # kao "  1) [chromium] › fajl › ime"), ne cijeli ispis.
-              grep -E "^ +[0-9]+\) \[chromium\]" "$log" | head -3 >> /tmp/e2e-stabilnost/sazetak.txt || true
-              grep -E "Error:" "$log" | head -2 >> /tmp/e2e-stabilnost/sazetak.txt || true
+              echo "::error::STAB dio=$DIO run $n: FAIL"
+              grep -E "^ +[0-9]+\) \[chromium\]" "$log" | head -3 | while IFS= read -r l; do echo "::error::STAB palitest: $l"; done || true
+              grep -E "Error:" "$log" | head -2 | while IFS= read -r l; do echo "::error::STAB greska: $l"; done || true
               palo=$((palo+1))
             fi
+            rm -rf test-results
           done
-          {
-            echo "## E2E stabilnost"
-            echo ""
-            echo "- Pokretanja: $ukupno (svako bez retryja)"
-            echo "- Proslo: $proslo"
-            echo "- Palo: $palo"
-            echo ""
-            echo '```'
-            cat /tmp/e2e-stabilnost/sazetak.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/e2e-stabilnost/sazetak.txt
-          # Rezultati i kao anotacije: logovi/artefakti runa nisu uvijek
-          # dostupni, anotacije jesu (isti razlog kao ostala dijagnostika).
-          while IFS= read -r line; do echo "::notice::STAB $line"; done < /tmp/e2e-stabilnost/sazetak.txt
-          echo "::notice::STAB_UKUPNO pokretanja=$ukupno proslo=$proslo palo=$palo"
+          echo "::notice::STAB dio=$DIO proslo=$proslo palo=$palo"
           [ "$palo" -eq 0 ]
-      - name: Izvjestaj kao artefakt
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-stabilnost-izvjestaj
-          path: /tmp/e2e-stabilnost
-          retention-days: 14
-          if-no-files-found: ignore
