@@ -561,7 +561,9 @@ const CONFLICT_SELECT = `
     LEFT JOIN public.workers cw ON cw.company_id = conflict.company_id AND cw.user_id = cu.id`;
 
 function scopeClause(scope: ReturnType<typeof workdayResolveScopeFor>): string {
-  if (scope.kind === "company") return "TRUE";
+  // $2 (viewer) mora biti tipiziran i kad je opseg cijela firma — inače Postgres
+  // za neiskorišten parametar javlja „could not determine data type of parameter".
+  if (scope.kind === "company") return "($2::text IS NULL OR $2::text IS NOT NULL)";
   if (scope.kind === "assignments") {
     return `(e.worker_id IS NOT NULL AND EXISTS (
       SELECT 1 FROM public.project_assignments va
