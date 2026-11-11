@@ -80,3 +80,8 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 · `docs/design/DESIGN.md` + `reference.html` (dizajn) · `docs/DEMO-DIZAJN.md` (snimci i
 odobrena odstupanja od reference) · `docs/GH-SECRETS.md` (koje varijable trebaju) ·
 `MASTER_BRIEF.md`.
+12. **Granica server/klijent:** serverska komponenta (bez `"use client"`) nikad ne
+    prosljeđuje funkcije kao propove klijentskim komponentama (DataTable `cell`,
+    handleri, `actions`) — React ih ne može serijalizovati i stranica pada tek u
+    runtime-u (bug Pregled/Radni dani, CI 42965829962). Funkcije žive u klijentskom
+    omotaču uz tabelu. Provjerava `server-boundary.test.ts` i E2E smoke svih ruta.

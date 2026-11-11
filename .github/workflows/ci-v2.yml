@@ -167,6 +167,8 @@ jobs:
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
+          # Snimci kataloga (Dio 3c): vlasnik demo firme je i platformski admin za CI server.
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
         run: |
           pnpm --filter @gradix/web exec playwright install --with-deps chromium
           pnpm --filter @gradix/web seed
@@ -174,6 +176,16 @@ jobs:
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
           pnpm --filter @gradix/web test:e2e || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+
+      # Dio 3c: snimci se objavljuju uvijek (i kad E2E padne) — nisu kapija, nego materijal za pregled.
+      - name: Snimci ekrana kao artefakt (Dio 3c)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradix-snimci
+          path: v2/apps/web/snimci
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Playwright artefakti pri padu E2E
         if: failure()
