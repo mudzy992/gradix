@@ -43,6 +43,8 @@ export function ComponentCatalog() {
   const [longDialog, setLongDialog] = useState(false);
   const [page, setPage] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [acceptOpen, setAcceptOpen] = useState<"server" | "telefon" | null>(null);
+  const [acceptReason, setAcceptReason] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [tableState, setTableState] = useState<"ready" | "loading" | "error" | "empty">("ready");
   const [seg, setSeg] = useState("svi");
@@ -398,31 +400,55 @@ export function ComponentCatalog() {
               <SectionTitle hint="Ono što ured već ima (server).">Unos sa servera</SectionTitle>
               <DescriptionList
                 items={[
-                  { term: "Radnik", value: "Amar Hadžić" },
+                  { term: "Autor", value: "Mario Perić (šef) · izvor: server (uredski unos)" },
+                  { term: "Primljeno", value: "6. 11. 2026. u 16:02" },
                   { term: "Početak–kraj", value: <Mono>07:30–15:30</Mono> },
                   { term: "Projekat", value: "P-24/2026 · Dionica Visoko–Kiseljak" },
                   { term: "Mašina", value: <Mono>BAG-01 · Bager CAT 320</Mono> },
                 ]}
               />
               <Inline>
-                <Button variant="primary" onClick={() => push("success", "Dizajn: prihvaćen unos sa servera (demo)")}>Prihvati ovaj unos</Button>
+                <Button variant="primary" onClick={() => setAcceptOpen("server")}>Prihvati ovaj unos</Button>
               </Inline>
             </Card>
             <Card>
               <SectionTitle hint="Ono što je telefon poslao naknadno.">Unos s telefona</SectionTitle>
               <DescriptionList
                 items={[
-                  { term: "Radnik", value: "Amar Hadžić" },
+                  { term: "Autor", value: "Amar Hadžić (radnik) · izvor: telefon" },
+                  { term: "Primljeno", value: "7. 11. 2026. u 17:41" },
                   { term: "Početak–kraj", value: <Mono>08:00–16:00</Mono> },
                   { term: "Projekat", value: "P-24/2026 · Dionica Visoko–Kiseljak" },
                   { term: "Mašina", value: <Mono>BAG-01 · Bager CAT 320</Mono> },
                 ]}
               />
               <Inline>
-                <Button variant="primary" onClick={() => push("success", "Dizajn: prihvaćen unos s telefona (demo)")}>Prihvati ovaj unos</Button>
+                <Chip tone="hot">Sat telefona odstupa +6 min</Chip>
+                <Button variant="primary" onClick={() => setAcceptOpen("telefon")}>Prihvati ovaj unos</Button>
               </Inline>
             </Card>
           </FormGrid>
+          <Card>
+            <SectionTitle hint="Bez pozadinskog posla: broj se računa iz istih podataka kao lista; prag je postavka firme (podrazumijevano 3 dana).">Podsjetnik uredu (dizajn)</SectionTitle>
+            <Inline>
+              <span>Radni dani</span>
+              <Badge tone="danger">2</Badge>
+              <span>Pregled — nerazriješeni sukobi:</span>
+              <Stat label="Ukupno" value="2" />
+              <Stat label="Stariji od 3 dana" value="1" />
+              <Chip tone="hot">1 stariji od 3 dana</Chip>
+            </Inline>
+          </Card>
+          <Card>
+            <SectionTitle hint="Kad kolega razriješi isti sukob dok je ovaj ekran otvoren, akcije se gase i vidi se ko je i kada razriješio.">Stanje: već razriješeno (dizajn)</SectionTitle>
+            <Inline>
+              <Chip tone="full">Razriješeno</Chip>
+              <span>Razriješio/la Amina Karić · 7. 11. 2026. u 12:20 · prihvaćen unos s telefona. Ovaj ekran više ne može mijenjati odluku.</span>
+            </Inline>
+          </Card>
+          <Alert tone="warning">
+            Preklopljeni interval: <Mono>08:00–15:30</Mono> postoji u oba unosa — ured bira jedan, vremena se ne spajaju automatski.
+          </Alert>
           <Card>
             <SectionTitle hint="Ispravka se primjenjuje na izabrani unos prije prihvatanja; original ostaje u auditu. Vrijeme je 24 h (HH:MM).">Ispravi vremena izabranog unosa</SectionTitle>
             <FormGrid>
@@ -437,23 +463,26 @@ export function ComponentCatalog() {
         </Stack>
       </Section>
 
-      {rejectOpen ? (
-      <Dialog
-        title="Odbacivanje unosa (dizajn)"
-        hint="Prijedlog: ConfirmDialog se dopunjuje opcionim poljem razloga — nije nova vrsta komponente. Razlog je obavezan i radnik ga vidi na telefonu (kratko, bez internih napomena)."
-        onClose={() => setRejectOpen(false)}
-        footer={(
-          <div className="gx-dialog__actions">
-            <Button variant="quiet" onClick={() => setRejectOpen(false)}>Odustani</Button>
-            <Button variant="danger" disabled={rejectReason.trim().length < 10} onClick={() => { setRejectOpen(false); push("info", "Dizajn: unos odbačen uz razlog (demo)"); }}>
-              Odbaci uz razlog
-            </Button>
-          </div>
-        )}
-      >
-        <Textarea label="Razlog odbacivanja (vidi ga i radnik)" id="r4a2-reason" rows={3} value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} hint="Najmanje 10 znakova. Jedna rečenica, bez internih napomena." />
-      </Dialog>
-      ) : null}
+      <ConfirmDialog
+        open={acceptOpen !== null}
+        title="Prihvati ovaj unos? (dizajn)"
+        text={`Unos od ${acceptOpen === "telefon" ? "Mario Perić (server)" : "Amar Hadžić (telefon)"} će biti odbačen, a on će vidjeti razlog koji upišete ispod. Razlog vidi radnik/šef čiji je unos odbačen — bez internih napomena.`}
+        confirmLabel="Prihvati ovaj unos"
+        reason={{ value: acceptReason, onChange: setAcceptReason, minLength: 10, label: "Razlog (vidi ga autor odbačenog unosa)", hint: "Obavezno, najmanje 10 znakova." }}
+        onConfirm={() => { setAcceptOpen(null); push("success", "Dizajn: unos prihvaćen, drugi odbačen uz razlog (demo)"); }}
+        onCancel={() => setAcceptOpen(null)}
+      />
+
+      <ConfirmDialog
+        open={rejectOpen}
+        title="Odbaci unos s telefona? (dizajn)"
+        text="Unos se čuva u historiji s razlogom i autorom odluke. Razlog vidi Amar Hadžić na svom telefonu — bez internih napomena ureda."
+        confirmLabel="Odbaci uz razlog"
+        danger
+        reason={{ value: rejectReason, onChange: setRejectReason, minLength: 10, label: "Razlog odbacivanja (vidi ga i radnik)", hint: "Obavezno, najmanje 10 znakova. Jedna rečenica." }}
+        onConfirm={() => { setRejectOpen(false); push("info", "Dizajn: unos odbačen uz razlog (demo)"); }}
+        onCancel={() => setRejectOpen(false)}
+      />
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
 

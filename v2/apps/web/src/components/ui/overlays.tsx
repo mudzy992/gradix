@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
 import { Button } from "./primitives";
+import { Textarea } from "./controls";
 
 export { Dialog };
 
@@ -17,6 +18,7 @@ export function ConfirmDialog({
   confirmLabel,
   danger,
   busy,
+  reason,
   onConfirm,
   onCancel,
 }: {
@@ -26,10 +28,17 @@ export function ConfirmDialog({
   confirmLabel: string;
   danger?: boolean;
   busy?: boolean;
+  /**
+   * Opciono obavezno polje razloga (R4a-2, odobrena dopuna): potvrda je zaključana
+   * dok razlog nema bar `minLength` znakova. Ko vidi razlog piše u `label`/`hint`
+   * pozivajućeg ekrana — komponenta ne odlučuje o vidljivosti.
+   */
+  reason?: { value: string; onChange: (value: string) => void; minLength: number; label: string; hint?: string };
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   if (!open) return null;
+  const reasonInvalid = reason !== undefined && reason.value.trim().length < reason.minLength;
   return (
     <Dialog
       title={title}
@@ -39,13 +48,22 @@ export function ConfirmDialog({
           <Button variant="quiet" onClick={onCancel} disabled={busy}>
             Odustani
           </Button>
-          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy}>
+          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={busy || reasonInvalid}>
             {busy ? "Radim…" : confirmLabel}
           </Button>
         </div>
       )}
     >
       <p>{text}</p>
+      {reason ? (
+        <Textarea
+          label={reason.label}
+          hint={reason.hint}
+          rows={3}
+          value={reason.value}
+          onChange={(event) => reason.onChange(event.target.value)}
+        />
+      ) : null}
     </Dialog>
   );
 }

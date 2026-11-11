@@ -84,9 +84,11 @@ export default function KatalogBody() {
     
       <Text variant="label">R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje)</Text>
       <CardView>
-        <Text variant="muted">Samo dizajn, nije implementirano. Radnik na telefonu vidi ishod razrješenja i kratak razlog odbacivanja — ne interne napomene ureda. Ured bira jedan unos; vremena se ne spajaju automatski.</Text>
+        <Text variant="muted">Samo dizajn, nije implementirano. Radnik/šef na telefonu (360 px, obje teme) vidi ishod i kratak razlog — ne interne napomene ureda. Ured bira jedan unos; vremena se ne spajaju automatski.</Text>
         <ListItem title="Amar Hadžić · 7. 11. 2026." meta="P-24/2026" right="Za provjeru" />
-        <StatusChip label="Ishod: prihvaćeno / odbačeno uz razlog" tone="warn" />
+        <StatusChip label="Odbačeno — razlog: Dupli unos, dan je već evidentiran kod šefa." tone="warn" />
+        <StatusChip label="Ispravljeno — Vremena je ispravio ured: bilo 07:30–15:30, sada 08:00–16:00." />
+        <StatusChip label="Prihvaćeno — tvoj unos važi." />
       </CardView>
 </ScrollView>
   );
