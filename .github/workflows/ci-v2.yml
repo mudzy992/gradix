@@ -383,9 +383,15 @@ jobs:
           palo=0
           pocetak=$(( (DIO - 1) * 4 + 1 ))
           for n in $(seq "$pocetak" $((pocetak + 3))); do
-            # Svako pokretanje kreće od iste demo fiksture (seed vraća demo
-            # sukobe na OPEN) — inače test razrješenja troši seed podatke.
-            (cd ../.. && pnpm --filter @gradix/web seed > /tmp/e2e-stabilnost/seed-$n.log 2>&1) || echo "::error::STAB dio=$DIO run $n: seed nije uspio"
+            # Svako pokretanje krece od prazne baze + svjeze demo fiksture:
+            # test razrjesenja trosi demo sukobe (3 u seedu), pa bez reset-a
+            # cetvrto pokretanje na istoj bazi nema sta otvoriti (izmjereni
+            # uzrok padova, R4a-2/A). Baza je testna u CI-ju; produkcijski
+            # seed i guard nepromjenjivosti sukoba se ne diraju.
+            psql "$DATABASE_ADMIN_URL" -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /tmp/e2e-stabilnost/reset-$n.log 2>&1 \
+              && (cd ../.. && ./infra/scripts/db-apply.sh >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web seed >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              || echo "::error::STAB dio=$DIO run $n: reset baze nije uspio"
             log="/tmp/e2e-stabilnost/run-$n.log"
             if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then
               echo "::notice::STAB dio=$DIO run $n: PASS"

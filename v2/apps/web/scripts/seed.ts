@@ -266,15 +266,7 @@ try {
         `INSERT INTO sync_conflicts
            (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version, created_at)
          VALUES ($1, 'cmp_demo', 'usr_radnik', $2, $3, $4::jsonb, $5, 1, clock_timestamp() - make_interval(days => $6))
-         -- Demo fikstura se pri ponovnom seedu VRAĆA na OPEN (razriješeni demo
-         -- sukob bi inače potrošio seed: E2E razrješenja rješava jedan po
-         -- jedan i četvrto uzastopno pokretanje na istoj bazi nema šta
-         -- otvoriti — izmjereno mjerenjem stabilnosti, R4a-2/A).
-         ON CONFLICT (company_id, actor_id, local_id) DO UPDATE SET
-           status = 'OPEN', resolved_by = NULL, resolved_at = NULL,
-           resolution_reason = NULL, resolution_kind = NULL,
-           internal_note = NULL, resolved_by_party = false,
-           resolution_key = NULL`,
+         ON CONFLICT (company_id, actor_id, local_id) DO NOTHING`,
         [c.id, c.local, c.entry, JSON.stringify({
           kind: "WORK",
           startedAt: `${c.day}T${c.received[0]}:00+01:00`,
