@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * U1 — raspored i prikaz: zaglavlja, sekcije forme, filteri, tabele, paginacija, status.
  * Bez inline stilova po ekranima: razmaci i mreža su ovdje (gx-* klase / tokeni).

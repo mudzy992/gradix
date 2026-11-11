@@ -8,7 +8,8 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Alert, Button, Field, inputClass } from "@/components/ui";
+import { apiCall, jsonBody } from "@/api-client";
+import { Alert, Button, Input, Stack } from "@/components/ui/index";
 
 type State =
   | { kind: "idle" }
@@ -36,97 +37,55 @@ export default function LoginPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setState({ kind: "busy" });
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const body = (await response.json()) as
-        | { success: true }
-        | { success: false; error: { code: string; message: string } };
-      if (!response.ok || !body.success) {
-        // Kad je limit aktivan, poruka nosi stvarni broj sekundi; ekran ga odbrojava sam,
-        // da korisnik ne mora da pogađa kad smije ponovo (i da ne troši pokušaje).
-        const retryAfter = Number(response.headers.get("retry-after"));
-        setState({
-          kind: "error",
-          message: body.success ? "Prijava nije uspjela." : body.error.message,
-          ...(Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfter } : {}),
-        });
-        return;
-      }
-      // Obavezna promjena lozinke ide prije bilo čega drugog.
-      const mustChange = (body as { data?: { mustChangePassword?: boolean } }).data?.mustChangePassword;
-      router.replace(mustChange ? "/lozinka/promjena" : "/pregled");
-      router.refresh();
-    } catch {
-      setState({ kind: "error", message: "Nema veze sa serverom. Provjerite mrežu." });
+    const result = await apiCall<{ mustChangePassword?: boolean }>("/api/auth/login", jsonBody({ email, password }));
+    if (!result.ok) {
+      // Kad je limit aktivan, poruka nosi stvarni broj sekundi (retry-after); ekran ga
+      // odbrojava sam, da korisnik ne troši pokušaje pogađajući kad smije ponovo.
+      setState({ kind: "error", message: result.message, ...(result.retryAfter ? { retryAfter: result.retryAfter } : {}) });
+      return;
     }
+    // Obavezna promjena lozinke ide prije bilo čega drugog.
+    router.replace(result.data?.mustChangePassword ? "/lozinka/promjena" : "/pregled");
+    router.refresh();
   }
 
   return (
     <main className="gx-auth">
       <div className="gx-auth__card">
-        <div className="gx-brand" style={{ padding: "0 0 var(--space-5)" }}>
+        <div className="gx-brand">
           <span aria-hidden="true" className="gx-brand__mark" />
           <span>Gradix</span>
         </div>
 
-        <h1 className="gx-page-title" style={{ fontSize: 24 }}>
-          Prijava
-        </h1>
+        <h1 className="gx-page-title">Prijava</h1>
         <p className="gx-page-sub">Operativni sistem za niskogradnju.</p>
 
-        <form style={{ marginTop: "var(--space-6)" }} onSubmit={submit} noValidate>
-          <Field label="Email" htmlFor="email">
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className={inputClass}
-            />
-          </Field>
+        <form onSubmit={submit} noValidate>
+          <Stack>
+            <Input label="Email" id="email" name="email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} />
+            <Input label="Lozinka" id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
 
-          <Field label="Lozinka" htmlFor="password">
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className={inputClass}
-            />
-          </Field>
-
-          {state.kind === "error" ? (
-            <div style={{ marginBottom: "var(--space-4)" }}>
+            {state.kind === "error" ? (
               <Alert tone="error" role="alert">
                 {secondsLeft > 0
                   ? `Previše pokušaja. Pokušajte ponovo za ${secondsLeft} s.`
                   : state.message}
               </Alert>
-            </div>
-          ) : null}
+            ) : null}
 
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidthOnMobile
-            disabled={state.kind === "busy" || secondsLeft > 0}
-            className="gx-btn--block"
-          >
-            {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
-          </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidthOnMobile
+              disabled={state.kind === "busy" || secondsLeft > 0}
+              className="gx-btn--block"
+            >
+              {state.kind === "busy" ? "Prijava…" : "Prijavi se"}
+            </Button>
+          </Stack>
         </form>
 
-        <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
+        <p className="gx-page-sub">
           Zaboravljena lozinka? Obratite se administratoru firme — on izdaje jednokratni link.
         </p>
       </div>

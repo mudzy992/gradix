@@ -10,7 +10,8 @@
  * forma, uspjeh, greška politike.
  */
 import { useEffect, useState } from "react";
-import { Alert, Button, Card, Field, Skeleton, inputClass } from "@/components/ui";
+import { apiCall, jsonBody } from "@/api-client";
+import { Alert, Button, Card, Input, Skeleton, } from "@/components/ui/index";
 
 type Preview = {
   email: string;
@@ -63,20 +64,15 @@ export default function SetPasswordPage() {
       return;
     }
     void (async () => {
-      try {
-        const response = await fetch(`/api/invitations/${value}`);
-        const body = await response.json();
-        if (!response.ok || !body.success) {
-          setState({
-            kind: "invalid",
-            message: "Link je istekao ili je već iskorišten. Zamolite administratora da izda novi.",
-          });
-          return;
-        }
-        setState({ kind: "form", preview: { ...body.data, kind } });
-      } catch {
-        setState({ kind: "invalid", message: "Nema veze sa serverom. Pokušajte ponovo." });
+      const result = await apiCall<Omit<Preview, "kind">>(`/api/invitations/${value}`);
+      if (!result.ok || !result.data) {
+        setState({
+          kind: "invalid",
+          message: "Link je istekao ili je već iskorišten. Zamolite administratora da izda novi.",
+        });
+        return;
       }
+      setState({ kind: "form", preview: { ...result.data, kind } });
     })();
   }, []);
 
@@ -93,52 +89,43 @@ export default function SetPasswordPage() {
     }
 
     setState({ kind: "busy", preview });
-    try {
-      const endpoint =
-        preview.kind === "reset" ? `/api/password-resets/${token}` : `/api/invitations/${token}`;
-      const payload =
-        preview.kind === "reset"
-          ? { password }
-          : {
-              password,
-              firstName: String(formData.get("firstName") ?? ""),
-              lastName: String(formData.get("lastName") ?? ""),
-            };
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const body = await response.json();
-      if (!response.ok || !body.success) {
-        setState({ kind: "error", preview, message: body?.error?.message ?? "Lozinka nije postavljena." });
-        return;
-      }
-      // Token iz URL-a i iz istorije: zamjena adrese bez novog unosa u istoriju.
-      window.history.replaceState(null, "", "/lozinka/postavi");
-      setState({ kind: "done", email: preview.email });
-    } catch {
-      setState({ kind: "error", preview, message: "Nema veze sa serverom. Pokušajte ponovo." });
+    const endpoint =
+      preview.kind === "reset" ? `/api/password-resets/${token}` : `/api/invitations/${token}`;
+    const payload =
+      preview.kind === "reset"
+        ? { password }
+        : {
+            password,
+            firstName: String(formData.get("firstName") ?? ""),
+            lastName: String(formData.get("lastName") ?? ""),
+          };
+    const result = await apiCall(endpoint, jsonBody(payload));
+    if (!result.ok) {
+      setState({ kind: "error", preview, message: result.message });
+      return;
     }
+    // Token iz URL-a i iz istorije: zamjena adrese bez novog unosa u istoriju.
+    window.history.replaceState(null, "", "/lozinka/postavi");
+    setState({ kind: "done", email: preview.email });
   }
 
   return (
-    <div className="gx-page" style={{ maxWidth: 520, padding: 0 }}>
+    <div className="gx-page gx-auth-narrow">
       <Card>
         {state.kind === "loading" ? (
           <>
-            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Provjeravam link…</h1>
+            <h1 className="gx-page-title">Provjeravam link…</h1>
             <Skeleton rows={3} />
           </>
         ) : null}
 
         {state.kind === "invalid" ? (
           <>
-            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Link ne važi</h1>
+            <h1 className="gx-page-title">Link ne važi</h1>
             <Alert tone="warning" role="alert">
               {state.message}
             </Alert>
-            <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
+            <p className="gx-page-sub">
               Iz bezbjednosnih razloga ne pravimo razliku između isteklog, iskorištenog i izmišljenog linka.
             </p>
           </>
@@ -146,11 +133,11 @@ export default function SetPasswordPage() {
 
         {state.kind === "done" ? (
           <>
-            <h1 className="gx-page-title" style={{ fontSize: 24, marginBottom: "var(--space-4)" }}>Lozinka je postavljena</h1>
+            <h1 className="gx-page-title">Lozinka je postavljena</h1>
             <Alert tone="success">
               {state.email ? `Nalog ${state.email} je spreman.` : "Nalog je spreman."} Možete se prijaviti.
             </Alert>
-            <div style={{ marginTop: "var(--space-4)" }}>
+            <div>
               <Button variant="primary" onClick={() => (window.location.href = "/login")}>
                 Na prijavu
               </Button>
@@ -160,22 +147,22 @@ export default function SetPasswordPage() {
 
         {state.kind === "form" || state.kind === "busy" || state.kind === "error" ? (
           <>
-            <h1 className="gx-page-title" style={{ fontSize: 24 }}>
+            <h1 className="gx-page-title">
               {state.preview.kind === "reset" ? "Postavite novu lozinku" : "Dobro došli u Gradix"}
             </h1>
-            <p className="gx-page-sub" style={{ marginBottom: "var(--space-4)" }}>
+            <p className="gx-page-sub">
               {state.preview.kind === "reset"
                 ? "Postavite lozinku. Sve stare sesije se gase."
                 : `${state.preview.companyName} · ${state.preview.email}`}
             </p>
             {state.preview.roles.length > 0 ? (
-              <p style={{ marginBottom: "var(--space-4)" }}>
+              <p>
                 Rola: <strong>{state.preview.roles.map((role) => ROLE_BS[role] ?? role).join(", ")}</strong>
               </p>
             ) : null}
 
             {state.kind === "error" ? (
-              <div style={{ marginBottom: "var(--space-4)" }}>
+              <div>
                 <Alert tone="error" role="alert">
                   {state.message}
                 </Alert>
@@ -185,56 +172,32 @@ export default function SetPasswordPage() {
             <form onSubmit={submit} noValidate>
               {state.preview.kind === "invite" ? (
                 <>
-                  <Field label="Ime" htmlFor="firstName">
-                    <input
-                      id="firstName"
+                  <Input label="Ime" id="firstName"
                       name="firstName"
                       required
-                      autoComplete="given-name"
-                      className={inputClass}
-                    />
-                  </Field>
-                  <Field label="Prezime" htmlFor="lastName">
-                    <input
-                      id="lastName"
+                      autoComplete="given-name" />
+                  <Input label="Prezime" id="lastName"
                       name="lastName"
                       required
-                      autoComplete="family-name"
-                      className={inputClass}
-                    />
-                  </Field>
+                      autoComplete="family-name" />
                 </>
               ) : null}
-              <Field
-                label="Lozinka"
-                htmlFor="password"
-                hint="Najmanje 10 znakova, slovo i broj."
-              >
-                <input
-                  id="password"
+              <Input label="Lozinka" hint="Najmanje 10 znakova, slovo i broj." id="password"
                   name="password"
                   type="password"
                   required
                   autoComplete="new-password"
-                  aria-describedby="password-hint"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Lozinka još jednom" htmlFor="repeat">
-                <input
-                  id="repeat"
+                  aria-describedby="password-hint" />
+              <Input label="Lozinka još jednom" id="repeat"
                   name="repeat"
                   type="password"
                   required
-                  autoComplete="new-password"
-                  className={inputClass}
-                />
-              </Field>
+                  autoComplete="new-password" />
               <Button type="submit" variant="primary" disabled={state.kind === "busy"} className="gx-btn--block">
                 {state.kind === "busy" ? "Postavljam…" : "Postavi lozinku"}
               </Button>
             </form>
-            <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
+            <p className="gx-page-sub">
               Link je jednokratan i važi 48 h od izdavanja.
             </p>
           </>

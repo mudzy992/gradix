@@ -182,7 +182,8 @@ describe("rokovi", () => {
     render(<ObligationsClient canManage />);
     await screen.findAllByRole("row");
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Obnovi" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /Više radnji/ })[0]!);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Obnovi" }));
     const dialog = await screen.findByRole("dialog", { name: /Obnova/ });
     expect(within(dialog).getByText(/verzija 1/)).toBeInTheDocument();
 
@@ -216,6 +217,7 @@ describe("rokovi", () => {
     await screen.findAllByRole("row");
     expect(screen.queryByRole("button", { name: /Nova obaveza/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Obnovi" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Više radnji/ })).toBeNull();
     expect(screen.getAllByRole("button", { name: "Detalj" }).length).toBeGreaterThan(0);
   });
 
@@ -229,7 +231,8 @@ describe("rokovi", () => {
     }));
     render(<ObligationsClient canManage />);
     await screen.findAllByRole("row");
-    await userEvent.click(screen.getAllByRole("button", { name: "Obnovi" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: /Više radnji/ })[0]!);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Obnovi" }));
 
     const dialog = await screen.findByRole("dialog", { name: /Obnova/ });
     await userEvent.type(within(dialog).getByLabelText("Novi rok"), "2026-12-01");

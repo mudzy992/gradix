@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * U1 — preklopi i meniji: Dialog/ConfirmDialog (oko postojećeg Dialog primitiva),
  * Tabs i RowActions (jedna vidljiva akcija + „⋯“ meni, kao u referenci).
@@ -76,7 +78,7 @@ export function Tabs({
   );
 }
 
-export type RowAction = { key: string; label: string; danger?: boolean; onSelect: () => void };
+export type RowAction = { key: string; label: string; danger?: boolean; onSelect: (returnTo?: HTMLElement | null) => void };
 
 export function RowActions({ actions, label }: { actions: RowAction[]; label: string }) {
   const [open, setOpen] = useState(false);
@@ -86,14 +88,25 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
     function onPointerDown(event: PointerEvent) {
       if (!ref.current?.contains(event.target as Node)) setOpen(false);
     }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        // Fokus se vraća na „⋯“ koje je meni otvorilo — ne na <body>.
+        ref.current?.querySelector<HTMLElement>("button")?.focus();
+      }
+    }
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open ]);
   if (actions.length === 0) return null;
   const [primary, ...rest] = actions;
   return (
     <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end", alignItems: "center" }}>
-      <Button variant="quiet" onClick={primary!.onSelect}>
+      <Button variant="quiet" onClick={(event) => primary!.onSelect(event.currentTarget)}>
         {primary!.label}
       </Button>
       {rest.length > 0 ? (
@@ -112,7 +125,8 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
                   style={action.danger ? { color: "var(--danger)" } : undefined}
                   onClick={() => {
                     setOpen(false);
-                    action.onSelect();
+                    // Fokus/cilj je „⋯“ okidač, ne stavka menija (ona nestaje).
+                    action.onSelect(ref.current?.querySelector<HTMLElement>("button") ?? null);
                   }}
                 >
                   {action.label}

@@ -8,7 +8,8 @@
  * Stanja: prazno (forma), greška (politika / pogrešna trenutna), uspjeh.
  */
 import { useState } from "react";
-import { Alert, Button, Card, Field, inputClass } from "@/components/ui";
+import { apiCall, jsonBody } from "@/api-client";
+import { Alert, Button, Card, Input } from "@/components/ui/index";
 
 type State =
   | { kind: "idle" }
@@ -31,96 +32,62 @@ export default function ChangePasswordPage() {
     }
 
     setState({ kind: "busy" });
-    try {
-      const response = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: String(formData.get("currentPassword") ?? ""),
-          newPassword,
-        }),
-      });
-      const body = await response.json();
-      if (!response.ok || !body.success) {
-        setState({ kind: "error", message: body?.error?.message ?? "Promjena nije prošla." });
-        return;
-      }
-      setState({ kind: "success", revoked: Number(body.data.revokedSessions ?? 0) });
-      setTimeout(() => {
-        window.location.href = "/ured/korisnici";
-      }, 1200);
-    } catch {
-      setState({ kind: "error", message: "Nema veze sa serverom. Provjerite mrežu." });
+    const result = await apiCall<{ revokedSessions?: number }>("/api/auth/change-password", jsonBody({
+      currentPassword: String(formData.get("currentPassword") ?? ""),
+      newPassword,
+    }));
+    if (!result.ok) {
+      setState({ kind: "error", message: result.message });
+      return;
     }
+    setState({ kind: "success", revoked: Number(result.data?.revokedSessions ?? 0) });
+    setTimeout(() => {
+      window.location.href = "/ured/korisnici";
+    }, 1200);
   }
 
   return (
-    <div className="gx-page" style={{ maxWidth: 520, padding: 0 }}>
+    <div className="gx-page gx-auth-narrow">
       <Card>
-        <h1 className="gx-page-title" style={{ fontSize: 24 }}>
-          Postavite novu lozinku
-        </h1>
-        <p className="gx-page-sub" style={{ marginBottom: "var(--space-5)" }}>
+        <h1 className="gx-page-title">Postavite novu lozinku</h1>
+        <p className="gx-page-sub">
           Dok ne postavite novu lozinku, ostatak sistema vam nije dostupan.
         </p>
 
         {state.kind === "error" ? (
-          <div style={{ marginBottom: "var(--space-4)" }}>
-            <Alert tone="error" role="alert">
-              {state.message}
-            </Alert>
-          </div>
+          <Alert tone="error" role="alert">
+            {state.message}
+          </Alert>
         ) : null}
         {state.kind === "success" ? (
-          <div style={{ marginBottom: "var(--space-4)" }}>
-            <Alert tone="success">
-              Lozinka je promijenjena.
-              {state.revoked > 0 ? ` Odjavljeno je još ${state.revoked} sesija.` : ""}
-            </Alert>
-          </div>
+          <Alert tone="success">
+            Lozinka je promijenjena.
+            {state.revoked > 0 ? ` Odjavljeno je još ${state.revoked} sesija.` : ""}
+          </Alert>
         ) : null}
 
         <form onSubmit={submit} noValidate>
-          <Field label="Trenutna lozinka" htmlFor="currentPassword">
-            <input
-              id="currentPassword"
+          <Input label="Trenutna lozinka" id="currentPassword"
               name="currentPassword"
               type="password"
               required
-              autoComplete="current-password"
-              className={inputClass}
-            />
-          </Field>
-          <Field
-            label="Nova lozinka"
-            htmlFor="newPassword"
-            hint="Najmanje 10 znakova, slovo i broj. Ne smije biti ista kao trenutna."
-          >
-            <input
-              id="newPassword"
+              autoComplete="current-password" />
+          <Input label="Nova lozinka" hint="Najmanje 10 znakova, slovo i broj. Ne smije biti ista kao trenutna." id="newPassword"
               name="newPassword"
               type="password"
               required
               autoComplete="new-password"
-              aria-describedby="newPassword-hint"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Nova lozinka još jednom" htmlFor="repeat">
-            <input
-              id="repeat"
+              aria-describedby="newPassword-hint" />
+          <Input label="Nova lozinka još jednom" id="repeat"
               name="repeat"
               type="password"
               required
-              autoComplete="new-password"
-              className={inputClass}
-            />
-          </Field>
+              autoComplete="new-password" />
           <Button type="submit" variant="primary" disabled={state.kind === "busy"} className="gx-btn--block">
             {state.kind === "busy" ? "Postavljam…" : "Postavi lozinku i nastavi"}
           </Button>
         </form>
-        <p className="gx-page-sub" style={{ marginTop: "var(--space-4)", fontSize: "var(--text-small)" }}>
+        <p className="gx-page-sub">
           Poslije promjene sve ostale sesije se gase — ako je neko drugi bio prijavljen, ispada.
         </p>
       </Card>

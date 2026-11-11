@@ -1294,3 +1294,20 @@ select.gx-input option, select.gx-input optgroup {
 .gx-speeddial__fab { width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--primary); color: var(--on-primary); font-size: 24px; cursor: pointer; box-shadow: var(--shadow-lift); }
 .gx-speeddial__actions { display: grid; gap: var(--space-2); justify-items: end; }
 .gx-upload:focus-within { outline: 2px solid var(--link); outline-offset: 2px; }
+
+/* Uski auth okvir (lozinka stranice): 520 px, bez gornjeg razmaka stranice. */
+.gx-auth-narrow { max-width: 520px; padding: 0; }
+
+/* Kod/detalji blok (audit metadata): udubljena ploha, skrol bez isticanja. */
+.gx-codeblock { max-height: 224px; overflow: auto; background: var(--raise); padding: var(--space-3); border-radius: var(--radius-field); line-height: 1.6; }
+
+/* Layout utiliti klase (U migracija): isti razmaci kao Stack/Inline, bez inline stilova.
+   gx-stack = vertikalna mreža, gx-inline-flex = vodoravni red s prelamanjem. */
+.gx-stack { display: grid; gap: var(--space-4); }
+.gx-stack--5 { gap: var(--space-5); }
+.gx-stack--2 { gap: var(--space-2); }
+.gx-inline-flex { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.gx-mt-2 { margin-top: var(--space-2); }
+.gx-mt-3 { margin-top: var(--space-3); }
+.gx-mt-4 { margin-top: var(--space-4); }
+.gx-mt-5 { margin-top: var(--space-5); }

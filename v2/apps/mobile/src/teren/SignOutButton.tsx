@@ -4,13 +4,11 @@
  * broj neposlanih redova u objašnjenju, keš se briše — outbox redovi se nikad ne brišu.
  */
 import { useState } from "react";
-import { Alert, Pressable, Text } from "react-native";
+import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { getLogoutSummary, logoutMobile } from "../api/session-lifecycle";
 import { openDb } from "../db/sqlite";
-import { useTheme } from "../theme/use-theme";
-import { createStyles } from "./TerenShell";
-import { jedanStil } from "../lib/styles";
+import { Button } from "../ui";
 
 export function logoutExplanation(summary: { pendingCount: number; legacyR0Count: number }): string {
   return summary.pendingCount + summary.legacyR0Count > 0
@@ -19,8 +17,6 @@ export function logoutExplanation(summary: { pendingCount: number; legacyR0Count
 }
 
 export function SignOutButton() {
-  const { theme } = useTheme();
-  const styles = createStyles(theme);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -51,14 +47,12 @@ export function SignOutButton() {
   }
 
   return (
-    <Pressable
-      style={jedanStil(styles.chip, styles.chip)}
+    <Button
+      label={busy ? "Odjava…" : "Odjavi se"}
+      variant="secondary"
       onPress={() => void requestSignOut()}
       disabled={busy}
-      accessibilityRole="button"
       accessibilityLabel="Odjavi se"
-    >
-      <Text style={styles.chipText}>{busy ? "Odjava…" : "Odjavi se"}</Text>
-    </Pressable>
+    />
   );
 }

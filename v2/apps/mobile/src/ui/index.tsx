@@ -66,7 +66,7 @@ export function Text({ variant = "body", children, style }: { variant?: "page" |
   return <RNText style={style ? [base, style] : base}>{children}</RNText>;
 }
 
-export function Screen(props: { title: string; subtitle: string; loading: boolean; error: string | null; empty: string | null; children: ReactNode; onRetry?: () => void }) {
+export function Screen(props: { title: string; subtitle: string; loading: boolean; error: string | null; empty: string | null; children: ReactNode; onRetry?: () => void; onBack?: () => void }) {
   const { styles, theme } = useUiStyles();
   if (props.loading) {
     return (
@@ -78,6 +78,7 @@ export function Screen(props: { title: string; subtitle: string; loading: boolea
   }
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {props.onBack ? <TextLink label="‹ Nazad" onPress={props.onBack} /> : null}
       <RNText style={styles.title}>{props.title}</RNText>
       <RNText style={styles.subtitle}>{props.subtitle}</RNText>
       {props.error ? (
@@ -152,6 +153,19 @@ export function Segmented<T extends string>(props: {
         ))}
       </View>
     </View>
+  );
+}
+
+export function CheckboxRow(props: { label: string; checked: boolean; onToggle: () => void; right?: string }) {
+  const { styles } = useUiStyles();
+  return (
+    <Pressable onPress={props.onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: props.checked }} style={styles.row}>
+      <View style={jedanStil(styles.chip, props.checked ? styles.chipOn : styles.chip)}>
+        <RNText style={styles.chipText}>{props.checked ? "✓" : " "}</RNText>
+      </View>
+      <RNText style={styles.rowText}>{props.label}</RNText>
+      {props.right ? <RNText style={styles.outcome}>{props.right}</RNText> : null}
+    </Pressable>
   );
 }
 

@@ -5,8 +5,9 @@ import { withCompany } from "@gradix/db";
 import { authenticate } from "@/server/tenant-context";
 import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
-import { reviewLabel } from "./review-label";
 import { can } from "@/server/permissions";
+import { PageHeader } from "@/components/ui/index";
+import { WorkdaysTable } from "./workdays-table";
 import { listWorkdaysForReview, resolveViewerWorkerId, workdayReviewScopeFor } from "@/server/workday-review";
 
 export const dynamic = "force-dynamic";
@@ -35,44 +36,12 @@ export default async function RadniDaniPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-6xl">
-      <h1 className="text-2xl font-bold">Radni dani</h1>
-      <p className="mt-1 text-sm opacity-70">
-        Pregled dana pristiglih sa terena. Samo čitanje — potvrda i razrješenje nisu dio ovog koraka.
-      </p>
-      {days.length === 0 ? (
-        <p className="mt-6">Još nema pristiglih radnih dana.</p>
-      ) : (
-        <table className="mt-6 w-full" aria-label="Radni dani">
-          <thead>
-            <tr>
-              <th className="text-left">Radnik · datum</th>
-              <th className="text-left">Projekti</th>
-              <th className="text-left">Unosi</th>
-              <th className="text-left">Stanje</th>
-              <th className="text-left">Oznaka</th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((day) => {
-              const label = reviewLabel(day);
-              return (
-                <tr key={day.id}>
-                  <td data-label="Radnik · datum">
-                    <strong>{day.worker_name}</strong>
-                    <br />
-                    {day.work_date}
-                  </td>
-                  <td data-label="Projekti">{day.project_codes ?? "—"}</td>
-                  <td data-label="Unosi">{day.entries}</td>
-                  <td data-label="Stanje">{day.status === "SUBMITTED" ? "Poslano" : "Nacrt"}</td>
-                  <td data-label="Oznaka">{label ?? "—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
+    <main>
+      <PageHeader
+        title="Radni dani"
+        subtitle="Pregled dana pristiglih sa terena. Samo čitanje — potvrda i razrješenje nisu dio ovog koraka."
+      />
+<WorkdaysTable days={days} />
     </main>
   );
 }

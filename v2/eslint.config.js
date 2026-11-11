@@ -51,22 +51,11 @@ export default tseslint.config(
     // docs/UI-EXCEPTIONS.md i smije se samo smanjivati.
     files: ["apps/web/src/app/**/*.tsx"],
     ignores: [
-      "apps/web/src/app/login/page.tsx",
       "apps/web/src/app/platform/**",
       // U3 izuzeci (docs/UI-EXCEPTIONS.md) — svaki red se briše kad se fajl migrira; lista se samo smanjuje.
       "apps/web/src/app/layout.tsx",
       "apps/web/src/app/page.tsx",
-      "apps/web/src/app/lozinka/**",
-      "apps/web/src/app/pregled/**",
       "apps/web/src/app/ured/page.tsx",
-      "apps/web/src/app/ured/audit/**",
-      "apps/web/src/app/ured/korisnici/**",
-      "apps/web/src/app/ured/masine/**",
-      "apps/web/src/app/ured/projekti/**",
-      "apps/web/src/app/ured/radni-dani/**",
-      "apps/web/src/app/ured/rokovi/**",
-      "apps/web/src/app/ured/role/**",
-      "apps/web/src/app/ured/uvoz/**",
       "apps/web/src/app/**/*.test.tsx",
     ],
     rules: {
@@ -84,7 +73,7 @@ export default tseslint.config(
   {
     files: ["apps/mobile/src/app/**/*.tsx", "apps/mobile/src/teren/**/*.tsx"],
     // U3 mobile izuzeci: svi ekrani dok se ne migriraju (predložak U7b: Moj dan + prijava).
-    ignores: ["apps/mobile/src/app/_layout.tsx", "apps/mobile/src/app/grupa.tsx", "apps/mobile/src/app/projekti.tsx", "apps/mobile/src/app/rokovi.tsx", "apps/mobile/src/teren/**"],
+    ignores: [],
     rules: {
       "no-restricted-syntax": ["error",
         { selector: "JSXOpeningElement[name.name='TextInput']", message: "Koristi TextField (U: src/ui)." },

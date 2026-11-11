@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
-import { Card, Icon, Mono } from "@/components/ui";
+import { Card, EmptyState, Icon, Inline, PageHeader, Stack } from "@/components/ui/index";
+import { MachinesTable } from "./machines-table";
 import { ScopeNotice } from "@/components/scope-notice";
 import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
@@ -97,63 +98,35 @@ export default async function PregledPage() {
 
   return (
     <div>
-      <div className="gx-page-head">
-        <div className="gx-page-head__text">
-          <h1 className="gx-page-title">{firstName ? `Dobro došli, ${firstName}` : "Pregled"}</h1>
-          <p className="gx-page-sub">
-            {data.company?.name ?? "Firma"} · {data.profile?.first_name} {data.profile?.last_name} ·{" "}
-            {data.company?.currency}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={firstName ? `Dobro došli, ${firstName}` : "Pregled"}
+        subtitle={`${data.company?.name ?? "Firma"} · ${data.profile?.first_name} ${data.profile?.last_name} · ${data.company?.currency}`}
+      />
 
-      <div style={{ marginBottom: "var(--space-4)" }}>
-        <ScopeNotice scope={data.scope} assignmentCount={data.assignmentCount} />
-      </div>
+      <ScopeNotice scope={data.scope} assignmentCount={data.assignmentCount} />
 
       <div className="gx-cols">
         <Card>
           <h2 className="gx-section-title">Mehanizacija</h2>
-          <p className="gx-page-sub" style={{ marginTop: "var(--space-1)" }}>
+          <p className="gx-page-sub">
             {machineCount === 0
               ? "U ovoj firmi još nema mašina."
               : `${machineCount} ${machineCount === 1 ? "mašina" : "mašine"} u evidenciji.`}
           </p>
 
           {machineCount === 0 ? (
-            <div className="gx-empty" style={{ marginTop: "var(--space-5)" }}>
-              <p className="gx-empty__title">Nema mašina</p>
-              <p className="gx-empty__text">
-                Mašine se dodaju u bazi; ekran ih samo prikazuje dok ne dođe unos iz interfejsa.
-              </p>
-            </div>
+            <EmptyState
+              title="Nema mašina"
+              description="Mašine se dodaju u bazi; ekran ih samo prikazuje dok ne dođe unos iz interfejsa."
+            />
           ) : (
-            <table className="gx-table" style={{ marginTop: "var(--space-4)" }}>
-              <thead>
-                <tr>
-                  <th>Mašina</th>
-                  <th>Šifra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.machines.map((machine) => (
-                  <tr key={machine.code}>
-                    <td>
-                      <div className="gx-who">{machine.name}</div>
-                    </td>
-                    <td>
-                      <Mono>{machine.code}</Mono>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+<MachinesTable machines={data.machines} />
           )}
         </Card>
 
         <Card>
           <h2 className="gx-section-title">Radni zapisi</h2>
-          <p className="gx-page-sub" style={{ marginTop: "var(--space-1)" }}>
+          <p className="gx-page-sub">
             R4 push/pull API je tenant-scoped. Mobilni unos će se uključiti nakon lokalnog SQLite outbox koraka;
             stari R0 notes sync je isključen.
           </p>
@@ -169,27 +142,27 @@ export default async function PregledPage() {
             <span className="gx-section-hint">ono što je otvoreno u ovoj fazi</span>
           </div>
         </div>
-        <ul style={{ display: "grid", gap: "var(--space-3)", listStyle: "none", padding: 0 }}>
-          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+        <Stack>
+          <Inline>
             <Icon name="users" />
             <span>
               <strong>Korisnici</strong> — pozovite osobu, dodijelite rolu i opseg.
             </span>
-          </li>
-          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+          </Inline>
+          <Inline>
             <Icon name="shield" />
             <span>
               <strong>Pristup i role</strong> — pregled ko šta smije; dozvole se još ne mijenjaju iz
               ekrana.
             </span>
-          </li>
-          <li style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+          </Inline>
+          <Inline>
             <Icon name="list" />
             <span>
               <strong>Audit trag</strong> — svaka promjena pristupa ostaje zapisana.
             </span>
-          </li>
-        </ul>
+          </Inline>
+        </Stack>
       </Card>
     </div>
   );

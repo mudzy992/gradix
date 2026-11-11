@@ -9,7 +9,7 @@
  */
 export type ApiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; message: string; code?: string; data?: T };
+  | { ok: false; message: string; code?: string; data?: T; retryAfter?: number };
 
 export async function apiCall<T>(url: string, init?: RequestInit): Promise<ApiResult<T>> {
   let response: Response;
@@ -27,11 +27,13 @@ export async function apiCall<T>(url: string, init?: RequestInit): Promise<ApiRe
 
   if (response.ok && body.success !== false) return { ok: true, data: body.data as T };
 
+  const retryAfter = Number(response.headers?.get?.("retry-after"));
   return {
     ok: false,
     message: body.error?.message ?? "Radnja nije prošla.",
     code: body.error?.code,
     data: body.data,
+    ...(Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfter } : {}),
   };
 }
 
