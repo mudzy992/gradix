@@ -17,6 +17,8 @@ export type NavEntry = {
   icon: IconName;
   description: string;
   group: string;
+  /** Bedž broji SAMO nerazriješene sukobe; `older` ih ističe (vidi AppShell). */
+  badge?: { count: number; older: number };
   /** "authenticated" = svaki prijavljeni korisnik firme. */
   permission: Permission | "authenticated";
 };
@@ -29,6 +31,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: "/ured/radnici", label: "Radnici", icon: "users", description: "Ljudi, kontakt, angažman", group: "Evidencija", permission: "workers.view" },
   { href: "/ured/uvoz", label: "Uvoz iz Excela", icon: "upload", description: "Spisak sa papira", group: "Evidencija", permission: "workers.manage" },
   { href: "/ured/radni-dani", label: "Radni dani", icon: "calendar", description: "Dani sa terena, „Za provjeru“", group: "Ured", permission: "workdays.view" },
+  { href: "/ured/sukobi", label: "Sukobi", icon: "list", description: "Razrješenje sukoba radnih dana", group: "Ured", permission: "workdays.resolve" },
   { href: "/ured/korisnici", label: "Korisnici", icon: "users", description: "Ljudi, role, pristup", group: "Ured", permission: "users.manage" },
   { href: "/ured/role", label: "Pristup i role", icon: "shield", description: "Ko šta smije", group: "Ured", permission: "roles.view" },
   { href: "/ured/audit", label: "Audit trag", icon: "list", description: "Ko je šta mijenjao", group: "Ured", permission: "audit.view" },
@@ -42,12 +45,17 @@ export function navEntriesForRoles(roles: readonly string[]): NavEntry[] {
   );
 }
 
-export function navGroupsForRoles(roles: readonly string[]): NavGroup[] {
+export function navGroupsForRoles(
+  roles: readonly string[],
+  badges: Partial<Record<string, { count: number; older: number }>> = {},
+): NavGroup[] {
   const visible = navEntriesForRoles(roles);
   return GROUP_ORDER.map((label) => ({
     label,
     items: visible
       .filter((entry) => entry.group === label)
-      .map(({ href, label: itemLabel, icon, description }) => ({ href, label: itemLabel, icon, description })),
+      .map(({ href, label: itemLabel, icon, description }) => ({
+        href, label: itemLabel, icon, description, badge: badges[href],
+      })),
   })).filter((group) => group.items.length > 0);
 }

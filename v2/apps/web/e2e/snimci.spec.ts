@@ -19,6 +19,7 @@ const PAGES: { name: string; href: string }[] = [
   { name: "rokovi", href: "/ured/rokovi" },
   { name: "korisnici", href: "/ured/korisnici" },
   { name: "radni-dani", href: "/ured/radni-dani" },
+  { name: "sukobi", href: "/ured/sukobi" },
 ];
 
 async function login(page: Page) {

@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Icon, type IconName } from "./ui/index";
+import { Badge, Icon, type IconName } from "./ui/index";
 import { startSessionWatch } from "./session-watch";
 import { useTheme } from "./shell-theme";
 import { ROLE_BS, initialsOf } from "./shell-user";
@@ -25,7 +25,7 @@ import { CommandPalette } from "./shell-palette";
 
 export { initialsOf };
 
-export type NavItem = { href: string; label: string; icon: IconName; description?: string };
+export type NavItem = { href: string; label: string; icon: IconName; description?: string; badge?: { count: number; older: number } };
 export type NavGroup = { label: string; items: NavItem[] };
 export type ShellUser = { displayName: string; email: string; companyName: string; roles: string[] };
 
@@ -170,6 +170,9 @@ export default function Shell({
                       <Icon name={item.icon} />
                     </span>
                     <span>{item.label}</span>
+                    {item.badge && item.badge.count > 0 ? (
+                      <Badge tone={item.badge.older > 0 ? "danger" : "primary"}>{item.badge.count}</Badge>
+                    ) : null}
                   </Link>
                 );
               })}

@@ -498,3 +498,215 @@ export async function resolveWorkdayConflict(
     };
   });
 }
+
+export type ConflictListItem = {
+  id: string;
+  status: "OPEN" | "RESOLVED";
+  createdAt: string;
+  ageDays: number;
+  workerName: string | null;
+  projectId: string | null;
+  projectCode: string | null;
+  projectName: string | null;
+  workDate: string | null;
+  serverTimes: EntryTimes | null;
+  receivedTimes: EntryTimes | null;
+  resolutionKind: ResolutionKind | null;
+  resolvedByName: string | null;
+  resolvedAt: string | null;
+  resolvedByParty: boolean;
+};
+
+export type ConflictListFilters = {
+  status?: "OPEN" | "RESOLVED";
+  projectId?: string;
+  olderThanDays?: number;
+  limit?: number;
+  offset?: number;
+};
+
+const CONFLICT_SELECT = `
+  SELECT conflict.id, conflict.status, conflict.created_at,
+         floor(extract(epoch FROM (clock_timestamp() - conflict.created_at)) / 86400)::int AS age_days,
+         (w.first_name || ' ' || w.last_name) AS worker_name,
+         p.code AS project_code, p.name AS project_name,
+         d.work_date::text AS work_date,
+         e.started_at AS server_started, e.ended_at AS server_ended, e.end_state AS server_end_state,
+         conflict.received_payload,
+         conflict.resolution_kind,
+         (ru.first_name || ' ' || ru.last_name) AS resolved_by_name,
+         conflict.resolved_at, conflict.resolved_by_party,
+         e.review_flags AS server_flags,
+         conflict.resolution_reason, conflict.internal_note,
+         e.kind AS server_kind, e.project_id AS server_project, e.machine_id AS server_machine,
+         e.created_at AS server_created, e.worker_id AS server_worker_id,
+         (aw.first_name || ' ' || aw.last_name) AS server_author_name,
+         (cw.first_name || ' ' || cw.last_name) AS received_author_name,
+         m.code AS server_machine_code, m.name AS server_machine_name
+    FROM public.sync_conflicts conflict
+    LEFT JOIN public.work_entries e
+      ON e.company_id = conflict.company_id AND e.id = conflict.work_entry_id
+    LEFT JOIN public.workdays d
+      ON d.company_id = conflict.company_id AND d.id = e.workday_id
+    LEFT JOIN public.workers w ON w.company_id = conflict.company_id AND w.id = e.worker_id
+    LEFT JOIN public.projects p
+      ON p.company_id = conflict.company_id
+     AND p.id = COALESCE(e.project_id, conflict.received_payload->>'projectId')
+    LEFT JOIN public.machines m
+      ON m.company_id = conflict.company_id AND m.id = e.machine_id
+    LEFT JOIN public.users ru ON ru.id = conflict.resolved_by
+    LEFT JOIN public.users au ON au.id = e.created_by
+    LEFT JOIN public.workers aw ON aw.company_id = conflict.company_id AND aw.user_id = au.id
+    LEFT JOIN public.users cu ON cu.id = conflict.actor_id
+    LEFT JOIN public.workers cw ON cw.company_id = conflict.company_id AND cw.user_id = cu.id`;
+
+function scopeClause(scope: ReturnType<typeof workdayResolveScopeFor>): string {
+  if (scope.kind === "company") return "TRUE";
+  if (scope.kind === "assignments") {
+    return `(e.worker_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM public.project_assignments va
+        JOIN public.project_assignments ta
+          ON ta.company_id = va.company_id AND ta.project_id = va.project_id
+       WHERE va.company_id = conflict.company_id AND ta.company_id = conflict.company_id
+         AND va.worker_id = $SCOPE AND ta.worker_id = e.worker_id
+         AND va.voided_at IS NULL AND ta.voided_at IS NULL))`;
+  }
+  return "FALSE";
+}
+
+type ConflictDbRow = {
+  id: string; status: string; created_at: Date; age_days: number;
+  worker_name: string | null; project_code: string | null; project_name: string | null;
+  work_date: string | null;
+  server_started: Date | null; server_ended: Date | null; server_end_state: string | null;
+  received_payload: Record<string, unknown> | null;
+  resolution_kind: ResolutionKind | null; resolved_by_name: string | null;
+  resolved_at: Date | null; resolved_by_party: boolean;
+  server_flags: string[] | null; resolution_reason: string | null; internal_note: string | null;
+  server_kind: string | null; server_project: string | null; server_machine: string | null;
+  server_created: Date | null; server_worker_id: string | null;
+  server_author_name: string | null; received_author_name: string | null;
+  server_machine_code: string | null; server_machine_name: string | null;
+};
+
+function toListItem(row: ConflictDbRow): ConflictListItem {
+  return {
+    id: row.id,
+    status: row.status === "RESOLVED" ? "RESOLVED" : "OPEN",
+    createdAt: row.created_at.toISOString(),
+    ageDays: row.age_days,
+    workerName: row.worker_name ?? row.received_author_name,
+    projectId: row.server_project ?? (typeof row.received_payload?.projectId === "string" ? row.received_payload.projectId : null),
+    projectCode: row.project_code,
+    projectName: row.project_name,
+    workDate: row.work_date,
+    serverTimes: row.server_started ? {
+      startedAt: row.server_started.toISOString(),
+      endedAt: row.server_ended?.toISOString() ?? null,
+      endState: row.server_end_state ?? "KNOWN_END",
+    } : null,
+    receivedTimes: receivedTimes(row.received_payload),
+    resolutionKind: row.resolution_kind,
+    resolvedByName: row.resolved_by_name,
+    resolvedAt: row.resolved_at?.toISOString() ?? null,
+    resolvedByParty: row.resolved_by_party,
+  };
+}
+
+export async function listConflicts(
+  client: PoolClient,
+  companyId: string,
+  scope: ReturnType<typeof workdayResolveScopeFor>,
+  filters: ConflictListFilters = {},
+): Promise<{ conflicts: ConflictListItem[]; total: number }> {
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  const offset = Math.max(filters.offset ?? 0, 0);
+  const scopeSql = scopeClause(scope).replace("$SCOPE", "$2");
+  const rows = await client.query<ConflictDbRow>(
+    `${CONFLICT_SELECT}
+      WHERE conflict.company_id = $1
+        AND ${scopeSql}
+        AND ($3::text IS NULL OR conflict.status = $3)
+        AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
+        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))
+      ORDER BY conflict.status, conflict.created_at ASC
+      LIMIT $6 OFFSET $7`,
+    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
+      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null, limit, offset],
+  );
+  const total = await client.query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM public.sync_conflicts conflict
+       LEFT JOIN public.work_entries e
+         ON e.company_id = conflict.company_id AND e.id = conflict.work_entry_id
+      WHERE conflict.company_id = $1
+        AND ${scopeSql}
+        AND ($3::text IS NULL OR conflict.status = $3)
+        AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
+        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))`,
+    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
+      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null],
+  );
+  return { conflicts: rows.rows.map(toListItem), total: Number(total.rows[0]?.n ?? 0) };
+}
+
+export type ConflictDetail = ConflictListItem & {
+  reason: string | null;
+  /** Samo uredski API (workdays.resolve); nikad se ne šalje uređaju. */
+  internalNote: string | null;
+  clockSkewMinutes: number | null;
+  server: {
+    authorName: string | null; source: "server";
+    receivedAt: string | null; kind: string | null;
+    projectId: string | null; machineLabel: string | null; times: EntryTimes | null;
+  } | null;
+  received: {
+    authorName: string | null; source: "telefon";
+    receivedAt: string; kind: string | null;
+    projectId: string | null; machineId: string | null; times: EntryTimes | null;
+  } | null;
+};
+
+export async function getConflictDetail(
+  client: PoolClient,
+  companyId: string,
+  scope: ReturnType<typeof workdayResolveScopeFor>,
+  conflictId: string,
+): Promise<ConflictDetail | null> {
+  const scopeSql = scopeClause(scope).replace("$SCOPE", "$2");
+  const rows = await client.query<ConflictDbRow>(
+    `${CONFLICT_SELECT}
+      WHERE conflict.company_id = $1 AND conflict.id = $3 AND ${scopeSql}`,
+    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null, conflictId],
+  );
+  const row = rows.rows[0];
+  if (!row) return null;
+  const base = toListItem(row);
+  const payload = row.received_payload ?? {};
+  const skew = typeof payload.deviceClockSkewMinutes === "number"
+    ? payload.deviceClockSkewMinutes
+    : (row.server_flags ?? []).includes("DEVICE_CLOCK_SKEW") ? 0 : null;
+  return {
+    ...base,
+    reason: row.resolution_reason,
+    internalNote: row.internal_note,
+    clockSkewMinutes: skew,
+    server: row.server_started ? {
+      authorName: row.server_author_name,
+      source: "server",
+      receivedAt: row.server_created?.toISOString() ?? null,
+      kind: row.server_kind,
+      projectId: row.server_project,
+      machineLabel: row.server_machine_code ? `${row.server_machine_code} · ${row.server_machine_name ?? ""}`.trim() : null,
+      times: base.serverTimes,
+    } : null,
+    received: {
+      authorName: row.received_author_name,
+      source: "telefon",
+      receivedAt: row.created_at.toISOString(),
+      kind: typeof payload.kind === "string" ? payload.kind : null,
+      projectId: typeof payload.projectId === "string" ? payload.projectId : null,
+      machineId: typeof payload.machineId === "string" ? payload.machineId : null,
+      times: base.receivedTimes,
+    },
+  };
+}
