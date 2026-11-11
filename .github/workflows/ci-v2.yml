@@ -113,6 +113,14 @@ jobs:
         working-directory: v2
         run: pnpm --filter @gradix/mobile exec expo export --platform android --output-dir /tmp/export-android
 
+      # Dio 1e: produkcijski paket ne smije sadržati kod kataloga komponenti.
+      - name: Produkcijski bundle bez kataloga (Dio 1e)
+        run: |
+          if grep -rqs "Katalog komponenti" /tmp/export-android; then
+            echo "Katalog je u produkcijskom bundle-u!" && exit 1
+          fi
+          echo "OK: katalog nije u produkcijskom bundle-u"
+
       - name: Migracije i role
         working-directory: v2
         run: |
