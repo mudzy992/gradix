@@ -52,6 +52,16 @@
   nerazriješene, Pregled kartica, E2E razrješenja) i 2c (ishod razrješenja
   stiže na telefon pull-om: Odbačeno + razlog / Ispravljeno + stara-nova
   vremena / Prihvaćeno; interna napomena nikad na uređaj).
+  **Provjerena staging/produkcijska adresa (2026-11-07):**
+  `https://gradix.ba101.top/ured/sukobi` (jedan domen; API je na istom
+  originu pod `/api`). Stranicu i API (`workdays.resolve`) vide tačno:
+  **OWNER, ADMIN, PROJECT_MANAGER, SITE_SUPERVISOR** — PM i šef samo svoj
+  R3 opseg; ACCOUNTANT ima samo `workdays.view` (Radni dani, čitanje) i
+  Sukobe ne vidi (navigacija skrivena, stranica preusmjerava na
+  `/nemate-pristup`, API 403). Ostale role (WORKER, DRIVER,
+  MACHINE_OPERATOR, MECHANIC) nemaju ni `workdays.view` ni
+  `workdays.resolve`. Izvor: `src/server/permissions.ts` + `nav.ts`
+  (`permission: "workdays.resolve"`), ne pretpostavka.
 - **R4b (potvrda/zaključavanje sedmice):** nije započet; čeka R4a-2.
 - **Mobilni E2E na uređaju:** Maestro fajlovi postoje, ne izvršavaju se u CI-ju; telefonski
   prolaz radi vlasnik po `docs/DEMO-STEP7.md`.
