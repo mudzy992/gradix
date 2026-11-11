@@ -80,8 +80,8 @@ describeDb("R4a-2 pull ishoda (PostgreSQL + ruta)", () => {
       );
       await admin.query(
         `INSERT INTO public.sessions (id, company_id, user_id, token_hash, expires_at)
-         VALUES ($1, $2, $3, 'hash', clock_timestamp() + interval '1 day')`,
-        [`ses_${user}`, CO, user],
+         VALUES ($1, $2, $3, $4, clock_timestamp() + interval '1 day')`,
+        [`ses_${user}`, CO, user, `hash-${user}`],
       );
     }
     await admin.query(
