@@ -25,6 +25,9 @@ type ConflictCandidate = {
   workDate: string;
   projectId: string;
   receivedPayload: Record<string, unknown>;
+  /** R4a-2: ishod razrješenja smije vidjeti i šef u čijem je opsegu radnik,
+      ne samo pošiljalac primljenog unosa (autor server unosa je često šef). */
+  resolved: boolean;
 };
 
 type WorkdayCandidate = {
@@ -135,6 +138,7 @@ function conflictCandidate(event: ForemanPullEvent): ConflictCandidate | null {
     projectId: receivedPayload.projectId,
     workDate: payload.workDate,
     receivedPayload,
+    resolved: payload.status === "RESOLVED",
   };
 }
 
@@ -174,11 +178,11 @@ const CONFLICT_SCOPE_SQL = `
   SELECT candidate.event_id
     FROM jsonb_to_recordset($4::jsonb)
       AS candidate(event_id text, entity_id text, worker_id text, work_date date,
-                   project_id text, received_payload jsonb)
+                   project_id text, received_payload jsonb, resolved boolean)
     JOIN public.sync_conflicts conflict
       ON conflict.company_id = $1
      AND conflict.id = candidate.entity_id
-     AND conflict.actor_id = $3
+     AND (conflict.actor_id = $3 OR candidate.resolved)
      AND conflict.received_payload = candidate.received_payload
    WHERE EXISTS (
      SELECT 1
@@ -237,7 +241,10 @@ const WORKDAY_SCOPE_SQL = `
 /**
  * Filter the company-wide change page to a foreman's historical R3 scope. Work entries are checked
  * against their tenant-owned row and workday, then against both assignment histories for work_date.
- * Conflicts are visible only to their actor. Breaks and tombstones (whose scope metadata is absent)
+ * Conflicts are visible only to their actor. Conflicts are visible to their actor;
+ * a RESOLVED outcome is additionally visible to a foreman whose R3 scope covers
+ * the worker/project/date (the server entry's author is often the foreman).
+ * Breaks and tombstones (whose scope metadata is absent)
  * fail closed; no payload is guessed into scope.
  */
 export async function foremanVisibleR4EventIds(
@@ -280,6 +287,7 @@ export async function foremanVisibleR4EventIds(
         work_date: candidate.workDate,
         project_id: candidate.projectId,
         received_payload: candidate.receivedPayload,
+        resolved: candidate.resolved,
       })))],
     );
     for (const row of result.rows) visible.add(row.event_id);
