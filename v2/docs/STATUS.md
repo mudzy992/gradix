@@ -47,8 +47,11 @@
 
 ## Ne radi / namjerno još nema
 
-- **R4a-2 razrješenje sukoba:** plan odobren (`docs/R4A2-PLAN.md`); dizajn se radi u katalogu
-  i `reference.html`, implementacija tek poslije odobrenja vlasnika.
+- **R4a-2 razrješenje sukoba:** završeno — 2a (dozvola/opseg/strana u sukobu),
+  2b (server), 2d (uredski web ekrani `/ured/sukobi`, bedž samo za
+  nerazriješene, Pregled kartica, E2E razrješenja) i 2c (ishod razrješenja
+  stiže na telefon pull-om: Odbačeno + razlog / Ispravljeno + stara-nova
+  vremena / Prihvaćeno; interna napomena nikad na uređaj).
 - **R4b (potvrda/zaključavanje sedmice):** nije započet; čeka R4a-2.
 - **Mobilni E2E na uređaju:** Maestro fajlovi postoje, ne izvršavaju se u CI-ju; telefonski
   prolaz radi vlasnik po `docs/DEMO-STEP7.md`.

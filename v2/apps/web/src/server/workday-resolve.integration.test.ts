@@ -29,6 +29,7 @@ const reason = "Dupli unos istog segmenta s telefona";
 const DATES: Record<string, string> = {
   acc: "2026-11-10", short: "2026-11-17", rej: "2026-11-11", recv: "2026-11-12",
   corr: "2026-11-13", race: "2026-11-14", party: "2026-11-15", scope: "2026-11-16",
+  keep: "2026-11-18", term: "2026-11-19", hours: "2026-11-20",
 };
 
 async function seedConflict(admin: Pool, suffix: string): Promise<string> {
@@ -269,6 +270,66 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
       conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-tenant-${RUN}`,
     });
     expect(hidden.outcome).toBe("NOT_FOUND");
+  });
+
+  it("provjera (a): prihvaćen segment i dalje blokira preklapanje", async () => {
+    const conflictId = await seedConflict(admin, "keep");
+    const result = await resolveWorkdayConflict(app, adminActor, {
+      conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-keep-${RUN}`,
+    });
+    expect(result.outcome).toBe("RESOLVED");
+    await expect(withCompany(app, companyId(CO), (client) => client.query(
+      `INSERT INTO public.work_entries
+         (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
+       VALUES ('we_rsv_keep_block_${RUN}', $1, 'wd_rsv_keep_${RUN}', 'wrk_rsv_worker_${RUN}', 'WORK',
+               '2026-11-18T09:00:00Z', '2026-11-18T10:00:00Z', 'KNOWN_END', 'prj_rsv_a_${RUN}',
+               'usr_rsv_worker_${RUN}', 'usr_rsv_worker_${RUN}')`, [CO],
+    ))).rejects.toThrow(/WORK_ENTRY_OVERLAP/);
+  });
+
+  it("provjera (b): odbačen segment se ne može reaktivirati direktnim upitom (gradix_app)", async () => {
+    const conflictId = await seedConflict(admin, "term");
+    const result = await resolveWorkdayConflict(app, adminActor, {
+      conflictId, kind: "REJECTED", reason, idempotencyKey: `key-term-${RUN}`,
+    });
+    expect(result.outcome).toBe("RESOLVED");
+    await expect(withCompany(app, companyId(CO), (client) => client.query(
+      `UPDATE public.work_entries
+          SET resolution_state = 'ACTIVE', rejected_at = NULL, rejected_by = NULL, rejection_reason = NULL
+        WHERE company_id = $1 AND id = $2`, [CO, `we_rsv_term_${RUN}`],
+    ))).rejects.toThrow(/WORK_ENTRY_REJECTED_TERMINAL/);
+    const row = await admin.query<{ resolution_state: string }>(
+      "SELECT resolution_state FROM public.work_entries WHERE id = $1", [`we_rsv_term_${RUN}`]);
+    expect(row.rows[0]!.resolution_state).toBe("REJECTED");
+  });
+
+  it("provjera (c): odbacivanje mijenja zbir aktivnih sati tačno za odbačeni segment, ukupan zbir redova ostaje", async () => {
+    const conflictId = await seedConflict(admin, "hours");
+    await admin.query(
+      `INSERT INTO public.work_entries
+         (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
+       VALUES ('we_rsv_hours_extra_${RUN}', $1, 'wd_rsv_hours_${RUN}', 'wrk_rsv_worker_${RUN}', 'WORK',
+               '2026-11-20T16:00:00Z', '2026-11-20T17:00:00Z', 'KNOWN_END', 'prj_rsv_a_${RUN}',
+               'usr_rsv_worker_${RUN}', 'usr_rsv_worker_${RUN}')`,
+      [CO],
+    );
+    const sums = async () => {
+      const r = await admin.query<{ active_h: string; total_h: string }>(
+        `SELECT COALESCE(sum(extract(epoch FROM (ended_at - started_at)) / 3600) FILTER (WHERE resolution_state = 'ACTIVE'), 0)::text AS active_h,
+                COALESCE(sum(extract(epoch FROM (ended_at - started_at)) / 3600), 0)::text AS total_h
+           FROM public.work_entries WHERE company_id = $1 AND workday_id = $2`,
+        [CO, `wd_rsv_hours_${RUN}`]);
+      return { active: Number(r.rows[0]!.active_h), total: Number(r.rows[0]!.total_h) };
+    };
+    const before = await sums();
+    expect(before).toEqual({ active: 8.5, total: 8.5 });
+    const result = await resolveWorkdayConflict(app, adminActor, {
+      conflictId, kind: "REJECTED", reason, idempotencyKey: `key-hours-${RUN}`,
+    });
+    expect(result.outcome).toBe("RESOLVED");
+    const after = await sums();
+    // Namjerno: aktivni zbir pada tačno za odbačenih 7.5 h; red ostaje pa ukupan zbir ne mrda.
+    expect(after).toEqual({ active: 1, total: 8.5 });
   });
 
   it("podsjetnik: broji samo nerazriješene; prag iz firme", async () => {

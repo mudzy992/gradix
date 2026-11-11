@@ -55,6 +55,7 @@ vi.mock("../db/sqlite", () => ({ openDb: async () => ({}) }));
 vi.mock("../db/r4-outbox", () => ({
   getActiveLocalAccount: async () => ({ companyId: "c1", userId: "u1" }),
   readOutboxEntries: async () => state.entries,
+  readResolutionOutcomes: async () => new Map(),
   queueOwnWorkEntry: async () => ({}),
   saveForemanWorkerRoster: async () => undefined,
   readForemanWorkerRoster: async () => ({ workers: state.workers, fetchedAt: null }),

@@ -17,6 +17,9 @@ import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import Shell, { type NavGroup } from "./shell";
 import { navGroupsForRoles } from "./nav";
+import { can } from "@/server/permissions";
+import { countOpenConflicts } from "@/server/workday-resolve";
+import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
@@ -40,7 +43,17 @@ export default async function AppShell({ children }: { children: React.ReactNode
     return result.rows[0] ?? null;
   });
 
-  const groups: NavGroup[] = navGroupsForRoles(ctx.roles);
+  // Bedž broji samo nerazriješene sukobe u opsegu osobe; bez dozvole nema ni upita.
+  let badges: Partial<Record<string, { count: number; older: number }>> = {};
+  if (can(ctx.roles, "workdays.resolve")) {
+    const conflictCounts = await withCompany(pool, ctx.companyId, async (client) => {
+      const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
+      return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId));
+    });
+    badges = { "/ured/sukobi": { count: conflictCounts.open, older: conflictCounts.olderThanThreshold } };
+  }
+
+  const groups: NavGroup[] = navGroupsForRoles(ctx.roles, badges);
 
   // Ime za header: ime i prezime iz baze, ne iz tokena (token nosi samo id).
   const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : "Korisnik";

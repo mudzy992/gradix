@@ -32925,6 +32925,2713 @@
         }
       }
     },
+    "/api/workday-conflicts": {
+      "get": {
+        "operationId": "get_workday-conflicts",
+        "summary": "Lista sukoba radnih dana za razrješenje (workdays.resolve, opseg iz sesije).",
+        "tags": [
+          "workday-conflicts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "conflicts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "OPEN",
+                                  "RESOLVED"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "description": "ISO 8601, UTC"
+                              },
+                              "ageDays": {
+                                "type": "number"
+                              },
+                              "workerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "projectId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "projectCode": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "projectName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "workDate": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "serverTimes": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "startedAt": {
+                                        "type": "string"
+                                      },
+                                      "endedAt": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "endState": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "startedAt",
+                                      "endedAt",
+                                      "endState"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "receivedTimes": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "startedAt": {
+                                        "type": "string"
+                                      },
+                                      "endedAt": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "endState": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "startedAt",
+                                      "endedAt",
+                                      "endState"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "resolutionKind": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "ACCEPT_SERVER",
+                                      "ACCEPT_RECEIVED",
+                                      "CORRECTED_TIMES",
+                                      "REJECTED"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "resolvedByName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resolvedAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resolvedByParty": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "status",
+                              "createdAt",
+                              "ageDays",
+                              "workerName",
+                              "projectId",
+                              "projectCode",
+                              "projectName",
+                              "workDate",
+                              "serverTimes",
+                              "receivedTimes",
+                              "resolutionKind",
+                              "resolvedByName",
+                              "resolvedAt",
+                              "resolvedByParty"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "conflicts",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `workdays.resolve`.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "RESOLVED"
+              ]
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "olderThanDays",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ]
+      }
+    },
+    "/api/workday-conflicts/counts": {
+      "get": {
+        "operationId": "get_workday-conflicts_counts",
+        "summary": "Broj nerazriješenih sukoba i broj starijih od praga firme (bedž/kartica).",
+        "tags": [
+          "workday-conflicts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "number"
+                        },
+                        "olderThanThreshold": {
+                          "type": "number"
+                        },
+                        "thresholdDays": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "open",
+                        "olderThanThreshold",
+                        "thresholdDays"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `workdays.resolve`."
+      }
+    },
+    "/api/workday-conflicts/{id}": {
+      "get": {
+        "operationId": "get_workday-conflicts_id",
+        "summary": "Detalj sukoba: oba unosa, autor, izvor, odstupanje sata.",
+        "tags": [
+          "workday-conflicts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "conflict": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "OPEN",
+                                "RESOLVED"
+                              ]
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "description": "ISO 8601, UTC"
+                            },
+                            "ageDays": {
+                              "type": "number"
+                            },
+                            "workerName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectCode": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "projectName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "workDate": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "serverTimes": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "startedAt": {
+                                      "type": "string"
+                                    },
+                                    "endedAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "endState": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "startedAt",
+                                    "endedAt",
+                                    "endState"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "receivedTimes": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "startedAt": {
+                                      "type": "string"
+                                    },
+                                    "endedAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "endState": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "startedAt",
+                                    "endedAt",
+                                    "endState"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "resolutionKind": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "ACCEPT_SERVER",
+                                    "ACCEPT_RECEIVED",
+                                    "CORRECTED_TIMES",
+                                    "REJECTED"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "resolvedByName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "resolvedAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "resolvedByParty": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "internalNote": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "clockSkewMinutes": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            },
+                            "server": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "authorName": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "const": "server"
+                                    },
+                                    "receivedAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "kind": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "projectId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "machineLabel": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "times": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "startedAt": {
+                                              "type": "string"
+                                            },
+                                            "endedAt": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "endState": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "startedAt",
+                                            "endedAt",
+                                            "endState"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "authorName",
+                                    "source",
+                                    "receivedAt",
+                                    "kind",
+                                    "projectId",
+                                    "machineLabel",
+                                    "times"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "received": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "authorName": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "const": "telefon"
+                                    },
+                                    "receivedAt": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "projectId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "machineId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "times": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "startedAt": {
+                                              "type": "string"
+                                            },
+                                            "endedAt": {
+                                              "type": [
+                                                "string",
+                                                "null"
+                                              ]
+                                            },
+                                            "endState": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "startedAt",
+                                            "endedAt",
+                                            "endState"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "authorName",
+                                    "source",
+                                    "receivedAt",
+                                    "kind",
+                                    "projectId",
+                                    "machineId",
+                                    "times"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "createdAt",
+                            "ageDays",
+                            "workerName",
+                            "projectId",
+                            "projectCode",
+                            "projectName",
+                            "workDate",
+                            "serverTimes",
+                            "receivedTimes",
+                            "resolutionKind",
+                            "resolvedByName",
+                            "resolvedAt",
+                            "resolvedByParty",
+                            "reason",
+                            "internalNote",
+                            "clockSkewMinutes",
+                            "server",
+                            "received"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "conflict"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `workdays.resolve`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/workday-conflicts/{id}/resolve": {
+      "post": {
+        "operationId": "post_workday-conflicts_id_resolve",
+        "summary": "Razrješenje sukoba u jednoj transakciji (idempotentno; razlog vidi autor unosa, interna napomena nikad ne ide na uređaj).",
+        "tags": [
+          "workday-conflicts"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "RESOLVED",
+                            "ALREADY_RESOLVED",
+                            "VALIDATION_FAILED",
+                            "FORBIDDEN",
+                            "NOT_FOUND"
+                          ]
+                        },
+                        "conflictId": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "ACCEPT_SERVER",
+                            "ACCEPT_RECEIVED",
+                            "CORRECTED_TIMES",
+                            "REJECTED"
+                          ]
+                        },
+                        "resolvedBy": {
+                          "type": "string"
+                        },
+                        "resolvedAt": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "resolvedByParty": {
+                          "type": "boolean"
+                        },
+                        "oldTimes": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "startedAt": {
+                                  "type": "string"
+                                },
+                                "endedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "endState": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "startedAt",
+                                "endedAt",
+                                "endState"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "newTimes": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "startedAt": {
+                                  "type": "string"
+                                },
+                                "endedAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "endState": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "startedAt",
+                                "endedAt",
+                                "endState"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rejectedEntryId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "acceptedEntryId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "outcome",
+                        "conflictId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `workdays.resolve`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ACCEPT_SERVER",
+                      "ACCEPT_RECEIVED",
+                      "CORRECTED_TIMES",
+                      "REJECTED"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 500
+                  },
+                  "internalNote": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "correctedTimes": {
+                    "type": "object",
+                    "properties": {
+                      "startedAt": {
+                        "type": "string"
+                      },
+                      "endedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "endState": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "startedAt",
+                      "endedAt",
+                      "endState"
+                    ]
+                  },
+                  "correctedTarget": {
+                    "type": "string",
+                    "enum": [
+                      "SERVER",
+                      "RECEIVED"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "reason",
+                  "idempotencyKey"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sync/push": {
       "post": {
         "operationId": "post_sync_push",

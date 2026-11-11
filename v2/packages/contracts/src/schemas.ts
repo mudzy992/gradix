@@ -819,3 +819,108 @@ export const OverrideApproveInput = z.object({
   toDate: z.string().nullable().optional(),
 });
 export type OverrideApproveInput = z.infer<typeof OverrideApproveInput>;
+
+/* ------------------------------------------- R4a-2 razrješenje sukoba */
+
+export const ConflictEntryTimes = z.object({
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  endState: z.string(),
+});
+export type ConflictEntryTimes = z.infer<typeof ConflictEntryTimes>;
+
+export const WorkdayConflict = z.object({
+  id: z.string(),
+  status: z.enum(["OPEN", "RESOLVED"]),
+  createdAt: IsoDate,
+  ageDays: z.number(),
+  workerName: z.string().nullable(),
+  projectId: z.string().nullable(),
+  projectCode: z.string().nullable(),
+  projectName: z.string().nullable(),
+  workDate: z.string().nullable(),
+  serverTimes: ConflictEntryTimes.nullable(),
+  receivedTimes: ConflictEntryTimes.nullable(),
+  resolutionKind: z.enum(["ACCEPT_SERVER", "ACCEPT_RECEIVED", "CORRECTED_TIMES", "REJECTED"]).nullable(),
+  resolvedByName: z.string().nullable(),
+  resolvedAt: z.string().nullable(),
+  resolvedByParty: z.boolean(),
+});
+export type WorkdayConflict = z.infer<typeof WorkdayConflict>;
+
+export const WorkdayConflictsResponse = z.object({
+  conflicts: z.array(WorkdayConflict),
+  total: z.number(),
+});
+export type WorkdayConflictsResponse = z.infer<typeof WorkdayConflictsResponse>;
+
+export const WorkdayConflictListQuery = z.object({
+  status: z.enum(["OPEN", "RESOLVED"]).optional(),
+  projectId: z.string().optional(),
+  olderThanDays: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+export type WorkdayConflictListQuery = z.infer<typeof WorkdayConflictListQuery>;
+
+export const WorkdayConflictDetail = WorkdayConflict.extend({
+  reason: z.string().nullable(),
+  internalNote: z.string().nullable(),
+  clockSkewMinutes: z.number().nullable(),
+  server: z.object({
+    authorName: z.string().nullable(),
+    source: z.literal("server"),
+    receivedAt: z.string().nullable(),
+    kind: z.string().nullable(),
+    projectId: z.string().nullable(),
+    machineLabel: z.string().nullable(),
+    times: ConflictEntryTimes.nullable(),
+  }).nullable(),
+  received: z.object({
+    authorName: z.string().nullable(),
+    source: z.literal("telefon"),
+    receivedAt: z.string(),
+    kind: z.string().nullable(),
+    projectId: z.string().nullable(),
+    machineId: z.string().nullable(),
+    times: ConflictEntryTimes.nullable(),
+  }).nullable(),
+});
+export type WorkdayConflictDetail = z.infer<typeof WorkdayConflictDetail>;
+
+export const WorkdayConflictDetailResponse = z.object({ conflict: WorkdayConflictDetail });
+export type WorkdayConflictDetailResponse = z.infer<typeof WorkdayConflictDetailResponse>;
+
+export const WorkdayConflictCountsResponse = z.object({
+  open: z.number(),
+  olderThanThreshold: z.number(),
+  thresholdDays: z.number(),
+});
+export type WorkdayConflictCountsResponse = z.infer<typeof WorkdayConflictCountsResponse>;
+
+/** Razlog je vidljiv autoru odbačenog unosa; interna napomena nikad ne ide na uređaj. */
+export const ResolveConflictInput = z.object({
+  kind: z.enum(["ACCEPT_SERVER", "ACCEPT_RECEIVED", "CORRECTED_TIMES", "REJECTED"]),
+  reason: z.string().min(10).max(500),
+  internalNote: z.string().min(1).max(2000).nullable().optional(),
+  idempotencyKey: z.string().min(1).max(200),
+  correctedTimes: ConflictEntryTimes.optional(),
+  correctedTarget: z.enum(["SERVER", "RECEIVED"]).optional(),
+});
+export type ResolveConflictInput = z.infer<typeof ResolveConflictInput>;
+
+export const ResolveConflictResponse = z.object({
+  outcome: z.enum(["RESOLVED", "ALREADY_RESOLVED", "VALIDATION_FAILED", "FORBIDDEN", "NOT_FOUND"]),
+  conflictId: z.string(),
+  kind: z.enum(["ACCEPT_SERVER", "ACCEPT_RECEIVED", "CORRECTED_TIMES", "REJECTED"]).optional(),
+  resolvedBy: z.string().optional(),
+  resolvedAt: z.string().optional(),
+  reason: z.string().optional(),
+  resolvedByParty: z.boolean().optional(),
+  oldTimes: ConflictEntryTimes.nullable().optional(),
+  newTimes: ConflictEntryTimes.nullable().optional(),
+  rejectedEntryId: z.string().nullable().optional(),
+  acceptedEntryId: z.string().nullable().optional(),
+  code: z.string().optional(),
+});
+export type ResolveConflictResponse = z.infer<typeof ResolveConflictResponse>;

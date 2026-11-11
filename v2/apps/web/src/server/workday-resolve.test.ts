@@ -23,7 +23,13 @@ describe("R4a-2: payload za uređaj nikad ne nosi internu napomenu", () => {
       newTimes: null,
       rejectedEntryId: "we_1",
       acceptedEntryId: null,
+      correctedTarget: null,
+      localId: "local-1",
+      workerId: "wrk_1",
+      workDate: "2026-11-10",
     });
+    expect(payload.localId).toBe("local-1");
+    expect(payload.kind).toBe("REJECTED");
     const serialized = JSON.stringify(payload);
     expect(serialized).not.toMatch(/internal/i);
     expect(payload.reason).toContain("duplikat");

@@ -234,6 +234,53 @@ try {
     });
   }
 
+  // R4a-2 demo sukobi: preklopljen unos radnika (telefon) i šefa (server),
+  // jedan sa odstupanjem sata telefona, jedan stariji od praga (3 dana).
+  // SEED_DEMO ponašanje se ne mijenja — ovo je običan idempotentan demo podatak.
+  await withCompany(pool, companyId("cmp_demo"), async (client) => {
+    const demoConflicts = [
+      { id: "cnf_demo_1", day: "2026-11-05", entry: "we_demo_srv_1", local: "demo-tel-1", ageDays: 1, skew: null as number | null,
+        server: ["07:30", "15:30"], received: ["08:00", "16:00"] },
+      { id: "cnf_demo_2", day: "2026-11-04", entry: "we_demo_srv_2", local: "demo-tel-2", ageDays: 1, skew: 6,
+        server: ["07:00", "15:00"], received: ["07:06", "15:06"] },
+      { id: "cnf_demo_3", day: "2026-11-02", entry: "we_demo_srv_3", local: "demo-tel-3", ageDays: 5, skew: null,
+        server: ["07:30", "15:30"], received: ["08:15", "16:15"] },
+    ];
+    for (const c of demoConflicts) {
+      await client.query(
+        `INSERT INTO workdays (id, company_id, worker_id, work_date, status, created_by, updated_by)
+         VALUES ($1, 'cmp_demo', 'wrk_demo_amar', $2::date, 'DRAFT', 'usr_sef', 'usr_sef')
+         ON CONFLICT DO NOTHING`,
+        [`wd_demo_${c.id}`, c.day],
+      );
+      await client.query(
+        `INSERT INTO work_entries
+           (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, machine_id, created_by, updated_by)
+         VALUES ($1, 'cmp_demo', $2, 'wrk_demo_amar', 'WORK',
+                 ($3 || 'T' || $4 || ':00+01:00')::timestamptz, ($3 || 'T' || $5 || ':00+01:00')::timestamptz,
+                 'KNOWN_END', 'prj_dionica', 'mch_bager', 'usr_sef', 'usr_sef')
+         ON CONFLICT (company_id, id) DO NOTHING`,
+        [c.entry, `wd_demo_${c.id}`, c.day, c.server[0], c.server[1]],
+      );
+      await client.query(
+        `INSERT INTO sync_conflicts
+           (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version, created_at)
+         VALUES ($1, 'cmp_demo', 'usr_radnik', $2, $3, $4::jsonb, $5, 1, clock_timestamp() - make_interval(days => $6))
+         ON CONFLICT (company_id, actor_id, local_id) DO NOTHING`,
+        [c.id, c.local, c.entry, JSON.stringify({
+          kind: "WORK",
+          startedAt: `${c.day}T${c.received[0]}:00+01:00`,
+          endedAt: `${c.day}T${c.received[1]}:00+01:00`,
+          endState: "KNOWN_END",
+          projectId: "prj_dionica",
+          machineId: "mch_bager",
+          note: null,
+          ...(c.skew !== null ? { deviceClockSkewMinutes: c.skew } : {}),
+        }), "a".repeat(64), c.ageDays],
+      );
+    }
+  });
+
   console.log(
     `Seed gotov: ${companies.length} firme, ${users.length} korisnika, ${machines.length} mašina, ` +
       `${projects.length} projekta, ${assignments.length} dodjela.`,

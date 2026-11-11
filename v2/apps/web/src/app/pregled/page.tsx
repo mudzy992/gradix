@@ -3,12 +3,15 @@ import { redirect } from "next/navigation";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE, verifyAccessToken } from "@/server/session";
-import { Card, EmptyState, Icon, Inline, PageHeader, Stack } from "@/components/ui/index";
+import { Card, Chip, EmptyState, Icon, Inline, PageHeader, Stack, Stat } from "@/components/ui/index";
 import { MachinesTable } from "./machines-table";
 import { ScopeNotice } from "@/components/scope-notice";
 import { ObligationSummary } from "@/components/obligation-summary";
 import { can } from "@/server/permissions";
 import { listObligations } from "@/server/obligation-service";
+import { countOpenConflicts } from "@/server/workday-resolve";
+import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +96,14 @@ export default async function PregledPage() {
     : null;
 
 
+  // Kartica sukoba samo za one koji ih smiju razrješavati (workdays.resolve).
+  const conflictCounts = can(data.roles, "workdays.resolve")
+    ? await withCompany(await getVerifiedPool(), claims.companyId as CompanyId, async (client) => {
+        const viewerWorkerId = await resolveViewerWorkerId(client, claims.companyId, claims.sub);
+        return countOpenConflicts(client, claims.companyId, workdayResolveScopeFor(data.roles, viewerWorkerId));
+      })
+    : null;
+
   const firstName = data.profile?.first_name ?? "";
   const machineCount = data.machines.length;
 
@@ -134,6 +145,20 @@ export default async function PregledPage() {
       </div>
 
       {obligationCounts ? <ObligationSummary counts={obligationCounts} /> : null}
+
+      {conflictCounts ? (
+        <Card>
+          <h2 className="gx-section-title">Sukobi radnih dana</h2>
+          <Inline>
+            <Stat label="Nerazriješeni sukobi" value={String(conflictCounts.open)} />
+            <Stat label={`Stariji od ${conflictCounts.thresholdDays} dana`} value={String(conflictCounts.olderThanThreshold)} />
+            {conflictCounts.olderThanThreshold > 0 ? (
+              <Chip tone="hot">{conflictCounts.olderThanThreshold} stariji od {conflictCounts.thresholdDays} dana</Chip>
+            ) : null}
+            <Link href="/ured/sukobi">Otvori razrješenje</Link>
+          </Inline>
+        </Card>
+      ) : null}
 
       <Card>
         <div className="gx-section-head">
