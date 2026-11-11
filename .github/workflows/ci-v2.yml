@@ -210,7 +210,7 @@ jobs:
         working-directory: v2/apps/web
         env:
           REQUIRE_DB_TESTS: "1"
-        run: pnpm exec vitest run src/server/workday-review.integration.test.ts src/server/scope-roles.integration.test.ts --reporter=github-actions
+        run: pnpm exec vitest run src/server/workday-review.integration.test.ts src/server/scope-roles.integration.test.ts src/server/workday-resolve-pull.integration.test.ts src/server/workday-resolve.integration.test.ts src/server/foreman-sync.integration.test.ts --reporter=github-actions
 
       - name: Web test padovi kao artefakt (imena i poruke)
         if: failure()
