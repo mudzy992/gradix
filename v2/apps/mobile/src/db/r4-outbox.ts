@@ -7,6 +7,7 @@ import {
   type R4WorkEntryPayload,
 } from "@gradix/domain";
 import type { LocalSqlite } from "./migrations";
+import { resolutionsByLocalId, type ResolutionDisplay } from "../sync/r4-resolution";
 
 export type LocalAccount = { companyId: string; userId: string };
 export type LocalForemanWorker = { id: string; name: string };
@@ -356,6 +357,33 @@ export function createSqliteR4SyncStore(db: LocalSqlite, account: LocalAccount) 
       });
     },
   };
+}
+
+/**
+ * R4a-2 ishodi razrješenja iz pull događaja (sync_events), po lokalnom zapisu.
+ * Čita se iz istih događaja koje je pull već upisao — bez novog zahtjeva.
+ */
+export async function readResolutionOutcomes(
+  db: LocalSqlite,
+  account: LocalAccount,
+): Promise<Map<string, ResolutionDisplay>> {
+  await assertActiveAccount(db, account);
+  const rows = await db.getAllAsync<{ payload_json: string | null }>(
+    `SELECT payload_json FROM sync_events
+      WHERE company_id = ? AND user_id = ? AND entity_type = 'sync_conflict'
+      ORDER BY cursor_seq`,
+    [account.companyId, account.userId],
+  );
+  const events = rows.flatMap((row) => {
+    if (!row.payload_json) return [];
+    try {
+      const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+      return [{ entityType: "sync_conflict", payload }];
+    } catch {
+      return [];
+    }
+  });
+  return resolutionsByLocalId(events);
 }
 
 export type LocalOutboxEntry = {

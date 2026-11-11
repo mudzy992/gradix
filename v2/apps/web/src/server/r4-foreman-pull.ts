@@ -41,6 +41,9 @@ const WORK_ENTRY_FIELDS = [
 const WORKDAY_FIELDS = ["id", "workerId", "workerName", "workDate", "status", "headerVersion"] as const;
 const CONFLICT_FIELDS = [
   "id", "localId", "workEntryId", "workerId", "workerName", "workDate", "reason", "serverVersion",
+  // R4a-2 ishod razrješenja (device-payload iz workday-resolve): bez interne napomene,
+  // koja se u ovaj payload nikad i ne upisuje.
+  "status", "kind", "oldTimes", "newTimes", "rejectedEntryId", "acceptedEntryId", "correctedTarget",
 ] as const;
 const RECEIVED_WORK_FIELDS = [
   "kind", "startedAt", "endedAt", "endState", "projectId", "machineId", "note",

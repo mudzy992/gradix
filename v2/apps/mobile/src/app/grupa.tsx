@@ -8,7 +8,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { machines, myProjects, pullForemanWorkers } from "../api/client";
 import {
   getActiveLocalAccount, queueForemanGroupWorkEntries, readForemanWorkerRoster,
-  readOutboxEntries, saveForemanWorkerRoster, type LocalOutboxEntry,
+  readOutboxEntries, readResolutionOutcomes, saveForemanWorkerRoster, type LocalOutboxEntry,
 } from "../db/r4-outbox";
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
@@ -33,6 +33,7 @@ export default function GrupaScreen() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrides, setOverrides] = useState<Record<string, { started: string; ended: string }>>({});
   const [entries, setEntries] = useState<LocalOutboxEntry[]>([]);
+  const [resolutions, setResolutions] = useState<Map<string, { label: string; detail: string }>>(new Map());
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
@@ -58,6 +59,7 @@ export default function GrupaScreen() {
     setWorkers(cached.workers);
     setSelected(new Set(cached.workers.map((worker) => worker.id)));
     setEntries(await readOutboxEntries(db, account));
+    setResolutions(await readResolutionOutcomes(db, account));
   }, []);
 
   const load = useCallback(async () => {
@@ -124,6 +126,7 @@ export default function GrupaScreen() {
         });
       }
       setEntries(await readOutboxEntries(db, account));
+    setResolutions(await readResolutionOutcomes(db, account));
       setMessage(`Sačuvano na telefonu za ${chosen.length} radnika. Pošalji kad bude veze.`);
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : "Grupni unos se nije mogao sačuvati.");
@@ -138,6 +141,7 @@ export default function GrupaScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       const outcome = await runSqliteR4Sync(db, account);
       setEntries(await readOutboxEntries(db, account));
+    setResolutions(await readResolutionOutcomes(db, account));
       setSyncFailed(outcome.retry > 0);
       setMessage(`${sendResultMessage(outcome)} Ishod po radniku je ispod.`);
     } catch {
@@ -186,8 +190,13 @@ export default function GrupaScreen() {
                 label={worker.name}
                 checked={selected.has(worker.id)}
                 onToggle={() => toggleWorker(worker.id)}
-                right={latest ? outcomeFor(latest.status, latest.lastError).label : "Nije poslano"}
+                right={latest
+                  ? (resolutions.get(latest.localId)?.label ?? outcomeFor(latest.status, latest.lastError).label)
+                  : "Nije poslano"}
               />
+              {latest && resolutions.get(latest.localId) ? (
+                <Text variant="muted">{resolutions.get(latest.localId)!.detail}</Text>
+              ) : null}
               <TextField
                 label={`Pojedinačno vrijeme za ${worker.name}`}
                 value={override ? `${override.started}-${override.ended}` : ""}

@@ -227,3 +227,55 @@ describe("foreman R4 pull scope candidate handling", () => {
     expect(serialized).not.toContain("+38700000000");
   });
 });
+
+describe("R4a-2: ishod razrješenja kroz foreman pull", () => {
+  it("resolution događaj prolazi kandidatsku provjeru, a sanitize zadržava ishod bez interne napomene", async () => {
+    const { client } = mockClient();
+    const resolution = event({
+      id: "change-resolution",
+      type: "sync_conflict",
+      entityId: "conflict-allowed",
+      payload: {
+        id: "conflict-allowed",
+        status: "RESOLVED",
+        kind: "REJECTED",
+        reason: "Dupli unos istog segmenta s telefona",
+        resolvedByParty: true,
+        internalNote: "INTERNA — provjeri s terena",
+        localId: "local-9",
+        workerId: WORKER,
+        workDate: DATE,
+        workEntryId: "entry-allowed",
+        oldTimes: { startedAt: `${DATE}T08:00:00+01:00`, endedAt: `${DATE}T15:30:00+01:00`, endState: "KNOWN_END" },
+        newTimes: null,
+        rejectedEntryId: "entry-allowed",
+        acceptedEntryId: null,
+        correctedTarget: null,
+        receivedPayload: {
+          kind: "WORK",
+          projectId: PROJECT,
+          startedAt: `${DATE}T08:00:00+01:00`,
+          endedAt: `${DATE}T15:30:00+01:00`,
+          endState: "KNOWN_END",
+          machineId: null,
+          note: null,
+        },
+      },
+    });
+    const visible = await foremanVisibleR4EventIds(client, COMPANY, FOREMAN_WORKER, FOREMAN_USER, [resolution]);
+    expect(visible.has("change-resolution")).toBe(true);
+
+    const safe = sanitizeForemanPullPayload("sync_conflict", resolution.payload);
+    expect(safe).toMatchObject({
+      status: "RESOLVED",
+      kind: "REJECTED",
+      reason: "Dupli unos istog segmenta s telefona",
+      rejectedEntryId: "entry-allowed",
+    });
+    expect(safe?.oldTimes).toBeTruthy();
+    const serialized = JSON.stringify(safe);
+    expect(serialized).not.toContain("INTERNA");
+    expect(serialized).not.toContain("internalNote");
+    expect(serialized).not.toContain("resolvedByParty");
+  });
+});

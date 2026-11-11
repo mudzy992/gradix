@@ -4,7 +4,8 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { machines, me, myProjects } from "../api/client";
-import { getActiveLocalAccount, queueOwnWorkEntry, readOutboxEntries, type LocalOutboxEntry } from "../db/r4-outbox";
+import { getActiveLocalAccount, queueOwnWorkEntry, readOutboxEntries, readResolutionOutcomes, type LocalOutboxEntry } from "../db/r4-outbox";
+import type { ResolutionDisplay } from "../sync/r4-resolution";
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { Banner, Button, CardView, ListItem, Screen, Segmented, Text, TextField } from "../ui";
@@ -25,6 +26,7 @@ export default function MojDanScreen() {
   const [started, setStarted] = useState("07:30");
   const [ended, setEnded] = useState("15:30");
   const [entries, setEntries] = useState<LocalOutboxEntry[]>([]);
+  const [resolutions, setResolutions] = useState<Map<string, ResolutionDisplay>>(new Map());
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
@@ -40,7 +42,7 @@ export default function MojDanScreen() {
       setProjectId((current) => current || projectData.projects[0]?.id || "");
       const db = await openDb();
       const account = await getActiveLocalAccount(db);
-      if (account) setEntries(await readOutboxEntries(db, account));
+      if (account) { setEntries(await readOutboxEntries(db, account)); setResolutions(await readResolutionOutcomes(db, account)); }
     } catch {
       setError("Podaci se nisu mogli učitati. Provjeri vezu i pokušaj ponovo.");
     } finally {
@@ -69,6 +71,7 @@ export default function MojDanScreen() {
         note: null,
       });
       setEntries(await readOutboxEntries(db, account));
+      setResolutions(await readResolutionOutcomes(db, account));
       setMessage("Sačuvano na telefonu. Pošalji kad bude veze.");
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : "Unos se nije mogao sačuvati.");
@@ -83,6 +86,7 @@ export default function MojDanScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       const outcome = await runSqliteR4Sync(db, account);
       setEntries(await readOutboxEntries(db, account));
+      setResolutions(await readResolutionOutcomes(db, account));
       setSyncFailed(outcome.retry > 0);
       setMessage(sendResultMessage(outcome));
     } catch {
@@ -117,9 +121,17 @@ export default function MojDanScreen() {
       <CardView>
         <Text variant="label">Moji zapisi i ishod slanja</Text>
         {entries.length === 0 ? <Text variant="muted">Još nema zapisa na ovom telefonu.</Text> : null}
-        {entries.map((entry) => (
-          <ListItem key={entry.localId} title={entry.createdAt.slice(0, 10)} right={outcomeFor(entry.status, entry.lastError).label} />
-        ))}
+        {entries.map((entry) => {
+          const resolution = resolutions.get(entry.localId);
+          return (
+            <ListItem
+              key={entry.localId}
+              title={entry.createdAt.slice(0, 10)}
+              meta={resolution?.detail}
+              right={resolution?.label ?? outcomeFor(entry.status, entry.lastError).label}
+            />
+          );
+        })}
       </CardView>
     </Screen>
   );

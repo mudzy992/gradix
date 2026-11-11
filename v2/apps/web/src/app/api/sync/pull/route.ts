@@ -138,8 +138,14 @@ export async function GET(request: NextRequest): Promise<Response> {
               [ctx.companyId, workerId, workEntryIds],
             ) : Promise.resolve({ rows: [] as { id: string }[] }),
             conflictIds.length ? client.query<{ id: string }>(
-              "SELECT id FROM public.sync_conflicts WHERE company_id = $1 AND actor_id = $2 AND id = ANY($3::text[])",
-              [ctx.companyId, ctx.userId, conflictIds],
+              // Autor primljenog unosa ILI radnik čiji je server-unos u sukobu:
+              // ishod razrješenja moraju vidjeti obje strane, ne samo pošiljalac.
+              `SELECT id FROM public.sync_conflicts
+                WHERE company_id = $1 AND id = ANY($3::text[])
+                  AND (actor_id = $2 OR work_entry_id IN (
+                    SELECT id FROM public.work_entries WHERE company_id = $1 AND worker_id = $4
+                  ))`,
+              [ctx.companyId, ctx.userId, conflictIds, workerId],
             ) : Promise.resolve({ rows: [] as { id: string }[] }),
           ]);
           for (const row of days.rows) allowedEntityKeys.add(`workday:${row.id}`);

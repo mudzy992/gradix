@@ -10,6 +10,7 @@ import type {
 import { businessDate } from "@gradix/domain";
 import { chunkR4, runR4Sync, type R4SyncStore, type R4SyncTransport } from "./r4-engine";
 import { sendResultMessage } from "../teren/outcome";
+import { resolutionsByLocalId } from "./r4-resolution";
 
 const uuid = (tail: string) => `00000000-0000-4000-8000-${tail.padStart(12, "0")}`;
 
@@ -200,6 +201,43 @@ function memoryStore(initial: readonly R4SyncPushItem[] = []): R4SyncStore & {
 }
 
 describe("R4 deterministic sync simulator", () => {
+  it("R4a-2: ishod razrješenja stiže pull-om tačno jednom i ne gubi nijedan zapis", async () => {
+    const server = new SimulatedNetwork();
+    const queued = item(41);
+    const store = memoryStore([queued]);
+    await runR4Sync(store, server);
+    const appliedBefore = store.applied.length;
+    expect(appliedBefore).toBeGreaterThan(0);
+
+    // Ured razrješava: server objavljuje ishod kao sync_conflict događaj.
+    const slot = server.reserve();
+    server.publish(slot, "cnf-sim-1", {
+      id: "cnf-sim-1",
+      status: "RESOLVED",
+      kind: "REJECTED",
+      reason: "Dupli unos istog segmenta s telefona",
+      localId: queued.localId,
+      workerId: "worker_simulator",
+      workDate: "2026-11-07",
+      oldTimes: { startedAt: "2026-11-07T08:00:00+01:00", endedAt: "2026-11-07T09:00:00+01:00", endState: "KNOWN_END" },
+      newTimes: null,
+      correctedTarget: null,
+    }, "sync_conflict");
+
+    const first = await runR4Sync(store, server);
+    expect(first.error).toBeNull();
+    const resolutions = store.applied.filter((event) => event.entityType === "sync_conflict");
+    expect(resolutions).toHaveLength(1);
+    // Nijedan raniji događaj nije izgubljen razrješenjem.
+    expect(store.applied.length).toBe(appliedBefore + 1);
+    expect(resolutionsByLocalId(store.applied).get(queued.localId)?.label).toBe("Odbačeno");
+
+    // Tačno jednom: ponovni sync ne donosi ishod drugi put.
+    const again = await runR4Sync(store, server);
+    expect(again.pulledEvents).toBe(0);
+    expect(store.applied.filter((event) => event.entityType === "sync_conflict")).toHaveLength(1);
+  });
+
   it("floor-fix scenarij: podignut server floor ne preskače događaje — klijent ispod poda dobija EXPIRED, cursor se ne pomjera", async () => {
     const server = new SimulatedNetwork();
     await server.push([item(21), item(22)]);

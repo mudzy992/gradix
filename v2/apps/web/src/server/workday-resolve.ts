@@ -81,6 +81,14 @@ export function buildDeviceResolutionPayload(args: {
   newTimes: EntryTimes | null;
   rejectedEntryId: string | null;
   acceptedEntryId: string | null;
+  correctedTarget?: CorrectedTarget | null;
+  /** Polja vidljivosti za pull: uređaj po njima veže ishod za svoj lokalni zapis. */
+  localId: string;
+  workerId: string | null;
+  workDate: string | null;
+  /** Ulaz s telefona kako je primljen — autorovi vlastiti podaci, sigurno za uređaj;
+      pull vidljivost za šefa se veže na ovaj oblik (r4-foreman-pull). */
+  receivedPayload?: Record<string, unknown> | null;
 }): Record<string, unknown> {
   return {
     id: args.conflictId,
@@ -93,11 +101,17 @@ export function buildDeviceResolutionPayload(args: {
     newTimes: args.newTimes,
     rejectedEntryId: args.rejectedEntryId,
     acceptedEntryId: args.acceptedEntryId,
+    correctedTarget: args.correctedTarget ?? null,
+    localId: args.localId,
+    workerId: args.workerId,
+    workDate: args.workDate,
+    receivedPayload: args.receivedPayload ?? null,
   };
 }
 
 type ConflictRow = {
   id: string;
+  local_id: string;
   actor_id: string;
   work_entry_id: string | null;
   received_payload: Record<string, unknown> | null;
@@ -257,7 +271,7 @@ export async function resolveWorkdayConflict(
     };
 
     const found = await client.query<ConflictRow>(
-      `SELECT id, actor_id, work_entry_id, received_payload, status, resolved_by, resolved_at,
+      `SELECT id, local_id, actor_id, work_entry_id, received_payload, status, resolved_by, resolved_at,
               resolution_reason, resolution_kind, resolution_payload, resolved_by_party
          FROM public.sync_conflicts
         WHERE company_id = $1 AND id = $2
@@ -430,6 +444,23 @@ export async function resolveWorkdayConflict(
       return fail({ outcome: "VALIDATION_FAILED", conflictId: input.conflictId, code, oldTimes });
     }
 
+    let workDate: string | null = null;
+    if (serverEntry) {
+      const day = await client.query<{ work_date: string }>(
+        "SELECT work_date::text AS work_date FROM public.workdays WHERE company_id = $1 AND id = $2",
+        [company, serverEntry.workday_id],
+      );
+      workDate = day.rows[0]?.work_date ?? null;
+    }
+    if (!workDate && received) {
+      const day = await client.query<{ work_date: string }>(
+        `SELECT ($1::timestamptz AT TIME ZONE c.timezone)::date::text AS work_date
+           FROM public.companies c WHERE c.id = $2`,
+        [received.startedAt, company],
+      );
+      workDate = day.rows[0]?.work_date ?? null;
+    }
+
     const devicePayload = buildDeviceResolutionPayload({
       conflictId: conflict.id,
       kind: input.kind,
@@ -440,6 +471,13 @@ export async function resolveWorkdayConflict(
       newTimes,
       rejectedEntryId,
       acceptedEntryId,
+      correctedTarget: input.kind === "CORRECTED_TIMES"
+        ? (input.correctedTarget ?? (serverEntry ? "SERVER" : "RECEIVED"))
+        : null,
+      localId: conflict.local_id,
+      workerId: targetWorkerId,
+      workDate,
+      receivedPayload: conflict.received_payload,
     });
 
     const updated = await client.query<{ resolved_at: Date }>(
