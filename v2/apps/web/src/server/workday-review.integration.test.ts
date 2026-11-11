@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
-import { listWorkdaysForReview, resolveViewerWorkerId, workdayReviewScopeFor } from "./workday-review";
+import { canResolveConflict, listWorkdaysForReview, resolveViewerWorkerId, workdayResolveScopeFor, workdayReviewScopeFor } from "./workday-review";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -86,6 +86,37 @@ describeDb("workday review scope (PostgreSQL)", () => {
       });
       expect(rows.map((row) => row.id)).toEqual([`wd_wdr_in_${RUN}`]);
     }
+  });
+
+  it("R4a-2: opseg razrješenja — PM vidi sukob samo na danu iz svog opsega; ACCOUNTANT nema resolve opseg; tenant izolacija", async () => {
+    // Opseg razrješenja nad istim fixture danima: PM (povezan radnik) -> assignments
+    // opseg pokriva samo dan radnika u opsegu, nikad drugu firmu.
+    const scoped = await withCompany(app, companyId(CO), async (client) => {
+      const viewer = await resolveViewerWorkerId(client, CO, `usr_wdr_pm_${RUN}`);
+      const scope = workdayResolveScopeFor(["PROJECT_MANAGER"], viewer);
+      expect(scope.kind).toBe("assignments");
+      return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer));
+    });
+    expect(scoped.map((row) => row.id)).toEqual([`wd_wdr_in_${RUN}`]);
+
+    // ACCOUNTANT: view = cijela firma, resolve = none.
+    expect(workdayResolveScopeFor(["ACCOUNTANT"], null)).toEqual({ kind: "none" });
+    expect(workdayResolveScopeFor(["OWNER"], null)).toEqual({ kind: "company" });
+
+    // Strana u sukobu na stvarnim fixture ID-evima: PM je autor dana (created_by
+    // usr_wdr_pm), pa kao radnik-strana ne razrješava; OWNER smije.
+    const pmWorker = await withCompany(app, companyId(CO), (client) =>
+      resolveViewerWorkerId(client, CO, `usr_wdr_pm_${RUN}`));
+    expect(canResolveConflict({
+      roles: ["PROJECT_MANAGER"],
+      resolverWorkerId: pmWorker,
+      partyWorkerIds: [pmWorker],
+    })).toBe(false);
+    expect(canResolveConflict({
+      roles: ["OWNER"],
+      resolverWorkerId: pmWorker,
+      partyWorkerIds: [pmWorker],
+    })).toBe(true);
   });
 
   it("PM/šef bez povezanog radnika vide prazno", async () => {

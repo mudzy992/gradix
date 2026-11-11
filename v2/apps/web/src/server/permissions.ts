@@ -113,6 +113,9 @@ export const PERMISSIONS = {
   // A2: PM i šef vide samo radnike/projekte iz svog R3 opsega, ACCOUNTANT cijelu firmu
   // (samo čitanje) — opseg provodi server (workday-review), ne meni.
   "workdays.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
+  // R4a-2: razrješenje sukoba je odvojeno od pregleda — ACCOUNTANT vidi, ne razrješava.
+  // Strana u sukobu ne razrješava vlastiti sukob (workday-review.canResolveConflict).
+  "workdays.resolve": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -181,6 +184,10 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "workdays.view": {
     label: "Pregled radnih dana",
     description: "Radni dani sa terena — samo pregled, uz oznake „Za provjeru“. Vlasnik/admin i računovođa vide cijelu firmu; vođa projekta i šef samo svoj R3 opseg.",
+  },
+  "workdays.resolve": {
+    label: "Razrješenje sukoba radnih dana",
+    description: "Odluka o sukobu server/telefon unosa: prihvati jedan, ispravi vremena ili odbaci uz razlog koji autor vidi. Vlasnik/admin cijela firma; vođa projekta i šef samo svoj opseg. Strana u sukobu ne razrješava vlastiti sukob.",
   },
 };
 

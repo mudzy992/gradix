@@ -423,7 +423,7 @@ export function ComponentCatalog() {
                 ]}
               />
               <Inline>
-                <Chip tone="hot">Sat telefona odstupa +6 min</Chip>
+                <Chip tone="hollow">Sat telefona odstupa +6 min</Chip>
                 <Button variant="primary" onClick={() => setAcceptOpen("telefon")}>Prihvati ovaj unos</Button>
               </Inline>
             </Card>
