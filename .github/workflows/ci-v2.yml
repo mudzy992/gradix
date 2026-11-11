@@ -400,6 +400,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/e2e-stabilnost/sazetak.txt
+          # Rezultati i kao anotacije: logovi/artefakti runa nisu uvijek
+          # dostupni, anotacije jesu (isti razlog kao ostala dijagnostika).
+          while IFS= read -r line; do echo "::notice::STAB $line"; done < /tmp/e2e-stabilnost/sazetak.txt
+          echo "::notice::STAB_UKUPNO pokretanja=$ukupno proslo=$proslo palo=$palo"
           [ "$palo" -eq 0 ]
       - name: Izvjestaj kao artefakt
         if: always()
