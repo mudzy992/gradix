@@ -120,6 +120,15 @@ export function workdayResolveScopeFor(
  * osoba iz ureda. OWNER je izuzetak — vlasnik je zadnja instanca firme i smije
  * razriješiti i sukob u kojem je njegov radnički zapis strana.
  */
+/** Da li je razrješavalac autor jednog od dva unosa u sukobu (strana u sukobu). */
+export function isConflictParty(
+  resolverWorkerId: string | null,
+  partyWorkerIds: readonly (string | null | undefined)[],
+): boolean {
+  if (!resolverWorkerId) return false;
+  return partyWorkerIds.some((id) => id != null && id === resolverWorkerId);
+}
+
 export function canResolveConflict(args: {
   roles: readonly string[];
   resolverWorkerId: string | null;

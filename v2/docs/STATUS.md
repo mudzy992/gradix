@@ -56,6 +56,12 @@
 - **Katalog** (`/katalog`, mobilni katalog ekran) nije javan: razvoj ili platformski
   administrator, ostalima 404; u produkcijskoj mobilnoj gradnji se ne uključuje.
 
+## Dugovi (ne blokiraju)
+
+- **PLATFORM_ADMIN_EMAILS:** privremeni mehanizam platformskih administratora
+  (u env-u je `ured@demo.ba`); zamijeniti pravim platform korisnicima, ne širiti
+  na druge rute.
+
 ## Otvoreno
 
 1. **Staging:** vlasnik deploya zadnji zeleni commit s ove grane i prolazi ekrane po rolama

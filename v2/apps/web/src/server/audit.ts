@@ -60,6 +60,8 @@ export const AUDIT_ACTIONS = [
   "project.assignment_voided",
   "project.assignment_overridden",
   "project.override_requested",
+  // R4a-2
+  "workday.conflict_resolved",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -76,6 +78,7 @@ export const AUDIT_ENTITY_TYPES = [
   "project",
   "project_assignment",
   "project_overrides",
+  "sync_conflict",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -122,6 +125,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "project.assignment_voided": "Pogrešna dodjela poništena",
   "project.assignment_overridden": "Iznimka od blokade odobrena",
   "project.override_requested": "Zatražena iznimka od blokade",
+  "workday.conflict_resolved": "Sukob radnog dana razriješen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */
