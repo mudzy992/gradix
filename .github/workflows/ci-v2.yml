@@ -382,6 +382,9 @@ jobs:
           palo=0
           pocetak=$(( (DIO - 1) * 4 + 1 ))
           for n in $(seq "$pocetak" $((pocetak + 3))); do
+            # Svako pokretanje kreće od iste demo fiksture (seed vraća demo
+            # sukobe na OPEN) — inače test razrješenja troši seed podatke.
+            (cd ../.. && pnpm --filter @gradix/web seed > /tmp/e2e-stabilnost/seed-$n.log 2>&1) || echo "::error::STAB dio=$DIO run $n: seed nije uspio"
             log="/tmp/e2e-stabilnost/run-$n.log"
             if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then
               echo "::notice::STAB dio=$DIO run $n: PASS"
