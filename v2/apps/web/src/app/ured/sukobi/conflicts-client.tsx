@@ -105,7 +105,8 @@ export function ConflictsClient({ initial, counts }: { initial: WorkdayConflict[
     setCorrStart(base ? hhmm(base.startedAt) : "");
     setCorrEnd(base?.endedAt ? hhmm(base.endedAt) : "");
     setCorrTarget(conflict.server ? "SERVER" : "RECEIVED");
-    setNotice(null);
+    // Namjerno se obavijest NE briše ovdje: tok razrješenja postavi svoju poruku
+    // pa tek onda ponovo učita detalj (poruka ishoda mora ostati vidljiva).
   }, []);
 
   const applyOutcome = useCallback((result: ResolveConflictResponse) => {
