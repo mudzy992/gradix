@@ -45,6 +45,8 @@ type Slot = { seq: number; status: "PENDING" | "COMMITTED" | "SKIPPED"; event: R
 
 /** Deterministic, in-memory model of idempotent push and the DB cursor's pending-slot frontier. */
 class SimulatedNetwork implements R4SyncTransport {
+  /** Pod koji server objavljuje (sync_cursor_pull.cursor_floor); klijent ispod njega je istekao. */
+  serverFloor = 0;
   private nextSeq = 1;
   private slots = new Map<number, Slot>();
   private receipts = new Map<string, { hash: string; result: R4SyncPushItemResult }>();
@@ -136,7 +138,7 @@ class SimulatedNetwork implements R4SyncTransport {
   async pull(cursor: string, limit: number): Promise<R4SyncPullPage> {
     const after = Number(cursor);
     const head = this.nextSeq - 1;
-    const floor = 0;
+    const floor = this.serverFloor;
     if (!Number.isInteger(after) || after < floor) throw Object.assign(new Error("expired"), { code: "SYNC_CURSOR_EXPIRED" });
     if (after > head) throw Object.assign(new Error("invalid"), { code: "SYNC_CURSOR_INVALID" });
     const firstPending = [...this.slots.values()]
@@ -198,6 +200,39 @@ function memoryStore(initial: readonly R4SyncPushItem[] = []): R4SyncStore & {
 }
 
 describe("R4 deterministic sync simulator", () => {
+  it("floor-fix scenarij: podignut server floor ne preskače događaje — klijent ispod poda dobija EXPIRED, cursor se ne pomjera", async () => {
+    const server = new SimulatedNetwork();
+    await server.push([item(21), item(22)]);
+    const store = memoryStore();
+    // Prvi sync: sve se povuče, cursor je na granici (frontier).
+    const first = await runR4Sync(store, server);
+    expect(first.error).toBeNull();
+    expect(store.applied.length).toBeGreaterThan(0);
+    const cursorAtFrontier = store.cursor;
+    // Server podiže floor iznad klijentovog cursora (npr. retencija obrisala stare slotove):
+    // pull NE smije tiho preskočiti na floor i izgubiti događaje između.
+    server.serverFloor = Number(cursorAtFrontier) + 10;
+    const second = await runR4Sync(store, server);
+    expect(second.error).toBe("SYNC_CURSOR_EXPIRED");
+    expect(store.cursor).toBe(cursorAtFrontier);
+  });
+
+  it("floor-fix scenarij: pull od poda isporučuje svaki commitovani događaj tačno jednom, bez rupe na granici poda", async () => {
+    const server = new SimulatedNetwork();
+    await server.push([item(31), item(32), item(33)]);
+    server.serverFloor = 2;
+    const store = memoryStore();
+    store.cursor = "2";
+    const outcome = await runR4Sync(store, server);
+    expect(outcome.error).toBeNull();
+    const seqs = store.applied.map((event) => Number(event.cursorSeq));
+    expect(new Set(seqs).size).toBe(seqs.length);
+    expect(Math.min(...seqs)).toBeGreaterThan(2);
+    // Ponovni sync ne donosi duplikate.
+    const again = await runR4Sync(store, server);
+    expect(again.pulledEvents).toBe(0);
+  });
+
   it("splits outbox into protocol-sized batches", () => {
     expect(chunkR4(Array.from({ length: 245 }, (_, index) => item(index + 1))).map((batch) => batch.length))
       .toEqual([100, 100, 45]);
