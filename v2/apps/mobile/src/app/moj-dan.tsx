@@ -107,8 +107,8 @@ export default function MojDanScreen() {
         <Segmented label="Mašina" value={machineId ?? ""} onChange={(v) => setMachineId(v === "" ? null : v)}
           options={[{ value: "", label: "Bez mašine" }, ...machineList.map((machine) => ({ value: machine.id, label: `${machine.code} · ${machine.name}` }))]} />
         <TextField label="Datum (GGGG-MM-DD)" value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
-        <TextField label="Početak (HH:MM)" value={started} onChangeText={setStarted} accessibilityLabel="Početak rada" />
-        <TextField label="Kraj (HH:MM)" value={ended} onChangeText={setEnded} accessibilityLabel="Kraj rada" />
+        <TextField label="Početak (HH:MM, 24 h)" value={started} onChangeText={setStarted} accessibilityLabel="Početak rada" />
+        <TextField label="Kraj (HH:MM, 24 h)" value={ended} onChangeText={setEnded} accessibilityLabel="Kraj rada" />
         <Button label="Sačuvaj na telefon" busy={busy} onPress={save} />
         <Button label="Pošalji sada" busy={busy} onPress={send} />
         {message ? <Text>{message}</Text> : null}

@@ -93,7 +93,9 @@ export function InviteDialog({
           event.preventDefault();
           setBusy(true);
           try {
-            await onSubmit(new FormData(event.currentTarget));
+            const data = new FormData(event.currentTarget);
+            data.set("scope", scope);
+            await onSubmit(data);
           } finally {
             setBusy(false);
           }
@@ -111,25 +113,16 @@ export function InviteDialog({
               ))}
           </Select>
           {/* Opseg je izbor od dva stanja — segmentirana pilula, ne padajuća lista.
-              Skriveno polje nosi vrijednost u formu, pa `FormData` ostaje isti. */}
-          <div className="gx-field">
-            <span className="gx-field__label" id="invite-scope-label">
-              Opseg pristupa
-            </span>
-            <input type="hidden" name="scope" value={scope} />
-            <p className="gx-field__hint">Izaberite opseg; pozivnica se ne može poslati bez ovog izbora.</p>
-            <div role="group" aria-labelledby="invite-scope-label">
-              <Segmented
-                label="Opseg pristupa"
-                value={scope}
-                options={[
-                  { value: "COMPANY", label: "Cijela firma" },
-                  { value: "SELF", label: "Samo svoje" },
-                ]}
-                onChange={setScope}
-              />
-            </div>
-          </div>
+              Vrijednost se dodaje u FormData pri slanju (scope je stanje, ne polje). */}
+          <Segmented
+            label="Opseg pristupa"
+            value={scope}
+            options={[
+              { value: "COMPANY", label: "Cijela firma" },
+              { value: "SELF", label: "Samo svoje" },
+            ]}
+            onChange={setScope}
+          />
         </Stack>
       </form>
     </Dialog>

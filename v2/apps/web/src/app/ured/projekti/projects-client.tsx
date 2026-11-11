@@ -14,7 +14,7 @@
  *  - Jedna primarna akcija po redu, ostalo u meniju „⋯".
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AssignmentInput, Project, ProjectAssignment } from "@gradix/contracts";
+import type { Project } from "@gradix/contracts";
 import { apiCall } from "@/api-client";
 import {
   Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Mono, PageHeader, Select, Skeleton,

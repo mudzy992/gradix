@@ -77,7 +77,7 @@ export function ComponentCatalog() {
             <Input label="Pretraga" id="cat-search" type="search" placeholder="Traži…" />
             <Input label="Broj" id="cat-num" type="number" defaultValue={8} hint="Sati, količine, brojila." />
             <Input label="Datum" id="cat-date" type="date" />
-            <Input label="Vrijeme" id="cat-time" type="time" />
+            <Input label="Vrijeme" id="cat-time" type="time" lang="bs" />
             <Input label="Onemogućeno" id="cat-dis" disabled defaultValue="Ne može se mijenjati" />
             <Select label="Select (lista se vidi u obje teme)" id="cat-sel" hint="Opcije nose boje ploče — i u tamnoj temi lista je čitljiva." defaultValue="druga">
               <option value="prva">Prva opcija</option>
