@@ -197,7 +197,7 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
 
     const good = await resolveWorkdayConflict(app, adminActor, {
       conflictId, kind: "CORRECTED_TIMES", reason, idempotencyKey: `key-corr-${RUN}`,
-      correctedTimes: { startedAt: "2026-11-10T13:00:00Z", endedAt: "2026-11-10T15:30:00Z", endState: "KNOWN_END" },
+      correctedTimes: { startedAt: "2026-11-13T13:00:00Z", endedAt: "2026-11-13T15:30:00Z", endState: "KNOWN_END" },
       correctedTarget: "SERVER",
     });
     // 13:00–15:30 i dalje preklapa vlastiti original? Ne: ispravlja se isti red; ali
