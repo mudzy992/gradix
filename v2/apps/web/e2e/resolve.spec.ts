@@ -50,6 +50,7 @@ test("ured razrješava sukob, vlasnik vidi već razriješeno", async ({ page, br
   await expect(owner.getByText("Razriješeno").first()).toBeVisible();
   await owner.getByRole("button", { name: "Otvori" }).first().click();
   await expect(owner.locator("text=Razriješio/la Amina Karić").first()).toBeVisible();
-  await expect(owner.getByRole("button", { name: "Prihvati ovaj unos" })).toBeDisabled();
+  await expect(owner.getByRole("button", { name: "Prihvati ovaj unos" }).first()).toBeDisabled();
+  await expect(owner.getByRole("button", { name: "Prihvati ovaj unos" }).last()).toBeDisabled();
   await ctx.close();
 });
