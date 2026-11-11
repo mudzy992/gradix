@@ -92,3 +92,43 @@ export async function listWorkdaysForReview(
   );
   return result.rows;
 }
+
+/**
+ * R4a-2 opseg razrješenja: isti pojam opsega kao pregled, ali bez ACCOUNTANT-a
+ * (on vidi cijelu firmu kroz workdays.view, ne odlučuje). `none` = rola uopšte
+ * nema workdays.resolve, pa se ni lista sukoba ne nudi.
+ */
+export type WorkdayResolveScope =
+  | { kind: "company" }
+  | { kind: "assignments"; viewerWorkerId: string | null }
+  | { kind: "none" };
+
+export function workdayResolveScopeFor(
+  roles: readonly string[],
+  viewerWorkerId: string | null,
+): WorkdayResolveScope {
+  if (roles.includes("OWNER") || roles.includes("ADMIN")) return { kind: "company" };
+  if (roles.includes("PROJECT_MANAGER") || roles.includes("SITE_SUPERVISOR")) {
+    return { kind: "assignments", viewerWorkerId };
+  }
+  return { kind: "none" };
+}
+
+/**
+ * Strana u sukobu ne razrješava vlastiti sukob: ako je pregledač povezan s radnikom
+ * koji je autor BILO KOJEG od dva unosa (server ili telefon), odluku donosi druga
+ * osoba iz ureda. OWNER je izuzetak — vlasnik je zadnja instanca firme i smije
+ * razriješiti i sukob u kojem je njegov radnički zapis strana.
+ */
+export function canResolveConflict(args: {
+  roles: readonly string[];
+  resolverWorkerId: string | null;
+  partyWorkerIds: readonly (string | null | undefined)[];
+}): boolean {
+  if (args.roles.includes("OWNER")) return true;
+  if (!args.roles.some((role) => ["ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"].includes(role))) {
+    return false;
+  }
+  if (!args.resolverWorkerId) return true;
+  return !args.partyWorkerIds.some((id) => id != null && id === args.resolverWorkerId);
+}
