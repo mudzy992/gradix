@@ -81,6 +81,13 @@ export default function KatalogBody() {
       </Accordion>
       <ToastBanner text="ToastBanner: zapis je sačuvan na telefonu." />
       <ToastBanner text="ToastBanner greška: slanje nije uspjelo, zapis ostaje." tone="error" />
-    </ScrollView>
+    
+      <Text variant="label">R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje)</Text>
+      <CardView>
+        <Text variant="muted">Samo dizajn, nije implementirano. Radnik na telefonu vidi ishod razrješenja i kratak razlog odbacivanja — ne interne napomene ureda. Ured bira jedan unos; vremena se ne spajaju automatski.</Text>
+        <ListItem title="Amar Hadžić · 7. 11. 2026." meta="P-24/2026" right="Za provjeru" />
+        <StatusChip label="Ishod: prihvaćeno / odbačeno uz razlog" tone="warn" />
+      </CardView>
+</ScrollView>
   );
 }

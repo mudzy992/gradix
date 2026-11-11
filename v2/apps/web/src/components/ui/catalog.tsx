@@ -42,6 +42,8 @@ export function ComponentCatalog() {
   const [dialog, setDialog] = useState(false);
   const [longDialog, setLongDialog] = useState(false);
   const [page, setPage] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [tableState, setTableState] = useState<"ready" | "loading" | "error" | "empty">("ready");
   const [seg, setSeg] = useState("svi");
   const [qty, setQty] = useState(8);
@@ -368,6 +370,90 @@ export function ComponentCatalog() {
           </Card>
         </Stack>
       </Section>
+
+      <Section
+        title="R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje vlasnika)"
+        hint="Nije implementirano: samo dizajn od postojećih komponenti. Lista = DataTable, detalj = dva DescriptionList jedan pored drugog, odbacivanje = dijalog s obaveznim razlogom. Vremena se ne spajaju automatski — ured bira jedan unos i smije ručno ispraviti vremena. Nerazriješen sukob u R4b blokira odobravanje te sedmice; podsjetnik uredu stiže nakon 3 dana (podesivo po firmi). Radnik na telefonu vidi ishod i kratak razlog odbacivanja, ne interne napomene."
+      >
+        <Stack>
+          <DataTable
+            caption="Sukobi koji čekaju razrješenje (demo, seed podaci)"
+            rows={[
+              { id: "sukob-1", worker: "Amar Hadžić", project: "P-24/2026 · Dionica Visoko–Kiseljak", date: "7. 11. 2026.", since: "prije 1 dan", state: "Za provjeru" },
+              { id: "sukob-2", worker: "Mario Perić", project: "P-24/2026 · Dionica Visoko–Kiseljak", date: "6. 11. 2026.", since: "prije 4 dana", state: "Podsjetnik poslan" },
+            ]}
+            rowKey={(row) => row.id}
+            emptyText="Nema nerazriješenih sukoba."
+            columns={[
+              { key: "worker", header: "Radnik", cell: (row) => row.worker },
+              { key: "project", header: "Projekat", cell: (row) => row.project },
+              { key: "date", header: "Datum", cell: (row) => row.date },
+              { key: "since", header: "Čeka", cell: (row) => row.since },
+              { key: "state", header: "Stanje", cell: (row) => <Chip tone="hot">{row.state}</Chip> },
+              { key: "nav", header: "Navigacija (prijedlog)", cell: () => <Mono>Ured → Radni dani → Za provjeru</Mono> },
+            ]}
+          />
+          <FormGrid>
+            <Card>
+              <SectionTitle hint="Ono što ured već ima (server).">Unos sa servera</SectionTitle>
+              <DescriptionList
+                items={[
+                  { term: "Radnik", value: "Amar Hadžić" },
+                  { term: "Početak–kraj", value: <Mono>07:30–15:30</Mono> },
+                  { term: "Projekat", value: "P-24/2026 · Dionica Visoko–Kiseljak" },
+                  { term: "Mašina", value: <Mono>BAG-01 · Bager CAT 320</Mono> },
+                ]}
+              />
+              <Inline>
+                <Button variant="primary" onClick={() => push("success", "Dizajn: prihvaćen unos sa servera (demo)")}>Prihvati ovaj unos</Button>
+              </Inline>
+            </Card>
+            <Card>
+              <SectionTitle hint="Ono što je telefon poslao naknadno.">Unos s telefona</SectionTitle>
+              <DescriptionList
+                items={[
+                  { term: "Radnik", value: "Amar Hadžić" },
+                  { term: "Početak–kraj", value: <Mono>08:00–16:00</Mono> },
+                  { term: "Projekat", value: "P-24/2026 · Dionica Visoko–Kiseljak" },
+                  { term: "Mašina", value: <Mono>BAG-01 · Bager CAT 320</Mono> },
+                ]}
+              />
+              <Inline>
+                <Button variant="primary" onClick={() => push("success", "Dizajn: prihvaćen unos s telefona (demo)")}>Prihvati ovaj unos</Button>
+              </Inline>
+            </Card>
+          </FormGrid>
+          <Card>
+            <SectionTitle hint="Ispravka se primjenjuje na izabrani unos prije prihvatanja; original ostaje u auditu. Vrijeme je 24 h (HH:MM).">Ispravi vremena izabranog unosa</SectionTitle>
+            <FormGrid>
+              <Input label="Početak (HH:MM, 24 h)" id="r4a2-start" defaultValue="07:30" />
+              <Input label="Kraj (HH:MM, 24 h)" id="r4a2-end" defaultValue="15:30" />
+            </FormGrid>
+            <Inline>
+              <Button onClick={() => setRejectOpen(true)}>Odbaci uz razlog…</Button>
+              <Chip tone="hollow">Nakon razrješenja: stanje „Razriješeno“ + ko/kad/razlog u auditu; radnik vidi ishod pri sljedećem syncu</Chip>
+            </Inline>
+          </Card>
+        </Stack>
+      </Section>
+
+      {rejectOpen ? (
+      <Dialog
+        title="Odbacivanje unosa (dizajn)"
+        hint="Prijedlog: ConfirmDialog se dopunjuje opcionim poljem razloga — nije nova vrsta komponente. Razlog je obavezan i radnik ga vidi na telefonu (kratko, bez internih napomena)."
+        onClose={() => setRejectOpen(false)}
+        footer={(
+          <div className="gx-dialog__actions">
+            <Button variant="quiet" onClick={() => setRejectOpen(false)}>Odustani</Button>
+            <Button variant="danger" disabled={rejectReason.trim().length < 10} onClick={() => { setRejectOpen(false); push("info", "Dizajn: unos odbačen uz razlog (demo)"); }}>
+              Odbaci uz razlog
+            </Button>
+          </div>
+        )}
+      >
+        <Textarea label="Razlog odbacivanja (vidi ga i radnik)" id="r4a2-reason" rows={3} value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} hint="Najmanje 10 znakova. Jedna rečenica, bez internih napomena." />
+      </Dialog>
+      ) : null}
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
 
