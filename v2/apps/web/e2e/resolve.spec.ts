@@ -47,6 +47,7 @@ test("ured razrješava sukob, vlasnik vidi već razriješeno", async ({ page, br
   await login(owner, "vlasnik@demo.ba");
   await owner.goto("/ured/sukobi");
   await owner.getByLabel("Stanje").selectOption("RESOLVED");
+  await expect(owner.getByText("Razriješeno").first()).toBeVisible();
   await owner.getByRole("button", { name: "Otvori" }).first().click();
   await expect(owner.locator("text=Razriješio/la Amina Karić").first()).toBeVisible();
   await expect(owner.getByRole("button", { name: "Prihvati ovaj unos" })).toBeDisabled();
