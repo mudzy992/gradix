@@ -1,0 +1,30 @@
+# Snimci ključnih ekrana STVARNE aplikacije (Dio 1c) — dokaz, ne referenca.
+# Svaki takeScreenshot ide u `snimci/` i objavljuje se kao CI artefakt.
+# Teme: aplikacija prati sistem; tamna tema se snima drugim prolazom kad
+# emulator podrži noćni režim (adb shell cmd uimode) — do tada obe teme na webu.
+appId: ba.gradix.teren
+outputDir: snimci
+---
+- launchApp:
+    clearState: true
+- takeScreenshot: 01-prijava-svjetla
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- takeScreenshot: 02-moj-dan-svjetla
+- tapOn: "Grupa — unos za ekipu"
+- assertVisible: "Grupa"
+- takeScreenshot: 03-grupa-svjetla
+- tapOn: "Moji rokovi"
+- assertVisible: "Moji rokovi"
+- takeScreenshot: 04-rokovi-svjetla
+- tapOn: "Moji projekti"
+- assertVisible: "Moji projekti"
+- takeScreenshot: 05-projekti-svjetla
+- tapOn: "Odjavi se"
+- takeScreenshot: 06-odjava-svjetla
