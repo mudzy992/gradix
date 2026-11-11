@@ -45,6 +45,8 @@ DECLARE
   v_sync_guard_missing TEXT;
   v_conflict_retention_default TEXT;
   v_conflict_retention_check TEXT;
+  v_conflict_reminder_default TEXT;
+  v_conflict_reminder_check TEXT;
 BEGIN
   SELECT rolname, rolsuper, rolbypassrls
     INTO v_role
@@ -369,6 +371,31 @@ BEGIN
      OR position('1' IN v_conflict_retention_check) = 0
      OR position('3650' IN v_conflict_retention_check) = 0 THEN
     RAISE EXCEPTION 'PREFLIGHT: per-company sync conflict retention nema validiran raspon i default 90 dana.';
+  END IF;
+
+  -- R4a-2: prag podsjetnika za nerazriješene sukobe, podesiv po firmi (zadano 3 dana).
+  SELECT pg_get_expr(d.adbin, d.adrelid)
+    INTO v_conflict_reminder_default
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.oid
+    LEFT JOIN pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
+   WHERE n.nspname = 'public'
+     AND c.relname = 'companies'
+     AND a.attname = 'conflict_reminder_days'
+     AND a.attnum > 0 AND NOT a.attisdropped;
+  SELECT pg_get_constraintdef(oid)
+    INTO v_conflict_reminder_check
+    FROM pg_constraint
+   WHERE conrelid = 'public.companies'::regclass
+     AND conname = 'companies_conflict_reminder_days_check'
+     AND convalidated;
+  IF v_conflict_reminder_default IS NULL
+     OR position('3' IN v_conflict_reminder_default) = 0
+     OR v_conflict_reminder_check IS NULL
+     OR position('1' IN v_conflict_reminder_check) = 0
+     OR position('365' IN v_conflict_reminder_check) = 0 THEN
+    RAISE EXCEPTION 'PREFLIGHT: prag podsjetnika za sukobe nema validiran raspon i default 3 dana (R4a-2).';
   END IF;
 
   SELECT count(*)::integer, bool_and(t.tgenabled IN ('O', 'A')), max(p.proname),
