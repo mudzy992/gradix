@@ -371,6 +371,7 @@ jobs:
         working-directory: v2/apps/web
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
           DIO: ${{ matrix.dio }}
         run: |
           set -u
