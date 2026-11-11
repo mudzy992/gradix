@@ -384,7 +384,10 @@ jobs:
               proslo=$((proslo+1))
             else
               echo "run $n: FAIL" >> /tmp/e2e-stabilnost/sazetak.txt
-              grep -E "›|Error:" "$log" | head -5 >> /tmp/e2e-stabilnost/sazetak.txt || true
+              # Samo imena palih testova (list reporter ih na kraju ponovi
+              # kao "  1) [chromium] › fajl › ime"), ne cijeli ispis.
+              grep -E "^ +[0-9]+\) \[chromium\]" "$log" | head -3 >> /tmp/e2e-stabilnost/sazetak.txt || true
+              grep -E "Error:" "$log" | head -2 >> /tmp/e2e-stabilnost/sazetak.txt || true
               palo=$((palo+1))
             fi
           done
