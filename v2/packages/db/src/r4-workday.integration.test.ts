@@ -493,7 +493,7 @@ describeDb("R4 radni dani, segmenti, receipt i tenant RLS (PostgreSQL)", () => {
     const resolved = await withCompany(app, companyId(A.company), async (client) =>
       client.query<{ resolved_at: Date; payload_purge_after: Date; received_payload: unknown }>(
         `UPDATE public.sync_conflicts
-            SET status = 'RESOLVED', resolved_by = $2, resolution_reason = 'Potvrđena je zadnja verzija rada.'
+            SET status = 'RESOLVED', resolved_by = $2, resolution_reason = 'Potvrđena je zadnja verzija rada.', resolution_kind = 'ACCEPT_SERVER'
           WHERE id = $1
           RETURNING resolved_at, payload_purge_after, received_payload`,
         [A.conflict, A.user],
