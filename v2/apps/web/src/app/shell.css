@@ -276,10 +276,6 @@
   flex-wrap: wrap;
 }
 
-.gx-page-head__text {
-  flex: 1;
-  min-width: 0;
-}
 
 .gx-page-title {
   font-size: var(--text-page);
@@ -883,25 +879,7 @@ textarea.gx-input {
   border: 1.5px solid var(--muted);
 }
 
-/* Pilula broja dana (rokovi): žuta kad je blizu. */
-.gx-days {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--raise);
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--text-label);
-  font-weight: 600;
-  white-space: nowrap;
-}
 
-.gx-days--hot {
-  background: var(--accent);
-  color: var(--on-accent);
-}
 
 /* ------------------------------------------------------------------ tabela */
 
@@ -930,9 +908,6 @@ textarea.gx-input {
   background: var(--raise);
 }
 
-.gx-table .gx-num {
-  text-align: right;
-}
 
 /* Dvije linije u ćeliji: glavno + tiho (npr. ime + email, mašina + šifra). */
 .gx-who {
@@ -1097,13 +1072,6 @@ textarea.gx-input {
   flex: none;
 }
 
-/* Mono kao drugi red u ćeliji (tehnički ključ role, šifra mašine). */
-.gx-mono--block {
-  display: block;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
 
 /* ------------------------------------------------- tabela na uskom ekranu */
 
@@ -1154,17 +1122,7 @@ textarea.gx-input {
   }
 }
 
-/* Kartice umjesto tabele: vidljive samo na uskom ekranu. */
-.gx-cards-mobile {
-  display: none;
-}
 
-@media (max-width: 639px) {
-  .gx-cards-mobile {
-    display: grid;
-    gap: var(--space-3);
-  }
-}
 
 /* ------------------------------------------------------------------ koraci */
 

@@ -13,7 +13,7 @@
  * `document.activeElement` u trenutku zatvaranja — taj element često više ne postoji.
  */
 import { useEffect, useRef, type ReactNode } from "react";
-import { Icon } from "@/components/ui";
+import { Icon } from "@/components/ui/index";
 
 export function Dialog({
   title,
