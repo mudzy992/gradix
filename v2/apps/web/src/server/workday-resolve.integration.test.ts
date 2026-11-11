@@ -178,17 +178,17 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
   });
 
   it("CORRECTED_TIMES: preklapanje daje jasan ishod i sukob ostaje OPEN; ispravna ispravka prolazi i označena je kao uredska", async () => {
-    // Drugi, nepovezani segment istog radnika 12:00–13:00 da ispravka na njega naleti.
+    const conflictId = await seedConflict(admin, "corr");
+    // Drugi, nepovezani segment istog radnika 12:00–13:00 da ispravka na njega naleti
+    // (server unos je 08:00–10:00, pa se s njim ne preklapa).
     await admin.query(
       `INSERT INTO public.work_entries
          (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
-       VALUES ('we_rsv_block_${RUN}', $1, 'wd_rsv_1_${RUN}', 'wrk_rsv_worker_${RUN}', 'WORK',
-               '2026-11-10T12:00:00Z', '2026-11-10T13:00:00Z', 'KNOWN_END', 'prj_rsv_a_${RUN}',
-               'usr_rsv_worker_${RUN}', 'usr_rsv_worker_${RUN}')
-       ON CONFLICT (company_id, id) DO NOTHING`,
+       VALUES ('we_rsv_block_${RUN}', $1, 'wd_rsv_corr_${RUN}', 'wrk_rsv_worker_${RUN}', 'WORK',
+               '2026-11-13T12:00:00Z', '2026-11-13T13:00:00Z', 'KNOWN_END', 'prj_rsv_a_${RUN}',
+               'usr_rsv_worker_${RUN}', 'usr_rsv_worker_${RUN}')`,
       [CO],
     );
-    const conflictId = await seedConflict(admin, "corr");
     const bad = await resolveWorkdayConflict(app, adminActor, {
       conflictId, kind: "CORRECTED_TIMES", reason, idempotencyKey: `key-corr-bad-${RUN}`,
       correctedTimes: { startedAt: "2026-11-13T11:00:00Z", endedAt: "2026-11-13T12:30:00Z", endState: "KNOWN_END" },
