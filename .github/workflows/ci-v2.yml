@@ -185,6 +185,15 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
           pnpm --filter @gradix/web test:e2e || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
 
+      - name: Dijagnostika E2E (privremeno)
+        if: failure()
+        working-directory: v2/apps/web
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+        run: |
+          tail -n 30 /tmp/e2e-server.log | sed 's/^/::error::SERVER /' || true
+          pnpm exec playwright test e2e/resolve.spec.ts e2e/smoke.spec.ts --reporter=list 2>&1 | tail -50 | sed 's/^/::error::E2E /' || true
+
       # Dio 3c: snimci se objavljuju uvijek (i kad E2E padne) — nisu kapija, nego materijal za pregled.
       - name: Snimci ekrana kao artefakt (Dio 3c)
         if: always()
