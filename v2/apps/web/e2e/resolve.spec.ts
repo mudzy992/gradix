@@ -27,8 +27,8 @@ test("ured razrješava sukob, vlasnik vidi već razriješeno", async ({ page, br
   await expect(page.getByText("Nerazriješeni sukobi")).toBeVisible();
 
   await page.getByRole("button", { name: "Otvori" }).first().click();
-  await expect(page.getByText("Unos sa servera")).toBeVisible();
-  await expect(page.getByText("Unos s telefona")).toBeVisible();
+  await expect(page.getByText("Unos sa servera").first()).toBeVisible();
+  await expect(page.getByText("Unos s telefona").first()).toBeVisible();
 
   // Prihvati server unos uz obavezni razlog (>= 10 znakova; dugme je prije toga zaključano).
   await page.getByRole("button", { name: "Prihvati ovaj unos" }).first().click();
