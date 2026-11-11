@@ -436,6 +436,20 @@ BEGIN
     RAISE EXCEPTION 'PREFLIGHT: work_entries overlap trigger nedostaje ili ne pokriva concurrency/UNKNOWN_END.';
   END IF;
 
+  -- R4a-2: odbačen segment je terminalan (bez reaktivacije direktnim upitom).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger t
+      JOIN pg_proc pr ON pr.oid = t.tgfoid
+     WHERE t.tgrelid = to_regclass('public.work_entries')
+       AND NOT t.tgisinternal
+       AND t.tgname = 'work_entries_resolution_guard'
+       AND t.tgenabled IN ('O', 'A')
+       AND pr.proname = 'guard_work_entry_resolution_state'
+       AND position('WORK_ENTRY_REJECTED_TERMINAL' IN pg_get_functiondef(pr.oid)) > 0
+  ) THEN
+    RAISE EXCEPTION 'PREFLIGHT: guard terminalnog odbačenog segmenta nedostaje ili je ugašen (R4a-2).';
+  END IF;
+
   SELECT string_agg(required.trigger_name, ', ' ORDER BY required.trigger_name)
     INTO v_sync_guard_missing
     FROM (VALUES
