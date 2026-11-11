@@ -178,9 +178,11 @@ jobs:
           # Snimci kataloga (Dio 3c): vlasnik demo firme je i platformski admin za CI server.
           PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
         run: |
-          pnpm --filter @gradix/web exec playwright install --with-deps chromium
-          pnpm --filter @gradix/web seed
-          pnpm --filter @gradix/web build
+          pnpm --filter @gradix/web exec playwright install --with-deps chromium || echo "::error::PW_INSTALL_DEPS_FAILED (nastavljam bez deps koraka)"
+          pnpm --filter @gradix/web exec playwright install chromium || echo "::error::PW_INSTALL_FAILED"
+          ls "$HOME/.cache/ms-playwright" 2>/dev/null | sed 's/^/::warning::PW_CACHE /' || echo "::error::PW_CACHE_EMPTY"
+          pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
           pnpm --filter @gradix/web test:e2e || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
