@@ -4,8 +4,7 @@
  * uz pojedinačna odstupanja, stanje slanja i ishod PO RADNIKU. Van opsega se prikazuje kao
  * "Van opsega — ostaje na telefonu", nikad kao odbijeno.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { machines, myProjects, pullForemanWorkers } from "../api/client";
 import {
   getActiveLocalAccount, queueForemanGroupWorkEntries, readForemanWorkerRoster,
@@ -13,18 +12,14 @@ import {
 } from "../db/r4-outbox";
 import { openDb } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
-import { TerenShell, createStyles } from "../teren/TerenShell";
+import { Banner, Button, CardView, CheckboxRow, Screen, Segmented, Text, TextField } from "../ui";
 import { outcomeFor, syncBannerText, sendResultMessage, OUT_OF_SCOPE_NOTE } from "../teren/outcome";
-import { useTheme } from "../theme/use-theme";
-import { jedanStil } from "../lib/styles";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function GrupaScreen() {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<{ id: string; code: string; name: string }[]>([]);
@@ -151,7 +146,7 @@ export default function GrupaScreen() {
   }
 
   return (
-    <TerenShell
+    <Screen
       title="Grupa"
       subtitle="Grupni unos za tvoju ekipu — jedan unos, ishod za svakog radnika."
       loading={loading}
@@ -159,63 +154,42 @@ export default function GrupaScreen() {
       empty={workers.length === 0 ? "Nema radnika u tvom opsegu za ovaj projekat i datum." : null}
       onRetry={load}
     >
-      <View style={styles.banner} accessibilityLiveRegion="polite">
-        <Text style={styles.bannerText}>{syncBannerText({ pending, syncFailed: syncFailed || entries.some((entry) => entry.status === "failed") })}</Text>
-      </View>
+      <Banner>{syncBannerText({ pending, syncFailed: syncFailed || entries.some((entry) => entry.status === "failed") })}</Banner>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Zajednički projekat</Text>
-        <View style={styles.chipRow}>
-          {projects.map((project) => (
-            <Pressable key={project.id} onPress={() => { setProjectId(project.id); void loadRoster(project.id, workDate); }}
-              accessibilityRole="radio" accessibilityState={{ selected: projectId === project.id }}
-              style={jedanStil(styles.chip, projectId === project.id ? styles.chipOn : styles.chip)}>
-              <Text style={styles.chipText}>{project.code} · {project.name}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={styles.label}>Zajednička mašina</Text>
-        <View style={styles.chipRow}>
-          <Pressable onPress={() => setMachineId(null)} accessibilityRole="radio" accessibilityState={{ selected: machineId === null }}
-            style={jedanStil(styles.chip, machineId === null ? styles.chipOn : styles.chip)}>
-            <Text style={styles.chipText}>Bez mašine</Text>
-          </Pressable>
-          {machineList.map((machine) => (
-            <Pressable key={machine.id} onPress={() => setMachineId(machine.id)} accessibilityRole="radio" accessibilityState={{ selected: machineId === machine.id }}
-              style={jedanStil(styles.chip, machineId === machine.id ? styles.chipOn : styles.chip)}>
-              <Text style={styles.chipText}>{machine.code} · {machine.name}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={styles.label}>Datum (GGGG-MM-DD)</Text>
-        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
-        <Pressable style={styles.button} onPress={() => void loadRoster(projectId, workDate)} accessibilityRole="button">
-          <Text style={styles.buttonText}>Osvježi ekipu za datum</Text>
-        </Pressable>
-        <Text style={styles.label}>Početak za sve (HH:MM)</Text>
-        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={started} onChangeText={setStarted} accessibilityLabel="Početak za sve" />
-        <Text style={styles.label}>Kraj za sve (HH:MM)</Text>
-        <TextInput placeholderTextColor={theme.muted} style={styles.input} value={ended} onChangeText={setEnded} accessibilityLabel="Kraj za sve" />
-      </View>
+      <CardView>
+        <Segmented
+          label="Zajednički projekat"
+          value={projectId}
+          onChange={(value) => { setProjectId(value); void loadRoster(value, workDate); }}
+          options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))}
+        />
+        <Segmented
+          label="Zajednička mašina"
+          value={machineId ?? ""}
+          onChange={(value) => setMachineId(value === "" ? null : value)}
+          options={[{ value: "", label: "Bez mašine" }, ...machineList.map((machine) => ({ value: machine.id, label: `${machine.code} · ${machine.name}` }))]}
+        />
+        <TextField label="Datum (GGGG-MM-DD)" value={workDate} onChangeText={setWorkDate} accessibilityLabel="Datum rada" />
+        <Button label="Osvježi ekipu za datum" variant="secondary" onPress={() => void loadRoster(projectId, workDate)} />
+        <TextField label="Početak za sve (HH:MM, 24 h)" value={started} onChangeText={setStarted} accessibilityLabel="Početak za sve" />
+        <TextField label="Kraj za sve (HH:MM, 24 h)" value={ended} onChangeText={setEnded} accessibilityLabel="Kraj za sve" />
+      </CardView>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Radnici iz opsega ({selected.size}/{workers.length} izabrano)</Text>
+      <CardView>
+        <Text variant="label">Radnici iz opsega ({selected.size}/{workers.length} izabrano)</Text>
         {workers.map((worker) => {
           const latest = latestByWorker.get(worker.id);
           const override = overrides[worker.id];
           return (
-            <View key={worker.id}>
-              <View style={styles.row}>
-                <Pressable onPress={() => toggleWorker(worker.id)} accessibilityRole="checkbox" accessibilityState={{ checked: selected.has(worker.id) }}
-                  style={jedanStil(styles.chip, selected.has(worker.id) ? styles.chipOn : styles.chip)}>
-                  <Text style={styles.chipText}>{selected.has(worker.id) ? "✓" : " "}</Text>
-                </Pressable>
-                <Text style={styles.rowText}>{worker.name}</Text>
-                <Text style={styles.outcome}>{latest ? outcomeFor(latest.status, latest.lastError).label : "Nije poslano"}</Text>
-              </View>
-              <TextInput
-                placeholderTextColor={theme.muted}
-                style={styles.input}
+            <Fragment key={worker.id}>
+              <CheckboxRow
+                label={worker.name}
+                checked={selected.has(worker.id)}
+                onToggle={() => toggleWorker(worker.id)}
+                right={latest ? outcomeFor(latest.status, latest.lastError).label : "Nije poslano"}
+              />
+              <TextField
+                label={`Pojedinačno vrijeme za ${worker.name}`}
                 value={override ? `${override.started}-${override.ended}` : ""}
                 placeholder={`${started}-${ended} (zajedničko)`}
                 onChangeText={(value) => {
@@ -225,18 +199,14 @@ export default function GrupaScreen() {
                 }}
                 accessibilityLabel={`Pojedinačno vrijeme za ${worker.name}`}
               />
-            </View>
+            </Fragment>
           );
         })}
-        <Text style={styles.muted}>{OUT_OF_SCOPE_NOTE}</Text>
-        <Pressable style={styles.button} onPress={saveGroup} disabled={busy} accessibilityRole="button">
-          <Text style={styles.buttonText}>{busy ? "Radim…" : `Sačuvaj za ${selected.size} radnika`}</Text>
-        </Pressable>
-        <Pressable style={styles.button} onPress={send} disabled={busy} accessibilityRole="button">
-          <Text style={styles.buttonText}>Pošalji sada</Text>
-        </Pressable>
-        {message ? <Text style={styles.text} accessibilityLiveRegion="polite">{message}</Text> : null}
-      </View>
-    </TerenShell>
+        <Text variant="muted">{OUT_OF_SCOPE_NOTE}</Text>
+        <Button label={`Sačuvaj za ${selected.size} radnika`} busy={busy} onPress={saveGroup} />
+        <Button label="Pošalji sada" busy={busy} onPress={send} />
+        {message ? <Text>{message}</Text> : null}
+      </CardView>
+    </Screen>
   );
 }

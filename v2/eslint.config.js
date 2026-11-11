@@ -73,7 +73,7 @@ export default tseslint.config(
   {
     files: ["apps/mobile/src/app/**/*.tsx", "apps/mobile/src/teren/**/*.tsx"],
     // U3 mobile izuzeci: svi ekrani dok se ne migriraju (predložak U7b: Moj dan + prijava).
-    ignores: ["apps/mobile/src/app/_layout.tsx", "apps/mobile/src/app/grupa.tsx", "apps/mobile/src/app/projekti.tsx", "apps/mobile/src/app/rokovi.tsx", "apps/mobile/src/teren/**"],
+    ignores: [],
     rules: {
       "no-restricted-syntax": ["error",
         { selector: "JSXOpeningElement[name.name='TextInput']", message: "Koristi TextField (U: src/ui)." },

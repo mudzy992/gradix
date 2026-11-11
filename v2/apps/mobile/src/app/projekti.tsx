@@ -7,13 +7,11 @@
  * Offline: zadnji preuzet spisak ostaje na uređaju i prikazuje se i bez veze — ekran NIKAD nije
  * prazan zbog mreže. Uz spisak ide „od prije X“ da se ne pomisli da je svjež.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { router } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { myProjects } from "../api/client";
 import { openDb, readProjects, saveProjects, type LocalProject } from "../db/sqlite";
-import { radius, spacing, touchTarget, typography } from "../theme/tokens";
-import { useTheme } from "../theme/use-theme";
+import { Button, CardView, Screen, StatusChip, Text } from "../ui";
 
 const STATUS_LABEL: Record<string, string> = {
   PLANNED: "U planu",
@@ -41,9 +39,6 @@ function domaciDatum(iso: string): string {
 }
 
 export default function ProjectsScreen() {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-
   const [rows, setRows] = useState<LocalProject[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,131 +85,28 @@ export default function ProjectsScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/*
-        Zaglavlje je u cijeloj aplikaciji isključeno (`_layout.tsx`), pa ekran koji nije početni
-        mora sam imati put nazad — inače na iOS-u nema kako da se vrati.
-      */}
-      <Pressable
-        style={styles.back}
-        onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-        accessibilityRole="button"
-        accessibilityLabel="Nazad na početni ekran"
-      >
-        <Text style={styles.backText}>‹ Nazad</Text>
-      </Pressable>
-
-      <Text style={styles.title}>Moji projekti</Text>
-      <Text style={styles.subtitle}>{sinceLabel(fetchedAt)}</Text>
-
-      {message && <Text style={styles.hint}>{message}</Text>}
-
-      {rows.length === 0 ? (
-        <View style={styles.panel}>
-          <Text style={styles.panelLabel}>Nema projekata</Text>
-          <Text style={styles.panelHint}>
-            Ovdje se vide projekti na koje si dodijeljen. Ako neki nedostaje, javi uredu.
+    <Screen
+      title="Moji projekti"
+      subtitle={sinceLabel(fetchedAt)}
+      loading={loading}
+      error={null}
+      empty={rows.length === 0 ? "Nema projekata. Ovdje se vide projekti na koje si dodijeljen. Ako neki nedostaje, javi uredu." : null}
+      onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+    >
+      {message ? <Text variant="muted">{message}</Text> : null}
+      {rows.map((row) => (
+        <CardView key={row.id}>
+          <Text variant="label">{row.name}</Text>
+          <StatusChip label={STATUS_LABEL[row.status] ?? row.status} tone={row.status === "ACTIVE" ? "plain" : "warn"} />
+          <Text>{row.sitePlace ?? "lokacija nije upisana"}</Text>
+          <Text variant="caption">
+            {row.code} · {row.endsOn ? `do ${domaciDatum(row.endsOn)}` : row.startsOn ? `od ${domaciDatum(row.startsOn)}` : "bez perioda"}
           </Text>
-        </View>
-      ) : (
-        rows.map((row) => (
-          <View key={row.id} style={styles.card}>
-            <View style={styles.cardTop}>
-              <Text style={styles.cardTitle}>{row.name}</Text>
-              {/* Stanje je tekst, ne samo boja — čita se na suncu i u čitaču ekrana. */}
-              <Text style={[styles.badge, row.status !== "ACTIVE" && styles.badgeQuiet]}>
-                {STATUS_LABEL[row.status] ?? row.status}
-              </Text>
-            </View>
-            <Text style={styles.cardTarget}>{row.sitePlace ?? "lokacija nije upisana"}</Text>
-            <Text style={styles.cardMono}>
-              {row.code} ·{" "}
-              {row.endsOn ? `do ${domaciDatum(row.endsOn)}` : row.startsOn ? `od ${domaciDatum(row.startsOn)}` : "bez perioda"}
-            </Text>
-          </View>
-        ))
-      )}
-
-      {/* Jedna velika primarna akcija — mete ≥ 56 dp, radi rukavicama. */}
-      <Pressable
-        style={[styles.big, busy && styles.disabled]}
-        onPress={refresh}
-        disabled={busy}
-        accessibilityRole="button"
-        accessibilityLabel="Osvježi spisak projekata"
-      >
-        <Text style={styles.bigText}>{busy ? "Osvježavam…" : "Osvježi"}</Text>
-      </Pressable>
-
-      <Text style={styles.footnote}>Projekti se ovdje samo gledaju. Dodjele radi ured.</Text>
-    </ScrollView>
+        </CardView>
+      ))}
+      <Button label={busy ? "Osvježavam…" : "Osvježi"} busy={busy} onPress={refresh} accessibilityLabel="Osvježi spisak projekata" />
+      <Text variant="muted">Projekti se ovdje samo gledaju. Dodjele radi ured.</Text>
+    </Screen>
   );
-}
-
-function createStyles(t: ReturnType<typeof useTheme>["theme"]) {
-  return StyleSheet.create({
-    center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: t.bg },
-    container: { padding: spacing.xl, backgroundColor: t.bg, flexGrow: 1 },
-    back: { minHeight: touchTarget, justifyContent: "center", alignSelf: "flex-start", paddingRight: spacing.md },
-    backText: { ...typography.button, color: t.muted },
-    title: { ...typography.page, color: t.text },
-    subtitle: { ...typography.body, color: t.muted, marginBottom: spacing.sm },
-    panel: {
-      padding: spacing.lg,
-      borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: t.line,
-      backgroundColor: t.panel,
-      gap: 2,
-      marginTop: spacing.md,
-    },
-    panelLabel: { ...typography.label, color: t.muted },
-    panelHint: { ...typography.body, color: t.muted },
-    card: {
-      padding: spacing.lg,
-      borderRadius: radius.card,
-      borderWidth: 1,
-      borderColor: t.line,
-      backgroundColor: t.panel,
-      marginTop: spacing.md,
-    },
-    // Razmak unutar reda ide preko `marginTop` na tekstu, ne preko `gap`: stariji React Native na
-    // Androidu ne podržava `gap` u svakom kontejneru (a izgleda kao da radi).
-    cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    cardTitle: { ...typography.section, color: t.text, flex: 1, paddingRight: spacing.sm },
-    badge: {
-      ...typography.label,
-      color: t.text,
-      borderWidth: 1,
-      borderColor: t.line,
-      borderRadius: radius.pill,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-    },
-    badgeQuiet: { color: t.muted },
-    cardTarget: { ...typography.body, color: t.text, marginTop: spacing.xs },
-    cardMono: { ...typography.mono, color: t.muted, marginTop: spacing.xs },
-    big: {
-      marginTop: spacing.lg,
-      backgroundColor: t.primary,
-      borderRadius: radius.tile,
-      paddingVertical: spacing.lg,
-      minHeight: 60,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    bigText: { ...typography.button, fontSize: 17, color: t.onPrimary },
-    disabled: { opacity: 0.6 },
-    hint: { ...typography.body, color: t.muted, marginBottom: spacing.sm },
-    footnote: { marginTop: spacing.lg, ...typography.body, color: t.muted },
-  });
 }
