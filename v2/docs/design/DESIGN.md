@@ -4,6 +4,8 @@ Vizuelna referenca: `reference.html`. Pisana pravila ispod. Referenca ima predno
 
 **Referenca pokriva i:** dijaloge, prazna stanja, učitavanje (skeleton), poruke u tri stanja, ekrane prijave i lozinke, matricu rola, drawer ispod 960 px i pretvaranje tabele u kartice ispod 640 px, te mobilni ekran (prijava i teren). Ta stanja su dopunjena 2026-11-08 vlasnikovim odobrenjem — vidi `docs/DEMO-DIZAJN.md`.
 
+**C.1 dizajn pregleda — PRIJEDLOG, čeka odobrenje vlasnika:** `reference.html#c1-pregled-reference` prikazuje novi Pregled („šta moram danas uraditi?“) za OWNER, ADMIN, PROJECT_MANAGER i SITE_SUPERVISOR: pažnja prvo (istekli rokovi, rokovi u 30 i 31–90 dana, nerazriješeni sukobi, dani za provjeru, rokovi koji blokiraju dodjelu — svaka stavka vodi na ekran rješavanja), pa sažetak, pa stanje sinhronizacije (manji prikaz, samo OWNER i ADMIN). 1440 i 360 px, obje teme, prazno stanje kao dobra vijest, matrica kartica po rolima. Kompozicija isključivo postojećih komponenti kataloga (isto i u /katalog); PM i šef vide samo svoj opseg; WORKER, DRIVER i ostali ostaju na postojećem pregledu. Stranica /pregled se NE mijenja do odobrenja.
+
 **R4a-1 dizajn — odobren „ovako“:** `reference.html#r4a1-reference` prikazuje mobilni unos radnika na 360 px i uredski read-only pregled dana na 1440 px, oba u svijetloj i tamnoj temi. Četiri tačna pregleda su linkovana u referenci; snimci su `docs/demo-dizajn/{360,1440}-{light,dark}-r4a1-{worker,office}.png`. Radnikov vlastiti unos je glavni telefonski tok; grupni unos šefa ostaje u R4a-2.
 
 ## Karakter

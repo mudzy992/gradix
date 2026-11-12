@@ -312,6 +312,48 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
 @media(max-width:960px){.r4a-office{grid-template-columns:1fr;min-height:0}.r4o-side{display:none}.r4o-main{border-left:0}.r4o-top{padding:0 16px}.r4o-page{padding:20px 16px 28px}.r4o-controls{align-items:flex-start;flex-direction:column}.r4o-filters{justify-content:flex-start}.r4o-heading{align-items:flex-start}}
 @media(max-width:639px){.r4a-reference{padding:0 12px 36px}.r4a-reference-head{align-items:flex-start}.r4a-artboard{padding:8px}.r4a-artboard-label{display:block}.r4a-artboard-label span{display:block;margin-top:3px}.r4o-stats{grid-template-columns:1fr}.r4o-table-wrap{overflow:visible;border:0;background:transparent}.r4o-table,.r4o-table tbody,.r4o-table tr,.r4o-table td{display:block;width:100%}.r4o-table thead{display:none}.r4o-table tr{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}.r4o-table td{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-top:0}.r4o-table td::before{content:attr(data-label);flex:none;color:var(--muted);font-size:11px;font-weight:700}.r4o-table td:nth-child(2){display:block}.r4o-table td:nth-child(2)::before{display:block;margin-bottom:6px}.r4o-table td:last-child{justify-content:flex-end}.r4o-foot{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.skel i{animation:none}}
+
+/* ===== C.1 Pregled — „šta moram danas uraditi?“ (prijedlog, čeka odobrenje) ===== */
+.c1-row{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1.15fr) auto;gap:14px;align-items:center;padding:13px 4px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}
+.c1-row:last-child{border-bottom:0}
+.c1-row:hover{background:var(--raise)}
+.c1-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--raise);color:var(--link)}
+.c1-ico svg{width:18px;height:18px}
+.c1-row[data-tone="danger"] .c1-ico{background:var(--danger-soft);color:var(--danger)}
+.c1-row[data-tone="warn"] .c1-ico{background:var(--warn-soft);color:var(--text)}
+.c1-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:13.5px;line-height:1.3}
+.c1-count{font:800 24px/1 "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:right;min-width:34px}
+.c1-row[data-tone="danger"] .c1-count{color:var(--danger)}
+.c1-ex{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45}
+.c1-ex b{font:600 11px "IBM Plex Mono",ui-monospace,monospace}
+.c1-flag{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;background:var(--danger-soft);color:var(--danger);font-size:11px;font-weight:700;white-space:nowrap}
+.c1-go{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--link);white-space:nowrap}
+.c1-go svg{width:13px;height:13px}
+.c1-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.c1-stats .r4o-stat-icon svg{width:17px;height:17px}
+.c1-sync{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.c1-sync-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 13px;border-bottom:1px solid var(--line);background:var(--panel);font-size:12px}
+.c1-sync-row:last-child{border-bottom:0}
+.c1-sync-row b{display:block;font-size:12.5px}
+.c1-sync-row small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
+.c1-sync-fail{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:var(--raise);font:700 12px "IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.c1-sync-fail[data-hot="true"]{background:var(--warn-soft)}
+.c1-matrix th,.c1-matrix td{font-size:12px}
+.c1-matrix td:first-child{font-weight:700}
+.c1-matrix .da{color:var(--link);font-weight:700}
+.c1-matrix .ne{color:var(--muted)}
+body[data-c1-preview] .shell{display:none}
+body[data-c1-preview] #c1-pregled-reference{max-width:none;margin:0;padding:0}
+body[data-c1-preview] .r4a-reference-head,body[data-c1-preview] .r4a-seed-note,body[data-c1-preview] .r4a-artboard-label,body[data-c1-preview] .c1-copy{display:none}
+body[data-c1-preview] .r4a-artboard{margin:0;padding:0;border:0;border-radius:0;background:transparent}
+body[data-c1-preview] .r4a-artboard-canvas{margin:0;border:0;border-radius:0}
+body[data-c1-preview="ured"] .c1-artboard:not([data-screen="ured"]){display:none}
+body[data-c1-preview="mob"] .c1-artboard:not([data-screen="mob"]){display:none}
+body[data-c1-preview="prazno"] .c1-artboard:not([data-screen="prazno"]){display:none}
+body[data-c1-preview="ured"] .r4a-office{min-height:100vh;border-radius:0}
+body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r4a-mobile-screen{width:100vw;max-width:none;min-height:100vh}
+@media(max-width:960px){.c1-row{grid-template-columns:44px minmax(0,1fr) auto auto}.c1-ex{display:none}}
+@media(max-width:639px){.c1-row{grid-template-columns:40px minmax(0,1fr) auto;row-gap:4px;padding:12px 2px}.c1-count{font-size:20px}.c1-go{grid-column:2;display:inline-flex}.c1-ex{display:block;grid-column:2 / -1}.c1-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.c1-sync-row{grid-template-columns:minmax(0,1fr) auto}.c1-sync-row .c1-sync-when{display:none}}
 </style>
 </head>
 <body>
@@ -808,11 +850,460 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
     <p class="hint">Vremena se NE spajaju automatski: ured bira jedan unos i smije ručno ispraviti vremena (24 h, HH:MM) prije prihvatanja; original ostaje u auditu. „Odbaci uz razlog" otvara dijalog s obaveznim razlogom (prijedlog: ConfirmDialog + opciono polje razloga) — razlog radnik vidi na telefonu, interne napomene ne vidi. Nakon razrješenja red prelazi u stanje „Razriješeno" s odlukom, autorom i vremenom u audit tragu, a telefon ishod povlači sljedećim syncom.</p>
   </section>
 </section>
+<section class="r4a-reference" id="c1-pregled-reference" aria-labelledby="c1-heading">
+  <div class="r4a-reference-head">
+    <div class="r4a-reference-copy">
+      <span class="r4a-pending">Prijedlog · čeka odobrenje vlasnika — pregled se NE mijenja do odobrenja</span>
+      <h1 id="c1-heading">C.1 · Pregled: „Šta moram danas uraditi?“</h1>
+      <p class="sub">Početna za OWNER, ADMIN, PROJECT_MANAGER i SITE_SUPERVISOR najprije odgovara na pitanje „šta moram danas uraditi?“, tek onda pokazuje brojke. WORKER, DRIVER i ostale role ostaju na postojećem pregledu bez izmjena.</p>
+    </div>
+    <nav class="r4a-preview-links" aria-label="Prikazi C.1 pregleda">
+      <a href="reference.html?preview=c1&amp;screen=ured&amp;theme=light">1440 · Ured · Svijetlo</a>
+      <a href="reference.html?preview=c1&amp;screen=ured&amp;theme=dark">1440 · Ured · Tamno</a>
+      <a href="reference.html?preview=c1&amp;screen=mob&amp;theme=light">360 · Mobilni · Svijetlo</a>
+      <a href="reference.html?preview=c1&amp;screen=mob&amp;theme=dark">360 · Mobilni · Tamno</a>
+      <a href="reference.html?preview=c1&amp;screen=prazno&amp;theme=light">360 · Prazno · Svijetlo</a>
+      <a href="reference.html?preview=c1&amp;screen=prazno&amp;theme=dark">360 · Prazno · Tamno</a>
+    </nav>
+  </div>
+  <div class="r4a-seed-note"><svg aria-hidden="true"><use href="#i-info"/></svg><span><b>Demo podaci (sidro 12. 11. 2026.):</b> isteklo 4, u 30 dana 5, 31–90 dana 6, tri demo sukoba (preklop, sat +6 min, stariji od praga), radnici 31, mašine 19 — iz seeda i seed-demo-podaci naredbe. Istekli rokovi u primjerima su stvarni redovi iz uvoza (Tehnički pregled KAM-04, Ljekarski Dino Salihović, Osiguranje BUL-01, Građevinska dozvola P-02/2025). Dani za provjeru, blokirane dodjele i sinhronizacija su ilustrativni — u seedu takvih redova nema (tipovi iz uvoza ne blokiraju dodjelu). Bez telefona i emaila.</span></div>
+
+  <div class="c1-copy">
+    <section class="card">
+      <h2 style="margin-bottom:12px">Kartice i redoslijed</h2>
+      <p class="hint"><b>(a) Šta traži pažnju — prvo i najvažnije.</b> Istekli rokovi; rokovi u 30 dana i 31–90 dana (svaki vodi na listu rokova filtriranu na to stanje, npr. <span class="mono">/ured/rokovi?stanje=isteklo</span>); nerazriješeni sukobi sa starošću starijom od praga firme istaknutom; dani za provjeru (otvoren segment, kraj nepoznat); mašine i radnici sa isteklom obavezom koja blokira dodjelu. Redoslijed je po hitnosti: isteklo i sukobi nose crvenu, „u 30 dana“ i „za provjeru“ žutu (warn), „31–90“ je mirno. Svaka stavka je link direktno na ekran rješavanja — nema pretrage kroz meni.</p>
+      <p class="hint"><b>(b) Sažetak — drugo.</b> Aktivni projekti, aktivni radnici, mašine i unosi rada ovaj tjedan (ako ih ima). Brojevi, ne radni spisak.</p>
+      <p class="hint"><b>(c) Stanje sinhronizacije — manji prikaz, samo OWNER i ADMIN.</b> Zadnja sinhronizacija po korisniku i neuspjele stavke po danu; detalji ostaju u Audit tragu. Na telefonu ovo ne postoji — radnik i šef i dalje vide svoj red za slanje.</p>
+      <p class="hint"><b>(d) Po rolama.</b> PM i šef gradilišta vide iste kartice, ali samo svoj opseg (rokovi i dani njihovih projekata/radnika); WORKER, DRIVER i ostale role ostaju na postojećem pregledu. Matrica ispod pokazuje ko šta vidi.</p>
+      <p class="hint"><b>(e) Komponente.</b> Sve je iz postojećeg kataloga: Card, ActionCard (red pažnje), Stat, Chip, StatusDot, EmptyState, TextLink, Mono i DataTable. Red pažnje je kompozicija postojećih dijelova (ikona + naslov + broj + primjeri + link), ne nova vrsta komponente — ne predlažem ništa novo.</p>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <h2 style="margin-bottom:12px">Koja kartica se vidi kojoj roli</h2>
+      <div class="r4o-table-wrap">
+        <table class="r4o-table c1-matrix" aria-label="Kartice pregleda po rolama">
+          <thead><tr><th>Kartica</th><th>OWNER</th><th>ADMIN</th><th>PROJECT_MANAGER</th><th>SITE_SUPERVISOR</th><th>WORKER · DRIVER · ostali</th></tr></thead>
+          <tbody>
+            <tr><td data-label="Kartica">Šta traži pažnju</td><td data-label="OWNER"><span class="da">Cijela firma</span></td><td data-label="ADMIN"><span class="da">Cijela firma</span></td><td data-label="PROJECT_MANAGER"><span class="da">Samo svoj opseg</span></td><td data-label="SITE_SUPERVISOR"><span class="da">Samo svoj opseg</span></td><td data-label="WORKER i ostali"><span class="ne">postojeći pregled</span></td></tr>
+            <tr><td data-label="Kartica">Sažetak</td><td data-label="OWNER"><span class="da">Firma</span></td><td data-label="ADMIN"><span class="da">Firma</span></td><td data-label="PROJECT_MANAGER"><span class="da">Svoj opseg</span></td><td data-label="SITE_SUPERVISOR"><span class="da">Svoj opseg</span></td><td data-label="WORKER i ostali"><span class="ne">postojeći pregled</span></td></tr>
+            <tr><td data-label="Kartica">Stanje sinhronizacije</td><td data-label="OWNER"><span class="da">Vidi</span></td><td data-label="ADMIN"><span class="da">Vidi</span></td><td data-label="PROJECT_MANAGER"><span class="ne">Ne vidi</span></td><td data-label="SITE_SUPERVISOR"><span class="ne">Ne vidi</span></td><td data-label="WORKER i ostali"><span class="ne">Ne vidi</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:12px">Prazno stanje je dobra vijest i tako glasi: „Ništa ne traži pažnju“ — bez crvenog, bez upozorenja. Pokazatelji pilota (PILOT.md: unosi po danu, starost sukoba, otvoreni dani, greške sinhronizacije) nemaju posebnu stranicu: svi se vide iz ove tri kartice plus Radni dani i Audit trag. Posebna stranica bi dodala površinu za održavanje bez odluke koju olakšava; ako pilot pokaže potrebu, predlaže se odvojeno.</p>
+    </section>
+  </div>
+
+  <div class="r4a-artboards">
+    <article class="r4a-artboard c1-artboard" data-screen="ured" aria-label="Uredski pregled, širina 1440 piksela, light tema">
+      <div class="r4a-artboard-label"><b>1440 px · Ured · Svijetlo</b><span>OWNER/ADMIN · pažnja prvo, pa brojke · PM i šef vide svoj opseg</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-office" data-theme="light">
+          <aside class="r4o-side" aria-label="Glavna navigacija">
+            <div class="logo"><i aria-hidden="true"></i>Gradix</div>
+            <nav class="nav">
+              <a href="#" aria-current="page"><svg aria-hidden="true"><use href="#i-home"/></svg>Pregled</a>
+              <small>Posao</small>
+              <a href="#"><svg aria-hidden="true"><use href="#i-folder"/></svg>Projekti</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-users"/></svg>Radnici</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-truck"/></svg>Mehanizacija</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-cal"/></svg>Rokovi</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-clock"/></svg>Radni dani</a>
+              <small>Firma</small>
+              <a href="#"><svg aria-hidden="true"><use href="#i-shield"/></svg>Pristup i role</a>
+            </nav>
+            <div class="org"><div class="av" aria-hidden="true">ND</div><div><b>Niskogradnja Demo</b><span>Emir Hadžić · Vlasnik</span></div></div>
+          </aside>
+          <div class="r4o-main">
+            <header class="r4o-top">
+              <div class="search"><svg aria-hidden="true"><use href="#i-search"/></svg>Traži radnike, projekte<span class="kbd">Ctrl K</span></div>
+              <div class="sp"></div>
+              <button class="icon-btn" type="button" aria-label="Promijeni temu"><svg aria-hidden="true"><use href="#i-moon"/></svg></button>
+              <div class="av" aria-label="Emir Hadžić">EH</div>
+            </header>
+            <main class="r4o-page">
+              <div class="r4o-heading">
+                <div><h1>Dobro jutro, Emire</h1><p class="sub">Petak, 12. novembar 2026. · Niskogradnja Demo d.o.o.</p></div>
+                <span class="chip chip--hot"><i class="dot w" aria-hidden="true"></i>6 stvari traži pažnju</span>
+              </div>
+
+              <section class="card" aria-labelledby="c1-atten-h">
+                <div class="r4o-heading" style="margin-bottom:4px">
+                  <div><h2 id="c1-atten-h" style="font-size:16px">Šta traži pažnju</h2><p class="sub" style="font-size:12px">Najvažnije prvo. Svaka stavka vodi na ekran na kojem se rješava.</p></div>
+                </div>
+                <div class="c1-rows">
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Istekli rokovi</span><span class="c1-ex">Tehnički pregled <b>KAM-04</b> · 28. 10. — Ljekarski pregled <b>Dino Salihović</b> · 2. 11. — Osiguranje <b>BUL-01</b> · 5. 11. — Građevinska dozvola <b>P-02/2025</b> · 9. 11.</span></span>
+                    <span class="c1-count">4</span>
+                    <span class="c1-go">Rokovi · isteklo<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
+                    <span><span class="c1-title">Nerazriješeni sukobi<span class="c1-flag"><i class="dot w" aria-hidden="true" style="width:7px;height:7px"></i>1 stariji od 3 dana</span></span><span class="c1-ex">Amar Hadžić · preklop <b>11. 11.</b> — sat +6 min <b>10. 11.</b> — stari sukob <b>2. 11.</b></span></span>
+                    <span class="c1-count">3</span>
+                    <span class="c1-go">Sukobi<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="warn" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Rokovi koji ističu u 30 dana</span><span class="c1-ex">Najbliži rok ističe za 7 dana — obnovi na vrijeme i ne dođe u „isteklo“.</span></span>
+                    <span class="c1-count">5</span>
+                    <span class="c1-go">Rokovi · uskoro<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="warn" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-clock"/></svg></span>
+                    <span><span class="c1-title">Dani za provjeru</span><span class="c1-ex">Otvoren segment, kraj nepoznat — <b>Amar Hadžić 10. 11.</b>, <b>Mario Perić 9. 11.</b></span></span>
+                    <span class="c1-count">2</span>
+                    <span class="c1-go">Radni dani · Za provjeru<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-truck"/></svg></span>
+                    <span><span class="c1-title">Istekla roka blokiraju dodjelu</span><span class="c1-ex"><b>KAM-04</b> · tehnički pregled istekao — <b>Dino Salihović</b> · ljekarski pregled istekao. Dodjela traži obnovu ili iznimku.</span></span>
+                    <span class="c1-count">2</span>
+                    <span class="c1-go">Projekti · dodjele<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Rokovi 31–90 dana</span><span class="c1-ex">Još ne pregrijavaju — tu su da se isplanira obnova.</span></span>
+                    <span class="c1-count">6</span>
+                    <span class="c1-go">Rokovi · 31–90<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="c1-sum-h">
+                <h2 id="c1-sum-h" style="font-size:16px;margin-bottom:2px">Sažetak</h2>
+                <p class="sub" style="font-size:12px">Brojke drugo — stanje firme na prvi pogled.</p>
+                <div class="c1-stats">
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>aktivni projekat</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>aktivnih radnika</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina u evidenciji</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>3</b><span>unosa rada ovaj tjedan</span></div></div>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="c1-sync-h">
+                <div class="r4o-heading" style="margin-bottom:4px">
+                  <div><h2 id="c1-sync-h" style="font-size:16px">Stanje sinhronizacije</h2><p class="sub" style="font-size:12px">Manji prikaz · vide ga samo vlasnik i administrator.</p></div>
+                  <a class="c1-go" href="#">Audit trag<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+                </div>
+                <div class="c1-sync">
+                  <div class="c1-sync-row"><span><b>Amar Hadžić</b><small>telefon · van mreže juče u 16:10</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: juče 16:10</small></span><span class="c1-sync-fail" data-hot="true">2 neuspješne juče</span></div>
+                  <div class="c1-sync-row"><span><b>Mario Perić</b><small>telefon · sve prošlo</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: danas 07:15</small></span><span class="c1-sync-fail">0</span></div>
+                  <div class="c1-sync-row"><span><b>Selmir Begić</b><small>telefon · 1 stavka čeka od prekjuče</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: juče 18:02</small></span><span class="c1-sync-fail" data-hot="true">1 prije 2 dana</span></div>
+                </div>
+                <p class="sub" style="font-size:11px;margin-top:10px">Neuspjele stavke po danu; detalji svakog pokušaja u Audit tragu. Na telefonu radnik i dalje vidi svoj red za slanje.</p>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard c1-artboard" data-screen="ured" aria-label="Uredski pregled, širina 1440 piksela, dark tema">
+      <div class="r4a-artboard-label"><b>1440 px · Ured · Tamno</b><span>OWNER/ADMIN · pažnja prvo, pa brojke · PM i šef vide svoj opseg</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-office" data-theme="dark">
+          <aside class="r4o-side" aria-label="Glavna navigacija">
+            <div class="logo"><i aria-hidden="true"></i>Gradix</div>
+            <nav class="nav">
+              <a href="#" aria-current="page"><svg aria-hidden="true"><use href="#i-home"/></svg>Pregled</a>
+              <small>Posao</small>
+              <a href="#"><svg aria-hidden="true"><use href="#i-folder"/></svg>Projekti</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-users"/></svg>Radnici</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-truck"/></svg>Mehanizacija</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-cal"/></svg>Rokovi</a>
+              <a href="#"><svg aria-hidden="true"><use href="#i-clock"/></svg>Radni dani</a>
+              <small>Firma</small>
+              <a href="#"><svg aria-hidden="true"><use href="#i-shield"/></svg>Pristup i role</a>
+            </nav>
+            <div class="org"><div class="av" aria-hidden="true">ND</div><div><b>Niskogradnja Demo</b><span>Emir Hadžić · Vlasnik</span></div></div>
+          </aside>
+          <div class="r4o-main">
+            <header class="r4o-top">
+              <div class="search"><svg aria-hidden="true"><use href="#i-search"/></svg>Traži radnike, projekte<span class="kbd">Ctrl K</span></div>
+              <div class="sp"></div>
+              <button class="icon-btn" type="button" aria-label="Promijeni temu"><svg aria-hidden="true"><use href="#i-moon"/></svg></button>
+              <div class="av" aria-label="Emir Hadžić">EH</div>
+            </header>
+            <main class="r4o-page">
+              <div class="r4o-heading">
+                <div><h1>Dobro jutro, Emire</h1><p class="sub">Petak, 12. novembar 2026. · Niskogradnja Demo d.o.o.</p></div>
+                <span class="chip chip--hot"><i class="dot w" aria-hidden="true"></i>6 stvari traži pažnju</span>
+              </div>
+
+              <section class="card" aria-labelledby="c1-atten-h">
+                <div class="r4o-heading" style="margin-bottom:4px">
+                  <div><h2 id="c1-atten-h" style="font-size:16px">Šta traži pažnju</h2><p class="sub" style="font-size:12px">Najvažnije prvo. Svaka stavka vodi na ekran na kojem se rješava.</p></div>
+                </div>
+                <div class="c1-rows">
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Istekli rokovi</span><span class="c1-ex">Tehnički pregled <b>KAM-04</b> · 28. 10. — Ljekarski pregled <b>Dino Salihović</b> · 2. 11. — Osiguranje <b>BUL-01</b> · 5. 11. — Građevinska dozvola <b>P-02/2025</b> · 9. 11.</span></span>
+                    <span class="c1-count">4</span>
+                    <span class="c1-go">Rokovi · isteklo<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
+                    <span><span class="c1-title">Nerazriješeni sukobi<span class="c1-flag"><i class="dot w" aria-hidden="true" style="width:7px;height:7px"></i>1 stariji od 3 dana</span></span><span class="c1-ex">Amar Hadžić · preklop <b>11. 11.</b> — sat +6 min <b>10. 11.</b> — stari sukob <b>2. 11.</b></span></span>
+                    <span class="c1-count">3</span>
+                    <span class="c1-go">Sukobi<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="warn" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Rokovi koji ističu u 30 dana</span><span class="c1-ex">Najbliži rok ističe za 7 dana — obnovi na vrijeme i ne dođe u „isteklo“.</span></span>
+                    <span class="c1-count">5</span>
+                    <span class="c1-go">Rokovi · uskoro<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="warn" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-clock"/></svg></span>
+                    <span><span class="c1-title">Dani za provjeru</span><span class="c1-ex">Otvoren segment, kraj nepoznat — <b>Amar Hadžić 10. 11.</b>, <b>Mario Perić 9. 11.</b></span></span>
+                    <span class="c1-count">2</span>
+                    <span class="c1-go">Radni dani · Za provjeru<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" data-tone="danger" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-truck"/></svg></span>
+                    <span><span class="c1-title">Istekla roka blokiraju dodjelu</span><span class="c1-ex"><b>KAM-04</b> · tehnički pregled istekao — <b>Dino Salihović</b> · ljekarski pregled istekao. Dodjela traži obnovu ili iznimku.</span></span>
+                    <span class="c1-count">2</span>
+                    <span class="c1-go">Projekti · dodjele<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                  <a class="c1-row" href="#">
+                    <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                    <span><span class="c1-title">Rokovi 31–90 dana</span><span class="c1-ex">Još ne pregrijavaju — tu su da se isplanira obnova.</span></span>
+                    <span class="c1-count">6</span>
+                    <span class="c1-go">Rokovi · 31–90<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></span>
+                  </a>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="c1-sum-h">
+                <h2 id="c1-sum-h" style="font-size:16px;margin-bottom:2px">Sažetak</h2>
+                <p class="sub" style="font-size:12px">Brojke drugo — stanje firme na prvi pogled.</p>
+                <div class="c1-stats">
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>aktivni projekat</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>aktivnih radnika</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina u evidenciji</span></div></div>
+                  <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>3</b><span>unosa rada ovaj tjedan</span></div></div>
+                </div>
+              </section>
+
+              <section class="card" aria-labelledby="c1-sync-h">
+                <div class="r4o-heading" style="margin-bottom:4px">
+                  <div><h2 id="c1-sync-h" style="font-size:16px">Stanje sinhronizacije</h2><p class="sub" style="font-size:12px">Manji prikaz · vide ga samo vlasnik i administrator.</p></div>
+                  <a class="c1-go" href="#">Audit trag<svg aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+                </div>
+                <div class="c1-sync">
+                  <div class="c1-sync-row"><span><b>Amar Hadžić</b><small>telefon · van mreže juče u 16:10</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: juče 16:10</small></span><span class="c1-sync-fail" data-hot="true">2 neuspješne juče</span></div>
+                  <div class="c1-sync-row"><span><b>Mario Perić</b><small>telefon · sve prošlo</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: danas 07:15</small></span><span class="c1-sync-fail">0</span></div>
+                  <div class="c1-sync-row"><span><b>Selmir Begić</b><small>telefon · 1 stavka čeka od prekjuče</small></span><span class="c1-sync-when"><small>zadnja sinhronizacija: juče 18:02</small></span><span class="c1-sync-fail" data-hot="true">1 prije 2 dana</span></div>
+                </div>
+                <p class="sub" style="font-size:11px;margin-top:10px">Neuspjele stavke po danu; detalji svakog pokušaja u Audit tragu. Na telefonu radnik i dalje vidi svoj red za slanje.</p>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard c1-artboard" data-screen="mob" aria-label="Pregled na telefonu, širina 360 piksela, light tema">
+      <div class="r4a-artboard-label"><b>360 px · Mobilni · Svijetlo</b><span>Isti redoslijed: pažnja pa brojke · šef vidi svoj opseg</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="light">
+          <header class="r4m-header">
+            <div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>URED</small></div></div>
+            <button class="icon-btn menu-btn" type="button" aria-label="Otvori navigaciju"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
+          </header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-title-row">
+              <div><h1>Dobro jutro, Emire</h1><p>Petak, 12. novembar 2026.</p></div>
+              <span class="r4m-pill"><i class="dot w" aria-hidden="true"></i>6 pažnje</span>
+            </div>
+            <section class="r4m-card" aria-labelledby="c1m-atten-h">
+              <div class="r4m-card-head"><h2 id="c1m-atten-h">Šta traži pažnju</h2><span>prvo ovo</span></div>
+              <div class="c1-rows">
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Istekli rokovi</span><span class="c1-ex">Tehnički <b>KAM-04</b> · Ljekarski <b>D. Salihović</b> · Osiguranje <b>BUL-01</b> · Dozvola <b>P-02/2025</b></span></span>
+                  <span class="c1-count">4</span>
+                </a>
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
+                  <span><span class="c1-title">Sukobi<span class="c1-flag">1 stariji od 3 dana</span></span><span class="c1-ex">Amar Hadžić · preklop 11. 11. · sat +6 min · stari 2. 11.</span></span>
+                  <span class="c1-count">3</span>
+                </a>
+                <a class="c1-row" data-tone="warn" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Rokovi u 30 dana</span><span class="c1-ex">Najbliži ističe za 7 dana.</span></span>
+                  <span class="c1-count">5</span>
+                </a>
+                <a class="c1-row" data-tone="warn" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-clock"/></svg></span>
+                  <span><span class="c1-title">Dani za provjeru</span><span class="c1-ex">Otvoren segment, kraj nepoznat.</span></span>
+                  <span class="c1-count">2</span>
+                </a>
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-truck"/></svg></span>
+                  <span><span class="c1-title">Blokirane dodjele</span><span class="c1-ex"><b>KAM-04</b> i <b>D. Salihović</b> — rok istekao.</span></span>
+                  <span class="c1-count">2</span>
+                </a>
+                <a class="c1-row" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Rokovi 31–90 dana</span><span class="c1-ex">Za plan obnove.</span></span>
+                  <span class="c1-count">6</span>
+                </a>
+              </div>
+            </section>
+            <section class="r4m-card" aria-labelledby="c1m-sum-h">
+              <div class="r4m-card-head"><h2 id="c1m-sum-h">Sažetak</h2><span>ovaj tjedan</span></div>
+              <div class="c1-stats">
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>projekat</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>radnika</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>3</b><span>unosa rada</span></div></div>
+              </div>
+            </section>
+            <p class="r4m-footnote">Stanje sinhronizacije vidi samo vlasnik i administrator, u uredu.</p>
+          </main>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard c1-artboard" data-screen="mob" aria-label="Pregled na telefonu, širina 360 piksela, dark tema">
+      <div class="r4a-artboard-label"><b>360 px · Mobilni · Tamno</b><span>Isti redoslijed: pažnja pa brojke · šef vidi svoj opseg</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="dark">
+          <header class="r4m-header">
+            <div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>URED</small></div></div>
+            <button class="icon-btn menu-btn" type="button" aria-label="Otvori navigaciju"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
+          </header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-title-row">
+              <div><h1>Dobro jutro, Emire</h1><p>Petak, 12. novembar 2026.</p></div>
+              <span class="r4m-pill"><i class="dot w" aria-hidden="true"></i>6 pažnje</span>
+            </div>
+            <section class="r4m-card" aria-labelledby="c1m-atten-h">
+              <div class="r4m-card-head"><h2 id="c1m-atten-h">Šta traži pažnju</h2><span>prvo ovo</span></div>
+              <div class="c1-rows">
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Istekli rokovi</span><span class="c1-ex">Tehnički <b>KAM-04</b> · Ljekarski <b>D. Salihović</b> · Osiguranje <b>BUL-01</b> · Dozvola <b>P-02/2025</b></span></span>
+                  <span class="c1-count">4</span>
+                </a>
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
+                  <span><span class="c1-title">Sukobi<span class="c1-flag">1 stariji od 3 dana</span></span><span class="c1-ex">Amar Hadžić · preklop 11. 11. · sat +6 min · stari 2. 11.</span></span>
+                  <span class="c1-count">3</span>
+                </a>
+                <a class="c1-row" data-tone="warn" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Rokovi u 30 dana</span><span class="c1-ex">Najbliži ističe za 7 dana.</span></span>
+                  <span class="c1-count">5</span>
+                </a>
+                <a class="c1-row" data-tone="warn" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-clock"/></svg></span>
+                  <span><span class="c1-title">Dani za provjeru</span><span class="c1-ex">Otvoren segment, kraj nepoznat.</span></span>
+                  <span class="c1-count">2</span>
+                </a>
+                <a class="c1-row" data-tone="danger" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-truck"/></svg></span>
+                  <span><span class="c1-title">Blokirane dodjele</span><span class="c1-ex"><b>KAM-04</b> i <b>D. Salihović</b> — rok istekao.</span></span>
+                  <span class="c1-count">2</span>
+                </a>
+                <a class="c1-row" href="#">
+                  <span class="c1-ico"><svg aria-hidden="true"><use href="#i-cal"/></svg></span>
+                  <span><span class="c1-title">Rokovi 31–90 dana</span><span class="c1-ex">Za plan obnove.</span></span>
+                  <span class="c1-count">6</span>
+                </a>
+              </div>
+            </section>
+            <section class="r4m-card" aria-labelledby="c1m-sum-h">
+              <div class="r4m-card-head"><h2 id="c1m-sum-h">Sažetak</h2><span>ovaj tjedan</span></div>
+              <div class="c1-stats">
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>projekat</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>radnika</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>3</b><span>unosa rada</span></div></div>
+              </div>
+            </section>
+            <p class="r4m-footnote">Stanje sinhronizacije vidi samo vlasnik i administrator, u uredu.</p>
+          </main>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard c1-artboard" data-screen="prazno" aria-label="Prazno stanje pregleda, širina 360 piksela, light tema">
+      <div class="r4a-artboard-label"><b>360 px · Prazno stanje · Svijetlo</b><span>Nema ničega što traži pažnju — i tako i piše</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="light">
+          <header class="r4m-header">
+            <div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>URED</small></div></div>
+            <button class="icon-btn menu-btn" type="button" aria-label="Otvori navigaciju"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
+          </header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-title-row">
+              <div><h1>Dobro jutro, Emire</h1><p>Petak, 12. novembar 2026.</p></div>
+              <span class="r4m-pill"><i class="dot" aria-hidden="true"></i>Sve mirno</span>
+            </div>
+            <section class="r4m-card">
+              <div class="empty">
+                <b>Ništa ne traži pažnju</b>
+                <span>To je dobra vijest: nema isteklih rokova, nerazrješenih sukoba ni dana za provjeru.</span>
+                <a class="btn" href="#">Svejedno pogledaj rokove</a>
+              </div>
+            </section>
+            <section class="r4m-card" aria-labelledby="c1p-sum-h">
+              <div class="r4m-card-head"><h2 id="c1p-sum-h">Sažetak</h2><span>brojke ostaju</span></div>
+              <div class="c1-stats">
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>projekat</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>radnika</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>0</b><span>unosa sa sukobom</span></div></div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard c1-artboard" data-screen="prazno" aria-label="Prazno stanje pregleda, širina 360 piksela, dark tema">
+      <div class="r4a-artboard-label"><b>360 px · Prazno stanje · Tamno</b><span>Nema ničega što traži pažnju — i tako i piše</span></div>
+      <div class="r4a-artboard-canvas">
+        <div class="r4a-mobile-screen" data-theme="dark">
+          <header class="r4m-header">
+            <div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>URED</small></div></div>
+            <button class="icon-btn menu-btn" type="button" aria-label="Otvori navigaciju"><svg aria-hidden="true"><use href="#i-menu"/></svg></button>
+          </header>
+          <main class="r4m-main">
+            <p class="r4m-company">Niskogradnja Demo d.o.o.</p>
+            <div class="r4m-title-row">
+              <div><h1>Dobro jutro, Emire</h1><p>Petak, 12. novembar 2026.</p></div>
+              <span class="r4m-pill"><i class="dot" aria-hidden="true"></i>Sve mirno</span>
+            </div>
+            <section class="r4m-card">
+              <div class="empty">
+                <b>Ništa ne traži pažnju</b>
+                <span>To je dobra vijest: nema isteklih rokova, nerazrješenih sukoba ni dana za provjeru.</span>
+                <a class="btn" href="#">Svejedno pogledaj rokove</a>
+              </div>
+            </section>
+            <section class="r4m-card" aria-labelledby="c1p-sum-h">
+              <div class="r4m-card-head"><h2 id="c1p-sum-h">Sažetak</h2><span>brojke ostaju</span></div>
+              <div class="c1-stats">
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-folder"/></svg></div><div><b>1</b><span>projekat</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-users"/></svg></div><div><b>31</b><span>radnika</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-truck"/></svg></div><div><b>19</b><span>mašina</span></div></div>
+                <div class="r4o-stat"><div class="r4o-stat-icon"><svg aria-hidden="true"><use href="#i-cal"/></svg></div><div><b>0</b><span>unosa sa sukobom</span></div></div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
 <script>
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),params=new URLSearchParams(location.search);
 const requestedTheme=params.get("theme");
 r.dataset.theme=requestedTheme==="light"||requestedTheme==="dark"?requestedTheme:(m.matches?"dark":"light");
 if(params.get("preview")==="r4a1"&&(params.get("screen")==="worker"||params.get("screen")==="office"))document.body.dataset.r4aPreview=params.get("screen");
+if(params.get("preview")==="c1"&&["ured","mob","prazno"].includes(params.get("screen")))document.body.dataset.c1Preview=params.get("screen");
 const toggleTheme=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
 document.getElementById("theme").onclick=toggleTheme;
 document.getElementById("r4a-mobile-theme").onclick=toggleTheme;

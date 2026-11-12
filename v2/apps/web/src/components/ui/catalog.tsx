@@ -463,6 +463,98 @@ export function ComponentCatalog() {
         </Stack>
       </Section>
 
+      <Section
+        title="C.1 — Pregled: „Šta moram danas uraditi?“ (prijedlog, čeka odobrenje)"
+        hint="Početna za OWNER, ADMIN, PROJECT_MANAGER i SITE_SUPERVISOR najprije odgovara na „šta moram danas uraditi?“, tek onda na brojke. PM i šef vide samo svoj opseg; WORKER, DRIVER i ostali ostaju na postojećem pregledu. Red pažnje je kompozicija postojećih dijelova (ActionCard + broj + primjeri + veza) — nove vrste komponente nema. Stranica /pregled NIJE mijenjana; potpuni dizajn (1440 i 360, obje teme, prazno stanje, matrica rola): docs/design/referenca/reference.html#c1-pregled-reference. Web prijedlog — mobilni katalog se ne dira."
+      >
+        <Stack>
+          <Card>
+            <SectionTitle hint="Najvažnije prvo. Svaka stavka vodi direktno na ekran na kojem se rješava. Brojevi su iz seeda (sidro 12. 11. 2026.); dani za provjeru, blokirane dodjele i sinhronizacija su ilustrativni.">Šta traži pažnju (dizajn)</SectionTitle>
+            <Stack>
+              <ActionCard
+                title="Istekli rokovi · 4"
+                hint="Tehnički pregled KAM-04 (28. 10.) · Ljekarski pregled Dino Salihović (2. 11.) · Osiguranje BUL-01 (5. 11.) · Građevinska dozvola P-02/2025 (9. 11.) — vodi na Rokove filtrirane na stanje „isteklo“"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=isteklo")}
+              />
+              <ActionCard
+                title="Nerazriješeni sukobi · 3"
+                hint="Amar Hadžić: preklop 11. 11., sat +6 min 10. 11., stariji od praga 2. 11. (istaknut) — vodi na Sukobe"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/sukobi?stanje=OPEN")}
+              />
+              <ActionCard
+                title="Rokovi koji ističu u 30 dana · 5"
+                hint="Najbliži rok ističe za 7 dana — vodi na Rokove filtrirane na stanje „uskoro“"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=expiring")}
+              />
+              <ActionCard
+                title="Dani za provjeru · 2"
+                hint="Otvoren segment, kraj nepoznat (ilustrativno) — vodi na Radne dane, filter „Za provjeru“"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/radni-dani?filter=za-provjeru")}
+              />
+              <ActionCard
+                title="Istekla roka blokiraju dodjelu · 2"
+                hint="KAM-04 (tehnički pregled) i Dino Salihović (ljekarski) — vodi na Projekti, dodjele; tamo se traži obnova ili iznimka"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/projekti")}
+              />
+              <ActionCard
+                title="Rokovi 31–90 dana · 6"
+                hint="Još ne pregrijavaju — tu su za plan obnove. Vodi na Rokove, stanje „31–90 dana“"
+                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=31-90")}
+              />
+            </Stack>
+          </Card>
+          <FormGrid>
+            <Card>
+              <SectionTitle hint="Brojke drugo — stanje firme na prvi pogled. PM i šef vide svoj opseg.">Sažetak (dizajn)</SectionTitle>
+              <Inline>
+                <Stat label="Aktivni projekti" value="1" />
+                <Stat label="Aktivni radnici" value="31" />
+                <Stat label="Mašine" value="19" />
+                <Stat label="Unosi rada ovaj tjedan" value="3" />
+              </Inline>
+            </Card>
+            <Card>
+              <SectionTitle hint="Manji prikaz; vide ga samo OWNER i ADMIN. Neuspjele stavke po danu; detalji ostaju u Audit tragu.">Stanje sinhronizacije (dizajn, ilustrativno)</SectionTitle>
+              <DescriptionList
+                items={[
+                  { term: "Amar Hadžić", value: <Inline>zadnja sinhronizacija juče u 16:10<Chip tone="hot">2 neuspješne juče</Chip></Inline> },
+                  { term: "Mario Perić", value: "danas u 07:15 · sve prošlo" },
+                  { term: "Selmir Begić", value: "juče u 18:02 · 1 stavka čeka od prekjuče" },
+                ]}
+              />
+            </Card>
+          </FormGrid>
+          <Card>
+            <SectionTitle hint="Kad nema ničega što traži pažnju, to je dobra vijest — i tako glasi.">Prazno stanje (dizajn)</SectionTitle>
+            <EmptyState
+              title="Ništa ne traži pažnju"
+              description="To je dobra vijest: nema isteklih rokova, nerazrješenih sukoba ni dana za provjeru."
+              action={<TextLink href="/ured/rokovi">Svejedno pogledaj rokove</TextLink>}
+            />
+          </Card>
+          <DataTable
+            caption="Koja kartica pregleda se vidi kojoj roli (C.1 prijedlog)"
+            rows={[
+              { id: "1", card: "Šta traži pažnju", owner: "Cijela firma", admin: "Cijela firma", pm: "Samo svoj opseg", sef: "Samo svoj opseg", ostali: "postojeći pregled" },
+              { id: "2", card: "Sažetak", owner: "Firma", admin: "Firma", pm: "Svoj opseg", sef: "Svoj opseg", ostali: "postojeći pregled" },
+              { id: "3", card: "Stanje sinhronizacije", owner: "Vidi", admin: "Vidi", pm: "Ne vidi", sef: "Ne vidi", ostali: "Ne vidi" },
+            ]}
+            rowKey={(row) => row.id}
+            columns={[
+              { key: "card", header: "Kartica", cell: (row) => row.card },
+              { key: "owner", header: "OWNER", cell: (row) => row.owner },
+              { key: "admin", header: "ADMIN", cell: (row) => row.admin },
+              { key: "pm", header: "PROJECT_MANAGER", cell: (row) => row.pm },
+              { key: "sef", header: "SITE_SUPERVISOR", cell: (row) => row.sef },
+              { key: "ostali", header: "WORKER · DRIVER · ostali", cell: (row) => row.ostali },
+            ]}
+          />
+          <Alert tone="info">
+            Pokazatelji pilota (unosi po danu, starost sukoba, otvoreni dani, greške sinhronizacije) nemaju posebnu stranicu: vide se iz ove tri kartice plus Radni dani i Audit trag. Ako pilot pokaže potrebu, stranica se predlaže odvojeno.
+          </Alert>
+        </Stack>
+      </Section>
+
       <ConfirmDialog
         open={acceptOpen !== null}
         title="Prihvati ovaj unos? (dizajn)"
