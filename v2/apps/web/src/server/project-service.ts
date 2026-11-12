@@ -329,7 +329,7 @@ export async function createProject(
 
   return withCompany(pool, companyId, async (client) => {
     const code = input.code.trim().toUpperCase();
-    const exists = await client.query("SELECT 1 FROM projects WHERE code = $1", [code]);
+    const exists = await client.query("SELECT 1 FROM projects WHERE company_id = $1 AND code = $2", [companyId, code]);
     if (exists.rowCount !== 0) {
       return { code: "CONFLICT", message: `Projekat sa šifrom „${code}" već postoji.` } as ServiceError;
     }
@@ -383,8 +383,8 @@ export async function updateProject(
 ): Promise<ProjectRow | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const current = await client.query<{ code: string; status: string }>(
-      "SELECT code, status FROM projects WHERE id = $1",
-      [projectId],
+      "SELECT code, status FROM projects WHERE id = $1 AND company_id = $2",
+      [projectId, companyId],
     );
     const before = current.rows[0];
     if (!before) return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
@@ -398,10 +398,10 @@ export async function updateProject(
         return { code: "VALIDATION_FAILED", message: "Šifra projekta ne može biti prazna." } as ServiceError;
       }
       if (code !== before.code) {
-        const taken = await client.query("SELECT 1 FROM projects WHERE code = $1 AND id <> $2", [
-          code,
-          projectId,
-        ]);
+        const taken = await client.query(
+          "SELECT 1 FROM projects WHERE company_id = $1 AND code = $2 AND id <> $3",
+          [companyId, code, projectId],
+        );
         if (taken.rowCount !== 0) {
           return { code: "CONFLICT", message: `Projekat sa šifrom „${code}" već postoji.` } as ServiceError;
         }
@@ -590,19 +590,19 @@ export async function createAssignment(
       return { code: "FORBIDDEN", message: "Nisi dodijeljen ovom projektu." } as ServiceError;
     }
 
-    const project = await client.query("SELECT 1 FROM projects WHERE id = $1", [projectId]);
+    const project = await client.query("SELECT 1 FROM projects WHERE id = $1 AND company_id = $2", [projectId, companyId]);
     if (project.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
     }
 
     if (input.workerId) {
-      const worker = await client.query("SELECT 1 FROM workers WHERE id = $1 AND is_active", [input.workerId]);
+      const worker = await client.query("SELECT 1 FROM workers WHERE id = $1 AND company_id = $2 AND is_active", [input.workerId, companyId]);
       if (worker.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Radnik nije pronađen ili nije aktivan." } as ServiceError;
       }
     }
     if (input.machineId) {
-      const machine = await client.query("SELECT 1 FROM machines WHERE id = $1 AND is_active", [input.machineId]);
+      const machine = await client.query("SELECT 1 FROM machines WHERE id = $1 AND company_id = $2 AND is_active", [input.machineId, companyId]);
       if (machine.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Mašina nije pronađena ili nije aktivna." } as ServiceError;
       }

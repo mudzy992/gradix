@@ -189,7 +189,7 @@ export async function createWorker(
 
   return withCompany(pool, companyId, async (client) => {
     if (valid.supervisorId) {
-      const supervisor = await client.query("SELECT 1 FROM workers WHERE id = $1", [valid.supervisorId]);
+      const supervisor = await client.query("SELECT 1 FROM workers WHERE id = $1 AND company_id = $2", [valid.supervisorId, companyId]);
       if (supervisor.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Nadređeni nije pronađen u ovoj firmi." } as ServiceError;
       }
@@ -213,6 +213,7 @@ export async function createWorker(
         valid.endedAt,
         valid.team,
         valid.supervisorId,
+        companyId,
       ],
     );
 
@@ -243,14 +244,14 @@ export async function updateWorker(
   if ("code" in valid) return valid;
 
   return withCompany(pool, companyId, async (client) => {
-    const existing = await client.query("SELECT id, engagement FROM workers WHERE id = $1", [workerId]);
+    const existing = await client.query("SELECT id, engagement FROM workers WHERE id = $1 AND company_id = $2", [workerId, companyId]);
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Radnik nije pronađen." } as ServiceError;
 
     if (valid.supervisorId) {
       if (valid.supervisorId === workerId) {
         return { code: "VALIDATION_FAILED", message: "Radnik ne može biti sam sebi nadređen." } as ServiceError;
       }
-      const supervisor = await client.query("SELECT 1 FROM workers WHERE id = $1", [valid.supervisorId]);
+      const supervisor = await client.query("SELECT 1 FROM workers WHERE id = $1 AND company_id = $2", [valid.supervisorId, companyId]);
       if (supervisor.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Nadređeni nije pronađen u ovoj firmi." } as ServiceError;
       }
@@ -261,7 +262,7 @@ export async function updateWorker(
           SET first_name = $2, last_name = $3, phone = $4, email = $5, job_title = $6,
               engagement = $7, hired_at = $8, ended_at = $9, team = $10, supervisor_id = $11,
               updated_at = now()
-        WHERE id = $1`,
+        WHERE id = $1 AND company_id = $12`,
       [
         workerId,
         valid.firstName,
@@ -301,8 +302,8 @@ export async function setWorkerActive(
 ): Promise<WorkerRow | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const result = await client.query(
-      "UPDATE workers SET is_active = $2, updated_at = now() WHERE id = $1 RETURNING id",
-      [workerId, active],
+      "UPDATE workers SET is_active = $3, updated_at = now() WHERE id = $1 AND company_id = $2 RETURNING id",
+      [workerId, companyId, active],
     );
     if (result.rowCount === 0) return { code: "NOT_FOUND", message: "Radnik nije pronađen." } as ServiceError;
 
@@ -332,7 +333,7 @@ export async function linkWorkerUser(
   userId: string | null,
 ): Promise<WorkerRow | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
-    const worker = await client.query("SELECT user_id FROM workers WHERE id = $1", [workerId]);
+    const worker = await client.query("SELECT user_id FROM workers WHERE id = $1 AND company_id = $2", [workerId, companyId]);
     if (worker.rowCount === 0) return { code: "NOT_FOUND", message: "Radnik nije pronađen." } as ServiceError;
 
     if (userId) {
@@ -354,7 +355,7 @@ export async function linkWorkerUser(
       }
     }
 
-    await client.query("UPDATE workers SET user_id = $2, updated_at = now() WHERE id = $1", [workerId, userId]);
+    await client.query("UPDATE workers SET user_id = $3, updated_at = now() WHERE id = $1 AND company_id = $2", [workerId, companyId, userId]);
 
     await writeAudit(client, {
       companyId,
@@ -557,8 +558,8 @@ export async function createMachine(
 
   return withCompany(pool, companyId, async (client) => {
     const category = await client.query<{ meter: string }>(
-      "SELECT meter FROM equipment_categories WHERE id = $1",
-      [input.categoryId],
+      "SELECT meter FROM equipment_categories WHERE id = $1 AND company_id = $2",
+      [input.categoryId, companyId],
     );
     if (category.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Kategorija nije pronađena u ovoj firmi." } as ServiceError;
@@ -630,8 +631,8 @@ export async function updateMachine(
 
   return withCompany(pool, companyId, async (client) => {
     const existing = await client.query<{ meter: string; meter_value: string | null }>(
-      "SELECT meter, meter_value FROM machines WHERE id = $1",
-      [machineId],
+      "SELECT meter, meter_value FROM machines WHERE id = $1 AND company_id = $2",
+      [machineId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Mašina nije pronađena." } as ServiceError;
 
@@ -647,7 +648,7 @@ export async function updateMachine(
     }
 
     if (input.categoryId) {
-      const category = await client.query("SELECT 1 FROM equipment_categories WHERE id = $1", [input.categoryId]);
+      const category = await client.query("SELECT 1 FROM equipment_categories WHERE id = $1 AND company_id = $2", [input.categoryId, companyId]);
       if (category.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Kategorija nije pronađena u ovoj firmi." } as ServiceError;
       }
@@ -660,7 +661,7 @@ export async function updateMachine(
               make = $4, model = $5, serial_no = $6, plate = $7, year = $8,
               ownership = COALESCE($9, ownership), meter = $10,
               is_active = COALESCE($11, is_active), updated_at = now()
-        WHERE id = $1`,
+        WHERE id = $1 AND company_id = $12`,
       [
         machineId,
         name,
@@ -673,6 +674,7 @@ export async function updateMachine(
         input.ownership ?? null,
         nextMeter,
         input.isActive ?? null,
+        companyId,
       ],
     );
 
@@ -713,8 +715,8 @@ export async function setMeterValue(
 
   return withCompany(pool, companyId, async (client) => {
     const existing = await client.query<{ meter_value: string | null }>(
-      "SELECT meter_value FROM machines WHERE id = $1 FOR UPDATE",
-      [machineId],
+      "SELECT meter_value FROM machines WHERE id = $1 AND company_id = $2 FOR UPDATE",
+      [machineId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Mašina nije pronađena." } as ServiceError;
 
@@ -726,10 +728,10 @@ export async function setMeterValue(
       } as ServiceError;
     }
 
-    await client.query("UPDATE machines SET meter_value = $2, meter_updated_at = now(), updated_at = now() WHERE id = $1", [
-      machineId,
-      value,
-    ]);
+    await client.query(
+      "UPDATE machines SET meter_value = $3, meter_updated_at = now(), updated_at = now() WHERE id = $1 AND company_id = $2",
+      [machineId, companyId, value],
+    );
 
     const corrected = previous !== null && value < previous;
     await writeAudit(client, {

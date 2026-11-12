@@ -667,16 +667,16 @@ export async function createObligation(
     }
 
     if (scope.projectId) {
-      const project = await client.query("SELECT 1 FROM projects WHERE id = $1", [scope.projectId]);
+      const project = await client.query("SELECT 1 FROM projects WHERE id = $1 AND company_id = $2", [scope.projectId, companyId]);
       if (project.rowCount === 0) return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
     }
 
     if (scope.workerId) {
-      const worker = await client.query("SELECT 1 FROM workers WHERE id = $1", [scope.workerId]);
+      const worker = await client.query("SELECT 1 FROM workers WHERE id = $1 AND company_id = $2", [scope.workerId, companyId]);
       if (worker.rowCount === 0) return { code: "NOT_FOUND", message: "Radnik nije pronađen." } as ServiceError;
     }
     if (scope.machineId) {
-      const machine = await client.query("SELECT 1 FROM machines WHERE id = $1", [scope.machineId]);
+      const machine = await client.query("SELECT 1 FROM machines WHERE id = $1 AND company_id = $2", [scope.machineId, companyId]);
       if (machine.rowCount === 0) return { code: "NOT_FOUND", message: "Mašina nije pronađena." } as ServiceError;
     }
     if (input.responsibleUserId) {

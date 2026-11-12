@@ -209,8 +209,8 @@ export async function previewImport(
   return withCompany(pool, companyId, async (client) => {
     const rows =
       kind === "workers"
-        ? await previewWorkers(client, sheet, mapping)
-        : await previewEquipment(client, sheet, mapping);
+        ? await previewWorkers(client, companyId, sheet, mapping)
+        : await previewEquipment(client, companyId, sheet, mapping);
 
     const counts = { import: 0, skip: 0, error: 0, duplicate: 0 };
     for (const row of rows) counts[row.outcome] += 1;
@@ -230,11 +230,15 @@ export async function previewImport(
 
 async function previewWorkers(
   client: PoolClient,
+  companyId: CompanyId,
   sheet: ParsedSheet,
   mapping: Record<string, string | null>,
 ): Promise<PreviewRow[]> {
+  // Izričit company_id filter, ne samo RLS: servis mora biti siguran i pod
+  // administratorskom rolom (izolacija firme ne zavisi od role pozivaoca).
   const existing = await client.query<{ first_name: string; last_name: string; phone: string | null }>(
-    "SELECT first_name, last_name, phone FROM workers WHERE is_active",
+    "SELECT first_name, last_name, phone FROM workers WHERE company_id = $1 AND is_active",
+    [companyId],
   );
   const byName = new Map<string, number>();
   const byPhone = new Map<string, number>();
@@ -337,11 +341,13 @@ async function previewWorkers(
 
 async function previewEquipment(
   client: PoolClient,
+  companyId: CompanyId,
   sheet: ParsedSheet,
   mapping: Record<string, string | null>,
 ): Promise<PreviewRow[]> {
   const categories = await client.query<{ id: string; code: string; name: string }>(
-    "SELECT id, code, name FROM equipment_categories",
+    "SELECT id, code, name FROM equipment_categories WHERE company_id = $1",
+    [companyId],
   );
   const categoryIndex = new Map<string, { id: string; code: string; name: string }>();
   for (const category of categories.rows) {
@@ -349,7 +355,10 @@ async function previewEquipment(
     categoryIndex.set(normaliseHeader(category.name), category);
   }
 
-  const machines = await client.query<{ code: string }>("SELECT code FROM machines");
+  const machines = await client.query<{ code: string }>(
+    "SELECT code FROM machines WHERE company_id = $1",
+    [companyId],
+  );
   const existingCodes = new Set(machines.rows.map((row) => row.code));
   const seenInFile = new Map<string, number>();
 
@@ -504,7 +513,7 @@ export async function applyImport(
     // Uvoz je jedna radnja sa jednim zapisom u tragu (vidi audit niže), pa se pojedinačni
     // `equipment.updated` ovdje ne piše — inače bi jedan uvoz ostavio stotine zapisa.
     const result: ApplyResult = { imported: 0, skipped: 0, failed: 0, updated: 0, errors: [] };
-    const supervisors = await loadSupervisorIndex(client);
+    const supervisors = await loadSupervisorIndex(client, companyId);
 
     for (const decision of decisions) {
       const row = byRow.get(decision.rowNumber);
@@ -516,16 +525,16 @@ export async function applyImport(
       try {
         if (kind === "workers") {
           if (decision.action === "update") {
-            const existing = await findExistingWorker(client, row.summary);
+            const existing = await findExistingWorker(client, companyId, row.summary);
             if (!existing) throw new Error("Radnik za ažuriranje nije pronađen.");
-            await updateWorkerRow(client, existing, row, supervisors);
+            await updateWorkerRow(client, companyId, existing, row, supervisors);
             result.updated += 1;
           } else {
             await insertWorkerRow(client, companyId, row, supervisors);
             result.imported += 1;
           }
         } else if (decision.action === "update") {
-          await updateMachineRow(client, row);
+          await updateMachineRow(client, companyId, row);
           result.updated += 1;
         } else {
           await insertMachineRow(client, companyId, row);
@@ -574,9 +583,10 @@ class ImportAbort extends Error {
   }
 }
 
-async function loadSupervisorIndex(client: PoolClient): Promise<Map<string, string>> {
+async function loadSupervisorIndex(client: PoolClient, companyId: CompanyId): Promise<Map<string, string>> {
   const result = await client.query<{ id: string; first_name: string; last_name: string }>(
-    "SELECT id, first_name, last_name FROM workers WHERE is_active",
+    "SELECT id, first_name, last_name FROM workers WHERE company_id = $1 AND is_active",
+    [companyId],
   );
   const index = new Map<string, string>();
   for (const row of result.rows) {
@@ -585,12 +595,18 @@ async function loadSupervisorIndex(client: PoolClient): Promise<Map<string, stri
   return index;
 }
 
-async function findExistingWorker(client: PoolClient, summary: string): Promise<string | null> {
+async function findExistingWorker(
+  client: PoolClient,
+  companyId: CompanyId,
+  summary: string,
+): Promise<string | null> {
   const [firstName, ...rest] = summary.split(" ");
   const lastName = rest.join(" ");
   const result = await client.query<{ id: string }>(
-    "SELECT id FROM workers WHERE lower(first_name) = lower($1) AND lower(last_name) = lower($2) LIMIT 1",
-    [firstName, lastName],
+    `SELECT id FROM workers
+      WHERE company_id = $1 AND lower(first_name) = lower($2) AND lower(last_name) = lower($3)
+      LIMIT 1`,
+    [companyId, firstName, lastName],
   );
   return result.rows[0]?.id ?? null;
 }
@@ -628,6 +644,7 @@ async function insertWorkerRow(
 
 async function updateWorkerRow(
   client: PoolClient,
+  companyId: CompanyId,
   workerId: string,
   row: PreviewRow,
   supervisors: Map<string, string>,
@@ -636,11 +653,12 @@ async function updateWorkerRow(
   const supervisor = values.supervisor ? supervisors.get(normaliseName(String(values.supervisor))) : null;
   await client.query(
     `UPDATE workers
-        SET phone = $2, email = $3, job_title = $4, engagement = $5,
-            hired_at = $6, ended_at = $7, team = $8, supervisor_id = $9, updated_at = now()
-      WHERE id = $1`,
+        SET phone = $3, email = $4, job_title = $5, engagement = $6,
+            hired_at = $7, ended_at = $8, team = $9, supervisor_id = $10, updated_at = now()
+      WHERE id = $1 AND company_id = $2`,
     [
       workerId,
+      companyId,
       values.phone,
       values.email,
       values.jobTitle,
@@ -657,9 +675,10 @@ async function insertMachineRow(client: PoolClient, companyId: CompanyId, row: P
   const values = row.values as RowValues;
   const meterValue = values.meterValue as number | null;
   // Vrsta brojila se nasljeđuje iz kategorije: kamion mjeri kilometre, bager sate.
-  const category = await client.query<{ meter: string }>("SELECT meter FROM equipment_categories WHERE id = $1", [
-    values.categoryId,
-  ]);
+  const category = await client.query<{ meter: string }>(
+    "SELECT meter FROM equipment_categories WHERE id = $1 AND company_id = $2",
+    [values.categoryId, companyId],
+  );
   if (category.rowCount === 0) throw new Error("Kategorija mašine nije pronađena.");
 
   await client.query(
@@ -685,15 +704,16 @@ async function insertMachineRow(client: PoolClient, companyId: CompanyId, row: P
   );
 }
 
-async function updateMachineRow(client: PoolClient, row: PreviewRow): Promise<void> {
+async function updateMachineRow(client: PoolClient, companyId: CompanyId, row: PreviewRow): Promise<void> {
   const values = row.values as RowValues;
   await client.query(
     `UPDATE machines
-        SET name = $2, category_id = $3, make = $4, model = $5, serial_no = $6, plate = $7,
-            year = $8, ownership = $9, updated_at = now()
-      WHERE code = $1`,
+        SET name = $3, category_id = $4, make = $5, model = $6, serial_no = $7, plate = $8,
+            year = $9, ownership = $10, updated_at = now()
+      WHERE code = $1 AND company_id = $2`,
     [
       values.code,
+      companyId,
       values.name,
       values.categoryId,
       values.make,
