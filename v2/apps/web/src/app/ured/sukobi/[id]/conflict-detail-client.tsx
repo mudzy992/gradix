@@ -194,22 +194,24 @@ export function ConflictDetailClient({ initial }: { initial: WorkdayConflictDeta
       <div className="gx-actionbar">
         <Inline>
           <Button variant="primary" disabled={resolved || busy} onClick={() => { setReason(""); setAcceptTarget("SERVER"); }}>
-            Prihvati ovaj unos
+            Prihvati unos sa servera{detail.server?.authorName ? ` (${detail.server.authorName})` : ""}
           </Button>
-          <span className="gx-actionbar__label">sa servera</span>
           <Button variant="primary" disabled={resolved || busy} onClick={() => { setReason(""); setAcceptTarget("RECEIVED"); }}>
-            Prihvati ovaj unos
+            Prihvati unos s telefona{detail.received?.authorName ? ` (${detail.received.authorName})` : ""}
           </Button>
-          <span className="gx-actionbar__label">s telefona</span>
           <Button disabled={resolved || busy} onClick={openCorrection}>Ispravi vremena</Button>
           <Button disabled={resolved || busy} onClick={() => { setReason(""); setRejectOpen(true); }}>Odbaci uz razlog</Button>
         </Inline>
       </div>
 
+      {/* Razmak ispod ljepljive trake: na 360 px traka ne smije zakrivati
+          zadnje elemente sadržaja kad se ekran skrola do kraja. */}
+      <div aria-hidden="true" style={{ height: "var(--space-8)" }} />
+
       <ConfirmDialog
         open={acceptTarget !== null}
         title="Prihvati ovaj unos?"
-        text="Drugi unos će biti odbačen i sačuvan u historiji, a njegov autor će vidjeti razlog koji upišete ispod. Razlog vidi radnik/šef čiji je unos odbačen — bez internih napomena ureda."
+        text="Drugi unos će biti odbačen i sačuvan u historiji. Razlog koji upišete ispod vidjet će radnik (ili šef) čiji je unos odbačen — na svom telefonu, pri sljedećoj sinhronizaciji. Interne napomene ureda radnik ne vidi."
         confirmLabel="Prihvati ovaj unos"
         busy={busy}
         reason={{ value: reason, onChange: setReason, minLength: 10, label: "Razlog (vidi ga autor odbačenog unosa)", hint: "Obavezno, najmanje 10 znakova." }}

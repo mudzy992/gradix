@@ -29,14 +29,20 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/lozinka/postavi": "dolazi se isključivo token-linkom iz pozivnice/reseta",
   "/lozinka/promjena": "korisnički meni u okviru + prisilna promjena poslije prijave",
   "/katalog": "U5 katalog UI komponenti — razvojni alat, otvara se direktnim URL-om",
-  "/ured/sukobi/[id]": "detalj jednog sukoba (R4a-2/B) — dijete liste /ured/sukobi, dolazi se klikom na red liste; ista dozvola workdays.resolve, zasebna stavka u navigaciji bi bila duplikat liste",
 };
 
 describe("dosegljivost stranica (A4a)", () => {
   it("svaka stranica je u navigaciji ili na listi izuzetaka s razlogom", () => {
     const routes = pageRoutes(appDir);
     const navHrefs = new Set(NAV_ENTRIES.map((entry) => entry.href));
-    const uncovered = routes.filter((route) => !navHrefs.has(route) && !(route in NAV_EXCEPTIONS));
+    // Dinamička ruta-dijete (npr. /ured/sukobi/[id]) NIJE izuzetak i ne ide
+    // na listu izuzetaka: pokriva je roditelj u navigaciji, jer se na dijete
+    // dolazi isključivo kroz roditeljsku listu i važi ista dozvola. Razlog
+    // živi ovdje, u pravilu pokrivanja, a ne u listi izuzetaka — izuzetak bi
+    // značio da stranica svjesno nema ulaz, a detalj ga ima (red liste).
+    const covered = (route: string) =>
+      navHrefs.has(route) || navHrefs.has(route.replace(/\/\[[^\]]+\]$/, ""));
+    const uncovered = routes.filter((route) => !covered(route) && !(route in NAV_EXCEPTIONS));
     expect(uncovered).toEqual([]);
     for (const [route, reason] of Object.entries(NAV_EXCEPTIONS)) {
       expect(routes).toContain(route);

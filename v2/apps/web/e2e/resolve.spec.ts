@@ -37,7 +37,7 @@ test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješen
   await expect(page.getByRole("link", { name: /Nazad na listu/ })).toBeVisible();
 
   // Prihvati server unos uz obavezni razlog (>= 10 znakova; dugme je prije toga zaključano).
-  await page.getByRole("button", { name: "Prihvati ovaj unos" }).first().click();
+  await page.getByRole("button", { name: /Prihvati unos sa servera/ }).click();
   const confirm = page.getByRole("button", { name: "Prihvati ovaj unos" }).last();
   await expect(confirm).toBeDisabled();
   await page.getByLabel(/Razlog \(vidi ga autor/).fill("Server unos je potvrđen s terena.");
@@ -59,7 +59,7 @@ test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješen
   await login(owner, "vlasnik@demo.ba");
   await owner.goto(detailUrl);
   await expect(owner.getByText(/Razriješio\/la Amina Karić/).first()).toBeVisible();
-  await expect(owner.getByRole("button", { name: "Prihvati ovaj unos" }).first()).toBeDisabled();
+  await expect(owner.getByRole("button", { name: /Prihvati unos sa servera/ })).toBeDisabled();
   await expect(owner.getByRole("button", { name: "Odbaci uz razlog" })).toBeDisabled();
   await ctx.close();
 });

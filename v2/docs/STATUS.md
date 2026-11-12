@@ -62,6 +62,14 @@
   MACHINE_OPERATOR, MECHANIC) nemaju ni `workdays.view` ni
   `workdays.resolve`. Izvor: `src/server/permissions.ts` + `nav.ts`
   (`permission: "workdays.resolve"`), ne pretpostavka.
+- **R4a-2/B — detalj sukoba na zasebnoj stranici:** lista `/ured/sukobi`
+  nosi filtere u adresi (`?stanje=&starost=&projekat=`); klik na red vodi na
+  `/ured/sukobi/[id]` (putanja Radni dani / Sukobi / detalj, „Nazad na
+  listu" čuva filtere, „Sljedeći nerazriješeni", dva unosa jedan pored
+  drugog / na 360 px jedan ispod drugog, akcije u ljepljivoj traci pri dnu,
+  modal samo za potvrdu s razlogom ≥10, interna napomena na stranici,
+  „već razriješeno" s ugašenim akcijama na istoj stranici). Tuđi/
+  nepostojeći sukob → 404 kao API; bez dozvole → `/nemate-pristup`.
 - **R4b (potvrda/zaključavanje sedmice):** nije započet; čeka R4a-2.
 - **Mobilni E2E na uređaju:** Maestro fajlovi postoje, ne izvršavaju se u CI-ju; telefonski
   prolaz radi vlasnik po `docs/DEMO-STEP7.md`.

@@ -52,9 +52,8 @@ describe("detalj sukoba (R4a-2/B)", () => {
     const { container } = render(<ConflictDetailClient initial={openDetail} />);
     expect(screen.getByRole("heading", { name: "Unos sa servera" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Unos s telefona" })).toBeVisible();
-    for (const button of screen.getAllByRole("button", { name: "Prihvati ovaj unos" })) {
-      expect(button).toBeEnabled();
-    }
+    expect(screen.getByRole("button", { name: "Prihvati unos sa servera (Mario Perić)" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Prihvati unos s telefona (Amar Hadžić)" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Ispravi vremena" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Odbaci uz razlog" })).toBeEnabled();
     await expectNoSeriousA11yViolations(container);
@@ -71,9 +70,8 @@ describe("detalj sukoba (R4a-2/B)", () => {
     };
     const { container } = render(<ConflictDetailClient initial={resolved} />);
     expect(screen.getByText(/Razriješio\/la Amina Karić/)).toBeVisible();
-    for (const button of screen.getAllByRole("button", { name: "Prihvati ovaj unos" })) {
-      expect(button).toBeDisabled();
-    }
+    expect(screen.getByRole("button", { name: /Prihvati unos sa servera/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Prihvati unos s telefona/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Odbaci uz razlog" })).toBeDisabled();
     await expectNoSeriousA11yViolations(container);
   });
