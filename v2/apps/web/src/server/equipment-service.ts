@@ -345,7 +345,10 @@ export async function linkWorkerUser(
         return { code: "NOT_FOUND", message: "Osoba nije član ove firme." } as ServiceError;
       }
 
-      const taken = await client.query("SELECT id FROM workers WHERE user_id = $1 AND id <> $2", [userId, workerId]);
+      const taken = await client.query(
+        "SELECT id FROM workers WHERE user_id = $1 AND id <> $2 AND company_id = $3",
+        [userId, workerId, companyId],
+      );
       if ((taken.rowCount ?? 0) > 0) {
         return {
           code: "CONFLICT",
@@ -424,7 +427,7 @@ export async function createCategory(
   }
 
   return withCompany(pool, companyId, async (client) => {
-    const exists = await client.query("SELECT 1 FROM equipment_categories WHERE code = $1", [code]);
+    const exists = await client.query("SELECT 1 FROM equipment_categories WHERE code = $1 AND company_id = $2", [code, companyId]);
     if ((exists.rowCount ?? 0) > 0) {
       return { code: "CONFLICT", message: `Kategorija sa oznakom ${code} već postoji.` } as ServiceError;
     }
@@ -564,7 +567,7 @@ export async function createMachine(
       return { code: "NOT_FOUND", message: "Kategorija nije pronađena u ovoj firmi." } as ServiceError;
     }
 
-    const duplicate = await client.query("SELECT 1 FROM machines WHERE code = $1", [code]);
+    const duplicate = await client.query("SELECT 1 FROM machines WHERE code = $1 AND company_id = $2", [code, companyId]);
     if ((duplicate.rowCount ?? 0) > 0) {
       return { code: "CONFLICT", message: `Mašina sa oznakom ${code} već postoji.` } as ServiceError;
     }

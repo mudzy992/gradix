@@ -17,6 +17,7 @@
  */
 import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
+import { buildWhere, cond, type SqlCondition } from "./sql-conditions";
 import {
   businessDate,
   daysLeft,
@@ -136,8 +137,9 @@ export async function createObligationType(
   if (invalid) return invalid;
 
   return withCompany(pool, companyId, async (client) => {
-    const exists = await client.query("SELECT 1 FROM obligation_types WHERE code = $1", [
+    const exists = await client.query("SELECT 1 FROM obligation_types WHERE code = $1 AND company_id = $2", [
       input.code.trim().toUpperCase(),
+      companyId,
     ]);
     if (exists.rowCount !== 0) {
       return { code: "CONFLICT", message: `Tip sa oznakom „${input.code.trim().toUpperCase()}“ već postoji.` };
@@ -187,14 +189,14 @@ export async function updateObligationType(
 
   return withCompany(pool, companyId, async (client) => {
     const existing = await client.query<{ entity_kind: string; default_reminder_days: string }>(
-      "SELECT entity_kind, default_reminder_days::text AS default_reminder_days FROM obligation_types WHERE id = $1",
-      [typeId],
+      "SELECT entity_kind, default_reminder_days::text AS default_reminder_days FROM obligation_types WHERE id = $1 AND company_id = $2",
+      [typeId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Tip obaveze nije pronađen." } as ServiceError;
 
     // Promjena vrste entiteta bi postojeće obaveze ostavila na pogrešnoj vezi (ljekarski na mašini).
     if (existing.rows[0]!.entity_kind !== input.entityKind) {
-      const used = await client.query("SELECT 1 FROM obligations WHERE type_id = $1 LIMIT 1", [typeId]);
+      const used = await client.query("SELECT 1 FROM obligations WHERE type_id = $1 AND company_id = $2 LIMIT 1", [typeId, companyId]);
       if (used.rowCount !== 0) {
         return {
           code: "CONFLICT",
@@ -409,43 +411,53 @@ export async function listObligations(
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
 
-    const conditions: string[] = [];
-    // Firma NE ide u `WHERE`: RLS je već postavlja (`withCompany`), a duplirani `$1` bez upotrebe
-    // u tekstu upita bi bio „bind message supplies 1 parameters“ greška.
-    const params: unknown[] = [];
-    const param = (value: unknown) => {
-      params.push(value);
-      return `$${params.length}`;
-    };
+    /*
+     * Firma ide izričito u WHERE, prije svega ostalog: RLS je prva linija odbrane, ali
+     * ne i jedina — servis mora biti tačan i pod admin rolom (administratorske naredbe)
+     * i u svakom budućem pozivu bez RLS konteksta. Uslovi se grade kroz `cond`/`buildWhere`:
+     * uslov nosi svoje parametre uz tekst, pa firma ne može da ostane u nizu bez upita
+     * („bind message supplies 1 parameters“ iz prethodne varijante) ni obrnuto.
+     */
+    const conditions: SqlCondition[] = [cond("o.company_id = $", companyId)];
 
     /*
-     * Opseg `SELF` ide PRVI i uvijek. Redoslijed je namjeran: ako se doda poslije filtera iz upita,
-     * `?workerId=` bi mogao proširiti skup prije nego ga opseg suzi — a granica koja se primjenjuje
-     * poslije korisničkog filtera nije granica.
+     * Opseg `SELF` ide PRIJE filtera iz zahtjeva i uvijek. Redoslijed je namjeran: ako
+     * se doda poslije filtera, `?workerId=` bi mogao proširiti skup prije nego ga opseg
+     * suzi — a granica koja se primjenjuje poslije korisničkog filtera nije granica.
+     * Radnik u podupitu je vezan na `o.company_id` (kompozitni FK), pa korisnikove veze
+     * u drugim firmama ne otvaraju tuđe rokove.
      */
     if (options.scope === "SELF") {
-      const korisnik = param(options.userId ?? "");
+      const korisnik = options.userId ?? "";
       conditions.push(
-        `(o.responsible_user_id = ${korisnik}
-          OR o.worker_id IN (SELECT id FROM workers WHERE user_id = ${korisnik}))`,
+        cond(
+          `(o.responsible_user_id = $
+            OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $ AND company_id = o.company_id))`,
+          korisnik,
+          korisnik,
+        ),
       );
     }
 
-    if (!filter.includeSuperseded) conditions.push("o.superseded_by IS NULL");
-    if (filter.typeId) conditions.push(`o.type_id = ${param(filter.typeId)}`);
-    if (filter.entityKind) conditions.push(`t.entity_kind = ${param(filter.entityKind)}`);
-    if (filter.workerId) conditions.push(`o.worker_id = ${param(filter.workerId)}`);
-    if (filter.machineId) conditions.push(`o.machine_id = ${param(filter.machineId)}`);
-  if (filter.projectId) conditions.push(`o.project_id = ${param(filter.projectId)}`);
-    if (filter.responsibleUserId) conditions.push(`o.responsible_user_id = ${param(filter.responsibleUserId)}`);
+    if (!filter.includeSuperseded) conditions.push(cond("o.superseded_by IS NULL"));
+    if (filter.typeId) conditions.push(cond("o.type_id = $", filter.typeId));
+    if (filter.entityKind) conditions.push(cond("t.entity_kind = $", filter.entityKind));
+    if (filter.workerId) conditions.push(cond("o.worker_id = $", filter.workerId));
+    if (filter.machineId) conditions.push(cond("o.machine_id = $", filter.machineId));
+    if (filter.projectId) conditions.push(cond("o.project_id = $", filter.projectId));
+    if (filter.responsibleUserId) conditions.push(cond("o.responsible_user_id = $", filter.responsibleUserId));
     if (filter.ofLinkedWorkerUserId) {
       conditions.push(
-        `(o.responsible_user_id = ${param(filter.ofLinkedWorkerUserId)}
-          OR o.worker_id IN (SELECT id FROM workers WHERE user_id = ${param(filter.ofLinkedWorkerUserId)}))`,
+        cond(
+          `(o.responsible_user_id = $
+            OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $ AND company_id = o.company_id))`,
+          filter.ofLinkedWorkerUserId,
+          filter.ofLinkedWorkerUserId,
+        ),
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { where, params } = buildWhere(conditions);
     const result = await client.query(`${OBLIGATION_SELECT} ${where}`, params);
 
     // Bez prava na priloge upit se NE izvršava — podatak koji se ne smije vidjeti ne treba ni doći
@@ -517,17 +529,26 @@ export async function getObligation(
      * Opseg `SELF` i u detalju: `id` iz URL-a nije dozvola. Uslov je u ISTOM upitu kao i `id`, pa
      * tuđi rok daje 404 — ne 403, jer radnik ne treba da zna da tuđi rok postoji.
      */
-    const uslovi = ["o.id = $1"];
-    const params: unknown[] = [obligationId];
+    const conditions: SqlCondition[] = [
+      cond("o.id = $", obligationId),
+      // Tuđa firma i nepostojeća obaveza daju isti odgovor — izričit company_id
+      // čini da to važi i pod admin rolom, ne samo kroz RLS.
+      cond("o.company_id = $", companyId),
+    ];
     if (options.scope === "SELF") {
-      params.push(options.userId ?? "");
-      uslovi.push(
-        `(o.responsible_user_id = $${params.length}
-          OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $${params.length}))`,
+      const korisnik = options.userId ?? "";
+      conditions.push(
+        cond(
+          `(o.responsible_user_id = $
+            OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $ AND company_id = o.company_id))`,
+          korisnik,
+          korisnik,
+        ),
       );
     }
 
-    const row = await client.query(`${OBLIGATION_SELECT} WHERE ${uslovi.join(" AND ")}`, params);
+    const { where, params } = buildWhere(conditions);
+    const row = await client.query(`${OBLIGATION_SELECT} ${where}`, params);
     if (row.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     }
@@ -536,13 +557,13 @@ export async function getObligation(
       ? { rows: [] as Array<Record<string, unknown>> }
       : await client.query(
       `SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
-         FROM obligation_attachments WHERE obligation_id = $1 ORDER BY created_at DESC`,
-      [obligationId],
+         FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 ORDER BY created_at DESC`,
+      [obligationId, companyId],
     );
     const versions = await client.query(
       `SELECT version, number, issuer, issued_at, expires_at, note, attachment_id, created_at, created_by
-         FROM obligation_versions WHERE obligation_id = $1 ORDER BY version DESC`,
-      [obligationId],
+         FROM obligation_versions WHERE obligation_id = $1 AND company_id = $2 ORDER BY version DESC`,
+      [obligationId, companyId],
     );
 
     return {
@@ -643,8 +664,8 @@ export async function createObligation(
 
   return withCompany(pool, companyId, async (client) => {
     const type = await client.query<{ entity_kind: string; requires_attachment: boolean }>(
-      "SELECT entity_kind, requires_attachment FROM obligation_types WHERE id = $1 AND is_active",
-      [input.typeId],
+      "SELECT entity_kind, requires_attachment FROM obligation_types WHERE id = $1 AND company_id = $2 AND is_active",
+      [input.typeId, companyId],
     );
     if (type.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Tip obaveze nije pronađen ili je deaktiviran." } as ServiceError;
@@ -748,18 +769,18 @@ async function getObligationWithClient(
   obligationId: string,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   const today = await companyToday(client, companyId);
-  const row = await client.query(`${OBLIGATION_SELECT} WHERE o.id = $1`, [obligationId]);
+  const row = await client.query(`${OBLIGATION_SELECT} WHERE o.id = $1 AND o.company_id = $2`, [obligationId, companyId]);
   if (row.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
   const attachments = await client.query(
     `SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
-       FROM obligation_attachments WHERE obligation_id = $1 ORDER BY created_at DESC`,
-    [obligationId],
+       FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 ORDER BY created_at DESC`,
+    [obligationId, companyId],
   );
   const versions = await client.query(
     `SELECT version, number, issuer, issued_at, expires_at, note, attachment_id, created_at, created_by
-       FROM obligation_versions WHERE obligation_id = $1 ORDER BY version DESC`,
-    [obligationId],
+       FROM obligation_versions WHERE obligation_id = $1 AND company_id = $2 ORDER BY version DESC`,
+    [obligationId, companyId],
   );
 
   return {
@@ -801,12 +822,15 @@ export async function updateObligation(
   if ("code" in scope) return scope;
 
   return withCompany(pool, companyId, async (client) => {
-    const existing = await client.query<{ id: string }>("SELECT id FROM obligations WHERE id = $1", [obligationId]);
+    const existing = await client.query<{ id: string }>(
+      "SELECT id FROM obligations WHERE id = $1 AND company_id = $2",
+      [obligationId, companyId],
+    );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
     const type = await client.query<{ entity_kind: string }>(
-      "SELECT entity_kind FROM obligation_types WHERE id = $1",
-      [input.typeId],
+      "SELECT entity_kind FROM obligation_types WHERE id = $1 AND company_id = $2",
+      [input.typeId, companyId],
     );
     if (type.rowCount === 0) return { code: "NOT_FOUND", message: "Tip obaveze nije pronađen." } as ServiceError;
 
@@ -824,7 +848,7 @@ export async function updateObligation(
       `UPDATE obligations
           SET type_id = $2, worker_id = $3, machine_id = $4, project_id = $5,
               scope_company = $6, responsible_user_id = $7, note = $8, updated_at = now()
-        WHERE id = $1`,
+        WHERE id = $1 AND company_id = $9`,
       [
         obligationId,
         input.typeId,
@@ -834,6 +858,7 @@ export async function updateObligation(
         scope.scopeCompany,
         input.responsibleUserId ?? null,
         input.note?.trim() || null,
+        companyId,
       ],
     );
 
@@ -879,8 +904,8 @@ export async function renewObligation(
 
   return withCompany(pool, companyId, async (client) => {
     const existing = await client.query<{ current_version: number; expires_at: Date | null }>(
-      "SELECT current_version, expires_at FROM obligations WHERE id = $1 FOR UPDATE",
-      [obligationId],
+      "SELECT current_version, expires_at FROM obligations WHERE id = $1 AND company_id = $2 FOR UPDATE",
+      [obligationId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
@@ -1032,8 +1057,8 @@ export async function deleteObligation(
       `SELECT (SELECT count(*)::int FROM obligation_versions WHERE obligation_id = o.id) AS versions,
               o.created_at, t.code AS type_code
          FROM obligations o JOIN obligation_types t ON t.id = o.type_id
-        WHERE o.id = $1`,
-      [obligationId],
+        WHERE o.id = $1 AND o.company_id = $2`,
+      [obligationId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
@@ -1053,7 +1078,7 @@ export async function deleteObligation(
     }
 
     // Prilozi padaju kaskadno (FK), ali objekti u bucketu ne — njih čisti poziv prije brisanja.
-    await client.query("DELETE FROM obligations WHERE id = $1", [obligationId]);
+    await client.query("DELETE FROM obligations WHERE id = $1 AND company_id = $2", [obligationId, companyId]);
 
     await writeAudit(client, {
       companyId,
@@ -1117,7 +1142,10 @@ export async function registerAttachment(
   | ServiceError
 > {
   return withCompany(pool, companyId, async (client) => {
-    const obligation = await client.query<{ id: string }>("SELECT id FROM obligations WHERE id = $1", [obligationId]);
+    const obligation = await client.query<{ id: string }>(
+      "SELECT id FROM obligations WHERE id = $1 AND company_id = $2",
+      [obligationId, companyId],
+    );
     if (obligation.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
     if (input.sizeBytes <= 0 || input.sizeBytes > MAX_ATTACHMENT_BYTES) {
@@ -1128,8 +1156,8 @@ export async function registerAttachment(
     }
 
     const count = await client.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM obligation_attachments WHERE obligation_id = $1 AND status = 'ready'",
-      [obligationId],
+      "SELECT count(*)::int AS n FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 AND status = 'ready'",
+      [obligationId, companyId],
     );
     if (Number(count.rows[0]!.n) >= MAX_ATTACHMENTS_PER_OBLIGATION) {
       return {
@@ -1148,8 +1176,8 @@ export async function registerAttachment(
     }
 
     const duplicate = await client.query(
-      "SELECT id FROM obligation_attachments WHERE obligation_id = $1 AND sha256 = $2",
-      [obligationId, input.sha256],
+      "SELECT id FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 AND sha256 = $3",
+      [obligationId, companyId, input.sha256],
     );
     if (duplicate.rowCount !== 0) {
       return { code: "CONFLICT", message: "Taj prilog je već dodan na ovu obavezu." } as ServiceError;
@@ -1171,7 +1199,7 @@ export async function registerAttachment(
       [id, companyId, obligationId, key, sanitiseFileName(input.fileName), contentType, input.sizeBytes, input.sha256],
     );
 
-    const created = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1`, [id]);
+    const created = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1 AND company_id = $2`, [id, companyId]);
     return {
       attachment: toAttachment(created.rows[0]!),
       uploadUrl: upload.url,
@@ -1196,8 +1224,8 @@ export async function confirmAttachment(
 
   const row = await withCompany(pool, companyId, async (client) => {
     const found = await client.query<{ object_key: string; size_bytes: string; status: string; file_name: string }>(
-      "SELECT object_key, size_bytes, status, file_name FROM obligation_attachments WHERE id = $1 AND obligation_id = $2",
-      [attachmentId, obligationId],
+      "SELECT object_key, size_bytes, status, file_name FROM obligation_attachments WHERE id = $1 AND obligation_id = $2 AND company_id = $3",
+      [attachmentId, obligationId, companyId],
     );
     return found.rows[0] ?? null;
   });
@@ -1217,8 +1245,8 @@ export async function confirmAttachment(
 
   return withCompany(pool, companyId, async (client) => {
     await client.query(
-      "UPDATE obligation_attachments SET status = 'ready', uploaded_at = now() WHERE id = $1",
-      [attachmentId],
+      "UPDATE obligation_attachments SET status = 'ready', uploaded_at = now() WHERE id = $1 AND company_id = $2",
+      [attachmentId, companyId],
     );
     await writeAudit(client, {
       companyId,
@@ -1230,8 +1258,9 @@ export async function confirmAttachment(
       // Bez imena fajla: ime često sadrži ime osobe („ljekarski Amina.pdf“).
       metadata: { obligationId },
     });
-    const updated = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1`, [
+    const updated = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1 AND company_id = $2`, [
       attachmentId,
+      companyId,
     ]);
     return { attachment: toAttachment(updated.rows[0]!) };
   });
@@ -1249,8 +1278,8 @@ export async function attachmentDownloadUrl(
 
   const row = await withCompany(pool, companyId, async (client) => {
     const found = await client.query<{ object_key: string; file_name: string; content_type: AllowedContentType; status: string }>(
-      "SELECT object_key, file_name, content_type, status FROM obligation_attachments WHERE id = $1 AND obligation_id = $2",
-      [attachmentId, obligationId],
+      "SELECT object_key, file_name, content_type, status FROM obligation_attachments WHERE id = $1 AND obligation_id = $2 AND company_id = $3",
+      [attachmentId, obligationId, companyId],
     );
     return found.rows[0] ?? null;
   });

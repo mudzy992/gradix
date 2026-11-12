@@ -16,6 +16,7 @@
 import type { Pool, PoolClient } from "pg";
 import type { AssignmentChangeInput } from "@gradix/contracts";
 import { withCompany, type CompanyId } from "@gradix/db";
+import { buildWhere, cond, type SqlCondition } from "./sql-conditions";
 import {
   assignmentBlockMessage,
   checkAssignment,
@@ -92,6 +93,8 @@ const toDate = (value: unknown): string | null => {
  * Rokovi se broje po `obligation_state()` iz R2b — ista funkcija kao ekran rokova, pa se broj na
  * projektu i stanje na listi rokova ne mogu razići.
  */
+// NAPOMENA: `$1` u ovom šablonu je uvijek „danas“ — ko gradi upit oko njega,
+// „danas“ mora dati kao prvi parametar (u listi: `buildWhere(conditions, [today])`).
 const PROJECT_SELECT = `
   SELECT p.id, p.code, p.name, p.status, p.site_address, p.site_place,
          p.starts_on, p.ends_on, p.manager_worker_id, p.note, p.is_active, p.created_at,
@@ -183,13 +186,6 @@ function isRetroactiveAssignmentEndError(error: unknown): boolean {
 
 export const OVERLAP_MESSAGE = "Isti radnik ili mašina su već na ovom projektu u periodu koji se preklapa.";
 
-function scopeClause(actor: ProjectActor, column: string): { sql: string; params: unknown[] } {
-  const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
-  if (ids === null) return { sql: "", params: [] };
-  if (ids.length === 0) return { sql: " AND false", params: [] };
-  return { sql: ` AND ${column} = ANY($SCOPE_IDS::text[])`, params: [ids] };
-}
-
 /* ================================================================== projekti */
 
 export type ProjectFilter = {
@@ -207,27 +203,33 @@ export async function listProjects(
 ): Promise<ProjectRow[]> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
-    const params: unknown[] = [today];
-    const param = (value: unknown) => {
-      params.push(value);
-      return `$${params.length}`;
-    };
 
-    const conditions: string[] = [];
-    if (!filter.includeInactive) conditions.push("p.is_active");
+    /*
+     * Firma ide izričito u WHERE i ovdje (kao u obligation-service): RLS je prva
+     * linija, ali servis mora biti tačan i pod admin rolom. Uslovi nose parametre
+     * uz tekst (`cond`/`buildWhere`), pa parametar ne može da ostane bez upita —
+     * zamka „supplies 2 parameters, but prepared statement requires 1" iz A2.4
+     * (prazan opseg je gurao parametar koji SQL ne koristi) ovako nestaje po tipu,
+     * a ne po pažnji.
+     */
+    const conditions: SqlCondition[] = [cond("p.company_id = $", companyId)];
+    if (!filter.includeInactive) conditions.push(cond("p.is_active"));
     if (filter.status) {
       if (!isProjectStatus(filter.status)) return [];
-      conditions.push(`p.status = ${param(filter.status)}`);
+      conditions.push(cond("p.status = $", filter.status));
     }
     if (filter.workerUserId) {
       conditions.push(
-        `EXISTS (SELECT 1 FROM project_assignments a
+        cond(
+          `EXISTS (SELECT 1 FROM project_assignments a
                    JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
-                  WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = ${param(
-                    filter.workerUserId,
-                  )}
-                    AND a.voided_at IS NULL AND a.from_date <= $1
-                    AND (a.to_date IS NULL OR a.to_date >= $1))`,
+                  WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = $
+                    AND a.voided_at IS NULL AND a.from_date <= $
+                    AND (a.to_date IS NULL OR a.to_date >= $))`,
+          filter.workerUserId,
+          today,
+          today,
+        ),
       );
     }
 
@@ -235,32 +237,35 @@ export async function listProjects(
     // SELF (A2.4): "samo svoje" za projekte znači projekti na kojima je povezani radnik
     // dodijeljen — inače bi radnik u listi vidio prazninu iako dodjele ima (i `mine=1`
     // na mobilnom je vraćao prazno). Dodjela se provjerava iz sesije, ne iz zahtjeva.
-    const scope = actor.scope === "SELF"
-      ? {
-          sql: ` AND EXISTS (SELECT 1 FROM project_assignments a
+    if (actor.scope === "SELF") {
+      conditions.push(
+        cond(
+          `EXISTS (SELECT 1 FROM project_assignments a
                    JOIN workers w ON w.company_id = a.company_id AND w.id = a.worker_id
-                  WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = ${param(actor.userId)}
-                    AND a.voided_at IS NULL AND a.from_date <= $1
-                    AND (a.to_date IS NULL OR a.to_date >= $1))`,
-          params: [] as unknown[],
-        }
-      : scopeClause(actor, "p.id");
-    let sql = `${PROJECT_SELECT} WHERE ${conditions.length > 0 ? conditions.join(" AND ") : "true"}`;
-    /*
-     * `AND false` (prazan opseg) nema parametar — i to je bilo mjesto gdje je lista projekata
-     * PADALA tačno u scenariju „osoba više nije ni na jednom projektu": `param(undefined)` bi
-     * dodao parametar kojeg SQL ne koristi, pa bi baza odbila upit („supplies 2 parameters, but
-     * prepared statement requires 1"). Umjesto prazne liste dobijala se greška 500.
-     */
-    if (scope.params.length > 0) {
-      const index = param(scope.params[0]);
-      sql += scope.sql.replace("$SCOPE_IDS", index);
+                  WHERE a.company_id = p.company_id AND a.project_id = p.id AND w.user_id = $
+                    AND a.voided_at IS NULL AND a.from_date <= $
+                    AND (a.to_date IS NULL OR a.to_date >= $))`,
+          actor.userId,
+          today,
+          today,
+        ),
+      );
     } else {
-      sql += scope.sql;
+      const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
+      // `null` = bez filtera (COMPANY); prazan niz = „nijedan projekat“ — uslov BEZ
+      // parametara, pa prazan opseg vraća praznu listu, a ne grešku 500.
+      if (ids !== null) {
+        conditions.push(ids.length === 0 ? cond("false") : cond("p.id = ANY($::text[])", ids));
+      }
     }
-    sql += " ORDER BY p.status = 'ACTIVE' DESC, p.code";
 
-    const result = await client.query(sql, params);
+    // `leading` = [$1 danas]: PROJECT_SELECT koristi „danas“ u podupitima
+    // (broj radnika/mašina, istekle rokove), pa je njegov broj rezervisan prije uslova.
+    const { where, params } = buildWhere(conditions, [today]);
+    const result = await client.query(
+      `${PROJECT_SELECT} ${where} ORDER BY p.status = 'ACTIVE' DESC, p.code`,
+      params,
+    );
     return result.rows.map(toProject);
   });
 }
@@ -273,10 +278,14 @@ export async function getProject(
 ): Promise<ProjectRow | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
-    const result = await client.query(`${PROJECT_SELECT} WHERE p.id = $2`, [today, projectId]);
+    const result = await client.query(`${PROJECT_SELECT} WHERE p.id = $2 AND p.company_id = $3`, [
+      today,
+      projectId,
+      companyId,
+    ]);
     const row = result.rows[0];
-    // Tuđa firma i nepostojeći projekat daju isti odgovor — RLS ne pravi razliku, pa je ne
-    // izmišljamo ni mi.
+    // Tuđa firma i nepostojeći projekat daju isti odgovor — izričit company_id to garantuje
+    // i pod admin rolom, ne samo kroz RLS.
     if (!row) return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
 
     // Tuđi projekat u ISTOJ firmi: 403, ne 404. Čovjek sa opsegom mora znati da projekat postoji.
@@ -366,9 +375,10 @@ export async function createProject(
       metadata: { code, name: input.name.trim(), status: input.status ?? "ACTIVE" },
     });
 
-    const created = await client.query(`${PROJECT_SELECT} WHERE p.id = $2`, [
+    const created = await client.query(`${PROJECT_SELECT} WHERE p.id = $2 AND p.company_id = $3`, [
       await companyToday(client, companyId),
       id,
+      companyId,
     ]);
     return toProject(created.rows[0]!);
   });
@@ -448,9 +458,10 @@ export async function updateProject(
         : { fields: Object.keys(input) },
     });
 
-    const updated = await client.query(`${PROJECT_SELECT} WHERE p.id = $2`, [
+    const updated = await client.query(`${PROJECT_SELECT} WHERE p.id = $2 AND p.company_id = $3`, [
       await companyToday(client, companyId),
       projectId,
+      companyId,
     ]);
     return toProject(updated.rows[0]!);
   });
@@ -505,6 +516,7 @@ type ObligationForCheck = { id: string; typeLabel: string; state: "valid" | "exp
  */
 async function entityObligations(
   client: PoolClient,
+  companyId: CompanyId,
   today: string,
   entity: { workerId?: string | null; machineId?: string | null },
 ): Promise<ObligationForCheck[]> {
@@ -517,8 +529,8 @@ async function entityObligations(
             obligation_state(o.expires_at, t.default_reminder_days, $2) AS state
        FROM obligations o
        JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-      WHERE ${column} = $1 AND o.superseded_by IS NULL`,
-    [value, today],
+      WHERE ${column} = $1 AND o.company_id = $3 AND o.superseded_by IS NULL`,
+    [value, today, companyId],
   );
 
   return result.rows.map((row) => ({
@@ -531,11 +543,12 @@ async function entityObligations(
 
 async function activeOverrides(
   client: PoolClient,
+  companyId: CompanyId,
   assignmentId: string,
 ): Promise<AssignmentOverride[]> {
   const result = await client.query(
-    "SELECT obligation_id, reason, valid_until, created_by FROM project_assignment_overrides WHERE assignment_id = $1",
-    [assignmentId],
+    "SELECT obligation_id, reason, valid_until, created_by FROM project_assignment_overrides WHERE assignment_id = $1 AND company_id = $2",
+    [assignmentId, companyId],
   );
   return result.rows.map((row) => ({
     obligationId: String(row.obligation_id),
@@ -615,7 +628,7 @@ export async function createAssignment(
         message: "Kraj nove dodjele može biti samo današnji ili budući poslovni datum.",
       } as ServiceError;
     }
-    const obligations = await entityObligations(client, today, {
+    const obligations = await entityObligations(client, companyId, today, {
       workerId: input.workerId,
       machineId: input.machineId,
     });
@@ -707,8 +720,8 @@ export async function createAssignment(
       },
     });
 
-    const created = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1`, [id]);
-    const overrides = await activeOverrides(client, id);
+    const created = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1 AND a.company_id = $2`, [id, companyId]);
+    const overrides = await activeOverrides(client, companyId, id);
     return toAssignment(created.rows[0]!, obligations, overrides, today);
   });
 }
@@ -752,17 +765,18 @@ export async function listAssignments(
     }
 
     const today = await companyToday(client, companyId);
-    const result = await client.query(`${ASSIGNMENT_SELECT} WHERE a.project_id = $1 ORDER BY a.from_date DESC`, [
-      projectId,
-    ]);
+    const result = await client.query(
+      `${ASSIGNMENT_SELECT} WHERE a.project_id = $1 AND a.company_id = $2 ORDER BY a.from_date DESC`,
+      [projectId, companyId],
+    );
 
     const assignments: AssignmentRow[] = [];
     for (const row of result.rows) {
-      const obligations = await entityObligations(client, today, {
+      const obligations = await entityObligations(client, companyId, today, {
         workerId: row.worker_id ? String(row.worker_id) : null,
         machineId: row.machine_id ? String(row.machine_id) : null,
       });
-      const overrides = await activeOverrides(client, String(row.id));
+      const overrides = await activeOverrides(client, companyId, String(row.id));
       assignments.push(toAssignment(row, obligations, overrides, today));
     }
 
@@ -798,9 +812,9 @@ export async function changeAssignment(
     }>(
       `SELECT worker_id, machine_id, from_date, to_date, voided_at
          FROM project_assignments
-        WHERE id = $1 AND project_id = $2
+        WHERE id = $1 AND project_id = $2 AND company_id = $3
         FOR UPDATE`,
-      [assignmentId, projectId],
+      [assignmentId, projectId, companyId],
     );
     const row = existing.rows[0];
     if (!row) return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
@@ -972,7 +986,7 @@ export async function assignmentPreview(
 ): Promise<AssignmentBlockerRow[]> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
-    const obligations = await entityObligations(client, today, entity);
+    const obligations = await entityObligations(client, companyId, today, entity);
     const check = checkAssignment(obligations, [], today);
     return check.blocked;
   });
@@ -1031,7 +1045,7 @@ export async function requestOverride(
   }
 
   return withCompany(pool, companyId, async (client) => {
-    const project = await client.query("SELECT 1 FROM projects WHERE id = $1", [projectId]);
+    const project = await client.query("SELECT 1 FROM projects WHERE id = $1 AND company_id = $2", [projectId, companyId]);
     if (project.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
     }
@@ -1040,8 +1054,8 @@ export async function requestOverride(
       `SELECT t.label AS type_label
          FROM obligations o
          JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-        WHERE o.id = $1`,
-      [input.obligationId],
+        WHERE o.id = $1 AND o.company_id = $2`,
+      [input.obligationId, companyId],
     );
     if (obligation.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
@@ -1180,8 +1194,8 @@ export async function approveOverride(
          FROM project_assignment_overrides r
          JOIN obligations o ON o.company_id = r.company_id AND o.id = r.obligation_id
          JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-        WHERE r.id = $1 AND r.assignment_id IS NULL`,
-      [requestId],
+        WHERE r.id = $1 AND r.company_id = $2 AND r.assignment_id IS NULL`,
+      [requestId, companyId],
     );
     const row = request.rows[0];
     if (!row) {
@@ -1254,14 +1268,17 @@ export async function approveOverride(
       },
     });
 
-    const created = await client.query("SELECT * FROM project_assignments WHERE id = $1", [id]);
-    const obligations = await entityObligations(client, today, {
+    const created = await client.query(
+      "SELECT * FROM project_assignments WHERE id = $1 AND company_id = $2",
+      [id, companyId],
+    );
+    const obligations = await entityObligations(client, companyId, today, {
       workerId: row.worker_id ? String(row.worker_id) : null,
       machineId: row.machine_id ? String(row.machine_id) : null,
     });
-    const overrides = await activeOverrides(client, id);
+    const overrides = await activeOverrides(client, companyId, id);
     // `ASSIGNMENT_SELECT` je JOIN — novi red se čita istim putem da odgovor ima imena, ne id-jeve.
-    const full = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1`, [id]);
+    const full = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1 AND a.company_id = $2`, [id, companyId]);
     void created;
     return toAssignment(full.rows[0]!, obligations, overrides, today);
   });
@@ -1275,20 +1292,20 @@ export async function listOverrideRequests(
   projectId?: string,
 ): Promise<OverrideRequestRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const params: unknown[] = [];
-    const conditions = ["r.approved_at IS NULL", "r.assignment_id IS NULL"];
-    if (projectId) {
-      params.push(projectId);
-      conditions.push(`r.project_id = $${params.length}`);
-    }
+    const conditions: SqlCondition[] = [
+      cond("r.company_id = $", companyId),
+      cond("r.approved_at IS NULL"),
+      cond("r.assignment_id IS NULL"),
+    ];
+    if (projectId) conditions.push(cond("r.project_id = $", projectId));
 
     // Opseg: zahtjevi se vide samo za projekte koje osoba vidi.
     const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
     if (ids !== null) {
       if (ids.length === 0) return [];
-      params.push(ids);
-      conditions.push(`r.project_id = ANY($${params.length}::text[])`);
+      conditions.push(cond("r.project_id = ANY($::text[])", ids));
     }
+    const { where, params } = buildWhere(conditions);
 
     const result = await client.query(
       `SELECT r.id, r.project_id, r.obligation_id, r.reason, r.created_at, r.requested_by,
@@ -1302,7 +1319,7 @@ export async function listOverrideRequests(
          LEFT JOIN workers w ON w.company_id = r.company_id AND w.id = r.worker_id
          LEFT JOIN machines m ON m.company_id = r.company_id AND m.id = r.machine_id
          LEFT JOIN users ru ON ru.id = r.requested_by
-        WHERE ${conditions.join(" AND ")}
+        ${where}
         ORDER BY r.created_at`,
       params,
     );
