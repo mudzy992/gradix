@@ -543,11 +543,12 @@ async function entityObligations(
 
 async function activeOverrides(
   client: PoolClient,
+  companyId: CompanyId,
   assignmentId: string,
 ): Promise<AssignmentOverride[]> {
   const result = await client.query(
-    "SELECT obligation_id, reason, valid_until, created_by FROM project_assignment_overrides WHERE assignment_id = $1",
-    [assignmentId],
+    "SELECT obligation_id, reason, valid_until, created_by FROM project_assignment_overrides WHERE assignment_id = $1 AND company_id = $2",
+    [assignmentId, companyId],
   );
   return result.rows.map((row) => ({
     obligationId: String(row.obligation_id),
@@ -719,8 +720,8 @@ export async function createAssignment(
       },
     });
 
-    const created = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1`, [id]);
-    const overrides = await activeOverrides(client, id);
+    const created = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1 AND a.company_id = $2`, [id, companyId]);
+    const overrides = await activeOverrides(client, companyId, id);
     return toAssignment(created.rows[0]!, obligations, overrides, today);
   });
 }
@@ -764,9 +765,10 @@ export async function listAssignments(
     }
 
     const today = await companyToday(client, companyId);
-    const result = await client.query(`${ASSIGNMENT_SELECT} WHERE a.project_id = $1 ORDER BY a.from_date DESC`, [
-      projectId,
-    ]);
+    const result = await client.query(
+      `${ASSIGNMENT_SELECT} WHERE a.project_id = $1 AND a.company_id = $2 ORDER BY a.from_date DESC`,
+      [projectId, companyId],
+    );
 
     const assignments: AssignmentRow[] = [];
     for (const row of result.rows) {
@@ -774,7 +776,7 @@ export async function listAssignments(
         workerId: row.worker_id ? String(row.worker_id) : null,
         machineId: row.machine_id ? String(row.machine_id) : null,
       });
-      const overrides = await activeOverrides(client, String(row.id));
+      const overrides = await activeOverrides(client, companyId, String(row.id));
       assignments.push(toAssignment(row, obligations, overrides, today));
     }
 
@@ -810,9 +812,9 @@ export async function changeAssignment(
     }>(
       `SELECT worker_id, machine_id, from_date, to_date, voided_at
          FROM project_assignments
-        WHERE id = $1 AND project_id = $2
+        WHERE id = $1 AND project_id = $2 AND company_id = $3
         FOR UPDATE`,
-      [assignmentId, projectId],
+      [assignmentId, projectId, companyId],
     );
     const row = existing.rows[0];
     if (!row) return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
@@ -1192,8 +1194,8 @@ export async function approveOverride(
          FROM project_assignment_overrides r
          JOIN obligations o ON o.company_id = r.company_id AND o.id = r.obligation_id
          JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-        WHERE r.id = $1 AND r.assignment_id IS NULL`,
-      [requestId],
+        WHERE r.id = $1 AND r.company_id = $2 AND r.assignment_id IS NULL`,
+      [requestId, companyId],
     );
     const row = request.rows[0];
     if (!row) {
@@ -1274,9 +1276,9 @@ export async function approveOverride(
       workerId: row.worker_id ? String(row.worker_id) : null,
       machineId: row.machine_id ? String(row.machine_id) : null,
     });
-    const overrides = await activeOverrides(client, id);
+    const overrides = await activeOverrides(client, companyId, id);
     // `ASSIGNMENT_SELECT` je JOIN — novi red se čita istim putem da odgovor ima imena, ne id-jeve.
-    const full = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1`, [id]);
+    const full = await client.query(`${ASSIGNMENT_SELECT} WHERE a.id = $1 AND a.company_id = $2`, [id, companyId]);
     void created;
     return toAssignment(full.rows[0]!, obligations, overrides, today);
   });
@@ -1290,20 +1292,20 @@ export async function listOverrideRequests(
   projectId?: string,
 ): Promise<OverrideRequestRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const params: unknown[] = [];
-    const conditions = ["r.approved_at IS NULL", "r.assignment_id IS NULL"];
-    if (projectId) {
-      params.push(projectId);
-      conditions.push(`r.project_id = $${params.length}`);
-    }
+    const conditions: SqlCondition[] = [
+      cond("r.company_id = $", companyId),
+      cond("r.approved_at IS NULL"),
+      cond("r.assignment_id IS NULL"),
+    ];
+    if (projectId) conditions.push(cond("r.project_id = $", projectId));
 
     // Opseg: zahtjevi se vide samo za projekte koje osoba vidi.
     const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
     if (ids !== null) {
       if (ids.length === 0) return [];
-      params.push(ids);
-      conditions.push(`r.project_id = ANY($${params.length}::text[])`);
+      conditions.push(cond("r.project_id = ANY($::text[])", ids));
     }
+    const { where, params } = buildWhere(conditions);
 
     const result = await client.query(
       `SELECT r.id, r.project_id, r.obligation_id, r.reason, r.created_at, r.requested_by,
@@ -1317,7 +1319,7 @@ export async function listOverrideRequests(
          LEFT JOIN workers w ON w.company_id = r.company_id AND w.id = r.worker_id
          LEFT JOIN machines m ON m.company_id = r.company_id AND m.id = r.machine_id
          LEFT JOIN users ru ON ru.id = r.requested_by
-        WHERE ${conditions.join(" AND ")}
+        ${where}
         ORDER BY r.created_at`,
       params,
     );
