@@ -206,7 +206,7 @@ export function ConflictDetailClient({ initial }: { initial: WorkdayConflictDeta
 
       {/* Razmak ispod ljepljive trake: na 360 px traka ne smije zakrivati
           zadnje elemente sadržaja kad se ekran skrola do kraja. */}
-      <div aria-hidden="true" style={{ height: "var(--space-8)" }} />
+      <div aria-hidden="true" className="gx-actionbar-spacer" />
 
       <ConfirmDialog
         open={acceptTarget !== null}

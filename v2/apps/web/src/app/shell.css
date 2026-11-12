@@ -1282,6 +1282,9 @@ select.gx-input option, select.gx-input optgroup {
   background: var(--panel);
   box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
 }
+.gx-actionbar-spacer {
+  height: var(--space-8);
+}
 .gx-actionbar__label {
   color: var(--muted);
   font-size: 0.85em;
