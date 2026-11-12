@@ -213,7 +213,6 @@ export async function createWorker(
         valid.endedAt,
         valid.team,
         valid.supervisorId,
-        companyId,
       ],
     );
 
