@@ -343,6 +343,63 @@ praga podsjetnika firme:
 DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts
 ```
 
+### 5.3. Demo podaci iz fajlova (radnici, mašine, rokovi)
+
+Demo firmu puni sintetičkim podacima iz `v2/docs/demo-podaci/`
+(`radnici-popunjeno.xlsx`, `masine-popunjeno.xlsx`, `rokovi-popunjeno.xlsx`;
+izmišljeni podaci). Radnici i mašine idu kroz isti servis kao Uvoz iz
+aplikacije (isto pravilo duplikata: radnik = ime+prezime ili telefon;
+mašina = inventarska oznaka), rokovi postaju obaveze s verzijama povezane
+po oznaci mašine, imenu radnika ili šifri projekta — nepovezivo se
+prijavljuje i preskače. Datumi rokova (sidro 12. 11. 2026) pomjeraju se
+prema današnjem danu. Naredba je idempotentna i radi samo za demo firmu;
+baza se otvara aplikacijskom rolom (`DATABASE_URL`, servis uvoza se oslanja
+na RLS), a administratorska služi samo da se demo firma pronađe po slug-u:
+
+```sh
+DATABASE_ADMIN_URL=... DATABASE_URL=... \
+  pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts
+```
+
+## 11. Retencija podataka (razvojne pretpostavke)
+
+> Ovo su razvojne pretpostavke, **ne pravno mišljenje**. Prije produkcije
+> ih potvrđuje pravnik ili računovođa. Gdje ima smisla, rok je postavka
+> firme (npr. `companies.conflict_reminder_days` za podsjetnik i
+> `sync_conflict_retention_days` za payload sukoba već postoje); ostalo su
+> konstante u administratorskim naredbama dok se ne pokaže potreba za
+> postavkom.
+
+| Podatak | Rok | Stanje |
+|---|---|---|
+| Sesije, pokušaji prijave, istekli tokeni pozivnica i resetovanja | brisanje 30 dana nakon isteka | naredba `scripts/retention-cleanup.ts` (ispod) |
+| Tombstone i sync change log | 90 dana | kako je implementirano u sync sloju |
+| Originalni payload razriješenog sukoba | razrješenje + 90 dana; odluka i razlog ostaju | kako je implementirano (guard + purge) |
+| Audit trag | 24 mjeseca | čuva se; čišćenje nije implementirano |
+| Radni dani, sati i ispravke | 10 godina | čuva se; čišćenje nije implementirano |
+| Lični podaci radnika koji je otišao | anonimizacija umjesto brisanja, razvojno 5 godina nakon prestanka; historija sati ostaje cjelovita | samo dizajn (ispod), bez implementacije |
+| Prilozi (skenovi isprava) | dok obaveza traje + 5 godina; ljekarski nalazi se ne čuvaju, samo datum isteka | čuva se; čišćenje nije implementirano |
+| Sigurnosne kopije | 30 dana dnevne, 12 mjesečnih | operativna postavka backup posla (C.2, čeka odobrenje) |
+| Projektna dokumentacija | do kraja garantnog roka + dogovoreni period | čuva se; čišćenje nije implementirano |
+
+Tehničko čišćenje bez ličnih podataka (sesije, pokušaji prijave, istekli
+tokeni) radi se administratorskom naredbom, pod administratorskom rolom
+baze, nikad iz aplikacije i nikad automatski. Podrazumijevano je dry-run:
+
+```sh
+DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/retention-cleanup.ts --dry-run
+DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/retention-cleanup.ts --primijeni
+```
+
+**Anonimizacija radnika (samo dizajn, nije implementirano).** Kad prođe
+rok nakon prestanka radnog odnosa: ime i prezime zamjenjuju se oznakom
+(npr. „Bivši radnik #<id>"), telefon/email/napomene s ličnim podacima se
+brišu, veza na korisnički nalog se uklanja; red radnika, radni dani, sati,
+ispravke i obaveze ostaju, da historija sati i obračuna ostane cjelovita.
+Anonimizacija bi bila administratorska naredba s dry-run izvještajem,
+jedna transakcija po radniku i zapis u audit trag (bez ličnih podataka u
+zapisu). Čeka zasebno odobrenje i pravnu potvrdu roka.
+
 ## 6. Provjera poslije deploya
 
 ```sh

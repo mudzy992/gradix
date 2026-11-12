@@ -38,6 +38,10 @@ export type ParseError =
 /** Zaglavlje se normalizuje da mapiranje ne zavisi od velikih slova, dijakritike ni razmaka. */
 export function normaliseHeader(value: string): string {
   return value
+    // Đ/đ se ne razlaže NFD normalizacijom; bosanska transliteracija je „dj"
+    // (inače „ODREĐENO" postane „odre eno" i angažman se ne prepozna).
+    .replace(/Đ/g, "Dj")
+    .replace(/đ/g, "dj")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()

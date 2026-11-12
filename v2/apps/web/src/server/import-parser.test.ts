@@ -108,3 +108,51 @@ describe("zaglavlja", () => {
     expect(toText(12)).toBe("12");
   });
 });
+
+describe("demo-podaci fajlovi i formatirani prazni redovi (Dio 2b)", () => {
+  it("čita tri sintetička fajla iz v2/docs/demo-podaci i ne broji prazne redove šablona", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const dir = join(process.cwd(), "..", "..", "docs", "demo-podaci");
+    const expected: Record<string, number> = {
+      "radnici-popunjeno.xlsx": 29,
+      "masine-popunjeno.xlsx": 19,
+      "rokovi-popunjeno.xlsx": 100,
+    };
+    for (const [file, rows] of Object.entries(expected)) {
+      const parsed = await parseWorkbook(readFileSync(join(dir, file)), file);
+      expect("code" in parsed).toBe(false);
+      if (!("code" in parsed)) expect(parsed.rows).toHaveLength(rows);
+    }
+  });
+
+  it("500 formatiranih praznih redova šablona nisu ni podaci ni greške", async () => {
+    const ExcelJS = (await import("exceljs")).default;
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Radnici");
+    sheet.addRow(["Ime", "Prezime", "Datum početka"]);
+    sheet.addRow(["Test", "Testić", "2024-01-15"]);
+    // Šablon s unaprijed formatiranim praznim redovima (brojčani format + ivice).
+    for (let row = 3; row <= 502; row += 1) {
+      for (let col = 1; col <= 3; col += 1) {
+        const cell = sheet.getCell(row, col);
+        cell.numFmt = "dd.mm.yyyy";
+        cell.border = { top: { style: "thin" } };
+      }
+    }
+    const bytes = Buffer.from(await workbook.xlsx.writeBuffer());
+    const parsed = await parseWorkbook(bytes, "sablon.xlsx");
+    expect("code" in parsed).toBe(false);
+    if (!("code" in parsed)) {
+      expect(parsed.rows).toHaveLength(1);
+      expect(parsed.rows[0]?.rowNumber).toBe(2);
+    }
+  });
+});
+
+describe("normalizacija đ (Dio 2)", () => {
+  it("ODREĐENO se normalizuje u odredjeno, ne odre eno", () => {
+    expect(normaliseHeader("ODREĐENO")).toBe("odredjeno");
+    expect(normaliseHeader("Đuro Đaković")).toBe("djuro djakovic");
+  });
+});
