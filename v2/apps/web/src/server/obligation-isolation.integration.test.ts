@@ -38,7 +38,6 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
   const drugaObligation = `obl_isodruga_${STAMP}`;
   const drugaWorker = `wrk_isodruga_${STAMP}`;
   const demoWorkerType = `obt_isow_demo_${STAMP}`;
-  const drugaTypeCode = `ISO${STAMP.slice(-6)}`.toUpperCase();
   // Oznaka tipa koja postoji SAMO u drugoj firmi (identične oznake iz fiksture
   // su u objema firmama, pa ne dokazuju „tuđa oznaka je slobodna“).
   const drugaOnlyTypeCode = `ISX${STAMP.slice(-6)}`.toUpperCase();

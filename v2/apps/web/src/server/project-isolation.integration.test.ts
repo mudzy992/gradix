@@ -149,8 +149,9 @@ describeDb("projekti pod admin rolom ne vide i ne diraju drugu firmu (pokrivenos
     expect(isServiceError(tuđaMašina) && tuđaMašina.code).toBe("NOT_FOUND");
 
     // Liste dodjela po tuđem projektu nema — filter je na firmi, ne samo na RLS-u.
-    const { assignments } = await listAssignments(admin, demo, owner, DRUGA_PROJETK);
-    expect(assignments).toEqual([]);
+    const page = await listAssignments(admin, demo, owner, DRUGA_PROJETK);
+    expect(isServiceError(page)).toBe(false);
+    if (!isServiceError(page)) expect(page.assignments).toEqual([]);
   });
 
   it("zahtjev za iznimku, odobrenje i poništavanje ne diraju drugu firmu", async () => {
