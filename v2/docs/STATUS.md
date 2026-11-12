@@ -52,12 +52,35 @@
   nerazriješene, Pregled kartica, E2E razrješenja) i 2c (ishod razrješenja
   stiže na telefon pull-om: Odbačeno + razlog / Ispravljeno + stara-nova
   vremena / Prihvaćeno; interna napomena nikad na uređaj).
+  **Provjerena staging/produkcijska adresa (2026-11-07):**
+  `https://gradix.ba101.top/ured/sukobi` (jedan domen; API je na istom
+  originu pod `/api`). Stranicu i API (`workdays.resolve`) vide tačno:
+  **OWNER, ADMIN, PROJECT_MANAGER, SITE_SUPERVISOR** — PM i šef samo svoj
+  R3 opseg; ACCOUNTANT ima samo `workdays.view` (Radni dani, čitanje) i
+  Sukobe ne vidi (navigacija skrivena, stranica preusmjerava na
+  `/nemate-pristup`, API 403). Ostale role (WORKER, DRIVER,
+  MACHINE_OPERATOR, MECHANIC) nemaju ni `workdays.view` ni
+  `workdays.resolve`. Izvor: `src/server/permissions.ts` + `nav.ts`
+  (`permission: "workdays.resolve"`), ne pretpostavka.
 - **R4b (potvrda/zaključavanje sedmice):** nije započet; čeka R4a-2.
 - **Mobilni E2E na uređaju:** Maestro fajlovi postoje, ne izvršavaju se u CI-ju; telefonski
   prolaz radi vlasnik po `docs/DEMO-STEP7.md`.
 - **Redis se ne koristi** u aplikaciji (samo dijagnostika); rate limit je u bazi.
 - **Katalog** (`/katalog`, mobilni katalog ekran) nije javan: razvoj ili platformski
   administrator, ostalima 404; u produkcijskoj mobilnoj gradnji se ne uključuje.
+
+- **E2E stabilnost (izmjereno, R4a-2/A):** ručni mod CI workflowa
+  (`workflow_dispatch`, `e2e_stabilnost=true`, matrica 5×4, bez retryja —
+  retry je uklonjen i iz redovnog `playwright.config.ts`). Prvo mjerenje:
+  **15/20**, svaki pad 4. pokretanje u jobu, isti test
+  (`resolve.spec.ts`, `locator.click` timeout). Uzrok nije preglednik ni
+  rate limit: test razrješenja troši demo sukobe (3 u seedu) pa 4.
+  pokretanje na istoj bazi nema šta otvoriti. Ispravka: mjerenje prije
+  svakog pokretanja resetuje testnu bazu (drop schema + migracije + seed);
+  produkcijski seed i guard nepromjenjivosti razriješenih sukoba nisu
+  dirani (pokušaj reset-a kroz seed je guard ispravno odbio). Drugo
+  mjerenje: **20/20**. Preglednik u CI-ju ide iz cachea (ključ = zaključana
+  verzija `@playwright/test` 1.57.0 u lockfileu).
 
 ## Dugovi (ne blokiraju)
 

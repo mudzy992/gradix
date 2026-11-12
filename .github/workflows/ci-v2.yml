@@ -17,6 +17,15 @@ on:
     paths:
       - "v2/**"
   workflow_dispatch:
+    inputs:
+      e2e_stabilnost:
+        description: "Mjerenje stabilnosti E2E (20x bez retryja) umjesto redovne provjere"
+        type: boolean
+        default: false
+      broj_pokretanja:
+        description: "Broj E2E pokretanja u mjerenju stabilnosti"
+        required: false
+        default: "20"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -29,6 +38,7 @@ env:
 
 jobs:
   verify:
+    if: ${{ !inputs.e2e_stabilnost }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -293,3 +303,106 @@ jobs:
           ! grep -q "ERR_MODULE_NOT_FOUND" /tmp/diag-image.log
           grep -q "phase=s3.connection status=FAIL" /tmp/diag-image.log
           grep -q "phase=redis.config" /tmp/diag-image.log
+
+  # E2E stabilnost (R4a-2/A): 20 pokretanja BEZ retryja, raspoređeno kao
+  # matrica 5 jobova x 4 pokretanja (izolacija: pad/istek jednog joba ne
+  # gubi ostala mjerenja; svaki job javlja svoje rezultate anotacijama).
+  # Preglednik ide iz cachea ključanog zaključanom verzijom Playwrighta
+  # (@playwright/test 1.57.0), pa instalacija ne može biti uzrok padova.
+  e2e-stabilnost:
+    if: ${{ inputs.e2e_stabilnost }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        dio: [1, 2, 3, 4, 5]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+      - name: Cache Playwright preglednika (pinovana verzija iz lockfilea)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('v2/pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - name: Instalacija preglednika (samo ako cache promaši)
+        working-directory: v2/apps/web
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+      - name: Seed i build
+        working-directory: v2
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
+        run: |
+          pnpm --filter @gradix/web seed
+          pnpm --filter @gradix/web build
+      - name: Mjerenje — 4 pokretanja bez retryja (dio ${{ matrix.dio }}/5)
+        working-directory: v2/apps/web
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+          DIO: ${{ matrix.dio }}
+        run: |
+          set -u
+          mkdir -p /tmp/e2e-stabilnost
+          (pnpm start > /tmp/e2e-stabilnost/server.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
+          curl -sf http://127.0.0.1:3000/login >/dev/null || { echo "::error::STAB dio=$DIO server se nije digao"; tail -n 20 /tmp/e2e-stabilnost/server.log; exit 1; }
+          proslo=0
+          palo=0
+          pocetak=$(( (DIO - 1) * 4 + 1 ))
+          for n in $(seq "$pocetak" $((pocetak + 3))); do
+            # Svako pokretanje krece od prazne baze + svjeze demo fiksture:
+            # test razrjesenja trosi demo sukobe (3 u seedu), pa bez reset-a
+            # cetvrto pokretanje na istoj bazi nema sta otvoriti (izmjereni
+            # uzrok padova, R4a-2/A). Baza je testna u CI-ju; produkcijski
+            # seed i guard nepromjenjivosti sukoba se ne diraju.
+            psql "$DATABASE_ADMIN_URL" -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /tmp/e2e-stabilnost/reset-$n.log 2>&1 \
+              && (cd ../.. && ./infra/scripts/db-apply.sh >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web seed >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              || echo "::error::STAB dio=$DIO run $n: reset baze nije uspio"
+            log="/tmp/e2e-stabilnost/run-$n.log"
+            if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then
+              echo "::notice::STAB dio=$DIO run $n: PASS"
+              proslo=$((proslo+1))
+            else
+              echo "::error::STAB dio=$DIO run $n: FAIL"
+              grep -E "^ +[0-9]+\) \[chromium\]" "$log" | head -3 | while IFS= read -r l; do echo "::error::STAB palitest: $l"; done || true
+              grep -E "Error:" "$log" | head -2 | while IFS= read -r l; do echo "::error::STAB greska: $l"; done || true
+              palo=$((palo+1))
+            fi
+            rm -rf test-results
+          done
+          echo "::notice::STAB dio=$DIO proslo=$proslo palo=$palo"
+          [ "$palo" -eq 0 ]

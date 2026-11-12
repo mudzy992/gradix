@@ -20,6 +20,7 @@ const PAGES: { name: string; href: string }[] = [
   { name: "korisnici", href: "/ured/korisnici" },
   { name: "radni-dani", href: "/ured/radni-dani" },
   { name: "sukobi", href: "/ured/sukobi" },
+  { name: "sukobi-detalj", href: "/ured/sukobi/cnf_demo_1?stanje=OPEN" },
 ];
 
 async function login(page: Page) {

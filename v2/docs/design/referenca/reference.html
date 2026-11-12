@@ -764,12 +764,12 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
 <section class="r4a-reference" id="r4a2-design" aria-labelledby="r4a2-heading">
   <div class="r4a-reference-head">
     <div>
-      <h1 id="r4a2-heading">R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje vlasnika)</h1>
-      <p class="hint">Samo dizajn od postojećih komponenti kataloga (DataTable, DescriptionList, Button, Chip, ConfirmDialog s opcionim poljem razloga — odobrena dopuna komponente). Nije implementirano. Navigacija pri implementaciji: Ured → Radni dani → „Za provjeru" (ulazi i u E2E smoke iz Dijela 3). Svaki unos nosi autora (radnik ili šef), izvor (telefon ili server), vrijeme prijema i oznaku odstupanja sata kad postoji; preklopljeni interval (08:00–15:30) je istaknut. „Prihvati ovaj unos" u dijalogu kaže da će drugi unos biti odbačen i da njegov autor vidi upisani razlog (obavezno, min 10 znakova). Podsjetnik bez pozadinskog posla: broj nerazriješenih u navigaciji (bedž) i na Pregledu; stariji od 3 dana istaknuti (prag je postavka firme). Kad drugi korisnik ureda razriješi isti sukob, ekran prikazuje stanje „Razriješeno" s autorom i vremenom i gasi akcije. Na telefonu radnik vidi: „Odbačeno — razlog: …" i „Ispravljeno — Vremena je ispravio ured: bilo …, sada …" (bez riječi „odbijeno").</p>
+      <h1 id="r4a2-heading">R4a-2 — razrješenje sukoba (implementirano; B: detalj na zasebnoj stranici)</h1>
+      <p class="hint">Samo postojeće komponente kataloga (DataTable, DescriptionList, Button, Chip, ConfirmDialog s opcionim poljem razloga — odobrena dopuna komponente). Tok (B): lista „Sukobi" s filterima u adresi (stanje/starost/projekat) → klik na red vodi na zasebnu stranicu „Detalj sukoba" (/ured/sukobi/[id]) s putanjom Radni dani / Sukobi / detalj, „Nazad na listu" čuva filtere, a „Sljedeći nerazriješeni" ide na naredni otvoreni sukob. Dva unosa stoje jedan pored drugog na širokom ekranu, jedan ispod drugog na 360 px; akcije su u ljepljivoj traci pri dnu, modal je samo potvrda s obaveznim razlogom, interna napomena ostaje na stranici. Svaki unos nosi autora (radnik ili šef), izvor (telefon ili server), vrijeme prijema i oznaku odstupanja sata kad postoji; preklopljeni interval (08:00–15:30) je istaknut. „Prihvati ovaj unos" u dijalogu kaže da će drugi unos biti odbačen i da njegov autor vidi upisani razlog (obavezno, min 10 znakova). Podsjetnik bez pozadinskog posla: broj nerazriješenih u navigaciji (bedž) i na Pregledu; stariji od 3 dana istaknuti (prag je postavka firme). Kad drugi korisnik ureda razriješi isti sukob, ekran prikazuje stanje „Razriješeno" s autorom i vremenom i gasi akcije. Na telefonu radnik vidi: „Odbačeno — razlog: …" i „Ispravljeno — Vremena je ispravio ured: bilo …, sada …" (bez riječi „odbijeno").</p>
     </div>
   </div>
   <section class="card" style="margin-bottom:16px">
-    <h2 style="margin-bottom:12px">Lista sukoba (DataTable)</h2>
+    <h2 style="margin-bottom:12px">Lista sukoba (DataTable) — klik na red otvara zasebnu stranicu detalja</h2>
     <table class="table">
       <thead><tr><th>Radnik</th><th>Projekat</th><th>Datum</th><th>Čeka</th><th>Stanje</th></tr></thead>
       <tbody>

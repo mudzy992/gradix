@@ -374,8 +374,8 @@ export function ComponentCatalog() {
       </Section>
 
       <Section
-        title="R4a-2 — razrješenje sukoba (DIZAJN, čeka odobrenje vlasnika)"
-        hint="Nije implementirano: samo dizajn od postojećih komponenti. Lista = DataTable, detalj = dva DescriptionList jedan pored drugog, odbacivanje = dijalog s obaveznim razlogom. Vremena se ne spajaju automatski — ured bira jedan unos i smije ručno ispraviti vremena. Nerazriješen sukob u R4b blokira odobravanje te sedmice; podsjetnik uredu stiže nakon 3 dana (podesivo po firmi). Radnik na telefonu vidi ishod i kratak razlog odbacivanja, ne interne napomene."
+        title="R4a-2 — razrješenje sukoba (implementirano; B: detalj na zasebnoj stranici)"
+        hint="Lista = DataTable s filterima u adresi; klik na red vodi na zasebnu stranicu detalja (/ured/sukobi/[id]): putanja Radni dani / Sukobi / detalj, dva DescriptionList jedan pored drugog (na 360 px jedan ispod drugog), akcije u ljepljivoj traci pri dnu, dijalog samo za potvrdu s obaveznim razlogom, interna napomena ostaje na stranici. Vremena se ne spajaju automatski — ured bira jedan unos i smije ručno ispraviti vremena. Nerazriješen sukob u R4b blokira odobravanje te sedmice; podsjetnik uredu stiže nakon 3 dana (podesivo po firmi). Radnik na telefonu vidi ishod i kratak razlog odbacivanja, ne interne napomene."
       >
         <Stack>
           <DataTable

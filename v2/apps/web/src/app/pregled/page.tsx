@@ -155,7 +155,7 @@ export default async function PregledPage() {
             {conflictCounts.olderThanThreshold > 0 ? (
               <Chip tone="hot">{conflictCounts.olderThanThreshold} stariji od {conflictCounts.thresholdDays} dana</Chip>
             ) : null}
-            <Link href="/ured/sukobi">Otvori razrješenje</Link>
+            <Link href="/ured/sukobi?stanje=OPEN">Otvori razrješenje</Link>
           </Inline>
         </Card>
       ) : null}

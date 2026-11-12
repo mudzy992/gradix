@@ -9,7 +9,10 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
-  retries: process.env.CI ? 1 : 0,
+  // Bez automatskog ponavljanja: retry u CI-ju je skrivao povremene padove E2E
+  // (tri pada pa prolaz na rerun, R4a-2/A). Stabilnost se mjeri workflowom
+  // `e2e-stabilnost.yml` (20+ pokretanja, svako bez retryja).
+  retries: 0,
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
     trace: "retain-on-failure",
