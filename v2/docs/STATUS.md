@@ -69,6 +69,19 @@
 - **Katalog** (`/katalog`, mobilni katalog ekran) nije javan: razvoj ili platformski
   administrator, ostalima 404; u produkcijskoj mobilnoj gradnji se ne uključuje.
 
+- **E2E stabilnost (izmjereno, R4a-2/A):** ručni mod CI workflowa
+  (`workflow_dispatch`, `e2e_stabilnost=true`, matrica 5×4, bez retryja —
+  retry je uklonjen i iz redovnog `playwright.config.ts`). Prvo mjerenje:
+  **15/20**, svaki pad 4. pokretanje u jobu, isti test
+  (`resolve.spec.ts`, `locator.click` timeout). Uzrok nije preglednik ni
+  rate limit: test razrješenja troši demo sukobe (3 u seedu) pa 4.
+  pokretanje na istoj bazi nema šta otvoriti. Ispravka: mjerenje prije
+  svakog pokretanja resetuje testnu bazu (drop schema + migracije + seed);
+  produkcijski seed i guard nepromjenjivosti razriješenih sukoba nisu
+  dirani (pokušaj reset-a kroz seed je guard ispravno odbio). Drugo
+  mjerenje: **20/20**. Preglednik u CI-ju ide iz cachea (ključ = zaključana
+  verzija `@playwright/test` 1.57.0 u lockfileu).
+
 ## Dugovi (ne blokiraju)
 
 - **PLATFORM_ADMIN_EMAILS:** privremeni mehanizam platformskih administratora
