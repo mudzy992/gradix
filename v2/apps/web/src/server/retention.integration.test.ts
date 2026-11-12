@@ -27,8 +27,8 @@ describeDb("retention-cleanup naredba (Dio 2d)", () => {
               ('ses_ret_new_${stamp}', 'cmp_demo', 'usr_vlasnik', 'hash_ret_new_${stamp}', clock_timestamp() - interval '10 days')`,
     );
     await admin.query(
-      `INSERT INTO public.invitations (id, company_id, email, roles, token_hash, expires_at, created_by)
-       VALUES ('inv_ret_old_${stamp}', 'cmp_demo', 'ret@primjer.test', ARRAY['WORKER']::"Role"[], 'hash_inv_ret_${stamp}', clock_timestamp() - interval '40 days', 'usr_vlasnik')`,
+      `INSERT INTO public.invitations (id, company_id, email, roles, scope, token_hash, expires_at, created_by)
+       VALUES ('inv_ret_old_${stamp}', 'cmp_demo', 'ret@primjer.test', ARRAY['WORKER']::"Role"[], 'COMPANY', 'hash_inv_ret_${stamp}', clock_timestamp() - interval '40 days', 'usr_vlasnik')`,
     );
 
     const dry = await retentionCleanup(admin, false);
