@@ -29,6 +29,7 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/lozinka/postavi": "dolazi se isključivo token-linkom iz pozivnice/reseta",
   "/lozinka/promjena": "korisnički meni u okviru + prisilna promjena poslije prijave",
   "/katalog": "U5 katalog UI komponenti — razvojni alat, otvara se direktnim URL-om",
+  "/ured/sukobi/[id]": "detalj jednog sukoba (R4a-2/B) — dijete liste /ured/sukobi, dolazi se klikom na red liste; ista dozvola workdays.resolve, zasebna stavka u navigaciji bi bila duplikat liste",
 };
 
 describe("dosegljivost stranica (A4a)", () => {

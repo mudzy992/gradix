@@ -1269,3 +1269,21 @@ select.gx-input option, select.gx-input optgroup {
 .gx-mt-3 { margin-top: var(--space-3); }
 .gx-mt-4 { margin-top: var(--space-4); }
 .gx-mt-5 { margin-top: var(--space-5); }
+
+/* R4a-2/B: ljepljiva traka akcija na stranici detalja sukoba — akcije su
+   uvijek na istom mjestu ekrana, i na 360 px i na širokom ekranu. */
+.gx-actionbar {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: 5;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--panel);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
+}
+.gx-actionbar__label {
+  color: var(--muted);
+  font-size: 0.85em;
+  margin-left: calc(-1 * var(--space-2));
+}
