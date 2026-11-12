@@ -387,6 +387,11 @@ tokeni) radi se administratorskom naredbom, pod administratorskom rolom
 baze, nikad iz aplikacije i nikad automatski. Podrazumijevano je dry-run:
 
 ```sh
+<!-- Tačan popis tabela koje naredba smije dirati: sessions, login_attempts,
+     invitations, password_resets. Popis je izvezen kao RETENTION_TABLES iz
+     scripts/retention-cleanup.ts i test retention.integration.test.ts ga
+     provjerava statički (izvor naredbe) i ponašanjem (poslovne tabele
+     netaknute prije/poslije --primijeni). -->
 DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/retention-cleanup.ts --dry-run
 DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/retention-cleanup.ts --primijeni
 ```

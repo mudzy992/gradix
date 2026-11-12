@@ -22,6 +22,14 @@ export const RETENTION_DAYS = {
   passwordResetTokensAfterExpiry: 30,
 } as const;
 
+/**
+ * Tačan popis tabela koje ova naredba smije dirati. Sve ostalo — radni dani,
+ * sukobi, audit, korisnici, radnici, obaveze — naredba ne dotiče; test
+ * `retention.integration.test.ts` to provjerava i statički (izvor naredbe)
+ * i ponašanjem (brojevi redova poslovnih tabela prije/poslije primjene).
+ */
+export const RETENTION_TABLES = ["sessions", "login_attempts", "invitations", "password_resets"] as const;
+
 export type RetentionCounts = {
   sessions: number;
   loginAttempts: number;
