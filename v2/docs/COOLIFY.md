@@ -329,6 +329,20 @@ Bez `REMOVE_DEMO_CONFIRM=niskogradnja-demo` skripta staje prije bilo kakve izmje
 Briše sve redove demo firme (tenant tabele se otkrivaju iz kataloga), samu firmu i demo
 korisnike (`@demo.ba`) koji ne pripadaju nijednoj drugoj firmi — sve ili ništa.
 
+### 5.2. Novi demo sukobi (kad se postojeći razriješe)
+
+Razriješen sukob se ne može vratiti na OPEN (guard nepromjenjivosti u bazi to
+brani i tako mora ostati). Kad demo sukobi „potroše" razrješenja, novi se
+prave administratorskom naredbom — postojeći se ne diraju. Naredba radi
+samo za demo firmu (slug `niskogradnja-demo`) i staje prije ikakvog upisa
+za svaku drugu firmu (pokriveno testom). Pravi 3 nova sukoba: preklopljen
+unos radnika i šefa, unos s odstupanjem sata telefona i jedan stariji od
+praga podsjetnika firme:
+
+```sh
+DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts
+```
+
 ## 6. Provjera poslije deploya
 
 ```sh
