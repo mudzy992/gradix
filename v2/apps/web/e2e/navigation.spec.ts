@@ -38,7 +38,7 @@ test("vlasnik: meni sadrži Radne dane i Korisnike; odjava vraća na prijavu", a
 
 test("A1e regresija: odjava pa ponovna prijava u istom kontekstu uspjeva", async ({ page }) => {
   // Originalni bug (mobilni): prijava NAKON odjave vraćala je „Došlo je do greške."
-  // (server 500, PG 22P05). Ovdje se ta sekvenca dokazuje na webu u istom
+  // (server 500, PG 22021). Ovdje se ta sekvenca dokazuje na webu u istom
   // kontekstu: stari cookie/tokeni moraju otići, novi moraju raditi.
   await login(page, "vlasnik@demo.ba");
 

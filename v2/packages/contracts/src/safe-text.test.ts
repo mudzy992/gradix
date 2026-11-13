@@ -1,7 +1,7 @@
 /**
  * A1 — SafeText: granica API-ja odbija kontrolne znakove (npr. NUL) u tekstualnim
  * poljima SVIH šema zahtjeva. Bez ove provjere takav unos stiže do Postgresa, koji ga
- * odbija (22P05, „invalid byte sequence for encoding "UTF8": 0x00“) i klijent vidi 500.
+ * odbija (22021, „invalid byte sequence for encoding "UTF8": 0x00“) i klijent vidi 500.
  *
  * Test radi na registru ruta (`ROUTES`), ne na ručnom spisku: nova ruta sa šemom koja
  * koristi goli `z.string()` za tekst pada ovdje dok ne pređe na `SafeText`.

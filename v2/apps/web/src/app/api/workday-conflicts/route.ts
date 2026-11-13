@@ -4,8 +4,7 @@
  */
 import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
-import { fail, internal, ok } from "@/server/api";
-import { hasControlChars } from "@gradix/contracts";
+import { internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { listConflicts } from "@/server/workday-resolve";
@@ -19,13 +18,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (!guardResult.ok) return guardResult.response;
     const ctx = guardResult.ctx;
     const params = request.nextUrl.searchParams;
-    // A1: kontrolni znakovi (npr. NUL) u filteru nisu nikad legitiman unos — odbijaju se
-    // na granici, da ne stignu do baze (Postgres odbija NUL u string parametru).
-    for (const value of params.values()) {
-      if (hasControlChars(value)) {
-        return fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.");
-      }
-    }
+    // A1: granica kontrolnih znakova za query je zajednička — u guard() (svaka ruta).
     const status = params.get("status");
     const older = params.get("olderThanDays");
     const result = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {

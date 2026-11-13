@@ -2,7 +2,7 @@
  * A1 (mobilni): email se čisti od kontrolnih znakova PRIJE slanja na server.
  *
  * NALAZ iz buga: `trim()` NE skida NUL (\u0000), a Postgres odbija 0x00 u stringu
- * (22P05) — prijava nakon odjave padala je s „Došlo je do greške.“ (500). Server sada
+ * (22021) — prijava nakon odjave padala je s „Došlo je do greške.“ (500). Server sada
  * takav unos odbija s 400 (SafeText), a mobilni ga uklanja prije slanja, da prijava
  * radi čak i kad tipkovnica/autofill ubaci kontrolni znak. Test hvata TAČNO to:
  * šta je otišlo na žicu, a ne šta je korisnik ukucao.

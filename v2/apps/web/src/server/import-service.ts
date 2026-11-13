@@ -465,7 +465,7 @@ async function previewEquipment(
 
 /**
  * A1: kontrolni znak (npr. NUL) u bilo kojoj ćeliji reda — string kolone u bazi to
- * odbijaju (22P05) i srušile bi cijeli uvoz. Takav red dobija ishod „error“ u pregledu,
+ * odbijaju (22021) i srušile bi cijeli uvoz. Takav red dobija ishod „error“ u pregledu,
  * pa korisnik vidi tačno koji red treba popraviti prije potvrde.
  */
 function rowHasControlChars(cells: Record<string, string | number | Date | null>): boolean {

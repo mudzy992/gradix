@@ -14,7 +14,7 @@ export type SyncPushActor = { userId: string; companyId: CompanyId; roles: reado
 
 /**
  * A1: kontrolni znakovi (npr. NUL) bilo gdje u stavci — string kolone i jsonb u
- * Postgresu ih odbijaju (22P05). Provjera ide kroz cijelu stavku, uključujući
+ * Postgresu ih odbijaju (22021). Provjera ide kroz cijelu stavku, uključujući
  * ugniježđene zapise (workday header, note), da se loša stavka odbije PO STAVKI
  * umjesto da sruši cijeli batch.
  */

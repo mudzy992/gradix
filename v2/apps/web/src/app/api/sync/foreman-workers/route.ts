@@ -2,7 +2,6 @@
 import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
 import { fail, internal, ok } from "@/server/api";
-import { hasControlChars } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 
@@ -28,13 +27,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const params = request.nextUrl.searchParams;
-    // A1: kontrolni znakovi (npr. NUL) u filteru nisu nikad legitiman unos — odbijaju se
-    // na granici, da ne stignu do baze (Postgres odbija NUL u string parametru).
-    for (const value of params.values()) {
-      if (hasControlChars(value)) {
-        return fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.");
-      }
-    }
+    // A1: granica kontrolnih znakova za query je zajednička — u guard() (svaka ruta).
     if ([...params.keys()].some((key) => key !== "projectId" && key !== "workDate")
         || params.getAll("projectId").length !== 1 || params.getAll("workDate").length !== 1) {
       return fail("VALIDATION_FAILED", "Potrebni su tačno jedan projectId i workDate.");

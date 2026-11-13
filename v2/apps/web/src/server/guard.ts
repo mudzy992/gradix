@@ -6,6 +6,7 @@
  * kroz koju privremena lozinka radi kao puna.
  */
 import type { NextRequest } from "next/server";
+import { hasControlChars } from "@gradix/contracts";
 import { fail } from "./api";
 import { can, type Permission } from "./permissions";
 import { authenticate, requiresPasswordChange, type AuthContext } from "./tenant-context";
@@ -16,6 +17,19 @@ export async function guard(request: NextRequest, permission?: Permission): Prom
   const auth = await authenticate(request);
   if (!auth.ok) {
     return { ok: false, response: fail(auth.code, "Niste prijavljeni.") };
+  }
+
+  /*
+   * A1 — ZAJEDNIČKI pomoćnik granice za kontrolne znakove, na SVAKOJ zaštićenoj ruti:
+   * NUL i ostali kontrolni znakovi u query parametru nisu nikad legitiman unos. Bez ove
+   * provjere stigli bi do baze (Postgres odbija NUL u stringu: SQLSTATE 22021) i rutu
+   * bi srušili u 500. Ranije je ova petlja bila kopirana ruti po ruti — dvije su je
+   * i zaboravile; sada je čuva jedno mjesto kroz koje prolazi svaki zahtjev sa sesijom.
+   */
+  for (const value of request.nextUrl.searchParams.values()) {
+    if (hasControlChars(value)) {
+      return { ok: false, response: fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.") };
+    }
   }
 
   const blocked = requiresPasswordChange(auth.ctx, request.nextUrl.pathname);
