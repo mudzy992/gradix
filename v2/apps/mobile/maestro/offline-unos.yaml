@@ -1,5 +1,5 @@
 # Offline unos (radnik): avionski režim -> unos se sprema na telefon i čeka slanje.
-# Preduslov: uređaj u avionskom režimu PRIJE pokretanja; demo radnik postoji (radnik1@demo.ba).
+# Preduslov: uređaj u avionskom režimu PRIJE pokretanja; demo radnik postoji (radnik@demo.ba).
 appId: ba.gradix.teren
 ---
 - launchApp:
@@ -7,7 +7,7 @@ appId: ba.gradix.teren
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"
-- inputText: "radnik1@demo.ba"
+- inputText: "radnik@demo.ba"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
