@@ -18,6 +18,8 @@ const SCOPES = [
   // Migrirani ekrani — predlošci U7b + katalog:
   "apps/web/src/app/ured/radnici",
   "apps/web/src/app/katalog",
+  // C.1: novi pregled je migriran od prvnog dana — bez hex i fontSize brojeva.
+  "apps/web/src/app/pregled",
   "apps/mobile/src/app/moj-dan.tsx",
   "apps/mobile/src/app/index.tsx",
   "apps/mobile/src/app/katalog.tsx",

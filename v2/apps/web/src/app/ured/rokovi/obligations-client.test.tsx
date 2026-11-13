@@ -62,9 +62,11 @@ const obligations = [
   { ...base, id: "obl_1", expiresAt: "2026-11-27", state: "valid", daysLeft: 20 },
   { ...base, id: "obl_2", expiresAt: "2026-11-12", state: "expiring", daysLeft: 5 },
   { ...base, id: "obl_3", expiresAt: "2026-11-06", state: "expired", daysLeft: -1, number: "L-23/2026" },
+  // C.1: rok u prozoru 31–90 dana — „plan obnove“, ne uzbuna.
+  { ...base, id: "obl_4", expiresAt: "2026-12-20", state: "valid", daysLeft: 43, number: "L-25/2026" },
 ];
 
-const counts = { all: 3, expired: 1, expiring: 1, valid: 1, no_expiry: 0 };
+const counts = { all: 4, expired: 1, expiring: 1, valid: 2, no_expiry: 0 };
 
 type Call = { method: string; url: string; body: unknown };
 
@@ -240,6 +242,34 @@ describe("rokovi", () => {
 
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("nije poslije starog");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("C.1: stanje iz adrese (?stanje=isteklo) suži listu čim se ekran učita", async () => {
+    mockApi();
+    render(<ObligationsClient canManage initialStateFilter="expired" />);
+
+    const rows = await screen.findAllByRole("row");
+    const text = rows.map((row) => row.textContent).join(" | ");
+    expect(text).toContain("Isteklo");
+    expect(text).not.toContain("Uskoro istječe");
+    // Filter je vidljiv i postavljen: čovjek vidi ZAŠTO je lista kratka.
+    expect((screen.getByLabelText("Stanje") as HTMLSelectElement).value).toBe("expired");
+  });
+
+  it("C.1: „31–90 dana“ je prozor dana, ne stanje u bazi — broji i sužava bez servera", async () => {
+    mockApi();
+    render(<ObligationsClient canManage />);
+
+    await screen.findAllByRole("row");
+    const select = screen.getByLabelText("Stanje") as HTMLSelectElement;
+    expect(select.textContent).toContain("31–90 dana (1)");
+
+    await userEvent.selectOptions(select, "31-90");
+    const rows = await screen.findAllByRole("row");
+    const text = rows.map((row) => row.textContent).join(" | ");
+    expect(text).toContain("L-25/2026"); // 43 dana — jedini u prozoru
+    expect(text).not.toContain("L-23/2026"); // isteklo nije 31–90
+    expect(text).not.toContain("L-24/2026"); // 20 dana nije 31–90
   });
 
   it("nema serious/critical a11y nalaza na listi ni u dijalogu", async () => {

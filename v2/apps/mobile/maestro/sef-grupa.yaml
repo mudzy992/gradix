@@ -1,5 +1,5 @@
 # Šef grupni unos: jedan projekat/mašina, zajedničko vrijeme, ishod po radniku.
-# Preduslov: mreža dostupna; demo šef postoji (sef@demo.ba), ekipa od 5 radnika u opsegu.
+# Preduslov: mreža dostupna; demo šef postoji (sef@demo.ba), ekipa od 6 radnika u opsegu.
 appId: ba.gradix.teren
 ---
 - launchApp:

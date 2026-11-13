@@ -76,6 +76,7 @@ import {
   WorkdayConflictCountsResponse,
   ResolveConflictInput,
   ResolveConflictResponse,
+  PregledResponse,
 } from "./schemas";
 
 export type RouteSpec = {
@@ -651,6 +652,16 @@ export const ROUTES = [
     permission: "workdays.resolve",
     request: null,
     response: WorkdayConflictCountsResponse,
+  },
+  {
+    method: "GET",
+    path: "/api/pregled",
+    summary:
+      "C.1 pregled: „šta traži pažnju“ (rokovi, sukobi, dani za provjeru, blokirane dodjele), sažetak i stanje sinhronizacije (samo OWNER/ADMIN); opseg iz sesije.",
+    auth: true,
+    permission: "pregled.view",
+    request: null,
+    response: PregledResponse,
   },
   {
     method: "GET",

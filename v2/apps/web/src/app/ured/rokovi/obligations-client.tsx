@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/index";
 import { CreateDialog, RenewDialog } from "./obligations-dialogs";
 import { DetailDialog } from "./obligation-detail";
-export { STATE_LABEL, daysLabel, targetLabel, type MachineOption, type WorkerOption } from "./obligations-shared";
-import { STATE_LABEL, daysLabel, targetLabel } from "./obligations-shared";
+export { STATE_LABEL, daysLabel, targetLabel, count3190, type MachineOption, type WorkerOption } from "./obligations-shared";
+import { STATE_LABEL, count3190, daysLabel, targetLabel } from "./obligations-shared";
 
 type LoadState =
   | { kind: "loading" }
@@ -42,9 +42,16 @@ const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
 
 
 
-export default function ObligationsClient({ canManage }: { canManage: boolean }) {
+export default function ObligationsClient({
+  canManage,
+  initialStateFilter = "",
+}: {
+  canManage: boolean;
+  /** C.1: stanje iz adrese (?stanje=isteklo i sl.) — dolazi iz servera, već provjereno. */
+  initialStateFilter?: string;
+}) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [stateFilter, setStateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState(initialStateFilter);
   const [typeFilter, setTypeFilter] = useState("");
   const [filter, setFilter] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -85,7 +92,11 @@ export default function ObligationsClient({ canManage }: { canManage: boolean })
   const visible = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     return obligations.filter((row) => {
-      if (stateFilter && row.state !== stateFilter) return false;
+      if (stateFilter === "31-90") {
+        // Prozor dana, ne stanje u bazi: server je `daysLeft` već izračunao po
+        // poslovnom datumu firme, pa klijent samo sužava ono što je dobilo.
+        if (row.daysLeft === null || row.daysLeft < 31 || row.daysLeft > 90) return false;
+      } else if (stateFilter && row.state !== stateFilter) return false;
       if (typeFilter && row.typeId !== typeFilter) return false;
       if (needle.length === 0) return true;
       return `${row.typeLabel} ${targetLabel(row)} ${row.number ?? ""} ${row.issuer ?? ""}`
@@ -119,13 +130,14 @@ export default function ObligationsClient({ canManage }: { canManage: boolean })
       <Card>
         {state.kind === "ready" ? (
           <FilterBar>
-            <Select label="Stanje"id="obligation-state"
+              <Select label="Stanje"id="obligation-state"
                 value={stateFilter}
                 onChange={(event) => setStateFilter(event.target.value)}
               >
                 <option value="">Sva stanja ({state.counts.all})</option>
                 <option value="expired">Isteklo ({state.counts.expired})</option>
                 <option value="expiring">Uskoro istječe ({state.counts.expiring})</option>
+                <option value="31-90">31–90 dana ({count3190(obligations)})</option>
                 <option value="valid">Važeće ({state.counts.valid})</option>
                 <option value="no_expiry">Bez roka ({state.counts.no_expiry})</option>
               </Select>

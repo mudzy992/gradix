@@ -39,6 +39,10 @@ export const ROLES: readonly Role[] = [
 ];
 
 export const PERMISSIONS = {
+  // C.1 (odobren dizajn, 2026-11-12): početni pregled „šta moram danas uraditi?“.
+  // WORKER, DRIVER i ostali ostaju na postojećem pregledu — zato ova dozvola postoji:
+  // da granica između starog i novog ekrana bude podatak (matrica, test), ne `if` u stranici.
+  "pregled.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "users.manage": ["OWNER", "ADMIN"],
   "audit.view": ["OWNER", "ADMIN"],
   "roles.view": ["OWNER", "ADMIN"],
@@ -122,6 +126,11 @@ export type Permission = keyof typeof PERMISSIONS;
 
 /** Opis za matricu — isti tekst u UI-u i u testu koji provjerava da nije prazan. */
 export const PERMISSION_INFO: Record<Permission, { label: string; description: string }> = {
+  "pregled.view": {
+    label: "Početni pregled (šta traži pažnju)",
+    description:
+      "Početni ekran nakon prijave: istekli rokovi, nerazriješeni sukobi, dani za provjeru, blokirane dodjele i stanje sinhronizacije. Vlasnik i admin vide cijelu firmu i sinhronizaciju; vođa projekta i šef samo svoj opseg, bez sinhronizacije. Radnik, vozač i ostali ostaju na starom pregledu.",
+  },
   "users.manage": {
     label: "Upravljanje korisnicima",
     description: "Pozivnice, reset lozinke, deaktivacija i dodjela rola i opsega.",

@@ -11,6 +11,7 @@ const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const USERS: { email: string; roles: string[] }[] = [
   { email: "vlasnik@demo.ba", roles: ["OWNER"] },
   { email: "ured@demo.ba", roles: ["ADMIN"] },
+  { email: "voditelj@demo.ba", roles: ["PROJECT_MANAGER"] },
   { email: "sef@demo.ba", roles: ["SITE_SUPERVISOR"] },
   { email: "radnik@demo.ba", roles: ["WORKER"] },
 ];

@@ -42,15 +42,16 @@ describeDb("demo seed: veze korisnik-radnik i šefova ekipa", () => {
   it("šef i radnik su povezani s radničkim zapisima", async () => {
     const links = await admin.query<{ id: string; user_id: string | null }>(
       "SELECT id, user_id FROM public.workers WHERE id = ANY($1)",
-      [["wrk_demo_mario", "wrk_demo_amar", "wrk_demo_nedim", "wrk_demo_selmir", "wrk_demo_haris"]],
+      [["wrk_demo_mario", "wrk_demo_amar", "wrk_demo_nedim", "wrk_demo_selmir", "wrk_demo_haris", "wrk_demo_kenan"]],
     );
     const byId = new Map(links.rows.map((row) => [row.id, row.user_id]));
     expect(byId.get("wrk_demo_mario")).toBe("usr_sef");
     expect(byId.get("wrk_demo_amar")).toBe("usr_radnik");
-    expect(byId.size).toBe(5);
+    expect(byId.get("wrk_demo_kenan")).toBe("usr_voditelj");
+    expect(byId.size).toBe(6);
   });
 
-  it("roster za šefa vraća ekipu od 5 na demo projektu", async () => {
+  it("roster za šefa vraća ekipu od 6 na demo projektu (uključujući voditelja)", async () => {
     const today = await admin.query<{ d: string }>(
       "SELECT (clock_timestamp() AT TIME ZONE timezone)::date::text AS d FROM public.companies WHERE id = 'cmp_demo'",
     );
@@ -62,7 +63,7 @@ describeDb("demo seed: veze korisnik-radnik i šefova ekipa", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { data: { workers: { id: string }[] } };
     expect(body.data.workers.map((w) => w.id).sort()).toEqual(
-      ["wrk_demo_amar", "wrk_demo_haris", "wrk_demo_mario", "wrk_demo_nedim", "wrk_demo_selmir"].sort(),
+      ["wrk_demo_amar", "wrk_demo_haris", "wrk_demo_kenan", "wrk_demo_mario", "wrk_demo_nedim", "wrk_demo_selmir"].sort(),
     );
   });
 });

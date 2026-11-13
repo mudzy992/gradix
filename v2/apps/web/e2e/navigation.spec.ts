@@ -107,3 +107,81 @@ test("istek/opoziv sesije: drugi tab završava na prijavi", async ({ browser }) 
   await tabB.waitForURL("**/login", { timeout: 15_000 });
   await context.close();
 });
+
+/* ================================================================ C.1 pregled */
+
+/**
+ * C.1: „šta moram danas uraditi?“ — po roli (odobren dizajn). Demo brojevi se pomiču
+ * s datumom, pa testovi NE tvrde tačan broj: tvrde da RED POSTOJI kad podatka ima,
+ * da vodi na filtriranu listu i da radik koji ga ne smije vidjeti ne dobija ništa od
+ * toga. Sinhronizaciju traži samo vlasnik/admin — voditelj ne smije ni karticu.
+ */
+
+test("C.1 vlasnik: pregled nudi redove pažnje, sažetak i sinhronizaciju", async ({ page }) => {
+  await login(page, "vlasnik@demo.ba");
+
+  await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sažetak" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toBeVisible();
+
+  // Red isteklih rokova postoji (demo uvijek ima istekle) i nosi filter u adresi.
+  const expired = page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ });
+  await expect(expired).toBeVisible();
+  await expect(expired).toHaveAttribute("href", "/ured/rokovi?stanje=isteklo");
+
+  // Red dana za provjeru vodi na filtrirane radne dane (demo ima nepoznat kraj).
+  const days = page.getByRole("link", { name: /^Dani za provjeru/ });
+  await expect(days).toBeVisible();
+  await expect(days).toHaveAttribute("href", "/ured/radni-dani?filter=za-provjeru");
+});
+
+test("C.1 vlasnik: klik na red otvara listu već filtriranu (rokovi → isteklo)", async ({ page }) => {
+  await login(page, "vlasnik@demo.ba");
+  await page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ }).click();
+  await page.waitForURL(/\/ured\/rokovi\?stanje=isteklo$/);
+  await expect(page.getByRole("heading", { name: "Rokovi" })).toBeVisible();
+  // Lista se suzila: selektator stanja pokazuje „Isteklo“, a ne „Sva stanja“.
+  await expect(page.getByRole("combobox", { name: "Stanje" })).toHaveValue("expired");
+  // Bar jedan red s oznakom isteklog stanja postoji u tabeli.
+  await expect(page.getByText("Isteklo").first()).toBeVisible();
+});
+
+test("C.1 vlasnik: klik na dane za provjeru otvara samo dane s oznakom", async ({ page }) => {
+  await login(page, "vlasnik@demo.ba");
+  await page.getByRole("link", { name: /^Dani za provjeru/ }).click();
+  await page.waitForURL(/\/ured\/radni-dani\?filter=za-provjeru$/);
+  await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();
+  await expect(page.getByText("Za provjeru", { exact: false }).first()).toBeVisible();
+  // Svaki prikazani red nosi oznaku „Za provjeru“ — filter je pošten prema onome što je obećao.
+  const rows = await page.getByRole("row").allInnerTexts();
+  expect(rows.slice(1).every((text) => text.includes("Za provjeru"))).toBe(true);
+});
+
+test("C.1 admin (ured): vidi pregled i sinhronizaciju kao vlasnik", async ({ page }) => {
+  await login(page, "ured@demo.ba");
+  await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toBeVisible();
+  // Opseg firme: bez natpisa „samo vaš opseg“.
+  await expect(page.getByText("samo vaš opseg")).toHaveCount(0);
+});
+
+test("C.1 voditelj (PROJECTS opseg): pregled sužen, BEZ sinhronizacije", async ({ page }) => {
+  await login(page, "voditelj@demo.ba");
+
+  await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
+  // Kartica sinhronizacije ne postoji — ne ni prazna (design: samo OWNER i ADMIN).
+  await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toHaveCount(0);
+  // Opseg je istaknut da brojevi ne izgledaju kao greška.
+  await expect(page.getByText("samo vaš opseg")).toBeVisible();
+  // Blokirana dodjela (BAG-01 je na dionici — u opsegu voditelja) postoji.
+  await expect(page.getByRole("link", { name: /blokiraju dodjelu/ })).toBeVisible();
+});
+
+test("C.1 radnik: stari pregled — nema redova pažnje ni sinhronizacije", async ({ page }) => {
+  await login(page, "radnik@demo.ba");
+
+  await expect(page.getByRole("heading", { name: "Dobro došli, Amar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Mehanizacija" })).toBeVisible();
+});
