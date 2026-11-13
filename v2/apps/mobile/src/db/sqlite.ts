@@ -29,12 +29,19 @@ let openDbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 export function openDb(): Promise<SQLite.SQLiteDatabase> {
   if (!openDbPromise) {
     openDbPromise = (async () => {
+      // PRIVREMENO (dijagnostika release boot-a u CI) — skloniti nakon
+      // dijagnoze: breadcrumbs u logcat, workflow ih čita u anotacije.
+      console.log("[e2e] sqlite open start");
       const db = await SQLite.openDatabaseAsync(DB_NAME);
+      console.log("[e2e] sqlite open ok");
       try {
         // Keep the database untouched until the migration helper has made a verified backup.
         await db.execAsync("PRAGMA foreign_keys = ON;");
+        console.log("[e2e] pragma fk ok");
         await migrateLocalDatabase(db);
+        console.log("[e2e] migrate ok");
         await db.execAsync("PRAGMA journal_mode = WAL;");
+        console.log("[e2e] pragma wal ok");
         return db;
       } catch (error) {
         await db.closeAsync().catch(() => undefined);

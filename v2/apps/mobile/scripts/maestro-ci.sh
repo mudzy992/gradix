@@ -94,7 +94,7 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
     # Native crash s stackom (glavni buffer, crash buffer zna biti prazan).
     local fatal
-    fatal=$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220)
+    fatal=$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600)
     if [ -n "$fatal" ]; then
       announce error "$name" "FATAL: $fatal"
     fi
