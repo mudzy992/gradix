@@ -5,18 +5,13 @@
  * istoj transakciji kao izmjenu.
  */
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import { fail, internal, ok, type ErrorCode } from "@/server/api";
+import { MembershipPatch } from "@gradix/contracts";
 import { changeMembership } from "@/server/rbac-service";
 import { getVerifiedPool } from "@/server/db";
 import { clientIp, guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  roles: z.array(z.string()).min(1).max(5),
-  scope: z.enum(["COMPANY", "SELF"]),
-});
 
 const CODE_MAP: Record<string, ErrorCode> = {
   FORBIDDEN: "USERS_TARGET_PROTECTED",
@@ -33,7 +28,7 @@ export async function PATCH(
     const guardResult = await guard(request, "users.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = MembershipPatch.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return fail("VALIDATION_FAILED", "Provjerite role i opseg.");
 
     const { id } = await context.params;

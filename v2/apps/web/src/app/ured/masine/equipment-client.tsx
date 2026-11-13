@@ -13,14 +13,9 @@
  *  - Deaktivacija umjesto brisanja: mašina ostaje u istoriji zapisa i radnih naloga.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { EquipmentCategory, Machine as MachineApi } from "@gradix/contracts";
-export type CategoryRow = EquipmentCategory;
 
-/**
- * Ekran koristi isti tip kao ugovor (`Machine`), samo pod kraćim imenom; `MachineRow` u servisu
- * je serverski red i nema šta da traži u klijentu.
- */
-export type MachineRow = MachineApi;
+export type { CategoryRow, MachineRow } from "./equipment-shared";
+import type { CategoryRow, MachineRow } from "./equipment-shared";
 import { apiCall, patchBody } from "@/api-client";
 import { formatDateTime, formatNumber, meterUnit, ownershipLabel } from "@/format";
 import {

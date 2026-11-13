@@ -7,13 +7,13 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { ObligationTypeInput } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import {
   createObligationType,
   isServiceError,
   listObligationTypes,
-  type ObligationTypeInput,
 } from "@/server/obligation-service";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as ObligationTypeInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = ObligationTypeInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const result = await createObligationType(
       await getVerifiedPool(),
       guardResult.ctx.companyId,

@@ -20,7 +20,7 @@ vi.mock("expo-router", async () => {
   };
 });
 
-vi.mock("./teren/SignOutButton", () => ({ SignOutButton: () => null, logoutExplanation: () => "" }));
+vi.mock("./ui/SignOutButton", () => ({ SignOutButton: () => null, logoutExplanation: () => "" }));
 
 // Tijelo kataloga se u razvoju učitava dinamički (require) — u testu ga zamjenjuje marker.
 vi.mock("./katalog-body", async () => {

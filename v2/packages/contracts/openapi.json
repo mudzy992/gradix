@@ -4851,9 +4851,13 @@
                       "enum": [
                         "OWNER",
                         "ADMIN",
-                        "SITE_MANAGER",
+                        "PROJECT_MANAGER",
+                        "SITE_SUPERVISOR",
                         "WORKER",
-                        "VIEWER"
+                        "DRIVER",
+                        "MACHINE_OPERATOR",
+                        "MECHANIC",
+                        "ACCOUNTANT"
                       ]
                     }
                   },
@@ -5927,9 +5931,13 @@
                       "enum": [
                         "OWNER",
                         "ADMIN",
-                        "SITE_MANAGER",
+                        "PROJECT_MANAGER",
+                        "SITE_SUPERVISOR",
                         "WORKER",
-                        "VIEWER"
+                        "DRIVER",
+                        "MACHINE_OPERATOR",
+                        "MECHANIC",
+                        "ACCOUNTANT"
                       ]
                     }
                   },
@@ -8381,12 +8389,7 @@
                       "null"
                     ]
                   }
-                },
-                "required": [
-                  "firstName",
-                  "lastName",
-                  "hiredAt"
-                ]
+                }
               }
             }
           }
@@ -12672,12 +12675,7 @@
                   "isActive": {
                     "type": "boolean"
                   }
-                },
-                "required": [
-                  "code",
-                  "name",
-                  "categoryId"
-                ]
+                }
               }
             }
           }
@@ -17678,10 +17676,7 @@
                       }
                     ]
                   }
-                },
-                "required": [
-                  "typeId"
-                ]
+                }
               }
             }
           }
@@ -21563,12 +21558,7 @@
                   "isActive": {
                     "type": "boolean"
                   }
-                },
-                "required": [
-                  "code",
-                  "label",
-                  "entityKind"
-                ]
+                }
               }
             }
           }
@@ -22122,6 +22112,9 @@
                     "type": "number"
                   },
                   "sha256": {
+                    "type": "string"
+                  },
+                  "headBase64": {
                     "type": "string"
                   }
                 },
@@ -30538,7 +30531,6 @@
                         },
                         "reason": {
                           "type": "string",
-                          "minLength": 10,
                           "maxLength": 500
                         },
                         "validUntil": {

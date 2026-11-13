@@ -6,6 +6,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { WorkerLinkPatch } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { isServiceError, linkWorkerUser } from "@/server/equipment-service";
 import { guard } from "@/server/guard";
@@ -17,8 +18,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const guardResult = await guard(request, "users.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const body = (await request.json().catch(() => null)) as { userId?: unknown } | null;
-    if (!body || !(typeof body.userId === "string" || body.userId === null)) {
+    const parsed = WorkerLinkPatch.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
       return fail("VALIDATION_FAILED", "Polje `userId` je obavezno (ili null za odvezivanje).");
     }
 
@@ -28,7 +29,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       guardResult.ctx.companyId,
       { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
       id,
-      body.userId as string | null,
+      parsed.data.userId,
     );
 
     if (isServiceError(result)) {

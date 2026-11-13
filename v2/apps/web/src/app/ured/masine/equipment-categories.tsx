@@ -5,7 +5,7 @@ import { useState } from "react";
 import { apiCall, jsonBody } from "@/api-client";
 import { meterUnit } from "@/format";
 import { Alert, Button, DataTable, Dialog, Input, Mono, SectionTitle, Select } from "@/components/ui/index";
-import type { CategoryRow } from "./equipment-client";
+import type { CategoryRow } from "./equipment-shared";
 
 export function CategoriesDialog({
   categories,

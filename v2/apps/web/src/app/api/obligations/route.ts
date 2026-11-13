@@ -7,6 +7,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { ObligationInput, hasControlChars } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { can } from "@/server/permissions";
@@ -14,7 +15,6 @@ import {
   createObligation,
   isServiceError,
   listObligations,
-  type ObligationInput,
 } from "@/server/obligation-service";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (!guardResult.ok) return guardResult.response;
 
     const params = request.nextUrl.searchParams;
+    // A1: kontrolni znakovi (npr. NUL) u filteru nisu nikad legitiman unos — odbijaju se
+    // na granici, da ne stignu do baze (Postgres odbija NUL u string parametru).
+    for (const value of params.values()) {
+      if (hasControlChars(value)) {
+        return fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.");
+      }
+    }
     const ctx = guardResult.ctx;
     /*
      * Radnik (`SELF` opseg) vidi SAMO svoje rokove — granica se postavlja ovdje, iz sesije.
@@ -56,9 +63,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as ObligationInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = ObligationInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const result = await createObligation(
       await getVerifiedPool(),
       guardResult.ctx.companyId,

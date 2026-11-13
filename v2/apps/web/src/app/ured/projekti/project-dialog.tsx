@@ -8,7 +8,7 @@ import { Alert, Button, Dialog, Input, Select, Textarea } from "@/components/ui/
 import {
   PROJECT_EMPTY_FORM, STATUS_LABEL, fromProject, toProjectPayload,
   type ProjectFormState, type WorkerOption,
-} from "./projects-client";
+} from "./projects-shared";
 
 export function ProjectDialog({
   project,

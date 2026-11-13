@@ -3,62 +3,19 @@
  * NE smiju imati StyleSheet.create, TextInput ni Pressable van ovog modula (ESLint U3).
  * Sve boje/veličine dolaze iz theme tokena; mete dodira ≥56 dp.
  */
-import { forwardRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View,
-  type PressableProps, type TextInputProps, type TextStyle,
+  ActivityIndicator, Pressable, ScrollView, Text as RNText, TextInput, View,
+  type TextInputProps, type TextStyle,
 } from "react-native";
-import { radius, spacing, touchTarget, typography } from "../theme/tokens";
-import { useTheme } from "../theme/use-theme";
-import type { ThemeTokens } from "../theme/tokens";
+import { typography } from "../theme/tokens";
 import { jedanStil } from "../lib/styles";
-import { SignOutButton } from "../teren/SignOutButton";
+import { useUiStyles } from "./styles";
+import { SignOutButton } from "./SignOutButton";
 
-function makeStyles(t: ThemeTokens) {
-  return StyleSheet.create({
-    center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md, backgroundColor: t.bg },
-    container: { padding: spacing.xl, gap: spacing.md, backgroundColor: t.bg, flexGrow: 1 },
-    title: { ...typography.page, color: t.text },
-    subtitle: { ...typography.body, color: t.muted },
-    muted: { ...typography.body, color: t.muted },
-    body: { ...typography.body, color: t.text },
-    label: { ...typography.label, color: t.text, marginTop: spacing.sm },
-    caption: { ...typography.label, color: t.muted },
-    errorBox: { padding: spacing.md, borderRadius: radius.field, backgroundColor: t.dangerSoft, gap: spacing.sm },
-    errorText: { ...typography.body, color: t.danger },
-    emptyBox: { padding: spacing.lg, borderRadius: radius.card, borderWidth: 1, borderColor: t.line, backgroundColor: t.panel },
-    retry: { minHeight: touchTarget, justifyContent: "center" },
-    retryText: { ...typography.button, color: t.danger },
-    banner: { padding: spacing.md, borderRadius: radius.field, backgroundColor: t.warnSoft },
-    bannerText: { ...typography.body, color: t.text },
-    card: { padding: spacing.lg, borderRadius: radius.card, borderWidth: 1, borderColor: t.line, backgroundColor: t.panel, gap: spacing.sm },
-    input: {
-      borderWidth: 1, borderColor: t.field, borderRadius: radius.field, paddingHorizontal: spacing.md,
-      minHeight: touchTarget, ...typography.body, color: t.text, backgroundColor: t.panel,
-    },
-    button: { backgroundColor: t.primary, borderRadius: radius.card, minHeight: touchTarget, alignItems: "center", justifyContent: "center", padding: spacing.md },
-    buttonSecondary: { backgroundColor: "transparent", borderWidth: 1, borderColor: t.line },
-    buttonDisabled: { opacity: 0.6 },
-    buttonText: { ...typography.button, color: t.onPrimary },
-    buttonTextSecondary: { ...typography.button, color: t.text },
-    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    chip: { borderWidth: 1, borderColor: t.line, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 40, justifyContent: "center" },
-    chipOn: { backgroundColor: t.tint },
-    chipText: { ...typography.label, color: t.text },
-    row: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
-    rowText: { ...typography.body, color: t.text, flex: 1 },
-    outcome: { ...typography.label, color: t.text },
-    tile: { padding: spacing.lg, borderRadius: radius.tile, borderWidth: 1, borderColor: t.line, backgroundColor: t.panel, gap: spacing.xs },
-    skeleton: { height: spacing.lg, borderRadius: radius.field, backgroundColor: t.sunken },
-    topRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md },
-    themeBtn: { minHeight: 40, paddingHorizontal: spacing.md, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: t.line },
-  });
-}
-export type UiStyles = ReturnType<typeof makeStyles>;
-export function useUiStyles(): { styles: UiStyles; theme: ThemeTokens } {
-  const { theme } = useTheme();
-  return { styles: makeStyles(theme), theme };
-}
+export { makeStyles, useUiStyles, type UiStyles } from "./styles";
+export { Button } from "./button";
+export { SignOutButton, logoutExplanation } from "./SignOutButton";
 
 export function Text({ variant = "body", children, style }: { variant?: "page" | "body" | "muted" | "label" | "caption"; children: ReactNode; style?: TextStyle }) {
   const { styles } = useUiStyles();
@@ -99,21 +56,6 @@ export function Screen(props: { title: string; subtitle: string; loading: boolea
     </ScrollView>
   );
 }
-
-/** Dugme s metom ≥56 dp. forwardRef: Expo Router `Link asChild` prosljeđuje ref. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ref tip zavisi od RN verzije; Link asChild prosljeđuje ref
-  export const Button = forwardRef<any, PressableProps & { label: string; variant?: "primary" | "secondary"; busy?: boolean }>(
-  function Button({ label, variant = "primary", busy, disabled, style: _style, ...rest }, ref) {
-    const { styles } = useUiStyles();
-    const base = variant === "secondary" ? jedanStil(styles.button, styles.buttonSecondary) : styles.button;
-    return (
-      <Pressable ref={ref} disabled={disabled || busy} accessibilityRole={rest.accessibilityRole ?? "button"}
-        style={jedanStil(base, disabled || busy ? styles.buttonDisabled : base)} {...rest}>
-        <RNText style={variant === "secondary" ? styles.buttonTextSecondary : styles.buttonText}>{busy ? "Radim…" : label}</RNText>
-      </Pressable>
-    );
-  },
-);
 
 export function BigActionButton(props: { label: string; hint?: string; onPress: () => void; disabled?: boolean }) {
   const { styles } = useUiStyles();

@@ -3,15 +3,13 @@
  * Isti ugovor kao pozivnica: token u putanji, atomski claim, gašenje svih sesija.
  */
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import { fail, internal, ok, type ErrorCode } from "@/server/api";
+import { ApplyPasswordResetRequest } from "@gradix/contracts";
 import { setPasswordWithToken } from "@/server/access-service";
 import { isValidTokenFormat } from "@/server/tokens";
 import { getVerifiedPool } from "@/server/db";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({ password: z.string().min(1).max(200) });
 
 const CODE_MAP: Record<string, ErrorCode> = {
   VALIDATION_FAILED: "AUTH_PASSWORD_WEAK",
@@ -25,7 +23,7 @@ export async function POST(
   try {
     const { token } = await context.params;
     if (!isValidTokenFormat(token, "reset")) return fail("LINK_INVALID", "Link nije ispravan.");
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = ApplyPasswordResetRequest.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return fail("VALIDATION_FAILED", "Lozinka je obavezna.");
 
     const result = await setPasswordWithToken(await getVerifiedPool(), "reset", token, parsed.data.password, {

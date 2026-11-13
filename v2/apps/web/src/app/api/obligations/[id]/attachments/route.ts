@@ -7,6 +7,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { AttachmentRegisterRequest } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { isServiceError, registerAttachment } from "@/server/obligation-service";
@@ -18,14 +19,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const body = (await request.json().catch(() => null)) as
-      | { fileName?: string; sizeBytes?: number; sha256?: string; headBase64?: string }
-      | null;
-    if (!body || typeof body.fileName !== "string" || typeof body.sha256 !== "string") {
+    const parsed = AttachmentRegisterRequest.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
       return fail("VALIDATION_FAILED", "Nedostaje ime, veličina ili kontrolni zbir priloga.");
     }
 
-    const head = Buffer.from(String(body.headBase64 ?? ""), "base64");
+    const head = Buffer.from(parsed.data.headBase64 ?? "", "base64");
     const { id } = await context.params;
     const result = await registerAttachment(
       await getVerifiedPool(),
@@ -33,9 +32,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
       id,
       {
-        fileName: body.fileName,
-        sizeBytes: Number(body.sizeBytes ?? 0),
-        sha256: body.sha256,
+        fileName: parsed.data.fileName,
+        sizeBytes: Number(parsed.data.sizeBytes ?? 0),
+        sha256: parsed.data.sha256,
         head,
       },
     );

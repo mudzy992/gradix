@@ -7,8 +7,9 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { CategoryInput } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
-import { createCategory, isServiceError, listCategories, type CategoryInput } from "@/server/equipment-service";
+import { createCategory, isServiceError, listCategories } from "@/server/equipment-service";
 import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +29,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "equipment.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as CategoryInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = CategoryInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const result = await createCategory(
       await getVerifiedPool(),
       guardResult.ctx.companyId,

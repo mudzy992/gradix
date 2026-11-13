@@ -7,7 +7,7 @@
  * funkcije (vidi migration `r1a_pristup` i `bootstrap/grants.sql`).
  */
 import type { NextRequest } from "next/server";
-import { z } from "zod";
+import { LoginRequest, hasControlChars } from "@gradix/contracts";
 import { fail, internal, ok } from "@/server/api";
 import { login } from "@/server/auth-service";
 import { checkPasswordPolicy, verifyPassword } from "@/server/password";
@@ -17,15 +17,31 @@ import { clearAttempts, rateLimitWait, recordAttempt } from "@/server/rate-limit
 
 export const dynamic = "force-dynamic";
 
-const bodySchema = z.object({
-  email: z.string().min(3).max(200),
-  password: z.string().min(1).max(200),
-});
-
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return fail("VALIDATION_FAILED", "Email i lozinka su obavezni.");
+    const body = await request.json().catch(() => null);
+    const parsed = LoginRequest.safeParse(body);
+    if (!parsed.success) {
+      // A1c: log ODBIJENOG unosa BEZ vrijednosti — samo ime polja, dužina i da li sadrži
+      // kontrolne znakove. To je dovoljno da se vidi odakle dolazi NUL (npr. s mobilnog),
+      // a nikad ne upisuje email ni lozinku u log.
+      let controlChars = false;
+      if (body && typeof body === "object" && !Array.isArray(body)) {
+        for (const [field, value] of Object.entries(body as Record<string, unknown>)) {
+          if (typeof value !== "string") continue;
+          if (hasControlChars(value)) controlChars = true;
+          console.warn(
+            JSON.stringify({ level: "warn", context: "auth.login", field, length: value.length, controlChars: hasControlChars(value) }),
+          );
+        }
+      }
+      return fail(
+        "VALIDATION_FAILED",
+        controlChars
+          ? "Email ili lozinka sadrži nedozvoljene kontrolne znakove."
+          : "Email i lozinka su obavezni.",
+      );
+    }
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     // Brojač i prijava moraju gledati ISTI ključ: `login` normalizuje email, pa bi bez ovoga

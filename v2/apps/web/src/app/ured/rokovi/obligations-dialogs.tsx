@@ -8,7 +8,7 @@ import { formatDate } from "@/format";
 import {
   Alert, Button, Dialog, Input, Select,
 } from "@/components/ui/index";
-import { targetLabel, type MachineOption, type WorkerOption } from "./obligations-client";
+import { targetLabel, type MachineOption, type WorkerOption } from "./obligations-shared";
 
 export function CreateDialog({
   types,

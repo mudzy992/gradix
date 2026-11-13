@@ -17,12 +17,48 @@ const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appUrl = process.env.DATABASE_URL;
 const describeDb = adminUrl && appUrl ? describe : describe.skip;
 
+/**
+ * B3 — ponovljivost na prljavoj bazi. Dodjele su historijski dokaz (trigger
+ * brani svaki DELETE), pa ostaju i drže svoje radnike/mašine/projekte; sve
+ * ostalo što su prethodni prolazi/testovi ostavili briše se u FK redu.
+ * `seed.ts` (idempotentan) potom vraća fiksne demo redove, pa prvi prolaz
+ * uvoza opet ima šta uvesti — i na bazi koja je već viđala ovaj test.
+ */
+async function resetDemoZaPonovniUvoz(admin: Pool, companyIdValue: string): Promise<void> {
+  await admin.query("DELETE FROM sync_conflicts WHERE company_id = $1", [companyIdValue]);
+  await admin.query("DELETE FROM work_entries WHERE company_id = $1", [companyIdValue]);
+  await admin.query("DELETE FROM workdays WHERE company_id = $1", [companyIdValue]);
+  await admin.query("DELETE FROM project_assignment_overrides WHERE company_id = $1", [companyIdValue]);
+  await admin.query("DELETE FROM obligation_attachments WHERE company_id = $1", [companyIdValue]);
+  // Jedan statement: verzije idu kaskadno, a superseded lance NO ACTION provjerava tek na kraju.
+  await admin.query("DELETE FROM obligations WHERE company_id = $1", [companyIdValue]);
+  await admin.query(
+    `DELETE FROM workers w
+      WHERE w.company_id = $1
+        AND NOT EXISTS (SELECT 1 FROM project_assignments a
+                         WHERE a.company_id = w.company_id AND a.worker_id = w.id)
+        AND NOT EXISTS (SELECT 1 FROM projects p
+                         WHERE p.company_id = w.company_id AND p.manager_worker_id = w.id)
+        AND NOT EXISTS (SELECT 1 FROM workers s
+                         WHERE s.company_id = w.company_id AND s.supervisor_id = w.id)`,
+    [companyIdValue],
+  );
+  await admin.query(
+    `DELETE FROM machines m
+      WHERE m.company_id = $1
+        AND NOT EXISTS (SELECT 1 FROM project_assignments a
+                         WHERE a.company_id = m.company_id AND a.machine_id = m.id)`,
+    [companyIdValue],
+  );
+}
+
 describeDb("seed-demo-podaci naredba (Dio 2)", () => {
   const admin = new Pool({ connectionString: adminUrl, max: 2 });
   // Servis uvoza se oslanja na RLS: naredba se poziva aplikacijskom rolom.
   const app = new Pool({ connectionString: appUrl, max: 2 });
 
   beforeAll(async () => {
+    await resetDemoZaPonovniUvoz(admin, "cmp_demo");
     const run = promisify(execFile);
     const webDir = fileURLToPath(new URL("../..", import.meta.url));
     await run(process.execPath, ["--import", "tsx", "scripts/seed.ts"], {

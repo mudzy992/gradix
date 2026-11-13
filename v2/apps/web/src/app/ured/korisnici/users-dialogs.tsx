@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   Alert, Button, Card, Checkbox, Dialog, Input, Segmented, Select, Stack,
 } from "@/components/ui/index";
-import type { IssuedLink, User } from "./users-client";
+import type { IssuedLink, User } from "./users-shared";
 
 const ROLE_BS: Record<string, string> = {
   OWNER: "Vlasnik",

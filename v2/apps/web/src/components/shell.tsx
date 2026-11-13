@@ -17,15 +17,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Icon, type IconName } from "./ui/index";
+import { Badge, Icon } from "./ui/index";
 import { startSessionWatch } from "./session-watch";
 import { useTheme } from "./shell-theme";
 import { ROLE_BS, initialsOf } from "./shell-user";
 import { CommandPalette } from "./shell-palette";
+import type { NavItem } from "./shell-types";
 
 export { initialsOf };
 
-export type NavItem = { href: string; label: string; icon: IconName; description?: string; badge?: { count: number; older: number } };
+export type { NavItem } from "./shell-types";
 export type NavGroup = { label: string; items: NavItem[] };
 export type ShellUser = { displayName: string; email: string; companyName: string; roles: string[] };
 

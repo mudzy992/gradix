@@ -16,25 +16,15 @@ import {
   PageHeader, Select, Skeleton, Stack,
 } from "@/components/ui/index";
 import { InviteDialog, IssuedLinkCard, MembershipDialog } from "./users-dialogs";
+import type { IssuedLink, User } from "./users-shared";
 
-export type User = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  isActive: boolean;
-  mustChangePassword: boolean;
-  roles: string[];
-  scope: string;
-  createdAt: string;
-};
+export type { IssuedLink, User } from "./users-shared";
 
 type LoadState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "ready"; users: User[] };
 
-export type IssuedLink = { link: string; email: string; expiresAt: string } | null;
 
 const ROLE_BS: Record<string, string> = {
   OWNER: "Vlasnik",

@@ -3,7 +3,7 @@
 /** Ctrl+K paleta komandi okvira: pretraga navigacije tastaturom. */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "./ui/index";
-import type { NavItem } from "./shell";
+import type { NavItem } from "./shell-types";
 
 export function CommandPalette({
   items,

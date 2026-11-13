@@ -1,5 +1,6 @@
 /**
- * Odjava za terenske ekrane (A3, 2026-11-07): dostupna SVAKOJ roli, ne samo šefu, i ne
+ * Odjava za terenske ekrane (A3, 2026-11-07; A2 premještena iz src/teren da se prekine
+ * ciklus ui/index → teren/SignOutButton → ui/index): dostupna SVAKOJ roli, ne samo šefu, i ne
  * samo na početnom ekranu. Ista pravila kao na početnom ekranu: eksplicitna potvrda,
  * broj neposlanih redova u objašnjenju, keš se briše — outbox redovi se nikad ne brišu.
  */
@@ -8,7 +9,7 @@ import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { getLogoutSummary, logoutMobile } from "../api/session-lifecycle";
 import { openDb } from "../db/sqlite";
-import { Button } from "../ui";
+import { Button } from "./button";
 
 export function logoutExplanation(summary: { pendingCount: number; legacyR0Count: number }): string {
   return summary.pendingCount + summary.legacyR0Count > 0

@@ -13,6 +13,7 @@
  */
 import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
+import { hasControlChars } from "@gradix/contracts";
 import { writeAudit } from "./audit";
 import { isServiceError } from "./equipment-service";
 import type { ServiceError } from "./equipment-service";
@@ -257,6 +258,10 @@ async function previewWorkers(
     const lastName = value("lastName");
     const summary = `${firstName ?? "?"} ${lastName ?? "?"}`.trim();
 
+    if (rowHasControlChars(row.cells)) {
+      return { rowNumber: row.rowNumber, outcome: "error", reason: "Red sadrži nedozvoljene kontrolne znakove.", summary };
+    }
+
     if (!firstName || !lastName) {
       return { rowNumber: row.rowNumber, outcome: "error", reason: "Ime i prezime su obavezni.", summary };
     }
@@ -369,6 +374,10 @@ async function previewEquipment(
     const name = value("name");
     const summary = `${code ?? rawCode ?? "?"} · ${name ?? "?"}`;
 
+    if (rowHasControlChars(row.cells)) {
+      return { rowNumber: row.rowNumber, outcome: "error", reason: "Red sadrži nedozvoljene kontrolne znakove.", summary };
+    }
+
     if (!code) {
       return {
         rowNumber: row.rowNumber,
@@ -451,6 +460,16 @@ async function previewEquipment(
 
     return { rowNumber: row.rowNumber, outcome: "import", summary, values };
   });
+}
+
+
+/**
+ * A1: kontrolni znak (npr. NUL) u bilo kojoj ćeliji reda — string kolone u bazi to
+ * odbijaju (22P05) i srušile bi cijeli uvoz. Takav red dobija ishod „error“ u pregledu,
+ * pa korisnik vidi tačno koji red treba popraviti prije potvrde.
+ */
+function rowHasControlChars(cells: Record<string, string | number | Date | null>): boolean {
+  return Object.values(cells).some((cell) => typeof cell === "string" && hasControlChars(cell));
 }
 
 /* ------------------------------------------------------------------ potvrda */

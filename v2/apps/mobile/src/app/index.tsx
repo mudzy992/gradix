@@ -12,7 +12,7 @@ import { openDb } from "../db/sqlite";
 import { useTheme } from "../theme/use-theme";
 import { Button, Text, TextField, useUiStyles } from "../ui";
 import { mobileNavForProfile } from "../lib/mobile-nav";
-import { logoutExplanation } from "../teren/SignOutButton";
+import { logoutExplanation } from "../ui/SignOutButton";
 
 type Phase = "loading" | "login" | "ready";
 

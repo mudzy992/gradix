@@ -71,8 +71,9 @@ export type ObligationTypeRow = {
 const TYPE_SELECT = `
   SELECT t.id, t.code, t.label, t.entity_kind, t.default_reminder_days::text AS reminder_days,
          t.requires_attachment, t.blocks_assignment, t.is_active, t.sort_order,
-         (SELECT count(*)::int FROM obligations o WHERE o.type_id = t.id) AS obligation_count
+         (SELECT count(*)::int FROM obligations o WHERE o.company_id = t.company_id AND o.type_id = t.id) AS obligation_count
     FROM obligation_types t
+   WHERE t.company_id = $1
 `;
 
 const toType = (row: Record<string, unknown>): ObligationTypeRow => ({
@@ -90,7 +91,9 @@ const toType = (row: Record<string, unknown>): ObligationTypeRow => ({
 
 export async function listObligationTypes(pool: Pool, companyId: CompanyId): Promise<ObligationTypeRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const result = await client.query(`${TYPE_SELECT} ORDER BY t.entity_kind, t.sort_order, t.label`);
+    const result = await client.query(`${TYPE_SELECT} ORDER BY t.entity_kind, t.sort_order, t.label`, [
+      companyId,
+    ]);
     return result.rows.map(toType);
   });
 }
@@ -107,14 +110,14 @@ export type ObligationTypeInput = {
 
 const ENTITY_KINDS = ["WORKER", "MACHINE", "PROJECT", "COMPANY"] as const;
 
-function validateTypeInput(input: ObligationTypeInput): ServiceError | null {
+function validateTypeInput(input: Partial<ObligationTypeInput>): ServiceError | null {
   if (!/^[A-Z0-9][A-Z0-9_]{1,39}$/.test(input.code?.trim().toUpperCase() ?? "")) {
     return { code: "VALIDATION_FAILED", message: "Oznaka tipa: 2–40 znakova, velika slova, brojevi i donja crta." };
   }
   if (!input.label?.trim() || input.label.trim().length > 80) {
     return { code: "VALIDATION_FAILED", message: "Naziv tipa je obavezan (do 80 znakova)." };
   }
-  if (!(ENTITY_KINDS as readonly string[]).includes(input.entityKind)) {
+  if (!input.entityKind || !(ENTITY_KINDS as readonly string[]).includes(input.entityKind)) {
     return { code: "VALIDATION_FAILED", message: "Tip se odnosi na radnika, mašinu, projekat ili firmu." };
   }
   const days = input.defaultReminderDays;
@@ -154,7 +157,7 @@ export async function createObligationType(
         id,
         companyId,
         input.code.trim().toUpperCase(),
-        input.label.trim(),
+        input.label!.trim(), // validateTypeInput je već odbacio prazan label
         input.entityKind,
         input.defaultReminderDays ?? [60, 30, 15, 7],
         input.requiresAttachment ?? false,
@@ -172,7 +175,7 @@ export async function createObligationType(
       metadata: { code: input.code.trim().toUpperCase(), entityKind: input.entityKind },
     });
 
-    const created = await client.query(`${TYPE_SELECT} WHERE t.id = $1`, [id]);
+    const created = await client.query(`${TYPE_SELECT} AND t.id = $2`, [companyId, id]);
     return toType(created.rows[0]!);
   });
 }
@@ -182,7 +185,7 @@ export async function updateObligationType(
   companyId: CompanyId,
   actor: Actor,
   typeId: string,
-  input: ObligationTypeInput,
+  input: Partial<ObligationTypeInput>,
 ): Promise<ObligationTypeRow | ServiceError> {
   const invalid = validateTypeInput(input);
   if (invalid) return invalid;
@@ -210,15 +213,16 @@ export async function updateObligationType(
           SET label = $2, entity_kind = $3, default_reminder_days = COALESCE($4, default_reminder_days),
               requires_attachment = COALESCE($5, requires_attachment), sort_order = COALESCE($6, sort_order),
               is_active = COALESCE($7, is_active), updated_at = now()
-        WHERE id = $1`,
+        WHERE id = $1 AND company_id = $8`,
       [
         typeId,
-        input.label.trim(),
+        input.label!.trim(), // validateTypeInput je već odbacio prazan label
         input.entityKind,
         input.defaultReminderDays ?? null,
         input.requiresAttachment ?? null,
         input.sortOrder ?? null,
         input.isActive ?? null,
+        companyId,
       ],
     );
 
@@ -232,7 +236,7 @@ export async function updateObligationType(
       metadata: {},
     });
 
-    const updated = await client.query(`${TYPE_SELECT} WHERE t.id = $1`, [typeId]);
+    const updated = await client.query(`${TYPE_SELECT} AND t.id = $2`, [companyId, typeId]);
     return toType(updated.rows[0]!);
   });
 }
@@ -701,9 +705,10 @@ export async function createObligation(
       if (machine.rowCount === 0) return { code: "NOT_FOUND", message: "Mašina nije pronađena." } as ServiceError;
     }
     if (input.responsibleUserId) {
-      const member = await client.query("SELECT 1 FROM memberships WHERE user_id = $1 AND is_active", [
-        input.responsibleUserId,
-      ]);
+      const member = await client.query(
+        "SELECT 1 FROM memberships WHERE user_id = $1 AND company_id = $2 AND is_active",
+        [input.responsibleUserId, companyId],
+      );
       if (member.rowCount === 0) {
         return { code: "NOT_FOUND", message: "Odgovorna osoba nije član firme." } as ServiceError;
       }
@@ -816,7 +821,7 @@ export async function updateObligation(
   companyId: CompanyId,
   actor: Actor,
   obligationId: string,
-  input: ObligationInput,
+  input: Partial<ObligationInput>,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   const scope = resolveScope(input);
   if ("code" in scope) return scope;
@@ -985,9 +990,9 @@ export async function correctObligation(
               v.created_at AS version_created_at
          FROM obligations o
          JOIN obligation_versions v ON v.obligation_id = o.id AND v.version = o.current_version
-        WHERE o.id = $1
+        WHERE o.id = $1 AND o.company_id = $2
         FOR UPDATE OF o`,
-      [obligationId],
+      [obligationId, companyId],
     );
     if (existing.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
@@ -1011,7 +1016,7 @@ export async function correctObligation(
     await client.query(
       `UPDATE obligation_versions
           SET number = $3, issuer = $4, issued_at = $5, expires_at = $6, note = $7
-        WHERE obligation_id = $1 AND version = $2`,
+        WHERE obligation_id = $1 AND version = $2 AND company_id = $8`,
       [
         obligationId,
         current.current_version,
@@ -1020,6 +1025,7 @@ export async function correctObligation(
         nextIssued,
         nextExpires,
         input.note?.trim() || current.note,
+        companyId,
       ],
     );
 
@@ -1300,12 +1306,13 @@ export async function cleanStaleAttachments(
   return withCompany(pool, companyId, async (client) => {
     const stale = await client.query<{ id: string }>(
       `DELETE FROM obligation_attachments
-        WHERE id IN (
+        WHERE company_id = $1 AND id IN (
           SELECT id FROM obligation_attachments
-           WHERE status = 'pending' AND created_at < now() - interval '1 hour'
+           WHERE company_id = $1 AND status = 'pending' AND created_at < now() - interval '1 hour'
            LIMIT 20
         )
         RETURNING id`,
+      [companyId],
     );
     return stale.rowCount ?? 0;
   });

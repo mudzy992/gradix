@@ -8,7 +8,7 @@ import { formatDate } from "@/format";
 import {
   Alert, Button, DataTable, DescriptionList, Dialog, FileUpload, Mono, SectionTitle, Skeleton,
 } from "@/components/ui/index";
-import { STATE_LABEL, daysLabel, targetLabel } from "./obligations-client";
+import { STATE_LABEL, daysLabel, targetLabel } from "./obligations-shared";
 
 export function DetailDialog({
   obligation,
