@@ -29,15 +29,22 @@ export function fail(code: ErrorCode, message: string): NextResponse {
  *
  * A1 backstop: string s kontrolnim znakom (npr. NUL iz mobilne tipkovnice) koji je
  * nekako prošao granicu valjanja dospijeva do Postgresa, koji ga odbija (SQLSTATE
- * 22P05, „invalid byte sequence for encoding "UTF8"“). To je greška ulaza, ne servera:
- * klijent dobija 400 s jasnom porukom umjesto generičkog 500, a log i dalje bilježi
- * da je neki put ostao ne pokriven (kontekst + 22P05, bez vrijednosti polja).
+ * 22021 character_not_in_repertoire, „invalid byte sequence for encoding "UTF8": 0x00“;
+ * mjereno na pravoj bazi 13. 11. 2026. — ranije zapisano „22P05“ je bila pogrešna šifra).
+ * To je greška ulaza, ne servera: klijent dobija 400 s jasnom porukom umjesto generičkog
+ * 500, a log i dalje bilježi da je neki put ostao ne pokriven (kontekst + stvarna PG
+ * šifra, bez vrijednosti polja).
  */
 export function internal(error: unknown, context: string): NextResponse {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('invalid byte sequence for encoding "UTF8"')) {
     console.error(
-      JSON.stringify({ level: "error", context, msg: "kontrolni znak dosao do baze — rupa u validaciji", pgCode: "22P05" }),
+      JSON.stringify({
+        level: "error",
+        context,
+        msg: "kontrolni znak dosao do baze — rupa u validaciji",
+        pgCode: (error as { code?: unknown }).code ?? "22021",
+      }),
     );
     return fail("VALIDATION_FAILED", "Unos sadrži nedozvoljene kontrolne znakove.");
   }

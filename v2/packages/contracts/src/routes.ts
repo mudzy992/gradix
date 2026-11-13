@@ -359,6 +359,19 @@ export const ROUTES = [
     permission: "obligations.view",
     request: null,
     response: ObligationsResponse,
+    // Filteri koje ekran šalje; granica kontrolnih znakova je zajednička (guard), a
+    // šema je ovdje da ugovor (i NUL sweep test) zna koji se query parametri čitaju.
+    query: z.object({
+      state: z.string().optional(),
+      entityKind: z.string().optional(),
+      typeId: z.string().optional(),
+      workerId: z.string().optional(),
+      machineId: z.string().optional(),
+      projectId: z.string().optional(),
+      responsibleUserId: z.string().optional(),
+      mine: z.string().optional(),
+      includeSuperseded: z.string().optional(),
+    }),
   },
   {
     method: "POST",
@@ -489,6 +502,17 @@ export const ROUTES = [
     permission: "audit.view",
     request: null,
     response: AuditResponse,
+    // Filteri koje ekran šalje; granica kontrolnih znakova je zajednička (guard), a
+    // šema je ovdje da ugovor (i NUL sweep test) zna koji se query parametri čitaju.
+    query: z.object({
+      action: z.string().optional(),
+      entityType: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+      actorId: z.string().optional(),
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }),
   },
   {
     method: "GET",

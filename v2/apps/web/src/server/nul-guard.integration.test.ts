@@ -2,11 +2,14 @@
  * A1 — NUL (\u0000) i drugi kontrolni znakovi na granici API-ja: NIKAD 500.
  *
  * Bug iz mobilnog prolaza: email s NUL-om prolazio je zod (goli `z.string()`), stizao do
- * Postgresa koji odbija 0x00 (22P05) i korisnik je viđao „Došlo je do greške.“ (500).
+ * Postgresa koji odbija 0x00 (SQLSTATE 22021, mjereno na pravoj bazi) i korisnik je viđao „Došlo je do greške.“ (500).
  *
- * Ovaj test ide kroz SVE rute iz registra (`ROUTES`) koje primaju tijelo sa šemom: u svako
- * tekstualno polje stavlja NUL i traži da odgovor NIJE 5xx. Posebni slučajevi (prijava,
- * sync push po stavci, filteri, uvoz) imaju svoje provjere s tačnim ishodima.
+ * Ovaj test ide kroz SVE rute iz registra (`ROUTES`) po svakoj ulaznoj površini:
+ *   1. tijelo sa šemom — u svako tekstualno polje stavlja NUL i traži da odgovor NIJE 5xx;
+ *   2. query parametri (GET rute sa query šemom) — granica je zajednički guard(): 400;
+ *   3. path parametri — NUL u svakom {param} segmentu, backstop 22021 → 400, nikad 500.
+ * Posebni slučajevi (prijava, sync push po stavci, filteri, uvoz) imaju svoje provjere
+ * s tačnim ishodima.
  *
  * Traži: DATABASE_URL (gradix_app) i DATABASE_ADMIN_URL (vlasnik šeme). Bez njih se
  * testovi preskaču — nikad ne prolaze lažno.
@@ -51,6 +54,20 @@ import { POST as resolveRoute } from "@/app/api/workday-conflicts/[id]/resolve/r
 import { POST as pushRoute } from "@/app/api/sync/push/route";
 import { GET as obligationsGet } from "@/app/api/obligations/route";
 import { POST as importsPreviewRoute } from "@/app/api/imports/preview/route";
+import { GET as auditGet } from "@/app/api/audit/route";
+import { GET as pullGet } from "@/app/api/sync/pull/route";
+import { GET as foremanGet } from "@/app/api/sync/foreman-workers/route";
+import { GET as projectsGet } from "@/app/api/projects/route";
+import { GET as projectGet } from "@/app/api/projects/[id]/route";
+import { GET as assignmentsGet } from "@/app/api/projects/[id]/assignments/route";
+import { GET as overrideListGet } from "@/app/api/projects/[id]/override-requests/route";
+import { GET as obligationGet, DELETE as obligationsDelete } from "@/app/api/obligations/[id]/route";
+import { GET as attachmentUrlGet } from "@/app/api/obligations/[id]/attachments/[attachmentId]/url/route";
+import { POST as attachmentConfirmPost } from "@/app/api/obligations/[id]/attachments/[attachmentId]/confirm/route";
+import { GET as invitationGet } from "@/app/api/invitations/[token]/route";
+import { GET as conflictsGet } from "@/app/api/workday-conflicts/route";
+import { GET as conflictGet } from "@/app/api/workday-conflicts/[id]/route";
+import { POST as resetPasswordPost } from "@/app/api/users/[id]/reset-password/route";
 import { getVerifiedPool } from "./db" ;
 import { previewImport } from "./import-service";
 import { parseWorkbook } from "./import-parser";
@@ -135,23 +152,31 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/equipment-categories": { POST: categoriesPost },
   "/api/equipment": { POST: equipmentPost },
   "/api/equipment/{id}": { PATCH: equipmentPatch },
-  "/api/obligations": { POST: obligationsPost },
-  "/api/obligations/{id}": { PATCH: obligationsPatch },
+  "/api/obligations": { GET: obligationsGet, POST: obligationsPost },
+  "/api/obligations/{id}": { GET: obligationGet, PATCH: obligationsPatch, DELETE: obligationsDelete },
   "/api/obligations/{id}/renew": { POST: renewRoute },
   "/api/obligations/{id}/correct": { POST: correctRoute },
   "/api/obligation-types": { POST: typesPost },
   "/api/obligation-types/{id}": { PATCH: typesPatch },
   "/api/obligations/{id}/attachments": { POST: attachmentsPost },
-  "/api/invitations/{token}": { POST: acceptInviteRoute },
+  "/api/invitations/{token}": { GET: invitationGet, POST: acceptInviteRoute },
   "/api/password-resets/{token}": { POST: applyResetRoute },
-  "/api/projects": { POST: projectsPost },
-  "/api/projects/{id}": { PATCH: projectsPatch },
-  "/api/projects/{id}/assignments": { POST: assignmentsPost },
+  "/api/projects": { GET: projectsGet, POST: projectsPost },
+  "/api/projects/{id}": { GET: projectGet, PATCH: projectsPatch },
+  "/api/projects/{id}/assignments": { GET: assignmentsGet, POST: assignmentsPost },
   "/api/projects/{id}/assignments/{assignmentId}": { PATCH: assignmentChangeRoute },
-  "/api/projects/{id}/override-requests": { POST: overrideReqRoute },
+  "/api/projects/{id}/override-requests": { GET: overrideListGet, POST: overrideReqRoute },
   "/api/projects/{id}/override-requests/{requestId}": { POST: overrideApproveRoute },
   "/api/workday-conflicts/{id}/resolve": { POST: resolveRoute },
   "/api/sync/push": { POST: pushRoute },
+  "/api/audit": { GET: auditGet },
+  "/api/sync/pull": { GET: pullGet },
+  "/api/sync/foreman-workers": { GET: foremanGet },
+  "/api/workday-conflicts": { GET: conflictsGet },
+  "/api/workday-conflicts/{id}": { GET: conflictGet },
+  "/api/obligations/{id}/attachments/{attachmentId}/confirm": { POST: attachmentConfirmPost },
+  "/api/obligations/{id}/attachments/{attachmentId}/url": { GET: attachmentUrlGet },
+  "/api/users/{id}/reset-password": { POST: resetPasswordPost },
 };
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */
@@ -171,10 +196,36 @@ function paramsFor(path: string): Record<string, string> {
   return params;
 }
 
+/** Path s popunjenim {param} segmentima (bez NUL-a) — za URL u query sweepu. */
+function filledPath(path: string, params: Record<string, string>): string {
+  return path.replace(/\{([^}]+)\}/g, (_, key: string) => params[key] ?? "nul-ne-postoji");
+}
+
+/**
+ * Query šema rute iz registra — ne svaka ruta je ima (unija literala u ROUTES), pa je
+ * pristup preko `in` provjere; vraća undefined za rute bez query površine.
+ */
+function querySchemaOf(route: (typeof ROUTES)[number]): z.ZodObject | undefined {
+  return "query" in route ? (route as { query?: z.ZodObject }).query : undefined;
+}
+
+/** Svaki {param} segment nosi NUL — za path sweep (backstop 22021 mora da ga zaustavi). */
+function paramsNulFor(path: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const segment of path.split("/")) {
+    const match = /^\{(.+)\}$/.exec(segment);
+    if (match) params[match[1]!] = match[1] === "token" ? "gxr_nu\u0000l.token" : "nu\u0000l";
+  }
+  return params;
+}
+
 function jsonRequest(url: string, body: unknown, method: string, cookie?: string): NextRequest {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (cookie) headers.cookie = cookie;
-  return new NextRequest(url, { method, body: JSON.stringify(body), headers });
+  // GET ne smije nositi tijelo; null znači „ruta ne prima tijelo“ (npr. DELETE s id-em).
+  const init: { method: string; headers: Record<string, string>; body?: string } = { method, headers };
+  if (method !== "GET" && body !== null) init.body = JSON.stringify(body);
+  return new NextRequest(url, init);
 }
 
 function cookieFrom(response: Response, name: string): string {
@@ -247,14 +298,19 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
     await admin.end();
   });
 
-  it("svaka ruta sa shemom tijela iz ROUTES je obuhvaćena testom (nema rupe u spisku)", () => {
+  it("svaka ruta iz ROUTES s ulaznom površinom (tijelo/query/path) je obuhvaćena testom", () => {
     for (const route of ROUTES) {
-      if (route.method !== "POST" && route.method !== "PATCH") continue;
-      // Rute bez sheme tijela (logout, reset-password, confirm) ne primaju tekst od klijenta;
-      // multipart uvoz ima svoj test s imenom datoteke niže.
-      if (!route.request) continue;
+      const hasBodySchema = (route.method === "POST" || route.method === "PATCH") && route.request;
+      const hasQuerySchema = route.method === "GET" && !!querySchemaOf(route);
+      const hasPathParams = /\{[^}]+\}/.test(route.path);
+      // Rute bez ijedne površine (logout) ne primaju tekst od klijenta; multipart uvoz
+      // (imports) ima svoj test s imenom datoteke niže.
+      if (!hasBodySchema && !hasQuerySchema && !hasPathParams) continue;
       const handler = HANDLERS[route.path]?.[route.method];
-      expect(handler, `${route.method} ${route.path}: ruta ima shemu tijela, a nije u NUL testu — dodaj je u HANDLERS`).toBeTruthy();
+      expect(
+        handler,
+        `${route.method} ${route.path}: ruta ima ulaznu površinu (tijelo/query/path), a nije u NUL testu — dodaj je u HANDLERS`,
+      ).toBeTruthy();
     }
   });
 
@@ -284,6 +340,57 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
       }
       // Senka: test stvarno prolazi kroz rute, ne prazan spisak.
       expect(checked.length).toBeGreaterThan(15);
+    } finally {
+      errorLog.mockRestore();
+    }
+  });
+
+  it("NUL u bilo kojem query parametru svake GET rute iz ugovora: 400 na granici (guard), nikad 5xx", async () => {
+    const checked: string[] = [];
+    for (const route of ROUTES) {
+      const query = querySchemaOf(route);
+      if (route.method !== "GET" || !query) continue;
+      const keys = Object.keys(query.shape);
+      expect(keys.length, `${route.path}: query šema bez parametara?`).toBeGreaterThan(0);
+      for (const key of keys) {
+        const params = paramsFor(route.path);
+        const url = `http://localhost${filledPath(route.path, params)}?${encodeURIComponent(key)}=a%00b`;
+        const handler = HANDLERS[route.path]![route.method]!;
+        const request = new NextRequest(url, { headers: { cookie: ownerCookie } });
+        const response = await handler(request, { params: Promise.resolve(params) });
+        // Zajednička granica u guard() odbija PRIJE dozvole i PRIJE baze: 400 s jasnim kodom.
+        expect(response.status, `${route.path}?${key}=<NUL> vratio ${response.status}`).toBe(400);
+        const body = await bodyOf<{ error: { code: string } }>(response);
+        expect(body.error.code, `${route.path}?${key}=<NUL>`).toBe("VALIDATION_FAILED");
+        checked.push(`${route.path}?${key}`);
+      }
+    }
+    // Senka: sweep stvarno prolazi kroz parametre, ne prazan spisak.
+    expect(checked.length).toBeGreaterThan(10);
+  });
+
+  it("NUL u path parametru svake rute iz ugovora: nikad 5xx (backstop 22021 → 400)", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const checked: string[] = [];
+      for (const route of ROUTES) {
+        if (!/\{[^}]+\}/.test(route.path)) continue;
+        const handler = HANDLERS[route.path]?.[route.method];
+        expect(handler, `${route.method} ${route.path}: nije u HANDLERS`).toBeTruthy();
+        // Svaki {param} nosi NUL; tijelo (ako ga ima) je ČISTO — cilj je baš path parametar.
+        const schema = route.request as z.core.$ZodType | null;
+        const body = schema ? withNulAt(schema, ["__nista__"]) : null;
+        const cookie = PUBLIC_PATHS.has(route.path) ? undefined : ownerCookie;
+        const request = jsonRequest(`http://localhost${route.path}`, body, route.method, cookie);
+        const response = await handler!(request, { params: Promise.resolve(paramsNulFor(route.path)) });
+        const errors = errorLog.mock.calls.map((args) => args.map(String).join(" ")).join("\n");
+        expect(
+          response.status,
+          `${route.method} ${route.path} (NUL u path parametru) vratio 5xx. Server log:\n${errors}`,
+        ).toBeLessThan(500);
+        checked.push(`${route.method} ${route.path}`);
+      }
+      expect(checked.length).toBeGreaterThan(20);
     } finally {
       errorLog.mockRestore();
     }
