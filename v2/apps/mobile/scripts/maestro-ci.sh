@@ -80,7 +80,24 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     trajanje=$(( $(date +%s) - start ))
     echo "::endgroup::"
     echo "❌ $name (pokušaj $attempt, ${trajanje}s)"
-    announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s)"
+    # Dijagnostika u anotaciju: prva greška iz junit XML-a (logovi/artefakti se iz
+    # svih okruženja ne mogu preuzeti, anotacije uvijek dolaze kroz API).
+    local junit="$artifacts/junit/$name-pokusaj$attempt.xml" prva=""
+    if [ -f "$junit" ]; then
+      prva=$(grep -o '<failure[^>]*message="[^"]*"' "$junit" | head -1 | sed 's/.*message="//; s/"$//' | cut -c1-220)
+      if [ -z "$prva" ]; then
+        prva=$(tr '\n' ' ' < "$junit" | grep -o '<failure[^>]*>[^<]*' | head -1 | sed 's/.*>//' | cut -c1-220)
+      fi
+    else
+      prva="(junit nije ni nastao — maestro se srušio prije izvještaja)"
+    fi
+    announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
+    # Pad aplikacije (native/JS crash) prepoznajemo iz crash buffera logcata.
+    local crash
+    crash=$(adb logcat -d -b crash 2>/dev/null | grep -v "^$" | tail -3 | tr '\n' ' ' | cut -c1-220)
+    if [ -n "$crash" ]; then
+      announce error "$name" "logcat crash buffer: $crash"
+    fi
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     bash scripts/emulator-net.sh on >/dev/null 2>&1 || true
