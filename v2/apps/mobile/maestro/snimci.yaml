@@ -28,3 +28,14 @@ outputDir: snimci
 - takeScreenshot: 05-projekti-svjetla
 - tapOn: "Odjavi se"
 - takeScreenshot: 06-odjava-svjetla
+# A1e regresija: prijava NAKON odjave mora uspjeti (originalni mobilni bug:
+# „Došlo je do greške." — server 500 na NUL u emailu). Sekvenca se snimi kao dokaz.
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- takeScreenshot: 07-ponovna-prijava-svjetla

@@ -464,48 +464,48 @@ export function ComponentCatalog() {
       </Section>
 
       <Section
-        title="C.1 — Pregled: „Šta moram danas uraditi?“ (prijedlog, čeka odobrenje)"
-        hint="Početna za OWNER, ADMIN, PROJECT_MANAGER i SITE_SUPERVISOR najprije odgovara na „šta moram danas uraditi?“, tek onda na brojke. PM i šef vide samo svoj opseg; WORKER, DRIVER i ostali ostaju na postojećem pregledu. Red pažnje je kompozicija postojećih dijelova (ActionCard + broj + primjeri + veza) — nove vrste komponente nema. Stranica /pregled NIJE mijenjana; potpuni dizajn (1440 i 360, obje teme, prazno stanje, matrica rola): docs/design/referenca/reference.html#c1-pregled-reference. Web prijedlog — mobilni katalog se ne dira."
+        title="C.1 — Pregled: „Šta moram danas uraditi?“ (IMPLEMENTIRANO)"
+        hint="Početna za OWNER, ADMIN, PROJECT_MANAGER i SITE_SUPERVISOR najprije odgovara na „šta moram danas uraditi?“, tek onda na brojke. PM i šef vide samo svoj opseg; WORKER, DRIVER i ostali ostaju na postojećem pregledu. Granica je dozvola pregled.view (matrica /ured/role), podaci dolaze iz /api/pregled (jedan ugovor, opseg iz sesije), a red pažnje je kompozicija postojećih dijelova — ikona + naslov + primjeri + broj + veza; nove vrste komponente nema. Redovi vode na filtrirane liste: /ured/rokovi?stanje=isteklo|uskoro|31-90, /ured/sukobi?stanje=OPEN, /ured/radni-dani?filter=za-provjeru, /ured/projekti. Sinhronizaciju vide samo OWNER i ADMIN. Dizajn (1440 i 360, obje teme, prazno stanje, matrica rola): docs/design/referenca/reference.html#c1-pregled-reference."
       >
         <Stack>
           <Card>
-            <SectionTitle hint="Najvažnije prvo. Svaka stavka vodi direktno na ekran na kojem se rješava. Brojevi su iz seeda (sidro 12. 11. 2026.); dani za provjeru, blokirane dodjele i sinhronizacija su ilustrativni.">Šta traži pažnju (dizajn)</SectionTitle>
+            <SectionTitle hint="Najvažnije prvo. Svaka stavka vodi direktno na ekran na kojem se rješava. Prikazano stanje je dizajnerski prikaz; stvarni /pregled nosi brojeve iz baze (demo sidro 12. 11. 2026.), a redovi s nulom ne postoje.">Šta traži pažnju (kompozicija redova)</SectionTitle>
             <Stack>
               <ActionCard
                 title="Istekli rokovi · 4"
-                hint="Tehnički pregled KAM-04 (28. 10.) · Ljekarski pregled Dino Salihović (2. 11.) · Osiguranje BUL-01 (5. 11.) · Građevinska dozvola P-02/2025 (9. 11.) — vodi na Rokove filtrirane na stanje „isteklo“"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=isteklo")}
+                hint="Tehnički pregled KAM-04 (28. 10.) · Ljekarski pregled Dino Salihović (2. 11.) · Osiguranje BUL-01 (5. 11.) · Građevinska dozvola P-02/2025 (9. 11.) — vodi na /ured/rokovi?stanje=isteklo"
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/rokovi?stanje=isteklo")}
               />
               <ActionCard
                 title="Nerazriješeni sukobi · 3"
                 hint="Amar Hadžić: preklop 11. 11., sat +6 min 10. 11., stariji od praga 2. 11. (istaknut) — vodi na Sukobe"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/sukobi?stanje=OPEN")}
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/sukobi?stanje=OPEN")}
               />
               <ActionCard
                 title="Rokovi koji ističu u 30 dana · 5"
-                hint="Najbliži rok ističe za 7 dana — vodi na Rokove filtrirane na stanje „uskoro“"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=expiring")}
+                hint="Najbliži rok ističe za 7 dana — vodi na /ured/rokovi?stanje=uskoro"
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/rokovi?stanje=uskoro")}
               />
               <ActionCard
                 title="Dani za provjeru · 2"
-                hint="Otvoren segment, kraj nepoznat (ilustrativno) — vodi na Radne dane, filter „Za provjeru“"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/radni-dani?filter=za-provjeru")}
+                hint="Otvoren segment, kraj nepoznat (ilustrativno) — vodi na /ured/radni-dani?filter=za-provjeru"
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/radni-dani?filter=za-provjeru")}
               />
               <ActionCard
                 title="Istekla roka blokiraju dodjelu · 2"
-                hint="KAM-04 (tehnički pregled) i Dino Salihović (ljekarski) — vodi na Projekti, dodjele; tamo se traži obnova ili iznimka"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/projekti")}
+                hint="KAM-04 (tehnički pregled) i Dino Salihović (ljekarski) — vodi na /ured/projekti; tamo se traži obnova ili iznimka"
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/projekti (dodjele i iznimke)")}
               />
               <ActionCard
                 title="Rokovi 31–90 dana · 6"
-                hint="Još ne pregrijavaju — tu su za plan obnove. Vodi na Rokove, stanje „31–90 dana“"
-                onClick={() => push("info", "Prijedlog: otvorilo bi /ured/rokovi?stanje=31-90")}
+                hint="Još ne pregrijavaju — tu su za plan obnove. Vodi na /ured/rokovi?stanje=31-90"
+                onClick={() => push("info", "Na /pregled ovo je veza na /ured/rokovi?stanje=31-90")}
               />
             </Stack>
           </Card>
           <FormGrid>
             <Card>
-              <SectionTitle hint="Brojke drugo — stanje firme na prvi pogled. PM i šef vide svoj opseg.">Sažetak (dizajn)</SectionTitle>
+              <SectionTitle hint="Brojke drugo — stanje firme na prvi pogled. PM i šef vide svoj opseg.">Sažetak (kompozicija Stat/summary list)</SectionTitle>
               <Inline>
                 <Stat label="Aktivni projekti" value="1" />
                 <Stat label="Aktivni radnici" value="31" />
@@ -514,7 +514,7 @@ export function ComponentCatalog() {
               </Inline>
             </Card>
             <Card>
-              <SectionTitle hint="Manji prikaz; vide ga samo OWNER i ADMIN. Neuspjele stavke po danu; detalji ostaju u Audit tragu.">Stanje sinhronizacije (dizajn, ilustrativno)</SectionTitle>
+              <SectionTitle hint="Manji prikaz; vide ga samo OWNER i ADMIN. Neuspjele stavke po danu; detalji ostaju u Audit tragu.">Stanje sinhronizacije (samo OWNER i ADMIN)</SectionTitle>
               <DescriptionList
                 items={[
                   { term: "Amar Hadžić", value: <Inline>zadnja sinhronizacija juče u 16:10<Chip tone="hot">2 neuspješne juče</Chip></Inline> },
@@ -525,7 +525,7 @@ export function ComponentCatalog() {
             </Card>
           </FormGrid>
           <Card>
-            <SectionTitle hint="Kad nema ničega što traži pažnju, to je dobra vijest — i tako glasi.">Prazno stanje (dizajn)</SectionTitle>
+            <SectionTitle hint="Kad nema ničega što traži pažnju, to je dobra vijest — i tako glasi.">Prazno stanje — dobra vijest</SectionTitle>
             <EmptyState
               title="Ništa ne traži pažnju"
               description="To je dobra vijest: nema isteklih rokova, nerazrješenih sukoba ni dana za provjeru."
@@ -533,7 +533,7 @@ export function ComponentCatalog() {
             />
           </Card>
           <DataTable
-            caption="Koja kartica pregleda se vidi kojoj roli (C.1 prijedlog)"
+            caption="Koja kartica pregleda se vidi kojoj roli (C.1, implementirano)"
             rows={[
               { id: "1", card: "Šta traži pažnju", owner: "Cijela firma", admin: "Cijela firma", pm: "Samo svoj opseg", sef: "Samo svoj opseg", ostali: "postojeći pregled" },
               { id: "2", card: "Sažetak", owner: "Firma", admin: "Firma", pm: "Svoj opseg", sef: "Svoj opseg", ostali: "postojeći pregled" },

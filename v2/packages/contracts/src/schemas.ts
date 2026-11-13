@@ -971,3 +971,108 @@ export const ResolveConflictResponse = z.object({
   code: z.string().optional(),
 });
 export type ResolveConflictResponse = z.infer<typeof ResolveConflictResponse>;
+
+/* ============================================================ C.1 — Pregled */
+
+/**
+ * „Šta traži pažnju“ — podaci, ne kopija. Ekran (i samo ekran) redoslijed, nazive,
+ * tonove i linkove; servis vraća brojeve i najstarije/najbliže primjere, pa broj na
+ * početnoj stranici i lista na koju red vodi računaju ISTO stanje.
+ *
+ * `date` polja su poslovni datumi firme (`YYYY-MM-DD`), trenuci (`lastSyncAt`) su UTC
+ * ISO trenuci — prikaz ih formatuje u zoni firme.
+ */
+export const PregledObligationExample = z.object({
+  typeLabel: z.string(),
+  /** Radnik (ime i prezime) ili šifra mašine — nosilac obaveze. */
+  target: z.string(),
+  expiresAt: IsoDate,
+});
+export type PregledObligationExample = z.infer<typeof PregledObligationExample>;
+
+export const PregledConflictExample = z.object({
+  workerName: z.string(),
+  /** Kada je sukob otvoren (UTC ISO trenutak). */
+  createdAt: IsoDate,
+});
+export type PregledConflictExample = z.infer<typeof PregledConflictExample>;
+
+export const PregledReviewDayExample = z.object({
+  workerName: z.string(),
+  workDate: IsoDate,
+  /** `open` = otvoren segment (kraj nije ni poslan), `unknown` = kraj nepoznat. */
+  kind: z.enum(["open", "unknown"]),
+});
+export type PregledReviewDayExample = z.infer<typeof PregledReviewDayExample>;
+
+export const PregledBlockedExample = z.object({
+  /** Radnik ili šifra mašine čija dodjela stoji na isteklom dokumentu. */
+  target: z.string(),
+  typeLabel: z.string(),
+});
+export type PregledBlockedExample = z.infer<typeof PregledBlockedExample>;
+
+export const PregledAttention = z.object({
+  expired: z.object({
+    count: z.number(),
+    /** Najstarije tri — „zašto ovaj red postoji“. */
+    oldest: z.array(PregledObligationExample),
+  }),
+  conflicts: z.object({
+    count: z.number(),
+    olderThanThreshold: z.number(),
+    thresholdDays: z.number(),
+    oldest: z.array(PregledConflictExample),
+  }),
+  expiring30: z.object({
+    count: z.number(),
+    nearest: PregledObligationExample.nullable(),
+  }),
+  reviewDays: z.object({
+    count: z.number(),
+    oldest: z.array(PregledReviewDayExample),
+  }),
+  blockedAssignments: z.object({
+    count: z.number(),
+    examples: z.array(PregledBlockedExample),
+  }),
+  expiring3190: z.object({
+    count: z.number(),
+    nearest: PregledObligationExample.nullable(),
+  }),
+});
+export type PregledAttention = z.infer<typeof PregledAttention>;
+
+export const PregledSummary = z.object({
+  activeProjects: z.number(),
+  activeWorkers: z.number(),
+  activeMachines: z.number(),
+  entriesThisWeek: z.number(),
+});
+export type PregledSummary = z.infer<typeof PregledSummary>;
+
+/**
+ * Sinhronizacija po korisniku koji je ikad poslao stavku: zadnji trenutak i broj
+ * njegovih neuspješnih stavki (odbijeni računi + nerazriješeni sukobi).
+ */
+export const PregledSyncRow = z.object({
+  userId: z.string(),
+  name: z.string(),
+  lastSyncAt: IsoDate,
+  failedItems: z.number(),
+});
+export type PregledSyncRow = z.infer<typeof PregledSyncRow>;
+
+export const PregledResponse = z.object({
+  /** Poslovni datum firme po kojem se sva stanja računaju (`YYYY-MM-DD`). */
+  today: IsoDate,
+  /** Vremenska zona firme (IANA) — ekran formatuje trenutke u njoj. */
+  timezone: z.string(),
+  attention: PregledAttention,
+  summary: PregledSummary,
+  /** Samo OWNER i ADMIN; ostali ne dobijaju ni praznu listu, nego `null`. */
+  sync: z.array(PregledSyncRow).nullable(),
+  /** `"projects"` = brojevi su suženi na opseg iz sesije (PM/šef s PROJECTS opsegom). */
+  scope: z.enum(["company", "projects"]),
+});
+export type PregledResponse = z.infer<typeof PregledResponse>;

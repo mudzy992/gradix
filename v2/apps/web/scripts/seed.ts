@@ -24,7 +24,16 @@ const hash = await argon2.hash(seedPassword, {
   parallelism: 1,
 });
 
-type SeedUser = { id: string; email: string; first: string; last: string; role: string; companyId: string };
+type SeedUser = {
+  id: string;
+  email: string;
+  first: string;
+  last: string;
+  role: string;
+  companyId: string;
+  /** C.1: opseg članstva; default je `COMPANY`. Demo voditelj projekta nosi `PROJECTS`. */
+  scope?: "COMPANY" | "PROJECTS" | "SELF";
+};
 
 const companies = [
   { id: "cmp_demo", name: "Niskogradnja Demo d.o.o.", slug: "niskogradnja-demo" },
@@ -36,6 +45,9 @@ const users: SeedUser[] = [
   { id: "usr_ured", email: "ured@demo.ba", first: "Amina", last: "Karić", role: "ADMIN", companyId: "cmp_demo" },
   { id: "usr_sef", email: "sef@demo.ba", first: "Mario", last: "Perić", role: "SITE_SUPERVISOR", companyId: "cmp_demo" },
   { id: "usr_radnik", email: "radnik@demo.ba", first: "Amar", last: "Hadžić", role: "WORKER", companyId: "cmp_demo" },
+  // C.1: voditelj projekta sa suženim opsegom — E2E i snimci moraju vidjeti pregled „u
+  // svom opsegu“, a ne samo cijelu firmu. Dodijeljen je na dionicu (wrk_demo_kenan).
+  { id: "usr_voditelj", email: "voditelj@demo.ba", first: "Kenan", last: "Softić", role: "PROJECT_MANAGER", companyId: "cmp_demo", scope: "PROJECTS" },
   { id: "usr_stranac", email: "vlasnik@druga.test", first: "Nikola", last: "Jović", role: "OWNER", companyId: "cmp_druga" },
 ];
 
@@ -87,6 +99,7 @@ const assignments = [
   { id: "pas_5", projectId: "prj_dionica", machineId: "mch_kamion", from: "2026-03-16" },
   { id: "pas_6", projectId: "prj_dionica", workerId: "wrk_demo_selmir", from: "2026-06-01" },
   { id: "pas_7", projectId: "prj_dionica", workerId: "wrk_demo_haris", from: "2026-06-01" },
+  { id: "pas_8", projectId: "prj_dionica", workerId: "wrk_demo_kenan", from: "2026-03-02" },
 ];
 
 /**
@@ -100,6 +113,7 @@ const workers = [
   { id: "wrk_demo_nedim", first: "Nedim", last: "Softić", job: "Radnik na iskopu", hired: "2025-01-20" },
   { id: "wrk_demo_selmir", first: "Selmir", last: "Begić", job: "Rukovalac valjkom", hired: "2024-03-11" },
   { id: "wrk_demo_haris", first: "Haris", last: "Kovačević", job: "Radnik na asfaltiranju", hired: "2025-05-05" },
+  { id: "wrk_demo_kenan", first: "Kenan", last: "Softić", job: "Voditelj projekta", hired: "2024-06-01", userId: "usr_voditelj" },
 ];
 
 /**
@@ -131,13 +145,13 @@ try {
       // `ON CONFLICT DO UPDATE` traži da Postgres vidi postojeći red — a RLS ga krije
       // čim se promijeni `id`/`company_id`. Zato je putanja: probaj UPDATE, pa INSERT.
       const updated = await client.query(
-        "UPDATE memberships SET roles = ARRAY[$3]::\"Role\"[], scope = 'COMPANY' WHERE user_id = $1 AND company_id = $2",
-        [user.id, user.companyId, user.role],
+        "UPDATE memberships SET roles = ARRAY[$3]::\"Role\"[], scope = $4 WHERE user_id = $1 AND company_id = $2",
+        [user.id, user.companyId, user.role, user.scope ?? "COMPANY"],
       );
       if (updated.rowCount === 0) {
         await client.query(
-          "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], 'COMPANY')",
-          [`mem_${user.id}`, user.id, user.companyId, user.role],
+          "INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, ARRAY[$4]::\"Role\"[], $5)",
+          [`mem_${user.id}`, user.id, user.companyId, user.role, user.scope ?? "COMPANY"],
         );
       }
     });

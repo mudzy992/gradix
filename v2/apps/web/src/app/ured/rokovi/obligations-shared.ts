@@ -31,3 +31,20 @@ export const targetLabel = (obligation: Obligation): string => {
   if (obligation.machineCode) return `${obligation.machineCode} · ${obligation.machineName ?? ""}`.trim();
   return "Cijela firma";
 };
+
+/**
+ * C.1: riječi iz adrese → interno stanje filtera. Whitelist, ne preslikavanje svih
+ * vrijednosti: URL je link, ne API, pa se samo ono što Pregled (i čovjek) može
+ * smisleno zatražiti prevodi. `31-90` nije stanje u bazi nego prozor dana — računa
+ * ga klijent iz `daysLeft` koji je server već izračunao po poslovnom datumu firme.
+ */
+export const STATE_FROM_URL: Record<string, string> = {
+  isteklo: "expired",
+  uskoro: "expiring",
+  "31-90": "31-90",
+};
+
+/** Koliko obaveza ima rok za 31–90 dana — prozor dana, ne stanje u bazi (C.1). */
+export function count3190(obligations: Obligation[]): number {
+  return obligations.filter((row) => row.daysLeft !== null && row.daysLeft >= 31 && row.daysLeft <= 90).length;
+};

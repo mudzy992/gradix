@@ -87,3 +87,77 @@ export function ownershipLabel(value: string): string {
 export function initialsOf(firstName: string, lastName: string): string {
   return `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
 }
+
+/* ================================================================ C.1 pregled */
+
+const DAY_NAMES_BS = [
+  "Nedjelja",
+  "Ponedjeljak",
+  "Utorak",
+  "Srijeda",
+  "Četvrtak",
+  "Petak",
+  "Subota",
+] as const;
+
+const MONTH_NAMES_BS = [
+  "januar",
+  "februar",
+  "mart",
+  "april",
+  "maj",
+  "juni",
+  "juli",
+  "august",
+  "septembar",
+  "oktobar",
+  "novembar",
+  "decembar",
+] as const;
+
+/** `2026-11-08` → „Nedjelja, 8. novembar“ — podnaslov pregleda (poslovni datum firme). */
+export function formatLongDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  const [, , month, day] = match as unknown as [string, string, string, string];
+  const weekday = DAY_NAMES_BS[new Date(`${value}T00:00:00Z`).getUTCDay()]!;
+  return `${weekday}, ${Number(day)}. ${MONTH_NAMES_BS[Number(month) - 1]!}`;
+}
+
+/**
+ * Trenutak → „danas u 16:10“ / „juče u 07:15“ / „3. 11. 2026. u 16:10“ u zoni firme.
+ *
+ * „Danas“ i „juče“ se računaju u zoni firme, ne na serveru: sinhronizacija u 23:50 i
+ * u 00:10 je za ured ista noć, bez obzira gdje stoji sat mašine koja ga prikazuje.
+ */
+export function formatDayTime(value: string | null | undefined, timezone?: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const zone = safeTimezone(timezone ?? DEFAULT_TIMEZONE);
+  const dayIn = (moment: Date): string => {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(moment);
+    const [day, month, year] = parts.split("/");
+    return `${year}-${month}-${day}`;
+  };
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: zone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+  const today = dayIn(new Date());
+  // Juče = današnji datum pomjeren za jedan dan, opet u zoni firme (DST granični sat
+  // pomjeri rok za sat, ali kalendarski datum ostaje taj dan).
+  const yesterdayDate = new Date();
+  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+  const yesterday = dayIn(yesterdayDate);
+  const that = dayIn(date);
+  if (that === today) return `danas u ${time}`;
+  if (that === yesterday) return `juče u ${time}`;
+  return `${formatDate(that)} u ${time}`;
+}

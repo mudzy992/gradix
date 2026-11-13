@@ -204,7 +204,12 @@ jobs:
           pnpm --filter @gradix/web exec playwright install --with-deps chromium || echo "::error::PW_INSTALL_DEPS_FAILED (nastavljam bez deps koraka)"
           pnpm --filter @gradix/web exec playwright install chromium || echo "::error::PW_INSTALL_FAILED"
           ls "$HOME/.cache/ms-playwright" 2>/dev/null | sed 's/^/::warning::PW_CACHE /' || echo "::error::PW_CACHE_EMPTY"
+          # C.1: E2E po rolama treba demo svijet (rokovi, sukobi, dani za provjeru,
+          # sinhronizacija), ne samo praznu firmu — zato i demo skripte iza osnovnog seeda.
           pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts || { echo "::error::SEED_PREGLED_FAILED"; exit 1; }
           pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
