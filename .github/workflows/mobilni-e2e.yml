@@ -172,7 +172,7 @@ jobs:
 
       # ---------------- Emulator + Maestro tokovi ----------------
       - name: Maestro tokovi (emulator)
-        uses: reactivecircus/android-emulator-runner@v3
+        uses: reactivecircus/android-emulator-runner@v2.38.0
         env:
           DEMO_LOZINKA: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
           SCENARIJ: ${{ inputs.scenarij || 'sve' }}
