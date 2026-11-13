@@ -92,22 +92,15 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
       prva="(junit nije ni nastao — maestro se srušio prije izvještaja)"
     fi
     announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
-    # Pad aplikacije (native/JS crash) prepoznajemo iz crash buffera logcata.
-    local crash
-    crash=$(adb logcat -d -b crash 2>/dev/null | grep -v "^$" | tail -3 | tr '\n' ' ' | cut -c1-220)
-    if [ -n "$crash" ]; then
-      announce error "$name" "logcat crash buffer: $crash"
+    # Native crash s stackom (glavni buffer, crash buffer zna biti prazan).
+    local fatal
+    fatal=$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220)
+    if [ -n "$fatal" ]; then
+      announce error "$name" "FATAL: $fatal"
     fi
-    # Šta je stvarno na ekranu u trenutku pada — vidljivi paketi i tekstovi.
-    adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
-    local paketi tekstovi
-    paketi=$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'package="[^"]*"' | sort -u | paste -sd, - | cut -c1-200)
-    tekstovi=$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-220)
-    announce error "$name" "ekran (paketi): ${paketi:-dump nije uspio}"
-    announce error "$name" "ekran (tekstovi): ${tekstovi:-nema teksta}"
-    # JS greške (ReactNativeJS) i native padovi iz glavnog buffera.
+    # JS greške (ReactNativeJS) — jedina sigurna dijagnoza za release bundle.
     local jserr
-    jserr=$(adb logcat -d 2>/dev/null | grep -E "ReactNativeJS|FATAL EXCEPTION" | tail -5 | tr '\n' ' ' | cut -c1-220)
+    jserr=$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -8 | tr '\n' ' ' | cut -c1-220)
     if [ -n "$jserr" ]; then
       announce error "$name" "logcat: $jserr"
     fi

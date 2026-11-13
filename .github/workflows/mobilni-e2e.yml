@@ -139,6 +139,13 @@ jobs:
             echo "::error title=APK::nema lib/x86_64 u APK-u — emulator ne može pokrenuti aplikaciju"
             exit 1
           fi
+          # Fontovi: _layout čeka useFonts — bez ugrađenih .ttf ostaje spinner zauvijek.
+          nttf=$(unzip -l .ci-apk/app-release.apk | grep -c "\.ttf" || true)
+          if [ "${nttf:-0}" -ge 5 ]; then
+            echo "::notice title=APK::fontovi ugrađeni ($nttf .ttf)"
+          else
+            echo "::error title=APK::samo $nttf .ttf u APK-u (očekivano 5) — useFonts se neće završiti"
+          fi
 
       - name: APK za testni job (artefakt)
         uses: actions/upload-artifact@v4
@@ -247,7 +254,10 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2.38.0
         env:
           DEMO_LOZINKA: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
-          SCENARIJ: ${{ inputs.scenarij || 'sve' }}
+          # PRIVREMENO ( debugging): push runovi idu samo sa scenarijem 'snimci'
+          # (jedan tok) dok se ne otkloni problem s release pokretanjem app-a;
+          # dispatch bira eksplicitno. Vratiti na 'sve' kad tok progovori.
+          SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
           api-level: 34
