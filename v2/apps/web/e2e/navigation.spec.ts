@@ -142,8 +142,9 @@ test("C.1 vlasnik: klik na red otvara listu već filtriranu (rokovi → isteklo)
   await expect(page.getByRole("heading", { name: "Rokovi" })).toBeVisible();
   // Lista se suzila: selektator stanja pokazuje „Isteklo“, a ne „Sva stanja“.
   await expect(page.getByRole("combobox", { name: "Stanje" })).toHaveValue("expired");
-  // Bar jedan red s oznakom isteklog stanja postoji u tabeli.
-  await expect(page.getByText("Isteklo").first()).toBeVisible();
+  // Bar jedan red tabele nosi oznaku isteklog stanja (ne <option> u selektoru —
+  // on postoji i kad je lista prazna, pa nije dokaz da je filter radio).
+  await expect(page.getByRole("row").filter({ hasText: "Isteklo" }).first()).toBeVisible();
 });
 
 test("C.1 vlasnik: klik na dane za provjeru otvara samo dane s oznakom", async ({ page }) => {
