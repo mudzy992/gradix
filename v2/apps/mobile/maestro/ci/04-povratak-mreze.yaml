@@ -1,0 +1,23 @@
+# CI tok 4/5 — povratak mreže: čekani zapis se šalje TAČNO jednom, bez duplikata.
+#
+# Mrežu UKLJUČUJE skripta emulator-net.sh PRIJE ovog toka. Tok 03 je ostavio
+# jedan zapis u „Čeka slanje"; ovdje se šalje, pa se slanje PONAVLJA — drugi put
+# server prepoznaje duplikat i na telefonu se ništa ne mijenja. Konačnu provjeru
+# „tačno jednom" radi i server (idempotency testovi u CI-ju) i ured na webu.
+appId: ba.gradix.teren
+name: povratak-mreze
+---
+- launchApp
+- tapOn: "Moj dan"
+- assertVisible: "Sačuvaj na telefon"
+- assertVisible: "Čeka slanje"
+- takeScreenshot: povratak-ceka
+- tapOn: "Pošalji sada"
+- assertVisible: "Poslano"
+- assertVisible: "Sve je poslano."
+- takeScreenshot: povratak-poslano
+# Ponovno slanje NE smije napraviti duplikat — stanje ostaje „sve je poslano".
+- tapOn: "Pošalji sada"
+- assertVisible: "Sve je poslano."
+- assertVisible: "Poslano"
+- takeScreenshot: povratak-bez-duplikata

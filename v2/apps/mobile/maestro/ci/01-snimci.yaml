@@ -1,0 +1,58 @@
+# CI tok 1/5 — obilazak ekrana radnika + A1e regresija: prijava NAKON odjave.
+#
+# Autonomna verzija snimci.yaml za CI emulator: nema ručnih koraka, lozinka dolazi
+# iz okoline Maestra (-e DEMO_LOZINKA). Za razliku od ručne verzije, NE dira
+# „Grupa" — radnik je nema u meniju (matrica rola); grupu pokriva tok 05 sa šefom.
+#
+# Snimke (takeScreenshot) idu u maestro-artifacts/test-output/<sesija>/<tok>/takeScreenshot/.
+appId: ba.gradix.teren
+name: snimci-i-A1e
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Prijava za teren."
+- takeScreenshot: 01-prijava-svjetla
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- hideKeyboard
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- hideKeyboard
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- tapOn: "Moj dan"
+- takeScreenshot: 02-moj-dan-svjetla
+- back
+- tapOn: "Moji rokovi"
+- assertVisible: "Moji rokovi"
+- takeScreenshot: 03-rokovi-svjetla
+- tapOn: "‹ Nazad"
+- tapOn: "Moji projekti"
+- assertVisible: "Moji projekti"
+- takeScreenshot: 04-projekti-svjetla
+- tapOn: "‹ Nazad"
+- tapOn: "Odjavi se"
+- assertVisible: "Potvrdi odjavu"
+- takeScreenshot: 05-odjava-potvrda-svjetla
+# Potvrda u dijalogu: istoimeno dugme postoji i na ekranu iza dijaloga, pa se bira
+# drugi po redu (index: 1) — dijalog je u hijerarhiji poslije glavnog prozora.
+- tapOn:
+    text: "Odjavi se"
+    index: 1
+# A1e regresija: originalni mobilni bug — prijava nakon odjave vraćala je
+# „Došlo je do greške." (server 500 na NUL-u u emailu). Ovdje se dokazuje na CI-ju.
+- assertVisible: "Prijava za teren."
+- takeScreenshot: 06-odjava-svjetla
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- hideKeyboard
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- hideKeyboard
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- takeScreenshot: 07-ponovna-prijava-svjetla
