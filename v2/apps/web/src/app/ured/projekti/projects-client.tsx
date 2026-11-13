@@ -20,15 +20,13 @@ import {
   Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Mono, PageHeader, Select, Skeleton,
 } from "@/components/ui/index";
 import { ProjectDialog } from "./project-dialog";
+export {
+  PROJECT_EMPTY_FORM, STATUS_LABEL, fromProject, toProjectPayload,
+  type MachineOption, type ProjectFormState, type WorkerOption,
+} from "./projects-shared";
+import { STATUS_LABEL } from "./projects-shared";
 import { ProjectDetail } from "./project-detail";
 
-export const STATUS_LABEL: Record<string, string> = {
-  PLANNED: "U planu",
-  ACTIVE: "Aktivan",
-  PAUSED: "Pauziran",
-  FINISHED: "Završen",
-  CANCELLED: "Otkazan",
-};
 
 const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
   ACTIVE: "full",
@@ -38,47 +36,9 @@ const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
   PLANNED: "hollow",
 };
 
-export type WorkerOption = { id: string; firstName: string; lastName: string; isActive: boolean };
-export type MachineOption = { id: string; code: string; name: string; isActive: boolean };
 
-export const PROJECT_EMPTY_FORM = {
-  code: "",
-  name: "",
-  status: "ACTIVE",
-  sitePlace: "",
-  siteAddress: "",
-  startsOn: "",
-  endsOn: "",
-  managerWorkerId: "",
-  note: "",
-};
 
-export type ProjectFormState = typeof PROJECT_EMPTY_FORM;
 
-export const fromProject = (project: Project): ProjectFormState => ({
-  code: project.code,
-  name: project.name,
-  status: project.status,
-  sitePlace: project.sitePlace ?? "",
-  siteAddress: project.siteAddress ?? "",
-  startsOn: project.startsOn?.slice(0, 10) ?? "",
-  endsOn: project.endsOn?.slice(0, 10) ?? "",
-  managerWorkerId: project.managerWorkerId ?? "",
-  note: project.note ?? "",
-});
-
-/** Prazno se šalje kao `null`, ne kao `""` — isto pravilo kao na ekranu radnika. */
-export const toProjectPayload = (form: ProjectFormState) => ({
-  code: form.code.trim(),
-  name: form.name.trim(),
-  status: form.status,
-  sitePlace: form.sitePlace.trim() || null,
-  siteAddress: form.siteAddress.trim() || null,
-  startsOn: form.startsOn || null,
-  endsOn: form.endsOn || null,
-  managerWorkerId: form.managerWorkerId || null,
-  note: form.note.trim() || null,
-});
 
 export default function ProjectsClient({
   canManage,

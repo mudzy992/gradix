@@ -88,8 +88,10 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
  * Poslovni datum (`DATE`), ne trenutak. Vrijeme se odbija namjerno: „početak rada“ je dan u
  * zoni firme, a ne UTC ponoć koja u Sarajevu pokazuje jučerašnji datum.
  */
-function normaliseDate(value: string, field: string): string | ServiceError {
-  if (!DATE_ONLY.test(value)) return { code: "VALIDATION_FAILED", message: `${field} mora biti datum (gggg-mm-dd).` };
+function normaliseDate(value: string | undefined, field: string): string | ServiceError {
+  if (value === undefined || !DATE_ONLY.test(value)) {
+    return { code: "VALIDATION_FAILED", message: `${field} mora biti datum (gggg-mm-dd).` };
+  }
   const parsed = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
     return { code: "VALIDATION_FAILED", message: `${field} nije ispravan datum.` };
@@ -97,7 +99,8 @@ function normaliseDate(value: string, field: string): string | ServiceError {
   return value;
 }
 
-export function validateWorkerInput(input: WorkerInput): WorkerInput | ServiceError {
+/** Prihvata i djelimičan unos (PATCH): obavezna polja se provjeravaju sa `?? ""`. */
+export function validateWorkerInput(input: Partial<WorkerInput>): WorkerInput | ServiceError {
   const firstName = input.firstName?.trim() ?? "";
   const lastName = input.lastName?.trim() ?? "";
   if (firstName.length < 1 || firstName.length > 100) {
@@ -237,7 +240,7 @@ export async function updateWorker(
   companyId: CompanyId,
   actor: Actor,
   workerId: string,
-  input: WorkerInput,
+  input: Partial<WorkerInput>,
 ): Promise<WorkerRow | ServiceError> {
   const valid = validateWorkerInput(input);
   if ("code" in valid) return valid;
@@ -618,7 +621,7 @@ export async function updateMachine(
   companyId: CompanyId,
   actor: Actor,
   machineId: string,
-  input: MachineInput,
+  input: Partial<MachineInput>,
 ): Promise<MachineRow | ServiceError> {
   const name = input.name?.trim() ?? "";
   if (name.length < 1 || name.length > 120) {

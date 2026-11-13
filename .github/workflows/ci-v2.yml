@@ -106,6 +106,12 @@ jobs:
           pnpm check-contrast
           pnpm check-ui
 
+      # A2: nula ciklusa uvozâ u mobilnom i webu (madge čita stvarne import grafove).
+      # Novi ciklus = crven build; popravlja se *-shared datotekom ili uvozom iz konkretne datoteke.
+      - name: Ciklusi uvozâ (A2)
+        working-directory: v2
+        run: pnpm check-cycles
+
       - name: OpenAPI je ažuran
         working-directory: v2
         run: pnpm --filter @gradix/contracts check

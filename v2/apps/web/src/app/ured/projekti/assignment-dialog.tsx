@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { AssignmentInput, Project, ProjectAssignment } from "@gradix/contracts";
 import { apiCall, jsonBody } from "@/api-client";
 import { Alert, Button, Dialog, Input, Select } from "@/components/ui/index";
-import type { MachineOption, WorkerOption } from "./projects-client";
+import type { MachineOption, WorkerOption } from "./projects-shared";
 
 export function AssignmentDialog({
   projectId,

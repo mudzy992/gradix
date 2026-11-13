@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/index";
 import { CreateDialog, RenewDialog } from "./obligations-dialogs";
 import { DetailDialog } from "./obligation-detail";
+export { STATE_LABEL, daysLabel, targetLabel, type MachineOption, type WorkerOption } from "./obligations-shared";
+import { STATE_LABEL, daysLabel, targetLabel } from "./obligations-shared";
 
 type LoadState =
   | { kind: "loading" }
@@ -28,16 +30,7 @@ type LoadState =
   | { kind: "ready"; obligations: Obligation[]; types: ObligationType[]; counts: Counts; today: string };
 
 type Counts = { all: number; expired: number; expiring: number; valid: number; no_expiry: number };
-export type WorkerOption = { id: string; firstName: string; lastName: string; isActive: boolean };
-export type MachineOption = { id: string; code: string; name: string; isActive: boolean };
 
-export const STATE_LABEL: Record<ObligationStateName, string> = {
-  valid: "Važeće",
-  expiring: "Uskoro istječe",
-  expired: "Isteklo",
-  superseded: "Zamijenjeno",
-  no_expiry: "Bez roka",
-};
 
 const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
   valid: "full",
@@ -47,21 +40,7 @@ const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
   no_expiry: "hollow",
 };
 
-/** Rok u riječima: „za 5 dana“, „istječe danas“, „prije 3 dana“ — bez računanja u glavi. */
-export function daysLabel(obligation: Obligation): string {
-  if (obligation.daysLeft === null) return "bez roka";
-  if (obligation.daysLeft === 0) return "istječe danas";
-  if (obligation.daysLeft === 1) return "za 1 dan";
-  if (obligation.daysLeft > 1) return `za ${obligation.daysLeft} dana`;
-  const ago = Math.abs(obligation.daysLeft);
-  return ago === 1 ? "prije 1 dan" : `prije ${ago} dana`;
-}
 
-export const targetLabel = (obligation: Obligation): string => {
-  if (obligation.workerName) return obligation.workerName;
-  if (obligation.machineCode) return `${obligation.machineCode} · ${obligation.machineName ?? ""}`.trim();
-  return "Cijela firma";
-};
 
 export default function ObligationsClient({ canManage }: { canManage: boolean }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });

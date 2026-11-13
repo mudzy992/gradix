@@ -3,18 +3,13 @@
  * Gasim sve ostale sesije; tekuća ostaje (čovjek nastavlja gdje je stao).
  */
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import { fail, internal, ok, type ErrorCode } from "@/server/api";
+import { ChangePasswordRequest } from "@gradix/contracts";
 import { changeOwnPassword } from "@/server/access-service";
 import { getVerifiedPool } from "@/server/db";
 import { authenticate } from "@/server/tenant-context";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  currentPassword: z.string().min(1).max(200),
-  newPassword: z.string().min(1).max(200),
-});
 
 const CODE_MAP: Record<string, ErrorCode> = {
   VALIDATION_FAILED: "AUTH_PASSWORD_WEAK",
@@ -26,7 +21,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const auth = await authenticate(request);
     if (!auth.ok) return fail(auth.code, "Niste prijavljeni.");
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = ChangePasswordRequest.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return fail("VALIDATION_FAILED", "Sva polja su obavezna.");
 
     const result = await changeOwnPassword(

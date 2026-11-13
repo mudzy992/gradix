@@ -4,7 +4,7 @@
  *
  * Tokeni se drže u `lib/store` (na uređaju Keychain/Keystore, na webu `localStorage`), nikad u AsyncStorage.
  */
-import { ApiError, createClient, type ErrorCode } from "@gradix/contracts";
+import { ApiError, createClient, stripControlChars, type ErrorCode } from "@gradix/contracts";
 import type {
   ForemanWorkersResponse,
   LoginResponse,
@@ -98,7 +98,12 @@ async function withToken<T>(call: (token: string | null) => Promise<T>): Promise
 }
 
 export async function login(email: string, password: string): Promise<{ mustChangePassword: boolean }> {
-  const { data } = await client.post("/api/auth/login", { email, password }, undefined, { accessToken: null });
+  // A1: `trim()` NE skida NUL (\u0000), a mobilna tipkovnica/autofill ga zna ubaciti u email.
+  // Server takav unos odbija s 400 (SafeText); ovdje se čisti PRIJE slanja, da prijava
+  // radi i kad uređaj pošalje kontrolni znak. Lozinka se ne dira: kontrolni znak u njoj
+  // znači pogrešan unos i tačno je da server odbije.
+  const cleanEmail = stripControlChars(email).trim();
+  const { data } = await client.post("/api/auth/login", { email: cleanEmail, password }, undefined, { accessToken: null });
   await saveTokens(data.accessToken, data.refreshToken);
   return { mustChangePassword: data.mustChangePassword };
 }

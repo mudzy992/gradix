@@ -1,6 +1,7 @@
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
 import { withCompany, type CompanyId } from "@gradix/db";
+import { hasControlChars } from "@gradix/contracts";
 import {
   R4_SYNC_CLOCK_SKEW_SECONDS,
   type R4SyncPushItem,
@@ -10,6 +11,21 @@ import type { Pool, PoolClient } from "pg";
 import { encodeSyncCursor } from "./sync-cursor";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
+
+/**
+ * A1: kontrolni znakovi (npr. NUL) bilo gdje u stavci — string kolone i jsonb u
+ * Postgresu ih odbijaju (22P05). Provjera ide kroz cijelu stavku, uključujući
+ * ugniježđene zapise (workday header, note), da se loša stavka odbije PO STAVKI
+ * umjesto da sruši cijeli batch.
+ */
+function itemHasControlChars(value: unknown): boolean {
+  if (typeof value === "string") return hasControlChars(value);
+  if (Array.isArray(value)) return value.some(itemHasControlChars);
+  if (value !== null && typeof value === "object") {
+    return Object.values(value).some(itemHasControlChars);
+  }
+  return false;
+}
 
 export class SyncPushAccessError extends Error {
   constructor(readonly code: "FORBIDDEN" | "NOT_FOUND") {
@@ -764,6 +780,11 @@ export async function pushR4SyncItems(
 
   const results: R4SyncPushItemResult[] = [];
   for (const item of items) {
+    // A1: stavka s kontrolnim znakom dobija svoj ishod; ostatak batcha se obrađuje normalno.
+    if (itemHasControlChars(item)) {
+      results.push(invalidItem(item));
+      continue;
+    }
     let worker: Worker;
     let foremanWorkerId: string | null = null;
     if (item.workerId !== undefined) {

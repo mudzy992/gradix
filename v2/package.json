@@ -19,11 +19,13 @@
     "check-expo": "pnpm --filter @gradix/mobile check-expo",
     "check-privacy": "node infra/scripts/check-privacy.mjs .",
     "check-contrast": "node infra/scripts/check-contrast.mjs",
-    "check-ui": "node infra/scripts/check-ui-hardcode.mjs"
+    "check-ui": "node infra/scripts/check-ui-hardcode.mjs",
+    "check-cycles": "node infra/scripts/check-cycles.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
     "eslint": "9.39.1",
+    "madge": "^8.0.0",
     "turbo": "2.11.10",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.4"

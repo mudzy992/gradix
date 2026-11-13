@@ -7,7 +7,7 @@ import { formatDateTime, formatNumber, meterUnit } from "@/format";
 import {
   Alert, Button, Dialog, Input, Mono, Select,
 } from "@/components/ui/index";
-import type { CategoryRow, MachineRow } from "./equipment-client";
+import type { CategoryRow, MachineRow } from "./equipment-shared";
 
 const EMPTY_FORM = {
   code: "",

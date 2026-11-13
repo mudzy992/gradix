@@ -12,12 +12,17 @@ import { z } from "zod";
 
 /* ------------------------------------------------------------------ zajedničko */
 
+/** Iste vrijednosti kao `CREATE TYPE "Role"` u bazi (init migracija) — jedan izvor istine. */
 export const Role = z.enum([
   "OWNER",
   "ADMIN",
-  "SITE_MANAGER",
+  "PROJECT_MANAGER",
+  "SITE_SUPERVISOR",
   "WORKER",
-  "VIEWER",
+  "DRIVER",
+  "MACHINE_OPERATOR",
+  "MECHANIC",
+  "ACCOUNTANT",
 ]);
 export type Role = z.infer<typeof Role>;
 
@@ -28,6 +33,35 @@ export const IsoDate = z.string().describe("ISO 8601, UTC");
 export const Uuid = z.string().min(1);
 
 export const Meta = z.record(z.string(), z.unknown());
+
+/**
+ * Zajednički čuvar granice API-ja (A1): tekst NE smije sadržavati kontrolne znakove,
+ * uključujući NUL. Postgres odbija `\u0000` u stringovima i jsonb-u („invalid byte
+ * sequence for encoding "UTF8": 0x00“), pa bi takav unos bez ove provjere stigao do
+ * baze i vratio 500. Dozvoljeni su tab (\t), novi red (\n) i povratnik (\r) — tekst
+ * u više redova je legitiman unos. Sve ŠEME ZAHTJEVA koriste `SafeText` umjesto
+ * golog `z.string()`; izuzetak je `SyncPushRequest`, koji kontroliše po stavci
+ * (jedna loša stavka dobija svoj ishod, ne ruši batch — vidi r4-sync-service).
+ */
+// eslint-disable-next-line no-control-regex -- regex namjerno prepoznaje kontrolne znakove (A1)
+const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+
+export function hasControlChars(value: string): boolean {
+  return CONTROL_CHARS.test(value);
+}
+
+/**
+ * Uklanja kontrolne znakove iz teksta (A1, mobilni): `trim()` NE skida NUL, pa mobilni
+ * klijent prije slanja čisti email — server i dalje odbija takav unos s 400 (odbrana
+ * u dubini), ali prijava radi čak i kad tipkovnica/autofill ubaci kontrolni znak.
+ */
+export function stripControlChars(value: string): string {
+  return value.replace(CONTROL_CHARS, "");
+}
+
+export const SafeText = z.string().refine((value) => !CONTROL_CHARS.test(value), {
+  message: "Polje sadrži nedozvoljene kontrolne znakove.",
+});
 
 /* ------------------------------------------------------------------ identitet */
 
@@ -59,8 +93,8 @@ export const MeResponse = z.object({
 export type MeResponse = z.infer<typeof MeResponse>;
 
 export const LoginRequest = z.object({
-  email: z.string().min(3).max(200),
-  password: z.string().min(1).max(200),
+  email: SafeText.min(3).max(200),
+  password: SafeText.min(1).max(200),
 });
 export type LoginRequest = z.infer<typeof LoginRequest>;
 
@@ -79,7 +113,7 @@ export const LoginResponse = z.object({
 });
 export type LoginResponse = z.infer<typeof LoginResponse>;
 
-export const RefreshRequest = z.object({ refreshToken: z.string().optional() });
+export const RefreshRequest = z.object({ refreshToken: SafeText.optional() });
 export const RefreshResponse = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
@@ -97,8 +131,8 @@ export type AssignmentChangedResponse = z.infer<typeof AssignmentChangedResponse
 export const LoggedOutResponse = z.object({ loggedOut: z.literal(true) });
 
 export const ChangePasswordRequest = z.object({
-  currentPassword: z.string().min(1).max(200),
-  newPassword: z.string().min(10).max(200),
+  currentPassword: SafeText.min(1).max(200),
+  newPassword: SafeText.min(10).max(200),
 });
 export const ChangePasswordResponse = z.object({
   ok: z.literal(true),
@@ -125,7 +159,7 @@ export const UsersResponse = z.object({ users: z.array(UserRow) });
 export type UsersResponse = z.infer<typeof UsersResponse>;
 
 export const InviteRequest = z.object({
-  email: z.string().min(3).max(200),
+  email: SafeText.min(3).max(200),
   roles: z.array(Role).min(1),
   scope: Scope,
 });
@@ -171,14 +205,14 @@ export const InvitationPreview = z.object({
 export type InvitationPreview = z.infer<typeof InvitationPreview>;
 
 export const AcceptInvitationRequest = z.object({
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
-  password: z.string().min(10).max(200),
+  firstName: SafeText.min(1).max(100),
+  lastName: SafeText.min(1).max(100),
+  password: SafeText.min(10).max(200),
 });
 export type AcceptInvitationRequest = z.infer<typeof AcceptInvitationRequest>;
 
 export const ApplyPasswordResetRequest = z.object({
-  password: z.string().min(10).max(200),
+  password: SafeText.min(10).max(200),
 });
 export type ApplyPasswordResetRequest = z.infer<
   typeof ApplyPasswordResetRequest
@@ -253,16 +287,16 @@ export const Worker = z.object({
 export type Worker = z.infer<typeof Worker>;
 
 export const WorkerInput = z.object({
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
-  phone: z.string().max(40).nullable().optional(),
-  email: z.string().max(200).nullable().optional(),
-  jobTitle: z.string().max(120).nullable().optional(),
+  firstName: SafeText.min(1).max(100),
+  lastName: SafeText.min(1).max(100),
+  phone: SafeText.max(40).nullable().optional(),
+  email: SafeText.max(200).nullable().optional(),
+  jobTitle: SafeText.max(120).nullable().optional(),
   engagement: Engagement.optional(),
-  hiredAt: z.string(),
-  endedAt: z.string().nullable().optional(),
-  team: z.string().max(120).nullable().optional(),
-  supervisorId: z.string().nullable().optional(),
+  hiredAt: SafeText,
+  endedAt: SafeText.nullable().optional(),
+  team: SafeText.max(120).nullable().optional(),
+  supervisorId: SafeText.nullable().optional(),
 });
 export type WorkerInput = z.infer<typeof WorkerInput>;
 
@@ -272,7 +306,7 @@ export const WorkerResponse = z.object({ worker: Worker });
 export type WorkerResponse = z.infer<typeof WorkerResponse>;
 
 export const WorkerActivePatch = z.object({ active: z.boolean() });
-export const WorkerLinkPatch = z.object({ userId: z.string().nullable() });
+export const WorkerLinkPatch = z.object({ userId: SafeText.nullable() });
 
 export const EquipmentCategory = z.object({
   id: z.string(),
@@ -291,8 +325,8 @@ export const EquipmentCategory = z.object({
 export type EquipmentCategory = z.infer<typeof EquipmentCategory>;
 
 export const CategoryInput = z.object({
-  code: z.string().min(2).max(40),
-  name: z.string().min(1).max(80),
+  code: SafeText.min(2).max(40),
+  name: SafeText.min(1).max(80),
   meter: Meter,
   sortOrder: z.number().optional(),
 });
@@ -324,13 +358,13 @@ export const Machine = z.object({
 export type Machine = z.infer<typeof Machine>;
 
 export const MachineInput = z.object({
-  code: z.string().min(2).max(20),
-  name: z.string().min(1).max(120),
-  categoryId: z.string(),
-  make: z.string().max(80).nullable().optional(),
-  model: z.string().max(80).nullable().optional(),
-  serialNo: z.string().max(80).nullable().optional(),
-  plate: z.string().max(20).nullable().optional(),
+  code: SafeText.min(2).max(20),
+  name: SafeText.min(1).max(120),
+  categoryId: SafeText,
+  make: SafeText.max(80).nullable().optional(),
+  model: SafeText.max(80).nullable().optional(),
+  serialNo: SafeText.max(80).nullable().optional(),
+  plate: SafeText.max(20).nullable().optional(),
   year: z.number().int().nullable().optional(),
   ownership: Ownership.optional(),
   meter: Meter.optional(),
@@ -433,8 +467,8 @@ export const ObligationType = z.object({
 export type ObligationType = z.infer<typeof ObligationType>;
 
 export const ObligationTypeInput = z.object({
-  code: z.string().min(2).max(40),
-  label: z.string().min(1).max(80),
+  code: SafeText.min(2).max(40),
+  label: SafeText.min(1).max(80),
   entityKind: ObligationEntityKind,
   defaultReminderDays: z.array(z.number().int().min(0).max(365)).max(8).optional(),
   requiresAttachment: z.boolean().optional(),
@@ -470,6 +504,19 @@ export const ObligationAttachment = z.object({
   createdAt: IsoDate,
 });
 export type ObligationAttachment = z.infer<typeof ObligationAttachment>;
+
+/**
+ * Registracija priloga (A1): ime i kontrolni zbir su tekst na granici API-ja, pa idu
+ * kroz `SafeText` — NUL u imenu fajla ne smije stići do baze. `headBase64` su prva
+ * 32 bajta fajla (base64), samo za određivanje tipa iz sadržaja.
+ */
+export const AttachmentRegisterRequest = z.object({
+  fileName: SafeText,
+  sizeBytes: z.number(),
+  sha256: SafeText,
+  headBase64: SafeText.optional(),
+});
+export type AttachmentRegisterRequest = z.infer<typeof AttachmentRegisterRequest>;
 
 export const Obligation = z.object({
   id: z.string(),
@@ -524,33 +571,33 @@ export const ObligationResponse = z.object({
 export type ObligationResponse = z.infer<typeof ObligationResponse>;
 
 export const ObligationInput = z.object({
-  typeId: z.string(),
-  workerId: z.string().nullable().optional(),
-  machineId: z.string().nullable().optional(),
-  projectId: z.string().nullable().optional(),
+  typeId: SafeText,
+  workerId: SafeText.nullable().optional(),
+  machineId: SafeText.nullable().optional(),
+  projectId: SafeText.nullable().optional(),
   scopeCompany: z.boolean().optional(),
-  number: z.string().max(120).nullable().optional(),
-  issuer: z.string().max(200).nullable().optional(),
-  issuedAt: z.string().nullable().optional(),
-  expiresAt: z.string().nullable().optional(),
-  responsibleUserId: z.string().nullable().optional(),
-  note: z.string().max(2000).nullable().optional(),
+  number: SafeText.max(120).nullable().optional(),
+  issuer: SafeText.max(200).nullable().optional(),
+  issuedAt: SafeText.nullable().optional(),
+  expiresAt: SafeText.nullable().optional(),
+  responsibleUserId: SafeText.nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 });
 export type ObligationInput = z.infer<typeof ObligationInput>;
 
 /** Obnova = nova verzija. Stara ostaje; `expiresAt` je novi rok. */
 export const ObligationRenewInput = z.object({
-  number: z.string().max(120).nullable().optional(),
-  issuer: z.string().max(200).nullable().optional(),
-  issuedAt: z.string().nullable().optional(),
-  expiresAt: z.string(),
-  note: z.string().max(2000).nullable().optional(),
+  number: SafeText.max(120).nullable().optional(),
+  issuer: SafeText.max(200).nullable().optional(),
+  issuedAt: SafeText.nullable().optional(),
+  expiresAt: SafeText,
+  note: SafeText.max(2000).nullable().optional(),
 });
 export type ObligationRenewInput = z.infer<typeof ObligationRenewInput>;
 
 /** Ispravka greške u unosu — dozvoljena 24 h od unosa, bilježi se sa starom i novom vrijednošću. */
 export const ObligationCorrectInput = ObligationRenewInput.partial({ expiresAt: true }).extend({
-  expiresAt: z.string().nullable().optional(),
+  expiresAt: SafeText.nullable().optional(),
 });
 export type ObligationCorrectInput = z.infer<typeof ObligationCorrectInput>;
 
@@ -692,15 +739,15 @@ export const ProjectResponse = z.object({ project: Project });
 export type ProjectResponse = z.infer<typeof ProjectResponse>;
 
 export const ProjectInput = z.object({
-  code: z.string().min(1).max(40),
-  name: z.string().min(1).max(200),
+  code: SafeText.min(1).max(40),
+  name: SafeText.min(1).max(200),
   status: ProjectStatus.optional(),
-  siteAddress: z.string().max(300).nullable().optional(),
-  sitePlace: z.string().max(120).nullable().optional(),
-  startsOn: z.string().nullable().optional(),
-  endsOn: z.string().nullable().optional(),
-  managerWorkerId: z.string().nullable().optional(),
-  note: z.string().max(2000).nullable().optional(),
+  siteAddress: SafeText.max(300).nullable().optional(),
+  sitePlace: SafeText.max(120).nullable().optional(),
+  startsOn: SafeText.nullable().optional(),
+  endsOn: SafeText.nullable().optional(),
+  managerWorkerId: SafeText.nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 export type ProjectInput = z.infer<typeof ProjectInput>;
@@ -712,17 +759,17 @@ export type ProjectInput = z.infer<typeof ProjectInput>;
  * čin (dodjela bez iznimke bi bila odbijena, a iznimka bez dodjele ne visi ni o čemu).
  */
 export const AssignmentInput = z.object({
-  workerId: z.string().nullable().optional(),
-  machineId: z.string().nullable().optional(),
-  fromDate: z.string(),
-  toDate: z.string().nullable().optional(),
-  note: z.string().max(500).nullable().optional(),
+  workerId: SafeText.nullable().optional(),
+  machineId: SafeText.nullable().optional(),
+  fromDate: SafeText,
+  toDate: SafeText.nullable().optional(),
+  note: SafeText.max(500).nullable().optional(),
   overrides: z
     .array(
       z.object({
-        obligationId: z.string(),
-        reason: z.string().min(10).max(500),
-        validUntil: z.string(),
+        obligationId: SafeText,
+        reason: SafeText.max(500),
+        validUntil: SafeText,
       }),
     )
     .max(20)
@@ -732,7 +779,7 @@ export type AssignmentInput = z.infer<typeof AssignmentInput>;
 
 export const AssignmentChangeInput = z.discriminatedUnion("action", [
   z.object({ action: z.literal("END") }),
-  z.object({ action: z.literal("VOID"), reason: z.string().trim().min(10).max(500) }),
+  z.object({ action: z.literal("VOID"), reason: SafeText.trim().min(10).max(500) }),
 ]);
 export type AssignmentChangeInput = z.infer<typeof AssignmentChangeInput>;
 
@@ -800,12 +847,12 @@ export const OverrideRequestsResponse = z.object({ requests: z.array(OverrideReq
 export type OverrideRequestsResponse = z.infer<typeof OverrideRequestsResponse>;
 
 export const OverrideRequestInput = z.object({
-  obligationId: z.string(),
-  workerId: z.string().nullable().optional(),
-  machineId: z.string().nullable().optional(),
-  reason: z.string().min(10).max(500),
-  fromDate: z.string(),
-  toDate: z.string().nullable().optional(),
+  obligationId: SafeText,
+  workerId: SafeText.nullable().optional(),
+  machineId: SafeText.nullable().optional(),
+  reason: SafeText.min(10).max(500),
+  fromDate: SafeText,
+  toDate: SafeText.nullable().optional(),
 });
 export type OverrideRequestInput = z.infer<typeof OverrideRequestInput>;
 
@@ -814,9 +861,9 @@ export type OverrideRequestResponse = z.infer<typeof OverrideRequestResponse>;
 
 /** Odobrenje: rok je OBAVEZAN — iznimka bez roka je trajno gašenje pravila. */
 export const OverrideApproveInput = z.object({
-  validUntil: z.string(),
-  fromDate: z.string().optional(),
-  toDate: z.string().nullable().optional(),
+  validUntil: SafeText,
+  fromDate: SafeText.optional(),
+  toDate: SafeText.nullable().optional(),
 });
 export type OverrideApproveInput = z.infer<typeof OverrideApproveInput>;
 
@@ -901,9 +948,9 @@ export type WorkdayConflictCountsResponse = z.infer<typeof WorkdayConflictCounts
 /** Razlog je vidljiv autoru odbačenog unosa; interna napomena nikad ne ide na uređaj. */
 export const ResolveConflictInput = z.object({
   kind: z.enum(["ACCEPT_SERVER", "ACCEPT_RECEIVED", "CORRECTED_TIMES", "REJECTED"]),
-  reason: z.string().min(10).max(500),
-  internalNote: z.string().min(1).max(2000).nullable().optional(),
-  idempotencyKey: z.string().min(1).max(200),
+  reason: SafeText.min(10).max(500),
+  internalNote: SafeText.min(1).max(2000).nullable().optional(),
+  idempotencyKey: SafeText.min(1).max(200),
   correctedTimes: ConflictEntryTimes.optional(),
   correctedTarget: z.enum(["SERVER", "RECEIVED"]).optional(),
 });

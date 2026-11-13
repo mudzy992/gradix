@@ -5,6 +5,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { OverrideApproveInput } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { approveOverride, isServiceError } from "@/server/project-service";
@@ -19,12 +20,9 @@ export async function POST(
     const guardResult = await guard(request, "projects.override");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as {
-      validUntil?: string;
-      fromDate?: string;
-      toDate?: string | null;
-    } | null;
-    if (!input?.validUntil) return fail("VALIDATION_FAILED", "Nedostaje rok do kojeg iznimka važi.");
+    const parsed = OverrideApproveInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje rok do kojeg iznimka važi.");
+    const input = parsed.data;
 
     const { requestId } = await context.params;
     const result = await approveOverride(

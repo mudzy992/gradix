@@ -47,6 +47,7 @@ import {
   SyncPushResponse,
   UsersResponse,
   AcceptInvitationRequest,
+  AttachmentRegisterRequest,
   ObligationAttachment,
   IsoDate,
   ObligationCorrectInput,
@@ -250,7 +251,7 @@ export const ROUTES = [
     summary: "Izmjena podataka radnika.",
     auth: true,
     permission: "workers.manage",
-    request: WorkerInput,
+    request: WorkerInput.partial(),
     response: WorkerResponse,
   },
   {
@@ -313,7 +314,7 @@ export const ROUTES = [
     summary: "Izmjena mašine; vrsta brojila samo dok brojilo nema vrijednost.",
     auth: true,
     permission: "equipment.manage",
-    request: MachineInput,
+    request: MachineInput.partial(),
     response: MachineResponse,
   },
   {
@@ -382,7 +383,7 @@ export const ROUTES = [
     summary: "Izmjena podataka obaveze (veza, tip, odgovorni) — bez novog roka.",
     auth: true,
     permission: "obligations.manage",
-    request: ObligationInput,
+    request: ObligationInput.partial(),
     response: ObligationResponse,
   },
   {
@@ -436,7 +437,7 @@ export const ROUTES = [
     summary: "Izmjena tipa: naziv, pragovi, obavezan prilog, deaktivacija.",
     auth: true,
     permission: "obligations.manage",
-    request: ObligationTypeInput,
+    request: ObligationTypeInput.partial(),
     response: ObligationTypeResponse,
   },
   {
@@ -445,7 +446,7 @@ export const ROUTES = [
     summary: "Prilog: server vrati potpisan PUT i id u stanju „pending“.",
     auth: true,
     permission: "obligations.manage",
-    request: z.object({ fileName: z.string(), sizeBytes: z.number(), sha256: z.string() }),
+    request: AttachmentRegisterRequest,
     response: z.object({
       attachment: ObligationAttachment,
       uploadUrl: z.string(),

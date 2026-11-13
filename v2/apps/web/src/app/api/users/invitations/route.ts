@@ -5,21 +5,13 @@
  * jedini put je nova pozivnica — prethodna se opoziva u istoj transakciji.
  */
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import { fail, internal, ok, type ErrorCode } from "@/server/api";
+import { InviteRequest } from "@gradix/contracts";
 import { issueInvitation, type Role, type Scope } from "@/server/access-service";
 import { getVerifiedPool } from "@/server/db";
 import { clientIp, guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  email: z.string().min(3).max(200),
-  roles: z.array(z.string()).min(1).max(5),
-  // Opseg ima dvije vrijednosti; `PROJECTS` se vraća u R2 (docs/PLAN-R2.md).
-  // Pozivnica ne bira opseg umjesto pozivaoca — izbor je obavezan.
-  scope: z.enum(["COMPANY", "SELF"]),
-});
 
 const CODE_MAP: Record<string, ErrorCode> = {
   FORBIDDEN: "FORBIDDEN",
@@ -33,7 +25,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "users.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+    const parsed = InviteRequest.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return fail("VALIDATION_FAILED", "Provjerite email i rolu.");
 
     const result = await issueInvitation(await getVerifiedPool(), guardResult.ctx.companyId, {

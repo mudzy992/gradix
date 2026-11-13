@@ -7,7 +7,7 @@
  * Isti inventar postoji i na mobilnom (apps/mobile/src/ui) gdje platforma to dozvoljava.
  */
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { Button, Card, Icon, IconButton } from "./index";
+import { Button, Card, Icon, IconButton } from "./primitives";
 
 export function Avatar({ name, size = "md", imageUrl }: { name: string; size?: "sm" | "md" | "lg"; imageUrl?: string }) {
   const initials = name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase();

@@ -5,8 +5,9 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { WorkerInput } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
-import { createWorker, isServiceError, listWorkers, type WorkerInput } from "@/server/equipment-service";
+import { createWorker, isServiceError, listWorkers } from "@/server/equipment-service";
 import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +28,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "workers.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as WorkerInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = WorkerInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const result = await createWorker(await getVerifiedPool(), guardResult.ctx.companyId, {
       userId: guardResult.ctx.userId,
       roles: guardResult.ctx.roles,

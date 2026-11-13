@@ -7,6 +7,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { hasControlChars } from "@gradix/contracts";
 import { guard } from "@/server/guard";
 import { getVerifiedPool } from "@/server/db";
 import { listAudit } from "@/server/rbac-service";
@@ -26,6 +27,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (!guardResult.ok) return guardResult.response;
 
     const params = request.nextUrl.searchParams;
+    // A1: kontrolni znakovi (npr. NUL) u filteru nisu nikad legitiman unos — odbijaju se
+    // na granici, da ne stignu do baze (Postgres odbija NUL u string parametru).
+    for (const value of params.values()) {
+      if (hasControlChars(value)) {
+        return fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.");
+      }
+    }
     const action = params.get("action") ?? undefined;
     const entityType = params.get("entityType") ?? undefined;
     if (action && !AUDIT_ACTIONS.includes(action as (typeof AUDIT_ACTIONS)[number])) {

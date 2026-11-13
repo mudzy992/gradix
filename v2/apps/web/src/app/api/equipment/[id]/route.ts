@@ -1,8 +1,9 @@
 /** PATCH /api/equipment/:id — izmjena mašine (`equipment.manage`). */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { MachineInput } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
-import { updateMachine, isServiceError, type MachineInput } from "@/server/equipment-service";
+import { updateMachine, isServiceError } from "@/server/equipment-service";
 import { guard } from "@/server/guard";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const guardResult = await guard(request, "equipment.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as MachineInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = MachineInput.partial().safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const { id } = await context.params;
     const result = await updateMachine(
       await getVerifiedPool(),

@@ -107,14 +107,14 @@ export type ObligationTypeInput = {
 
 const ENTITY_KINDS = ["WORKER", "MACHINE", "PROJECT", "COMPANY"] as const;
 
-function validateTypeInput(input: ObligationTypeInput): ServiceError | null {
+function validateTypeInput(input: Partial<ObligationTypeInput>): ServiceError | null {
   if (!/^[A-Z0-9][A-Z0-9_]{1,39}$/.test(input.code?.trim().toUpperCase() ?? "")) {
     return { code: "VALIDATION_FAILED", message: "Oznaka tipa: 2–40 znakova, velika slova, brojevi i donja crta." };
   }
   if (!input.label?.trim() || input.label.trim().length > 80) {
     return { code: "VALIDATION_FAILED", message: "Naziv tipa je obavezan (do 80 znakova)." };
   }
-  if (!(ENTITY_KINDS as readonly string[]).includes(input.entityKind)) {
+  if (!input.entityKind || !(ENTITY_KINDS as readonly string[]).includes(input.entityKind)) {
     return { code: "VALIDATION_FAILED", message: "Tip se odnosi na radnika, mašinu, projekat ili firmu." };
   }
   const days = input.defaultReminderDays;
@@ -154,7 +154,7 @@ export async function createObligationType(
         id,
         companyId,
         input.code.trim().toUpperCase(),
-        input.label.trim(),
+        input.label!.trim(), // validateTypeInput je već odbacio prazan label
         input.entityKind,
         input.defaultReminderDays ?? [60, 30, 15, 7],
         input.requiresAttachment ?? false,
@@ -182,7 +182,7 @@ export async function updateObligationType(
   companyId: CompanyId,
   actor: Actor,
   typeId: string,
-  input: ObligationTypeInput,
+  input: Partial<ObligationTypeInput>,
 ): Promise<ObligationTypeRow | ServiceError> {
   const invalid = validateTypeInput(input);
   if (invalid) return invalid;
@@ -213,7 +213,7 @@ export async function updateObligationType(
         WHERE id = $1`,
       [
         typeId,
-        input.label.trim(),
+        input.label!.trim(), // validateTypeInput je već odbacio prazan label
         input.entityKind,
         input.defaultReminderDays ?? null,
         input.requiresAttachment ?? null,
@@ -816,7 +816,7 @@ export async function updateObligation(
   companyId: CompanyId,
   actor: Actor,
   obligationId: string,
-  input: ObligationInput,
+  input: Partial<ObligationInput>,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   const scope = resolveScope(input);
   if ("code" in scope) return scope;

@@ -7,9 +7,10 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { ProjectInput, hasControlChars } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
-import { createProject, isServiceError, listProjects, type ProjectInput } from "@/server/project-service";
+import { createProject, isServiceError, listProjects } from "@/server/project-service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (!guardResult.ok) return guardResult.response;
 
     const params = request.nextUrl.searchParams;
+    // A1: kontrolni znakovi (npr. NUL) u filteru nisu nikad legitiman unos — odbijaju se
+    // na granici, da ne stignu do baze (Postgres odbija NUL u string parametru).
+    for (const value of params.values()) {
+      if (hasControlChars(value)) {
+        return fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.");
+      }
+    }
     const projects = await listProjects(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
@@ -46,9 +54,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, "projects.manage");
     if (!guardResult.ok) return guardResult.response;
 
-    const input = (await request.json().catch(() => null)) as ProjectInput | null;
-    if (!input) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva.");
-
+    const parsed = ProjectInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje tijelo zahtjeva ili unos nije ispravan.");
+    const input = parsed.data;
     const result = await createProject(
       await getVerifiedPool(),
       guardResult.ctx.companyId,

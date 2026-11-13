@@ -10,6 +10,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { hasControlChars } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { isServiceError } from "@/server/equipment-service";
 import { guard } from "@/server/guard";
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const file = form.get("file");
     if (!(file instanceof File)) return fail("VALIDATION_FAILED", "Datoteka nedostaje.");
+    // A1: ime datoteke završava u tragu uvoza (audit, jsonb) — NUL se odbija na granici.
+    if (hasControlChars(file.name)) {
+      return fail("VALIDATION_FAILED", "Ime datoteke sadrži nedozvoljene kontrolne znakove.");
+    }
 
     const bytes = Buffer.from(await file.arrayBuffer());
     const parsed = await parseWorkbook(bytes, file.name);
