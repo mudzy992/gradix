@@ -1,12 +1,20 @@
 name: Mobilni E2E (Maestro)
 
 # Noćna regresija mobilne aplikacije protiv pravog API-ja + ručno pokretanje.
-# Zaseban workflow, a ne dio ci-v2.yml: emulator + APK gradnja dodaju ~20-30 minuta,
-# što ne ide na svaki push (ci-v2.yml je to i najavio u svom zaglavlju).
+# Zaseban workflow, a ne dio ci-v2.yml: emulator + APK gradnja dodaju značajno
+# vrijeme, što ne ide na svaki push (ci-v2.yml je to i najavio u svom zaglavlju).
 #
 # VAŽNO — noćni termin: GitHub `schedule` okidač radi SAMO s kopijom ovog fajla na
 # DEFAULT grani repozitorija. Dok god je fajl samo na radnoj grani, noćni run se ne
-# pokreće; ručno pokretanje (workflow_dispatch) s radne grane radi.
+# pokreće; ručno pokretanje (workflow_dispatch) s radne grane radi od spajanja u main.
+#
+# Arhitektura (modularno, po fazama):
+#   1. apk       — prebuild + gradnja release APK-a; APK se kešira po izvoru i
+#                  prosljeđuje sljedećem jobu kao artefakt (keš pogodak = preskočena
+#                  gradnja, noćni runovi su onda značajno kraći);
+#   2. mobilni-e2e — API s demo svijetom + Android emulator + Maestro tokovi.
+#                  Nezavisni timeout od gradnje: sporije gradnje ne smiju pojesti
+#                  budžet testiranja (prvi run je ovo platio otkazivanjem na 60 min).
 #
 # Šta pokriva: 5 autonomnih tokova iz v2/apps/mobile/maestro/ci/ (prijava + A1e
 # odjava→prijava, offline red, povratak mreže bez duplikata, grupni unos šefa).
@@ -43,21 +51,101 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
-  DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
-  AUTH_SECRET: ci-placeholder-secret-min-32-characters
-  # API teče na istom runneru; emulator dolazi do hostovog loopbacka preko 10.0.2.2.
-  # Vrijednost se peče u JS bundle pri gradnji APK-a (expo export:embed čita env i .env).
-  EXPO_PUBLIC_API_URL: http://10.0.2.2:3000
-  # Lozinka demo svijeta: tajna DEMO_LOZINKA ako je postavljena, inače poznata CI
-  # demo lozinka (nije tajna — ista vrijednost stoji u ci-v2.yml za web E2E).
-  SEED_PASSWORD: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
-
 jobs:
-  mobilni-e2e:
+  apk:
+    name: APK (prebuild + assembleRelease)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
+    env:
+      # Peče se u JS bundle pri gradnji: emulator dolazi do hosta preko 10.0.2.2.
+      EXPO_PUBLIC_API_URL: http://10.0.2.2:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Gradle keš
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-v1-${{ hashFiles('v2/pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-v1-
+
+      - name: Instalacija (pnpm)
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      # APK keširan po sadržaju izvora (app.json, src, lock): dokle god se mobilna
+      # aplikacija ne mijenja, gradnja se preskače — u ključu je i URL API-ja jer
+      # se peče u bundle.
+      - name: Keš APK-a (po izvoru)
+        id: apk-cache
+        uses: actions/cache@v4
+        with:
+          path: v2/apps/mobile/.ci-apk
+          key: apk-v1-${{ hashFiles('v2/apps/mobile/app.json', 'v2/apps/mobile/src/**', 'v2/apps/mobile/package.json', 'v2/pnpm-lock.yaml') }}-10.0.2.2
+
+      - name: Expo prebuild + cleartext samo za CI APK
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile
+        run: |
+          npx expo prebuild -p android --no-install
+          # CI APK razgovara s API-jem preko čistog http://10.0.2.2:3000, a Android
+          # blokira nešifriran saobraćaj u release gradnji. Ovaj patch diruje SAMO
+          # generisani CI artefakt — app.json i produkcijske gradnje (https) ostaju čisti.
+          sed -i 's|<application |<application android:usesCleartextTraffic="true" |' android/app/src/main/AndroidManifest.xml
+          test "$(grep -c 'usesCleartextTraffic' android/app/src/main/AndroidManifest.xml)" = "1"
+          echo "EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL" > .env
+
+      - name: Gradnja APK-a (assembleRelease)
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile/android
+        run: |
+          ./gradlew assembleRelease --stacktrace
+          mkdir -p ../.ci-apk
+          cp app/build/outputs/apk/release/app-release.apk ../.ci-apk/
+
+      - name: Provjera APK-a
+        working-directory: v2/apps/mobile
+        run: |
+          ls -lh .ci-apk/app-release.apk
+          sha256sum .ci-apk/app-release.apk
+
+      - name: APK za testni job (artefakt)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk/app-release.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  mobilni-e2e:
+    name: Emulator + Maestro tokovi
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+      DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      AUTH_SECRET: ci-placeholder-secret-min-32-characters
+      # Lozinka demo svijeta: tajna DEMO_LOZINKA ako je postavljena, inače poznata CI
+      # demo lozinka (nije tajna — ista vrijednost stoji u ci-v2.yml za web E2E).
+      SEED_PASSWORD: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
 
     services:
       postgres:
@@ -86,28 +174,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: v2/pnpm-lock.yaml
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      # Gradle keš (zavisnosti + wrapper): prva gradnja ~10-15 min, keširana 3-5 min.
-      - name: Gradle keš
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-v1-${{ hashFiles('v2/pnpm-lock.yaml') }}
-          restore-keys: gradle-${{ runner.os }}-v1-
-
-      # Slika sistema za emulator (~1,3 GB) — bez keša bi se skidala pri svakom runu.
-      - name: Keš Android sistemskih slika
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/lib/android/sdk/system-images
-          key: emulator-img-${{ runner.os }}-api34-default-x86_64-v1
-
       # Maestro CLI keširan u ~/.maestro; ako je binarna tu iz keša, preskače se download.
       - name: Keš Maestro CLI
         uses: actions/cache@v4
@@ -122,30 +188,22 @@ jobs:
           "$HOME/.maestro/bin/maestro" --version
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
+      # Slika sistema za emulator (~1,3 GB) — bez keša bi se skidala pri svakom runu.
+      - name: Keš Android sistemskih slika
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images
+          key: emulator-img-${{ runner.os }}-api34-default-x86_64-v1
+
       - name: Instalacija (pnpm)
         working-directory: v2
         run: pnpm install --frozen-lockfile
 
-      # ------------------------------ APK ------------------------------
-      # Release varijanta: JS bundle je UGRAĐEN u paket (debug bi tražio Metro na
-      # runneru). Expo šablon potpisuje release debug keystoreom, pa assembleRelease
-      # radi bez postavljanja potpisa; appId je ba.gradix.teren i u releaseu (bez sufiksa).
-      - name: Expo prebuild + cleartext samo za CI APK
-        working-directory: v2/apps/mobile
-        run: |
-          npx expo prebuild -p android --no-install
-          # CI APK razgovara s API-jem preko čistog http://10.0.2.2:3000, a Android
-          # blokira nešifriran saobraćaj u release gradnji. Ovaj patch diruje SAMO
-          # generisani CI artefakt — app.json i produkcijske gradnje (https) ostaju čisti.
-          sed -i 's|<application |<application android:usesCleartextTraffic="true" |' android/app/src/main/AndroidManifest.xml
-          test "$(grep -c 'usesCleartextTraffic' android/app/src/main/AndroidManifest.xml)" = "1"
-          echo "EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL" > .env
-
-      - name: Gradnja APK-a (assembleRelease)
-        working-directory: v2/apps/mobile/android
-        run: |
-          ./gradlew assembleRelease --stacktrace
-          ls -lh app/build/outputs/apk/release/
+      - name: Skidanje APK-a iz gradnje
+        uses: actions/download-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk
 
       # ---------------- API s demo svijetom (recepta iz ci-v2.yml) ----------------
       - name: Migracije i role
@@ -187,6 +245,16 @@ jobs:
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
+            # Ključni korak koji je prva verzija preskočila: APK mora biti instaliran
+            # na emulatoru prije maestro launchApp.
+            if adb install -r v2/apps/mobile/.ci-apk/app-release.apk; then
+              echo "::notice title=APK::instaliran na emulator"
+            else
+              echo "::error title=APK::instalacija na emulator pala"
+              exit 1
+            fi
+            adb shell pm list packages | grep ba.gradix.teren \
+              || { echo "::error title=APK::paket ba.gradix.teren nije nađen nakon instalacije"; exit 1; }
             bash v2/apps/mobile/scripts/maestro-ci.sh "$SCENARIJ" "$POKUSAJA"
 
       # ---------------- Dokazi (uvijek, i pri padu) ----------------
