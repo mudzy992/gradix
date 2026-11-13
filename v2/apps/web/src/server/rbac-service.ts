@@ -257,7 +257,9 @@ export async function listAudit(
   const limit = Math.min(Math.max(paging.limit ?? AUDIT_PAGE_DEFAULT, 1), AUDIT_PAGE_MAX);
 
   const values: unknown[] = [companyId];
-  const where: string[] = ["company_id = $1"];
+  // `company_id = $1` stoji DOSLOVNO u SQL predlošku dolje (B1: vidljiva druga
+  // linija odbrane pored RLS-a); ovdje idu samo filteri iz zahtjeva.
+  const where: string[] = [];
   const add = (sql: string, value: unknown) => {
     values.push(value);
     where.push(sql.replace("$?", `$${values.length}`));
@@ -292,7 +294,8 @@ export async function listAudit(
     }>(
       `SELECT id, action, entity_type, entity_id, actor_id, actor_email, metadata, created_at
          FROM audit_events
-        WHERE ${where.join(" AND ")}
+        WHERE company_id = $1
+          ${where.length > 0 ? `AND ${where.join(" AND ")}` : ""}
         ORDER BY created_at DESC, id DESC
         LIMIT $${values.length}`,
       values,

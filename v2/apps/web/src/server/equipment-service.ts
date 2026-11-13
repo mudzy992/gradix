@@ -10,7 +10,7 @@
  *
  * Svaka izmjena ide u istoj transakciji sa auditom (`withCompany` + `writeAudit`).
  */
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { writeAudit } from "./audit";
 import type { Actor } from "./rbac-service";
@@ -154,6 +154,7 @@ const WORKER_SELECT = `
     FROM workers w
     LEFT JOIN workers s ON s.company_id = w.company_id AND s.id = w.supervisor_id
     LEFT JOIN users u ON u.id = w.user_id
+   WHERE w.company_id = $1
 `;
 
 const toWorker = (row: Record<string, unknown>): WorkerRow => ({
@@ -176,7 +177,9 @@ const toWorker = (row: Record<string, unknown>): WorkerRow => ({
 
 export async function listWorkers(pool: Pool, companyId: CompanyId): Promise<WorkerRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const result = await client.query(`${WORKER_SELECT} ORDER BY w.is_active DESC, w.last_name, w.first_name`);
+    const result = await client.query(`${WORKER_SELECT} ORDER BY w.is_active DESC, w.last_name, w.first_name`, [
+      companyId,
+    ]);
     return result.rows.map(toWorker);
   });
 }
@@ -230,7 +233,7 @@ export async function createWorker(
       metadata: { engagement: valid.engagement },
     });
 
-    const created = await client.query(`SELECT * FROM (${WORKER_SELECT}) w WHERE w.id = $1`, [id]);
+    const created = await client.query(`SELECT * FROM (${WORKER_SELECT} AND w.id = $2) w`, [companyId, id]);
     return toWorker(created.rows[0]!);
   });
 }
@@ -290,7 +293,7 @@ export async function updateWorker(
       metadata: { engagement: valid.engagement },
     });
 
-    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT}) w WHERE w.id = $1`, [workerId]);
+    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT} AND w.id = $2) w`, [companyId, workerId]);
     return toWorker(updated.rows[0]!);
   });
 }
@@ -318,7 +321,7 @@ export async function setWorkerActive(
       entityId: workerId,
     });
 
-    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT}) w WHERE w.id = $1`, [workerId]);
+    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT} AND w.id = $2) w`, [companyId, workerId]);
     return toWorker(updated.rows[0]!);
   });
 }
@@ -372,7 +375,7 @@ export async function linkWorkerUser(
       metadata: userId ? { userId } : {},
     });
 
-    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT}) w WHERE w.id = $1`, [workerId]);
+    const updated = await client.query(`SELECT * FROM (${WORKER_SELECT} AND w.id = $2) w`, [companyId, workerId]);
     return toWorker(updated.rows[0]!);
   });
 }
@@ -393,9 +396,11 @@ export async function listCategories(pool: Pool, companyId: CompanyId): Promise<
   return withCompany(pool, companyId, async (client) => {
     const result = await client.query(
       `SELECT c.id, c.code, c.name, c.meter, c.is_active, c.sort_order,
-              (SELECT count(*)::int FROM machines m WHERE m.category_id = c.id) AS machine_count
+              (SELECT count(*)::int FROM machines m WHERE m.category_id = c.id AND m.company_id = c.company_id) AS machine_count
          FROM equipment_categories c
+        WHERE c.company_id = $1
         ORDER BY c.sort_order, c.name`,
+      [companyId],
     );
     return result.rows.map((row) => ({
       id: String(row.id),
@@ -507,6 +512,7 @@ const MACHINE_SELECT = `
          m.meter_updated_at, m.is_active
     FROM machines m
     JOIN equipment_categories c ON c.company_id = m.company_id AND c.id = m.category_id
+   WHERE m.company_id = $1
 `;
 
 const toMachine = (row: Record<string, unknown>): MachineRow => ({
@@ -530,7 +536,9 @@ const toMachine = (row: Record<string, unknown>): MachineRow => ({
 
 export async function listMachines(pool: Pool, companyId: CompanyId): Promise<MachineRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const result = await client.query(`${MACHINE_SELECT} ORDER BY m.is_active DESC, m.code`);
+    const result = await client.query(`${MACHINE_SELECT} ORDER BY m.is_active DESC, m.code`, [
+      companyId,
+    ]);
     return result.rows.map(toMachine);
   });
 }
@@ -611,7 +619,7 @@ export async function createMachine(
       metadata: { code, categoryId: input.categoryId, meter },
     });
 
-    const created = await client.query(`SELECT * FROM (${MACHINE_SELECT}) m WHERE m.id = $1`, [id]);
+    const created = await client.query(`SELECT * FROM (${MACHINE_SELECT} AND m.id = $2) m`, [companyId, id]);
     return toMachine(created.rows[0]!);
   });
 }
@@ -694,7 +702,7 @@ export async function updateMachine(
         input.isActive === undefined ? {} : { isActive: input.isActive, code: input.code?.trim().toUpperCase() ?? null },
     });
 
-    const updated = await client.query(`SELECT * FROM (${MACHINE_SELECT}) m WHERE m.id = $1`, [machineId]);
+    const updated = await client.query(`SELECT * FROM (${MACHINE_SELECT} AND m.id = $2) m`, [companyId, machineId]);
     return toMachine(updated.rows[0]!);
   });
 }
@@ -749,13 +757,7 @@ export async function setMeterValue(
       metadata: { from: previous, to: value },
     });
 
-    const updated = await client.query(`SELECT * FROM (${MACHINE_SELECT}) m WHERE m.id = $1`, [machineId]);
+    const updated = await client.query(`SELECT * FROM (${MACHINE_SELECT} AND m.id = $2) m`, [companyId, machineId]);
     return toMachine(updated.rows[0]!);
   });
-}
-
-/** Za uvoz: postojeće oznake mašina u firmi (da se red preskoči, ne duplira). */
-export async function existingMachineCodes(client: PoolClient): Promise<Set<string>> {
-  const result = await client.query<{ code: string }>("SELECT code FROM machines");
-  return new Set(result.rows.map((row) => row.code));
 }

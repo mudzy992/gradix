@@ -204,7 +204,8 @@ export async function previewInvitation(
     }>(
       `SELECT i.email, i.roles::text[] AS roles, i.scope, i.expires_at, c.name AS company_name
          FROM invitations i JOIN companies c ON c.id = i.company_id
-        WHERE i.used_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()`,
+        WHERE i.token_hash = $1 AND i.used_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > now()`,
+      [hashToken(token)],
     );
     await client.query("COMMIT");
     const row = result.rows[0];
@@ -402,8 +403,8 @@ export async function setPasswordWithToken(
     ]);
 
     const sessions = await client.query(
-      "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL RETURNING id",
-      [row.user_id],
+      "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND revoked_at IS NULL RETURNING id",
+      [row.user_id, row.company_id],
     );
 
     await writeAudit(client, {
@@ -461,8 +462,8 @@ export async function changeOwnPassword(
     );
     // Tekuća sesija ostaje, sve ostale se gase.
     const revoked = await client.query(
-      "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL RETURNING id",
-      [ctx.userId, ctx.sessionId],
+      "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND id <> $3 AND revoked_at IS NULL RETURNING id",
+      [ctx.userId, ctx.companyId, ctx.sessionId],
     );
 
     await writeAudit(client, {
@@ -511,8 +512,8 @@ export async function setUserActive(
     const revoked = active
       ? { rowCount: 0 }
       : await client.query(
-          "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL RETURNING id",
-          [targetUserId],
+          "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND revoked_at IS NULL RETURNING id",
+          [targetUserId, companyId],
         );
 
     if (!active) {
@@ -522,8 +523,8 @@ export async function setUserActive(
         [companyId, target.email],
       );
       await client.query(
-        "UPDATE password_resets SET revoked_at = now() WHERE user_id = $1 AND used_at IS NULL AND revoked_at IS NULL",
-        [targetUserId],
+        "UPDATE password_resets SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND used_at IS NULL AND revoked_at IS NULL",
+        [targetUserId, companyId],
       );
     }
 

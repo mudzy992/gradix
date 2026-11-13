@@ -361,6 +361,30 @@ DATABASE_ADMIN_URL=... DATABASE_URL=... \
   pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts
 ```
 
+### 5.4. Demo podaci za Pregled (B4)
+
+`scripts/demo-pregled.ts` priprema demo firmu za nadzornu ploču
+(Pregled): jednu **blokiranu dodjelu** mašine zbog istekle registracije
+(dedicirani demo tip `PRG_REGISTRACIJA`, rok 12 dana u prošlosti — postojeći
+tipovi firme se ne diraju), **dane za provjeru** (predat dan sa segmentom
+nepoznatog kraja `UNKNOWN_END`, predat dan sa redovnim segmentima i pauzom)
+i **današnji dan u toku** sa otvorenim segmentom (`OPEN`), te **podatke
+sinhronizacije** — zadnju sinhronizaciju po korisniku (`sync_receipts`) i
+neuspjele stavke (`sync_conflicts`, status `OPEN`). Svi podaci su izmišljeni.
+
+Naredba je idempotentna (svoje redove prepoznaje po `prg_` prefiksu i briše
+ih prije upisa, pa su datumi uvijek prema današnjem danu), radi samo za
+demo firmu i pokreće se ručno pod administratorskom rolom baze — nikad iz
+aplikacije i nikad automatski:
+
+```sh
+DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts
+```
+
+Ponašanje pokriva `src/server/demo-pregled.integration.test.ts`: odbijanje
+druge firme prije upisa, tačno jedna blokirana dodjela kroz pravi servis
+(`listAssignments`), stanja dana, sinhronizacija i idempotentnost.
+
 ## 11. Retencija podataka (razvojne pretpostavke)
 
 > Ovo su razvojne pretpostavke, **ne pravno mišljenje**. Prije produkcije

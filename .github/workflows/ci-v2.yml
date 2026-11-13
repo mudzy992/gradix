@@ -143,6 +143,13 @@ jobs:
           psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
           ./infra/scripts/db-apply.sh
 
+      # B1: svaki SQL upit nad tenant tabelom mora nositi company_id (vidljiva druga
+      # linija odbrane pored RLS-a). Katalog baze je upravo primijenjen migracijama,
+      # pa skripta unakrsno provjerava i svoju listu tenant tabela.
+      - name: Izolacija tenanata (B1)
+        working-directory: v2
+        run: pnpm check-tenant-sql
+
       # Isti runtime preflight, kao DATABASE_URL aplikacijska rola (gradix_app), prije testova.
       # Time CI čita isti skup katalogâ kao staging, a ne administratorsku DATABASE_ADMIN_URL.
       - name: Runtime preflight (RLS, aplikacijska rola, preklapanje, scope default)

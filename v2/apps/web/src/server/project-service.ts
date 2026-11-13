@@ -440,7 +440,11 @@ export async function updateProject(
     if (input.isActive !== undefined) set("is_active", input.isActive);
 
     if (sets.length > 0) {
-      await client.query(`UPDATE projects SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, params);
+      params.push(companyId);
+      await client.query(
+        `UPDATE projects SET ${sets.join(", ")}, updated_at = now() WHERE id = $1 AND company_id = $${params.length}`,
+        params,
+      );
     }
 
     // Status ima svoju radnju u auditu: „projekat završen" je ono što ljudi traže u tragu, a ne
@@ -854,8 +858,8 @@ export async function changeAssignment(
 
       try {
         await client.query(
-          "UPDATE project_assignments SET to_date = $1 WHERE id = $2",
-          [today, assignmentId],
+          "UPDATE project_assignments SET to_date = $1 WHERE id = $2 AND company_id = $3",
+          [today, assignmentId, companyId],
         );
       } catch (error) {
         if (isRetroactiveAssignmentEndError(error)) {
@@ -888,9 +892,9 @@ export async function changeAssignment(
       const voided = await client.query<{ voided_at: Date }>(
         `UPDATE project_assignments
             SET voided_at = clock_timestamp(), voided_by = $1, void_reason = $2
-          WHERE id = $3
+          WHERE id = $3 AND company_id = $4
           RETURNING voided_at`,
-        [actor.userId, input.reason.trim(), assignmentId],
+        [actor.userId, input.reason.trim(), assignmentId, companyId],
       );
       voidedAt = voided.rows[0]?.voided_at ?? null;
     } catch (error) {
@@ -1248,8 +1252,8 @@ export async function approveOverride(
     await client.query(
       `UPDATE project_assignment_overrides
           SET assignment_id = $2, valid_until = $3, approved_at = now(), approved_by = $4
-        WHERE id = $1`,
-      [requestId, id, input.validUntil, actor.userId],
+        WHERE id = $1 AND company_id = $5`,
+      [requestId, id, input.validUntil, actor.userId, companyId],
     );
 
     await writeAudit(client, {

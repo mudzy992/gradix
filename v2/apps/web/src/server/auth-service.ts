@@ -105,8 +105,8 @@ export async function rotateRefresh(token: string, now = new Date()): Promise<Re
   const rotated = await withCompany(pool, session!.company_id as CompanyId, async (client) => {
     // Atomski claim: drugi paralelni zahtjev sa istim tokenom ne smije proći.
     const claimed = await client.query(
-      "UPDATE sessions SET revoked_at = $1 WHERE id = $2 AND revoked_at IS NULL RETURNING id",
-      [now, session!.id],
+      "UPDATE sessions SET revoked_at = $1 WHERE id = $2 AND company_id = $3 AND revoked_at IS NULL RETURNING id",
+      [now, session!.id, session!.company_id],
     );
     if (claimed.rowCount === 0) return false;
     await client.query(
@@ -130,12 +130,18 @@ export async function rotateRefresh(token: string, now = new Date()): Promise<Re
 
 export async function revokeSession(sessionId: string, companyId: CompanyId, now = new Date()): Promise<void> {
   await withCompany(await getVerifiedPool(), companyId, async (client) => {
-    await client.query("UPDATE sessions SET revoked_at = $1 WHERE id = $2 AND revoked_at IS NULL", [now, sessionId]);
+    await client.query(
+      "UPDATE sessions SET revoked_at = $1 WHERE id = $2 AND company_id = $3 AND revoked_at IS NULL",
+      [now, sessionId, companyId],
+    );
   });
 }
 
 export async function revokeAllForUser(userId: string, companyId: CompanyId, now = new Date()): Promise<void> {
   await withCompany(await getVerifiedPool(), companyId, async (client) => {
-    await client.query("UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL", [now, userId]);
+    await client.query(
+      "UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND company_id = $3 AND revoked_at IS NULL",
+      [now, userId, companyId],
+    );
   });
 }
