@@ -47,16 +47,16 @@ announce notice "APK instaliran na emulator"
 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
 sleep 8
 resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -oE '(topResumedActivity|mResumedActivity)=[^ }]*[^ }]' | cut -c1-200)"
-announce notice "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
+announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
 adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
 tekstovi="$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200)"
-announce notice "dimna proba — vidljivi tekstovi (8s): ${tekstovi:-nema teksta u hijerarhiji}"
+announce warning "dimna proba — vidljivi tekstovi (8s): ${tekstovi:-nema teksta u hijerarhiji}"
 # Drugi pogled nakon još 20s: ako se app zaglavio na splashu/spinneru, ovo to
 # razotkrije (prazni tekstovi i nakon 28s = bootstrap se nije završio).
 sleep 20
 adb shell uiautomator dump /sdcard/uidump2.xml >/dev/null 2>&1 || true
 tekstovi2="$(adb shell cat /sdcard/uidump2.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200)"
-announce notice "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
+announce warning "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
 jserr="$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -6 | tr '\n' ' ' | cut -c1-220)"
 if [ -n "$jserr" ]; then
   announce error "dimna proba — JS greške: $jserr"
