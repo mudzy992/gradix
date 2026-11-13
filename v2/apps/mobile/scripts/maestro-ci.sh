@@ -27,8 +27,15 @@ MAKS_TRAJANJE=300  # sekundi po pokušaju toka
 
 cd "$(dirname "$0")/.."  # apps/mobile
 
-if ! command -v maestro >/dev/null 2>&1; then
-  echo "maestro nije na PATH-u" >&2
+# Rezolucija maestro binarne: PATH, pa fallback na standardnu lokaciju
+# instalacije (~/.maestro/bin) — GITHUB_PATH iz prethodnog koraka treba da je
+# dovoljan, ali fallback košta ništa a spašava ručna pokretanja.
+MAESTRO_BIN="$(command -v maestro || true)"
+if [ -z "$MAESTRO_BIN" ] && [ -x "$HOME/.maestro/bin/maestro" ]; then
+  MAESTRO_BIN="$HOME/.maestro/bin/maestro"
+fi
+if [ -z "$MAESTRO_BIN" ]; then
+  echo "maestro nije nađen ni na PATH-u ni u ~/.maestro/bin" >&2
   exit 2
 fi
 if [ -z "${DEMO_LOZINKA:-}" ]; then
@@ -57,7 +64,7 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
     start=$(date +%s)
-    if timeout "$MAKS_TRAJANJE" maestro test \
+    if timeout "$MAKS_TRAJANJE" "$MAESTRO_BIN" test \
         --format junit \
         --output "$artifacts/junit/$name-pokusaj$attempt.xml" \
         --test-output-dir "$artifacts/test-output" \

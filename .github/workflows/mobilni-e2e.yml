@@ -240,22 +240,10 @@ jobs:
           target: default
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 3072
-          script: |
-            # Animacije gasimo — najveći izvor lažnih padova na emulatoru.
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
-            # Ključni korak koji je prva verzija preskočila: APK mora biti instaliran
-            # na emulatoru prije maestro launchApp.
-            if adb install -r v2/apps/mobile/.ci-apk/app-release.apk; then
-              echo "::notice title=APK::instaliran na emulator"
-            else
-              echo "::error title=APK::instalacija na emulator pala"
-              exit 1
-            fi
-            adb shell pm list packages | grep ba.gradix.teren \
-              || { echo "::error title=APK::paket ba.gradix.teren nije nađen nakon instalacije"; exit 1; }
-            bash v2/apps/mobile/scripts/maestro-ci.sh "$SCENARIJ" "$POKUSAJA"
+          # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
+          # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
+          # scripts/emulator-ci.sh.
+          script: bash v2/apps/mobile/scripts/emulator-ci.sh
 
       # ---------------- Dokazi (uvijek, i pri padu) ----------------
       - name: Maestro dokazi — artefakt (video, screenshotovi, junit, logcat)

@@ -17,7 +17,10 @@ za ručni prolaz na pravom uređaju, s ručnim avionskim režimom).
 | `05-grupa` | mreža ON | šef: grupni unos za radnika iz ekipe, ishod „Poslano" bez „odbijeno" |
 
 Mrežu između faza prebacuje `scripts/emulator-net.sh` (adb, s provjerom pingom),
-a redoslijed i retry politiku nosi `scripts/maestro-ci.sh`. Scenariji:
+a redoslijed i retry politiku nosi `scripts/maestro-ci.sh`. Ulazna tačka emulator
+koraka CI-ja je `scripts/emulator-ci.sh` (animacije off, `adb install` APK-a, pa
+maestro-ci.sh — workflow ga zove u JEDNOM redu, jer android-emulator-runner razbija
+script po redovima i svaki red pokreće kao zaseban `sh -c`). Scenariji:
 `sve` (uobičajeno), `snimci`, `offline`, `grupa` — biraju se pri ručnom
 pokretanju workflowa; noćni run ide s `sve`.
 
