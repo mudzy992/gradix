@@ -14,6 +14,14 @@ name: Mobilni E2E (Maestro)
 # OEM optimizacije) — to ostaje telefonski prolaz vlasnika (docs/MOBILNI-CHECKLISTA.md).
 
 on:
+  # PRIVREMENO (validacija na radnoj grani): push okidač samo za arena grane i samo
+  # kad se mijenja mobilni dio/workflow. Skida se nakon provjere — noćni + ručni
+  # okidači su trajni; ručni postaje dostupan i s radne grane kad fajl stigne na main.
+  push:
+    branches: ["arena/**"]
+    paths:
+      - "v2/apps/mobile/**"
+      - ".github/workflows/mobilni-e2e.yml"
   schedule:
     - cron: "0 2 * * *" # 02:00 UTC = 03:00 po lokalnom vremenu (CET) — unutar 00–06
   workflow_dispatch:
