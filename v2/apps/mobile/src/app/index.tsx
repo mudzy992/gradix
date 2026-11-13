@@ -33,8 +33,13 @@ export default function IndexScreen() {
     void (async () => {
       let db: Awaited<ReturnType<typeof openDb>> | null = null;
       try {
+        // PRIVREMENO (dijagnostika release boot-a u CI) — skloniti nakon
+        // dijagnostike: breadcrumbs u logcat, workflow ih čita u anotacije.
+        console.log("[e2e] bootstrap start");
         db = await openDb();
+        console.log("[e2e] openDb ok");
         const token = await getAccessToken();
+        console.log(`[e2e] token=${token ? "da" : "ne"}`);
         if (!token) {
           // No authenticated account may see a server-derived cache left by a previous session.
           await clearLocalAccountData(db);
@@ -50,6 +55,7 @@ export default function IndexScreen() {
           setPhase("ready");
         }
       } catch (error) {
+        console.log("[e2e] bootstrap greska:", error instanceof Error ? error.message : error);
         // A revoked session clears tokens in the auth client; purge private caches on the next
         // online check, but preserve every outbox row for its original account.
         const tokenCleared = db ? !(await getAccessToken()) : false;
