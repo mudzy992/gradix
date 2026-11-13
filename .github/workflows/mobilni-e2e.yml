@@ -214,7 +214,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images
-          key: emulator-img-${{ runner.os }}-api34-default-x86_64-v1
+          key: emulator-img-${{ runner.os }}-api34-google_apis-x86_64-v1
 
       - name: Instalacija (pnpm)
         working-directory: v2
@@ -274,9 +274,9 @@ jobs:
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
           api-level: 34
-          target: default
+          target: google_apis
           arch: x86_64
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 2048
+          emulator-options: -no-window -gpu angle_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 2048
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
           # scripts/emulator-ci.sh.

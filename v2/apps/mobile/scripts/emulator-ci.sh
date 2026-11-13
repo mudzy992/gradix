@@ -38,18 +38,36 @@ if ! adb shell pm list packages | grep -q ba.gradix.teren; then
 fi
 announce notice "APK instaliran na emulator"
 
-# Sistemu dati da se smiri nakon boot-a: hladan boot sa swiftshaderom zna
-# ostaviti ANR dijalog („Process system isn't responding") NAVRH ekrana — app
-# ispod njega radi, ali ni Maestro ni dump ne vide kroz njega. Zato: odmor,
-# otkazivanje dijaloga (ENTER = „Wait", pa Back), provjera da je čisto.
+# Sistemu dati da se smiri nakon boot-a: hladan boot zna ostaviti ANR dijalog
+# („Process system isn't responding") NAVRH ekrana — app ispod njega radi, ali
+# ni Maestro ni dump ne vide kroz njega. Zato: odmor, baterija pokušaja
+# otkazivanja, provjera da je čisto, pa tek onda dimna proba.
 sleep 45
+adb shell settings put global anr_show_background 0 >/dev/null 2>&1 || true
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
 adb shell input keyevent 66 >/dev/null 2>&1 || true  # ENTER — potvrdi „Wait" ako dijalog stoji
 adb shell input keyevent 4 >/dev/null 2>&1 || true   # BACK — zatvori eventualni ostatak
+adb shell input tap 540 1500 >/dev/null 2>&1 || true # tap na „Wait" u dijalogu (sredina ekrana)
 sleep 2
+
+# Fokus prozora je istina o tome šta je stvarno na vrhu (dijalog ili app).
+focus="$(adb shell dumpsys window windows 2>/dev/null | grep -E "mCurrentFocus|mFocusedWindow" | head -2 | tr '\n' ' ' || true)"
+announce warning "dimna proba — fokus prozora: ${focus:-nepoznato}"
+
 adb shell uiautomator dump /sdcard/anr-check.xml >/dev/null 2>&1 || true
 anr="$(adb shell cat /sdcard/anr-check.xml 2>/dev/null | grep -c "isn't responding" || true)"
 if [ "${anr:-0}" -gt 0 ]; then
   announce warning "dimna proba — ANR dijalog i dalje stoji nakon pokušaja otkazivanja"
+  # ANR tragovi: koji proces i koja nit su blokirani (jedina prava istina o ANR-u).
+  adb root >/dev/null 2>&1 || true
+  sleep 3
+  anr_files="$(adb shell 'ls -t /data/anr/ 2>/dev/null | head -2' 2>/dev/null | tr '\n' ' ' || true)"
+  announce warning "dimna proba — ANR zapisi: ${anr_files:-nema ih}"
+  if [ -n "${anr_files// /}" ]; then
+    first_anr="$(echo "$anr_files" | awk '{print $1}')"
+    subj="$(adb shell "grep -m1 'Subject' /data/anr/$first_anr 2>/dev/null" 2>/dev/null | cut -c1-200 || true)"
+    announce warning "dimna proba — ANR subjekt: ${subj:-?}"
+  fi
 else
   announce warning "dimna proba — nema ANR dijaloga na ekranu"
 fi
