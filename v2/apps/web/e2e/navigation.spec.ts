@@ -36,6 +36,29 @@ test("vlasnik: meni sadrži Radne dane i Korisnike; odjava vraća na prijavu", a
   await expect(page.getByRole("heading", { name: "Prijava" })).toBeVisible();
 });
 
+test("A1e regresija: odjava pa ponovna prijava u istom kontekstu uspjeva", async ({ page }) => {
+  // Originalni bug (mobilni): prijava NAKON odjave vraćala je „Došlo je do greške."
+  // (server 500, PG 22P05). Ovdje se ta sekvenca dokazuje na webu u istom
+  // kontekstu: stari cookie/tokeni moraju otići, novi moraju raditi.
+  await login(page, "vlasnik@demo.ba");
+
+  await page.getByRole("button", { name: /Korisnički meni/ }).click();
+  await page.getByRole("menuitem", { name: "Odjavi se" }).click();
+  await page.waitForURL("**/login");
+  await expect(page.getByRole("heading", { name: "Prijava" })).toBeVisible();
+
+  // Ponovna prijava odmah, bez resetovanja konteksta.
+  await login(page, "vlasnik@demo.ba");
+  await expect(page.getByRole("navigation", { name: "Glavna navigacija" })).toBeVisible();
+
+  // Još jedan ciklus: ni druga odjava i treća prijava ne smiju pasti.
+  await page.getByRole("button", { name: /Korisnički meni/ }).click();
+  await page.getByRole("menuitem", { name: "Odjavi se" }).click();
+  await page.waitForURL("**/login");
+  await login(page, "ured@demo.ba");
+  await expect(page.getByRole("navigation", { name: "Glavna navigacija" })).toBeVisible();
+});
+
 test("radnik: meni nema uredske stavke (ni Radne dane ni Korisnike)", async ({ page }) => {
   await login(page, "radnik@demo.ba");
   const labels = await navLabels(page);
