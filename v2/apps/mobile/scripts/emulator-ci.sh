@@ -80,7 +80,7 @@ fi
 # 43479147231: FATAL EXCEPTION u app-u + system ANR nakon dumpova po padu).
 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
 sleep 8
-resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 "topResumedActivity" | cut -c1-200 || true)"
+resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -E "topResumedActivity|mResumedActivity" | cut -c1-200 || true)"
 announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
 adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
 tekstovi="$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
@@ -95,6 +95,10 @@ jserr="$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | 
 if [ -n "$jserr" ]; then
   announce error "dimna proba — JS greške: $jserr"
 fi
+# [e2e] breadcrumbs iz aplikacije (console.log → ReactNativeJS) — glavni
+# signal dok se dijagnostifikuje release boot.
+crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -8 | tr '\n' ' ' | cut -c1-220 || true)"
+announce warning "dimna proba — [e2e] breadcrumbs: ${crumbs:-nema ih}"
 fatal="$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220 || true)"
 if [ -n "$fatal" ]; then
   announce error "dimna proba — FATAL: $fatal"

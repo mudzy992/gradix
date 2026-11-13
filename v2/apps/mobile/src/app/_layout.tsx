@@ -12,6 +12,10 @@ import { useTheme } from "../theme/use-theme";
 export default function RootLayout() {
   const { theme, name } = useTheme();
   const [loaded] = useFonts(fontAssets);
+  // PRIVREMENO (dijagnostika release boot-a u CI): breadcrumbs idu u logcat
+  // (ReactNativeJS) iz kojeg ih workflow oglašava kroz anotacije. Skloniti
+  // nakon što se dijagnostifikuje zaglavljivanje na emulatoru.
+  console.log(`[e2e] useFonts loaded=${loaded}`);
 
   if (!loaded) {
     return (
