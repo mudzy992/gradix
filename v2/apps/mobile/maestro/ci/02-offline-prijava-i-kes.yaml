@@ -1,0 +1,40 @@
+# CI tok 2/5 — prijava radnika ONLINE + keširanje rokova i projekata za offline čitanje.
+#
+# Ovo je PRVA faza offline scenarija. Mreža mora biti UKLJUČENA prije ovog toka
+# (skripta emulator-net.sh). Ekran „Moj dan" se otvara DOK JE MREŽA TU — njegova
+# forma se ne učitava bez veze (load vuče projekte/mašine s API-ja), pa tok
+# završava NA tom ekranu i tok 03 preuzima nastavak iz istog stanja.
+appId: ba.gradix.teren
+name: offline-prijava-i-kes
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Prijava za teren."
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- hideKeyboard
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- hideKeyboard
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+# Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
+# pokazuje zadnje preuzeto, a ne prazan spisak.
+- tapOn: "Moji rokovi"
+- assertVisible: "Osvježi"
+- tapOn: "Osvježi"
+- extendedWaitUntil:
+    visible: "Osvježi"
+    timeout: 10000
+- tapOn: "‹ Nazad"
+- tapOn: "Moji projekti"
+- assertVisible: "Osvježi"
+- tapOn: "Osvježi"
+- extendedWaitUntil:
+    visible: "Osvježi"
+    timeout: 10000
+- tapOn: "‹ Nazad"
+- tapOn: "Moj dan"
+- assertVisible: "Sačuvaj na telefon"

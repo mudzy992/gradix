@@ -1,0 +1,34 @@
+# CI tok 3/5 — unos BEZ mreže: zapis ostaje na telefonu + offline čitanje iz keša.
+#
+# Mrežu ISKLJUČUJE skripta emulator-net.sh PRIJE ovog toka (avionski režim na
+# emulatoru, ne ručno). Prijava je već obavljena u toku 02; aplikacija nastavlja
+# s otvorene forme „Moj dan". Vremena se NE tipkaju — polja imaju validne
+# defaulte (07:30–15:30), a manje koraka = manje mjesta za lažne padove.
+appId: ba.gradix.teren
+name: offline-unos
+---
+- launchApp
+- tapOn: "Moj dan"
+- assertVisible: "Sačuvaj na telefon"
+- tapOn: "Sačuvaj na telefon"
+- assertVisible: "Čeka slanje"
+- tapOn: "Pošalji sada"
+# Offline: zapis ostaje na telefonu i to mora pisati na ekranu.
+- assertVisible: "Čeka slanje"
+- assertVisible:
+    text: ".*Sačuvano na ovom telefonu.*"
+- takeScreenshot: offline-unos-ceka
+# Offline čitanje: rokovi i projekti iz keša (osvježeni u toku 02), uz jasnu poruku.
+- back
+- tapOn: "Moji rokovi"
+- tapOn: "Osvježi"
+- assertVisible:
+    text: ".*Nema veze. Prikazujem zadnje preuzeto.*"
+- takeScreenshot: offline-rokovi-iz-kesa
+- tapOn: "‹ Nazad"
+- tapOn: "Moji projekti"
+- tapOn: "Osvježi"
+- assertVisible:
+    text: ".*Nema veze. Prikazujem zadnje preuzeto.*"
+- takeScreenshot: offline-projekti-iz-kesa
+- tapOn: "‹ Nazad"

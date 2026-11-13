@@ -1,0 +1,265 @@
+name: Mobilni E2E (Maestro)
+
+# Noćna regresija mobilne aplikacije protiv pravog API-ja + ručno pokretanje.
+# Zaseban workflow, a ne dio ci-v2.yml: emulator + APK gradnja dodaju značajno
+# vrijeme, što ne ide na svaki push (ci-v2.yml je to i najavio u svom zaglavlju).
+#
+# VAŽNO — noćni termin: GitHub `schedule` okidač radi SAMO s kopijom ovog fajla na
+# DEFAULT grani repozitorija. Dok god je fajl samo na radnoj grani, noćni run se ne
+# pokreće; ručno pokretanje (workflow_dispatch) s radne grane radi od spajanja u main.
+#
+# Arhitektura (modularno, po fazama):
+#   1. apk       — prebuild + gradnja release APK-a; APK se kešira po izvoru i
+#                  prosljeđuje sljedećem jobu kao artefakt (keš pogodak = preskočena
+#                  gradnja, noćni runovi su onda značajno kraći);
+#   2. mobilni-e2e — API s demo svijetom + Android emulator + Maestro tokovi.
+#                  Nezavisni timeout od gradnje: sporije gradnje ne smiju pojesti
+#                  budžet testiranja (prvi run je ovo platio otkazivanjem na 60 min).
+#
+# Šta pokriva: 5 autonomnih tokova iz v2/apps/mobile/maestro/ci/ (prijava + A1e
+# odjava→prijava, offline red, povratak mreže bez duplikata, grupni unos šefa).
+# Šta NE pokriva: ponašanje pravog uređaja (tipkovnica/autofill, promjena mreže,
+# OEM optimizacije) — to ostaje telefonski prolaz vlasnika (docs/MOBILNI-CHECKLISTA.md).
+
+on:
+  # PRIVREMENO (validacija na radnoj grani): push okidač samo za arena grane i samo
+  # kad se mijenja mobilni dio/workflow. Skida se nakon provjere — noćni + ručni
+  # okidači su trajni; ručni postaje dostupan i s radne grane kad fajl stigne na main.
+  push:
+    branches: ["arena/**"]
+    paths:
+      - "v2/apps/mobile/**"
+      - ".github/workflows/mobilni-e2e.yml"
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC = 03:00 po lokalnom vremenu (CET) — unutar 00–06
+  workflow_dispatch:
+    inputs:
+      scenarij:
+        description: "Šta pokrenuti"
+        type: choice
+        default: sve
+        options: [sve, snimci, offline, grupa]
+      pokusaja:
+        description: "Maksimalan broj pokušaja po toku (1 = bez retryja)"
+        type: string
+        default: "3"
+
+concurrency:
+  group: mobilni-e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: APK (prebuild + assembleRelease)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Peče se u JS bundle pri gradnji: emulator dolazi do hosta preko 10.0.2.2.
+      EXPO_PUBLIC_API_URL: http://10.0.2.2:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Gradle keš
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-v1-${{ hashFiles('v2/pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-v1-
+
+      - name: Instalacija (pnpm)
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      # APK keširan po sadržaju izvora (app.json, src, lock): dokle god se mobilna
+      # aplikacija ne mijenja, gradnja se preskače — u ključu je i URL API-ja jer
+      # se peče u bundle.
+      - name: Keš APK-a (po izvoru)
+        id: apk-cache
+        uses: actions/cache@v4
+        with:
+          path: v2/apps/mobile/.ci-apk
+          key: apk-v1-${{ hashFiles('v2/apps/mobile/app.json', 'v2/apps/mobile/src/**', 'v2/apps/mobile/package.json', 'v2/pnpm-lock.yaml') }}-10.0.2.2
+
+      - name: Expo prebuild + cleartext samo za CI APK
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile
+        run: |
+          npx expo prebuild -p android --no-install
+          # CI APK razgovara s API-jem preko čistog http://10.0.2.2:3000, a Android
+          # blokira nešifriran saobraćaj u release gradnji. Ovaj patch diruje SAMO
+          # generisani CI artefakt — app.json i produkcijske gradnje (https) ostaju čisti.
+          sed -i 's|<application |<application android:usesCleartextTraffic="true" |' android/app/src/main/AndroidManifest.xml
+          test "$(grep -c 'usesCleartextTraffic' android/app/src/main/AndroidManifest.xml)" = "1"
+          echo "EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL" > .env
+
+      - name: Gradnja APK-a (assembleRelease)
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile/android
+        run: |
+          ./gradlew assembleRelease --stacktrace
+          mkdir -p ../.ci-apk
+          cp app/build/outputs/apk/release/app-release.apk ../.ci-apk/
+
+      - name: Provjera APK-a
+        working-directory: v2/apps/mobile
+        run: |
+          ls -lh .ci-apk/app-release.apk
+          sha256sum .ci-apk/app-release.apk
+
+      - name: APK za testni job (artefakt)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk/app-release.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  mobilni-e2e:
+    name: Emulator + Maestro tokovi
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+      DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      AUTH_SECRET: ci-placeholder-secret-min-32-characters
+      # Lozinka demo svijeta: tajna DEMO_LOZINKA ako je postavljena, inače poznata CI
+      # demo lozinka (nije tajna — ista vrijednost stoji u ci-v2.yml za web E2E).
+      SEED_PASSWORD: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      # Maestro CLI keširan u ~/.maestro; ako je binarna tu iz keša, preskače se download.
+      - name: Keš Maestro CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-cli-v1
+      - name: Instalacija Maestro CLI
+        run: |
+          if [ ! -x "$HOME/.maestro/bin/maestro" ]; then
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+          fi
+          "$HOME/.maestro/bin/maestro" --version
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # Slika sistema za emulator (~1,3 GB) — bez keša bi se skidala pri svakom runu.
+      - name: Keš Android sistemskih slika
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images
+          key: emulator-img-${{ runner.os }}-api34-default-x86_64-v1
+
+      - name: Instalacija (pnpm)
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Skidanje APK-a iz gradnje
+        uses: actions/download-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk
+
+      # ---------------- API s demo svijetom (recepta iz ci-v2.yml) ----------------
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+
+      - name: Seed + demo svijet
+        working-directory: v2
+        run: |
+          pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts || { echo "::error::SEED_PREGLED_FAILED"; exit 1; }
+
+      - name: Gradnja i start API-ja
+        working-directory: v2
+        run: |
+          pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
+          (pnpm --filter @gradix/web start > /tmp/api.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/ready >/dev/null && break || sleep 2; done
+          curl -sf http://127.0.0.1:3000/api/ready || { echo "::error::API_NOT_READY"; tail -n 40 /tmp/api.log; exit 1; }
+
+      # ---------------- Emulator + Maestro tokovi ----------------
+      - name: Maestro tokovi (emulator)
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          DEMO_LOZINKA: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
+          SCENARIJ: ${{ inputs.scenarij || 'sve' }}
+          POKUSAJA: ${{ inputs.pokusaja || '3' }}
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 3072
+          # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
+          # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
+          # scripts/emulator-ci.sh.
+          script: bash v2/apps/mobile/scripts/emulator-ci.sh
+
+      # ---------------- Dokazi (uvijek, i pri padu) ----------------
+      - name: Maestro dokazi — artefakt (video, screenshotovi, junit, logcat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-dokazi
+          path: v2/apps/mobile/maestro-artifacts
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: API log — artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilni-e2e-api-log
+          path: /tmp/api.log
+          retention-days: 14
+          if-no-files-found: ignore

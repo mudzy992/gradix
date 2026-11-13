@@ -1,0 +1,38 @@
+# CI tok 5/5 — šef gradilišta: grupni unos za ekipu, ishod po radniku.
+#
+# Mreža mora biti UKLJUČENA (skripta emulator-net.sh on prije ovog toka).
+# Bira se Nedim Softić — NE Amar (radnik iz offline scenarija) — da grupni
+# unos i radnikov sopstveni unos za isti dan ne naprave sukob u scenariju „sve".
+# Vrijeme ostaje na defaultu (07:30–15:30).
+appId: ba.gradix.teren
+name: sef-grupa
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Prijava za teren."
+- tapOn:
+    id: "Email"
+- inputText: "sef@demo.ba"
+- hideKeyboard
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- hideKeyboard
+- tapOn: "Prijavi se"
+- assertVisible: "Grupa — unos za ekipu"
+- tapOn: "Grupa — unos za ekipu"
+- assertVisible: "Zajednički projekat"
+# Roster (ekipa na prvom projektu za današnji datum) dolazi s API-ja — sačekaj ga.
+- extendedWaitUntil:
+    visible: "Nedim Softić"
+    timeout: 15000
+- tapOn: "Nedim Softić"
+- tapOn:
+    text: "Sačuvaj za 1 radnika"
+- tapOn: "Pošalji sada"
+# Ishod po radniku: „Poslano". Riječ „odbijeno" ne postoji u UI-ju po dizajnu
+# (van opsega ≠ odbijeno) — ovo je straža da se ne vrati.
+- assertVisible: "Poslano"
+- assertNotVisible:
+    text: ".*[Oo]dbijen.*"
+- takeScreenshot: grupa-poslano

@@ -6,3 +6,10 @@ expo-env.d.ts
 # @end expo-cli
 # Expo lokalni keš (types router, devices) — generiše `expo start`
 .expo/
+
+# Expo prebuild izlaz — generiše se (CI/lokalno) iz app.json; ne ide u repozitorij.
+/android
+/ios
+# Maestro CI artefakti: video, screenshotovi, junit, logcat.
+/maestro-artifacts
+/report.xml

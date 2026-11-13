@@ -20,5 +20,9 @@ maestro test -e DEMO_LOZINKA=<demo-lozinka> maestro/sef-grupa.yaml
 maestro test maestro/povratak-mreze-jednom.yaml
 ```
 
+**CI verzije:** autonomne tokove za GitHub Actions (bez ručnih koraka) vidi u
+`maestro/ci/` — njih pokreće workflow „Mobilni E2E (Maestro)" noćno i ručno;
+`maestro/ci/README.md` objašnjava faze, mrežu i retry politiku.
+
 Tokovi koriste vidljivi tekst i accessibility oznake ekrana Moj dan / Grupa,
 pa ih promjena teksta na ekranu može pokvariti — tada prvo popravi tok, pa ekran.

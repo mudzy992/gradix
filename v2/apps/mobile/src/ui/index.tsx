@@ -73,7 +73,16 @@ export function TextField(props: { label: string } & TextInputProps) {
   return (
     <View>
       <RNText style={styles.label}>{label}</RNText>
-      <TextInput placeholderTextColor={theme.muted} style={styles.input} accessibilityLabel={props.accessibilityLabel ?? label} {...input} />
+      <TextInput
+        placeholderTextColor={theme.muted}
+        style={styles.input}
+        accessibilityLabel={props.accessibilityLabel ?? label}
+        // Stabilni testID za E2E (Maestro `id:` na Androidu čita resource-id, a
+        // accessibilityLabel ide u contentDescription tj. `text:` selektor).
+        // Isti naziv kao accessibilityLabel — jedan izvor istine.
+        testID={props.testID ?? props.accessibilityLabel ?? label}
+        {...input}
+      />
     </View>
   );
 }
