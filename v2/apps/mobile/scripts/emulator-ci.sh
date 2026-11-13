@@ -38,4 +38,49 @@ if ! adb shell pm list packages | grep -q ba.gradix.teren; then
 fi
 announce notice "APK instaliran na emulator"
 
+# Sistemu dati da se smiri nakon boot-a: hladan boot sa swiftshaderom zna
+# ostaviti ANR dijalog („Process system isn't responding") NAVRH ekrana — app
+# ispod njega radi, ali ni Maestro ni dump ne vide kroz njega. Zato: odmor,
+# otkazivanje dijaloga (ENTER = „Wait", pa Back), provjera da je čisto.
+sleep 45
+adb shell input keyevent 66 >/dev/null 2>&1 || true  # ENTER — potvrdi „Wait" ako dijalog stoji
+adb shell input keyevent 4 >/dev/null 2>&1 || true   # BACK — zatvori eventualni ostatak
+sleep 2
+adb shell uiautomator dump /sdcard/anr-check.xml >/dev/null 2>&1 || true
+anr="$(adb shell cat /sdcard/anr-check.xml 2>/dev/null | grep -c "isn't responding" || true)"
+if [ "${anr:-0}" -gt 0 ]; then
+  announce warning "dimna proba — ANR dijalog i dalje stoji nakon pokušaja otkazivanja"
+else
+  announce warning "dimna proba — nema ANR dijaloga na ekranu"
+fi
+
+# Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
+# šta je stvarno na ekranu. Razdvaja „aplikacija se ne otvara" (release problem)
+# od „Maestro ne vidi sadržaj" (driver problem) — prije nego ijedan tok krene.
+# uiautomator dump IDE SAMO OVDJE: tokom maestro runa dump kolidira s Maestrovim
+# pristupom accessibility stablu i ruši aplikaciju/Maestra (potvrđeno runom
+# 43479147231: FATAL EXCEPTION u app-u + system ANR nakon dumpova po padu).
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
+sleep 8
+resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 "topResumedActivity" | cut -c1-200 || true)"
+announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
+adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
+tekstovi="$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
+announce warning "dimna proba — vidljivi tekstovi (8s): ${tekstovi:-nema teksta u hijerarhiji}"
+# Drugi pogled nakon još 20s: ako se app zaglavio na splashu/spinneru, ovo to
+# razotkrije (prazni tekstovi i nakon 28s = bootstrap se nije završio).
+sleep 20
+adb shell uiautomator dump /sdcard/uidump2.xml >/dev/null 2>&1 || true
+tekstovi2="$(adb shell cat /sdcard/uidump2.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
+announce warning "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
+jserr="$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -6 | tr '\n' ' ' | cut -c1-220 || true)"
+if [ -n "$jserr" ]; then
+  announce error "dimna proba — JS greške: $jserr"
+fi
+fatal="$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220 || true)"
+if [ -n "$fatal" ]; then
+  announce error "dimna proba — FATAL: $fatal"
+fi
+adb logcat -c >/dev/null 2>&1 || true  # čist logcat za dijagnoze po toku
+
 bash "$here/maestro-ci.sh" "${SCENARIJ:-sve}" "${POKUSAJA:-3}"

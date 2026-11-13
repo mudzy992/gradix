@@ -92,11 +92,17 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
       prva="(junit nije ni nastao — maestro se srušio prije izvještaja)"
     fi
     announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
-    # Pad aplikacije (native/JS crash) prepoznajemo iz crash buffera logcata.
-    local crash
-    crash=$(adb logcat -d -b crash 2>/dev/null | grep -v "^$" | tail -3 | tr '\n' ' ' | cut -c1-220)
-    if [ -n "$crash" ]; then
-      announce error "$name" "logcat crash buffer: $crash"
+    # Native crash s stackom (glavni buffer, crash buffer zna biti prazan).
+    local fatal
+    fatal=$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220)
+    if [ -n "$fatal" ]; then
+      announce error "$name" "FATAL: $fatal"
+    fi
+    # JS greške (ReactNativeJS) — jedina sigurna dijagnoza za release bundle.
+    local jserr
+    jserr=$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -8 | tr '\n' ' ' | cut -c1-220)
+    if [ -n "$jserr" ]; then
+      announce error "$name" "logcat: $jserr"
     fi
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
