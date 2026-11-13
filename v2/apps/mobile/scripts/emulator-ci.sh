@@ -38,4 +38,20 @@ if ! adb shell pm list packages | grep -q ba.gradix.teren; then
 fi
 announce notice "APK instaliran na emulator"
 
+# Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
+# šta je stvarno na ekranu. Razdvaja „aplikacija se ne otvara" (release problem)
+# od „Maestro ne vidi sadržaj" (driver problem) — prije nego ijedan tok krene.
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
+sleep 8
+resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -oE '(topResumedActivity|mResumedActivity)=[^ }]*' | cut -c1-120)"
+announce notice "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
+adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
+tekstovi="$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -6 | paste -sd '|' - | cut -c1-200)"
+announce notice "dimna proba — vidljivi tekstovi: ${tekstovi:-nema teksta u hijerarhiji}"
+jserr="$(adb logcat -d 2>/dev/null | grep -E 'ReactNativeJS|FATAL EXCEPTION' | tail -4 | tr '\n' ' ' | cut -c1-220)"
+if [ -n "$jserr" ]; then
+  announce error "dimna proba — logcat greške: $jserr"
+fi
+adb logcat -c >/dev/null 2>&1 || true  # čist logcat za dijagnoze po toku
+
 bash "$here/maestro-ci.sh" "${SCENARIJ:-sve}" "${POKUSAJA:-3}"

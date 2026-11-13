@@ -124,7 +124,21 @@ jobs:
         working-directory: v2/apps/mobile
         run: |
           ls -lh .ci-apk/app-release.apk
-          sha256sum .ci-apk/app-release.apk
+          # JS bundle mora biti ugrađen — release APK nema Metro poslužitelja;
+          # bez bundle-a aplikacija se otvara u prazno/crno i odmah umire.
+          if unzip -l .ci-apk/app-release.apk | grep -q "index.android.bundle"; then
+            echo "::notice title=APK::JS bundle ugrađen"
+          else
+            echo "::error title=APK::nema index.android.bundle u APK-u — release se neće otvoriti"
+            exit 1
+          fi
+          # Emulator je x86_64 — APK mora nositi native biblioteke za tu arhitekturu.
+          if unzip -l .ci-apk/app-release.apk | grep -q "lib/x86_64"; then
+            echo "::notice title=APK::x86_64 biblioteke prisutne"
+          else
+            echo "::error title=APK::nema lib/x86_64 u APK-u — emulator ne može pokrenuti aplikaciju"
+            exit 1
+          fi
 
       - name: APK za testni job (artefakt)
         uses: actions/upload-artifact@v4

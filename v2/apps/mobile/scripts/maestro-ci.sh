@@ -98,6 +98,19 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     if [ -n "$crash" ]; then
       announce error "$name" "logcat crash buffer: $crash"
     fi
+    # Šta je stvarno na ekranu u trenutku pada — vidljivi paketi i tekstovi.
+    adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
+    local paketi tekstovi
+    paketi=$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'package="[^"]*"' | sort -u | paste -sd, - | cut -c1-200)
+    tekstovi=$(adb shell cat /sdcard/uidump.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-220)
+    announce error "$name" "ekran (paketi): ${paketi:-dump nije uspio}"
+    announce error "$name" "ekran (tekstovi): ${tekstovi:-nema teksta}"
+    # JS greške (ReactNativeJS) i native padovi iz glavnog buffera.
+    local jserr
+    jserr=$(adb logcat -d 2>/dev/null | grep -E "ReactNativeJS|FATAL EXCEPTION" | tail -5 | tr '\n' ' ' | cut -c1-220)
+    if [ -n "$jserr" ]; then
+      announce error "$name" "logcat: $jserr"
+    fi
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     bash scripts/emulator-net.sh on >/dev/null 2>&1 || true
