@@ -36,8 +36,12 @@ for i in $(seq 1 60); do
   sleep 5
 done
 announce warning "boot_completed=$boot (nakon $((i * 5))s)"
-# Package Manager se zna buditi nekoliko sekundi NAKON boot_completed=1.
-sleep 10
+# ODMOR SISTEMA (180s): dokaz iz runa 43592243486 — app pokrenut ~10 min nakon
+# boota završi cijeli bootstrap lanac za <1s, dok onaj pokrenut odmah nakon
+# boota nije krenuo ni nakon 20s (JS start zamrznut; SystemUI u crash-loopu
+# "Could not find Telephony Service"). Prvih nekoliko minuta emulator NIJE
+# zdrav i maestro tada umire prije junit-a.
+sleep 180
 
 # Animacije gasimo — najveći izvor lažnih padova na emulatoru. Sa retryjem:
 # prvih trenutaka nakon boot-a adb zna odbiti komandu.
@@ -136,6 +140,13 @@ announce warning "dimna proba — pid app-a (28s): ${pids28:-PROCES NIJE ŽIV}"
 adb shell uiautomator dump /sdcard/uidump2.xml >/dev/null 2>&1 || true
 tekstovi2="$(adb shell cat /sdcard/uidump2.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
 announce warning "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
+# Treći pogled nakon ponovnog pokretanja: ako je prvi start pao u loš prozor
+# sistema, restart pokazuje stabilno stanje.
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+sleep 15
+adb shell uiautomator dump /sdcard/uidump3.xml >/dev/null 2>&1 || true
+tekstovi3="$(adb shell cat /sdcard/uidump3.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -10 | paste -sd '|' | cut -c1-220 || true)"
+announce warning "dimna proba - vidljivi tekstovi (restart+15s): ${tekstovi3:-nema teksta u hijerarhiji}"
 jserr="$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -6 | tr '\n' ' ' | cut -c1-220 || true)"
 if [ -n "$jserr" ]; then
   announce error "dimna proba — JS greške: $jserr"
@@ -150,8 +161,9 @@ done
 # Render vs accessibility: view hijerarhija top aktivnosti pokazuje da li je
 # ekran STVARNO nacrtan (ReactTextView/ReactImageView čvorovi) i kad uiautomator
 # ne vidi nijedan tekst — tada je slomljeno izlaganje teksta, ne render.
-top_views="$(adb shell dumpsys activity top 2>/dev/null | grep -E "ACTIVITY|TextView|ImageView|View Hierarchy" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
-announce warning "dimna proba — view hijerarhija: ${top_views:-nepoznata}"
+adb shell dumpsys activity top > /tmp/top.txt 2>&1 || true
+top_count="$(grep -c "TextView" /tmp/top.txt || true)"
+announce warning "dimna proba — TextView čvorova u hijerarhiji top aktivnosti: ${top_count:-0} (dokaz da li je ekran nacrtan)"
 fatal="$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600 || true)"
 if [ -n "$fatal" ]; then
   announce error "dimna proba — FATAL: $fatal"

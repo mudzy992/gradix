@@ -159,7 +159,7 @@ jobs:
     name: Emulator + Maestro tokovi
     needs: apk
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
       DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
