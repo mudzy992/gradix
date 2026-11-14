@@ -94,7 +94,7 @@ adb shell input tap 540 1500 >/dev/null 2>&1 || true # tap na „Wait" u dijalog
 sleep 2
 
 # Fokus prozora je istina o tome šta je stvarno na vrhu (dijalog ili app).
-focus="$(adb shell dumpsys window windows 2>/dev/null | grep -E "mCurrentFocus|mFocusedWindow" | head -2 | tr '\n' ' ' || true)"
+focus="$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus|mFocusedWindow" | head -2 | tr '\n' ' ' || true)"
 announce warning "dimna proba — fokus prozora: ${focus:-nepoznato}"
 
 adb shell uiautomator dump /sdcard/anr-check.xml >/dev/null 2>&1 || true
