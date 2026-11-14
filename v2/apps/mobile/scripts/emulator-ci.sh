@@ -145,6 +145,18 @@ adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
 sleep 8
 pids8="$(adb shell pidof ba.gradix.teren 2>/dev/null | tr '\n' ' ' || true)"
 announce warning "dimna proba — pid app-a (8s): ${pids8:-PROCES NIJE ŽIV}"
+# Fokus A/B: am start zna ostaviti fokus na launcheru iako je app prozor na
+# vrhu (run 86e8985) — a fokusirani prozor je ono što driveri čitaju. Tap po
+# koordinatama ide u TOP prozor (app) i preuzima fokus za njega.
+focus_pre="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "dimna proba — fokus prije tapa: ${focus_pre:-nepoznato}"
+adb shell input tap 360 150 >/dev/null 2>&1 || true
+sleep 2
+focus_post="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "dimna proba — fokus poslije tapa: ${focus_post:-nepoznato}"
+adb shell uiautomator dump /sdcard/uidump-tap.xml >/dev/null 2>&1 || true
+tekstovi_tap="$(adb shell cat /sdcard/uidump-tap.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' | cut -c1-220 || true)"
+announce warning "dimna proba — tekstovi poslije tapa: ${tekstovi_tap:-nema teksta u hijerarhiji}"
 resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -E "topResumedActivity|mResumedActivity" | cut -c1-200 || true)"
 announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
 adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true

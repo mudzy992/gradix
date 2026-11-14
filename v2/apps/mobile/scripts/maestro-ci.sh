@@ -63,6 +63,14 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
   local name="$1" flow="$2" attempt start trajanje
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
+    # Deterministički fokus: am start zna ostaviti fokus na launcheru iako je
+    # app prozor na vrhu (run 86e8985 — Window #0 app, fokus EmptyHomeActivity).
+    # Tap po koordinatama ide u top prozor i preuzima fokus; bez fokusiranog
+    # app prozora driver ne vidi sadržaj.
+    adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+    sleep 1
+    adb shell input tap 360 150 >/dev/null 2>&1 || true
+    sleep 1
     start=$(date +%s)
     if timeout "$MAKS_TRAJANJE" "$MAESTRO_BIN" test \
         --format junit \
