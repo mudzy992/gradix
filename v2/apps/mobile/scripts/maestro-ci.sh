@@ -108,6 +108,10 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -4 | while IFS= read -r line; do
       announce error "$name" "crumb: $(echo "$line" | cut -c1-200)"
     done
+    # Render dokaz: broj TextView čvorova u hijerarhiji top aktivnosti.
+    adb shell dumpsys activity top > /tmp/top-fail.txt 2>&1 || true
+    top_n="$(grep -c "TextView" /tmp/top-fail.txt || true)"
+    announce error "$name" "TextView broj u hijerarhiji: ${top_n:-0}"
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     bash scripts/emulator-net.sh on >/dev/null 2>&1 || true

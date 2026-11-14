@@ -214,7 +214,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images
-          key: emulator-img-${{ runner.os }}-api31-google_apis-x86_64-v1
+          key: emulator-img-${{ runner.os }}-api33-aosp-atd-x86_64-v1
 
       - name: Instalacija (pnpm)
         working-directory: v2
@@ -274,8 +274,8 @@ jobs:
           SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
-          api-level: 31
-          target: google_apis
+          api-level: 33
+          target: aosp-atd
           arch: x86_64
           # Hladan start zna potrajati (skidanje slike pri prvom runu + boot) —
           # default od 600s je nedovoljan, pa je budžet 900s.

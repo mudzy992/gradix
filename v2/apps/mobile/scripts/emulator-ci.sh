@@ -36,12 +36,10 @@ for i in $(seq 1 60); do
   sleep 5
 done
 announce warning "boot_completed=$boot (nakon $((i * 5))s)"
-# ODMOR SISTEMA (180s): dokaz iz runa 43592243486 — app pokrenut ~10 min nakon
-# boota završi cijeli bootstrap lanac za <1s, dok onaj pokrenut odmah nakon
-# boota nije krenuo ni nakon 20s (JS start zamrznut; SystemUI u crash-loopu
-# "Could not find Telephony Service"). Prvih nekoliko minuta emulator NIJE
-# zdrav i maestro tada umire prije junit-a.
-sleep 180
+# Kratki odmor sistema nakon boota (slika je aosp-atd — ogoljena za CI, bez
+# telefonije i Google aplikacija; prijašnje slike su imale SystemUI crash-loop
+# „Could not find Telephony Service" i 18 minuta zagrijavanja — run 43596904847).
+sleep 30
 
 # Animacije gasimo — najveći izvor lažnih padova na emulatoru. Sa retryjem:
 # prvih trenutaka nakon boot-a adb zna odbiti komandu.
