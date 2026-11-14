@@ -12,7 +12,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"   # v2/apps/mobile/scripts
 mobile="$(dirname "$here")"             # v2/apps/mobile
 
-# announce <notice|error> <poruka>
+# announce <notice|warning|error> <poruka>
 announce() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then
     echo "::$1 title=Emulator::$2"
@@ -21,10 +21,33 @@ announce() {
   fi
 }
 
-# Animacije gasimo — najveći izvor lažnih padova na emulatoru.
-adb shell settings put global window_animation_scale 0
-adb shell settings put global transition_animation_scale 0
-adb shell settings put global animator_duration_scale 0
+# Svaki neuspjeli red se oglašava s brojem reda i izlaznim kodom — jedini
+# pouzdani način da se vidi GDJE je skripta stala (exit kodovi poput 224 iz
+# vanjskih alata inače ostaju nijemi).
+trap 'announce error "emulator-ci.sh stao u redu $LINENO (kod $?)"' ERR
+
+# Pojasnjava čekanje na boot: akcija čeka boot_completed, ali pojasnjava
+# dodatna provjera košta malo a spašava slučaj kad device još diže servise.
+adb wait-for-device
+boot=""
+for i in $(seq 1 60); do
+  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  if [ "$boot" = "1" ]; then break; fi
+  sleep 5
+done
+announce warning "boot_completed=$boot (nakon $((i * 5))s)"
+
+# Animacije gasimo — najveći izvor lažnih padova na emulatoru. Sa retryjem:
+# prvih trenutaka nakon boot-a adb zna odbiti komandu.
+for attempt in 1 2 3; do
+  if adb shell settings put global window_animation_scale 0 \
+     && adb shell settings put global transition_animation_scale 0 \
+     && adb shell settings put global animator_duration_scale 0; then
+    break
+  fi
+  announce warning "gašenje animacija nije uspjelo (pokušaj $attempt) — čekam i pokušavam ponovo"
+  sleep 10
+done
 
 # Ključni korak koji je prva verzija workflowa preskočila: APK mora biti
 # instaliran na emulatoru prije maestro launchApp.
