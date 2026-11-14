@@ -113,6 +113,7 @@ if [ "${anr:-0}" -gt 0 ]; then
   fi
 else
   announce warning "dimna proba — nema ANR dijaloga na ekranu"
+fi
 
 # Napomena: lažni launcher (com.android.fakesystemapp) se namjerno NE dira više
 # — njegovo onemogućavanje je ostavilo mCurrentFocus=null i vidljivost app
@@ -133,7 +134,6 @@ announce warning "fokus nakon otključavanja: ${focus_unlock:-nepoznato}"
 # Z-order prozora: šta je stvarno na vrhu ekrana (vidljivost = gornji prozor).
 windows_now="$(adb shell dumpsys window windows 2>/dev/null | grep "Window #" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
 announce warning "prozori po dubini (vrh prvi): ${windows_now:-nepoznato}"
-fi
 
 # Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
 # šta je stvarno na ekranu. Razdvaja „aplikacija se ne otvara" (release problem)
@@ -145,18 +145,11 @@ adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
 sleep 8
 pids8="$(adb shell pidof ba.gradix.teren 2>/dev/null | tr '\n' ' ' || true)"
 announce warning "dimna proba — pid app-a (8s): ${pids8:-PROCES NIJE ŽIV}"
-# Fokus A/B: am start zna ostaviti fokus na launcheru iako je app prozor na
-# vrhu (run 86e8985) — a fokusirani prozor je ono što driveri čitaju. Tap po
-# koordinatama ide u TOP prozor (app) i preuzima fokus za njega.
-focus_pre="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
-announce warning "dimna proba — fokus prije tapa: ${focus_pre:-nepoznato}"
-adb shell input tap 360 150 >/dev/null 2>&1 || true
-sleep 2
-focus_post="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
-announce warning "dimna proba — fokus poslije tapa: ${focus_post:-nepoznato}"
-adb shell uiautomator dump /sdcard/uidump-tap.xml >/dev/null 2>&1 || true
-tekstovi_tap="$(adb shell cat /sdcard/uidump-tap.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' | cut -c1-220 || true)"
-announce warning "dimna proba — tekstovi poslije tapa: ${tekstovi_tap:-nema teksta u hijerarhiji}"
+# Fokus nakon starta: am start zna ostaviti fokus na launcheru iako je app prozor
+# na vrhu (run 86e8985) — zato orkestratorska petlja u maestro-ci.sh prije svakog
+# toka radi am start + tap s provjerom fokusa; ovdje samo zabilježimo stanje.
+focus_smoke="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "dimna proba — fokus nakon starta: ${focus_smoke:-nepoznato}"
 resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -E "topResumedActivity|mResumedActivity" | cut -c1-200 || true)"
 announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
 adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true

@@ -7,7 +7,11 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
-- launchApp
+# launchApp NE smije restartovati app (stopApp: false): na aosp_atd slici
+# restart gubi fokus prozora, a Maestro vidi samo fokusirani prozor. Stanje
+# (pm clear / force-stop) i fokus (am start + tap) priprema maestro-ci.sh.
+- launchApp:
+    stopApp: false
 - tapOn: "Moj dan"
 - assertVisible: "Sačuvaj na telefon"
 - tapOn: "Sačuvaj na telefon"
