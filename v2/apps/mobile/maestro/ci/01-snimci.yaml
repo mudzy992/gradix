@@ -34,11 +34,11 @@ name: snimci-i-A1e
 - tapOn: "Odjavi se"
 - assertVisible: "Potvrdi odjavu"
 - takeScreenshot: 05-odjava-potvrda-svjetla
-# Potvrda u dijalogu: istoimeno dugme postoji i na ekranu iza dijaloga, pa se bira
-# drugi po redu (index: 1) — dijalog je u hijerarhiji poslije glavnog prozora.
+# Potvrda u dijalogu: Alert.alert je NATIVNI dijalog = zaseban prozor; dok je
+# otvoren, a11y stablo izlaže samo njegove čvorove, pa je „Odjavi se" u dijalogu
+# JEDINI dostupni match (index: 1 je bio pogrešna pretpostavka — run 43646763583).
 - tapOn:
     text: "Odjavi se"
-    index: 1
 # A1e regresija: originalni mobilni bug — prijava nakon odjave vraćala je
 # „Došlo je do greške." (server 500 na NUL-u u emailu). Ovdje se dokazuje na CI-ju.
 - assertVisible: "Prijava za teren."
