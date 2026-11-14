@@ -274,15 +274,15 @@ jobs:
           SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
-          # aosp_atd (podvlaka!) — sdkmanager tag; s crticom paket ne postoji i
-          # sdkmanager umire šutke (run d004919). Kombinacija je preslikana iz
-          # vlastitog CI-ja same akcije (main.yml matrica): api 34 + aosp_atd +
-          # x86_64 + canary kanal + Galaxy Nexus profil (manji ekran, lakši
-          # swiftshader) + canary channel.
+          # aosp_atd (podvlaka!) - sdkmanager tag; s crticom paket ne postoji i
+          # sdkmanager umire sutke (run d004919). Galaxy Nexus = manji ekran,
+          # laksi swiftshader. Kanal STABILAN: canary emulator (37.3.9, gfxstream)
+          # se zaglavi na "Checking system compatibility" i boot nikad ne zavrsi
+          # (runovi b16cda4/bbda46d); stabilni je dokazano bootovao ovim
+          # runnerima (raniji google_apis-31 runovi).
           api-level: 34
           target: aosp_atd
           arch: x86_64
-          channel: canary
           profile: Galaxy Nexus
           cores: 2
           ram-size: 2048M
@@ -296,7 +296,7 @@ jobs:
           # OPCIJE SU PRESLIKANE 1:1 iz CI-ja same akcije za aosp_atd — bez
           # -no-snapshot i bez -camera-front none (run 7e68fce: uz njih se
           # hladan boot uopšte nije završio u 900s; njihova kombinacija boota).
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           # Emulatorov izlaz se presreće u /tmp/emu.log (logovi koraka su nam
           # nedostupni izvan Actions UI-ja) — korak ispod ga objavljuje u
           # anotacije i kao artefakt.
