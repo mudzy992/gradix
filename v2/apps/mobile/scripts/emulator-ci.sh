@@ -51,17 +51,22 @@ for attempt in 1 2 3; do
   sleep 10
 done
 
-# Ključni korak koji je prva verzija workflowa preskočila: APK mora biti
-# instaliran na emulatoru prije maestro launchApp. Sa retryjem — odmah nakon
-# boot-a adb install zna pasti s „Could not access the Package Manager"
-# (run 8b6cb6d, 43585500810).
+# Ključni korak koji je prva verzija workflowa preskočila: APK mora biti instaliran
+# na emulatoru prije maestro launchApp. Sa retryjem — odmah nakon boot-a adb
+# install zna pasti s „Could not access the Package Manager"; ako pada i dalje,
+# izlaz adb install (razlog pada) ide u anotaciju, a pokušaji koriste varijante
+# flagova (-t za testOnly, -d za downgrade, te čista instalacija bez -r).
 installed=0
+inst_flags=("-r" "-r -t" "-r -d -t" "")
 for attempt in 1 2 3 4; do
-  if adb install -r "$mobile/.ci-apk/app-release.apk"; then
+  flags="${inst_flags[$((attempt - 1))]}"
+  inst_out="$(adb install $flags "$mobile/.ci-apk/app-release.apk" 2>&1 || true)"
+  if adb shell pm list packages 2>/dev/null | grep -q ba.gradix.teren; then
     installed=1
     break
   fi
-  announce warning "instalacija APK-a nije uspjela (pokušaj $attempt/4) — čekam 15s i pokušavam ponovo"
+  announce warning "instalacija APK-a nije uspjela (pokušaj $attempt/4, flagovi '$flags'): $(echo "$inst_out" | tr '\n' ' ' | cut -c1-200)"
+  adb uninstall ba.gradix.teren >/dev/null 2>&1 || true
   sleep 15
 done
 if [ "$installed" != "1" ]; then
