@@ -113,6 +113,21 @@ if [ "${anr:-0}" -gt 0 ]; then
   fi
 else
   announce warning "dimna proba — nema ANR dijaloga na ekranu"
+
+# ATD slika nema pravi launcher: FallbackHome (com.android.fakesystemapp) drži
+# fokus prozora i zna doći ISPRAD aplikacije (run f9059f8: mCurrentFocus=
+# FallbackHome dok je naša aktivnost resumed; index se unmountuje kad launcher
+# preuzme prvi plan). E2E ne treba home ekran — onemogućićemo lažni launcher i
+# aplikacija će biti jedini vidljivi prozor.
+if adb shell pm disable-user --user 0 com.android.fakesystemapp >/dev/null 2>&1; then
+  announce warning "FallbackHome (lažni launcher ATD slike) onemogućen"
+else
+  announce warning "FallbackHome nije mogao biti onemogućen — pokušaj force-stop"
+  adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
+fi
+sleep 2
+focus_after="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "fokus nakon onemogućavanja launchera: ${focus_after:-nepoznato}"
 fi
 
 # Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
