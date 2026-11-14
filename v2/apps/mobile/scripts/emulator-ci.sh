@@ -36,6 +36,8 @@ for i in $(seq 1 60); do
   sleep 5
 done
 announce warning "boot_completed=$boot (nakon $((i * 5))s)"
+# Package Manager se zna buditi nekoliko sekundi NAKON boot_completed=1.
+sleep 10
 
 # Animacije gasimo — najveći izvor lažnih padova na emulatoru. Sa retryjem:
 # prvih trenutaka nakon boot-a adb zna odbiti komandu.
@@ -50,9 +52,20 @@ for attempt in 1 2 3; do
 done
 
 # Ključni korak koji je prva verzija workflowa preskočila: APK mora biti
-# instaliran na emulatoru prije maestro launchApp.
-if ! adb install -r "$mobile/.ci-apk/app-release.apk"; then
-  announce error "instalacija APK-a na emulator pala"
+# instaliran na emulatoru prije maestro launchApp. Sa retryjem — odmah nakon
+# boot-a adb install zna pasti s „Could not access the Package Manager"
+# (run 8b6cb6d, 43585500810).
+installed=0
+for attempt in 1 2 3 4; do
+  if adb install -r "$mobile/.ci-apk/app-release.apk"; then
+    installed=1
+    break
+  fi
+  announce warning "instalacija APK-a nije uspjela (pokušaj $attempt/4) — čekam 15s i pokušavam ponovo"
+  sleep 15
+done
+if [ "$installed" != "1" ]; then
+  announce error "instalacija APK-a na emulator pala nakon 4 pokušaja"
   exit 1
 fi
 if ! adb shell pm list packages | grep -q ba.gradix.teren; then
