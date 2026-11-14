@@ -297,12 +297,38 @@ jobs:
           # -no-snapshot i bez -camera-front none (run 7e68fce: uz njih se
           # hladan boot uopšte nije završio u 900s; njihova kombinacija boota).
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # Emulatorov izlaz se presreće u /tmp/emu.log (logovi koraka su nam
+          # nedostupni izvan Actions UI-ja) — korak ispod ga objavljuje u
+          # anotacije i kao artefakt.
+          pre-emulator-launch-script: |
+            mkdir -p /tmp/emuwrap
+            cp "$ANDROID_HOME/emulator/emulator" /tmp/emuwrap/emulator.real
+            printf '#!/bin/sh\nexec /tmp/emuwrap/emulator.real "$@" > /tmp/emu.log 2>&1\n' > "$ANDROID_HOME/emulator/emulator"
+            chmod +x "$ANDROID_HOME/emulator/emulator"
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
           # scripts/emulator-ci.sh.
           script: bash v2/apps/mobile/scripts/emulator-ci.sh
 
       # ---------------- Dokazi (uvijek, i pri padu) ----------------
+      - name: Emulator boot log — dijagnostika (uvijek)
+        if: always()
+        run: |
+          if [ -f /tmp/emu.log ]; then
+            echo "::warning title=EmuLog pocetak::$(head -c 1600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+            echo "::warning title=EmuLog kraj::$(tail -c 2600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+          else
+            echo "::warning title=EmuLog::nema ga — emulator možda nije ni pokrenut"
+          fi
+      - name: Emulator boot log — artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-boot-log
+          path: /tmp/emu.log
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Maestro dokazi — artefakt (video, screenshotovi, junit, logcat)
         if: always()
         uses: actions/upload-artifact@v4
