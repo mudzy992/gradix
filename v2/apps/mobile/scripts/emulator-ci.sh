@@ -94,7 +94,7 @@ adb shell input tap 540 1500 >/dev/null 2>&1 || true # tap na „Wait" u dijalog
 sleep 2
 
 # Fokus prozora je istina o tome šta je stvarno na vrhu (dijalog ili app).
-focus="$(adb shell dumpsys window windows 2>/dev/null | grep -E "mCurrentFocus|mFocusedWindow" | head -2 | tr '\n' ' ' || true)"
+focus="$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus|mFocusedWindow" | head -2 | tr '\n' ' ' || true)"
 announce warning "dimna proba — fokus prozora: ${focus:-nepoznato}"
 
 adb shell uiautomator dump /sdcard/anr-check.xml >/dev/null 2>&1 || true
@@ -113,6 +113,26 @@ if [ "${anr:-0}" -gt 0 ]; then
   fi
 else
   announce warning "dimna proba — nema ANR dijaloga na ekranu"
+
+# Napomena: lažni launcher (com.android.fakesystemapp) se namjerno NE dira više
+# — njegovo onemogućavanje je ostavilo mCurrentFocus=null i vidljivost app
+# prozora je postala nasumična (run c1550da vidi ekran, run 9a310f3 ne vidi).
+# Prirodan home + am start aplikacije je determinističniji put.
+
+# Standardno CI otključavanje: probudi ekran, odbaci keyguard, pa MENU.
+adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+adb shell input keyevent 82 >/dev/null 2>&1 || true
+sleep 2
+kg_state="$(adb shell dumpsys window 2>/dev/null | grep -iE "mDreamingLockscreen|mKeyguardShown|Keyguard" | head -3 | tr '\n' '|' | cut -c1-200 || true)"
+announce warning "keyguard stanje: ${kg_state:-nepoznato}"
+wake="$(adb shell dumpsys power 2>/dev/null | grep -m1 "mWakefulness" || true)"
+announce warning "budnost ekrana: ${wake:-nepoznato}"
+focus_unlock="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "fokus nakon otključavanja: ${focus_unlock:-nepoznato}"
+# Z-order prozora: šta je stvarno na vrhu ekrana (vidljivost = gornji prozor).
+windows_now="$(adb shell dumpsys window windows 2>/dev/null | grep "Window #" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
+announce warning "prozori po dubini (vrh prvi): ${windows_now:-nepoznato}"
 fi
 
 # Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita

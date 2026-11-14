@@ -13,11 +13,9 @@ name: sef-grupa
 - tapOn:
     id: "Email"
 - inputText: "sef@demo.ba"
-- hideKeyboard
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
-- hideKeyboard
 - tapOn: "Prijavi se"
 - assertVisible: "Grupa — unos za ekipu"
 - tapOn: "Grupa — unos za ekipu"

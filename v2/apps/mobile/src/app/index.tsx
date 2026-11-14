@@ -22,6 +22,8 @@ export default function IndexScreen() {
   const { styles } = useUiStyles();
 
   const [phase, setPhase] = useState<Phase>("loading");
+  // PRIVREMENO (dijagnostika release render-a u CI) — skloniti nakon dijagnoze.
+  console.log(`[e2e] render phase=${phase}`);
   const [profile, setProfile] = useState<Me | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,13 @@ export default function IndexScreen() {
         if (!token) {
           // No authenticated account may see a server-derived cache left by a previous session.
           await clearLocalAccountData(db);
-          if (mounted) setPhase("login");
+          console.log("[e2e] clear done");
+          if (mounted) {
+            setPhase("login");
+            console.log("[e2e] phase=login postavljen");
+          } else {
+            console.log("[e2e] mounted=false — setPhase preskočen!");
+          }
           return;
         }
         const current = await me();
@@ -66,7 +74,10 @@ export default function IndexScreen() {
         }
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      console.log("[e2e] index unmounted (mounted=false)");
+      mounted = false;
+    };
   }, []);
 
   async function signIn() {

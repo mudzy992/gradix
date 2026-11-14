@@ -15,11 +15,9 @@ name: snimci-i-A1e
 - tapOn:
     id: "Email"
 - inputText: "radnik@demo.ba"
-- hideKeyboard
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
-- hideKeyboard
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 - tapOn: "Moj dan"
@@ -48,11 +46,9 @@ name: snimci-i-A1e
 - tapOn:
     id: "Email"
 - inputText: "radnik@demo.ba"
-- hideKeyboard
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
-- hideKeyboard
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 - takeScreenshot: 07-ponovna-prijava-svjetla
