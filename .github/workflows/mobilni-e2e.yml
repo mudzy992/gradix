@@ -302,8 +302,8 @@ jobs:
           # anotacije i kao artefakt.
           pre-emulator-launch-script: |
             mkdir -p /tmp/emuwrap
-            cp "$ANDROID_HOME/emulator/emulator" /tmp/emuwrap/emulator.real
-            printf '#!/bin/sh\nexec /tmp/emuwrap/emulator.real "$@" > /tmp/emu.log 2>&1\n' > "$ANDROID_HOME/emulator/emulator"
+            mv "$ANDROID_HOME/emulator/emulator" "$ANDROID_HOME/emulator/emulator.real"
+            printf '#!/bin/sh\nexec "$(dirname "$0")/emulator.real" "$@" > /tmp/emu.log 2>&1\n' > "$ANDROID_HOME/emulator/emulator"
             chmod +x "$ANDROID_HOME/emulator/emulator"
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
