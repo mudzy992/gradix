@@ -214,7 +214,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images
-          key: emulator-img-${{ runner.os }}-api33-aosp-atd-x86_64-v1
+          key: emulator-img-${{ runner.os }}-api34-aosp_atd-x86_64-v1
 
       - name: Instalacija (pnpm)
         working-directory: v2
@@ -274,13 +274,25 @@ jobs:
           SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
-          api-level: 33
-          target: aosp-atd
+          # aosp_atd (podvlaka!) — sdkmanager tag; s crticom paket ne postoji i
+          # sdkmanager umire šutke (run d004919). Kombinacija je preslikana iz
+          # vlastitog CI-ja same akcije (main.yml matrica): api 34 + aosp_atd +
+          # x86_64 + canary kanal + Galaxy Nexus profil (manji ekran, lakši
+          # swiftshader) + canary channel.
+          api-level: 34
+          target: aosp_atd
           arch: x86_64
+          channel: canary
+          profile: Galaxy Nexus
+          cores: 2
+          ram-size: 2048M
           # Hladan start zna potrajati (skidanje slike pri prvom runu + boot) —
           # default od 600s je nedovoljan, pa je budžet 900s.
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 2048
+          # Animacije gasi naša skripta (s retryjem) — disable-animations input
+          # bi pao na restriktivnim slikama prije nego skripta uopšte krene.
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
           # scripts/emulator-ci.sh.
