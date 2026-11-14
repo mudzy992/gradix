@@ -12,7 +12,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"   # v2/apps/mobile/scripts
 mobile="$(dirname "$here")"             # v2/apps/mobile
 
-# announce <notice|error> <poruka>
+# announce <notice|warning|error> <poruka>
 announce() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then
     echo "::$1 title=Emulator::$2"
@@ -21,15 +21,58 @@ announce() {
   fi
 }
 
-# Animacije gasimo — najveći izvor lažnih padova na emulatoru.
-adb shell settings put global window_animation_scale 0
-adb shell settings put global transition_animation_scale 0
-adb shell settings put global animator_duration_scale 0
+# Svaki neuspjeli red se oglašava s brojem reda i izlaznim kodom — jedini
+# pouzdani način da se vidi GDJE je skripta stala (exit kodovi poput 224 iz
+# vanjskih alata inače ostaju nijemi).
+trap 'announce error "emulator-ci.sh stao u redu $LINENO (kod $?)"' ERR
 
-# Ključni korak koji je prva verzija workflowa preskočila: APK mora biti
-# instaliran na emulatoru prije maestro launchApp.
-if ! adb install -r "$mobile/.ci-apk/app-release.apk"; then
-  announce error "instalacija APK-a na emulator pala"
+# Pojasnjava čekanje na boot: akcija čeka boot_completed, ali pojasnjava
+# dodatna provjera košta malo a spašava slučaj kad device još diže servise.
+adb wait-for-device
+boot=""
+for i in $(seq 1 60); do
+  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  if [ "$boot" = "1" ]; then break; fi
+  sleep 5
+done
+announce warning "boot_completed=$boot (nakon $((i * 5))s)"
+# Kratki odmor sistema nakon boota (slika je aosp-atd — ogoljena za CI, bez
+# telefonije i Google aplikacija; prijašnje slike su imale SystemUI crash-loop
+# „Could not find Telephony Service" i 18 minuta zagrijavanja — run 43596904847).
+sleep 30
+
+# Animacije gasimo — najveći izvor lažnih padova na emulatoru. Sa retryjem:
+# prvih trenutaka nakon boot-a adb zna odbiti komandu.
+for attempt in 1 2 3; do
+  if adb shell settings put global window_animation_scale 0 \
+     && adb shell settings put global transition_animation_scale 0 \
+     && adb shell settings put global animator_duration_scale 0; then
+    break
+  fi
+  announce warning "gašenje animacija nije uspjelo (pokušaj $attempt) — čekam i pokušavam ponovo"
+  sleep 10
+done
+
+# Ključni korak koji je prva verzija workflowa preskočila: APK mora biti instaliran
+# na emulatoru prije maestro launchApp. Sa retryjem — odmah nakon boot-a adb
+# install zna pasti s „Could not access the Package Manager"; ako pada i dalje,
+# izlaz adb install (razlog pada) ide u anotaciju, a pokušaji koriste varijante
+# flagova (-t za testOnly, -d za downgrade, te čista instalacija bez -r).
+installed=0
+inst_flags=("-r" "-r -t" "-r -d -t" "")
+for attempt in 1 2 3 4; do
+  flags="${inst_flags[$((attempt - 1))]}"
+  inst_out="$(adb install $flags "$mobile/.ci-apk/app-release.apk" 2>&1 || true)"
+  if adb shell pm list packages 2>/dev/null | grep -q ba.gradix.teren; then
+    installed=1
+    break
+  fi
+  announce warning "instalacija APK-a nije uspjela (pokušaj $attempt/4, flagovi '$flags'): $(echo "$inst_out" | tr '\n' ' ' | cut -c1-200)"
+  adb uninstall ba.gradix.teren >/dev/null 2>&1 || true
+  sleep 15
+done
+if [ "$installed" != "1" ]; then
+  announce error "instalacija APK-a na emulator pala nakon 4 pokušaja"
   exit 1
 fi
 if ! adb shell pm list packages | grep -q ba.gradix.teren; then
@@ -95,14 +138,30 @@ announce warning "dimna proba — pid app-a (28s): ${pids28:-PROCES NIJE ŽIV}"
 adb shell uiautomator dump /sdcard/uidump2.xml >/dev/null 2>&1 || true
 tekstovi2="$(adb shell cat /sdcard/uidump2.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
 announce warning "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
+# Treći pogled nakon ponovnog pokretanja: ako je prvi start pao u loš prozor
+# sistema, restart pokazuje stabilno stanje.
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+sleep 15
+adb shell uiautomator dump /sdcard/uidump3.xml >/dev/null 2>&1 || true
+tekstovi3="$(adb shell cat /sdcard/uidump3.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -10 | paste -sd '|' | cut -c1-220 || true)"
+announce warning "dimna proba - vidljivi tekstovi (restart+15s): ${tekstovi3:-nema teksta u hijerarhiji}"
 jserr="$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -6 | tr '\n' ' ' | cut -c1-220 || true)"
 if [ -n "$jserr" ]; then
   announce error "dimna proba — JS greške: $jserr"
 fi
 # [e2e] breadcrumbs iz aplikacije (console.log → ReactNativeJS) — glavni
-# signal dok se dijagnostifikuje release boot.
-crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -8 | tr '\n' ' ' | cut -c1-220 || true)"
-announce warning "dimna proba — [e2e] breadcrumbs: ${crumbs:-nema ih}"
+# signal dok se dijagnostifikuje release boot. POJEDINAČNO po liniji: združeni
+# zapis se znao odsjeći usred ključnog breadcrumba (run d8cb7cc).
+adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -14 | while IFS= read -r line; do
+  announce warning "crumb: $(echo "$line" | cut -c1-200)"
+done
+
+# Render vs accessibility: view hijerarhija top aktivnosti pokazuje da li je
+# ekran STVARNO nacrtan (ReactTextView/ReactImageView čvorovi) i kad uiautomator
+# ne vidi nijedan tekst — tada je slomljeno izlaganje teksta, ne render.
+adb shell dumpsys activity top > /tmp/top.txt 2>&1 || true
+top_count="$(grep -c "TextView" /tmp/top.txt || true)"
+announce warning "dimna proba — TextView čvorova u hijerarhiji top aktivnosti: ${top_count:-0} (dokaz da li je ekran nacrtan)"
 fatal="$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600 || true)"
 if [ -n "$fatal" ]; then
   announce error "dimna proba — FATAL: $fatal"

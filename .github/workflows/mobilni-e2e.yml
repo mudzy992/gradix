@@ -159,7 +159,7 @@ jobs:
     name: Emulator + Maestro tokovi
     needs: apk
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     env:
       DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
       DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
@@ -214,7 +214,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/lib/android/sdk/system-images
-          key: emulator-img-${{ runner.os }}-api31-google_apis-x86_64-v1
+          key: emulator-img-${{ runner.os }}-api34-aosp_atd-x86_64-v1
 
       - name: Instalacija (pnpm)
         working-directory: v2
@@ -256,6 +256,7 @@ jobs:
       - name: Okruženje runnera (KVM/CPU/RAM)
         run: |
           echo "::warning title=Runner::CPU jezgara: $(nproc)"
+          echo "::warning title=Runner::Disk: $(df -h / | awk 'NR==2{print $4 " slobodno od " $2}')"
           echo "::warning title=Runner::RAM: $(free -h | awk '/^Mem:/{print $2 " ukupno, " $7 " slobodno"}')"
           if [ -e /dev/kvm ]; then
             echo "::warning title=Runner::KVM dostupan ($(ls -l /dev/kvm | awk '{print $1, $3, $4}'))"
@@ -273,19 +274,61 @@ jobs:
           SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
-          api-level: 31
-          target: google_apis
+          # aosp_atd (podvlaka!) — sdkmanager tag; s crticom paket ne postoji i
+          # sdkmanager umire šutke (run d004919). Kombinacija je preslikana iz
+          # vlastitog CI-ja same akcije (main.yml matrica): api 34 + aosp_atd +
+          # x86_64 + canary kanal + Galaxy Nexus profil (manji ekran, lakši
+          # swiftshader) + canary channel.
+          api-level: 34
+          target: aosp_atd
           arch: x86_64
+          channel: canary
+          profile: Galaxy Nexus
+          cores: 2
+          ram-size: 2048M
           # Hladan start zna potrajati (skidanje slike pri prvom runu + boot) —
           # default od 600s je nedovoljan, pa je budžet 900s.
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 2048
+          # Animacije gasi naša skripta (s retryjem) — disable-animations input
+          # bi pao na restriktivnim slikama prije nego skripta uopšte krene.
+          disable-animations: false
+          sdcard-path-or-size: 100M
+          # OPCIJE SU PRESLIKANE 1:1 iz CI-ja same akcije za aosp_atd — bez
+          # -no-snapshot i bez -camera-front none (run 7e68fce: uz njih se
+          # hladan boot uopšte nije završio u 900s; njihova kombinacija boota).
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # Emulatorov izlaz se presreće u /tmp/emu.log (logovi koraka su nam
+          # nedostupni izvan Actions UI-ja) — korak ispod ga objavljuje u
+          # anotacije i kao artefakt.
+          pre-emulator-launch-script: |
+            mkdir -p /tmp/emuwrap
+            cp "$ANDROID_HOME/emulator/emulator" /tmp/emuwrap/emulator.real
+            printf '#!/bin/sh\nexec /tmp/emuwrap/emulator.real "$@" > /tmp/emu.log 2>&1\n' > "$ANDROID_HOME/emulator/emulator"
+            chmod +x "$ANDROID_HOME/emulator/emulator"
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
           # scripts/emulator-ci.sh.
           script: bash v2/apps/mobile/scripts/emulator-ci.sh
 
       # ---------------- Dokazi (uvijek, i pri padu) ----------------
+      - name: Emulator boot log — dijagnostika (uvijek)
+        if: always()
+        run: |
+          if [ -f /tmp/emu.log ]; then
+            echo "::warning title=EmuLog pocetak::$(head -c 1600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+            echo "::warning title=EmuLog kraj::$(tail -c 2600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+          else
+            echo "::warning title=EmuLog::nema ga — emulator možda nije ni pokrenut"
+          fi
+      - name: Emulator boot log — artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-boot-log
+          path: /tmp/emu.log
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Maestro dokazi — artefakt (video, screenshotovi, junit, logcat)
         if: always()
         uses: actions/upload-artifact@v4
