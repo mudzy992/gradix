@@ -13,11 +13,9 @@ name: offline-prijava-i-kes
 - tapOn:
     id: "Email"
 - inputText: "radnik@demo.ba"
-- hideKeyboard
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
-- hideKeyboard
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 # Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
