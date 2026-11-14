@@ -112,6 +112,9 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     adb shell dumpsys activity top > /tmp/top-fail.txt 2>&1 || true
     top_n="$(grep -c "TextView" /tmp/top-fail.txt || true)"
     announce error "$name" "TextView broj u hijerarhiji: ${top_n:-0}"
+    # Z-order prozora u trenutku pada: šta je stvarno na vrhu ekrana.
+    win_stack="$(adb shell dumpsys window windows 2>/dev/null | grep "Window #" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
+    announce error "$name" "prozori po dubini (vrh prvi): ${win_stack:-nepoznato}"
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     bash scripts/emulator-net.sh on >/dev/null 2>&1 || true

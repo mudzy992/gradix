@@ -114,24 +114,11 @@ if [ "${anr:-0}" -gt 0 ]; then
 else
   announce warning "dimna proba — nema ANR dijaloga na ekranu"
 
-# ATD slika nema pravi launcher: FallbackHome (com.android.fakesystemapp) drži
-# fokus prozora i zna doći ISPRAD aplikacije (run f9059f8: mCurrentFocus=
-# FallbackHome dok je naša aktivnost resumed; index se unmountuje kad launcher
-# preuzme prvi plan). E2E ne treba home ekran — onemogućićemo lažni launcher i
-# aplikacija će biti jedini vidljivi prozor.
-if adb shell pm disable-user --user 0 com.android.fakesystemapp >/dev/null 2>&1; then
-  announce warning "FallbackHome (lažni launcher ATD slike) onemogućen"
-else
-  announce warning "FallbackHome nije mogao biti onemogućen — pokušaj force-stop"
-  adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
-fi
-sleep 2
-focus_after="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
-announce warning "fokus nakon onemogućavanja launchera: ${focus_after:-nepoznato}"
+# Napomena: lažni launcher (com.android.fakesystemapp) se namjerno NE dira više
+# — njegovo onemogućavanje je ostavilo mCurrentFocus=null i vidljivost app
+# prozora je postala nasumična (run c1550da vidi ekran, run 9a310f3 ne vidi).
+# Prirodan home + am start aplikacije je determinističniji put.
 
-# Keyguard: na ATD slici bez SystemUI boot ostavlja ekran u zaključanom stanju
-# (FallbackHome je bio placeholder upravo toga) — i pošto ga je onemogućen,
-# fokus je null jer keyguard i dalje drži prozor aplikacije van vidljivosti.
 # Standardno CI otključavanje: probudi ekran, odbaci keyguard, pa MENU.
 adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
 adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
@@ -143,6 +130,9 @@ wake="$(adb shell dumpsys power 2>/dev/null | grep -m1 "mWakefulness" || true)"
 announce warning "budnost ekrana: ${wake:-nepoznato}"
 focus_unlock="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
 announce warning "fokus nakon otključavanja: ${focus_unlock:-nepoznato}"
+# Z-order prozora: šta je stvarno na vrhu ekrana (vidljivost = gornji prozor).
+windows_now="$(adb shell dumpsys window windows 2>/dev/null | grep "Window #" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
+announce warning "prozori po dubini (vrh prvi): ${windows_now:-nepoznato}"
 fi
 
 # Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
