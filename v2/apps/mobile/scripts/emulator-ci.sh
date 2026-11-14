@@ -128,6 +128,21 @@ fi
 sleep 2
 focus_after="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
 announce warning "fokus nakon onemogućavanja launchera: ${focus_after:-nepoznato}"
+
+# Keyguard: na ATD slici bez SystemUI boot ostavlja ekran u zaključanom stanju
+# (FallbackHome je bio placeholder upravo toga) — i pošto ga je onemogućen,
+# fokus je null jer keyguard i dalje drži prozor aplikacije van vidljivosti.
+# Standardno CI otključavanje: probudi ekran, odbaci keyguard, pa MENU.
+adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+adb shell input keyevent 82 >/dev/null 2>&1 || true
+sleep 2
+kg_state="$(adb shell dumpsys window 2>/dev/null | grep -iE "mDreamingLockscreen|mKeyguardShown|Keyguard" | head -3 | tr '\n' '|' | cut -c1-200 || true)"
+announce warning "keyguard stanje: ${kg_state:-nepoznato}"
+wake="$(adb shell dumpsys power 2>/dev/null | grep -m1 "mWakefulness" || true)"
+announce warning "budnost ekrana: ${wake:-nepoznato}"
+focus_unlock="$(adb shell dumpsys window 2>/dev/null | grep -m1 "mCurrentFocus" || true)"
+announce warning "fokus nakon otključavanja: ${focus_unlock:-nepoznato}"
 fi
 
 # Dimna proba bez Maestra: aplikacija se pokreće direktno (am start) pa se čita
