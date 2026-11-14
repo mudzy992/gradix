@@ -292,7 +292,11 @@ jobs:
           # Animacije gasi naša skripta (s retryjem) — disable-animations input
           # bi pao na restriktivnim slikama prije nego skripta uopšte krene.
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
+          sdcard-path-or-size: 100M
+          # OPCIJE SU PRESLIKANE 1:1 iz CI-ja same akcije za aosp_atd — bez
+          # -no-snapshot i bez -camera-front none (run 7e68fce: uz njih se
+          # hladan boot uopšte nije završio u 900s; njihova kombinacija boota).
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
           # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
           # scripts/emulator-ci.sh.
