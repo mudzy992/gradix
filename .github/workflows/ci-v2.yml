@@ -138,6 +138,7 @@ jobs:
           echo "OK: katalog nije u produkcijskom bundle-u"
 
       - name: Migracije i role
+        id: migracije
         working-directory: v2
         run: |
           psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
@@ -236,7 +237,9 @@ jobs:
       # Dijagnostika pri padu: anotacije su jedini kanal koji pouzdano stiže iz CI-ja
       # (turbo prefiksira `::error::`, artefakti/logovi nisu uvijek dostupni).
       - name: Dijagnostika — novi scope suite s anotacijama
-        if: failure()
+        # Samo ako su migracije stigle: kad padne raniji korak (npr. lint), baza je
+        # prazna i scope suite bi samo proizveo šum „relation companies does not exist".
+        if: failure() && steps.migracije.outcome == 'success'
         working-directory: v2/apps/web
         env:
           REQUIRE_DB_TESTS: "1"

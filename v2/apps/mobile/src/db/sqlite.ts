@@ -31,16 +31,21 @@ export function openDb(): Promise<SQLite.SQLiteDatabase> {
     openDbPromise = (async () => {
       // PRIVREMENO (dijagnostika release boot-a u CI) — skloniti nakon
       // dijagnoze: breadcrumbs u logcat, workflow ih čita u anotacije.
+      // eslint-disable-next-line no-console
       console.log("[e2e] sqlite open start");
       const db = await SQLite.openDatabaseAsync(DB_NAME);
+      // eslint-disable-next-line no-console
       console.log("[e2e] sqlite open ok");
       try {
         // Keep the database untouched until the migration helper has made a verified backup.
         await db.execAsync("PRAGMA foreign_keys = ON;");
+        // eslint-disable-next-line no-console
         console.log("[e2e] pragma fk ok");
         await migrateLocalDatabase(db);
+        // eslint-disable-next-line no-console
         console.log("[e2e] migrate ok");
         await db.execAsync("PRAGMA journal_mode = WAL;");
+        // eslint-disable-next-line no-console
         console.log("[e2e] pragma wal ok");
         return db;
       } catch (error) {

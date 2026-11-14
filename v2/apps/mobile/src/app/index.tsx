@@ -23,6 +23,7 @@ export default function IndexScreen() {
 
   const [phase, setPhase] = useState<Phase>("loading");
   // PRIVREMENO (dijagnostika release render-a u CI) — skloniti nakon dijagnoze.
+  // eslint-disable-next-line no-console
   console.log(`[e2e] render phase=${phase}`);
   const [profile, setProfile] = useState<Me | null>(null);
   const [email, setEmail] = useState("");
@@ -37,19 +38,25 @@ export default function IndexScreen() {
       try {
         // PRIVREMENO (dijagnostika release boot-a u CI) — skloniti nakon
         // dijagnostike: breadcrumbs u logcat, workflow ih čita u anotacije.
+        // eslint-disable-next-line no-console
         console.log("[e2e] bootstrap start");
         db = await openDb();
+        // eslint-disable-next-line no-console
         console.log("[e2e] openDb ok");
         const token = await getAccessToken();
+        // eslint-disable-next-line no-console
         console.log(`[e2e] token=${token ? "da" : "ne"}`);
         if (!token) {
           // No authenticated account may see a server-derived cache left by a previous session.
           await clearLocalAccountData(db);
+          // eslint-disable-next-line no-console
           console.log("[e2e] clear done");
           if (mounted) {
             setPhase("login");
+            // eslint-disable-next-line no-console
             console.log("[e2e] phase=login postavljen");
           } else {
+            // eslint-disable-next-line no-console
             console.log("[e2e] mounted=false — setPhase preskočen!");
           }
           return;
@@ -63,6 +70,7 @@ export default function IndexScreen() {
           setPhase("ready");
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.log("[e2e] bootstrap greska:", error instanceof Error ? error.message : error);
         // A revoked session clears tokens in the auth client; purge private caches on the next
         // online check, but preserve every outbox row for its original account.
@@ -75,6 +83,7 @@ export default function IndexScreen() {
       }
     })();
     return () => {
+      // eslint-disable-next-line no-console
       console.log("[e2e] index unmounted (mounted=false)");
       mounted = false;
     };
