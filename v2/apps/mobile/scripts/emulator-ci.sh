@@ -141,9 +141,17 @@ if [ -n "$jserr" ]; then
   announce error "dimna proba — JS greške: $jserr"
 fi
 # [e2e] breadcrumbs iz aplikacije (console.log → ReactNativeJS) — glavni
-# signal dok se dijagnostifikuje release boot.
-crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -8 | tr '\n' ' ' | cut -c1-220 || true)"
-announce warning "dimna proba — [e2e] breadcrumbs: ${crumbs:-nema ih}"
+# signal dok se dijagnostifikuje release boot. POJEDINAČNO po liniji: združeni
+# zapis se znao odsjeći usred ključnog breadcrumba (run d8cb7cc).
+adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -14 | while IFS= read -r line; do
+  announce warning "crumb: $(echo "$line" | cut -c1-200)"
+done
+
+# Render vs accessibility: view hijerarhija top aktivnosti pokazuje da li je
+# ekran STVARNO nacrtan (ReactTextView/ReactImageView čvorovi) i kad uiautomator
+# ne vidi nijedan tekst — tada je slomljeno izlaganje teksta, ne render.
+top_views="$(adb shell dumpsys activity top 2>/dev/null | grep -E "ACTIVITY|TextView|ImageView|View Hierarchy" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
+announce warning "dimna proba — view hijerarhija: ${top_views:-nepoznata}"
 fatal="$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600 || true)"
 if [ -n "$fatal" ]; then
   announce error "dimna proba — FATAL: $fatal"

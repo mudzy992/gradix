@@ -104,6 +104,10 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     if [ -n "$jserr" ]; then
       announce error "$name" "logcat: $jserr"
     fi
+    # [e2e] breadcrumbs — dokle je app stigao u ovom pokušaju.
+    adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -4 | while IFS= read -r line; do
+      announce error "$name" "crumb: $(echo "$line" | cut -c1-200)"
+    done
     # Prije retryja: poznato stanje aplikacije i mreže.
     adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     bash scripts/emulator-net.sh on >/dev/null 2>&1 || true
