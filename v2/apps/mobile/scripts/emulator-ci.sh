@@ -80,6 +80,8 @@ fi
 # 43479147231: FATAL EXCEPTION u app-u + system ANR nakon dumpova po padu).
 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null
 sleep 8
+pids8="$(adb shell pidof ba.gradix.teren 2>/dev/null | tr '\n' ' ' || true)"
+announce warning "dimna proba — pid app-a (8s): ${pids8:-PROCES NIJE ŽIV}"
 resumed="$(adb shell dumpsys activity activities 2>/dev/null | grep -m1 -E "topResumedActivity|mResumedActivity" | cut -c1-200 || true)"
 announce warning "dimna proba — aktivnost u prvom planu: ${resumed:-nepoznato}"
 adb shell uiautomator dump /sdcard/uidump.xml >/dev/null 2>&1 || true
@@ -88,6 +90,8 @@ announce warning "dimna proba — vidljivi tekstovi (8s): ${tekstovi:-nema tekst
 # Drugi pogled nakon još 20s: ako se app zaglavio na splashu/spinneru, ovo to
 # razotkrije (prazni tekstovi i nakon 28s = bootstrap se nije završio).
 sleep 20
+pids28="$(adb shell pidof ba.gradix.teren 2>/dev/null | tr '\n' ' ' || true)"
+announce warning "dimna proba — pid app-a (28s): ${pids28:-PROCES NIJE ŽIV}"
 adb shell uiautomator dump /sdcard/uidump2.xml >/dev/null 2>&1 || true
 tekstovi2="$(adb shell cat /sdcard/uidump2.xml 2>/dev/null | tr '\n' ' ' | grep -o 'text="[^"]*"' | head -8 | paste -sd '|' - | cut -c1-200 || true)"
 announce warning "dimna proba — vidljivi tekstovi (28s): ${tekstovi2:-nema teksta u hijerarhiji}"
@@ -99,7 +103,7 @@ fi
 # signal dok se dijagnostifikuje release boot.
 crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -8 | tr '\n' ' ' | cut -c1-220 || true)"
 announce warning "dimna proba — [e2e] breadcrumbs: ${crumbs:-nema ih}"
-fatal="$(adb logcat -d 2>/dev/null | grep -A 18 "FATAL EXCEPTION" | tail -20 | tr '\n' ' ' | cut -c1-220 || true)"
+fatal="$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600 || true)"
 if [ -n "$fatal" ]; then
   announce error "dimna proba — FATAL: $fatal"
 fi
