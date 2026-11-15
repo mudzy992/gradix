@@ -225,7 +225,7 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
     fokus_fail="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | tr -d '\r' | cut -c1-120)"
     api_health="$(curl -s -m 5 http://127.0.0.1:3000/api/ready 2>/dev/null || echo "NE ODGOVARA")"
     email_probe="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | sed 's/^.*\[e2e\] //' | tr -d '\r' | cut -c1-80)"
-    announce error "$name" "dijagnoza: crumb: ${crumbs:-—} | email: ${email_probe:——} | fokus: ${fokus_fail:-?} | API: $(echo "$api_health" | head -c 60) | junit-out: ${junit_so:-—}"
+    announce error "$name" "dijagnoza: crumb: ${crumbs:-—} | email: ${email_probe:-—} | fokus: ${fokus_fail:-?} | API: $(echo "$api_health" | head -c 60) | junit-out: ${junit_so:-—}"
     # Prije retryja se NIŠTA ne dira: stanje i fokus priprema početak petlje
     # (pm clear / force-stop po načinu toka), a mrežu posjeduje pozivalac —
     # tok 03 se retreja U avionskom režimu, pa net on ovdje bi ga pokvario.
