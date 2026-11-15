@@ -8,20 +8,18 @@ appId: ba.gradix.teren
 name: sef-grupa
 ---
 - launchApp:
-    clearState: true
-# Fokus prije asercija: restart iz launchApp zna ostaviti fokus na launcheru iako
-# je app prozor na vrhu Z-ordera (aosp_atd slika), a Maestro čita samo fokusirani
-# prozor. Koordinatni tap ide u TOP prozor (app) i deterministički preuzima fokus.
+    stopApp: false
+# Koordinatni tap odmah nakon launchApp: drajverov startActivity na već
+# foreground aktivnost razbije input fokus prozora (dugme ne odgovara na tap),
+# a koordinatni tap ga vraća. App je startao orkestrator (maestro-ci.sh) —
+# typing u njega NE duplira znakove (za razliku od app-a startanog drajverovim
+# restartom), pa se unosi čist ASCII bez trikova.
 - tapOn:
     point: 50%, 12%
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"
-# Email s nevidljivim NBSP repom (\u00A0): Maestro za ČISTO ASCII tipka key
-# eventima po znaku, što na sporom emulatoru duplira svaki znak (poznati
-# Maestro #2005). Jedan ne-ASCII znak prebacuje unos na IME commitText —
-# cijeli string odjednom, bez utrke. JS trim() skida NBSP prije prijave.
-- inputText: "sef@demo.ba\u00A0"
+- inputText: "sef@demo.ba"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
