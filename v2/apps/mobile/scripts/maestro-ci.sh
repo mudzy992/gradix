@@ -98,8 +98,10 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
     # RN mora progutati onChangeText (controlled polje) prije provjere:
     sleep 3
     probe="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
-    announce notice "login priprema" "pokušaj $try — email u polju (RN crumb): ${probe:-NEMA — unos nije stigao}"
+    # announce SAMO na neuspjeh (GitHub cap ~10 anotacija po tipu — uspješni
+    # probe-ovi bi potrošili budžet i sakrili poruke o padovima)
     case "$probe" in *"email changed=\"$email\""*|*"email changed=\"${email//%s/ }\""*) break ;; esac
+    announce warning "login priprema" "pokušaj $try — email nije stigao: ${probe:-NEMA email changed loga}"
     # nije stigao (ili djelimično) — isprazni polje i probaj ponovo
     timeout 30 adb shell "$ocisti" >/dev/null 2>&1 || true
     sleep 1
@@ -111,8 +113,8 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
     timeout 20 adb shell input text "$pass" >/dev/null 2>&1 || true
     sleep 3
     probe="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "lozinka changed" | tail -1 | tr -d '\r')"
-    announce notice "login priprema" "pokušaj $try — lozinka dužina (RN crumb): ${probe:-NEMA — unos nije stigao}"
     case "$probe" in *"lozinka changed=${#DEMO_LOZINKA}zn"*) break ;; esac
+    announce warning "login priprema" "pokušaj $try — lozinka nije tačna: ${probe:-NEMA lozinka changed loga}"
     timeout 30 adb shell "$ocisti" >/dev/null 2>&1 || true
     sleep 1
   done
@@ -207,45 +209,23 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
       prva="(junit nije ni nastao — maestro se srušio prije izvještaja)"
     fi
     announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
-    # Završetak maestro izlaza (njegova poruka o padu — junit zna ostati prazan):
+    # Završetak maestro izlaza (njegova poruka o padu — junit zna ostati prazan)
+    # + rep system-out iz junita (posljednji izvršeni koraci — dokle je tok stigao):
     if [ -f "/tmp/maestro-$name-pokusaj$attempt.txt" ]; then
-      maestro_tail="$(tail -12 "/tmp/maestro-$name-pokusaj$attempt.txt" | tr '\n' '|' | tr -d '\r' | cut -c1-500)"
-      announce error "$name" "maestro izlaz (rep): ${maestro_tail:-PRAZNO}"
+      maestro_tail="$(tail -10 "/tmp/maestro-$name-pokusaj$attempt.txt" | tr '\n' '|' | tr -d '\r' | cut -c1-400)"
+      announce error "$name" "maestro rep: ${maestro_tail:-PRAZNO}"
     fi
-    # Native crash s stackom (glavni buffer, crash buffer zna biti prazan).
-    local fatal
-    fatal=$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600)
-    if [ -n "$fatal" ]; then
-      announce error "$name" "FATAL: $fatal"
+    local junit_so=""
+    if [ -f "$junit" ]; then
+      junit_so="$(grep -o '<system-out>.*' "$junit" | tail -c 400 | tr '\n' '|' | tr -d '\r' | cut -c1-380)"
     fi
-    # JS greške (ReactNativeJS) — jedina sigurna dijagnoza za release bundle.
-    local jserr
-    jserr=$(adb logcat -d 2>/dev/null | grep "ReactNativeJS" | grep -E " E | W " | tail -8 | tr '\n' ' ' | cut -c1-220)
-    if [ -n "$jserr" ]; then
-      announce error "$name" "logcat: $jserr"
-    fi
-    # [e2e] breadcrumbs — dokle je app stigao u ovom pokušaju.
-    adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -4 | while IFS= read -r line; do
-      announce error "$name" "crumb: $(echo "$line" | cut -c1-200)"
-    done
-    # Šta je RN polje Email zadnje primilo (adb_login unos ili prazno):
-    email_probe="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
-    announce error "$name" "email polje pri padu: ${email_probe:-NEMA email changed loga u ovom pokušaju}"
-    # Render dokaz: broj TextView čvorova u hijerarhiji top aktivnosti.
-    adb shell dumpsys activity top > /tmp/top-fail.txt 2>&1 || true
-    top_n="$(grep -c "TextView" /tmp/top-fail.txt || true)"
-    announce error "$name" "TextView broj u hijerarhiji: ${top_n:-0}"
-    # Z-order prozora u trenutku pada: šta je stvarno na vrhu ekrana.
-    win_stack="$(adb shell dumpsys window windows 2>/dev/null | grep "Window #" | head -8 | tr '\n' '|' | cut -c1-400 || true)"
-    announce error "$name" "prozori po dubini (vrh prvi): ${win_stack:-nepoznato}"
-    # Fokus u trenutku pada — Maestro čita fokusirani prozor, pa je ovo ključna
-    # dijagnoza: app na vrhu Z-ordera + fokus na launcheru = slijepi tok.
-    fokus_fail="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
-    announce error "$name" "fokus pri padu: $(echo "$fokus_fail" | tr -d '\r' | cut -c1-200)"
-    # API health s runnera u trenutku pada: je li backend uopšte živ (emulator
-    # dolazi do njega preko 10.0.2.2 → 127.0.0.1:3000).
+    # SPOJENA dijagnoza (GitHub cap ~10 anotacija po tipu — svaka mora nositi više):
+    local crumbs fokus_fail api_health email_probe top_n
+    crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -2 | sed 's/^.*\[e2e\] //' | tr '\n' '|' | tr -d '\r' | cut -c1-260)"
+    fokus_fail="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | tr -d '\r' | cut -c1-120)"
     api_health="$(curl -s -m 5 http://127.0.0.1:3000/api/ready 2>/dev/null || echo "NE ODGOVARA")"
-    announce error "$name" "API /api/ready pri padu: $(echo "$api_health" | head -c 120)"
+    email_probe="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | sed 's/^.*\[e2e\] //' | tr -d '\r' | cut -c1-80)"
+    announce error "$name" "dijagnoza: crumb: ${crumbs:-—} | email: ${email_probe:——} | fokus: ${fokus_fail:-?} | API: $(echo "$api_health" | head -c 60) | junit-out: ${junit_so:-—}"
     # Prije retryja se NIŠTA ne dira: stanje i fokus priprema početak petlje
     # (pm clear / force-stop po načinu toka), a mrežu posjeduje pozivalac —
     # tok 03 se retreja U avionskom režimu, pa net on ovdje bi ga pokvario.
@@ -328,8 +308,11 @@ adb logcat -d > "$artifacts/logcat.txt" 2>/dev/null || true
   echo "Pokušaja po toku: $max_attempts (cap ${MAKS_TRAJANJE}s po pokušaju). Dokazi: video, screenshot po koraku, junit, logcat — artefakt \`maestro-dokazi\`."
 } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
+# Sažetak i kao anotacija — jedina poruka koja MORA stići kroz cap.
 if [ "${#failed[@]}" -gt 0 ]; then
+  announce error "sažetak" "scenarij '$scenario': PALI → ${failed[*]} | prošli → ${passed[*]:-nijedan}"
   echo "Nije prošlo: ${failed[*]}" >&2
   exit 1
 fi
+announce notice "sažetak" "scenarij '$scenario': svi tokovi prošli → ${passed[*]}"
 echo "Svi tokovi prošli."
