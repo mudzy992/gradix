@@ -72,6 +72,7 @@ sleep 1
 # (uiautomator dump ne radi na ATD-u — NIJE_NAĐEN u prošlom runu; IME put
 # nemoguć: "cannot be enabled for user #0", ime list prazan.)
 echo "::group::Dijagnoza unosa v2 (privremeno)"
+artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" 2>/dev/null || true
 
 cat > /tmp/dijag-a.yaml <<'YAML'
