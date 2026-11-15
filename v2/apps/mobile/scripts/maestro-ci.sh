@@ -63,23 +63,19 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
-# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v4 (ukloniti nakon analize) =====
-# v3 (43689488958): mini-flow [tap Email + inputText] na svježem app-u = ČIST
-# unos (email changed=maestro@x → x. → x.b → x.ba). Dakle Maestro inputText na
-# ovom emulatoru NE duplira per se — nešto u pravom toku 01 kvari unos.
-# Tok 01 prije inputText-a ima assertVisible + takeScreenshot + (poslije)
-# lozinku i „Prijavi se". Binarna pretraga krivca:
-#   C = assertVisible + tap Email + inputText;
-#   D = takeScreenshot + tap Email + inputText;
-#   F = puna reprodukcija početka toka 01 (assert, screenshot, email, lozinka,
-#       Prijavi se, assert „Moj dan").
-echo "::group::Dijagnoza unosa v4 (privremeno)"
+# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v5 (ukloniti nakon analize) =====
+# v4 (43705800372): assertVisible (C) i takeScreenshot (D) prije unosa =
+# ČIST unos; puna login sekvenca (F) = email čist, ali lozinka=9zn od 18.
+# Zaključak: Maestro inputText je nondeterministički nestabilan na sporom
+# emulatoru (trka: nekad duplira, nekad gubi, nekad čist). v5 testira
+# KOMPLETAN LOGIN preko adb input text (fokus i submit preko Maestro
+# element tapova) — ako je „Moj dan" vidljiv i signIn crumb čist, ADB put
+# je rješenje za login unos u tokovima.
+echo "::group::Dijagnoza unosa v5 (privremeno)"
 artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" 2>/dev/null || true
 
-dijag_prep() {  # svjež app, fokus, čist logcat
-  # ANR dijalog system procesa zna ukrasti fokus cijeli run (43691349218) —
-  # otpusti ga BACK tipkom prije pripreme app-a.
+dijag_prep() {  # ANR dismissal + svjež app, fokus, čist logcat
   for _i in $(seq 1 3); do
     _f="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
     if echo "$_f" | grep -q "Application Not Responding"; then
@@ -97,60 +93,54 @@ dijag_prep() {  # svjež app, fokus, čist logcat
     echo "$_f" | grep -q "ba.gradix.teren" && break
     sleep 1
   done
-  sleep 3
+  sleep 5
   adb logcat -c
 }
 
-dijag_run() {  # dijag_run <slovo> <fajl>
-  local slovo="$1" fajl="$2" out crumb
-  out="$(timeout 120 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-$slovo.xml" "$fajl" 2>&1 | tail -3 | tr '\n' '|' | tr -d '\r' | cut -c1-300)"
-  crumb="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep -E "email changed|signIn poziv" | tail -3 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
-  announce notice "dijag-$slovo" "maestro: ${out:-PRAZNO}"
-  announce notice "dijag-$slovo" "RN: ${crumb:-NEMA}"
+dijag_flow() {  # dijag_flow <ime> <yaml sadržaj> — pokreće maestro mini-flow
+  printf '%s\n' "$2" > "/tmp/dijag-$1.yaml"
+  timeout 120 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-$1.xml" "/tmp/dijag-$1.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r'
 }
 
-cat > /tmp/dijag-c.yaml <<'YAML'
-appId: ba.gradix.teren
-name: dijag-c-assert
----
-- assertVisible: "Prijava za teren."
-- tapOn:
-    id: "Email"
-- inputText: "cccc@x.ba"
-YAML
-cat > /tmp/dijag-d.yaml <<'YAML'
-appId: ba.gradix.teren
-name: dijag-d-screenshot
----
-- takeScreenshot: dijag-d
-- tapOn:
-    id: "Email"
-- inputText: "dddd@x.ba"
-YAML
-cat > /tmp/dijag-f.yaml <<'YAML'
-appId: ba.gradix.teren
-name: dijag-f-full
----
-- assertVisible: "Prijava za teren."
-- takeScreenshot: dijag-f-prijava
-- tapOn:
-    id: "Email"
-- inputText: "radnik@demo.ba"
-- tapOn:
-    id: "Lozinka"
-- inputText: "${DEMO_LOZINKA}"
-- tapOn: "Prijavi se"
-- assertVisible: "Moj dan"
-YAML
+dijag_prep
 
-dijag_prep; dijag_run "c" /tmp/dijag-c.yaml
-dijag_prep; dijag_run "d" /tmp/dijag-d.yaml
-dijag_prep; dijag_run "f" /tmp/dijag-f.yaml
+# 1) fokus na Email (element tap), unos preko adb input text
+out="$(dijag_flow "fokus-email" 'appId: ba.gradix.teren
+name: dijag-fokus-email
+---
+- tapOn:
+    id: "Email"')"
+announce notice "dijagnoza-v5" "fokus email flow: ${out:-PRAZNO}"
+sleep 1
+timeout 20 adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
+sleep 2
+
+# 2) fokus na Lozinka, unos preko adb input text
+out="$(dijag_flow "fokus-lozinka" 'appId: ba.gradix.teren
+name: dijag-fokus-lozinka
+---
+- tapOn:
+    id: "Lozinka"')"
+announce notice "dijagnoza-v5" "fokus lozinka flow: ${out:-PRAZNO}"
+sleep 1
+timeout 20 adb shell input text "$DEMO_LOZINKA" >/dev/null 2>&1 || true
+sleep 2
+
+# 3) submit preko maestra + dokaz prijave
+out="$(dijag_flow "submit" 'appId: ba.gradix.teren
+name: dijag-submit
+---
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"')"
+announce notice "dijagnoza-v5" "submit flow: ${out:-PRAZNO}"
+
+crumb="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep -E "email changed|signIn poziv|signIn greska|phase=ready" | tail -5 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
+announce notice "dijagnoza-v5" "RN: ${crumb:-NEMA}"
 
 echo "::endgroup::"
 announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
 exit 1
-# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v4 =====
+# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v5 =====
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
