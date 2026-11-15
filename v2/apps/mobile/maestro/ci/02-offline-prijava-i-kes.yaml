@@ -19,22 +19,43 @@ name: offline-prijava-i-kes
 # s puno kartica je izvan vidljivog dijela, pa assertVisible pada. Skrolamo
 # do dugmeta; povratak ide `back` (‹ Nazad je poslije skrola izvan vidika).
 - tapOn: "Moji rokovi"
+- assertVisible: "Moji rokovi"
+# „Osvježi" je na DNU spiska (poslije kartica) — skrolamo do dugmeta.
 - scrollUntilVisible:
     element:
       text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+# Refresh traje nepredvidljivo (API + SQLite + re-render na sporom emulatoru);
+# dok traje, dugme je „Osvježavam…". takeScreenshot daje RN vremena da uđe u
+# busy stanje (nema sleep komande), pa čekamo da busy nestane. Poslije
+# re-rendera s punim spiskom dugme zna ispasti iz vidika — ponovo skrolamo.
+- takeScreenshot: 02-rokovi-osvjezava
 - extendedWaitUntil:
-    visible: "Osvježi"
-    timeout: 15000
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-rokovi-osvjezeno
 - back
 - tapOn: "Moji projekti"
+- assertVisible: "Moji projekti"
 - scrollUntilVisible:
     element:
       text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+- takeScreenshot: 02-projekti-osvjezava
 - extendedWaitUntil:
-    visible: "Osvježi"
-    timeout: 15000
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-projekti-osvjezeno
 - back
 - tapOn: "Moj dan"
 - assertVisible: "Sačuvaj na telefon"
