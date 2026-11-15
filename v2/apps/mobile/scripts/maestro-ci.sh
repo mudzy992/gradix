@@ -63,15 +63,11 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
-# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v2 (ukloniti nakon analize) =====
-# Poređenje dva injekcijska puta na istom emulatoru, u istom runu:
-#   A) maestro mini-flow samo fokusira Email polje (element tap) pa
-#      `adb shell input text` upisuje — system `input` binary put;
-#   B) maestro mini-flow radi i tap i inputText — pressKeyCode put.
-# [e2e] email changed crumb u index.tsx otkriva šta je RN polje primilo.
-# (uiautomator dump ne radi na ATD-u — NIJE_NAĐEN u prošlom runu; IME put
-# nemoguć: "cannot be enabled for user #0", ime list prazan.)
-echo "::group::Dijagnoza unosa v2 (privremeno)"
+# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v3 (ukloniti nakon analize) =====
+# v2 rezultat: NEMA CRUMBA za oba puta — ništa nije ušlo u polje. v3 dodaje
+# dokaze: RN logovi poslije starta (je li login ekran renderovan), maestro
+# stdout/stderr, i RN logovi poslije pokušaja unosa.
+echo "::group::Dijagnoza unosa v3 (privremeno)"
 artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" 2>/dev/null || true
 
@@ -100,12 +96,16 @@ for i in $(seq 1 20); do
   sleep 1
 done
 adb logcat -c
-timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-a.xml" /tmp/dijag-a.yaml >/dev/null 2>&1 || announce warning "dijagnoza" "mini-flow A (fokus) nije prošao čisto"
+sleep 2
+log_poslije_starta="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -4 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
+announce notice "dijagnoza-A" "RN log poslije starta: ${log_poslije_starta:-PRAZNO}"
+ma_out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-a.xml" /tmp/dijag-a.yaml 2>&1 | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
+announce notice "dijagnoza-A" "maestro izlaz: ${ma_out:-PRAZNO}"
 sleep 1
 timeout 20 adb shell input text "radik@demo.ba" >/dev/null 2>&1 || true
 sleep 3
-crumb_a="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
-announce notice "dijagnoza-A" "adb input text → RN: ${crumb_a:-NEMA CRUMBA}"
+log_a="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
+announce notice "dijagnoza-A" "RN log poslije adb input text: ${log_a:-PRAZNO}"
 
 # B) i tap i inputText preko maestra (pressKeyCode put)
 adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
@@ -116,15 +116,16 @@ for i in $(seq 1 20); do
   sleep 1
 done
 adb logcat -c
-timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-b.xml" /tmp/dijag-b.yaml >/dev/null 2>&1 || announce warning "dijagnoza" "mini-flow B (inputText) nije prošao čisto"
+ma_out_b="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-b.xml" /tmp/dijag-b.yaml 2>&1 | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
+announce notice "dijagnoza-B" "maestro izlaz: ${ma_out_b:-PRAZNO}"
 sleep 3
-crumb_b="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
-announce notice "dijagnoza-B" "maestro inputText → RN: ${crumb_b:-NEMA CRUMBA}"
+log_b="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -8 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
+announce notice "dijagnoza-B" "RN log poslije maestro inputText: ${log_b:-PRAZNO}"
 
 echo "::endgroup::"
 announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
 exit 1
-# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v2 =====
+# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v3 =====
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
