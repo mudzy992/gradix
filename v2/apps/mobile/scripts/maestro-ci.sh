@@ -85,36 +85,45 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
   # 3/3 tačno) — unos je SELF-HEALING: [e2e] email/lozinka changed crumb u RN
   # otkriva šta je polje primilo; ako nije tačno, polje se isprazni (DEL) i
   # unos se ponavlja do 3 puta.
-  local email="$1" out probe try
+  local email="$1" out probe try it_out
   email="${email// /%s}"
   local pass="${DEMO_LOZINKA// /%s}"
+  # Probe mora gledati SAMO log ovog unosa — bez brisanja bi retry (ili
+  # sljedeći tok) našao stari „email changed" crumb i lažno prošao (43748557549).
+  adb logcat -c >/dev/null 2>&1 || true
   # brisanje polja: petlja na uređaju (jedan adb poziv), 40× KEYCODE_DEL
   local ocisti='i=0; while [ $i -lt 40 ]; do input keyevent 67; i=$((i+1)); done' 
   for try in 1 2 3; do
-    out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-email-$try.xml" "$flows_dir/_fokus-email.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
-    case "$out" in *Passed*) ;; *) announce warning "login priprema" "pokušaj $try — fokus Email mini-flow: ${out:-PRAZNO}" ;; esac
-    sleep 1
-    timeout 20 adb shell input text "$email" >/dev/null 2>&1 || true
+    # try 2 preskače re-tap: fokus polja zna „prionuti" tek poslije pauze,
+    # a ponovljeni input text bez tapanja je jeftin provjereni pokušaj.
+    if [ "$try" -ne 2 ]; then
+      out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-email-$try.xml" "$flows_dir/_fokus-email.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
+      case "$out" in *Passed*) ;; *) announce warning "login priprema" "pokušaj $try — fokus Email mini-flow: ${out:-PRAZNO}" ;; esac
+      sleep 1
+    fi
+    it_out="$(timeout 20 adb shell input text "$email" 2>&1 || true)"
     # RN mora progutati onChangeText (controlled polje) prije provjere:
     sleep 3
     probe="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
     # announce SAMO na neuspjeh (GitHub cap ~10 anotacija po tipu — uspješni
     # probe-ovi bi potrošili budžet i sakrili poruke o padovima)
     case "$probe" in *"email changed=\"$email\""*|*"email changed=\"${email//%s/ }\""*) break ;; esac
-    announce warning "login priprema" "pokušaj $try — email nije stigao: ${probe:-NEMA email changed loga}"
+    announce warning "login priprema" "pokušaj $try — email nije stigao (input izlaz: ${it_out:-prazno}): ${probe:-NEMA email changed loga}"
     # nije stigao (ili djelimično) — isprazni polje i probaj ponovo
     timeout 30 adb shell "$ocisti" >/dev/null 2>&1 || true
     sleep 1
   done
   for try in 1 2 3; do
-    out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-lozinka-$try.xml" "$flows_dir/_fokus-lozinka.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
-    case "$out" in *Passed*) ;; *) announce warning "login priprema" "pokušaj $try — fokus Lozinka mini-flow: ${out:-PRAZNO}" ;; esac
-    sleep 1
-    timeout 20 adb shell input text "$pass" >/dev/null 2>&1 || true
+    if [ "$try" -ne 2 ]; then
+      out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-lozinka-$try.xml" "$flows_dir/_fokus-lozinka.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
+      case "$out" in *Passed*) ;; *) announce warning "login priprema" "pokušaj $try — fokus Lozinka mini-flow: ${out:-PRAZNO}" ;; esac
+      sleep 1
+    fi
+    it_out="$(timeout 20 adb shell input text "$pass" 2>&1 || true)"
     sleep 3
     probe="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "lozinka changed" | tail -1 | tr -d '\r')"
     case "$probe" in *"lozinka changed=${#DEMO_LOZINKA}zn"*) break ;; esac
-    announce warning "login priprema" "pokušaj $try — lozinka nije tačna: ${probe:-NEMA lozinka changed loga}"
+    announce warning "login priprema" "pokušaj $try — lozinka nije tačna (input izlaz: ${it_out:-prazno}): ${probe:-NEMA lozinka changed loga}"
     timeout 30 adb shell "$ocisti" >/dev/null 2>&1 || true
     sleep 1
   done
