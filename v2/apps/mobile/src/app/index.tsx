@@ -169,7 +169,9 @@ export default function IndexScreen() {
           // eslint-disable-next-line no-console
           onChangeText={(t) => { console.log(`[e2e] email changed="${t}"`); setEmail(t); }} autoCapitalize="none"
           keyboardType="email-address" autoComplete="username" accessibilityLabel="Email" />
-        <TextField label="Lozinka" value={password} onChangeText={setPassword} secureTextEntry
+        <TextField label="Lozinka" value={password}
+          // eslint-disable-next-line no-console
+          onChangeText={(t) => { console.log(`[e2e] lozinka changed=${t.length}zn`); setPassword(t); }} secureTextEntry
           autoComplete="current-password" accessibilityLabel="Lozinka" />
         {message && <Text>{message}</Text>}
         <Button label="Prijavi se" busy={busy} onPress={signIn} />
