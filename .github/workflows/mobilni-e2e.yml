@@ -268,10 +268,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2.38.0
         env:
           DEMO_LOZINKA: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
-          # PRIVREMENO ( debugging): push runovi idu samo sa scenarijem 'snimci'
-          # (jedan tok) dok se ne otkloni problem s release pokretanjem app-a;
-          # dispatch bira eksplicitno. Vratiti na 'sve' kad tok progovori.
-          SCENARIJ: ${{ inputs.scenarij || 'snimci' }}
+          SCENARIJ: ${{ inputs.scenarij || 'sve' }}
           POKUSAJA: ${{ inputs.pokusaja || '3' }}
         with:
           # aosp_atd (podvlaka!) - sdkmanager tag; s crticom paket ne postoji i
