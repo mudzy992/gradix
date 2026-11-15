@@ -25,6 +25,16 @@ scenario="${1:-sve}"
 max_attempts="${2:-3}"
 MAKS_TRAJANJE=300  # sekundi po pokušaju toka
 
+# announce <notice|error> <tok> <poruka>
+announce() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::$1 title=Maestro — $2::$3"
+  else
+    echo "Maestro — $2: $3"
+  fi
+}
+
+
 cd "$(dirname "$0")/.."  # apps/mobile
 
 # Rezolucija maestro binarne: PATH, pa fallback na standardnu lokaciju
@@ -62,8 +72,8 @@ adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
 sleep 8
 adb logcat -c
-adb shell uiautomator dump /sdcard/dijag.xml >/dev/null 2>&1 || true
-txty="$(adb shell cat /sdcard/dijag.xml 2>/dev/null | tr -d '\r' | python3 -c '
+timeout 30 adb shell uiautomator dump /sdcard/dijag.xml >/dev/null 2>&1 || true
+txty="$(timeout 10 adb shell cat /sdcard/dijag.xml 2>/dev/null | tr -d '\r' | timeout 10 python3 -c '
 import sys, re
 xml = sys.stdin.read()
 for m in re.finditer(r"<node[^>]*>", xml):
@@ -77,35 +87,28 @@ for m in re.finditer(r"<node[^>]*>", xml):
 announce notice "dijagnoza" "Email polje (x,y): ${txty:-NIJE_NAĐEN}"
 if [ -n "$txty" ]; then
   tx="${txty%% *}"; ty="${txty##* }"
-  adb shell input tap "$tx" "$ty" >/dev/null 2>&1 || true
+  timeout 10 adb shell input tap "$tx" "$ty" >/dev/null 2>&1 || true
   sleep 1
-  adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
+  timeout 20 adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
   sleep 3
-  last_email="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+  last_email="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
   announce notice "dijagnoza" "adb input text zadnji RN crumb: ${last_email:-NEMA CRUMBA}"
 fi
-ime_default="$(adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
-ime_list="$(adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';' )"
+ime_default="$(timeout 10 adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
+ime_list="$(timeout 10 adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';' )"
 announce notice "ime" "prije: default='${ime_default}' lista='${ime_list}'"
-adb shell ime enable dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2 | while read -r l; do [ -n "$l" ] && announce notice "ime" "enable: $l"; done
-adb shell ime set dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2 | while read -r l; do [ -n "$l" ] && announce notice "ime" "set: $l"; done
+ime_en="$(timeout 15 adb shell ime enable dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2)"
+[ -n "$ime_en" ] && announce notice "ime" "enable: $ime_en"
+ime_st="$(timeout 15 adb shell ime set dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2)"
+[ -n "$ime_st" ] && announce notice "ime" "set: $ime_st"
 sleep 1
-ime_default2="$(adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
-ime_list2="$(adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';')"
+ime_default2="$(timeout 10 adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
+ime_list2="$(timeout 10 adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';')"
 announce notice "ime" "poslije: default='${ime_default2}' lista='${ime_list2}'"
 echo "::endgroup::"
 announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
 exit 1
 # ===== KRAJ PRIVREMENE DIJAGNOSTIKE =====
-
-# announce <notice|error> <tok> <poruka>
-announce() {
-  if [ -n "${GITHUB_ACTIONS:-}" ]; then
-    echo "::$1 title=Maestro — $2::$3"
-  else
-    echo "Maestro — $2: $3"
-  fi
-}
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
