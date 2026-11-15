@@ -15,19 +15,26 @@ name: offline-prijava-i-kes
 - assertVisible: "Moj dan"
 # Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
 # pokazuje zadnje preuzeto, a ne prazan spisak.
+# „Osvježi" je na DNU spiska (poslije kartica rokova) — na sporom emulatoru
+# s puno kartica je izvan vidljivog dijela, pa assertVisible pada. Skrolamo
+# do dugmeta; povratak ide `back` (‹ Nazad je poslije skrola izvan vidika).
 - tapOn: "Moji rokovi"
-- assertVisible: "Osvježi"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
 - tapOn: "Osvježi"
 - extendedWaitUntil:
     visible: "Osvježi"
-    timeout: 10000
-- tapOn: "‹ Nazad"
+    timeout: 15000
+- back
 - tapOn: "Moji projekti"
-- assertVisible: "Osvježi"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
 - tapOn: "Osvježi"
 - extendedWaitUntil:
     visible: "Osvježi"
-    timeout: 10000
-- tapOn: "‹ Nazad"
+    timeout: 15000
+- back
 - tapOn: "Moj dan"
 - assertVisible: "Sačuvaj na telefon"
