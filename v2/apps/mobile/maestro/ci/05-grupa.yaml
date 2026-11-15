@@ -17,7 +17,11 @@ name: sef-grupa
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"
-- inputText: "sef@demo.ba"
+# Email s nevidljivim NBSP repom (\u00A0): Maestro za ČISTO ASCII tipka key
+# eventima po znaku, što na sporom emulatoru duplira svaki znak (poznati
+# Maestro #2005). Jedan ne-ASCII znak prebacuje unos na IME commitText —
+# cijeli string odjednom, bez utrke. JS trim() skida NBSP prije prijave.
+- inputText: "sef@demo.ba\u00A0"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"

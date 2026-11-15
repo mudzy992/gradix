@@ -42,6 +42,9 @@ if [ -z "${DEMO_LOZINKA:-}" ]; then
   echo "DEMO_LOZINKA mora biti postavljena u okolini" >&2
   exit 2
 fi
+# SAMO dužina (nikad sadržaj): dokaz da li je polje Lozinka primilo tačnu
+# vrijednost (n znakova) ili dupliranje (više od n).
+announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 
 # announce <notice|error> <tok> <poruka>
 announce() {
@@ -56,27 +59,6 @@ flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" "$artifacts/test-output"
 
-# Zagrijavanje: prvi maestro run instalira drajver s Maestro IME-om. Onda se
-# Maestro IME postavi kao trenutna metoda unosa — jedini pouzdani lijek za
-# dupliranje znakova (run 43662146227): default IME na aosp_atd slici ubaci
-# znak I propusti hardverski key event pa inputText otkuca svaki znak dvaput.
-# Maestro IME ne obrađuje hardverske tipke — znak stigne tačno jednom.
-echo "::group::Zagrijavanje (instalacija drajvera + Maestro IME)"
-"$MAESTRO_BIN" test --format junit --output "$artifacts/junit/warmup.xml" \
-  "$flows_dir/00-warmup.yaml" >/dev/null 2>&1 || true
-sleep 2
-default_ime="$(adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r' || true)"
-announce notice "IME" "default IME prije zamjene: ${default_ime:-nepoznat}"
-if adb shell ime enable dev.mobile.maestro/.input.MaestroInputMethodService >/dev/null 2>&1; then
-  if adb shell ime set dev.mobile.maestro/.input.MaestroInputMethodService >/dev/null 2>&1; then
-    announce notice "IME" "Maestro IME postavljen kao trenutna metoda unosa"
-  else
-    announce error "IME" "Maestro IME nije moguće postaviti (ime set) — znakovi će se duplirati"
-  fi
-else
-  announce error "IME" "Maestro IME nije moguće omogućiti — drajver nije instaliran?"
-fi
-echo "::endgroup::"
 
 passed=()
 failed=()
