@@ -59,6 +59,33 @@ pokretanju workflowa; noćni run ide s `sve`.
   dumpsys anketom (BACK otpušta ANR dijalog system procesa ako ga uhvati).
 - **Keš mora biti svjež prije gašenja mreže** — zato tok 02 osvježava rokove i
   projekte DOK JE mreža uključena.
+- **Elementi van vidljivog dijela ekrana — `scrollUntilVisible`, ne
+  `assertVisible`** — Galaxy Nexus ekran je mali, a ekrani sadržajno duži od
+  njega: „Osvježi" je na dnu spiska rokova/projekata (poslije svih kartica),
+  dugmad „Sačuvaj na telefon"/„Pošalji sada"/„Sačuvaj za N radnika" su na dnu
+  svojih kartica, a status zapisa („Čeka slanje"/„Poslano") u kartici
+  „Moji zapisi" još niže. `assertVisible` na takvom elementu pada čim sadržaj
+  prekloni ekran (dokazano runovima 43733676496 i 43756628616), a padaju i
+  asercije POSLIJE akcije koja re-renderuje listu (re-render gura element iz
+  vidika). Zato: prije tapinga/asercije na dno-element ide `scrollUntilVisible`,
+  a poslije akcije koja mijenja listu skrol se PONAVLJA. Povratak s ekrana
+  ide `back` — „‹ Nazad" je poslije skrola izvan vidika.
+- **Poruke na vrhu ekrana vraćaju se skrolom GORE** — poruka
+  „Nema veze. Prikazujem zadnje preuzeto." je na VRHU spiska, pa poslije
+  skrola do „Osvježi" (dno) nije u vidiku; `scrollUntilVisible` s
+  `direction: UP` vraća do nje. Re-mount (back + ponovni ulaz) NE radi —
+  svježi ekran resetuje poruku iz stanja.
+- **Poruke uz dugmad su vidljive s pozicije dugmadi** — `message` na formama
+  „Moj dan"/„Grupa" renderuje se odmah ISPOD dugmadi (ista kartica), pa se
+  dokazi „Sačuvano na telefonu", „Zapisi ostaju na telefonu" i
+  „poslano N, za provjeru M" asertiraju BEZ dodatnog skrola, odmah poslije
+  tapinga (takeScreenshot prije provjere = pauza da RN dovrši slanje).
+  Banner („N čeka slanje.") je obrnuto — na VRHU forme, vidljiv samo čim se
+  ekran otvori, prije skrolanja.
+- **„Poslano" (veliko P) ≠ „poslano" (malo p)** — Maestro text match je
+  case-sensitive: statusni label „Poslano" ne matcha poruku
+  „Slanje završeno: poslano 1…" ni banner „Sve je poslano.", pa su sva tri
+  nezavisni dokazi.
 
 ## Dokazi
 

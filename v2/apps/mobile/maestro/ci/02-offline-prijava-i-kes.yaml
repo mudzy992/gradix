@@ -15,12 +15,11 @@ name: offline-prijava-i-kes
 - assertVisible: "Moj dan"
 # Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
 # pokazuje zadnje preuzeto, a ne prazan spisak.
-# „Osvježi" je na DNU spiska (poslije kartica rokova) — na sporom emulatoru
+# „Osvježi" je na DNU spiska (poslije kartica) — na sporom emulatoru
 # s puno kartica je izvan vidljivog dijela, pa assertVisible pada. Skrolamo
 # do dugmeta; povratak ide `back` (‹ Nazad je poslije skrola izvan vidika).
 - tapOn: "Moji rokovi"
 - assertVisible: "Moji rokovi"
-# „Osvježi" je na DNU spiska (poslije kartica) — skrolamo do dugmeta.
 - scrollUntilVisible:
     element:
       text: "Osvježi"
@@ -58,4 +57,12 @@ name: offline-prijava-i-kes
 - takeScreenshot: 02-projekti-osvjezeno
 - back
 - tapOn: "Moj dan"
-- assertVisible: "Sačuvaj na telefon"
+# Forma „Moj dan" je DUŽA od ekrana: polja → „Sačuvaj na telefon"/„Pošalji
+# sada" (dno prve kartice) → poruka → kartica „Moji zapisi". Dugme je van
+# folda i assertVisible pada (run 43756628616) — skrol do dugmeta je dokaz
+# da je forma (i projekti s API-ja) učitana; tok 03 nastavlja odatle.
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj na telefon"
+    timeout: 20000
+- takeScreenshot: 02-moj-dan-spreman

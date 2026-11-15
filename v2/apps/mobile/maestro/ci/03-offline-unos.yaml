@@ -4,30 +4,82 @@
 # emulatoru, ne ručno). Prijava je već obavljena u toku 02; aplikacija nastavlja
 # s otvorene forme „Moj dan". Vremena se NE tipkaju — polja imaju validne
 # defaulte (07:30–15:30), a manje koraka = manje mjesta za lažne padove.
+#
+# LAYOUT činjenice (sve ekrane je duža od vidljivog dijela): na formi „Moj dan"
+# su dugmad na dnu prve kartice, poruka (message) odmah ISPOD dugmadi, a status
+# „Čeka slanje" u kartici „Moji zapisi" još niže — do dugmadi i statusa se
+# SKROLA DOLJE, a poruke uz dugmad su vidljive s te pozicije. Na ekranima
+# rokova/projekata je „Osvježi" na dnu, a poruka „Nema veze…" na VRHU — poslije
+# skrola do dugmeta poruka nije u vidiku pa se vraćamo skrolom GORE
+# (direction: UP; re-mount bi obrisao poruku iz stanja ekrana).
 appId: ba.gradix.teren
 name: offline-unos
 ---
 - tapOn: "Moj dan"
-- assertVisible: "Sačuvaj na telefon"
+# „Sačuvaj na telefon" je van folda — skrolamo do njega (dokaz da je forma tu).
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj na telefon"
+    timeout: 20000
 - tapOn: "Sačuvaj na telefon"
-- assertVisible: "Čeka slanje"
-- tapOn: "Pošalji sada"
-# Offline: zapis ostaje na telefonu i to mora pisati na ekranu.
-- assertVisible: "Čeka slanje"
+# Poruka poslije save-a je odmah ispod dugmadi. takeScreenshot je i pauza da
+# RN zapiše u SQLite prije provjere (nema sleep komande).
+- takeScreenshot: offline-unos-sacuvao
 - assertVisible:
-    text: ".*Sačuvano na ovom telefonu.*"
+    text: "Sačuvano na telefonu"
+- tapOn: "Pošalji sada"
+# Offline: slanje pada, zapis OSTAJE u redu — poruka to kaže (ispod dugmadi).
+- takeScreenshot: offline-unos-poslao-pokusao
+- assertVisible:
+    text: "Zapisi ostaju na telefonu"
+# Status „Čeka slanje" je u kartici „Moji zapisi", još niže — skrolamo do njega.
+- scrollUntilVisible:
+    element:
+      text: "Čeka slanje"
+    timeout: 20000
 - takeScreenshot: offline-unos-ceka
-# Offline čitanje: rokovi i projekti iz keša (osvježeni u toku 02), uz jasnu poruku.
+# Offline čitanje: rokovi i projekti iz keša (osvježeni u toku 02), uz jasnu
+# poruku. „Osvježi" je na dnu spiska — skrolamo do njega prije tapinga.
 - back
 - tapOn: "Moji rokovi"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+# Offline refresh odmah pada, ali prije povratka na vrh pričekajmo da dugme
+# izađe iz „Osvježavam…" stanja (takeScreenshot = pauza za RN).
+- takeScreenshot: offline-rokovi-refresh
+- extendedWaitUntil:
+    notVisible: "Osvježavam…"
+    timeout: 15000
+# Poruka „Nema veze. Prikazujem zadnje preuzeto." je na VRHU spiska — poslije
+# skrola do dugmeta nije u vidiku, pa skrolamo GORE do nje.
+- scrollUntilVisible:
+    element:
+      text: "Nema veze. Prikazujem zadnje preuzeto."
+    direction: UP
+    timeout: 20000
 - assertVisible:
-    text: ".*Nema veze. Prikazujem zadnje preuzeto.*"
+    text: "Nema veze. Prikazujem zadnje preuzeto."
 - takeScreenshot: offline-rokovi-iz-kesa
-- tapOn: "‹ Nazad"
+- back
 - tapOn: "Moji projekti"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+- takeScreenshot: offline-projekti-refresh
+- extendedWaitUntil:
+    notVisible: "Osvježavam…"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "Nema veze. Prikazujem zadnje preuzeto."
+    direction: UP
+    timeout: 20000
 - assertVisible:
-    text: ".*Nema veze. Prikazujem zadnje preuzeto.*"
+    text: "Nema veze. Prikazujem zadnje preuzeto."
 - takeScreenshot: offline-projekti-iz-kesa
-- tapOn: "‹ Nazad"
+- back
