@@ -64,14 +64,14 @@ passed=()
 failed=()
 
 run_flow() {  # run_flow <ime> <fajl> [cisto|restart] — 0 = prošao (eventualno iz retryja)
-  # App STARTA ORKESTRATOR (adb am start + koordinatni tap s provjerom fokusa):
-  # - typing u app startan DRAJVEROVIM restartom duplira svaki znak (runovi
-  #   43657398421/43662146227: email tačno ×2), a u app startan am start-om ne
-  #   duplira (typing je radio u 43654551089) — zato tokovi rade launchApp s
-  #   stopApp: false (samo dovedu app u prvi plan, BEZ restarta).
-  # - drajverov startActivity na već-foreground aktivnost razbije input fokus
-  #   (dugme „Prijavi se" mrtvo u 43654551089) — zato je druga komanda svakog
-  #   toka koordinatni tap koji ga vraća (dokazano u 43657398421: signIn okinut).
+  # App STARTA ISKLJUČIVO ORKESTRATOR; tokovi NE SMIJU imati launchApp ni
+  # koordinatni tap (dokazano runovima):
+  # - launchApp u toku razbija input fokus prozora (dugme „Prijavi se" mrtvo
+  #   u 43654551089 kad stopApp:false, a s restartom duplira svaki uneseni
+  #   znak — 43657398421/43662146227/43671967067: cijeli string točno ×2).
+  # - orkestratorov am start + koordinatni tap s dumpsys provjerom fokusa
+  #   pouzdano dovodi app u prvi plan (43671967067: mCurrentFocus=app prije
+  #   toka), a typing i element tapovi onda rade čisto (kao u 43646763583).
   # Način pripreme stanja: cisto = pm clear (tokovi iz prijave: 01/02/05);
   # restart = samo am force-stop (03/04: proces se vraća na početni meni,
   # tokeni/keš/neslani zapisi ostaju).

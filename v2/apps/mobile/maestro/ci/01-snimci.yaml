@@ -8,15 +8,6 @@
 appId: ba.gradix.teren
 name: snimci-i-A1e
 ---
-- launchApp:
-    stopApp: false
-# Koordinatni tap odmah nakon launchApp: drajverov startActivity na već
-# foreground aktivnost razbije input fokus prozora (dugme ne odgovara na tap),
-# a koordinatni tap ga vraća. App je startao orkestrator (maestro-ci.sh) —
-# typing u njega NE duplira znakove (za razliku od app-a startanog drajverovim
-# restartom), pa se unosi čist ASCII bez trikova.
-- tapOn:
-    point: 50%, 12%
 - assertVisible: "Prijava za teren."
 - takeScreenshot: 01-prijava-svjetla
 - tapOn:
