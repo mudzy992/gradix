@@ -154,13 +154,15 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
       announce error "$name" "fokus nije preuzet — tok vjerovatno neće vidjeti ekran"
     fi
     start=$(date +%s)
+    # stdout/stderr u fajl (logovi se iz svih okruženja ne mogu preuzeti —
+    # na padu završetak ide u anotaciju). tee uz pipefail čuva exit kod.
     if timeout "$MAKS_TRAJANJE" "$MAESTRO_BIN" test \
         --format junit \
         --output "$artifacts/junit/$name-pokusaj$attempt.xml" \
         --test-output-dir "$artifacts/test-output" \
         --analyze \
         -e DEMO_LOZINKA="$DEMO_LOZINKA" \
-        "$flow"; then
+        "$flow" 2>&1 | tee "/tmp/maestro-$name-pokusaj$attempt.txt"; then
       trajanje=$(( $(date +%s) - start ))
       echo "::endgroup::"
       echo "✅ $name (pokušaj $attempt, ${trajanje}s)"
@@ -178,10 +180,18 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
       if [ -z "$prva" ]; then
         prva=$(tr '\n' ' ' < "$junit" | grep -o '<failure[^>]*>[^<]*' | head -1 | sed 's/.*>//' | cut -c1-220)
       fi
+      if [ -z "$prva" ]; then
+        prva="junit bez poruke; snippet: $(head -c 300 "$junit" | tr '\n' ' ' | cut -c1-280)"
+      fi
     else
       prva="(junit nije ni nastao — maestro se srušio prije izvještaja)"
     fi
     announce error "$name" "pokušaj $attempt/$max_attempts pao (trajanje ${trajanje}s) — ${prva:-nema poruke}"
+    # Završetak maestro izlaza (njegova poruka o padu — junit zna ostati prazan):
+    if [ -f "/tmp/maestro-$name-pokusaj$attempt.txt" ]; then
+      maestro_tail="$(tail -12 "/tmp/maestro-$name-pokusaj$attempt.txt" | tr '\n' '|' | tr -d '\r' | cut -c1-500)"
+      announce error "$name" "maestro izlaz (rep): ${maestro_tail:-PRAZNO}"
+    fi
     # Native crash s stackom (glavni buffer, crash buffer zna biti prazan).
     local fatal
     fatal=$(adb logcat -d 2>/dev/null | grep -A 22 "FATAL EXCEPTION" | head -24 | tr '\n' ' ' | cut -c1-600)
