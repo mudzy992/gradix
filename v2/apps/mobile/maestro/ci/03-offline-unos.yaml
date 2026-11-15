@@ -15,6 +15,13 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
+# Poslije force-stop + am start app se HLADNO startuje (na sporom emulatoru
+# i više od 15 s) — prije tapinga pričekajmo da home s tabovima stvarno
+# izrenderuje (bez ovoga tapOn istekne prije nego što se „Moj dan" pojavi —
+# run 43764693794: „Element not found: Moj dan").
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 45000
 - tapOn: "Moj dan"
 # „Sačuvaj na telefon" je van folda — skrolamo do njega (dokaz da je forma tu).
 - scrollUntilVisible:

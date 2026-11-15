@@ -13,6 +13,12 @@
 appId: ba.gradix.teren
 name: povratak-mreze
 ---
+# Poslije force-stop + am start app se HLADNO startuje — pričekajmo home
+# (kao u toku 03; run 43764693794 je pokazao da tapOn bez čekanja zna
+# isteci prije rendera).
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 45000
 - tapOn: "Moj dan"
 # Banner na vrhu pokazuje da zapis iz toka 03 i dalje čeka (dokaz prije
 # slanja) — malo „čeka slanje." matcha „1 čeka slanje.", a NE statusni label
