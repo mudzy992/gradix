@@ -7,7 +7,6 @@
 appId: ba.gradix.teren
 name: povratak-mreze
 ---
-- launchApp
 - tapOn: "Moj dan"
 - assertVisible: "Sačuvaj na telefon"
 - assertVisible: "Čeka slanje"

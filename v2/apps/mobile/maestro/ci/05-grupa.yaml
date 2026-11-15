@@ -7,8 +7,6 @@
 appId: ba.gradix.teren
 name: sef-grupa
 ---
-- launchApp:
-    clearState: true
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"

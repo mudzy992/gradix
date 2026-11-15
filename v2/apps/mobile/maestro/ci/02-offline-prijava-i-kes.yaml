@@ -7,8 +7,6 @@
 appId: ba.gradix.teren
 name: offline-prijava-i-kes
 ---
-- launchApp:
-    clearState: true
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"

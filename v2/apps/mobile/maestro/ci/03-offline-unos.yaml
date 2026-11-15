@@ -7,7 +7,6 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
-- launchApp
 - tapOn: "Moj dan"
 - assertVisible: "Sačuvaj na telefon"
 - tapOn: "Sačuvaj na telefon"
