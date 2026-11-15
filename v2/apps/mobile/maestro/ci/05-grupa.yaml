@@ -7,11 +7,13 @@
 appId: ba.gradix.teren
 name: sef-grupa
 ---
-# launchApp NE smije restartovati app (stopApp: false): na aosp_atd slici
-# restart gubi fokus prozora, a Maestro vidi samo fokusirani prozor. Stanje
-# (pm clear / force-stop) i fokus (am start + tap) priprema maestro-ci.sh.
 - launchApp:
-    stopApp: false
+    clearState: true
+# Fokus prije asercija: restart iz launchApp zna ostaviti fokus na launcheru iako
+# je app prozor na vrhu Z-ordera (aosp_atd slika), a Maestro čita samo fokusirani
+# prozor. Koordinatni tap ide u TOP prozor (app) i deterministički preuzima fokus.
+- tapOn:
+    point: 50%, 12%
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"

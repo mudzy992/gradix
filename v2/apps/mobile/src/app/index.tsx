@@ -90,6 +90,8 @@ export default function IndexScreen() {
   }, []);
 
   async function signIn() {
+    // eslint-disable-next-line no-console
+    console.log("[e2e] signIn poziv");  // PRIVREMENO (dijagnostika CI tapova) — skloniti nakon dijagnoze.
     setBusy(true);
     setMessage(null);
     try {
