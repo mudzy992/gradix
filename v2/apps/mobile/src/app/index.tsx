@@ -91,7 +91,7 @@ export default function IndexScreen() {
 
   async function signIn() {
     // eslint-disable-next-line no-console
-    console.log("[e2e] signIn poziv");  // PRIVREMENO (dijagnostika CI tapova) — skloniti nakon dijagnoze.
+    console.log(`[e2e] signIn poziv email="${email}" lozinka=${password.length}zn`);  // PRIVREMENO (dijagnostika CI) — skloniti nakon dijagnoze.
     setBusy(true);
     setMessage(null);
     try {
@@ -109,6 +109,8 @@ export default function IndexScreen() {
         setMessage(`Na uređaju je ${switched.pendingForOtherAccounts} neposlanih redova drugog naloga; ovaj nalog ih ne može poslati.`);
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log("[e2e] signIn greska:", error instanceof Error ? error.message : error);  // PRIVREMENO — skloniti nakon dijagnoze.
       setMessage(error instanceof Error ? error.message : "Prijava nije uspjela.");
     } finally {
       setBusy(false);

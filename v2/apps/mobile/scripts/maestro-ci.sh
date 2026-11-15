@@ -126,6 +126,10 @@ run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
     # dijagnoza: app na vrhu Z-ordera + fokus na launcheru = slijepi tok.
     fokus_fail="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
     announce error "$name" "fokus pri padu: $(echo "$fokus_fail" | tr -d '\r' | cut -c1-200)"
+    # API health s runnera u trenutku pada: je li backend uopšte živ (emulator
+    # dolazi do njega preko 10.0.2.2 → 127.0.0.1:3000).
+    api_health="$(curl -s -m 5 http://127.0.0.1:3000/api/ready 2>/dev/null || echo "NE ODGOVARA")"
+    announce error "$name" "API /api/ready pri padu: $(echo "$api_health" | head -c 120)"
     # Prije retryja se NIŠTA ne dira: stanje i fokus priprema početak petlje
     # (pm clear / force-stop po načinu toka), a mrežu posjeduje pozivalac —
     # tok 03 se retreja U avionskom režimu, pa net on ovdje bi ga pokvario.
