@@ -62,9 +62,11 @@ pokretanju workflowa; noćni run ide s `sve`.
 
 ## Dokazi
 
-`maestro test --analyze --test-output-dir maestro-artifacts/test-output` ostavlja
+`maestro test --test-output-dir maestro-artifacts/test-output` ostavlja
 po toku: video cijelog toka, screenshot SVAKOG koraka, hijerarhiju pogleda,
-logcat i junit XML. Uz to `maestro-artifacts/logcat.txt` (cijeli dump) i
+logcat i junit XML. (`--analyze` se namjerno NE koristi — flag zove Maestro
+Cloud i zna srušiti CLI nakon uspješno završenog toka, pa bi zeleni tokovi
+izgledali kao padovi.) Uz to `maestro-artifacts/logcat.txt` (cijeli dump) i
 `maestro-artifacts/junit/*.xml`. Workflow sve to objavljuje kao artefakt
 `maestro-dokazi` — uvijek, i kada testovi padnu.
 

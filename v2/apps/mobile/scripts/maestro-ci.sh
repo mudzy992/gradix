@@ -173,11 +173,14 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
     start=$(date +%s)
     # stdout/stderr u fajl (logovi se iz svih okruženja ne mogu preuzeti —
     # na padu završetak ide u anotaciju). tee uz pipefail čuva exit kod.
+    # NEMA --analyze: flag zove Maestro Cloud (CloudInteractor.analyze) i zna
+    # srušiti CLI NAKON uspješno završenog toka (43721446496: junit failures=0,
+    # a exit ≠ 0 → lažni fail + uzaludni retry). Dokazi idu kroz junit +
+    # --test-output-dir (video, screenshotovi, hijerarhije, logcat).
     if timeout "$MAKS_TRAJANJE" "$MAESTRO_BIN" test \
         --format junit \
         --output "$artifacts/junit/$name-pokusaj$attempt.xml" \
         --test-output-dir "$artifacts/test-output" \
-        --analyze \
         -e DEMO_LOZINKA="$DEMO_LOZINKA" \
         "$flow" 2>&1 | tee "/tmp/maestro-$name-pokusaj$attempt.txt"; then
       trajanje=$(( $(date +%s) - start ))
