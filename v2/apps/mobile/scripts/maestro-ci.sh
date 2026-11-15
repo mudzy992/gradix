@@ -53,6 +53,51 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
+# ===== PRIVREMENA DIJAGNOSTIKA UNOSA (ukloniti nakon analize) =====
+# Odgovara na: (1) da li adb `input text` (drugi injekcijski put od Maestrovog)
+# duplira znakove; (2) može li Maestro IME (atomic commitText) uopšte raditi
+# na aosp_atd slici; (3) šta RN polje stvarno primi (onChangeText crumb).
+echo "::group::Dijagnoza unosa (privremeno)"
+adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+sleep 8
+adb logcat -c
+adb shell uiautomator dump /sdcard/dijag.xml >/dev/null 2>&1 || true
+txty="$(adb shell cat /sdcard/dijag.xml 2>/dev/null | tr -d '\r' | python3 -c '
+import sys, re
+xml = sys.stdin.read()
+for m in re.finditer(r"<node[^>]*>", xml):
+    tag = m.group(0)
+    if 'text="Email"' in tag or 'content-desc="Email"' in tag:
+        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', tag)
+        if b:
+            print((int(b.group(1)) + int(b.group(3))) // 2, (int(b.group(2)) + int(b.group(4))) // 2)
+            break
+' 2>/dev/null || true)"
+announce notice "dijagnoza" "Email polje (x,y): ${txty:-NIJE_NAĐEN}"
+if [ -n "$txty" ]; then
+  tx="${txty%% *}"; ty="${txty##* }"
+  adb shell input tap "$tx" "$ty" >/dev/null 2>&1 || true
+  sleep 1
+  adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
+  sleep 3
+  last_email="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+  announce notice "dijagnoza" "adb input text zadnji RN crumb: ${last_email:-NEMA CRUMBA}"
+fi
+ime_default="$(adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
+ime_list="$(adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';' )"
+announce notice "ime" "prije: default='${ime_default}' lista='${ime_list}'"
+adb shell ime enable dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2 | while read -r l; do [ -n "$l" ] && announce notice "ime" "enable: $l"; done
+adb shell ime set dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2 | while read -r l; do [ -n "$l" ] && announce notice "ime" "set: $l"; done
+sleep 1
+ime_default2="$(adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
+ime_list2="$(adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';')"
+announce notice "ime" "poslije: default='${ime_default2}' lista='${ime_list2}'"
+echo "::endgroup::"
+announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
+exit 1
+# ===== KRAJ PRIVREMENE DIJAGNOSTIKE =====
+
 # announce <notice|error> <tok> <poruka>
 announce() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then

@@ -165,7 +165,9 @@ export default function IndexScreen() {
           {themeToggle}
         </View>
         <Text variant="muted">Prijava za teren.</Text>
-        <TextField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none"
+        <TextField label="Email" value={email}
+          // eslint-disable-next-line no-console
+          onChangeText={(t) => { console.log(`[e2e] email changed="${t}"`); setEmail(t); }} autoCapitalize="none"
           keyboardType="email-address" autoComplete="username" accessibilityLabel="Email" />
         <TextField label="Lozinka" value={password} onChangeText={setPassword} secureTextEntry
           autoComplete="current-password" accessibilityLabel="Lozinka" />
