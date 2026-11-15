@@ -81,19 +81,25 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
   # je dokazano egzaktno (43708006955: email i lozinka tačni, prijava prošla).
   # Fokus polja preuzimaju mini-flowovi (element tap), sadržaj ide adb-om,
   # submit ostaje u glavnom toku („Prijavi se" + asercije — dokaz u junitu).
-  local email="$1" out
+  # Pauze su obavezne (v5 je radio sa sleep 5 prije fokusiranja — RN mount
+  # mora završiti da fokus polja „prione"; bez toga unos ode u prazno i tok
+  # submituje prazna polja — run 43710204835).
+  local email="$1" out probe
   email="${email// /%s}"
   out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-email.xml" "$flows_dir/_fokus-email.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
   case "$out" in *Passed*) ;; *) announce warning "login priprema" "fokus Email mini-flow: ${out:-PRAZNO}" ;; esac
   sleep 1
   timeout 20 adb shell input text "$email" >/dev/null 2>&1 || true
-  sleep 1
+  # RN mora progutati onChangeText prije bilo čeg drugog (controlled polje):
+  sleep 3
+  probe="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+  announce notice "login priprema" "email u polju (RN crumb): ${probe:-NEMA — unos nije stigao}"
   local pass="${DEMO_LOZINKA// /%s}"
   out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-lozinka.xml" "$flows_dir/_fokus-lozinka.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
   case "$out" in *Passed*) ;; *) announce warning "login priprema" "fokus Lozinka mini-flow: ${out:-PRAZNO}" ;; esac
   sleep 1
   timeout 20 adb shell input text "$pass" >/dev/null 2>&1 || true
-  sleep 1
+  sleep 2
 }
 
 run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz retryja)
@@ -139,6 +145,9 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
       done
     fi
     if [ "$who" != "-" ]; then
+      # RN mount mora završiti prije fokusiranja polja (v5: sleep 5 = radilo;
+      # bez njega run 43710204835: polja prazna pri submitu)
+      sleep 5
       adb_login "$who"
     fi
     if ! echo "$fokus" | grep -q "ba.gradix.teren"; then
@@ -189,6 +198,9 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
     adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -4 | while IFS= read -r line; do
       announce error "$name" "crumb: $(echo "$line" | cut -c1-200)"
     done
+    # Šta je RN polje Email zadnje primilo (adb_login unos ili prazno):
+    email_probe="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+    announce error "$name" "email polje pri padu: ${email_probe:-NEMA email changed loga u ovom pokušaju}"
     # Render dokaz: broj TextView čvorova u hijerarhiji top aktivnosti.
     adb shell dumpsys activity top > /tmp/top-fail.txt 2>&1 || true
     top_n="$(grep -c "TextView" /tmp/top-fail.txt || true)"
