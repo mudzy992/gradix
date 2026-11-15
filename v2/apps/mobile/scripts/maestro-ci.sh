@@ -63,26 +63,21 @@ mkdir -p "$artifacts/junit" "$artifacts/test-output"
 passed=()
 failed=()
 
-run_flow() {  # run_flow <ime> <fajl> [cisto|restart] — 0 = prošao (eventualno iz retryja)
-  # App STARTA ISKLJUČIVO ORKESTRATOR; tokovi NE SMIJU imati launchApp ni
-  # koordinatni tap (dokazano runovima):
-  # - launchApp u toku razbija input fokus prozora (dugme „Prijavi se" mrtvo
-  #   u 43654551089 kad stopApp:false, a s restartom duplira svaki uneseni
-  #   znak — 43657398421/43662146227/43671967067: cijeli string točno ×2).
-  # - orkestratorov am start + koordinatni tap s dumpsys provjerom fokusa
-  #   pouzdano dovodi app u prvi plan (43671967067: mCurrentFocus=app prije
-  #   toka), a typing i element tapovi onda rade čisto (kao u 43646763583).
-  # Način pripreme stanja: cisto = pm clear (tokovi iz prijave: 01/02/05);
-  # restart = samo am force-stop (03/04: proces se vraća na početni meni,
-  # tokeni/keš/neslani zapisi ostaju).
-  local name="$1" flow="$2" mode="${3:-restart}" attempt start trajanje fokus tap_i
+run_flow() {  # run_flow <ime> <fajl> — 0 = prošao (eventualno iz retryja)
+  # Arhitektura po dokazanom runu 43646763583 (prijava prošla čistim typingom):
+  # - orkestrator: am start + koordinatni tap s dumpsys provjerom fokusa
+  #   (am start zna ostaviti fokus na launcheru iako je app Window #0);
+  # - tok odmah radi launchApp: clearState za 01/02/05 (pm clear + restart),
+  #   goli launchApp za 03/04 (restart, keš i neslani zapisi ostaju).
+  #   RESTART NAKON orkestratorovog tapa je BITAN: tap na app ekranu
+  #   „prlja" input (svaki sljedeći inputText duplira cijeli string — runovi
+  #   43657398421/43662146227/43671967067/43674507709), a restart procesa
+  #   to čisti. Zato tokovi NEMAJU nikakve tap komande prije unosa teksta —
+  #   idu ravno na elemente (assertVisible/tapOn id).
+  # 03/04 nemaju inputText (unos formom i defaultima), pa su na restart imuni.
+  local name="$1" flow="$2" attempt start trajanje fokus tap_i
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
-    if [ "$mode" = "cisto" ]; then
-      adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
-    else
-      adb shell am force-stop ba.gradix.teren >/dev/null 2>&1 || true
-    fi
     adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
     sleep 3
     fokus=""
@@ -175,7 +170,7 @@ offline_block() {
     return 1
   fi
   announce notice "mreža" "uključena prije offline bloka"
-  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml" cisto; then
+  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml"; then
     failed+=("offline-prijava-i-kes (blok prekinut: 03/04 ovise o prijavi i kešu)")
     return 1
   fi
@@ -186,7 +181,7 @@ offline_block() {
     rc=1
   else
     announce notice "mreža" "isključena (avionski režim) — offline unos"
-    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" restart; then
+    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml"; then
       passed+=("offline-unos")
     else
       failed+=("offline-unos")
@@ -194,7 +189,7 @@ offline_block() {
   fi
   bash scripts/emulator-net.sh on || true
   announce notice "mreža" "uključena nakon offline unosa"
-  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml" restart; then
+  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml"; then
     passed+=("povratak-mreze")
   else
     failed+=("povratak-mreze")
@@ -204,18 +199,18 @@ offline_block() {
 
 case "$scenario" in
   sve)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" cisto; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml"; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     offline_block || true
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" cisto; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml"; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   snimci)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" cisto; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml"; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     ;;
   offline)
     offline_block || true
     ;;
   grupa)
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" cisto; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml"; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   *)
     echo "nepoznat scenarij: $scenario (sve | snimci | offline | grupa)" >&2

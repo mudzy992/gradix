@@ -8,6 +8,8 @@
 appId: ba.gradix.teren
 name: snimci-i-A1e
 ---
+- launchApp:
+    clearState: true
 - assertVisible: "Prijava za teren."
 - takeScreenshot: 01-prijava-svjetla
 - tapOn:
