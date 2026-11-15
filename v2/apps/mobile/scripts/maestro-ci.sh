@@ -78,6 +78,18 @@ artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" 2>/dev/null || true
 
 dijag_prep() {  # svjež app, fokus, čist logcat
+  # ANR dijalog system procesa zna ukrasti fokus cijeli run (43691349218) —
+  # otpusti ga BACK tipkom prije pripreme app-a.
+  for _i in $(seq 1 3); do
+    _f="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    if echo "$_f" | grep -q "Application Not Responding"; then
+      announce warning "dijagnoza" "ANR dijalog u fokusu — otpuštam ($_f)"
+      adb shell input keyevent 4 >/dev/null 2>&1 || true
+      sleep 2
+    else
+      break
+    fi
+  done
   adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
   adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
   for _i in $(seq 1 20); do
