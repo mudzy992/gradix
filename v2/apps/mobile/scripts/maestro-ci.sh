@@ -63,69 +63,82 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
-# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v3 (ukloniti nakon analize) =====
-# v2 rezultat: NEMA CRUMBA za oba puta — ništa nije ušlo u polje. v3 dodaje
-# dokaze: RN logovi poslije starta (je li login ekran renderovan), maestro
-# stdout/stderr, i RN logovi poslije pokušaja unosa.
-echo "::group::Dijagnoza unosa v3 (privremeno)"
+# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v4 (ukloniti nakon analize) =====
+# v3 (43689488958): mini-flow [tap Email + inputText] na svježem app-u = ČIST
+# unos (email changed=maestro@x → x. → x.b → x.ba). Dakle Maestro inputText na
+# ovom emulatoru NE duplira per se — nešto u pravom toku 01 kvari unos.
+# Tok 01 prije inputText-a ima assertVisible + takeScreenshot + (poslije)
+# lozinku i „Prijavi se". Binarna pretraga krivca:
+#   C = assertVisible + tap Email + inputText;
+#   D = takeScreenshot + tap Email + inputText;
+#   F = puna reprodukcija početka toka 01 (assert, screenshot, email, lozinka,
+#       Prijavi se, assert „Moj dan").
+echo "::group::Dijagnoza unosa v4 (privremeno)"
 artifacts="maestro-artifacts"
 mkdir -p "$artifacts/junit" 2>/dev/null || true
 
-cat > /tmp/dijag-a.yaml <<'YAML'
+dijag_prep() {  # svjež app, fokus, čist logcat
+  adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
+  adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+  for _i in $(seq 1 20); do
+    _f="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    echo "$_f" | grep -q "ba.gradix.teren" && break
+    sleep 1
+  done
+  sleep 3
+  adb logcat -c
+}
+
+dijag_run() {  # dijag_run <slovo> <fajl>
+  local slovo="$1" fajl="$2" out crumb
+  out="$(timeout 120 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-$slovo.xml" "$fajl" 2>&1 | tail -3 | tr '\n' '|' | tr -d '\r' | cut -c1-300)"
+  crumb="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep -E "email changed|signIn poziv" | tail -3 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
+  announce notice "dijag-$slovo" "maestro: ${out:-PRAZNO}"
+  announce notice "dijag-$slovo" "RN: ${crumb:-NEMA}"
+}
+
+cat > /tmp/dijag-c.yaml <<'YAML'
 appId: ba.gradix.teren
-name: dijag-a-fokus
+name: dijag-c-assert
 ---
+- assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"
+- inputText: "cccc@x.ba"
 YAML
-cat > /tmp/dijag-b.yaml <<'YAML'
+cat > /tmp/dijag-d.yaml <<'YAML'
 appId: ba.gradix.teren
-name: dijag-b-maestro
+name: dijag-d-screenshot
 ---
+- takeScreenshot: dijag-d
 - tapOn:
     id: "Email"
-- inputText: "maestro@x.ba"
+- inputText: "dddd@x.ba"
+YAML
+cat > /tmp/dijag-f.yaml <<'YAML'
+appId: ba.gradix.teren
+name: dijag-f-full
+---
+- assertVisible: "Prijava za teren."
+- takeScreenshot: dijag-f-prijava
+- tapOn:
+    id: "Email"
+- inputText: "radnik@demo.ba"
+- tapOn:
+    id: "Lozinka"
+- inputText: "${DEMO_LOZINKA}"
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
 YAML
 
-# A) fokus preko maestro element tapa, tekst preko adb input text
-adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
-adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
-for i in $(seq 1 20); do
-  fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
-  echo "$fokus" | grep -q "ba.gradix.teren" && break
-  sleep 1
-done
-adb logcat -c
-sleep 2
-log_poslije_starta="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -4 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
-announce notice "dijagnoza-A" "RN log poslije starta: ${log_poslije_starta:-PRAZNO}"
-ma_out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-a.xml" /tmp/dijag-a.yaml 2>&1 | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
-announce notice "dijagnoza-A" "maestro izlaz: ${ma_out:-PRAZNO}"
-sleep 1
-timeout 20 adb shell input text "radik@demo.ba" >/dev/null 2>&1 || true
-sleep 3
-log_a="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
-announce notice "dijagnoza-A" "RN log poslije adb input text: ${log_a:-PRAZNO}"
-
-# B) i tap i inputText preko maestra (pressKeyCode put)
-adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
-adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
-for i in $(seq 1 20); do
-  fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
-  echo "$fokus" | grep -q "ba.gradix.teren" && break
-  sleep 1
-done
-adb logcat -c
-ma_out_b="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-b.xml" /tmp/dijag-b.yaml 2>&1 | tail -6 | tr '\n' '|' | tr -d '\r' | cut -c1-450)"
-announce notice "dijagnoza-B" "maestro izlaz: ${ma_out_b:-PRAZNO}"
-sleep 3
-log_b="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | tail -8 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
-announce notice "dijagnoza-B" "RN log poslije maestro inputText: ${log_b:-PRAZNO}"
+dijag_prep; dijag_run "c" /tmp/dijag-c.yaml
+dijag_prep; dijag_run "d" /tmp/dijag-d.yaml
+dijag_prep; dijag_run "f" /tmp/dijag-f.yaml
 
 echo "::endgroup::"
 announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
 exit 1
-# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v3 =====
+# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v4 =====
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
