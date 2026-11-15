@@ -10,6 +10,7 @@ za ručni prolaz na pravom uređaju, s ručnim avionskim režimom).
 
 | Tok | Faza | Šta dokazuje |
 |---|---|---|
+| `00-warmup` | — | **nije test** — digne Maestro drajver da orkestrator može postaviti Maestro IME (lijek za dupliranje znakova pri `inputText`) |
 | `01-snimci` | mreža ON | prijava, obilazak ekrana, **A1e: odjava pa ponovna prijava** |
 | `02-offline-prijava-i-kes` | mreža ON | prijava radnika + osvježavanje rokova/projekata u keš; završava na formi „Moj dan" |
 | `03-offline-unos` | mreža OFF | unos bez veze — „Čeka slanje", zapis ostaje na telefonu; čitanje rokova/projekata iz keša |

@@ -1,0 +1,14 @@
+# CI tok 0 — ZAGRIJAVANJE, NIJE TEST.
+#
+# Maestro instalira svoj drajver (dev.mobile.maestro, u njemu Maestro IME) tek
+# na prvo pokretanje. Orkestrator (maestro-ci.sh) odmah nakon ovog toka postavlja
+# Maestro IME kao trenutnu metodu unosa: default IME na aosp_atd slici ubacuje
+# znak I propušta hardverski key event, pa inputText duplira svaki znak
+# (run 43662146227: email="radnik@demo.baradnik@demo.ba", server odbija prijavu).
+# Maestro IME ne dira hardverske tipke — znak stigne tačno jednom.
+#
+# Zato ovaj tok nema nijednu aserciju: samo digne drajver i izađe.
+appId: ba.gradix.teren
+name: warmup
+---
+- launchApp
