@@ -63,52 +63,67 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
-# ===== PRIVREMENA DIJAGNOSTIKA UNOSA (ukloniti nakon analize) =====
-# Odgovara na: (1) da li adb `input text` (drugi injekcijski put od Maestrovog)
-# duplira znakove; (2) može li Maestro IME (atomic commitText) uopšte raditi
-# na aosp_atd slici; (3) šta RN polje stvarno primi (onChangeText crumb).
-echo "::group::Dijagnoza unosa (privremeno)"
+# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v2 (ukloniti nakon analize) =====
+# Poređenje dva injekcijska puta na istom emulatoru, u istom runu:
+#   A) maestro mini-flow samo fokusira Email polje (element tap) pa
+#      `adb shell input text` upisuje — system `input` binary put;
+#   B) maestro mini-flow radi i tap i inputText — pressKeyCode put.
+# [e2e] email changed crumb u index.tsx otkriva šta je RN polje primilo.
+# (uiautomator dump ne radi na ATD-u — NIJE_NAĐEN u prošlom runu; IME put
+# nemoguć: "cannot be enabled for user #0", ime list prazan.)
+echo "::group::Dijagnoza unosa v2 (privremeno)"
+mkdir -p "$artifacts/junit" 2>/dev/null || true
+
+cat > /tmp/dijag-a.yaml <<'YAML'
+appId: ba.gradix.teren
+name: dijag-a-fokus
+---
+- tapOn:
+    id: "Email"
+YAML
+cat > /tmp/dijag-b.yaml <<'YAML'
+appId: ba.gradix.teren
+name: dijag-b-maestro
+---
+- tapOn:
+    id: "Email"
+- inputText: "maestro@x.ba"
+YAML
+
+# A) fokus preko maestro element tapa, tekst preko adb input text
 adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
-sleep 8
-adb logcat -c
-timeout 30 adb shell uiautomator dump /sdcard/dijag.xml >/dev/null 2>&1 || true
-txty="$(timeout 10 adb shell cat /sdcard/dijag.xml 2>/dev/null | tr -d '\r' | timeout 10 python3 -c '
-import sys, re
-xml = sys.stdin.read()
-for m in re.finditer(r"<node[^>]*>", xml):
-    tag = m.group(0)
-    if 'text="Email"' in tag or 'content-desc="Email"' in tag:
-        b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', tag)
-        if b:
-            print((int(b.group(1)) + int(b.group(3))) // 2, (int(b.group(2)) + int(b.group(4))) // 2)
-            break
-' 2>/dev/null || true)"
-announce notice "dijagnoza" "Email polje (x,y): ${txty:-NIJE_NAĐEN}"
-if [ -n "$txty" ]; then
-  tx="${txty%% *}"; ty="${txty##* }"
-  timeout 10 adb shell input tap "$tx" "$ty" >/dev/null 2>&1 || true
+for i in $(seq 1 20); do
+  fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+  echo "$fokus" | grep -q "ba.gradix.teren" && break
   sleep 1
-  timeout 20 adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
-  sleep 3
-  last_email="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
-  announce notice "dijagnoza" "adb input text zadnji RN crumb: ${last_email:-NEMA CRUMBA}"
-fi
-ime_default="$(timeout 10 adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
-ime_list="$(timeout 10 adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';' )"
-announce notice "ime" "prije: default='${ime_default}' lista='${ime_list}'"
-ime_en="$(timeout 15 adb shell ime enable dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2)"
-[ -n "$ime_en" ] && announce notice "ime" "enable: $ime_en"
-ime_st="$(timeout 15 adb shell ime set dev.mobile.maestro/.input.MaestroInputMethodService 2>&1 | tr -d '\r' | head -2)"
-[ -n "$ime_st" ] && announce notice "ime" "set: $ime_st"
+done
+adb logcat -c
+timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-a.xml" /tmp/dijag-a.yaml >/dev/null 2>&1 || announce warning "dijagnoza" "mini-flow A (fokus) nije prošao čisto"
 sleep 1
-ime_default2="$(timeout 10 adb shell settings get secure default_input_method 2>/dev/null | tr -d '\r')"
-ime_list2="$(timeout 10 adb shell ime list -s 2>/dev/null | tr -d '\r' | tr '\n' ';')"
-announce notice "ime" "poslije: default='${ime_default2}' lista='${ime_list2}'"
+timeout 20 adb shell input text "radik@demo.ba" >/dev/null 2>&1 || true
+sleep 3
+crumb_a="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+announce notice "dijagnoza-A" "adb input text → RN: ${crumb_a:-NEMA CRUMBA}"
+
+# B) i tap i inputText preko maestra (pressKeyCode put)
+adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
+adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+for i in $(seq 1 20); do
+  fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+  echo "$fokus" | grep -q "ba.gradix.teren" && break
+  sleep 1
+done
+adb logcat -c
+timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-b.xml" /tmp/dijag-b.yaml >/dev/null 2>&1 || announce warning "dijagnoza" "mini-flow B (inputText) nije prošao čisto"
+sleep 3
+crumb_b="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | tr -d '\r')"
+announce notice "dijagnoza-B" "maestro inputText → RN: ${crumb_b:-NEMA CRUMBA}"
+
 echo "::endgroup::"
 announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
 exit 1
-# ===== KRAJ PRIVREMENE DIJAGNOSTIKE =====
+# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v2 =====
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
