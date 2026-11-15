@@ -8,12 +8,9 @@ appId: ba.gradix.teren
 name: offline-prijava-i-kes
 ---
 - assertVisible: "Prijava za teren."
-- tapOn:
-    id: "Email"
-- inputText: "radnik@demo.ba"
-- tapOn:
-    id: "Lozinka"
-- inputText: "${DEMO_LOZINKA}"
+# Email i lozinku je unio orkestrator (adb_login u maestro-ci.sh) —
+# Maestro inputText na sporom emulatoru nondeterministički duplira/gubi
+# znakove, pa unos ide pouzdanim adb putem, a ovdje ostaje samo submit.
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 # Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda

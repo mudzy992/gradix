@@ -1,0 +1,11 @@
+# Pomoćni mini-flow (poziva ga samo orkestrator, NIJE samostalni tok):
+# fokusira Email polje na prijavi da orkestrator može unijeti sadržaj preko
+# `adb shell input text` — pouzdanim putem. Maestro inputText na sporom
+# emulatoru trči s RN re-renderom i nondeterministički duplira ili gubi
+# znakove (dokazano runovima: email tačno ×2, lozinka 9 od 13 znakova),
+# dok adb input text unosi egzaktno (run 43708006955: prijava prošla).
+appId: ba.gradix.teren
+name: fokus-email
+---
+- tapOn:
+    id: "Email"

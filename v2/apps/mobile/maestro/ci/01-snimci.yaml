@@ -1,7 +1,7 @@
 # CI tok 1/5 — obilazak ekrana radnika + A1e regresija: prijava NAKON odjave.
 #
-# Autonomna verzija snimci.yaml za CI emulator: nema ručnih koraka, lozinka dolazi
-# iz okoline Maestra (-e DEMO_LOZINKA). Za razliku od ručne verzije, NE dira
+# Autonomna verzija snimci.yaml za CI emulator: nema ručnih koraka; email i
+# lozinku unosi orkestrator (adb_login), tok samo submituje. NE dira
 # „Grupa" — radnik je nema u meniju (matrica rola); grupu pokriva tok 05 sa šefom.
 #
 # Snimke (takeScreenshot) idu u maestro-artifacts/test-output/<sesija>/<tok>/takeScreenshot/.
@@ -10,12 +10,9 @@ name: snimci-i-A1e
 ---
 - assertVisible: "Prijava za teren."
 - takeScreenshot: 01-prijava-svjetla
-- tapOn:
-    id: "Email"
-- inputText: "radnik@demo.ba"
-- tapOn:
-    id: "Lozinka"
-- inputText: "${DEMO_LOZINKA}"
+# Email i lozinku je unio orkestrator (adb input text preko mini-flow
+# fokusâ — vidi maestro-ci.sh adb_login); polja ostaju popunjena i poslije
+# odjave, pa je i A1e re-prijava samo tap na „Prijavi se".
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 - tapOn: "Moj dan"
@@ -41,12 +38,8 @@ name: snimci-i-A1e
 # „Došlo je do greške." (server 500 na NUL-u u emailu). Ovdje se dokazuje na CI-ju.
 - assertVisible: "Prijava za teren."
 - takeScreenshot: 06-odjava-svjetla
-- tapOn:
-    id: "Email"
-- inputText: "radnik@demo.ba"
-- tapOn:
-    id: "Lozinka"
-- inputText: "${DEMO_LOZINKA}"
+# Re-prijava: polja su ostala popunjena poslije odjave (finishSignOut ih
+# ne dira) — dovoljan je submit.
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 - takeScreenshot: 07-ponovna-prijava-svjetla

@@ -63,84 +63,7 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
-# ===== PRIVREMENA DIJAGNOSTIKA UNOSA v5 (ukloniti nakon analize) =====
-# v4 (43705800372): assertVisible (C) i takeScreenshot (D) prije unosa =
-# ČIST unos; puna login sekvenca (F) = email čist, ali lozinka=9zn od 18.
-# Zaključak: Maestro inputText je nondeterministički nestabilan na sporom
-# emulatoru (trka: nekad duplira, nekad gubi, nekad čist). v5 testira
-# KOMPLETAN LOGIN preko adb input text (fokus i submit preko Maestro
-# element tapova) — ako je „Moj dan" vidljiv i signIn crumb čist, ADB put
-# je rješenje za login unos u tokovima.
-echo "::group::Dijagnoza unosa v5 (privremeno)"
-artifacts="maestro-artifacts"
-mkdir -p "$artifacts/junit" 2>/dev/null || true
 
-dijag_prep() {  # ANR dismissal + svjež app, fokus, čist logcat
-  for _i in $(seq 1 3); do
-    _f="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
-    if echo "$_f" | grep -q "Application Not Responding"; then
-      announce warning "dijagnoza" "ANR dijalog u fokusu — otpuštam ($_f)"
-      adb shell input keyevent 4 >/dev/null 2>&1 || true
-      sleep 2
-    else
-      break
-    fi
-  done
-  adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
-  adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
-  for _i in $(seq 1 20); do
-    _f="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
-    echo "$_f" | grep -q "ba.gradix.teren" && break
-    sleep 1
-  done
-  sleep 5
-  adb logcat -c
-}
-
-dijag_flow() {  # dijag_flow <ime> <yaml sadržaj> — pokreće maestro mini-flow
-  printf '%s\n' "$2" > "/tmp/dijag-$1.yaml"
-  timeout 120 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/dijag-$1.xml" "/tmp/dijag-$1.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r'
-}
-
-dijag_prep
-
-# 1) fokus na Email (element tap), unos preko adb input text
-out="$(dijag_flow "fokus-email" 'appId: ba.gradix.teren
-name: dijag-fokus-email
----
-- tapOn:
-    id: "Email"')"
-announce notice "dijagnoza-v5" "fokus email flow: ${out:-PRAZNO}"
-sleep 1
-timeout 20 adb shell input text "radnik@demo.ba" >/dev/null 2>&1 || true
-sleep 2
-
-# 2) fokus na Lozinka, unos preko adb input text
-out="$(dijag_flow "fokus-lozinka" 'appId: ba.gradix.teren
-name: dijag-fokus-lozinka
----
-- tapOn:
-    id: "Lozinka"')"
-announce notice "dijagnoza-v5" "fokus lozinka flow: ${out:-PRAZNO}"
-sleep 1
-timeout 20 adb shell input text "$DEMO_LOZINKA" >/dev/null 2>&1 || true
-sleep 2
-
-# 3) submit preko maestra + dokaz prijave
-out="$(dijag_flow "submit" 'appId: ba.gradix.teren
-name: dijag-submit
----
-- tapOn: "Prijavi se"
-- assertVisible: "Moj dan"')"
-announce notice "dijagnoza-v5" "submit flow: ${out:-PRAZNO}"
-
-crumb="$(timeout 10 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep -E "email changed|signIn poziv|signIn greska|phase=ready" | tail -5 | tr '\n' '|' | tr -d '\r' | cut -c1-600)"
-announce notice "dijagnoza-v5" "RN: ${crumb:-NEMA}"
-
-echo "::endgroup::"
-announce error "dijagnoza" "kraj dijagnostičkog runa — tokovi namjerno preskočeni"
-exit 1
-# ===== KRAJ PRIVREMENE DIJAGNOSTIKE v5 =====
 
 flows_dir="maestro/ci"
 artifacts="maestro-artifacts"
@@ -150,25 +73,47 @@ mkdir -p "$artifacts/junit" "$artifacts/test-output"
 passed=()
 failed=()
 
-run_flow() {  # run_flow <ime> <fajl> [cisto|restart] — 0 = prošao (eventualno iz retryja)
-  # Arhitektura po dokazanom runu 43646763583 (prijava čistim typingom):
-  # - orkestrator priprema stanje i starta app: cisto = pm clear + start
-  #   (tokovi iz prijave: 01/02/05), restart = force-stop + start (03/04:
-  #   keš i neslani zapisi ostaju). RESTART je bitan: koordinatni tap na app
-  #   ekranu „prlja" input (svaki sljedeći inputText duplira cijeli string —
-  #   runovi 43657398421/43662146227/43671967067/43674507709), a restart
-  #   procesa to čisti (84e6183: tap → restart → typing čist).
-  # - fokus se ČEKA dumpsys anketom, BEZ tapanja (tap bi pokvario typing).
-  #   Launcher je ubijen na početku skripte, pa je app jedini kandidat za
-  #   fokus; koordinatni tap je samo očajnički fallback.
-  # - tokovi idu ravno na element akcije (assertVisible/tapOn id/...) — bez
-  #   launchApp (restart bi vratio fokus na launcher) i bez tapOn point.
-  # 03/04 nemaju inputText (unos formom i defaultima), pa su na dupliranje
-  # imuni; element tapovi (tapOn id) nisu pokazali uticaj na typing.
-  local name="$1" flow="$2" mode="${3:-restart}" attempt start trajanje fokus tap_i i
+adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
+  # Maestro inputText na sporom emulatoru je nondeterministički nestabilan
+  # (trka s RN re-renderom: cijeli string točno ×2, ili gubitak znakova —
+  # runovi 43662146227/43674507709/43705800372), a IME (atomic commitText)
+  # na aosp_atd slici ne postoji ("cannot be enabled"). `adb shell input text`
+  # je dokazano egzaktno (43708006955: email i lozinka tačni, prijava prošla).
+  # Fokus polja preuzimaju mini-flowovi (element tap), sadržaj ide adb-om,
+  # submit ostaje u glavnom toku („Prijavi se" + asercije — dokaz u junitu).
+  local email="$1" out
+  email="${email// /%s}"
+  out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-email.xml" "$flows_dir/_fokus-email.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
+  case "$out" in *Passed*) ;; *) announce warning "login priprema" "fokus Email mini-flow: ${out:-PRAZNO}" ;; esac
+  sleep 1
+  timeout 20 adb shell input text "$email" >/dev/null 2>&1 || true
+  sleep 1
+  local pass="${DEMO_LOZINKA// /%s}"
+  out="$(timeout 90 "$MAESTRO_BIN" test --format junit --output "$artifacts/junit/_fokus-lozinka.xml" "$flows_dir/_fokus-lozinka.yaml" 2>&1 | tail -2 | tr '\n' '|' | tr -d '\r')"
+  case "$out" in *Passed*) ;; *) announce warning "login priprema" "fokus Lozinka mini-flow: ${out:-PRAZNO}" ;; esac
+  sleep 1
+  timeout 20 adb shell input text "$pass" >/dev/null 2>&1 || true
+  sleep 1
+}
+
+run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz retryja)
+  # Arhitektura (dokazano runom 43708006955 — prijava prošla egzaktnim unosom):
+  # - orkestrator u potpunosti posjeduje lifecycle: <email> = pm clear + start
+  #   + adb_login priprema prijave (tokovi 01/02/05); „-" = force-stop + start
+  #   (03/04 nastavljaju stanje: keš i neslani zapisi ostaju).
+  # - fokus se čeka dumpsys anketom; ATD launcher je ubijen na početku skripte,
+  #   pa je app jedini kandidat. ANR dijalog system procesa zna ukrasti fokus
+  #   (43691349218) — otpušta se BACK-om. Koordinatni tap je zadnja odbrana.
+  # - tokovi NE RADE launchApp (restart bi fokus vratio launcheru, a i
+  #   startActivity razbija input fokus) i NE KORISTE inputText — Maestrov
+  #   key-event unos na sporom emulatoru je nondeterministički nestabilan
+  #   (duplira cijeli string: 43657398421; gubi znakove: 43705800372).
+  #   Unos ide adb putem (adb_login), tokovi počinju element akcijama.
+  # - element tapovi (tapOn id/text) rade pouzdano u svim runovima.
+  local name="$1" flow="$2" who="${3:--}" attempt start trajanje fokus i tap_i
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
-    if [ "$mode" = "cisto" ]; then
+    if [ "$who" != "-" ]; then
       adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
     else
       adb shell am force-stop ba.gradix.teren >/dev/null 2>&1 || true
@@ -177,17 +122,24 @@ run_flow() {  # run_flow <ime> <fajl> [cisto|restart] — 0 = prošao (eventualn
     fokus=""
     for i in $(seq 1 20); do
       fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+      if echo "$fokus" | grep -q "Application Not Responding"; then
+        announce warning "$name" "ANR dijalog u fokusu — otpuštam BACK-om"
+        adb shell input keyevent 4 >/dev/null 2>&1 || true
+      fi
       if echo "$fokus" | grep -q "ba.gradix.teren"; then break; fi
       sleep 1
     done
     if ! echo "$fokus" | grep -q "ba.gradix.teren"; then
-      announce warning "$name" "fokus nije došao sam na app (20s): $(echo "$fokus" | tr -d '\r' | cut -c1-160) — pokušavam koordinatni tap (može pokvariti typing)"
+      announce warning "$name" "fokus nije došao sam na app (20s): $(echo "$fokus" | tr -d '\r' | cut -c1-160) — pokušavam koordinatni tap"
       for tap_i in 1 2 3; do
         adb shell input tap 360 150 >/dev/null 2>&1 || true
         sleep 1
         fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
         if echo "$fokus" | grep -q "ba.gradix.teren"; then break; fi
       done
+    fi
+    if [ "$who" != "-" ]; then
+      adb_login "$who"
     fi
     if ! echo "$fokus" | grep -q "ba.gradix.teren"; then
       announce error "$name" "fokus nije preuzet — tok vjerovatno neće vidjeti ekran"
@@ -271,7 +223,7 @@ offline_block() {
     return 1
   fi
   announce notice "mreža" "uključena prije offline bloka"
-  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml" cisto; then
+  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml" radnik@demo.ba; then
     failed+=("offline-prijava-i-kes (blok prekinut: 03/04 ovise o prijavi i kešu)")
     return 1
   fi
@@ -282,7 +234,7 @@ offline_block() {
     rc=1
   else
     announce notice "mreža" "isključena (avionski režim) — offline unos"
-    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" restart; then
+    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" -; then
       passed+=("offline-unos")
     else
       failed+=("offline-unos")
@@ -290,7 +242,7 @@ offline_block() {
   fi
   bash scripts/emulator-net.sh on || true
   announce notice "mreža" "uključena nakon offline unosa"
-  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml" restart; then
+  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml" -; then
     passed+=("povratak-mreze")
   else
     failed+=("povratak-mreze")
@@ -300,18 +252,18 @@ offline_block() {
 
 case "$scenario" in
   sve)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" cisto; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.ba; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     offline_block || true
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" cisto; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.ba; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   snimci)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" cisto; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.ba; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     ;;
   offline)
     offline_block || true
     ;;
   grupa)
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" cisto; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.ba; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   *)
     echo "nepoznat scenarij: $scenario (sve | snimci | offline | grupa)" >&2
