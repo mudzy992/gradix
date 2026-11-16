@@ -44,6 +44,8 @@ export default function MojDanScreen() {
       const account = await getActiveLocalAccount(db);
       if (account) { setEntries(await readOutboxEntries(db, account)); setResolutions(await readResolutionOutcomes(db, account)); }
     } catch {
+      // eslint-disable-next-line no-console
+      console.log("[e2e] moj-dan load greska (API nedostupan?)");  // PRIVREMENO (dijagnostika CI) — skloniti nakon dijagnoze.
       setError("Podaci se nisu mogli učitati. Provjeri vezu i pokušaj ponovo.");
     } finally {
       setLoading(false);
@@ -55,6 +57,8 @@ export default function MojDanScreen() {
   const pending = entries.filter((entry) => entry.status === "pending" || entry.status === "failed").length;
 
   async function save() {
+    // eslint-disable-next-line no-console
+    console.log(`[e2e] save poziv projectId=${projectId || "PRAZAN"}`);  // PRIVREMENO (dijagnostika CI) — skloniti nakon dijagnoze.
     if (!projectId) { setMessage("Izaberi projekat."); return; }
     setBusy(true);
     try {
@@ -73,7 +77,11 @@ export default function MojDanScreen() {
       setEntries(await readOutboxEntries(db, account));
       setResolutions(await readResolutionOutcomes(db, account));
       setMessage("Sačuvano na telefonu. Pošalji kad bude veze.");
+      // eslint-disable-next-line no-console
+      console.log("[e2e] save ok — poruka postavljena");  // PRIVREMENO (dijagnostika CI) — skloniti nakon dijagnoze.
     } catch (caught) {
+      // eslint-disable-next-line no-console
+      console.log(`[e2e] save greska: ${caught instanceof Error ? caught.message : String(caught)}`);  // PRIVREMENO — skloniti nakon dijagnoze.
       setMessage(caught instanceof Error ? caught.message : "Unos se nije mogao sačuvati.");
     } finally { setBusy(false); }
   }
@@ -89,7 +97,11 @@ export default function MojDanScreen() {
       setResolutions(await readResolutionOutcomes(db, account));
       setSyncFailed(outcome.retry > 0);
       setMessage(sendResultMessage(outcome));
+      // eslint-disable-next-line no-console
+      console.log(`[e2e] send ishod: poslano=${outcome.applied + outcome.duplicate} retry=${outcome.retry} error=${outcome.error ?? "—"}`);  // PRIVREMENO (dijagnostika CI) — skloniti nakon dijagnoze.
     } catch {
+      // eslint-disable-next-line no-console
+      console.log("[e2e] send greska (izuzetak)");  // PRIVREMENO — skloniti nakon dijagnoze.
       setMessage("Slanje nije uspjelo. Zapisi ostaju na telefonu.");
     } finally { setBusy(false); }
   }

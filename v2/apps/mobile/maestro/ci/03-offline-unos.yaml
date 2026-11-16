@@ -15,8 +15,8 @@
 #
 # LAYOUT činjenice (sve ekrane je duža od vidljivog dijela): na formi „Moj dan"
 # su dugmad na dnu prve kartice, poruka (message) odmah ISPOD dugmadi, a status
-# „Čeka slanje" u kartici „Moji zapisi" još niže — do dugmadi i statusa se
-# SKROLA DOLJE, a poruke uz dugmad su vidljive s te pozicije. Na ekranima
+# „Čeka slanje" u kartici „Moji zapisi" još niže — DO SVEGA (dugmadi, poruka,
+# statusa) se SKROLA DOLJE, jedna po jedna. Na ekranima
 # rokova/projekata je „Osvježi" na dnu, a poruka „Nema veze…" na VRHU — poslije
 # skrola do dugmeta poruka nije u vidiku pa se vraćamo skrolom GORE
 # (direction: UP; re-mount bi obrisao poruku iz stanja ekrana).
@@ -37,10 +37,10 @@ name: offline-unos
 - takeScreenshot: offline-unos-sacuvao
 - scrollUntilVisible:
     element:
-      text: "Sačuvano na telefonu"
+      text: "Sačuvano na telefonu\. Pošalji kad bude veze\."
     timeout: 20000
 - assertVisible:
-    text: "Sačuvano na telefonu"
+    text: "Sačuvano na telefonu\. Pošalji kad bude veze\."
 # Dugmad su iznad poruke — vratimo se do „Pošalji sada" (ako je u vidiku,
 # skrol je no-op).
 - scrollUntilVisible:
@@ -54,10 +54,10 @@ name: offline-unos
 - takeScreenshot: offline-unos-poslao-pokusao
 - scrollUntilVisible:
     element:
-      text: "Zapisi ostaju na telefonu"
+      text: "Nema veze sa serverom\. Zapisi ostaju na telefonu i poslaće se kasnije\."
     timeout: 20000
 - assertVisible:
-    text: "Zapisi ostaju na telefonu"
+    text: "Nema veze sa serverom\. Zapisi ostaju na telefonu i poslaće se kasnije\."
 # Status „Čeka slanje" je u kartici „Moji zapisi", još niže — skrolamo do njega.
 - scrollUntilVisible:
     element:
@@ -83,11 +83,11 @@ name: offline-unos
 # skrola do dugmeta nije u vidiku, pa skrolamo GORE do nje.
 - scrollUntilVisible:
     element:
-      text: "Nema veze. Prikazujem zadnje preuzeto."
+      text: "Nema veze\. Prikazujem zadnje preuzeto\."
     direction: UP
     timeout: 20000
 - assertVisible:
-    text: "Nema veze. Prikazujem zadnje preuzeto."
+    text: "Nema veze\. Prikazujem zadnje preuzeto\."
 - takeScreenshot: offline-rokovi-iz-kesa
 - back
 - tapOn: "Moji projekti"
@@ -102,10 +102,10 @@ name: offline-unos
     timeout: 15000
 - scrollUntilVisible:
     element:
-      text: "Nema veze. Prikazujem zadnje preuzeto."
+      text: "Nema veze\. Prikazujem zadnje preuzeto\."
     direction: UP
     timeout: 20000
 - assertVisible:
-    text: "Nema veze. Prikazujem zadnje preuzeto."
+    text: "Nema veze\. Prikazujem zadnje preuzeto\."
 - takeScreenshot: offline-projekti-iz-kesa
 - back

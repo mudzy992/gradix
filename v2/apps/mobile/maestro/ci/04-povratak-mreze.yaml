@@ -26,10 +26,10 @@ name: povratak-mreze
 # podatke s API-ja (loading spinner) — zato extendedWaitUntil, a ne samo
 # assertVisible.
 - extendedWaitUntil:
-    visible: "čeka slanje\\."
+    visible: "[0-9]+ čeka slanje\\."
     timeout: 30000
 - assertVisible:
-    text: "čeka slanje\\."
+    text: "[0-9]+ čeka slanje\\."
 - scrollUntilVisible:
     element:
       text: "Sačuvaj na telefon"
@@ -42,13 +42,13 @@ name: povratak-mreze
 - takeScreenshot: povratak-poslao
 - scrollUntilVisible:
     element:
-      text: "poslano [1-9][0-9]*, za provjeru 0"
+      text: "Slanje završeno: poslano [1-9][0-9]*, za provjeru 0\\."
     timeout: 20000
 # „poslano 1" — regex „najmanje jedan": retry toka 03 (poslije uspješnog
 # save-a) može ostaviti dva zapisa u redu, pa bi strogi „poslano 1" lažno
 # pao na „poslano 2". Duplikat-dokaz je druga asercija („poslano 0").
 - assertVisible:
-    text: "poslano [1-9][0-9]*, za provjeru 0"
+    text: "Slanje završeno: poslano [1-9][0-9]*, za provjeru 0\\."
 # Ponovno slanje NE smije napraviti duplikat — outbox je prazan pa poruka
 # kaže „poslano 0" (server ništa novo nije primio). Poruka je na istom
 # mjestu (ispod dugmadi) — već u vidiku, skrol zbog sigurnosti.
@@ -61,10 +61,10 @@ name: povratak-mreze
 - takeScreenshot: povratak-bez-duplikata
 - scrollUntilVisible:
     element:
-      text: "poslano 0, za provjeru 0"
+      text: "Slanje završeno: poslano 0, za provjeru 0\\."
     timeout: 20000
 - assertVisible:
-    text: "poslano 0, za provjeru 0"
+    text: "Slanje završeno: poslano 0, za provjeru 0\\."
 # Status zapisa „Poslano" je u kartici „Moji zapisi" — skrolamo do njega.
 - scrollUntilVisible:
     element:
