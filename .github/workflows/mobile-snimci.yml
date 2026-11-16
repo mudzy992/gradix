@@ -1,13 +1,13 @@
 # Mobilni snimci STVARNE aplikacije (Dio 1c) — nije kapija.
-# Ručno (workflow_dispatch) i noćno. GitHub-hosted runneri podržavaju Android emulator
-# (macOS/ubuntu s KVM), pa job: build dev klijenta, emulator, Maestro takeScreenshot.
-# Ako job padne (emulator/Maestro), ostaje ručni prolaz vlasnika iz DEMO-STEP7.md.
+# PARKIRANO (odluka vlasnika, 2026-11-16): noćno pokretanje je ISKLJUČENO —
+# ostaje samo ručno (workflow_dispatch). Emulator u CI-ju je stajalište;
+# snimke radi vlasnik ručno s vlastitog emulatora. Maestro tokovi za ručno
+# pokretanje: v2/apps/mobile/maestro/ci/README.md.
 name: Mobilni snimci (emulator, nije kapija)
 
 on:
+  # SAMO ručno pokretanje (vidi napomenu iznad).
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * *"
 
 jobs:
   snimci:
