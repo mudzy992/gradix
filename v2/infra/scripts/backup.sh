@@ -18,7 +18,7 @@ BASE="gradix-$STAMP"
 MANIFEST_LIST="${BACKUP_MANIFEST_LIST:-$script_dir/backup-manifest.tsv}"
 
 require_cmd pg_dump psql openssl sha256sum
-warn_if_not_off_host
+validate_dest
 mkdir -p "$BACKUP_DIR"
 
 CONN="$(pg_conn "$BACKUP_URL")"

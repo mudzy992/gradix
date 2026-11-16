@@ -27,12 +27,6 @@ pg_conn() {
   fi
 }
 
-pg_host_from_url() {
-  local url
-  url="$(pg_conn "$1")"
-  printf '%s' "$url" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://([^@/]*@)?([^/:?]+).*#\2#'
-}
-
 require_cmd() {
   local c
   for c in "$@"; do
@@ -45,7 +39,7 @@ require_cmd() {
 
 encrypt_file() {
   local src="$1" dst="$2"
-  : "${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY je obavezan (šifrovanje prije slanja/čuvanja)}"
+  : "${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY je obavezan (šifrovanje prije čuvanja/slanja)}"
   require_cmd openssl
   openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
     -pass env:BACKUP_ENCRYPTION_KEY \
@@ -67,48 +61,30 @@ write_sha256() {
   (cd "$(dirname "$file")" && sha256sum "$(basename "$file")" > "$(basename "$file").sha256")
 }
 
+# Obavezna SHA-256 provjera šifrata prije restora (okrjnjen/izmijenjen fajl pada ovdje).
 check_sha256() {
   local file="$1"
-  if [ -f "${file}.sha256" ]; then
-    require_cmd sha256sum
-    (cd "$(dirname "$file")" && sha256sum --check "$(basename "$file").sha256" >/dev/null)
+  require_cmd sha256sum
+  if [ ! -f "${file}.sha256" ]; then
+    echo "GREŠKA: nedostaje ${file}.sha256 — odbijam restore." >&2
+    exit 4
+  fi
+  (cd "$(dirname "$file")" && sha256sum --check "$(basename "$file").sha256" >/dev/null)
+}
+
+apply_backup_s3_creds() {
+  if [ -n "${BACKUP_S3_ACCESS_KEY:-}" ]; then
+    export AWS_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY"
+  fi
+  if [ -n "${BACKUP_S3_SECRET_KEY:-}" ]; then
+    export AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_KEY"
   fi
 }
 
-# Odredište na istom hostu kao baza / lokalni disk = nije van hosta.
-warn_if_not_off_host() {
+validate_dest() {
   local dest_mode="${BACKUP_DEST:-local}"
-  local db_url="${DATABASE_BACKUP_URL:-${DATABASE_ADMIN_URL:-${DATABASE_URL:-}}}"
-  local db_host="" s3_host=""
-  if [ -n "$db_url" ]; then
-    db_host="$(pg_host_from_url "$db_url")"
-  fi
   case "$dest_mode" in
-    local)
-      echo "UPOZORENJE: NIJE VAN HOSTA — odredište je lokalni direktorij na istom hostu." >&2
-      return 0
-      ;;
-    s3)
-      s3_host="${BACKUP_S3_ENDPOINT:-}"
-      s3_host="${s3_host#https://}"
-      s3_host="${s3_host#http://}"
-      s3_host="${s3_host%%/*}"
-      s3_host="${s3_host%%:*}"
-      if [ "${BACKUP_OFFHOST:-}" = "true" ]; then
-        echo "→ odredište označeno kao van hosta (BACKUP_OFFHOST=true)."
-        return 0
-      fi
-      if [ -n "$db_host" ] && [ -n "$s3_host" ] && [ "$db_host" = "$s3_host" ]; then
-        echo "UPOZORENJE: NIJE VAN HOSTA — S3 endpoint je isti host kao baza ($s3_host)." >&2
-        return 0
-      fi
-      # Isti Coolify server: interni MinIO DNS ili loopback.
-      case "$s3_host" in
-        minio|localhost|127.0.0.1|"" )
-          echo "UPOZORENJE: NIJE VAN HOSTA — S3 endpoint ($s3_host) je na istom serveru kao aplikacija/baza." >&2
-          ;;
-      esac
-      ;;
+    local|s3) ;;
     *)
       echo "GREŠKA: BACKUP_DEST mora biti 'local' ili 's3' (dobijeno: $dest_mode)." >&2
       exit 2
@@ -123,17 +99,16 @@ upload_encrypted() {
     return 0
   fi
   require_cmd aws
+  apply_backup_s3_creds
   : "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT obavezan za BACKUP_DEST=s3}"
-  : "${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET obavezan za BACKUP_DEST=s3}"
-  local prefix="${BACKUP_S3_PREFIX:-gradix/backups}"
+  : "${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET obavezan (zaseban backup bucket, ne app bucket)}"
+  local prefix="${BACKUP_S3_PREFIX:-backups}"
   prefix="${prefix#/}"
   prefix="${prefix%/}"
   local key="$prefix/$(basename "$file")"
   echo "→ upload s3://$BACKUP_S3_BUCKET/$key"
   AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "$file" "s3://$BACKUP_S3_BUCKET/$key" --only-show-errors
-  if [ -f "${file}.sha256" ]; then
-    AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "${file}.sha256" "s3://$BACKUP_S3_BUCKET/${key}.sha256" --only-show-errors
-  fi
+  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "${file}.sha256" "s3://$BACKUP_S3_BUCKET/${key}.sha256" --only-show-errors
   local man="${file%.dump.enc}.manifest.tsv"
   if [ -f "$man" ]; then
     AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "$man" "s3://$BACKUP_S3_BUCKET/$prefix/$(basename "$man")" --only-show-errors
@@ -144,12 +119,13 @@ download_encrypted() {
   local name="$1"
   local dest_dir="$2"
   require_cmd aws
+  apply_backup_s3_creds
   : "${BACKUP_S3_ENDPOINT:?}"
   : "${BACKUP_S3_BUCKET:?}"
-  local prefix="${BACKUP_S3_PREFIX:-gradix/backups}"
+  local prefix="${BACKUP_S3_PREFIX:-backups}"
   prefix="${prefix#/}"
   prefix="${prefix%/}"
   mkdir -p "$dest_dir"
   AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/$name" "$dest_dir/$name" --only-show-errors
-  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${name}.sha256" "$dest_dir/${name}.sha256" --only-show-errors || true
+  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${name}.sha256" "$dest_dir/${name}.sha256" --only-show-errors
 }

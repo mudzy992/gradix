@@ -16,12 +16,12 @@ newest_name=""
 
 if [ "$DEST" = "s3" ]; then
   require_cmd aws
+  apply_backup_s3_creds
   : "${BACKUP_S3_ENDPOINT:?}"
   : "${BACKUP_S3_BUCKET:?}"
-  prefix="${BACKUP_S3_PREFIX:-gradix/backups}"
+  prefix="${BACKUP_S3_PREFIX:-backups}"
   prefix="${prefix#/}"
   prefix="${prefix%/}"
-  # aws s3 ls ispisuje datum/vrijeme; uzmi zadnji .dump.enc
   line=$(AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" \
     | awk '/\.dump\.enc$/ {print}' | tail -n1)
   if [ -z "$line" ]; then

@@ -1,5 +1,5 @@
-# v2 backup/restore drill — BEZ MinIO-a.
-# Postgres → lokalni šifrovani dump → restore u praznu bazu → manifest → preflight → prijava.
+# v2 backup/restore drill — BEZ MinIO-a u CI-ju (MinIO se provjerava ručno: backup-minio-check.sh).
+# Postgres → lokalni šifrovani dump → restore → manifest → preflight → prijava.
 # Izvor ideje: v1/.github/workflows/backup-restore.yml (ne skripte 1:1).
 name: v2 Backup/restore drill
 
@@ -82,8 +82,7 @@ jobs:
           ./infra/scripts/db-apply.sh
           pnpm --filter @gradix/web seed
 
-      - name: Ključ šifrovanja (efemeran u CI-ju)
-        id: key
+      - name: Ključ šifrovanja (sintetički, samo CI)
         run: echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Backup (lokalni dir, bez MinIO)
@@ -100,7 +99,7 @@ jobs:
           echo "enc=$ENC" >> "$GITHUB_OUTPUT"
           echo "manifest=${ENC%.dump.enc}.manifest.tsv" >> "$GITHUB_OUTPUT"
 
-      - name: Dokaz — bez ključa nije čitljivo
+      - name: "(a) pogrešan ključ pada"
         working-directory: v2
         run: |
           set -euo pipefail
@@ -111,12 +110,46 @@ jobs:
             echo "::error::dešifrovanje bez ispravnog ključa nije smjelo uspjeti"
             exit 1
           fi
-          # Sirovi sadržaj ne smije izgledati kao pg_dump custom header nakon „otvaranja” bez ključa
           if head -c 5 "$ENC" | grep -q '^PGDMP'; then
             echo "::error::enkriptovani fajl izgleda kao nešifrovani pg_dump"
             exit 1
           fi
-          echo "✓ kopija bez ključa nije čitljiva"
+          echo "✓ (a) pogrešan ključ odbijen"
+
+      - name: "(b) okrnjen šifrat pada prije restora (SHA-256)"
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          ENC="${{ steps.backup.outputs.enc }}"
+          BAD="/tmp/tampered.dump.enc"
+          cp "$ENC" "$BAD"
+          cp "${ENC}.sha256" "${BAD}.sha256"
+          printf '\x00' | dd of="$BAD" bs=1 seek=64 conv=notrunc status=none
+          if ./infra/scripts/restore.sh "$BAD" >/tmp/tamper-restore.log 2>&1; then
+            echo "::error::restore nije smio proći na izmijenjenom šifratu"
+            cat /tmp/tamper-restore.log
+            exit 1
+          fi
+          if ! grep -Eqi 'FAILED|does not match|GREŠKA|sha256' /tmp/tamper-restore.log; then
+            # sha256sum --check tipično: "FAILED"; restore echo i exit 4
+            echo "::notice::restore pao kako treba; log:"
+            cat /tmp/tamper-restore.log
+          fi
+          echo "✓ (b) izmijenjen šifrat odbijen prije restora"
+
+      - name: "(d) backup-age-check pada na kopiji >26 h"
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          AGE_DIR=$(mktemp -d)
+          OLD="$AGE_DIR/gradix-old.dump.enc"
+          printf 'x' > "$OLD"
+          touch -d '30 hours ago' "$OLD"
+          if BACKUP_DEST=local BACKUP_DIR="$AGE_DIR" ./infra/scripts/backup-age-check.sh; then
+            echo "::error::age-check nije smio proći za kopiju stariju od 26 h"
+            exit 1
+          fi
+          echo "✓ (d) age-check odbija staru kopiju"
 
       - name: Prazna ciljna baza
         run: |
@@ -133,7 +166,7 @@ jobs:
           END=$(date +%s)
           echo "restore_seconds=$((END - START))" >> "$GITHUB_OUTPUT"
 
-      - name: Brojevi redova prema manifestu
+      - name: "(c) brojevi redova prema manifestu"
         working-directory: v2
         run: ./infra/scripts/backup-verify-counts.sh "${{ steps.backup.outputs.manifest }}"
 
@@ -170,12 +203,15 @@ jobs:
           echo "✓ prijava radi na vraćenoj bazi"
 
       - name: Izmjereni RTO (demo količina)
+        id: rto
         run: |
           B="${{ steps.backup.outputs.backup_seconds }}"
           R="${{ steps.restore.outputs.restore_seconds }}"
-          echo "RTO (backup+restore na demo seedu): $((B + R)) s (backup=${B}s restore=${R}s)"
-          echo "RPO: tvrdnja važi samo uz zakazani zadatak (§12 COOLIFY) — cilj ≤ 26 h (dnevni job)."
-          echo "::notice::RTO_demo_seconds=$((B + R)) backup=${B}s restore=${R}s"
+          TOTAL=$((B + R))
+          echo "rto_seconds=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "RTO (backup+restore na demo seedu): ${TOTAL} s (backup=${B}s restore=${R}s)"
+          echo "RPO: ≤ 26 h uz dnevni zakazani zadatak (§12 COOLIFY)."
+          echo "::notice::RTO_demo_seconds=${TOTAL} backup=${B}s restore=${R}s"
 
       - name: Artefakt dumpa (7 dana)
         if: always()
