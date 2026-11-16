@@ -81,16 +81,38 @@ jobs:
           psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
           ./infra/scripts/db-apply.sh
           pnpm --filter @gradix/web seed
+          firms=$(psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.companies" | tr -d '[:space:]')
+          echo "firme u seedu: $firms"
+          if [ "$firms" -lt 2 ]; then
+            echo "::error::RLS dokaz traži ≥2 firme u seedu"
+            exit 1
+          fi
 
       - name: Ključ šifrovanja (sintetički, samo CI)
         run: echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: "RLS negativno — dump kao gradix_app (bez BYPASSRLS) mora pasti"
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/backup*.sh infra/scripts/restore.sh
+          BAD_DIR=$(mktemp -d)
+          if DATABASE_BACKUP_URL="$DATABASE_URL" \
+               DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" \
+               BACKUP_DEST=local BACKUP_DIR="$BAD_DIR" \
+               ./infra/scripts/backup.sh >/tmp/rls-neg.log 2>&1; then
+            echo "::error::dump kao gradix_app (NOBYPASSRLS) nije smio uspjeti"
+            cat /tmp/rls-neg.log
+            exit 1
+          fi
+          grep -Fq "BYPASSRLS" /tmp/rls-neg.log
+          echo "✓ dump bez BYPASSRLS odbijen"
 
       - name: Backup (lokalni dir, bez MinIO)
         working-directory: v2
         id: backup
         run: |
           set -euo pipefail
-          chmod +x infra/scripts/backup*.sh infra/scripts/restore.sh
           START=$(date +%s)
           ./infra/scripts/backup.sh 2>&1 | tee /tmp/backup.log
           END=$(date +%s)
@@ -166,9 +188,28 @@ jobs:
           END=$(date +%s)
           echo "restore_seconds=$((END - START))" >> "$GITHUB_OUTPUT"
 
-      - name: "(c) brojevi redova prema manifestu"
+      - name: "(c) brojevi redova prema manifestu + izvor=restore (admin, sve firme)"
         working-directory: v2
-        run: ./infra/scripts/backup-verify-counts.sh "${{ steps.backup.outputs.manifest }}"
+        run: |
+          set -euo pipefail
+          ./infra/scripts/backup-verify-counts.sh "${{ steps.backup.outputs.manifest }}"
+          # Nezavisno od manifesta: isti broj redova u izvoru i restore-u kao vlasnik šeme.
+          while IFS= read -r table || [ -n "$table" ]; do
+            case "$table" in ''|\#*) continue ;; esac
+            src=$(psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.\"$table\"" | tr -d '[:space:]')
+            dst=$(psql "$RESTORE_ADMIN_URL" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.\"$table\"" | tr -d '[:space:]')
+            if [ "$src" != "$dst" ]; then
+              echo "::error title=rls-all-firms::$table izvor=$src restore=$dst"
+              exit 1
+            fi
+            echo "✓ $table izvor=restore=$src (admin)"
+          done < infra/scripts/backup-manifest.tsv
+          firms=$(psql "$RESTORE_ADMIN_URL" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.companies" | tr -d '[:space:]')
+          if [ "$firms" -lt 2 ]; then
+            echo "::error::restore ima <2 firme — dump nije uhvatio sve tenante"
+            exit 1
+          fi
+          echo "✓ restore ima $firms firme"
 
       - name: Preflight na vraćenoj bazi
         working-directory: v2

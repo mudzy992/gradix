@@ -92,6 +92,19 @@ validate_dest() {
   esac
 }
 
+# Dump mora vidjeti SVE firme: rola bez BYPASSRLS/superuser gubi redove zbog RLS.
+assert_backup_role_sees_all() {
+  local conn="$1"
+  local flags
+  flags=$(psql "$conn" -v ON_ERROR_STOP=1 -tAc \
+    "SELECT CASE WHEN rolsuper OR rolbypassrls THEN 'ok' ELSE 'rls' END
+       FROM pg_roles WHERE rolname = current_user" | tr -d '[:space:]')
+  if [ "$flags" != "ok" ]; then
+    echo "GREŠKA: DATABASE_BACKUP_URL rola nema BYPASSRLS (niti je superuser) — dump bi izgubio redove drugih firmi zbog RLS." >&2
+    exit 5
+  fi
+}
+
 upload_encrypted() {
   local file="$1"
   local dest_mode="${BACKUP_DEST:-local}"

@@ -546,11 +546,12 @@ u praznu bazu → manifest → preflight → prijava. Staging MinIO se provjerav
 (`backup-minio-check.sh`). Odredište kopija je **samo** taj MinIO, u **zasebnom bucketu**
 s **zasebnim** `BACKUP_S3_ACCESS_KEY` / `BACKUP_S3_SECRET_KEY` (ne `MINIO_ACCESS_KEY` app-a).
 
-`backup.sh` uvijek šifrira (AES-256-CBC, PBKDF2) prije čuvanja/slanja. Ključ
-`BACKUP_ENCRYPTION_KEY` živi u Coolify/host secretu, **ne** u MinIO-u. Izgubljen ključ =
-izgubljene kopije. Izvoz: read-only `gradix_backup` (`DATABASE_BACKUP_URL`), nikad web
-`DATABASE_URL`. Dokaz u CI: (a) pogrešan ključ, (b) okrnjen šifrat/SHA-256, (c) manifest,
-(d) `backup-age-check` >26 h.
+Dump radi `gradix_backup` s **BYPASSRLS** (+ SELECT) preko `DATABASE_BACKUP_URL`; brojeve u
+manifestu i poslije restore-a broji **vlasnik šeme** (`DATABASE_ADMIN_URL` /
+`RESTORE_ADMIN_URL`), jer `gradix_app` bez tenant konteksta vidi 0 zbog RLS. Rola bez
+BYPASSRLS za dump **pada** (ne tihi gubitak firmi). `backup.sh` uvijek šifrira
+(AES-256-CBC, PBKDF2) prije čuvanja/slanja; ključ `BACKUP_ENCRYPTION_KEY` nije u MinIO-u.
+Dokaz u CI: (a)–(d) + RLS (≥2 firme, izvor=restore kao admin, dump bez BYPASSRLS pada).
 
 **RTO (demo seed, CI):** `RTO_demo_seconds` = **2** (backup=1s, restore=1s; run
 `43874147777` na `21f92ec`).
@@ -560,13 +561,14 @@ Raspored: `DATABASE_ADMIN_URL` / `BACKUP_ENCRYPTION_KEY` / backup S3 tajne **ne 
 kontejner**. Coolify Scheduled Task (ili host cron), dnevno ~02:30 Europe/Sarajevo:
 
 ```sh
-# Jednokratno: read-only export rola (zamijeni IME_BAZE).
+# Jednokratno: export rola sa BYPASSRLS + SELECT (zamijeni IME_BAZE).
 psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_backup') THEN
-    CREATE ROLE gradix_backup LOGIN NOSUPERUSER NOBYPASSRLS;
+    CREATE ROLE gradix_backup LOGIN NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
   END IF;
 END $$;
+ALTER ROLE gradix_backup NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
 SQL
 psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c 'GRANT CONNECT ON DATABASE "IME_BAZE" TO gradix_backup'
 psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
