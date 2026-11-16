@@ -1,9 +1,15 @@
 # CI tok 3/5 — unos BEZ mreže: zapis ostaje na telefonu + offline čitanje iz keša.
 #
 # Mrežu ISKLJUČUJE skripta emulator-net.sh PRIJE ovog toka (avionski režim na
-# emulatoru, ne ručno). Prijava je već obavljena u toku 02; aplikacija nastavlja
-# s otvorene forme „Moj dan". Vremena se NE tipkaju — polja imaju validne
-# defaulte (07:30–15:30), a manje koraka = manje mjesta za lažne padove.
+# emulatoru, ne ručno). Prijava je obavljena u toku 02, a app OSTAJE ŽIVA:
+# orkestrator ovaj tok pokreće u „nastavi" režimu („+"), jer hladni start bez
+# mreže zaglavi na provjeri sesije — index.tsx bootstrap zove me() prije home
+# ekrana, a server je nedostupan (run 43769430158: „Moj dan" nije vidljiv ni
+# nakon 45 s, sva 3 pokušaja). Orkestrator prije toka pritisne BACK (tok 02
+# završava na formi; pad unutar pokušaja ostavlja app na podređenom ekranu —
+# BACK uvijek vraća na home), pa tok otvara formu „Moj dan" od vrha.
+# Vremena se NE tipkaju — polja imaju validne defaulte (07:30–15:30), a manje
+# koraka = manje mjesta za lažne padove.
 #
 # LAYOUT činjenice (sve ekrane je duža od vidljivog dijela): na formi „Moj dan"
 # su dugmad na dnu prve kartice, poruka (message) odmah ISPOD dugmadi, a status
@@ -15,13 +21,8 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
-# Poslije force-stop + am start app se HLADNO startuje (na sporom emulatoru
-# i više od 15 s) — prije tapinga pričekajmo da home s tabovima stvarno
-# izrenderuje (bez ovoga tapOn istekne prije nego što se „Moj dan" pojavi —
-# run 43764693794: „Element not found: Moj dan").
-- extendedWaitUntil:
-    visible: "Moj dan"
-    timeout: 45000
+# Forma se otvara IZ HOME-a (orkestrator je BACK-om vratio app na home) —
+# isti obrazac kao unutar toka 02 (back pa tapOn), dokazano stabilan.
 - tapOn: "Moj dan"
 # „Sačuvaj na telefon" je van folda — skrolamo do njega (dokaz da je forma tu).
 - scrollUntilVisible:

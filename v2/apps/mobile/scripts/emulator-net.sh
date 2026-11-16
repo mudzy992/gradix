@@ -14,21 +14,23 @@ if [ "$mode" != "on" ] && [ "$mode" != "off" ]; then
   exit 2
 fi
 
+# SVAKI adb poziv s timeoutom — nečuvan poziv na objesenom adb-u objesio bi
+# cijeli korak joba (run 43769430158).
 toggle() {
   if [ "$mode" = "off" ]; then
-    adb shell cmd connectivity airplane-mode enable >/dev/null 2>&1 || true
-    adb shell svc wifi disable >/dev/null 2>&1 || true
-    adb shell svc data disable >/dev/null 2>&1 || true
+    timeout 15 adb shell cmd connectivity airplane-mode enable >/dev/null 2>&1 || true
+    timeout 15 adb shell svc wifi disable >/dev/null 2>&1 || true
+    timeout 15 adb shell svc data disable >/dev/null 2>&1 || true
   else
-    adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
-    adb shell svc wifi enable >/dev/null 2>&1 || true
-    adb shell svc data enable >/dev/null 2>&1 || true
+    timeout 15 adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+    timeout 15 adb shell svc wifi enable >/dev/null 2>&1 || true
+    timeout 15 adb shell svc data enable >/dev/null 2>&1 || true
   fi
 }
 
 # 0 = host nedostupan s emulatora, 1 = dostupan.
 host_reachable() {
-  adb exec-out ping -c 1 -W 2 10.0.2.2 2>/dev/null | grep -q "0% packet loss"
+  timeout 15 adb exec-out ping -c 1 -W 2 10.0.2.2 2>/dev/null | grep -q "0% packet loss"
 }
 
 for attempt in 1 2 3; do

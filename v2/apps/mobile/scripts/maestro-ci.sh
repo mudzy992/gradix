@@ -9,8 +9,9 @@
 # Retry politika: svaki tok se pokušava do maks_pokušaja puta, s hard capom
 # MAKS_TRAJANJE sekundi po pokušaju (štiti od vješto obješene sesije koja bi
 # pojela budžet joba). Stanje i fokus prije svakog pokušaja priprema run_flow
-# (pm clear za tokove iz prijave, force-stop za tokove koji nastavljaju stanje
-# — tok 03 se retreja u avionskom režimu, pa retry ne dira mrežu). Ako tok 02
+# (pm clear za tokove iz prijave, force-stop za tokove koji restartuju stanje
+# — tok 04; „nastavi" režim za tok 03: app ostaje živa jer hladni start bez
+# mreže zaglavi na me() provjeri sesije, pa je reset jedan BACK na home). Ako tok 02
 # (prijava i keš) ne prođe ni nakon retryja, offline blok se prekida — tokovi
 # 03/04 ovise o njegovom stanju — ali ostali scenariji se ipak izvrše, da
 # izvještaj ima sve dokaze. Izlazni kod: 0 samo ako nijedan tok nije ostao crven.
@@ -60,7 +61,7 @@ announce warning "lozinka" "DEMO_LOZINKA dužina: ${#DEMO_LOZINKA} znakova"
 # app-a (run 43674507709: app Window #0, ali Maestro slijep jer čita samo
 # fokusirani prozor). CI tokovima home ekran ne treba — ubijamo launcher
 # jednom, pa pri am start-u app neminovno dobija fokus.
-adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
+timeout 15 adb shell am force-stop com.android.fakesystemapp >/dev/null 2>&1 || true
 sleep 1
 
 
@@ -90,7 +91,7 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
   local pass="${DEMO_LOZINKA// /%s}"
   # Probe mora gledati SAMO log ovog unosa — bez brisanja bi retry (ili
   # sljedeći tok) našao stari „email changed" crumb i lažno prošao (43748557549).
-  adb logcat -c >/dev/null 2>&1 || true
+  timeout 10 adb logcat -c >/dev/null 2>&1 || true
   # brisanje polja: petlja na uređaju (jedan adb poziv), 40× KEYCODE_DEL
   local ocisti='i=0; while [ $i -lt 40 ]; do input keyevent 67; i=$((i+1)); done' 
   for try in 1 2 3; do
@@ -134,7 +135,8 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   # Arhitektura (dokazano runom 43708006955 — prijava prošla egzaktnim unosom):
   # - orkestrator u potpunosti posjeduje lifecycle: <email> = pm clear + start
   #   + adb_login priprema prijave (tokovi 01/02/05); „-" = force-stop + start
-  #   (03/04 nastavljaju stanje: keš i neslani zapisi ostaju).
+  #   (04 — keš i neslani zapisi ostaju); „+" = NASTAVI bez restarta (03 —
+  #   reset jednim BACK-om na home, app i sesija ostaju živi offline).
   # - fokus se čeka dumpsys anketom; ATD launcher je ubijen na početku skripte,
   #   pa je app jedini kandidat. ANR dijalog system procesa zna ukrasti fokus
   #   (43691349218) — otpušta se BACK-om. Koordinatni tap je zadnja odbrana.
@@ -147,18 +149,32 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   local name="$1" flow="$2" who="${3:--}" attempt start trajanje fokus i tap_i
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
-    if [ "$who" != "-" ]; then
-      adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
+    if [ "$who" = "+" ]; then
+      # „+" = NASTAVI (tok 03): app ostaje živa — hladni start BEZ mreže bi
+      # zaglavio na me() provjeri sesije u index.tsx bootstrapu (run
+      # 43769430158: „Moj dan" se ne pojavi ni nakon 45 s, 3/3 pokušaja).
+      # Reset na home: jedan BACK vraća sa forme/rokova/projekata (tok 02
+      # završava na formi; pad unutar toka ostavlja app na podređenom ekranu).
+      timeout 10 adb shell input keyevent 4 >/dev/null 2>&1 || true
+      sleep 2
+      # am start SAMO ako app nije u prvi plan — živu aktivnost ne diramo
+      # (novi start bi ponovo pokrenuo bootstrap i me() provjeru sesije).
+      if ! timeout 10 adb shell dumpsys window 2>/dev/null | tr -d '\r' | grep -q "ba.gradix.teren"; then
+        timeout 20 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+      fi
+    elif [ "$who" != "-" ]; then
+      timeout 20 adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
+      timeout 20 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
     else
-      adb shell am force-stop ba.gradix.teren >/dev/null 2>&1 || true
+      timeout 20 adb shell am force-stop ba.gradix.teren >/dev/null 2>&1 || true
+      timeout 20 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
     fi
-    adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
     fokus=""
     for i in $(seq 1 20); do
-      fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+      fokus="$(timeout 10 adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
       if echo "$fokus" | grep -q "Application Not Responding"; then
         announce warning "$name" "ANR dijalog u fokusu — otpuštam BACK-om"
-        adb shell input keyevent 4 >/dev/null 2>&1 || true
+        timeout 10 adb shell input keyevent 4 >/dev/null 2>&1 || true
       fi
       if echo "$fokus" | grep -q "ba.gradix.teren"; then break; fi
       sleep 1
@@ -166,13 +182,13 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
     if ! echo "$fokus" | grep -q "ba.gradix.teren"; then
       announce warning "$name" "fokus nije došao sam na app (20s): $(echo "$fokus" | tr -d '\r' | cut -c1-160) — pokušavam koordinatni tap"
       for tap_i in 1 2 3; do
-        adb shell input tap 360 150 >/dev/null 2>&1 || true
+        timeout 10 adb shell input tap 360 150 >/dev/null 2>&1 || true
         sleep 1
-        fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+        fokus="$(timeout 10 adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
         if echo "$fokus" | grep -q "ba.gradix.teren"; then break; fi
       done
     fi
-    if [ "$who" != "-" ]; then
+    if [ "$who" != "-" ] && [ "$who" != "+" ]; then
       # RN mount mora završiti prije fokusiranja polja (v5: sleep 5 = radilo;
       # bez njega run 43710204835: polja prazna pri submitu)
       sleep 5
@@ -230,10 +246,12 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
     fi
     # SPOJENA dijagnoza (GitHub cap ~10 anotacija po tipu — svaka mora nositi više):
     local crumbs fokus_fail api_health email_probe top_n
-    crumbs="$(adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -2 | sed 's/^.*\[e2e\] //' | tr '\n' '|' | tr -d '\r' | cut -c1-260)"
-    fokus_fail="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | tr -d '\r' | cut -c1-120)"
+    # SVAKI adb s timeoutom: nečuvan poziv na objesenom adb-u objesio bi
+    # cijeli korak (run 43769430158 — skripta nestala usred dijagnoze toka 04).
+    crumbs="$(timeout 15 adb logcat -d 2>/dev/null | grep "\[e2e\]" | tail -2 | sed 's/^.*\[e2e\] //' | tr '\n' '|' | tr -d '\r' | cut -c1-260)"
+    fokus_fail="$(timeout 15 adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | tr -d '\r' | cut -c1-120)"
     api_health="$(curl -s -m 5 http://127.0.0.1:3000/api/ready 2>/dev/null || echo "NE ODGOVARA")"
-    email_probe="$(adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | sed 's/^.*\[e2e\] //' | tr -d '\r' | cut -c1-80)"
+    email_probe="$(timeout 15 adb logcat -d -s ReactNativeJS:V 2>/dev/null | grep "email changed" | tail -1 | sed 's/^.*\[e2e\] //' | tr -d '\r' | cut -c1-80)"
     announce error "$name" "dijagnoza: crumb: ${crumbs:-—} | email: ${email_probe:-—} | fokus: ${fokus_fail:-?} | API: $(echo "$api_health" | head -c 60) | junit-out: ${junit_so:-—}"
     # Prije retryja se NIŠTA ne dira: stanje i fokus priprema početak petlje
     # (pm clear / force-stop po načinu toka), a mrežu posjeduje pozivalac —
@@ -265,7 +283,7 @@ offline_block() {
     rc=1
   else
     announce notice "mreža" "isključena (avionski režim) — offline unos"
-    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" -; then
+    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" +; then
       passed+=("offline-unos")
     else
       failed+=("offline-unos")
@@ -303,7 +321,7 @@ case "$scenario" in
 esac
 
 # Logcat dokaz (padded dump) — koristan i pri prolazu.
-adb logcat -d > "$artifacts/logcat.txt" 2>/dev/null || true
+timeout 90 adb logcat -d > "$artifacts/logcat.txt" 2>/dev/null || true
 
 # Sažetak u GitHub Step Summary (ili stdout kad se vrti ručno).
 {

@@ -59,6 +59,14 @@ pokretanju workflowa; noćni run ide s `sve`.
   dumpsys anketom (BACK otpušta ANR dijalog system procesa ako ga uhvati).
 - **Keš mora biti svjež prije gašenja mreže** — zato tok 02 osvježava rokove i
   projekte DOK JE mreža uključena.
+- **Offline tokovi NE smiju hladno startati app** — `index.tsx` bootstrap zove
+  `me()` (provjera sesije na serveru) PRIJE home ekrana, pa app bez mreže nikad
+  ne dođe do „Moj dan" (run 43769430158: 45 s čekanja, sva 3 pokušaja). Zato
+  orkestrator ima tri režima po toku: `pm clear` + start (01/02/05 — svježa
+  prijava), force-stop + start (04 — keš ostaje, online start prolazi kroz
+  `me()`) i „nastavi" (03 — app se NE restartuje: orkestrator samo pritisne
+  BACK na home i pokrene tok; RN stanje i sesija ostaju živi). Restart u
+  offline bloku = BACK na home, NIKAD force-stop.
 - **Elementi van vidljivog dijela ekrana — `scrollUntilVisible`, ne
   `assertVisible`** — Galaxy Nexus ekran je mali, a ekrani sadržajno duži od
   njega: „Osvježi" je na dnu spiska rokova/projekata (poslije svih kartica),
