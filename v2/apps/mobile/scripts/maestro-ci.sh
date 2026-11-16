@@ -25,6 +25,12 @@ set -uo pipefail
 scenario="${1:-sve}"
 max_attempts="${2:-3}"
 MAKS_TRAJANJE=300  # sekundi po pokušaju toka
+# Vremenski budžet cijelog orkestratora: job ima timeout-minutes 75, a u njega
+# ulaze i setup (~3 min), boot emulatora (~10 min) i artefakti/teardown (~5 min).
+# Kad budžet istekne, preostali tokovi se PRESKAČU i bilježe kao pad — sažetak
+# i dokazi uvijek stignu (run 43839355446: otkazan na 75. minuti, bez sažetka).
+BUDZET_SEK=3000  # 50 min od starta skripte
+START_TS=$(date +%s)
 
 # announce <notice|error> <tok> <poruka>
 announce() {
@@ -131,6 +137,10 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
   sleep 1
 }
 
+prekoracen_budzet() {  # 0 = budžet prekoračen (preskoči tok, sačuvaj sažetak)
+  [ $(( $(date +%s) - START_TS )) -gt "$BUDZET_SEK" ]
+}
+
 run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz retryja)
   # Arhitektura (dokazano runom 43708006955 — prijava prošla egzaktnim unosom):
   # - orkestrator u potpunosti posjeduje lifecycle: <email> = pm clear + start
@@ -147,6 +157,10 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   #   Unos ide adb putem (adb_login), tokovi počinju element akcijama.
   # - element tapovi (tapOn id/text) rade pouzdano u svim runovima.
   local name="$1" flow="$2" who="${3:--}" attempt start trajanje fokus i tap_i
+  if prekoracen_budzet; then
+    announce error "$name" "PRESKOČEN — vremenski budžet istekao (sažetak mora stići prije job timeouta; dokazi ranijih tokova su u artefaktima)"
+    return 1
+  fi
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
     if [ "$who" = "+" ]; then
