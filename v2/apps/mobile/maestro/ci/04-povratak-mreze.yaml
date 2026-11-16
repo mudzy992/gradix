@@ -22,7 +22,12 @@ name: povratak-mreze
 - tapOn: "Moj dan"
 # Banner na vrhu pokazuje da zapis iz toka 03 i dalje čeka (dokaz prije
 # slanja) — malo „čeka slanje." matcha „1 čeka slanje.", a NE statusni label
-# „Čeka slanje" (veliko Č, dno forme).
+# „Čeka slanje" (veliko Č, dno forme). Forma se upravo montirala i učitava
+# podatke s API-ja (loading spinner) — zato extendedWaitUntil, a ne samo
+# assertVisible.
+- extendedWaitUntil:
+    visible: "čeka slanje\\."
+    timeout: 30000
 - assertVisible:
     text: "čeka slanje\\."
 - scrollUntilVisible:
@@ -31,17 +36,33 @@ name: povratak-mreze
     timeout: 20000
 - takeScreenshot: povratak-ceka
 - tapOn: "Pošalji sada"
-# takeScreenshot je pauza da slanje završi prije provjere poruke.
+# Poruka „Slanje završeno: …" je ISPOD oba dugmeta — van folda poslije
+# scrolla do dugmeta (kao u toku 03) — skrolamo do nje; takeScreenshot je
+# i pauza da slanje završi.
 - takeScreenshot: povratak-poslao
+- scrollUntilVisible:
+    element:
+      text: "poslano [1-9][0-9]*, za provjeru 0"
+    timeout: 20000
 # „poslano 1" — regex „najmanje jedan": retry toka 03 (poslije uspješnog
 # save-a) može ostaviti dva zapisa u redu, pa bi strogi „poslano 1" lažno
 # pao na „poslano 2". Duplikat-dokaz je druga asercija („poslano 0").
 - assertVisible:
     text: "poslano [1-9][0-9]*, za provjeru 0"
 # Ponovno slanje NE smije napraviti duplikat — outbox je prazan pa poruka
-# kaže „poslano 0" (server ništa novo nije primio).
+# kaže „poslano 0" (server ništa novo nije primio). Poruka je na istom
+# mjestu (ispod dugmadi) — već u vidiku, skrol zbog sigurnosti.
+- scrollUntilVisible:
+    element:
+      text: "Pošalji sada"
+    direction: UP
+    timeout: 20000
 - tapOn: "Pošalji sada"
 - takeScreenshot: povratak-bez-duplikata
+- scrollUntilVisible:
+    element:
+      text: "poslano 0, za provjeru 0"
+    timeout: 20000
 - assertVisible:
     text: "poslano 0, za provjeru 0"
 # Status zapisa „Poslano" je u kartici „Moji zapisi" — skrolamo do njega.

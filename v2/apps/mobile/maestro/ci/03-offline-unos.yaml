@@ -31,14 +31,31 @@ name: offline-unos
       text: "Sačuvaj na telefon"
     timeout: 20000
 - tapOn: "Sačuvaj na telefon"
-# Poruka poslije save-a je odmah ispod dugmadi. takeScreenshot je i pauza da
-# RN zapiše u SQLite prije provjere (nema sleep komande).
+# Poruka poslije save-a je ISPOD oba dugmeta — poslije scrolla do dugmeta je
+# van folda (run 43826875691: asercija pala iako je save prošao). Zato se i
+# do poruke skrola; takeScreenshot je i pauza da RN zapiše u SQLite.
 - takeScreenshot: offline-unos-sacuvao
+- scrollUntilVisible:
+    element:
+      text: "Sačuvano na telefonu"
+    timeout: 20000
 - assertVisible:
     text: "Sačuvano na telefonu"
+# Dugmad su iznad poruke — vratimo se do „Pošalji sada" (ako je u vidiku,
+# skrol je no-op).
+- scrollUntilVisible:
+    element:
+      text: "Pošalji sada"
+    direction: UP
+    timeout: 20000
 - tapOn: "Pošalji sada"
-# Offline: slanje pada, zapis OSTAJE u redu — poruka to kaže (ispod dugmadi).
+# Offline: slanje pada, zapis OSTAJE u redu — poruka zamjenjuje staru na
+# istom mjestu (ispod dugmadi), pa je već u vidiku; skrol zbog sigurnosti.
 - takeScreenshot: offline-unos-poslao-pokusao
+- scrollUntilVisible:
+    element:
+      text: "Zapisi ostaju na telefonu"
+    timeout: 20000
 - assertVisible:
     text: "Zapisi ostaju na telefonu"
 # Status „Čeka slanje" je u kartici „Moji zapisi", još niže — skrolamo do njega.
