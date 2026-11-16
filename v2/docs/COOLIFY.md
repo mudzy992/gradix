@@ -403,7 +403,7 @@ druge firme prije upisa, tačno jedna blokirana dodjela kroz pravi servis
 | Radni dani, sati i ispravke | 10 godina | čuva se; čišćenje nije implementirano |
 | Lični podaci radnika koji je otišao | anonimizacija umjesto brisanja, razvojno 5 godina nakon prestanka; historija sati ostaje cjelovita | samo dizajn (ispod), bez implementacije |
 | Prilozi (skenovi isprava) | dok obaveza traje + 5 godina; ljekarski nalazi se ne čuvaju, samo datum isteka | čuva se; čišćenje nije implementirano |
-| Sigurnosne kopije | 30 dana dnevne, 12 mjesečnih | operativna postavka backup posla (C.2, čeka odobrenje) |
+| Sigurnosne kopije | 30 dana dnevne, 12 mjesečnih | implementirano (2a): `infra/scripts/backup.sh` + dnevni posao + CI drill (§12) |
 | Projektna dokumentacija | do kraja garantnog roka + dogovoreni period | čuva se; čišćenje nije implementirano |
 
 Tehničko čišćenje bez ličnih podataka (sesije, pokušaji prijave, istekli
@@ -535,3 +535,42 @@ fazu po fazu: `pnpm install --frozen-lockfile --filter @gradix/web...` → `next
 `esbuild` seed → slaganje runtime rasporeda → `entrypoint.sh` sa `RUN_MIGRATIONS=true`.
 Rezultat: migracije prošle, `/api/health` 200, `/api/ready` sa `is_super:false`,
 `/login` 200, `/favicon.png` 200, `/robots.txt` 200, seed iz slike prošao, prijava 200.
+
+## 12. Backup i restore (2a) — operativni postupak
+
+**Cilj:** podaci se mogu izgubiti najviše do zadnje dnevne kopije (**RPO ≤ 24 h**),
+a cijeli oporavak traje minute (**RTO** — trajanje ispisuje `restore.sh`, a CI
+drill ga dokazuje na svakoj promjeni skripti).
+
+| Dio | Šta radi |
+|---|---|
+| `v2/infra/scripts/backup.sh` | `pg_dump` (custom format) + manifest broja redova po tabeli + kopija **van diska** u MinIO (ADR 0006: bucket `gradix-v2`, prefiks `gx2/backups/`) + retencija 30 dnevnih + 12 mjesečnih |
+| `v2/infra/scripts/restore.sh` | `pg_restore` u **praznu** ciljnu bazu + provjera redova protiv manifesta; brane: cilj ≠ izvor, cilj prazan — nikad preko žive baze |
+| Workflow „Backup/restore drill (v2)" | CI dokaz cijelog lanca: seed → backup → dump skinut **s MinIO-a** → restore u drugu bazu → sve tabele i migracije se poklapaju |
+
+Backup pokreće **samo administratorska rola baze** (`DATABASE_ADMIN_URL`) — nikad
+aplikacijska rola i nikad iz aplikacije (isto pravilo kao retencija, §11).
+
+**Dnevni posao (operator):** Coolify Scheduled Task ili cron na hostu u 02:00,
+u okolini s `pg_dump` i `mc` na PATH-u:
+
+```sh
+DATABASE_ADMIN_URL=... BACKUP_MINIO_ENDPOINT=http://minio:9000 \
+BACKUP_MINIO_ACCESS_KEY=... BACKUP_MINIO_SECRET_KEY=... v2/infra/scripts/backup.sh
+```
+
+`BACKUP_MINIO_ENDPOINT` MORA biti postavljen — dump na istom disku nije
+sigurnosna kopija (skripta to i upozorava). Retencija ide automatski uz svaki
+backup. Promjena termina (češće od dnevno) smanjuje RPO; posao je idempotentan.
+
+**Oporavak (kad zatreba):**
+
+1. Nova, prazna baza: `createdb gradix_restore` — nikad preko žive baze.
+2. Na novom serveru prvo role: `psql -f v2/packages/db/bootstrap/roles.sql`
+   (klaster-nivo, idempotentno; dump nosi GRANT-ove za te role).
+3. Posljednja kopija s MinIO-a: `mc cp gradix-v2/gx2/backups/<najnoviji>.dump .`
+   (i pripadajući `.manifest.tsv`).
+4. `RESTORE_DATABASE_URL=... v2/infra/scripts/restore.sh <dump>` — sama provjeri
+   redove protiv manifesta i ispiše trajanje (RTO).
+5. Aplikacija se preusmjeri na novu bazu (`DATABASE_URL` u Coolify-u) + redeploy;
+   stara baza ostaje za uvid dok se ne potvrdi ispravnost.

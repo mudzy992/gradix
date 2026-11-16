@@ -4,6 +4,11 @@
 
 ## Radi (dokazano testovima u CI-ju)
 
+- **Backup/restore (2a):** dnevni `pg_dump` + kopija van diska (MinIO, ADR 0006)
+  s retencijom 30 dnevnih + 12 mjesečnih; restore u praznu bazu s provjerom
+  manifesta; CI drill dokaže lanac (dump s MinIO-a, sve tabele i migracije) i
+  mjeri RTO. Postupak za operatora: docs/COOLIFY.md §12.
+
 - **Pristup (R1):** prijava, pozivnice, reset i obavezna promjena lozinke, deaktivacija, rate
   limit u bazi. Matrica `permissions.ts` je jedini izvor za meni i za provjeru na stranici.
 - **Navigacija i sesija (A/A2):** svaka stranica je u meniju role koja je smije (test

@@ -1,0 +1,171 @@
+# 2a — drill backup/restore lanca (rework V1 drill-a za v2).
+#
+# Dokaz koji ovaj workflow daje: dump napravljen backup.sh-om STVARNO radi —
+# kopira se u MinIO (van diska), skida S MinIO-a (ne s lokalnog diska!),
+# restore.sh ga vraća u DRUGU bazu, i SVAKA tabela ima isti broj redova kao
+# izvor, a sve migracije iz repa su primijenjene. restore.sh mjeri trajanje —
+# to je RTO dokaz (docs/COOLIFY.md §12).
+#
+# Okidači: ručno + push SAMO kad se mijenjaju skripte/workflow (kao V1 drill;
+# nema razloga trošiti minute na svaki commit).
+name: Backup/restore drill (v2)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["arena/**"]
+    paths:
+      - "v2/infra/scripts/backup.sh"
+      - "v2/infra/scripts/restore.sh"
+      - ".github/workflows/backup-restore.yml"
+
+concurrency:
+  group: backup-restore
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Backup → MinIO → restore → provjera
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Aplikacijska rola za seed (kao u ci-v2), administratorska za backup.
+      DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+      DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      RESTORE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix_restore
+      BACKUP_DIR: ${{ github.workspace }}/backups
+      # MinIO u kontejneru (korak ispod) — CI vrijednosti, ne tajne.
+      BACKUP_MINIO_ENDPOINT: http://127.0.0.1:9000
+      BACKUP_MINIO_ACCESS_KEY: minioadmin
+      BACKUP_MINIO_SECRET_KEY: minioadmin
+      E2E_PASSWORD: E2eDemoLozinka-123
+      SEED_PASSWORD: E2eDemoLozinka-123
+      PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - name: Klijentski alati (pg_dump/pg_restore/psql)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client
+
+      - name: MinIO (isti image kao lokalni compose) + mc klijent
+        run: |
+          docker run -d --name minio-drill -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            ghcr.io/coollabsio/minio:latest server /data --console-address ":9001"
+          curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x /usr/local/bin/mc
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:9000/minio/health/ready
+
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+
+      - name: Seed + demo svijet
+        working-directory: v2
+        run: |
+          pnpm --filter @gradix/web seed
+          pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts
+
+      - name: Backup (dump + manifest + kopija u MinIO + retencija)
+        working-directory: v2
+        run: ./infra/scripts/backup.sh
+
+      # Ključni dokaz „kopije van diska": restore radi IZ MinIO kopije.
+      - name: Dump skinut S MinIO-a (ne s lokalnog diska)
+        working-directory: v2
+        run: |
+          mc alias set drill http://127.0.0.1:9000 minioadmin minioadmin
+          mc ls "drill/gradix-v2/gx2/backups"
+          mkdir -p /tmp/restore-src
+          mc cp "drill/gradix-v2/gx2/backups/gradix-v2-*.dump" /tmp/restore-src/
+          mc cp "drill/gradix-v2/gx2/backups/gradix-v2-*.manifest.tsv" /tmp/restore-src/
+          ls -la /tmp/restore-src
+
+      - name: Ciljna baza za restore
+        run: psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE gradix_restore"
+
+      - name: Restore (restore.sh mjeri trajanje = RTO)
+        working-directory: v2
+        run: |
+          dump=$(ls /tmp/restore-src/gradix-v2-*.dump | head -1)
+          ./infra/scripts/restore.sh "$dump"
+
+      # Nezavisna provjera (ne vjeruje manifestu): SVE tabele izvor ↔ restore,
+      # plus migracije — restore mora imati primijenjenu svaku migraciju iz repa.
+      - name: Nezavisna provjera — sve tabele i migracije
+        run: |
+          set -euo pipefail
+          failed=0
+          n=0
+          for t in $(psql "$DATABASE_ADMIN_URL" -Atc "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY 1"); do
+            s=$(psql "$DATABASE_ADMIN_URL" -Atc "SELECT count(*) FROM public.\"$t\"")
+            d=$(psql "$RESTORE_DATABASE_URL" -Atc "SELECT count(*) FROM public.\"$t\"")
+            n=$((n + 1))
+            if [ "$s" != "$d" ]; then
+              echo "::error title=$t::izvor=$s restore=$d"
+              failed=1
+            fi
+          done
+          applied=$(psql "$RESTORE_DATABASE_URL" -Atc "SELECT count(*) FROM schema_migrations")
+          expected=$(find v2/packages/db/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "tabele poređene: $n · migracije u restore-u: $applied / $expected"
+          if [ "$applied" != "$expected" ]; then
+            echo "::error title=migracije::u restore-u $applied od $expected migracija"
+            failed=1
+          fi
+          {
+            echo "### Backup/restore drill (2a)"
+            echo ""
+            echo "- tabele izvor ↔ restore: **$n** (sve se poklapaju: $([ "$failed" -eq 0 ] && echo DA || echo NE))"
+            echo "- migracije: **$applied / $expected**"
+            echo "- kopija van diska: dump skinut s MinIO-a i restore-ovan iz nje"
+            echo "- RTO: trajanje ispisuje korak „Restore (restore.sh mjeri trajanje = RTO)\""
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$failed" -eq 0 ]
+
+      - name: Dijagnoza na padu (šta je u bazi/na MinIO-u)
+        if: failure()
+        run: |
+          echo "— izvor (tabele/redovi):" >&2
+          psql "$DATABASE_ADMIN_URL" -c "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY 1" >&2 || true
+          echo "— restore (tabele/redovi):" >&2
+          psql "$RESTORE_DATABASE_URL" -c "SELECT relname, n_live_tup FROM pg_stat_user_tables ORDER BY 1" >&2 || true
+          echo "— MinIO objekti:" >&2
+          mc ls "drill/gradix-v2/gx2/backups" >&2 || true
+          echo "— backup/restore skripte izlazi su u logu koraka iznad." >&2
