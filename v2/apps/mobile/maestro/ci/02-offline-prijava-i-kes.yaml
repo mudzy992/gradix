@@ -7,32 +7,62 @@
 appId: ba.gradix.teren
 name: offline-prijava-i-kes
 ---
-- launchApp:
-    clearState: true
 - assertVisible: "Prijava za teren."
-- tapOn:
-    id: "Email"
-- inputText: "radnik@demo.ba"
-- tapOn:
-    id: "Lozinka"
-- inputText: "${DEMO_LOZINKA}"
+# Email i lozinku je unio orkestrator (adb_login u maestro-ci.sh) —
+# Maestro inputText na sporom emulatoru nondeterministički duplira/gubi
+# znakove, pa unos ide pouzdanim adb putem, a ovdje ostaje samo submit.
 - tapOn: "Prijavi se"
 - assertVisible: "Moj dan"
 # Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
 # pokazuje zadnje preuzeto, a ne prazan spisak.
+# „Osvježi" je na DNU spiska (poslije kartica) — na sporom emulatoru
+# s puno kartica je izvan vidljivog dijela, pa assertVisible pada. Skrolamo
+# do dugmeta; povratak ide `back` (‹ Nazad je poslije skrola izvan vidika).
 - tapOn: "Moji rokovi"
-- assertVisible: "Osvježi"
+- assertVisible: "Moji rokovi"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+# Refresh traje nepredvidljivo (API + SQLite + re-render na sporom emulatoru);
+# dok traje, dugme je „Osvježavam…". takeScreenshot daje RN vremena da uđe u
+# busy stanje (nema sleep komande), pa čekamo da busy nestane. Poslije
+# re-rendera s punim spiskom dugme zna ispasti iz vidika — ponovo skrolamo.
+- takeScreenshot: 02-rokovi-osvjezava
 - extendedWaitUntil:
-    visible: "Osvježi"
-    timeout: 10000
-- tapOn: "‹ Nazad"
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-rokovi-osvjezeno
+- back
 - tapOn: "Moji projekti"
-- assertVisible: "Osvježi"
+- assertVisible: "Moji projekti"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
 - tapOn: "Osvježi"
+- takeScreenshot: 02-projekti-osvjezava
 - extendedWaitUntil:
-    visible: "Osvježi"
-    timeout: 10000
-- tapOn: "‹ Nazad"
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-projekti-osvjezeno
+- back
 - tapOn: "Moj dan"
-- assertVisible: "Sačuvaj na telefon"
+# Forma „Moj dan" je DUŽA od ekrana: polja → „Sačuvaj na telefon"/„Pošalji
+# sada" (dno prve kartice) → poruka → kartica „Moji zapisi". Dugme je van
+# folda i assertVisible pada (run 43756628616) — skrol do dugmeta je dokaz
+# da je forma (i projekti s API-ja) učitana; tok 03 nastavlja odatle.
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj na telefon"
+    timeout: 20000
+- takeScreenshot: 02-moj-dan-spreman

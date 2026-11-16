@@ -15,6 +15,7 @@ export default function RootLayout() {
   // PRIVREMENO (dijagnostika release boot-a u CI): breadcrumbs idu u logcat
   // (ReactNativeJS) iz kojeg ih workflow oglašava kroz anotacije. Skloniti
   // nakon što se dijagnostifikuje zaglavljivanje na emulatoru.
+  // eslint-disable-next-line no-console
   console.log(`[e2e] useFonts loaded=${loaded}`);
 
   if (!loaded) {
