@@ -73,14 +73,30 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends postgresql-client
 
-      # Službeni MinIO image (ENTRYPOINT je sam minio binary — „server /data"
-      # je kanonska komanda). Coolify-ov wraper image ima svoj entrypoint i u
-      # CI-ju se nije digao (health endpoint nije odgovorio; prvi pokušaj).
-      - name: MinIO (službeni image) + mc klijent
+      # Službeni MinIO image s quay.io (ENTRYPOINT je sam minio binary —
+      # „server /data" je kanonska komanda). quay.io umjesto Docker Huba:
+      # GH runneri redovito potroše anonymous pull kvotu na Docker Hubu
+      # (run 9481bec: docker run exit 125 bez druge poruke). Retry petlja
+      # pokriva i ostale prolazne daemon greške.
+      - name: MinIO (službeni image, quay.io) + mc klijent
         run: |
-          docker run -d --name minio-drill -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:latest server /data --console-address ":9001"
+          started=""
+          for i in 1 2 3 4 5; do
+            if docker run -d --name minio-drill -p 9000:9000 \
+              -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+              quay.io/minio/minio:latest server /data --console-address ":9001"; then
+              started=1
+              break
+            fi
+            echo "docker run pokušaj $i/5 pao — pauza 15 s i ponovo (pull kvota / prolazna greška)."
+            docker rm -f minio-drill >/dev/null 2>&1 || true
+            sleep 15
+          done
+          if [ -z "$started" ]; then
+            echo "::error title=minio::docker run nije uspio ni nakon 5 pokušaja"
+            docker ps -a --filter name=minio-drill || true
+            exit 1
+          fi
           curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
           chmod +x /usr/local/bin/mc
           for i in $(seq 1 30); do
