@@ -4,10 +4,16 @@
 
 ## Radi (dokazano testovima u CI-ju)
 
-- **Backup/restore (2a):** dnevni `pg_dump` + kopija van diska (MinIO, ADR 0006)
-  s retencijom 30 dnevnih + 12 mjesečnih; restore u praznu bazu s provjerom
-  manifesta; CI drill dokaže lanac (dump s MinIO-a, sve tabele i migracije) i
-  mjeri RTO. Postupak za operatora: docs/COOLIFY.md §12.
+- **Backup/restore (2a) — skripte gotove, CI drill BLOKIRAN:** `backup.sh`
+  (dump + manifest + MinIO + retencija 30+12) i `restore.sh` (prazna ciljna
+  baza, provjera manifesta, RTO) su u `v2/infra/scripts/`; postupak za
+  operatora je u docs/COOLIFY.md §12. CI drill (backup-restore.yml) pada na
+  dizanju MinIO kontejnera — `docker run` konzistentno exit 125 na
+  ubuntu-latest runnerima (od 19. 10. 2026. to je Ubuntu 26; V1 drill na
+  mainu ne koristi docker komande i prolazi). Dva pokušaja ispravke
+  potrošena (službeni image, quay.io + retry) — po budžetskom pravilu se
+  stalo; sljedeći korak je odluka vlasnika (log koraka u Actions UI-ju,
+  `sudo docker`, ili MinIO van CI drill-a).
 
 - **Pristup (R1):** prijava, pozivnice, reset i obavezna promjena lozinke, deaktivacija, rate
   limit u bazi. Matrica `permissions.ts` je jedini izvor za meni i za provjeru na stranici.
