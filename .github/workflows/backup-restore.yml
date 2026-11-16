@@ -73,18 +73,25 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends postgresql-client
 
-      - name: MinIO (isti image kao lokalni compose) + mc klijent
+      # Službeni MinIO image (ENTRYPOINT je sam minio binary — „server /data"
+      # je kanonska komanda). Coolify-ov wraper image ima svoj entrypoint i u
+      # CI-ju se nije digao (health endpoint nije odgovorio; prvi pokušaj).
+      - name: MinIO (službeni image) + mc klijent
         run: |
           docker run -d --name minio-drill -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-            ghcr.io/coollabsio/minio:latest server /data --console-address ":9001"
+            minio/minio:latest server /data --console-address ":9001"
           curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
           chmod +x /usr/local/bin/mc
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:9000/minio/health/ready >/dev/null 2>&1 && break
             sleep 2
           done
-          curl -sf http://127.0.0.1:9000/minio/health/ready
+          if ! curl -sf http://127.0.0.1:9000/minio/health/ready >/dev/null; then
+            echo "::error title=minio::health endpoint nije odgovorio ni nakon 60 s — log kontejnera:"
+            docker logs minio-drill
+            exit 1
+          fi
 
       - name: Instalacija
         working-directory: v2
