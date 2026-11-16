@@ -1,13 +1,15 @@
 # CI tok 3/5 — unos BEZ mreže: zapis ostaje na telefonu + offline čitanje iz keša.
 #
 # Mrežu ISKLJUČUJE skripta emulator-net.sh PRIJE ovog toka (avionski režim na
-# emulatoru, ne ručno). Prijava je obavljena u toku 02, a app OSTAJE ŽIVA:
-# orkestrator ovaj tok pokreće u „nastavi" režimu („+"), jer hladni start bez
-# mreže zaglavi na provjeri sesije — index.tsx bootstrap zove me() prije home
-# ekrana, a server je nedostupan (run 43769430158: „Moj dan" nije vidljiv ni
-# nakon 45 s, sva 3 pokušaja). Orkestrator prije toka pritisne BACK (tok 02
-# završava na formi; pad unutar pokušaja ostavlja app na podređenom ekranu —
-# BACK uvijek vraća na home), pa tok otvara formu „Moj dan" od vrha.
+# emulatoru, ne ručno). Prijava je obavljena u toku 02, a app OSTAJE ŽIVA —
+# orkestrator ovaj tok pokreće u „nastavi" režimu („+"): forma „Moj dan" iz
+# toka 02 ostaje MONTIRANA s učitanim podacima. I remount i hladni start su
+# offline nemogući: load() forme zove me()/myProjects()/machines() pa bi novi
+# mount ostavio prazan spisak projekata (save bi rekao „Izaberi projekat." —
+# run 43821193657), a bootstrap zove me() prije home ekrana (run 43769430158:
+# „Moj dan" nije vidljiv ni nakon 45 s). Tok 02 je ostavio formu skrolanu do
+# dugmeta „Sačuvaj na telefon" — ovaj tok nastavlja OD TU, bez ikakvog
+# resetiranja (retry također — RN stanje forme ostaje živo).
 # Vremena se NE tipkaju — polja imaju validne defaulte (07:30–15:30), a manje
 # koraka = manje mjesta za lažne padove.
 #
@@ -21,10 +23,9 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
-# Forma se otvara IZ HOME-a (orkestrator je BACK-om vratio app na home) —
-# isti obrazac kao unutar toka 02 (back pa tapOn), dokazano stabilan.
-- tapOn: "Moj dan"
-# „Sačuvaj na telefon" je van folda — skrolamo do njega (dokaz da je forma tu).
+# Forma je VEĆ otvorena (tok 02 ju je ostavio ovdje) — „Sačuvaj na telefon"
+# je van folda, skrolamo do njega (dokaz da je forma tu; na svježoj formi iz
+# toka 02 dugme je već u vidiku pa skrol prođe odmah).
 - scrollUntilVisible:
     element:
       text: "Sačuvaj na telefon"

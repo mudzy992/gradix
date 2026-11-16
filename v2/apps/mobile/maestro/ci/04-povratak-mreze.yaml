@@ -33,8 +33,11 @@ name: povratak-mreze
 - tapOn: "Pošalji sada"
 # takeScreenshot je pauza da slanje završi prije provjere poruke.
 - takeScreenshot: povratak-poslao
+# „poslano 1" — regex „najmanje jedan": retry toka 03 (poslije uspješnog
+# save-a) može ostaviti dva zapisa u redu, pa bi strogi „poslano 1" lažno
+# pao na „poslano 2". Duplikat-dokaz je druga asercija („poslano 0").
 - assertVisible:
-    text: "poslano 1, za provjeru 0"
+    text: "poslano [1-9][0-9]*, za provjeru 0"
 # Ponovno slanje NE smije napraviti duplikat — outbox je prazan pa poruka
 # kaže „poslano 0" (server ništa novo nije primio).
 - tapOn: "Pošalji sada"

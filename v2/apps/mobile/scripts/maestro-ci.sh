@@ -10,8 +10,8 @@
 # MAKS_TRAJANJE sekundi po pokušaju (štiti od vješto obješene sesije koja bi
 # pojela budžet joba). Stanje i fokus prije svakog pokušaja priprema run_flow
 # (pm clear za tokove iz prijave, force-stop za tokove koji restartuju stanje
-# — tok 04; „nastavi" režim za tok 03: app ostaje živa jer hladni start bez
-# mreže zaglavi na me() provjeri sesije, pa je reset jedan BACK na home). Ako tok 02
+# — tok 04; „nastavi" režim za tok 03: app se uopšte ne dira — forma iz toka
+# 02 ostaje montirana, jer remount/hladni start bez mreže gubi podatke forme). Ako tok 02
 # (prijava i keš) ne prođe ni nakon retryja, offline blok se prekida — tokovi
 # 03/04 ovise o njegovom stanju — ali ostali scenariji se ipak izvrše, da
 # izvještaj ima sve dokaze. Izlazni kod: 0 samo ako nijedan tok nije ostao crven.
@@ -135,8 +135,8 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   # Arhitektura (dokazano runom 43708006955 — prijava prošla egzaktnim unosom):
   # - orkestrator u potpunosti posjeduje lifecycle: <email> = pm clear + start
   #   + adb_login priprema prijave (tokovi 01/02/05); „-" = force-stop + start
-  #   (04 — keš i neslani zapisi ostaju); „+" = NASTAVI bez restarta (03 —
-  #   reset jednim BACK-om na home, app i sesija ostaju živi offline).
+  #   (04 — keš i neslani zapisi ostaju); „+" = NASTAVI bez ikakvog diranja
+  #   (03 — forma iz toka 02 ostaje montirana s podacima, RN stanje živi).
   # - fokus se čeka dumpsys anketom; ATD launcher je ubijen na početku skripte,
   #   pa je app jedini kandidat. ANR dijalog system procesa zna ukrasti fokus
   #   (43691349218) — otpušta se BACK-om. Koordinatni tap je zadnja odbrana.
@@ -150,15 +150,14 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
     if [ "$who" = "+" ]; then
-      # „+" = NASTAVI (tok 03): app ostaje živa — hladni start BEZ mreže bi
-      # zaglavio na me() provjeri sesije u index.tsx bootstrapu (run
-      # 43769430158: „Moj dan" se ne pojavi ni nakon 45 s, 3/3 pokušaja).
-      # Reset na home: jedan BACK vraća sa forme/rokova/projekata (tok 02
-      # završava na formi; pad unutar toka ostavlja app na podređenom ekranu).
-      timeout 10 adb shell input keyevent 4 >/dev/null 2>&1 || true
-      sleep 2
-      # am start SAMO ako app nije u prvi plan — živu aktivnost ne diramo
-      # (novi start bi ponovo pokrenuo bootstrap i me() provjeru sesije).
+      # „+" = NASTAVI (tok 03): app se NE DIRA — ne restart, NE BACK. Forma
+      # „Moj dan" iz toka 02 mora ostati montirana s učitanim podacima:
+      # njen load() zove me()/myProjects()/machines() (API), pa bi remount
+      # bez mreže ostavio prazan spisak projekata i save završio s
+      # „Izaberi projekat." (run 43821193657), a hladni start bi zaglavio
+      # na me() provjeri sesije (run 43769430158). Retry nastavlja gdje je
+      # pokušaj stao. am start SAMO ako app nije u fokusu (odbrana od RNa
+      # kraša/pozadine).
       if ! timeout 10 adb shell dumpsys window 2>/dev/null | tr -d '\r' | grep -q "ba.gradix.teren"; then
         timeout 20 adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
       fi
