@@ -552,7 +552,8 @@ izgubljene kopije. Izvoz: read-only `gradix_backup` (`DATABASE_BACKUP_URL`), nik
 `DATABASE_URL`. Dokaz u CI: (a) pogrešan ključ, (b) okrnjen šifrat/SHA-256, (c) manifest,
 (d) `backup-age-check` >26 h.
 
-**RTO (demo seed, CI):** `RTO_demo_seconds` = _pending first green run_ (backup+restore).
+**RTO (demo seed, CI):** `RTO_demo_seconds` = **2** (backup=1s, restore=1s; run
+`43874147777` na `21f92ec`).
 **RPO:** ≤ 26 h uz dnevni zakazani zadatak ispod.
 
 Raspored: `DATABASE_ADMIN_URL` / `BACKUP_ENCRYPTION_KEY` / backup S3 tajne **ne idu u web

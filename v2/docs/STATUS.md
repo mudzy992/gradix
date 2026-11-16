@@ -1,106 +1,52 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-07 · **Grana:** `arena/37e610e9-gradix` · UI migracija prihvaćena (katalog, CI zelen).
+**Datum:** 2026-11-16 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
 
 ## Radi (dokazano testovima u CI-ju)
 
-- **Pristup (R1):** prijava, pozivnice, reset i obavezna promjena lozinke, deaktivacija, rate
-  limit u bazi. Matrica `permissions.ts` je jedini izvor za meni i za provjeru na stranici.
-- **Navigacija i sesija (A/A2):** svaka stranica je u meniju role koja je smije (test
-  dosegljivosti `nav.test.ts`) ili na listi izuzetaka s razlogom; zabranjen URL daje stranicu
-  „Nemate pristup" (HTTP 403, link na pregled), bez tihog redirecta; odjava vodi na prijavu;
-  čuvar sesije odjavljuje **samo na 401**, nikad na grešku mreže/timeout
-  (`session-watch.test.ts`, E2E drugi tab).
-- **Radni dani (workdays.view):** OWNER/ADMIN i ACCOUNTANT vide cijelu firmu (računovođa samo
-  čitanje), PM i šef samo radnike/projekte iz svog R3 opsega, bez povezanog radnika — prazno
-  (`workday-review.integration.test.ts`).
-- **Opsezi (R3):** WORKER i DRIVER vide samo projekte svojih dodjela i samo svoje rokove;
-  ACCOUNTANT sve u firmi (`scope-roles.integration.test.ts`). SELF/PROJECTS računaju se na
-  serveru, nikad u meniju.
-- **Evidencija (R2/R3):** radnici, mašine/kategorije i brojila, uvoz iz Excela, rokovi s
-  verzijama i prilozima, projekti i dodjele s blokadom i iznimkom (odobrenje samo
-  OWNER/ADMIN); dodjele se ne brišu, samo završavaju/poništavaju uz razlog.
-- **Teren (R4 + Step 7):** Moj dan (samo nalog povezan s radnikom), Grupa (šef + veza +
-  aktivna dodjela) — `mobile-nav.test.ts`; SQLite outbox, push/pull bez rupa u cursoru,
-  idempotentan retry, sukob = „Za provjeru", van opsega ostaje na telefonu. Simulator
-  (`r4-simulator.test.ts`) pokriva gubitak odgovora, pending rupe i server floor
-  (regresija `r4_sync_pull_floor_fix`, i DB strana u `sync-cursor.integration.test.ts`).
-- **UI (U):** svi web i mobilni ekrani na katalogu komponenti; lista izuzetaka u
-  `eslint.config.js` je **prazna**; vrijeme svuda 24 h; CI stražari: ESLint zabrane,
-  check-ui (bez hardkodiranih boja/fontova), check-contrast (WCAG AA, obje teme), axe.
-- **CI:** lint, typecheck, unit + integracije na pravoj bazi bez skipova, migracije na praznoj
-  i popunjenoj bazi, Android bundle (Metro), Playwright E2E navigacije i sesije.
+- **Pristup (R1):** prijava, pozivnice, reset, deaktivacija, rate limit u bazi.
+- **Navigacija i sesija (A/A2):** meni po roli, 403 bez tihog redirecta, odjava → prijava;
+  čuvar sesije samo na 401 (`session-watch`, E2E).
+- **Pregled (C.1):** „šta moram danas“ — odobren + implementiran (`b0c419d`); seed
+  `demo-pregled` + E2E po rolama.
+- **Radni dani / opsezi (R3):** view po matrici; SELF/PROJECTS samo na serveru.
+- **Evidencija (R2/R3):** radnici, mašine, uvoz Excel, rokovi, projekti/dodjele.
+- **Teren (R4 + Step 7):** Moj dan / Grupa; SQLite outbox; push/pull; sukob → Za provjeru.
+- **Razrješenje sukoba (R4a-2):** web `/ured/sukobi` + pull ishoda na telefon.
+- **UI (U):** katalog; lista izuzetaka prazna; CI: ESLint, check-ui, check-contrast, axe.
+- **Backup/restore (C.2):** `v2-backup-restore.yml` — šifrovani dump → restore → manifest →
+  preflight → prijava; dokazi (a)(b)(c)(d). Odredište: app MinIO, zaseban bucket + ključevi;
+  `BACKUP_ENCRYPTION_KEY` van MinIO-a. Retencija: 30 lokalnih / dnevni job (§12 COOLIFY).
+  RTO demo = 2 s (run 43874147777). Seed: `SEED_PASSWORD` + `pnpm seed` (demo nalozi).
 
 ## Role — ko šta vidi
 
 | Rola | Web (meni) | Mobilni | Ne vidi |
 |---|---|---|---|
-| OWNER | sve, uklj. Korisnici i Radni dani (cijela firma) | Moj dan ako je povezan s radnikom; Grupa ako je šef s dodjelom | tuđe firme (RLS) |
-| ADMIN | kao vlasnik, bez radnji nad vlasnikom | isto pravilo veze s radnikom | vlasnika (ne upravlja njim) |
-| PROJECT_MANAGER | Projekti, Rokovi, Mašine, Radnici, Radni dani (samo svoj opseg) | Moj dan/Grupa po vezi i dodjeli | Korisnici, Uvoz, tuđi opseg |
-| SITE_SUPERVISOR | Radnici, Mašine, Projekti, Rokovi, Radni dani (svoj opseg) | Grupa (šef s dodjelama), Moj dan | Korisnici, Uvoz, tuđi opseg |
-| WORKER | Pregled, Projekti, Rokovi, Mašine (samo svoje, SELF) | Moj dan, Moji rokovi/projekti | Radnici, Korisnici, Radni dani, tuđe rokove |
-| DRIVER | Pregled, Projekti, Rokovi, Mašine (SELF) | Moj dan (ako je povezan), Moji rokovi/projekti | sve uredsko izvan svog opsega |
-| MACHINE_OPERATOR | Pregled, Mašine, Projekti, Rokovi (SELF/opseg) | Moj dan, Moji rokovi/projekti | Radnici, Korisnici, Radni dani |
-| MECHANIC | Pregled, Mašine, Projekti, Rokovi | Moj dan (ako je povezan), Moji rokovi/projekti | Radnici, Korisnici, Radni dani |
-| ACCOUNTANT | Pregled, Projekti, Rokovi, Mašine, Radni dani (cijela firma, čitanje) | Moji rokovi/projekti | Korisnici, Uvoz, izmjene evidencije |
+| OWNER | sve | Moj dan / Grupa po vezi | tuđe firme (RLS) |
+| ADMIN | kao vlasnik (− upravljanje vlasnikom) | isto | vlasnika |
+| PROJECT_MANAGER | Projekti, Rokovi, Mašine, Radnici, Radni dani (opseg) | po vezi | Korisnici, Uvoz |
+| SITE_SUPERVISOR | Radnici, Mašine, Projekti, Rokovi, Radni dani (opseg) | Grupa / Moj dan | Korisnici, Uvoz |
+| WORKER | Pregled, Projekti, Rokovi, Mašine (SELF) | Moj dan | Radnici, Korisnici |
+| DRIVER | Pregled, Projekti, Rokovi, Mašine (SELF) | Moj dan ako povezan | uredsko van opsega |
+| MACHINE_OPERATOR | Pregled, Mašine, Projekti, Rokovi | Moj dan | Radnici, Korisnici |
+| MECHANIC | Pregled, Mašine, Projekti, Rokovi | Moj dan ako povezan | Radnici, Korisnici |
+| ACCOUNTANT | Pregled… + Radni dani (čitanje) | Moji rokovi/projekti | Korisnici, Uvoz |
 
 ## Ne radi / namjerno još nema
 
-- **R4a-2 razrješenje sukoba:** završeno — 2a (dozvola/opseg/strana u sukobu),
-  2b (server), 2d (uredski web ekrani `/ured/sukobi`, bedž samo za
-  nerazriješene, Pregled kartica, E2E razrješenja) i 2c (ishod razrješenja
-  stiže na telefon pull-om: Odbačeno + razlog / Ispravljeno + stara-nova
-  vremena / Prihvaćeno; interna napomena nikad na uređaj).
-  **Provjerena staging/produkcijska adresa (2026-11-07):**
-  `https://gradix.ba101.top/ured/sukobi` (jedan domen; API je na istom
-  originu pod `/api`). Stranicu i API (`workdays.resolve`) vide tačno:
-  **OWNER, ADMIN, PROJECT_MANAGER, SITE_SUPERVISOR** — PM i šef samo svoj
-  R3 opseg; ACCOUNTANT ima samo `workdays.view` (Radni dani, čitanje) i
-  Sukobe ne vidi (navigacija skrivena, stranica preusmjerava na
-  `/nemate-pristup`, API 403). Ostale role (WORKER, DRIVER,
-  MACHINE_OPERATOR, MECHANIC) nemaju ni `workdays.view` ni
-  `workdays.resolve`. Izvor: `src/server/permissions.ts` + `nav.ts`
-  (`permission: "workdays.resolve"`), ne pretpostavka.
-- **R4a-2/B — detalj sukoba na zasebnoj stranici:** lista `/ured/sukobi`
-  nosi filtere u adresi (`?stanje=&starost=&projekat=`); klik na red vodi na
-  `/ured/sukobi/[id]` (putanja Radni dani / Sukobi / detalj, „Nazad na
-  listu" čuva filtere, „Sljedeći nerazriješeni", dva unosa jedan pored
-  drugog / na 360 px jedan ispod drugog, akcije u ljepljivoj traci pri dnu,
-  modal samo za potvrdu s razlogom ≥10, interna napomena na stranici,
-  „već razriješeno" s ugašenim akcijama na istoj stranici). Tuđi/
-  nepostojeći sukob → 404 kao API; bez dozvole → `/nemate-pristup`.
-- **R4b (potvrda/zaključavanje sedmice):** nije započet; čeka R4a-2.
-- **Mobilni E2E na uređaju:** Maestro fajlovi postoje, ne izvršavaju se u CI-ju; telefonski
-  prolaz radi vlasnik po `docs/DEMO-STEP7.md`.
-- **Redis se ne koristi** u aplikaciji (samo dijagnostika); rate limit je u bazi.
-- **Katalog** (`/katalog`, mobilni katalog ekran) nije javan: razvoj ili platformski
-  administrator, ostalima 404; u produkcijskoj mobilnoj gradnji se ne uključuje.
+- **R4b (potvrda sedmice):** nije započet.
+- **Mobilni E2E u CI:** Maestro postoji; CI zatvoren — vlasnik po `DEMO-STEP7` / checklisti.
+- **A1 prijava na mobilnom poslije odjave:** nije još testirano (vlasnik).
+- **Redis:** samo dijagnostika; rate limit u bazi.
+- **Katalog:** nije javan; nije u produkcijskom mobilnom bundleu.
 
-- **E2E stabilnost (izmjereno, R4a-2/A):** ručni mod CI workflowa
-  (`workflow_dispatch`, `e2e_stabilnost=true`, matrica 5×4, bez retryja —
-  retry je uklonjen i iz redovnog `playwright.config.ts`). Prvo mjerenje:
-  **15/20**, svaki pad 4. pokretanje u jobu, isti test
-  (`resolve.spec.ts`, `locator.click` timeout). Uzrok nije preglednik ni
-  rate limit: test razrješenja troši demo sukobe (3 u seedu) pa 4.
-  pokretanje na istoj bazi nema šta otvoriti. Ispravka: mjerenje prije
-  svakog pokretanja resetuje testnu bazu (drop schema + migracije + seed);
-  produkcijski seed i guard nepromjenjivosti razriješenih sukoba nisu
-  dirani (pokušaj reset-a kroz seed je guard ispravno odbio). Drugo
-  mjerenje: **20/20**. Preglednik u CI-ju ide iz cachea (ključ = zaključana
-  verzija `@playwright/test` 1.57.0 u lockfileu).
+## Dugovi
 
-## Dugovi (ne blokiraju)
-
-- **PLATFORM_ADMIN_EMAILS:** privremeni mehanizam platformskih administratora
-  (u env-u je `ured@demo.ba`); zamijeniti pravim platform korisnicima, ne širiti
-  na druge rute.
+- **PLATFORM_ADMIN_EMAILS:** privremeno; zamijeniti pravim platform korisnicima.
 
 ## Otvoreno
 
-1. **Staging:** vlasnik deploya zadnji zeleni commit s ove grane i prolazi ekrane po rolama
-   u obje teme (lista u izvještaju uz ovaj STATUS).
-2. **Pilot:** `docs/PILOT.md` — Excel primjeri od vlasnika, priprema korisnika; SEED_DEMO se
-   uklanja samo eksplicitnom naredbom `remove-demo.ts`.
-3. **Produkcija:** prije pilota potvrditi backup baze i ugasiti javnu MinIO konzolu
-   (odluka vlasnika).
+1. Staging deploy + prolaz po rolama.
+2. Pilot: `PILOT.md`; `SEED_DEMO` se gasi samo `remove-demo.ts`.
+3. Produkcija: ugasiti javnu MinIO konzolu; backup raspored na hostu (§12).
