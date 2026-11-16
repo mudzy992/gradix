@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Uporedi manifest sa brojevima redova u RESTORE_DATABASE_URL.
+# Uporedi manifest sa brojevima redova. Brojanje ide kao admin (RESTORE_ADMIN_URL),
+# jer aplikacijska rola vidi 0 redova bez tenant konteksta (RLS) i nema SELECT na
+# schema_migrations.
 set -euo pipefail
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -7,11 +9,12 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$script_dir/backup-lib.sh"
 
 MANIFEST="${1:-}"
-: "${MANIFEST:?Upotreba: RESTORE_DATABASE_URL=... $0 <manifest.tsv>}"
-: "${RESTORE_DATABASE_URL:?RESTORE_DATABASE_URL je obavezan}"
+: "${MANIFEST:?Upotreba: RESTORE_ADMIN_URL=... $0 <manifest.tsv>}"
+VERIFY_URL="${RESTORE_ADMIN_URL:-${RESTORE_DATABASE_URL:-}}"
+: "${VERIFY_URL:?RESTORE_ADMIN_URL (ili RESTORE_DATABASE_URL) je obavezan}"
 require_cmd psql
 
-CONN="$(pg_conn "$RESTORE_DATABASE_URL")"
+CONN="$(pg_conn "$VERIFY_URL")"
 failed=0
 while IFS=$'\t' read -r table expected || [ -n "$table" ]; do
   case "$table" in
