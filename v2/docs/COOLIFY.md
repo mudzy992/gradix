@@ -403,7 +403,7 @@ druge firme prije upisa, tačno jedna blokirana dodjela kroz pravi servis
 | Radni dani, sati i ispravke | 10 godina | čuva se; čišćenje nije implementirano |
 | Lični podaci radnika koji je otišao | anonimizacija umjesto brisanja, razvojno 5 godina nakon prestanka; historija sati ostaje cjelovita | samo dizajn (ispod), bez implementacije |
 | Prilozi (skenovi isprava) | dok obaveza traje + 5 godina; ljekarski nalazi se ne čuvaju, samo datum isteka | čuva se; čišćenje nije implementirano |
-| Sigurnosne kopije | 30 dana dnevne, 12 mjesečnih | operativna postavka backup posla (C.2, čeka odobrenje) |
+| Sigurnosne kopije | 30 dana dnevne, 12 mjesečnih | zakazani zadatak + `backup.sh` (§12); RPO samo uz raspored |
 | Projektna dokumentacija | do kraja garantnog roka + dogovoreni period | čuva se; čišćenje nije implementirano |
 
 Tehničko čišćenje bez ličnih podataka (sesije, pokušaji prijave, istekli
@@ -535,3 +535,98 @@ fazu po fazu: `pnpm install --frozen-lockfile --filter @gradix/web...` → `next
 `esbuild` seed → slaganje runtime rasporeda → `entrypoint.sh` sa `RUN_MIGRATIONS=true`.
 Rezultat: migracije prošle, `/api/health` 200, `/api/ready` sa `is_super:false`,
 `/login` 200, `/favicon.png` 200, `/robots.txt` 200, seed iz slike prošao, prijava 200.
+
+## 12. Sigurnosne kopije baze (C.2)
+
+CI drill (`v2-backup-restore.yml`) **ne koristi MinIO**: Postgres → lokalni šifrovani dump →
+restore u praznu bazu → manifest → preflight → prijava. Offsite se dokazuje **ručno** jednom
+na stagingu (`backup-offsite-check.sh`).
+
+### Van hosta
+
+Kopije u istom MinIO-u na istom serveru kao baza **nisu van hosta**. Skripte ispisuju
+`UPOZORENJE: NIJE VAN HOSTA` za `BACKUP_DEST=local` i za S3 endpoint na istom hostu / `minio`
+DNS. RPO/offsite tvrdnja važi tek kad je odredište **drugi host ili drugi provajder**
+(`BACKUP_OFFHOST=true` samo kad je to zaista tačno).
+
+Preporuke (kratko): (1) **Backblaze B2 / Cloudflare R2 / AWS S3** u drugom regionu — jeftino,
+odvojen failure domain; (2) **drugi VPS + MinIO** — i dalje S3 API, ali drugi disk/mreža;
+(3) zadržati app MinIO samo kao **lokalni cache** kopija, ne kao jedino odredište.
+
+### Šifrovanje i ključ
+
+`backup.sh` **uvijek** šifrira (AES-256-CBC, PBKDF2) **prije** lokalnog čuvanja/slanja.
+Ključ: `BACKUP_ENCRYPTION_KEY` — Coolify/host secret **odvojen** od bucket-a s kopijama
+(npr. Coolify secret ili `/etc/gradix/backup.key` na hostu, ne u MinIO). Izgubljen ključ =
+izgubljene kopije. Izvoz ide kroz read-only rolu `gradix_backup` (`DATABASE_BACKUP_URL`),
+nikad kroz web `DATABASE_URL`. Dokaz: CI i offsite-check pokušavaju dešifrovati pogrešnim
+ključem i moraju pasti.
+
+### Raspored (ko / kada) — RPO samo uz ovo
+
+`DATABASE_ADMIN_URL` / `BACKUP_ENCRYPTION_KEY` / S3 tajne **ne idu u web kontejner**.
+Coolify → web resource → **Scheduled Tasks** (ili cron na hostu) pokreće odvojeni one-shot:
+
+```sh
+# Jednokratno na Postgres hostu (kao superuser): read-only export rola.
+# Zamijeni IME_BAZE stvarnim imenom (npr. gradix / gradix_stg).
+psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_backup') THEN
+    CREATE ROLE gradix_backup LOGIN NOSUPERUSER NOBYPASSRLS;
+  END IF;
+END $$;
+SQL
+psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c 'GRANT CONNECT ON DATABASE "IME_BAZE" TO gradix_backup'
+psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
+GRANT USAGE ON SCHEMA public TO gradix_backup;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO gradix_backup;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO gradix_backup;
+SQL
+```
+
+Coolify Scheduled Task (dnevno ~02:30 Europe/Sarajevo), radni dir `/app` ili host checkout `v2/`:
+
+```sh
+set -euo pipefail
+export DATABASE_BACKUP_URL=...          # samo gradix_backup
+export BACKUP_ENCRYPTION_KEY=...        # Coolify secret / host fajl, ne u web env
+export BACKUP_DEST=s3
+export BACKUP_S3_ENDPOINT=https://minio.gradix.ba101.top   # ili vanjski S3
+export BACKUP_S3_BUCKET=gradix-stg
+export BACKUP_S3_PREFIX=gradix/backups
+export AWS_ACCESS_KEY_ID=...            # poseban write-only nalog za prefiks backups/
+export AWS_SECRET_ACCESS_KEY=...
+export BACKUP_DIR=/var/backups/gradix-v2
+export BACKUP_RETENTION=30
+# Ako endpoint nije drugi host: očekuj "NIJE VAN HOSTA"
+./infra/scripts/backup.sh
+./infra/scripts/backup-age-check.sh
+```
+
+Provjera starosti (jedna naredba; pada ako je kopija starija od 26 h):
+
+```sh
+BACKUP_DEST=s3 BACKUP_S3_ENDPOINT=... BACKUP_S3_BUCKET=... BACKUP_S3_PREFIX=gradix/backups \
+  ./infra/scripts/backup-age-check.sh
+```
+
+### Ručni offsite-check (jednom na stagingu)
+
+```sh
+cd v2
+export DATABASE_BACKUP_URL=... RESTORE_DATABASE_URL=... RESTORE_ADMIN_URL=...
+export DATABASE_ADMIN_URL=... BACKUP_ENCRYPTION_KEY=...
+export BACKUP_DEST=s3 BACKUP_S3_ENDPOINT=... BACKUP_S3_BUCKET=... BACKUP_S3_PREFIX=gradix/backups
+export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...
+export BACKUP_DIR=./backups-offsite-check
+# Napravi praznu probnu bazu prije pokretanja, zatim:
+./infra/scripts/backup-offsite-check.sh
+```
+
+### Coolify nativni backup vs vlastito
+
+Coolify nudi zakazani `pg_dump` (+ opcionalni S3) za **Coolify-managed** Postgres; Gradix
+koristi odvojenu bazu, šifrovanje prije slanja, manifest/restore-drill i read-only export
+rolu — zato je **primarno vlastiti `backup.sh` raspored**; Coolify native samo kao dodatni
+sloj ako baza ikad postane Coolify resource.

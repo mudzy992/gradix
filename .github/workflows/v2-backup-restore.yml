@@ -1,0 +1,187 @@
+# v2 backup/restore drill — BEZ MinIO-a.
+# Postgres → lokalni šifrovani dump → restore u praznu bazu → manifest → preflight → prijava.
+# Izvor ideje: v1/.github/workflows/backup-restore.yml (ne skripte 1:1).
+name: v2 Backup/restore drill
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main, "arena/**", v2-bootstrap]
+    paths:
+      - "v2/infra/scripts/backup*.sh"
+      - "v2/infra/scripts/restore.sh"
+      - "v2/infra/scripts/backup-manifest.tsv"
+      - ".github/workflows/v2-backup-restore.yml"
+
+concurrency:
+  group: v2-backup-restore
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Backup → restore → preflight → login
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+      DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      DATABASE_BACKUP_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      RESTORE_DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix_restore
+      RESTORE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix_restore
+      PG_ADMIN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      BACKUP_DIR: ${{ github.workspace }}/v2/backups
+      BACKUP_DEST: local
+      BACKUP_RETENTION: "7"
+      AUTH_SECRET: ci-placeholder-secret-min-32-characters
+      SEED_PASSWORD: E2eDemoLozinka-123
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Klijentski alati
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Migracije + seed (izvor)
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+          pnpm --filter @gradix/web seed
+
+      - name: Ključ šifrovanja (efemeran u CI-ju)
+        id: key
+        run: echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Backup (lokalni dir, bez MinIO)
+        working-directory: v2
+        id: backup
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/backup*.sh infra/scripts/restore.sh
+          START=$(date +%s)
+          ./infra/scripts/backup.sh 2>&1 | tee /tmp/backup.log
+          END=$(date +%s)
+          echo "backup_seconds=$((END - START))" >> "$GITHUB_OUTPUT"
+          ENC=$(ls -1t backups/gradix-*.dump.enc | head -n1)
+          echo "enc=$ENC" >> "$GITHUB_OUTPUT"
+          echo "manifest=${ENC%.dump.enc}.manifest.tsv" >> "$GITHUB_OUTPUT"
+
+      - name: Dokaz — bez ključa nije čitljivo
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          ENC="${{ steps.backup.outputs.enc }}"
+          if env BACKUP_ENCRYPTION_KEY=definitely-wrong-key \
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:BACKUP_ENCRYPTION_KEY \
+            -in "$ENC" -out /tmp/should-fail.dump 2>/dev/null; then
+            echo "::error::dešifrovanje bez ispravnog ključa nije smjelo uspjeti"
+            exit 1
+          fi
+          # Sirovi sadržaj ne smije izgledati kao pg_dump custom header nakon „otvaranja” bez ključa
+          if head -c 5 "$ENC" | grep -q '^PGDMP'; then
+            echo "::error::enkriptovani fajl izgleda kao nešifrovani pg_dump"
+            exit 1
+          fi
+          echo "✓ kopija bez ključa nije čitljiva"
+
+      - name: Prazna ciljna baza
+        run: |
+          psql "$PG_ADMIN" -v ON_ERROR_STOP=1 -c 'DROP DATABASE IF EXISTS gradix_restore'
+          psql "$PG_ADMIN" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE gradix_restore OWNER postgres'
+
+      - name: Restore
+        working-directory: v2
+        id: restore
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          ./infra/scripts/restore.sh "${{ steps.backup.outputs.enc }}" 2>&1 | tee /tmp/restore.log
+          END=$(date +%s)
+          echo "restore_seconds=$((END - START))" >> "$GITHUB_OUTPUT"
+
+      - name: Brojevi redova prema manifestu
+        working-directory: v2
+        run: ./infra/scripts/backup-verify-counts.sh "${{ steps.backup.outputs.manifest }}"
+
+      - name: Preflight na vraćenoj bazi
+        working-directory: v2
+        env:
+          DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix_restore
+        run: ./packages/db/preflight-checks/run.sh
+
+      - name: Aplikacija + prijava nad vraćenom bazom
+        working-directory: v2
+        env:
+          DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix_restore
+          DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix_restore
+        run: |
+          set -euo pipefail
+          pnpm --filter @gradix/web build
+          (pnpm --filter @gradix/web start > /tmp/restore-app.log 2>&1 &)
+          for i in $(seq 1 40); do
+            curl -sf http://127.0.0.1:3000/api/health >/dev/null && break
+            sleep 2
+          done
+          code=$(curl -s -o /tmp/login.json -w "%{http_code}" \
+            -X POST http://127.0.0.1:3000/api/auth/login \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"vlasnik@demo.ba\",\"password\":\"$SEED_PASSWORD\"}")
+          echo "login HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::prijava na vraćenoj bazi nije uspjela (HTTP $code)"
+            tail -n 80 /tmp/restore-app.log || true
+            cat /tmp/login.json || true
+            exit 1
+          fi
+          echo "✓ prijava radi na vraćenoj bazi"
+
+      - name: Izmjereni RTO (demo količina)
+        run: |
+          B="${{ steps.backup.outputs.backup_seconds }}"
+          R="${{ steps.restore.outputs.restore_seconds }}"
+          echo "RTO (backup+restore na demo seedu): $((B + R)) s (backup=${B}s restore=${R}s)"
+          echo "RPO: tvrdnja važi samo uz zakazani zadatak (§12 COOLIFY) — cilj ≤ 26 h (dnevni job)."
+          echo "::notice::RTO_demo_seconds=$((B + R)) backup=${B}s restore=${R}s"
+
+      - name: Artefakt dumpa (7 dana)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-backup-drill-dump
+          path: v2/backups/
+          retention-days: 7
+          if-no-files-found: warn
