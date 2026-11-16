@@ -1,10 +1,12 @@
-# Maestro CI tokovi — autonomne verzije za GitHub Actions
+# Maestro tokovi — ručno pokretanje na uređaju/emulatoru
 
-Direktorij `maestro/ci/` nosi tokove koje workflow **„Mobilni E2E (Maestro)"**
-(`.github/workflows/mobilni-e2e.yml`) pokreće na Android emulatoru, protiv
-pravog API-ja s demo svijetom. Oni su prilagođeni autonomnom radu — bez ručnih
-koraka — i razlikuju se od tokova u `maestro/` (višesmjerno: oni su scenariji
-za ručni prolaz na pravom uređaju, s ručnim avionskim režimom).
+Direktorij `maestro/ci/` nosi pet tokova za mobilnu aplikaciju (protiv pravog
+API-ja s demo svijetom). Od 2026-11-16 NIŠTA od ovoga ne ide u CI automatski:
+workflow „Mobilni E2E (Maestro)" je parkiran (samo ručni `workflow_dispatch`),
+a tokovi su namijenjeni ručnom pokretanju na vlasnikovim uređajima — ovaj
+README je vodič. Razlikuju se od tokova u `maestro/` (višesmjerni scenariji
+za potpuno ručni prolaz): ovi su autonomni jednom kad se preduslovi postave
+(kredencijali se otkucaju ručno, mreža prebaci ručno — vidi dolje).
 
 ## Redoslijed i faze
 
@@ -85,11 +87,12 @@ pokretanju workflowa; noćni run ide s `sve`.
   skrola do „Osvježi" (dno) nije u vidiku; `scrollUntilVisible` s
   `direction: UP` vraća do nje. Re-mount (back + ponovni ulaz) NE radi —
   svježi ekran resetuje poruku iz stanja.
-- **Poruke uz dugmad su vidljive s pozicije dugmadi** — `message` na formama
-  „Moj dan"/„Grupa" renderuje se odmah ISPOD dugmadi (ista kartica), pa se
-  dokazi „Sačuvano na telefonu", „Zapisi ostaju na telefonu" i
-  „poslano N, za provjeru M" asertiraju BEZ dodatnog skrola, odmah poslije
-  tapinga (takeScreenshot prije provjere = pauza da RN dovrši slanje).
+- **Poruke uz dugmad su ISPOD folda — do njih se skrola** — `message` na
+  formama „Moj dan"/„Grupa" renderuje se odmah ISPOD oba dugmeta (ista
+  kartica): poslije `scrollUntilVisible` do dugmeta, dugme je na dnu ekrana
+  pa poruka NIJE u vidiku (run 43826875691: asercija na „Sačuvano na
+  telefonu" pala iako je save prošao). Zato se i do poruke skrola
+  (`scrollUntilVisible`), a za povratak na dugmad ide `direction: UP`.
   Banner („N čeka slanje.") je obrnuto — na VRHU forme, vidljiv samo čim se
   ekran otvori, prije skrolanja.
 - **„Poslano" (veliko P) ≠ „poslano" (malo p)** — Maestro text match je
@@ -107,20 +110,63 @@ izgledali kao padovi.) Uz to `maestro-artifacts/logcat.txt` (cijeli dump) i
 `maestro-artifacts/junit/*.xml`. Workflow sve to objavljuje kao artefakt
 `maestro-dokazi` — uvijek, i kada testovi padnu.
 
-## Lokalno pokretanje (emulator umjesto CI)
+## Ručno pokretanje — preduslovi
 
-Najjednostavnije je pokrenuti cijeli orkestrator (on nosi mrežu, retry i
-unos adb putem):
+1. Maestro CLI: `curl -fsSL "https://get.maestro.mobile.dev" | bash`
+2. Aplikacija instalirana na uređaju/emulatoru (`ba.gradix.teren`), s
+   `EXPO_PUBLIC_API_URL` u bundleu koji pokazuje na server koji je dohvatljiv
+   s tog uređaja (za emulator: `http://10.0.2.2:3000`; za pravi uređaj:
+   adresa računara na istoj mreži).
+3. API podignut s demo svijetom (`./infra/scripts/dev-up.sh` + seed) —
+   nalozi: `radnik@demo.ba`, `sef@demo.ba`, lozinka demo naloga.
+
+## Ručno pokretanje — pojedinačni tokovi (pravi uređaj)
+
+Tokovi NE unose email ni lozinku (CI ih je unosio adb putem — Maestro
+`inputText` na RN nondeterministički gubi/duplira znakove). Zato se
+kredencijali otkucaju RUČNO prije pokretanja toka — tok samo pritišće
+„Prijavi se" i nastavlja.
 
 ```bash
 cd v2/apps/mobile
-DEMO_LOZINKA=... bash scripts/maestro-ci.sh sve
+
+# Tok 01 — prijava radnika, obilazak, odjava pa ponovna prijava (A1e):
+# otvori app, otkucaj radnik@demo.ba + lozinku (NE pritišćaj „Prijavi se"), pa:
+maestro test maestro/ci/01-snimci.yaml
+
+# Tok 02 — prijava + osvježi rokove/projekte (keš za offline); završava NA formi:
+# odjava (ako si prijavljen), otkucaj kredencijale, pa:
+maestro test maestro/ci/02-offline-prijava-i-kes.yaml
+
+# Tok 03 — offline unos: NASTAVLJA na formi iz toka 02!
+# ODMAH poslije toka 02 (bez restarta appa!) ugasi mrežu (avionski režim), pa:
+maestro test maestro/ci/03-offline-unos.yaml
+
+# Tok 04 — povratak mreže: upali mrežu (avionski režim OFF), pa:
+maestro test maestro/ci/04-povratak-mreze.yaml
+
+# Tok 05 — šef, grupni unos: odjava, otkucaj sef@demo.ba + lozinku, pa:
+maestro test maestro/ci/05-grupa.yaml
 ```
 
-Pojedinačni tok se može pokrenuti i ručno, ali tokovi iz prijave (01/02/05)
-očekuju da su polja već popunjena orkestratorom — prije njih pokreni
-`adb_login` ekvivalent ručno (`maestro test maestro/ci/_fokus-email.yaml`
-pa `adb shell input text "radnik@demo.ba"`, isto za lozinku), a mrežu
-prebacuj s `adb shell cmd connectivity airplane-mode enable/disable`.
-Preduslovi su isti kao za CI: instaliran APK (`ba.gradix.teren`), API na
-`EXPO_PUBLIC_API_URL` iz bundlea, demo svijet seedovan.
+**Kritično za tok 03:** app NE smije biti restartovana između tokova 02 i 03
+(ni hladni start ni ponovni ulaz na formu) — bez mreže `me()` provjera sesije
+i `load()` forme ne prolaze, pa se zapis ne može sačuvati. Tok 03 nastavlja
+tačno tamo gdje je tok 02 stao (forma „Moj dan", skrolana do dugmeta).
+
+Dokazi (video, screenshot svakog koraka, junit) ostaju u
+`maestro-artifacts/test-output/` i `~/.maestro/tests/` — korisno za snimke.
+
+## Cijeli orkestrator na lokalnom emulatoru ( alternativa)
+
+Na emulatoru s adb pristupom najlakše je pustiti cijeli orkestrator — on
+sam prebacuje mrežu, unosi kredencijale adb putem i retreja tokove:
+
+```bash
+cd v2/apps/mobile
+DEMO_LOZINKA=<lozinka demo naloga> bash scripts/maestro-ci.sh sve   # ili: snimci | offline | grupa
+```
+
+(Orkestrator je pisan za CI; na lokalnom emulatoru radi isto ako su adb i
+emulator pokrenuti. `--analyze` se NE koristi — flag zove Maestro Cloud i
+zna srušiti CLI nakon uspješnog toka.)

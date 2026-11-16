@@ -47,6 +47,12 @@
 
 ## Ne radi / namjerno još nema
 
+- **Mobilni E2E na emulatoru u CI-ju — PARKIRANO (2026-11-16):** noćni cron i push
+  okidači uklonjeni iz `mobilni-e2e.yml`; ostaje samo ručni `workflow_dispatch`.
+  Razlog: previše utrošenog vremena za vrijednost pilota. Mobilne provjere idu kroz
+  simulator mreže + jedinične testove (postoje), Playwright snimke web izvoza mobilnih
+  ekrana (jasno označene kao aproksimacija) i vlasnikove snimke s emulatora. Maestro
+  tokovi ostaju u repou za ručno pokretanje: `v2/apps/mobile/maestro/ci/README.md`.
 - **R4a-2 razrješenje sukoba:** završeno — 2a (dozvola/opseg/strana u sukobu),
   2b (server), 2d (uredski web ekrani `/ured/sukobi`, bedž samo za
   nerazriješene, Pregled kartica, E2E razrješenja) i 2c (ishod razrješenja

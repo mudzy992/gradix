@@ -72,6 +72,10 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
     odobrenje**. Nova vrsta komponente ili novi vizuelni obrazac traži vlasnikovo odobrenje
     i dopunu kataloga i `reference.html` u istom commitu. Sirovi elementi po ekranima su
     zabranjeni lintom (U3); izuzeci žive u `docs/UI-EXCEPTIONS.md` i smiju se samo smanjivati.
+12. **Budžet za rad koji korisnik ne vidi (CI, alati, infrastruktura):** najviše DVA
+    pokušaja ispravke istog problema, pa STANI i izvijesti; cijeli zadatak najviše
+    pola radnog dana. Svaki izvještaj o takvom radu nosi liniju
+    „Utrošeno: <broj CI pokretanja>, <broj ponovnih pokušaja po problemu>".
 
 ## Dublje
 

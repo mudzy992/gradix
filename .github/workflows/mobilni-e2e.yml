@@ -1,12 +1,12 @@
 name: Mobilni E2E (Maestro)
 
-# Noćna regresija mobilne aplikacije protiv pravog API-ja + ručno pokretanje.
-# Zaseban workflow, a ne dio ci-v2.yml: emulator + APK gradnja dodaju značajno
-# vrijeme, što ne ide na svaki push (ci-v2.yml je to i najavio u svom zaglavlju).
-#
-# VAŽNO — noćni termin: GitHub `schedule` okidač radi SAMO s kopijom ovog fajla na
-# DEFAULT grani repozitorija. Dok god je fajl samo na radnoj grani, noćni run se ne
-# pokreće; ručno pokretanje (workflow_dispatch) s radne grane radi od spajanja u main.
+# PARKIRANO (odluka vlasnika, 2026-11-16): emulator u CI-ju je stajalište —
+# noćni cron i push okidači su UKLONJENI, ostaje SAMO ručno pokretanje
+# (workflow_dispatch), kad se baš to poželi provjeriti. Mobilne provjere idu
+# redovno kroz: simulator mreže + jedinične testove (postoje), web izvoz
+# mobilnih ekrana snimljen Playwrightom (jasno označen kao aproksimacija) i
+# vlasnikove snimke s emulatora. Maestro tokovi ostaju u repou za ručno
+# pokretanje na vlasnikovim uređajima — v2/apps/mobile/maestro/ci/README.md.
 #
 # Arhitektura (modularno, po fazama):
 #   1. apk       — prebuild + gradnja release APK-a; APK se kešira po izvoru i
@@ -22,16 +22,8 @@ name: Mobilni E2E (Maestro)
 # OEM optimizacije) — to ostaje telefonski prolaz vlasnika (docs/MOBILNI-CHECKLISTA.md).
 
 on:
-  # PRIVREMENO (validacija na radnoj grani): push okidač samo za arena grane i samo
-  # kad se mijenja mobilni dio/workflow. Skida se nakon provjere — noćni + ručni
-  # okidači su trajni; ručni postaje dostupan i s radne grane kad fajl stigne na main.
-  push:
-    branches: ["arena/**"]
-    paths:
-      - "v2/apps/mobile/**"
-      - ".github/workflows/mobilni-e2e.yml"
-  schedule:
-    - cron: "0 2 * * *" # 02:00 UTC = 03:00 po lokalnom vremenu (CET) — unutar 00–06
+  # SAMO ručno pokretanje (vidi napomenu na vrhu fajla). Okidači push i schedule
+  # su namjerno uklonjeni 2026-11-16 — emulator u CI-ju je parkiran.
   workflow_dispatch:
     inputs:
       scenarij:
