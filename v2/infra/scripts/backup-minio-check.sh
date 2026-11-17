@@ -12,16 +12,17 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 : "${DATABASE_BACKUP_URL:?DATABASE_BACKUP_URL (read-only export rola)}"
 : "${RESTORE_ADMIN_URL:?RESTORE_ADMIN_URL admin na praznoj probnoj bazi}"
 : "${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY (nije u MinIO-u)}"
-: "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT (aplikacijski MinIO API)}"
+: "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT (u web kontejneru: http://minio:9000)}"
 : "${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET (zaseban backup bucket)}"
 : "${BACKUP_S3_ACCESS_KEY:?BACKUP_S3_ACCESS_KEY (nije MINIO_ACCESS_KEY app-a)}"
 : "${BACKUP_S3_SECRET_KEY:?BACKUP_S3_SECRET_KEY (nije MINIO_SECRET_KEY app-a)}"
 BACKUP_DEST=s3
-BACKUP_DIR="${BACKUP_DIR:-./backups-minio-check}"
+BACKUP_DIR="${BACKUP_DIR:-/tmp/backups-minio-check}"
 BACKUP_S3_PREFIX="${BACKUP_S3_PREFIX:-backups}"
 export BACKUP_DIR BACKUP_DEST BACKUP_S3_ENDPOINT BACKUP_S3_BUCKET BACKUP_S3_PREFIX
 export BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY
 
+ensure_pg_ssl_env
 require_cmd pg_dump pg_restore psql openssl sha256sum aws
 validate_dest
 apply_backup_s3_creds

@@ -10,6 +10,7 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 : "${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL obavezan}"
 : "${BACKUP_ROLE_PASSWORD:?BACKUP_ROLE_PASSWORD obavezan}"
 ROLE_NAME="${BACKUP_ROLE_NAME:-gradix_backup}"
+ensure_pg_ssl_env
 ADMIN="$(pg_conn "$DATABASE_ADMIN_URL")"
 
 # SQL-escape jednim navodnikom (lozinka se ne logira).

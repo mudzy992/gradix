@@ -28,6 +28,7 @@ case "${RESTORE_ADMIN_URL}${RESTORE_DATABASE_URL:-}" in
     ;;
 esac
 
+ensure_pg_ssl_env
 require_cmd pg_restore psql openssl
 check_sha256 "$ENC"
 
@@ -46,6 +47,10 @@ pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error --dbna
 boot_dir=""
 if [ -d "$script_dir/../../packages/db/bootstrap" ]; then
   boot_dir=$(CDPATH= cd -- "$script_dir/../../packages/db/bootstrap" && pwd)
+elif [ -d /app/db/bootstrap ]; then
+  boot_dir=/app/db/bootstrap
+elif [ -d "$script_dir/../db/bootstrap" ]; then
+  boot_dir=$(CDPATH= cd -- "$script_dir/../db/bootstrap" && pwd)
 fi
 if [ -n "$boot_dir" ] && [ -f "$boot_dir/grants.sql" ]; then
   echo "→ roles.sql + grants.sql na vraćenoj bazi"

@@ -3,8 +3,41 @@
 # shellcheck shell=bash
 set -euo pipefail
 
+# Kontejner (Coolify web): CA je na /etc/ssl/certs/coolify-ca.crt.
+# CI (lokalni Postgres bez TLS) ne traži CA.
+ensure_pg_ssl_env() {
+  local default_ca="/etc/ssl/certs/coolify-ca.crt"
+  if [ -z "${PGSSLROOTCERT:-}" ] || [ ! -f "${PGSSLROOTCERT}" ]; then
+    if [ -f "$default_ca" ]; then
+      export PGSSLROOTCERT="$default_ca"
+    fi
+  fi
+  case "${DATABASE_ADMIN_URL:-}${DATABASE_BACKUP_URL:-}${RESTORE_ADMIN_URL:-}${DATABASE_URL:-}" in
+    *sslmode=verify*|*sslrootcert=*)
+      if [ -z "${PGSSLROOTCERT:-}" ] || [ ! -f "${PGSSLROOTCERT}" ]; then
+        echo "GREŠKA: PGSSLROOTCERT nije postavljen ili CA fajl ne postoji (očekivano $default_ca)." >&2
+        exit 2
+      fi
+      ;;
+  esac
+}
+
 pg_conn() {
   local url="$1"
+  # Uskladi sslrootcert u URL-u s PGSSLROOTCERT (kontejnerska putanja).
+  if [ -n "${PGSSLROOTCERT:-}" ]; then
+    case "$url" in
+      *sslrootcert=*)
+        url="$(printf '%s' "$url" | sed -E "s#[?&]sslrootcert=[^&]*#\&sslrootcert=${PGSSLROOTCERT}#" | sed -E 's#\?&#?#')"
+        ;;
+      *\?*)
+        url="${url}&sslrootcert=${PGSSLROOTCERT}"
+        ;;
+      *)
+        url="${url}?sslrootcert=${PGSSLROOTCERT}"
+        ;;
+    esac
+  fi
   case "$url" in
     *\?*) ;;
     *) printf '%s' "$url"; return ;;

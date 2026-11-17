@@ -57,9 +57,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
-# psql je potreban samo ako entrypoint primjenjuje migracije (RUN_MIGRATIONS=true).
+# postgresql-client: psql/pg_dump/pg_restore (migracije + backup drill).
+# bash/openssl/awscli: backup-*.sh u /app/backup (privremeni drill u web kontejneru).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends postgresql-client ca-certificates \
+ && apt-get install -y --no-install-recommends \
+      postgresql-client ca-certificates bash openssl awscli coreutils \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 1001 nodejs \
  && useradd -m -u 1001 -g nodejs nextjs \
@@ -85,6 +87,18 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
 COPY --chown=nextjs:nodejs infra/docker/entrypoint-web.sh ./entrypoint.sh
 COPY --chown=nextjs:nodejs infra/docker/seed-web.sh ./seed.sh
 COPY --chown=nextjs:nodejs infra/scripts/db-apply.sh ./db/apply.sh
+# Backup/restore drill skripte (pokreće vlasnik privremeno u web kontejneru).
+COPY --chown=nextjs:nodejs infra/scripts/backup-lib.sh \
+     infra/scripts/backup.sh \
+     infra/scripts/restore.sh \
+     infra/scripts/backup-manifest.tsv \
+     infra/scripts/backup-verify-counts.sh \
+     infra/scripts/backup-provision-role.sh \
+     infra/scripts/backup-assert-role.sh \
+     infra/scripts/backup-minio-check.sh \
+     infra/scripts/backup-age-check.sh \
+     ./backup/
+RUN chmod +x /app/backup/*.sh
 
 USER nextjs
 EXPOSE 3000

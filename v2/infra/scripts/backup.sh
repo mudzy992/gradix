@@ -19,6 +19,7 @@ STAMP="${BACKUP_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 BASE="gradix-$STAMP"
 MANIFEST_LIST="${BACKUP_MANIFEST_LIST:-$script_dir/backup-manifest.tsv}"
 
+ensure_pg_ssl_env
 require_cmd pg_dump psql openssl sha256sum
 validate_dest
 mkdir -p "$BACKUP_DIR"
