@@ -110,7 +110,7 @@ DEMO_LOZINKA=... bash scripts/maestro-ci.sh sve
 Pojedinačni tok se može pokrenuti i ručno, ali tokovi iz prijave (01/02/05)
 očekuju da su polja već popunjena orkestratorom — prije njih pokreni
 `adb_login` ekvivalent ručno (`maestro test maestro/ci/_fokus-email.yaml`
-pa `adb shell input text "radnik@demo.ba"`, isto za lozinku), a mrežu
+pa `adb shell input text "radnik@demo.test"`, isto za lozinku), a mrežu
 prebacuj s `adb shell cmd connectivity airplane-mode enable/disable`.
 Preduslovi su isti kao za CI: instaliran APK (`ba.gradix.teren`), API na
 `EXPO_PUBLIC_API_URL` iz bundlea, demo svijet seedovan.

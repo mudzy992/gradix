@@ -10,7 +10,7 @@
 https://gradix.ba101.top
 ```
 
-Prijava: `ured@demo.ba` / lozinka iz `SEED_PASSWORD`. Provjeri prije početka:
+Prijava: `ured@demo.test` / lozinka iz `SEED_PASSWORD`. Provjeri prije početka:
 `curl -s https://gradix.ba101.top/api/ready` ⇒ `"status":"ok"`.
 
 **Alternativa — lokalno** (samo ako želiš svoju bazu; traži Docker):
@@ -27,7 +27,7 @@ Lokalna lozinka: `demo-lozinka-123`. **Ne miješaj**: lokalno i testna domena im
 
 | # | Korak | Šta dokazuje |
 |---|---|---|
-| 1 | Prijavi se kao `ured@demo.ba` | sesija, Argon2id, tenant iz sesije |
+| 1 | Prijavi se kao `ured@demo.test` | sesija, Argon2id, tenant iz sesije |
 | 2 | Vidiš 3 mašine svoje firme | `/api/me` i stranica idu kroz tenant scope |
 | 3 | Odjavi se, prijavi kao `vlasnik@druga.test` | vidiš **1** mašinu (Druga Firma) — izolacija radi |
 | 4 | Otvori `/pregled` bez prijave u privatnom prozoru | preusmjerenje na `/login` (nema curenja) |

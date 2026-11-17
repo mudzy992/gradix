@@ -17,7 +17,7 @@ const workers = [
     firstName: "Amina",
     lastName: "Karić",
     phone: "061 111 222",
-    email: "amina@demo.ba",
+    email: "amina@demo.test",
     jobTitle: "Zidar",
     engagement: "PERMANENT",
     hiredAt: "2025-03-01",
@@ -34,7 +34,7 @@ const workers = [
     firstName: "Mario",
     lastName: "Perić",
     phone: null,
-    email: "mario@demo.ba",
+    email: "mario@demo.test",
     jobTitle: "Rukovalac",
     engagement: "FIXED_TERM",
     hiredAt: "2024-09-15",
@@ -43,7 +43,7 @@ const workers = [
     supervisorId: "wrk_1",
     supervisorName: "Amina Karić",
     userId: "usr_2",
-    userEmail: "mario@demo.ba",
+    userEmail: "mario@demo.test",
     isActive: false,
   },
 ];
@@ -68,7 +68,7 @@ function mockApi(handler?: (call: Call) => { ok: boolean; body: unknown }) {
             ok: true,
             json: async () => ({
               success: true,
-              data: { users: [{ id: "usr_2", firstName: "Mario", lastName: "Perić", email: "mario@demo.ba", isActive: true }] },
+              data: { users: [{ id: "usr_2", firstName: "Mario", lastName: "Perić", email: "mario@demo.test", isActive: true }] },
             }),
           } as unknown as Response;
         }
@@ -103,7 +103,7 @@ describe("radnici", () => {
     await userEvent.click(screen.getByLabelText(/Prikaži i neaktivne/));
 
     const withAccount = (await screen.findByText("Mario Perić")).closest("tr")!;
-    expect(within(withAccount).getByText("Nalog: mario@demo.ba")).toBeInTheDocument();
+    expect(within(withAccount).getByText("Nalog: mario@demo.test")).toBeInTheDocument();
     expect(within(withAccount).getByText("Neaktivan")).toBeInTheDocument();
   });
 

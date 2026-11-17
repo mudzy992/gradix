@@ -91,8 +91,8 @@ describe("SafeText (A1)", () => {
   });
 
   it("stripControlChars skida NUL, a ne dira ostatak teksta", () => {
-    expect(stripControlChars("ko\u0000ris@demo.ba")).toBe("koris@demo.ba");
-    expect(stripControlChars("  koris@demo.ba  ")).toBe("  koris@demo.ba  "); // trim je posao pozivaoca
+    expect(stripControlChars("ko\u0000ris@demo.test")).toBe("koris@demo.test");
+    expect(stripControlChars("  koris@demo.test  ")).toBe("  koris@demo.test  "); // trim je posao pozivaoca
     expect(stripControlChars("čist tekst")).toBe("čist tekst");
   });
 

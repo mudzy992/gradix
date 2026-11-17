@@ -24,7 +24,7 @@ const referenceFile = join(here, "../../../docs/design/reference.html");
 mkdirSync(outDir, { recursive: true });
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3140";
-const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.ba";
+const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.test";
 const PASSWORD = process.env.SEED_PASSWORD ?? "nije,kikiriki";
 
 const WIDTHS = [1440, 360];

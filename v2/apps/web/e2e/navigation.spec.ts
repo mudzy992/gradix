@@ -24,7 +24,7 @@ test.beforeAll(() => {
 });
 
 test("vlasnik: meni sadrži Radne dane i Korisnike; odjava vraća na prijavu", async ({ page }) => {
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
   const labels = await navLabels(page);
   expect(labels).toContain("Radni dani");
   expect(labels).toContain("Korisnici");
@@ -40,7 +40,7 @@ test("A1e regresija: odjava pa ponovna prijava u istom kontekstu uspjeva", async
   // Originalni bug (mobilni): prijava NAKON odjave vraćala je „Došlo je do greške."
   // (server 500, PG 22021). Ovdje se ta sekvenca dokazuje na webu u istom
   // kontekstu: stari cookie/tokeni moraju otići, novi moraju raditi.
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
 
   await page.getByRole("button", { name: /Korisnički meni/ }).click();
   await page.getByRole("menuitem", { name: "Odjavi se" }).click();
@@ -48,19 +48,19 @@ test("A1e regresija: odjava pa ponovna prijava u istom kontekstu uspjeva", async
   await expect(page.getByRole("heading", { name: "Prijava" })).toBeVisible();
 
   // Ponovna prijava odmah, bez resetovanja konteksta.
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
   await expect(page.getByRole("navigation", { name: "Glavna navigacija" })).toBeVisible();
 
   // Još jedan ciklus: ni druga odjava i treća prijava ne smiju pasti.
   await page.getByRole("button", { name: /Korisnički meni/ }).click();
   await page.getByRole("menuitem", { name: "Odjavi se" }).click();
   await page.waitForURL("**/login");
-  await login(page, "ured@demo.ba");
+  await login(page, "ured@demo.test");
   await expect(page.getByRole("navigation", { name: "Glavna navigacija" })).toBeVisible();
 });
 
 test("radnik: meni nema uredske stavke (ni Radne dane ni Korisnike)", async ({ page }) => {
-  await login(page, "radnik@demo.ba");
+  await login(page, "radnik@demo.test");
   const labels = await navLabels(page);
   expect(labels).not.toContain("Radni dani");
   expect(labels).not.toContain("Korisnici");
@@ -68,7 +68,7 @@ test("radnik: meni nema uredske stavke (ni Radne dane ni Korisnike)", async ({ p
 });
 
 test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu, ne tihi redirect", async ({ page }) => {
-  await login(page, "radnik@demo.ba");
+  await login(page, "radnik@demo.test");
   await page.goto("/ured/korisnici");
   await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
   await page.getByRole("link", { name: "Nazad na pregled" }).click();
@@ -76,7 +76,7 @@ test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu, ne 
 });
 
 test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
-  await login(page, "sef@demo.ba");
+  await login(page, "sef@demo.test");
   const labels = await navLabels(page);
   expect(labels).toContain("Radnici");
   expect(labels).toContain("Radni dani");
@@ -86,7 +86,7 @@ test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({
 test("istek/opoziv sesije: drugi tab završava na prijavi", async ({ browser }) => {
   const context = await browser.newContext();
   const tabA = await context.newPage();
-  await login(tabA, "vlasnik@demo.ba");
+  await login(tabA, "vlasnik@demo.test");
 
   const tabB = await context.newPage();
   await tabB.goto("/pregled");
@@ -118,7 +118,7 @@ test("istek/opoziv sesije: drugi tab završava na prijavi", async ({ browser }) 
  */
 
 test("C.1 vlasnik: pregled nudi redove pažnje, sažetak i sinhronizaciju", async ({ page }) => {
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
 
   await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sažetak" })).toBeVisible();
@@ -136,7 +136,7 @@ test("C.1 vlasnik: pregled nudi redove pažnje, sažetak i sinhronizaciju", asyn
 });
 
 test("C.1 vlasnik: klik na red otvara listu već filtriranu (rokovi → isteklo)", async ({ page }) => {
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
   await page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ }).click();
   await page.waitForURL(/\/ured\/rokovi\?stanje=isteklo$/);
   await expect(page.getByRole("heading", { name: "Rokovi" })).toBeVisible();
@@ -148,7 +148,7 @@ test("C.1 vlasnik: klik na red otvara listu već filtriranu (rokovi → isteklo)
 });
 
 test("C.1 vlasnik: klik na dane za provjeru otvara samo dane s oznakom", async ({ page }) => {
-  await login(page, "vlasnik@demo.ba");
+  await login(page, "vlasnik@demo.test");
   await page.getByRole("link", { name: /^Dani za provjeru/ }).click();
   await page.waitForURL(/\/ured\/radni-dani\?filter=za-provjeru$/);
   await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();
@@ -159,7 +159,7 @@ test("C.1 vlasnik: klik na dane za provjeru otvara samo dane s oznakom", async (
 });
 
 test("C.1 admin (ured): vidi pregled i sinhronizaciju kao vlasnik", async ({ page }) => {
-  await login(page, "ured@demo.ba");
+  await login(page, "ured@demo.test");
   await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toBeVisible();
   // Opseg firme: bez natpisa „samo vaš opseg“.
@@ -167,7 +167,7 @@ test("C.1 admin (ured): vidi pregled i sinhronizaciju kao vlasnik", async ({ pag
 });
 
 test("C.1 voditelj (PROJECTS opseg): pregled sužen, BEZ sinhronizacije", async ({ page }) => {
-  await login(page, "voditelj@demo.ba");
+  await login(page, "voditelj@demo.test");
 
   await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
   // Kartica sinhronizacije ne postoji — ne ni prazna (design: samo OWNER i ADMIN).
@@ -179,7 +179,7 @@ test("C.1 voditelj (PROJECTS opseg): pregled sužen, BEZ sinhronizacije", async 
 });
 
 test("C.1 radnik: stari pregled — nema redova pažnje ni sinhronizacije", async ({ page }) => {
-  await login(page, "radnik@demo.ba");
+  await login(page, "radnik@demo.test");
 
   await expect(page.getByRole("heading", { name: "Dobro došli, Amar" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toHaveCount(0);

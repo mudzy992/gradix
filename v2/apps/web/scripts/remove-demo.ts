@@ -5,7 +5,7 @@
  *  - radi samo kad REMOVE_DEMO_CONFIRM bude DOSLOVNO slug demo firme ("niskogradnja-demo");
  *    bez toga skripta staje prije bilo kakve izmjene;
  *  - sve ide u JEDNOJ transakciji: ili se obriše sve, ili ništa;
- *  - demo korisnici (@demo.ba) koji pripadaju samo demo firmi brišu se nakon firme.
+ *  - demo korisnici (@demo.test) koji pripadaju samo demo firmi brišu se nakon firme.
  *
  * Pokretanje: DATABASE_ADMIN_URL=... REMOVE_DEMO_CONFIRM=niskogradnja-demo \
  *   pnpm --filter @gradix/web exec tsx scripts/remove-demo.ts
@@ -61,7 +61,7 @@ try {
     // Korisnici koji su pripadali samo demo firmi (njihove membership/sesije nestaju kaskadno).
     const demoUsers = await client.query<{ id: string }>(
       `SELECT id FROM public.users
-        WHERE email LIKE '%@demo.ba'
+        WHERE email LIKE '%@demo.test'
           AND NOT EXISTS (SELECT 1 FROM public.memberships m WHERE m.user_id = users.id AND m.company_id <> $1)`,
       [companyId],
     );

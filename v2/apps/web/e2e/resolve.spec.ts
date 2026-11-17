@@ -22,7 +22,7 @@ test.beforeAll(() => {
 });
 
 test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješeno", async ({ page, browser }) => {
-  await login(page, "ured@demo.ba");
+  await login(page, "ured@demo.test");
   await page.goto("/ured/sukobi?stanje=OPEN");
   await expect(page.getByRole("heading", { name: "Sukobi radnih dana" })).toBeVisible();
   await expect(page.getByText("Nerazriješeni sukobi")).toBeVisible();
@@ -56,7 +56,7 @@ test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješen
   // Drugi korisnik (vlasnik) direktnim linkom vidi isto stanje, bez akcija.
   const ctx = await browser.newContext();
   const owner = await ctx.newPage();
-  await login(owner, "vlasnik@demo.ba");
+  await login(owner, "vlasnik@demo.test");
   await owner.goto(detailUrl);
   await expect(owner.getByText(/Razriješio\/la Amina Karić/).first()).toBeVisible();
   await expect(owner.getByRole("button", { name: /Prihvati unos sa servera/ })).toBeDisabled();

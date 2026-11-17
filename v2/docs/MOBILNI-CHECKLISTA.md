@@ -18,10 +18,10 @@ originalni A1 bug i nju uradi prvu.
 
   | Email | Uloga | Šta od njega očekujemo |
   |---|---|---|
-  | `radnik@demo.ba` | radnik | Moj dan, rokovi, projekti; BEZ Grupa |
-  | `sef@demo.ba` | šef gradilišta | sve od radnika + Grupa (ekipa) |
-  | `voditelj@demo.ba` | voditelj projekta | IMA Moj dan (vezan na radnika), projekti samo dodijeljeni |
-  | `vlasnik@demo.ba` | vlasnik | BEZ Moj dan i BEZ Grupa (nije vezan na radnika) |
+  | `radnik@demo.test` | radnik | Moj dan, rokovi, projekti; BEZ Grupa |
+  | `sef@demo.test` | šef gradilišta | sve od radnika + Grupa (ekipa) |
+  | `voditelj@demo.test` | voditelj projekta | IMA Moj dan (vezan na radnika), projekti samo dodijeljeni |
+  | `vlasnik@demo.test` | vlasnik | BEZ Moj dan i BEZ Grupa (nije vezan na radnika) |
 
   Lozinka je ona s kojom je okruženje seedovano (`SEED_PASSWORD`; u CI-u je to
   `E2eDemoLozinka-123`). Ako tvoje okruženje koristi druge naloge, koristi svoje —
@@ -33,7 +33,7 @@ originalni A1 bug i nju uradi prvu.
 
 ## 1. Prijava, odjava, sesija — NAJVAŽNIJE (A1)
 
-- [ ] Prijava `radnik@demo.ba` → početni ekran nosi ime firme i ime i prezime,
+- [ ] Prijava `radnik@demo.test` → početni ekran nosi ime firme i ime i prezime,
       dugmad: **Moj dan, Moji rokovi, Moji projekti, Odjavi se** (BEZ „Grupa").
 - [ ] Pogrešna lozinka → poruka **„Prijava nije uspjela."** — jasna poruka,
       aplikacija ne pada.
@@ -46,7 +46,7 @@ originalni A1 bug i nju uradi prvu.
 - [ ] Zatvori aplikaciju potpuno (iz pregleda nedavnih aplikacija) → ponovo otvori
       → i dalje prijavljen, bez ponovne prijave.
 - [ ] *(napredno, uradi na kraju ili s nalogom koji ti više ne treba — mijenja
-      lozinku)* Prijavi `voditelj@demo.ba` na telefonu; na webu se prijavi istim
+      lozinku)* Prijavi `voditelj@demo.test` na telefonu; na webu se prijavi istim
       nalogom i promijeni lozinku → na telefonu ponovo otvori aplikaciju →
       poruka **„Prijava više nije važeća — sesija je opozvana ili istekla…"**
       (web pri promjeni lozinke opoziva sve druge sesije tog naloga).
@@ -74,9 +74,9 @@ originalni A1 bug i nju uradi prvu.
 - [ ] *(napredno)* Odjava u avionskom režimu → poruka da je odjava lokalna i da
       server sesija nije mogla biti opozvana bez mreže (javi se uredu za opoziv).
 
-## 4. Grupa — samo `sef@demo.ba`
+## 4. Grupa — samo `sef@demo.test`
 
-- [ ] Prijava `sef@demo.ba` → meni ima **„Grupa — unos za ekipu"**.
+- [ ] Prijava `sef@demo.test` → meni ima **„Grupa — unos za ekipu"**.
 - [ ] Izaberi projekat → radnici u opsegu se učitavaju → zajednička mašina ili
       „Bez mašine" → Početak/Kraj za sve → „Sačuvaj za N radnika" → „Pošalji sada"
       → **„Poslano"** i nigdje riječ „Odbijeno" za ijednog radnika.
@@ -95,9 +95,9 @@ originalni A1 bug i nju uradi prvu.
 
 ## 7. Role — šta ko smije vidjeti
 
-- [ ] `vlasnik@demo.ba`: BEZ „Moj dan" i BEZ „Grupa" — samo rokovi, projekti, odjava.
-- [ ] `voditelj@demo.ba`: IMA „Moj dan"; projekti samo dodijeljeni (sužen opseg).
-- [ ] `radnik@demo.ba`: BEZ „Grupa".
+- [ ] `vlasnik@demo.test`: BEZ „Moj dan" i BEZ „Grupa" — samo rokovi, projekti, odjava.
+- [ ] `voditelj@demo.test`: IMA „Moj dan"; projekti samo dodijeljeni (sužen opseg).
+- [ ] `radnik@demo.test`: BEZ „Grupa".
 
 ## 8. Teme i izgled
 

@@ -47,9 +47,9 @@ describe("login (A1): kontrolni znakovi ne idu na server", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     try {
-      await login("ko\u0000ris@demo.ba", "lozinka");
+      await login("ko\u0000ris@demo.test", "lozinka");
       expect(sentBodies.length).toBe(1);
-      expect(sentBodies[0]!.email).toBe("koris@demo.ba");
+      expect(sentBodies[0]!.email).toBe("koris@demo.test");
       // lozinka se NE dira: kontrolni znak u njoj znači pogrešan unos
       expect(sentBodies[0]!.password).toBe("lozinka");
     } finally {
@@ -76,8 +76,8 @@ describe("login (A1): kontrolni znakovi ne idu na server", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     try {
-      await login("  koris@demo.ba  ", "lozinka");
-      expect(sentBodies[0]!.email).toBe("koris@demo.ba");
+      await login("  koris@demo.test  ", "lozinka");
+      expect(sentBodies[0]!.email).toBe("koris@demo.test");
     } finally {
       vi.unstubAllGlobals();
     }

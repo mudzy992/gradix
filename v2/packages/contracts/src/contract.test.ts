@@ -122,7 +122,7 @@ describe("šeme prihvataju stvarne odgovore", () => {
     const sample = {
       user: {
         id: "usr_1",
-        email: "ured@demo.ba",
+        email: "ured@demo.test",
         firstName: "Amina",
         lastName: "Karić",
         roles: ["ADMIN"],
@@ -147,7 +147,7 @@ describe("šeme prihvataju stvarne odgovore", () => {
       users: [
         {
           id: "usr_1",
-          email: "ured@demo.ba",
+          email: "ured@demo.test",
           firstName: "Amina",
           lastName: "Karić",
           isActive: true,
@@ -205,7 +205,7 @@ describe("šeme prihvataju stvarne odgovore", () => {
           entityType: "invitation",
           entityId: "inv_1",
           actorId: "usr_1",
-          actorEmail: "ured@demo.ba",
+          actorEmail: "ured@demo.test",
           metadata: { roles: ["WORKER"] },
           createdAt: "2026-11-08T09:00:00.000Z",
         },

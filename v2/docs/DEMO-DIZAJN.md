@@ -19,7 +19,7 @@ pnpm --filter @gradix/web build && \
 DATABASE_URL=... AUTH_SECRET=... pnpm --filter @gradix/web start -p 3140
 ```
 
-Prijava: **`ured@demo.ba`** / `SEED_PASSWORD`. Ako je limit prijave aktivan (5 pokušaja / 60 s),
+Prijava: **`ured@demo.test`** / `SEED_PASSWORD`. Ako je limit prijave aktivan (5 pokušaja / 60 s),
 poruka na ekranu nosi broj sekundi — ne treba čistiti bazu.
 
 **Mobilni ekran** (isti tokeni, ista pravila):

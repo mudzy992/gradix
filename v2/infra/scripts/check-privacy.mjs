@@ -11,7 +11,7 @@
  *  2. Polja ličnih podataka u KODU (`jmbg`, `broj_licne`, `bankovni_racun`, `iban`) — u R2a tih
  *     kolona nema, pa pojava imena polja znači da se nešto vratilo. U `docs/` su imena polja
  *     dozvoljena: plan mora da ih imenuje da bi ih zabranio.
- *  3. Email adrese van rezervisanih domena (`*.test`, `example.*`, `@demo.ba`).
+ *  3. Email adrese van rezervisanih domena (`*.test`, `example.*`, `@demo.test`).
  *
  * Ne traži imena i prezimena: „Amina Karić“ je sintetičko ime koje se ne razlikuje od stvarnog,
  * i takva provjera bi davala lažne pogotke bez ijedne koristi.
@@ -56,7 +56,7 @@ const PERSONAL_TS = /(^|[^\w.])(jmbg|brojLicne|licnaKarta|bankovniRacun|iban)\s*
 const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|json|md|sql|ya?ml|html|css|txt|csv)$/;
 
 /**
- * Dopušteni domeni: `*.test` (rezervisan za testove), `example.*` (RFC 2606) i `@demo.ba`.
+ * Dopušteni domeni: `*.test` (rezervisan za testove), `example.*` (RFC 2606) i `@demo.test`.
  */
 const ALLOWED_EMAIL =
   /^[A-Za-z0-9._%+-]+@([a-z0-9-]+\.)*(test|example)$|^[A-Za-z0-9._%+-]+@(demo\.ba|example\.com|example\.org|example\.net|localhost)$/i;
@@ -123,7 +123,7 @@ const CASES = [
   { name: "ispravan JMBG se hvata", file: "seed.ts", body: 'const j = "0101990151238";', expect: true },
   { name: "13 cifara sa pogrešnom kontrolnom prolazi", file: "seed.ts", body: 'const t = "0101990151230";', expect: false },
   { name: "stvarni email domen se hvata", file: "a.md", body: "kontakt: pero.peric@gmail.com", expect: true },
-  { name: "demo domen prolazi", file: "a.md", body: "kontakt: ured@demo.ba", expect: false },
+  { name: "demo domen prolazi", file: "a.md", body: "kontakt: ured@demo.test", expect: false },
   { name: "kolona JMBG-a u SQL-u se hvata", file: "schema.sql", body: "CREATE TABLE workers (jmbg TEXT);", expect: true },
   { name: "polje u TS tipu se hvata", file: "types.ts", body: "type Worker = { jmbg: string };", expect: true },
   { name: "spisak zabranjenih polja prolazi", file: "guard.ts", body: 'const BLOCKED = ["jmbg", "iban"];', expect: false },

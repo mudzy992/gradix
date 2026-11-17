@@ -3,11 +3,13 @@
  * ne samo tvrditi. Podaci su realistični (niskogradnja), ne "Test 1".
  *
  * Pokretanje: DATABASE_ADMIN_URL=... SEED_PASSWORD=... pnpm --filter @gradix/web exec tsx scripts/seed.ts
- * Idempotentno: ponovni seed ne pravi duplikate.
+ * Pilot reset pa seed: ... tsx scripts/seed.ts --reset-pilot
+ * Idempotentno: ponovni seed ne pravi duplikate; sam seed NE briše pilot workdays/receipts.
  */
 import { Pool } from "pg";
 import argon2 from "argon2";
 import { companyId, withCompany } from "@gradix/db";
+import { resetPilotSynthetic } from "./reset-pilot";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const seedPassword = process.env.SEED_PASSWORD;
@@ -16,6 +18,10 @@ if (!seedPassword) throw new Error("Potreban SEED_PASSWORD");
 if (seedPassword.length < 10) throw new Error("SEED_PASSWORD mora imati najmanje 10 znakova");
 
 const pool = new Pool({ connectionString: adminUrl });
+if (process.argv.includes("--reset-pilot")) {
+  const report = await resetPilotSynthetic(pool);
+  console.log("reset-pilot:", JSON.stringify(report));
+}
 
 const hash = await argon2.hash(seedPassword, {
   type: argon2.argon2id,
@@ -41,13 +47,13 @@ const companies = [
 ];
 
 const users: SeedUser[] = [
-  { id: "usr_vlasnik", email: "vlasnik@demo.ba", first: "Emir", last: "Hadžić", role: "OWNER", companyId: "cmp_demo" },
-  { id: "usr_ured", email: "ured@demo.ba", first: "Amina", last: "Karić", role: "ADMIN", companyId: "cmp_demo" },
-  { id: "usr_sef", email: "sef@demo.ba", first: "Mario", last: "Perić", role: "SITE_SUPERVISOR", companyId: "cmp_demo" },
-  { id: "usr_radnik", email: "radnik@demo.ba", first: "Amar", last: "Hadžić", role: "WORKER", companyId: "cmp_demo" },
+  { id: "usr_vlasnik", email: "vlasnik@demo.test", first: "Emir", last: "Hadžić", role: "OWNER", companyId: "cmp_demo" },
+  { id: "usr_ured", email: "ured@demo.test", first: "Amina", last: "Karić", role: "ADMIN", companyId: "cmp_demo" },
+  { id: "usr_sef", email: "sef@demo.test", first: "Mario", last: "Perić", role: "SITE_SUPERVISOR", companyId: "cmp_demo" },
+  { id: "usr_radnik", email: "radnik@demo.test", first: "Amar", last: "Hadžić", role: "WORKER", companyId: "cmp_demo" },
   // C.1: voditelj projekta sa suženim opsegom — E2E i snimci moraju vidjeti pregled „u
   // svom opsegu“, a ne samo cijelu firmu. Dodijeljen je na dionicu (wrk_demo_kenan).
-  { id: "usr_voditelj", email: "voditelj@demo.ba", first: "Kenan", last: "Softić", role: "PROJECT_MANAGER", companyId: "cmp_demo", scope: "PROJECTS" },
+  { id: "usr_voditelj", email: "voditelj@demo.test", first: "Kenan", last: "Softić", role: "PROJECT_MANAGER", companyId: "cmp_demo", scope: "PROJECTS" },
   { id: "usr_stranac", email: "vlasnik@druga.test", first: "Nikola", last: "Jović", role: "OWNER", companyId: "cmp_druga" },
 ];
 

@@ -10,7 +10,7 @@ const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";
 
 async function login(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill("ured@demo.ba");
+  await page.getByLabel("Email").fill("ured@demo.test");
   await page.getByLabel("Lozinka").fill(PASSWORD);
   await page.getByRole("button", { name: "Prijavi se" }).click();
   await page.waitForURL("**/pregled");

@@ -254,7 +254,7 @@ offline_block() {
     return 1
   fi
   announce notice "mreža" "uključena prije offline bloka"
-  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml" radnik@demo.ba; then
+  if ! run_flow "offline-prijava-i-kes" "$flows_dir/02-offline-prijava-i-kes.yaml" radnik@demo.test; then
     failed+=("offline-prijava-i-kes (blok prekinut: 03/04 ovise o prijavi i kešu)")
     return 1
   fi
@@ -283,18 +283,18 @@ offline_block() {
 
 case "$scenario" in
   sve)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.ba; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.test; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     offline_block || true
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.ba; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.test; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   snimci)
-    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.ba; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
+    if run_flow "snimci-i-A1e" "$flows_dir/01-snimci.yaml" radnik@demo.test; then passed+=("snimci-i-A1e"); else failed+=("snimci-i-A1e"); fi
     ;;
   offline)
     offline_block || true
     ;;
   grupa)
-    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.ba; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
+    if run_flow "sef-grupa" "$flows_dir/05-grupa.yaml" sef@demo.test; then passed+=("sef-grupa"); else failed+=("sef-grupa"); fi
     ;;
   *)
     echo "nepoznat scenarij: $scenario (sve | snimci | offline | grupa)" >&2

@@ -25,7 +25,7 @@ const PAGES: { name: string; href: string }[] = [
 
 async function login(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill("vlasnik@demo.ba");
+  await page.getByLabel("Email").fill("vlasnik@demo.test");
   await page.getByLabel("Lozinka").fill(PASSWORD);
   await page.getByRole("button", { name: "Prijavi se" }).click();
   await page.waitForURL("**/pregled");

@@ -50,7 +50,7 @@ Spremno.
   Teren:  pnpm --filter @gradix/mobile start (Expo) ili export -p web
 
 Prijave (seed):
-  ured@demo.ba     / $SEED_PASSWORD   (ADMIN, Niskogradnja Demo)
-  vlasnik@demo.ba  / $SEED_PASSWORD   (OWNER, Niskogradnja Demo)
+  ured@demo.test     / $SEED_PASSWORD   (ADMIN, Niskogradnja Demo)
+  vlasnik@demo.test  / $SEED_PASSWORD   (OWNER, Niskogradnja Demo)
   vlasnik@druga.ba / $SEED_PASSWORD   (OWNER, Druga Firma — za provjeru izolacije)
 INFO

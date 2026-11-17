@@ -12,7 +12,7 @@ import { expectNoSeriousA11yViolations } from "@/test/axe";
 const users = [
   {
     id: "usr_owner",
-    email: "vlasnik@demo.ba",
+    email: "vlasnik@demo.test",
     firstName: "Emir",
     lastName: "Hadžić",
     isActive: true,
@@ -23,7 +23,7 @@ const users = [
   },
   {
     id: "usr_worker",
-    email: "sef@demo.ba",
+    email: "sef@demo.test",
     firstName: "Mario",
     lastName: "Perić",
     isActive: true,

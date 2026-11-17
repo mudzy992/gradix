@@ -446,7 +446,7 @@ Vlasnik prolazi uživo, na demo firmi:
 - **U R2a se ne unose JMBG, adresa ni bankovni račun.** Ne postoje kao kolone, pa ne mogu ni
   slučajno ući kroz uvoz; nepodržane kolone se prijavljuju i ignorišu (§2.2).
 - **Svi seed i test podaci su sintetički**, u rezervisanim domenima (`*.test`, `example.*`,
-  `@demo.ba`); telefoni iz opsega za fikciju. U repou nema stvarnih ličnih podataka.
+  `@demo.test`); telefoni iz opsega za fikciju. U repou nema stvarnih ličnih podataka.
 - **CI provjera postoji** (`infra/scripts/check-privacy.mjs`, korak prije testova): JMBG po
   kontrolnoj cifri, polja ličnih podataka u kodu, strani emailovi — sa samoprovjerom da pravilo
   pada na stvarni podatak.

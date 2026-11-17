@@ -105,7 +105,7 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
 
   it("pregled ne piše ništa u bazu", async () => {
     const parsed = await parse(
-      await makeWorkbook([WORKER_HEADER, ["Amina", "Karić", "061 111 222", "amina@demo.ba", "Zidar", "STALNO", "01.03.2025", null, "Ekipa 1"]]),
+      await makeWorkbook([WORKER_HEADER, ["Amina", "Karić", "061 111 222", "amina@demo.test", "Zidar", "STALNO", "01.03.2025", null, "Ekipa 1"]]),
     );
     const before = await admin.query("SELECT count(*)::int AS n FROM workers WHERE company_id = $1", [COMPANY]);
     const preview = await previewImport(pool, COMPANY as never, "workers", parsed, workerMapping);

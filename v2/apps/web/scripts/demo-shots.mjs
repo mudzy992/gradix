@@ -22,7 +22,7 @@ const outDir = join(here, "../../docs/design/demo-r1a");
 mkdirSync(outDir, { recursive: true });
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3140";
-const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.ba";
+const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.test";
 const PASSWORD = process.env.SEED_PASSWORD ?? "nije,kikiriki";
 const WIDTHS = [360, 1440];
 
@@ -70,7 +70,7 @@ async function issueLinks(cookies) {
       method: "POST",
       headers: { "content-type": "application/json", cookie: cookieHeader },
       body: JSON.stringify({
-        email: `snimak+${Date.now()}@demo.ba`,
+        email: `snimak+${Date.now()}@demo.test`,
         roles: ["WORKER"],
         scope: "COMPANY",
       }),
@@ -172,7 +172,7 @@ for (const width of WIDTHS) {
   // 7. prijava i greška prijave
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle0" });
   await shot(page, width, "prijava");
-  await page.type("#email", "pogresan@demo.ba");
+  await page.type("#email", "pogresan@demo.test");
   await page.type("#password", "pogresna-lozinka");
   await page.click('button[type="submit"]');
   await new Promise((resolve) => setTimeout(resolve, 600));
@@ -185,7 +185,7 @@ for (const width of WIDTHS) {
       await fetch(`${base}/api/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: "limit@demo.ba", password: "pogresna" }),
+        body: JSON.stringify({ email: "limit@demo.test", password: "pogresna" }),
       });
     }
   }, BASE);
@@ -195,7 +195,7 @@ for (const width of WIDTHS) {
       if (field) field.value = "";
     }
   });
-  await page.type("#email", "limit@demo.ba");
+  await page.type("#email", "limit@demo.test");
   await page.type("#password", "pogresna-lozinka");
   await page.click('button[type="submit"]');
   await new Promise((resolve) => setTimeout(resolve, 900));

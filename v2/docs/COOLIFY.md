@@ -308,11 +308,18 @@ cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
 ```
 
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
-kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ured@demo.ba`,
-`vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
-Za **pilot oblik A** ovo je i „vrati sintetičku ekipu na početno“ (šef, radnici, projekti,
-dodjele): ponovi istu naredbu. Razriješeni sukobi ostaju razriješeni (ne zaobilazi guard);
-vidi §5.2 za nove demo sukobe. Dokaz: `seed-demo.integration.test.ts`.
+kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ured@demo.test`,
+`vlasnik@demo.test`, `sef@demo.test` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
+Običan ponovni seed **ne briše** pilot workdays/receipts (samo upsert). Za povrat unosa:
+
+```sh
+DATABASE_ADMIN_URL=... SEED_PASSWORD='…' \
+  pnpm --filter @gradix/web exec tsx scripts/seed.ts --reset-pilot
+```
+
+(`--reset-pilot` briše OPEN sukobe i pilot unose u demo firmi; **ne** RESOLVED; **ne** drugu
+firmu; zatim upsert seeda.) Dokaz: `reset-pilot.integration.test.ts`. Roster:
+`seed-demo.integration.test.ts`. Detalji: `MOBILE-EXPO-GO.md`.
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
 
@@ -330,7 +337,7 @@ DATABASE_ADMIN_URL=... REMOVE_DEMO_CONFIRM=niskogradnja-demo \
 
 Bez `REMOVE_DEMO_CONFIRM=niskogradnja-demo` skripta staje prije bilo kakve izmjene.
 Briše sve redove demo firme (tenant tabele se otkrivaju iz kataloga), samu firmu i demo
-korisnike (`@demo.ba`) koji ne pripadaju nijednoj drugoj firmi — sve ili ništa.
+korisnike (`@demo.test`) koji ne pripadaju nijednoj drugoj firmi — sve ili ništa.
 
 ### 5.2. Novi demo sukobi (kad se postojeći razriješe)
 

@@ -22,7 +22,7 @@ const outDir = join(here, "../../docs/design/demo-r1b");
 mkdirSync(outDir, { recursive: true });
 
 const BASE = process.env.BASE ?? "http://127.0.0.1:3140";
-const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.ba";
+const EMAIL = process.env.DEMO_EMAIL ?? "ured@demo.test";
 const PASSWORD = process.env.SEED_PASSWORD ?? "nije,kikiriki";
 const WIDTHS = [360, 1440];
 
@@ -123,7 +123,7 @@ for (const width of WIDTHS) {
   await editPage.goto(`${BASE}/ured/korisnici`, { waitUntil: "networkidle0" });
   await editPage.evaluate(() => {
     const rows = [...document.querySelectorAll("tr")];
-    const row = rows.find((tr) => tr.textContent?.includes("sef@demo.ba"));
+    const row = rows.find((tr) => tr.textContent?.includes("sef@demo.test"));
     row?.querySelector('button[aria-haspopup="menu"]')?.click();
   });
   await wait(250);
@@ -143,7 +143,7 @@ for (const width of WIDTHS) {
   await errorPage.goto(`${BASE}/ured/korisnici`, { waitUntil: "networkidle0" });
   await errorPage.evaluate(() => {
     const rows = [...document.querySelectorAll("tr")];
-    const row = rows.find((tr) => tr.textContent?.includes("sef@demo.ba"));
+    const row = rows.find((tr) => tr.textContent?.includes("sef@demo.test"));
     row?.querySelector('button[aria-haspopup="menu"]')?.click();
   });
   await wait(250);
@@ -230,7 +230,7 @@ for (const width of WIDTHS) {
 
 /* --------------------------------------- zabrana: radnik ne vidi matricu ni trag */
 for (const width of WIDTHS) {
-  const worker = await authCookies(process.env.WORKER_EMAIL ?? "sef@demo.ba", PASSWORD);
+  const worker = await authCookies(process.env.WORKER_EMAIL ?? "sef@demo.test", PASSWORD);
   const page = await freshPage(width, worker.cookies);
   // Server preusmjerava na /pregled — to je i dokaz da ekran nije samo sakriven u meniju.
   await page.goto(`${BASE}/ured/role`, { waitUntil: "networkidle0" });

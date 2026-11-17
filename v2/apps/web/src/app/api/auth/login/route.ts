@@ -45,7 +45,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     // Brojač i prijava moraju gledati ISTI ključ: `login` normalizuje email, pa bi bez ovoga
-    // „ Ured@Demo.ba " pravio drugi brojač (i zaobilazio limit).
+    // „ Ured@demo.test " pravio drugi brojač (i zaobilazio limit).
     const email = parsed.data.email.trim().toLowerCase();
     const pool = await getVerifiedPool();
 

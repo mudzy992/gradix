@@ -14,7 +14,7 @@ const row = (id: string, action = "user.membership_changed") => ({
   entityType: "user",
   entityId: "usr_1",
   actorId: "usr_admin",
-  actorEmail: "admin@demo.ba",
+  actorEmail: "admin@demo.test",
   metadata: { from: { roles: ["WORKER"] }, to: { roles: ["WORKER", "DRIVER"] } },
   createdAt: "2026-11-08T10:00:00.000Z",
 });
@@ -41,7 +41,7 @@ describe("audit trag", () => {
     mockPages([{ rows: [row("a1")], nextCursor: null }]);
     render(<AuditClient actors={actors} />);
     expect(await screen.findByText("Promijenjene role ili opseg")).toBeInTheDocument();
-    expect(screen.getByText("admin@demo.ba")).toBeInTheDocument();
+    expect(screen.getByText("admin@demo.test")).toBeInTheDocument();
     expect(screen.getByText(/To je cijeli trag/)).toBeInTheDocument();
   });
 

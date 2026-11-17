@@ -34,7 +34,7 @@ const groups: NavGroup[] = [
 
 const user = {
   displayName: "Amina Karić",
-  email: "ured@demo.ba",
+  email: "ured@demo.test",
   companyName: "Niskogradnja Demo d.o.o.",
   roles: ["ADMIN"],
 };

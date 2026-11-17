@@ -6,7 +6,7 @@ Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.
 
 ## Koraci na telefonu (šef, grupni unos)
 
-1. Prijavi se kao šef (`sef@demo.ba`). Na početnom ekranu izaberi **Grupa — unos za ekipu**.
+1. Prijavi se kao šef (`sef@demo.test`). Na početnom ekranu izaberi **Grupa — unos za ekipu**.
 2. Provjeri zajedničke podatke: projekat **P-01/2026**, mašina **BAG-01 · Bager CAT 320**,
    početak **07:30**, kraj **15:30**. Ekipa iz opsega je unaprijed izabrana (5 radnika).
 3. Kod jednog radnika upiši pojedinačno vrijeme (npr. `08:00-16:00`) u polje ispod njegovog imena.
@@ -26,6 +26,6 @@ Snimci odobrenog dizajna: `docs/demo-dizajn/{360,1440}-{light,dark}-step7-grupa.
 ## Radnik i ured
 
 10. Odjavi se (odjava sa neposlanim stavkama prvo traži izričitu potvrdu) i prijavi se kao radnik:
-    **Moj dan** (`radnik@demo.ba`) — izaberi projekat i mašinu, sačuvaj, pošalji.
+    **Moj dan** (`radnik@demo.test`) — izaberi projekat i mašinu, sačuvaj, pošalji.
 11. Na webu (`/ured/radni-dani`, OWNER/ADMIN) dan je vidljiv u pregledu; dan sa otvorenim
     segmentom ili nepoznatim krajem nosi oznaku **Za provjeru**.

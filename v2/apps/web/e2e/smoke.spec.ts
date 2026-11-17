@@ -9,11 +9,11 @@ import { NAV_ENTRIES, navEntriesForRoles } from "../src/components/nav";
 const PASSWORD = process.env.E2E_PASSWORD ?? "";
 
 const USERS: { email: string; roles: string[] }[] = [
-  { email: "vlasnik@demo.ba", roles: ["OWNER"] },
-  { email: "ured@demo.ba", roles: ["ADMIN"] },
-  { email: "voditelj@demo.ba", roles: ["PROJECT_MANAGER"] },
-  { email: "sef@demo.ba", roles: ["SITE_SUPERVISOR"] },
-  { email: "radnik@demo.ba", roles: ["WORKER"] },
+  { email: "vlasnik@demo.test", roles: ["OWNER"] },
+  { email: "ured@demo.test", roles: ["ADMIN"] },
+  { email: "voditelj@demo.test", roles: ["PROJECT_MANAGER"] },
+  { email: "sef@demo.test", roles: ["SITE_SUPERVISOR"] },
+  { email: "radnik@demo.test", roles: ["WORKER"] },
 ];
 
 async function login(page: Page, email: string) {
