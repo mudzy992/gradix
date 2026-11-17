@@ -29,6 +29,17 @@ pg_database_name() {
   printf '%s' "${base##*/}"
 }
 
+# Zamijeni ime baze u URL-u (query ostaje ispravno nakon patha).
+# Greška sed-a tipa host:5432?sslmode=.../postgres lomi psql ("extra key/value separator").
+pg_url_with_database() {
+  local url="$1"
+  local db="$2"
+  local no_q="${url%%\?*}"
+  local q=""
+  case "$url" in *\?*) q="?${url#*\?}" ;; esac
+  printf '%s/%s%s' "${no_q%/*}" "$db" "$q"
+}
+
 pg_conn() {
   local url="$1"
   # sslrootcert iz URL-a se skida; CA ide isključivo preko PGSSLROOTCERT (env).

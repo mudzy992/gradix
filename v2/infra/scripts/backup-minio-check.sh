@@ -64,11 +64,9 @@ echo "=== 4) restore baza + brojevi ==="
 RESTORE_DB="$(pg_database_name "$(pg_conn "$RESTORE_ADMIN_URL")")"
 ADMIN_MAINT="${DATABASE_ADMIN_URL:-$RESTORE_ADMIN_URL}"
 ADMIN_MAINT_CONN="$(pg_conn "$ADMIN_MAINT")"
-ADMIN_Q=""
-case "$ADMIN_MAINT_CONN" in *\?*) ADMIN_Q="?${ADMIN_MAINT_CONN#*\?}" ;; esac
-ADMIN_BASE="$(printf '%s' "$ADMIN_MAINT_CONN" | sed -E 's#([a-z]+://[^/]+)/[^?]*#\1#')"
-psql "${ADMIN_BASE}/postgres${ADMIN_Q}" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${RESTORE_DB}\"" >/dev/null
-psql "${ADMIN_BASE}/postgres${ADMIN_Q}" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${RESTORE_DB}\" OWNER CURRENT_USER" >/dev/null
+MAINT_URL="$(pg_url_with_database "$ADMIN_MAINT_CONN" "postgres")"
+psql "$MAINT_URL" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${RESTORE_DB}\"" >/dev/null
+psql "$MAINT_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${RESTORE_DB}\" OWNER CURRENT_USER" >/dev/null
 "$script_dir/restore.sh" "$ENC_PULLED"
 "$script_dir/backup-verify-counts.sh" "$MAN"
 
