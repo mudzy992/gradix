@@ -22,22 +22,16 @@ ensure_pg_ssl_env() {
   esac
 }
 
+# Ime baze iz patha URL-a (prije ?). Ne smije hvatati putanju iz sslrootcert=...
+pg_database_name() {
+  local base="${1%%\?*}"
+  base="${base%/}"
+  printf '%s' "${base##*/}"
+}
+
 pg_conn() {
   local url="$1"
-  # Uskladi sslrootcert u URL-u s PGSSLROOTCERT (kontejnerska putanja).
-  if [ -n "${PGSSLROOTCERT:-}" ]; then
-    case "$url" in
-      *sslrootcert=*)
-        url="$(printf '%s' "$url" | sed -E "s#[?&]sslrootcert=[^&]*#\&sslrootcert=${PGSSLROOTCERT}#" | sed -E 's#\?&#?#')"
-        ;;
-      *\?*)
-        url="${url}&sslrootcert=${PGSSLROOTCERT}"
-        ;;
-      *)
-        url="${url}?sslrootcert=${PGSSLROOTCERT}"
-        ;;
-    esac
-  fi
+  # sslrootcert iz URL-a se skida; CA ide isključivo preko PGSSLROOTCERT (env).
   case "$url" in
     *\?*) ;;
     *) printf '%s' "$url"; return ;;
@@ -49,7 +43,7 @@ pg_conn() {
   for pair in $query; do
     [ -z "$pair" ] && continue
     case "$pair" in
-      schema=*) continue ;;
+      schema=*|sslrootcert=*) continue ;;
     esac
     kept="${kept:+$kept&}$pair"
   done

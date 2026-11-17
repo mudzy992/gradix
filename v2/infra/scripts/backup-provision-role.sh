@@ -40,7 +40,7 @@ REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SC
 REVOKE CREATE ON SCHEMA public FROM ${ROLE_NAME};
 SQL
 
-DB_NAME=$(printf '%s' "$ADMIN" | sed -E 's#^.*/([^/?]+).*#\1#')
+DB_NAME="$(pg_database_name "$ADMIN")"
 run_psql "$ADMIN" -v ON_ERROR_STOP=1 -q -c "GRANT CONNECT ON DATABASE \"${DB_NAME}\" TO ${ROLE_NAME}"
 
 echo "PASS: role ${ROLE_NAME} je BYPASSRLS + SELECT-only (vrijednosti sakrivene)."
