@@ -1,6 +1,6 @@
 # ADR 0014 — praćenje grešaka (ops, bez implementacije)
 
-**Datum:** 2026-11-17 · **Status:** preporuka · **Opseg:** staging → pilot
+**Datum:** 2026-11-17 · **Status:** PRIHVAĆEN (vlasnik 2026-11-17) · **Opseg:** staging → pilot
 
 ## Problem
 
