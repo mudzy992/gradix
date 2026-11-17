@@ -57,14 +57,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
+# mc iz oficijalne slike (dl.min.io archive često 410); potreban za backup-provision-minio.sh.
+COPY --from=quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z /usr/bin/mc /usr/local/bin/mc
 # postgresql-client: psql/pg_dump/pg_restore (migracije + backup drill).
-# bash/openssl/awscli/curl: backup-*.sh u /app/backup (privremeni drill u web kontejneru).
-# mc: backup-provision-minio.sh (bucket + backup user) bez Docker socketa u kontejneru.
+# bash/openssl/awscli: backup-*.sh u /app/backup (privremeni drill u web kontejneru).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      postgresql-client ca-certificates bash openssl awscli coreutils curl \
- && curl -fsSL "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.RELEASE.2025-08-13T08-35-41Z" \
-      -o /usr/local/bin/mc \
+      postgresql-client ca-certificates bash openssl awscli coreutils \
  && chmod +x /usr/local/bin/mc \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 1001 nodejs \
