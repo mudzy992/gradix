@@ -66,7 +66,8 @@ ADMIN_MAINT="${DATABASE_ADMIN_URL:-$RESTORE_ADMIN_URL}"
 ADMIN_MAINT_CONN="$(pg_conn "$ADMIN_MAINT")"
 MAINT_URL="$(pg_url_with_database "$ADMIN_MAINT_CONN" "postgres")"
 psql "$MAINT_URL" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${RESTORE_DB}\"" >/dev/null
-psql "$MAINT_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${RESTORE_DB}\" OWNER CURRENT_USER" >/dev/null
+# OWNER default = ulogovani admin (CURRENT_USER nije dozvoljen u CREATE DATABASE).
+psql "$MAINT_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${RESTORE_DB}\"" >/dev/null
 "$script_dir/restore.sh" "$ENC_PULLED"
 "$script_dir/backup-verify-counts.sh" "$MAN"
 
