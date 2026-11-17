@@ -6,19 +6,19 @@
 
 | Stavka | Ishod |
 |---|---|
-| 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** / DA |
+| 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** |
+| Preimenovanje naloga `@demo.ba` → `@demo.test` | **ODOBRENO** |
 | Rotacija tajni | **DA** (odluka); stvarni podaci tek poslije izvršene rotacije |
-| Telefon za šefa | **nema** |
+| Telefon za šefa | **NEMA** |
 | Oblik pilota A, 5 dana | **DA** |
 | MinIO konzola do produkcije | **ostaje** |
 | R4b / R5 / partneri | **ne počinju** |
-| Seed email domen | `@demo.test` (+ `vlasnik@druga.test`) |
-| `--reset-pilot` | `seed.ts --reset-pilot` + test |
-| Expo Go SDK 58 | **radi** (`MOBILE-EXPO-GO.md`) |
+| Expo Go SDK 58 | očekivano radi (`check-expo`); **nije** na fizičkom uređaju |
+| `--reset-pilot` | `seed.ts --reset-pilot` |
 
 ## Radi (CI)
 
-- R1–R4a-2, Pregled, UI, C.2, 2c uvoz; seed; `--reset-pilot`.
+- R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`, `--reset-pilot`.
 
 ## Role (sažetak)
 
@@ -27,10 +27,10 @@ Mobilni: Moj dan (workerId); Grupa (SITE_SUPERVISOR + foremanScope).
 
 ## Ne radi / namjerno još nema
 
-- R4b, R5, partneri; fizički telefon šefa; izvršenje pilota na uređaju.
-- Mobilni E2E u CI se ne traži.
+- R4b, R5, partneri; fizički telefon šefa; mobilni E2E u CI se ne traži.
 
 ## Dugovi / otvoreno
 
-- Izvršiti rotaciju tajni; `PLATFORM_ADMIN_EMAILS`; MinIO konzola u produkciji;
-  retencija; B11; email provajder; ADR 0014 u produkciji.
+- Coolify: postavi `PLATFORM_ADMIN_EMAILS` na `ured@demo.test` (ili `vlasnik@demo.test`)
+  poslije redeploy + seed — inače katalog u produkcijskom modu ne prepoznaje admina.
+- Rotacija tajni; MinIO konzola u produkciji; retencija; B11; email provajder; ADR 0014 prod.

@@ -200,7 +200,7 @@ jobs:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
           # Snimci kataloga (Dio 3c): vlasnik demo firme je i platformski admin za CI server.
-          PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
         run: |
           pnpm --filter @gradix/web exec playwright install --with-deps chromium || echo "::error::PW_INSTALL_DEPS_FAILED (nastavljam bez deps koraka)"
           pnpm --filter @gradix/web exec playwright install chromium || echo "::error::PW_INSTALL_FAILED"
@@ -384,7 +384,7 @@ jobs:
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
-          PLATFORM_ADMIN_EMAILS: vlasnik@demo.ba
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
         run: |
           pnpm --filter @gradix/web seed
           pnpm --filter @gradix/web build

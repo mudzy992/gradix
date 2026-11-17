@@ -10,7 +10,7 @@ outputDir: snimci
 - takeScreenshot: 01-prijava-svjetla
 - tapOn:
     id: "Email"
-- inputText: "radnik@demo.ba"
+- inputText: "radnik@demo.test"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"
@@ -32,7 +32,7 @@ outputDir: snimci
 # „Došlo je do greške." — server 500 na NUL u emailu). Sekvenca se snimi kao dokaz.
 - tapOn:
     id: "Email"
-- inputText: "radnik@demo.ba"
+- inputText: "radnik@demo.test"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"

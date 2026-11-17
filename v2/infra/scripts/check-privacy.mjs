@@ -59,7 +59,7 @@ const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|json|md|sql|ya?ml|html|css|txt|csv)$/;
  * Dopušteni domeni: `*.test` (rezervisan za testove), `example.*` (RFC 2606) i `@demo.test`.
  */
 const ALLOWED_EMAIL =
-  /^[A-Za-z0-9._%+-]+@([a-z0-9-]+\.)*(test|example)$|^[A-Za-z0-9._%+-]+@(demo\.ba|example\.com|example\.org|example\.net|localhost)$/i;
+  /^[A-Za-z0-9._%+-]+@([a-z0-9-]+\.)*(test|example)$|^[A-Za-z0-9._%+-]+@(example\.com|example\.org|example\.net|localhost)$/i;
 
 /** `DDMMGGG RR BBB K`; K = 11 − (suma težina mod 11), gdje 10 → 0 i 11 → 1. */
 function isJmbg(candidate) {

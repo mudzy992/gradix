@@ -10,11 +10,10 @@
 | Expo Go | build za **SDK 58** ([expo.dev/go](https://expo.dev/go)) |
 | CI / lokalno | `pnpm --filter @gradix/mobile check-expo` (čita `expo/bundledNativeModules.json`, bez mreže) |
 
-**Rezultat: radi (Expo Go).** Trenutni moduli (`expo-router`, `expo-sqlite`, `expo-secure-store`, …)
-ulaze u Expo Go SDK 58. **Development build treba** tek kad uđe native modul kojeg Go nema
-— to **ne radi još** kao zahtjev ovog pilota.
+**Rezultat (izvor: `package.json` + `check-expo` + lista modula u Expo Go SDK 58): očekivano radi u Expo Go.**
+Development build treba tek kad uđe modul kojeg Go nema — **ne** za ovaj pilot.
 
-**Nije provjereno na fizičkom telefonu** (odluka: telefon za šefa **nema**). Emulator 2c/A1: DA.
+**Expo Go nije provjeren na fizičkom uređaju** (telefon za šefa: NEMA). Emulator 2c/A1: PRIHVAĆEN.
 
 ---
 
@@ -51,39 +50,30 @@ Lozinka = `SEED_PASSWORD` s kojim je seedan staging — **ne upisuj vrijednost u
 
 ## Semantika reseta
 
-### Samo `seed.sh` / `seed.ts` (bez flaga)
+| Entitet | Samo `seed.ts` / `seed.sh` | `--reset-pilot` pa seed |
+|---|---|---|
+| Radni dani (`workdays`) | **ostaje** (pilot dani se ne brišu) | **briše se** ako nema preostalih unosa; seed može ponovo upisati `wd_demo_*` |
+| Unosi (`work_entries`) | **ostaje** | **briše se** osim onih vezanih uz RESOLVED; seed upsert `we_demo_*` |
+| Sinhronizacijski događaji (`sync_change_log`, `sync_receipts`, slotovi) | **ostaje** | **briše se** (samo `cmp_demo`) |
+| Sukobi OPEN | **ostaje** (`DO NOTHING`) | **briše se**; seed ponovo upisuje `cnf_demo_*` ako fale |
+| Sukobi RESOLVED | **ostaje** (ne vraća na OPEN) | **ostaje** (guard se ne zaobilazi) |
+| Dodjele | seed `pas_*` **vraćeno** ako fale; **višak ostaje** | višak van `pas_1..8` **briše se**; `pas_*` **vraćeno** |
 
-| Tabela / pojam | Poslije ponovnog seeda |
-|---|---|
-| Firme, users, memberships, workers, projects, mašine | **vraćeno** (upsert) |
-| Dodjele (`pas_*`) | **vraćeno** ako nedostaju; **višak ostaje** |
-| Seed sukobi `cnf_demo_*` | **ostaje** ako postoje (`DO NOTHING`); ne vraća RESOLVED→OPEN |
-| Radni dani / unosi nastali u pilotu | **ostaje** (seed ih ne briše) |
-| `sync_receipts` / `sync_change_log` | **ostaje** |
-| Druga firma (`cmp_druga`) | **ostaje** (seed je ne briše) |
-
-**Zaključak:** običan seed **nije** povrat na stanje prije pilota.
-
-### Komanda `--reset-pilot` pa seed
+Običan seed **nije** povrat prije pilota. Komanda:
 
 ```sh
 DATABASE_ADMIN_URL=... SEED_PASSWORD=... \
   pnpm --filter @gradix/web exec tsx scripts/seed.ts --reset-pilot
 ```
 
-(Coolify web terminal: ista skripta u slici ako je `seed` izbuildan s flagom; inače gornja naredba.)
+Dokaz: `reset-pilot.integration.test.ts`. `cmp_druga` se ne dira.
 
-| Tabela / pojam | Poslije `--reset-pilot` + seed |
-|---|---|
-| Otvoreni sukobi (`status=OPEN`) u `cmp_demo` | **briše se**, seed ponovo upisuje `cnf_demo_*` ako fale |
-| Razriješeni sukobi (`RESOLVED`) | **ostaje** (guard se ne zaobilazi) |
-| Pilot `work_entries` / `workdays` bez veze na RESOLVED | **briše se** |
-| Unosi vezani uz RESOLVED | **ostaje** |
-| `sync_receipts`, `sync_change_log`, `sync_cursor_slots` u `cmp_demo` | **briše se** |
-| Dodjele van `pas_1..8` | **briše se**; seed drži `pas_*` |
-| `cmp_druga` | **ostaje** (naredba je ne dira) |
+### Preimenovanje `@demo.ba` → `@demo.test`
 
-Dokaz: `reset-pilot.integration.test.ts`.
+Razlog: kriterij sintetičkih adresa (`.test`); vlasnik **ODOBRIO**. Seed upsert-a `email` na istim
+user ID-jevima — nema paralelnih `@demo.ba` seed naloga. **Coolify env** (katalog):
+`PLATFORM_ADMIN_EMAILS` mora biti nova adresa, npr. `ured@demo.test` ili `vlasnik@demo.test`
+(zarezom više). Mehanizam se ne mijenja.
 
 ---
 

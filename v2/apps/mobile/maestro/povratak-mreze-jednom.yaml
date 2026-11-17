@@ -1,7 +1,7 @@
 # Povratak mreže: zapis nastao offline šalje se TAČNO jednom (idempotency dokaz na uređaju).
 # Koraci s avionskim režimom radi čovjek/uređaj — Maestro ne gasi mrežu sam,
 # pa tok ima eksplicitne tačke pauze (runScript/čekanje nisu automatski).
-# Preduslov: prijavljen radnik (radnik1@demo.ba), ekran Moj dan.
+# Preduslov: prijavljen radnik (radnik1@demo.test), ekran Moj dan.
 appId: ba.gradix.teren
 ---
 - launchApp

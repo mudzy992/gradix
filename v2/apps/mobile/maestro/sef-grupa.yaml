@@ -1,5 +1,5 @@
 # Šef grupni unos: jedan projekat/mašina, zajedničko vrijeme, ishod po radniku.
-# Preduslov: mreža dostupna; demo šef postoji (sef@demo.ba), ekipa od 6 radnika u opsegu.
+# Preduslov: mreža dostupna; demo šef postoji (sef@demo.test), ekipa od 6 radnika u opsegu.
 appId: ba.gradix.teren
 ---
 - launchApp:
@@ -7,7 +7,7 @@ appId: ba.gradix.teren
 - assertVisible: "Prijava za teren."
 - tapOn:
     id: "Email"
-- inputText: "sef@demo.ba"
+- inputText: "sef@demo.test"
 - tapOn:
     id: "Lozinka"
 - inputText: "${DEMO_LOZINKA}"

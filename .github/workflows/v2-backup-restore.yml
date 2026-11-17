@@ -241,7 +241,7 @@ jobs:
           code=$(curl -s -o /tmp/login.json -w "%{http_code}" \
             -X POST http://127.0.0.1:3000/api/auth/login \
             -H 'content-type: application/json' \
-            -d "{\"email\":\"vlasnik@demo.ba\",\"password\":\"$SEED_PASSWORD\"}")
+            -d "{\"email\":\"vlasnik@demo.test\",\"password\":\"$SEED_PASSWORD\"}")
           echo "login HTTP $code"
           if [ "$code" != "200" ]; then
             echo "::error::prijava na vraćenoj bazi nije uspjela (HTTP $code)"
