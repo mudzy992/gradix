@@ -10,97 +10,119 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-set -a
-# shellcheck disable=SC1090
-. "$ENV_FILE"
-set +a
-
-: "${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL mora postojati u .env}"
-: "${MINIO_ROOT_USER:?MINIO_ROOT_USER potreban za provision bucketa}"
-: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD potreban za provision bucketa}"
-
-require_openssl() {
-  command -v openssl >/dev/null 2>&1 || { echo "ERROR: openssl nije u PATH." >&2; exit 2; }
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "ERROR: openssl nije u PATH." >&2
+  exit 2
+fi
+resolve_python() {
+  local c
+  for c in \
+    "${BACKUP_PYTHON:-}" \
+    "${LOCALAPPDATA:+$LOCALAPPDATA/Programs/Python/Python312/python.exe}" \
+    "${LOCALAPPDATA:+$LOCALAPPDATA/Programs/Python/Python311/python.exe}" \
+    "$(command -v python 2>/dev/null || true)" \
+    "$(command -v python3 2>/dev/null || true)"
+  do
+    [ -n "$c" ] || continue
+    case "$c" in *WindowsApps*) continue ;; esac
+    if "$c" -c "import sys" >/dev/null 2>&1; then
+      printf '%s' "$c"
+      return 0
+    fi
+  done
+  return 1
 }
-require_openssl
+PY="$(resolve_python)" || { echo "ERROR: python nije u PATH." >&2; exit 2; }
 
-gen_hex() { openssl rand -hex "$1"; }
-gen_b64() { openssl rand -base64 "$1" | tr -d '\n' | tr '+/' 'Aa'; }
+# Sigurno čitanje/upis .env (podržava & u URL-ovima). Ne printa vrijednosti.
+ENV_FILE="$ENV_FILE" "$PY" - <<'PY'
+import os, secrets, urllib.parse
+from pathlib import Path
 
-# Generiši samo ako fali.
-if [ -z "${BACKUP_ENCRYPTION_KEY:-}" ]; then
-  BACKUP_ENCRYPTION_KEY="$(gen_hex 32)"
-fi
-if [ -z "${BACKUP_ROLE_PASSWORD:-}" ]; then
-  BACKUP_ROLE_PASSWORD="$(gen_b64 24)"
-fi
-if [ -z "${BACKUP_S3_ACCESS_KEY:-}" ]; then
-  BACKUP_S3_ACCESS_KEY="gx2bak$(gen_hex 10)"
-fi
-if [ -z "${BACKUP_S3_SECRET_KEY:-}" ]; then
-  BACKUP_S3_SECRET_KEY="$(gen_hex 32)"
-fi
-if [ -z "${BACKUP_S3_BUCKET:-}" ]; then
-  BACKUP_S3_BUCKET="gradix-stg-backups"
-fi
-if [ -z "${BACKUP_S3_ENDPOINT:-}" ]; then
-  BACKUP_S3_ENDPOINT="${MINIO_PUBLIC_ENDPOINT:-${MINIO_ENDPOINT:?postavi BACKUP_S3_ENDPOINT ili MINIO_PUBLIC_ENDPOINT}}"
-fi
-if [ -z "${BACKUP_S3_PREFIX:-}" ]; then
-  BACKUP_S3_PREFIX="backups"
-fi
-BACKUP_DEST="${BACKUP_DEST:-s3}"
+env_path = Path(os.environ["ENV_FILE"])
+text = env_path.read_text(encoding="utf-8")
 
-# DATABASE_BACKUP_URL iz admin URL-a: zamijeni userinfo sa gradix_backup:lozinka.
-# Ne echo-aj rezultat.
-python_build_urls() {
-  BACKUP_ROLE_PASSWORD="$BACKUP_ROLE_PASSWORD" DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" \
-  python - <<'PY'
-import os, urllib.parse
-admin = os.environ["DATABASE_ADMIN_URL"]
-pwd = os.environ["BACKUP_ROLE_PASSWORD"]
+def parse_env(raw: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        if s.startswith("export "):
+            s = s[7:].strip()
+        k, _, v = s.partition("=")
+        k = k.strip()
+        v = v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+            v = v[1:-1]
+        out[k] = v
+    return out
+
+def upsert(raw: str, updates: dict[str, str]) -> str:
+    keys = set(updates)
+    lines = []
+    seen: set[str] = set()
+    for line in raw.splitlines():
+        s = line.strip()
+        key = None
+        if s and not s.startswith("#") and "=" in s:
+            body = s[7:].strip() if s.startswith("export ") else s
+            key = body.partition("=")[0].strip()
+        if key in keys:
+            if key not in seen:
+                lines.append(f"{key}={updates[key]}")
+                seen.add(key)
+            continue
+        lines.append(line)
+    for key, val in updates.items():
+        if key not in seen:
+            lines.append(f"{key}={val}")
+    return "\n".join(lines).rstrip() + "\n"
+
+data = parse_env(text)
+admin = data.get("DATABASE_ADMIN_URL") or ""
+if not admin:
+    raise SystemExit("ERROR: DATABASE_ADMIN_URL mora postojati u .env")
+root_user = data.get("MINIO_ROOT_USER") or ""
+root_pass = data.get("MINIO_ROOT_PASSWORD") or ""
+if not root_user or not root_pass:
+    raise SystemExit("ERROR: MINIO_ROOT_USER/MINIO_ROOT_PASSWORD potrebni za provision")
+
+def keep_or(key: str, factory):
+    cur = data.get(key) or ""
+    return cur if cur else factory()
+
+enc = keep_or("BACKUP_ENCRYPTION_KEY", lambda: secrets.token_hex(32))
+role_pw = keep_or("BACKUP_ROLE_PASSWORD", lambda: secrets.token_urlsafe(24))
+ak = keep_or("BACKUP_S3_ACCESS_KEY", lambda: "gx2bak" + secrets.token_hex(10))
+sk = keep_or("BACKUP_S3_SECRET_KEY", lambda: secrets.token_hex(32))
+bucket = keep_or("BACKUP_S3_BUCKET", lambda: "gradix-stg-backups")
+endpoint = data.get("BACKUP_S3_ENDPOINT") or data.get("MINIO_PUBLIC_ENDPOINT") or data.get("MINIO_ENDPOINT") or ""
+if not endpoint:
+    raise SystemExit("ERROR: BACKUP_S3_ENDPOINT ili MINIO_PUBLIC_ENDPOINT mora postojati")
+prefix = keep_or("BACKUP_S3_PREFIX", lambda: "backups")
+dest = keep_or("BACKUP_DEST", lambda: "s3")
+
 u = urllib.parse.urlparse(admin)
-# netloc: user:pass@host:port
 host = u.hostname or ""
 port = f":{u.port}" if u.port else ""
-auth = urllib.parse.quote("gradix_backup", safe="") + ":" + urllib.parse.quote(pwd, safe="")
-netloc = f"{auth}@{host}{port}"
-path = u.path or "/gradix"
-query = ("?" + u.query) if u.query else ""
-backup = urllib.parse.urlunparse((u.scheme, netloc, path, "", u.query, ""))
-# restore admin: ista admin konekcija, baza gradix_restore
-restore_path = "/gradix_restore"
-restore = urllib.parse.urlunparse((u.scheme, u.netloc, restore_path, "", u.query, ""))
-# restore app URL optional
-print("DATABASE_BACKUP_URL=" + backup)
-print("RESTORE_ADMIN_URL=" + restore)
+auth = urllib.parse.quote("gradix_backup", safe="") + ":" + urllib.parse.quote(role_pw, safe="")
+backup_url = urllib.parse.urlunparse((u.scheme, f"{auth}@{host}{port}", u.path or "/gradix", "", u.query, ""))
+restore_admin = urllib.parse.urlunparse((u.scheme, u.netloc, "/gradix_restore", "", u.query, ""))
+
+updates = {
+    "BACKUP_ENCRYPTION_KEY": enc,
+    "BACKUP_ROLE_PASSWORD": role_pw,
+    "BACKUP_DEST": dest,
+    "BACKUP_S3_ENDPOINT": endpoint,
+    "BACKUP_S3_BUCKET": bucket,
+    "BACKUP_S3_PREFIX": prefix,
+    "BACKUP_S3_ACCESS_KEY": ak,
+    "BACKUP_S3_SECRET_KEY": sk,
+    "DATABASE_BACKUP_URL": backup_url,
+    "RESTORE_ADMIN_URL": restore_admin,
+}
+env_path.write_text(upsert(text, updates), encoding="utf-8")
+print("PASS: backup varijable upisane u lokalni .env (vrijednosti sakrivene).")
+print("KEYS: " + " ".join(updates.keys()))
 PY
-}
-
-URL_LINES="$(python_build_urls)"
-DATABASE_BACKUP_URL="$(printf '%s\n' "$URL_LINES" | sed -n 's/^DATABASE_BACKUP_URL=//p')"
-RESTORE_ADMIN_URL="$(printf '%s\n' "$URL_LINES" | sed -n 's/^RESTORE_ADMIN_URL=//p')"
-
-upsert_env() {
-  local key="$1" val="$2" tmp
-  tmp="$(mktemp)"
-  # Ukloni postojeći key=... (cijeli red), dodaj novi na kraj.
-  grep -v -E "^${key}=" "$ENV_FILE" >"$tmp" || true
-  printf '%s=%s\n' "$key" "$val" >>"$tmp"
-  mv "$tmp" "$ENV_FILE"
-}
-
-upsert_env BACKUP_ENCRYPTION_KEY "$BACKUP_ENCRYPTION_KEY"
-upsert_env BACKUP_ROLE_PASSWORD "$BACKUP_ROLE_PASSWORD"
-upsert_env BACKUP_DEST "$BACKUP_DEST"
-upsert_env BACKUP_S3_ENDPOINT "$BACKUP_S3_ENDPOINT"
-upsert_env BACKUP_S3_BUCKET "$BACKUP_S3_BUCKET"
-upsert_env BACKUP_S3_PREFIX "$BACKUP_S3_PREFIX"
-upsert_env BACKUP_S3_ACCESS_KEY "$BACKUP_S3_ACCESS_KEY"
-upsert_env BACKUP_S3_SECRET_KEY "$BACKUP_S3_SECRET_KEY"
-upsert_env DATABASE_BACKUP_URL "$DATABASE_BACKUP_URL"
-upsert_env RESTORE_ADMIN_URL "$RESTORE_ADMIN_URL"
-
-echo "PASS: backup varijable upisane u lokalni .env (vrijednosti sakrivene)."
-# Samo imena:
-echo "KEYS: BACKUP_ENCRYPTION_KEY BACKUP_ROLE_PASSWORD BACKUP_DEST BACKUP_S3_ENDPOINT BACKUP_S3_BUCKET BACKUP_S3_PREFIX BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY DATABASE_BACKUP_URL RESTORE_ADMIN_URL"

@@ -31,7 +31,8 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 2
 fi
 
-POLICY_JSON=$(mktemp)
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+POLICY_JSON="${SCRIPT_DIR}/.backup-policy-tmp.json"
 trap 'rm -f "$POLICY_JSON"' EXIT
 cat >"$POLICY_JSON" <<EOF
 {
@@ -51,24 +52,24 @@ cat >"$POLICY_JSON" <<EOF
 }
 EOF
 
-MC_IMAGE="${BACKUP_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-12-19T20-11-44Z}"
+MC_IMAGE="${BACKUP_MC_IMAGE:-quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z}"
 export MINIO_ROOT_USER MINIO_ROOT_PASSWORD BACKUP_S3_ENDPOINT BACKUP_S3_BUCKET
 export BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY
 
-docker run --rm \
+# Windows Docker: win path za mount; Git Bash ne smije pretvoriti //bin/sh.
+POLICY_WIN="$(cygpath -w "$POLICY_JSON" 2>/dev/null || printf '%s' "$POLICY_JSON")"
+MSYS_NO_PATHCONV=1 docker run --rm \
   -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
   -e BACKUP_S3_ENDPOINT -e BACKUP_S3_BUCKET \
   -e BACKUP_S3_ACCESS_KEY -e BACKUP_S3_SECRET_KEY \
-  -v "${POLICY_JSON}:/policy.json:ro" \
-  --entrypoint /bin/sh \
+  -v "${POLICY_WIN}:/policy.json:ro" \
+  --entrypoint //bin/sh \
   "$MC_IMAGE" \
   -ec '
     mc alias set prov "$BACKUP_S3_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
     mc mb --ignore-existing "prov/$BACKUP_S3_BUCKET" >/dev/null
     mc admin policy create prov gradix-backup-only /policy.json >/dev/null 2>&1 \
       || mc admin policy create prov gradix-backup-only /policy.json
-    mc admin user add prov "$BACKUP_S3_ACCESS_KEY" "$BACKUP_S3_SECRET_KEY" >/dev/null 2>&1 \
-      || true
     mc admin user add prov "$BACKUP_S3_ACCESS_KEY" "$BACKUP_S3_SECRET_KEY" >/dev/null 2>&1 || true
     mc admin policy attach prov gradix-backup-only --user "$BACKUP_S3_ACCESS_KEY" >/dev/null
   '

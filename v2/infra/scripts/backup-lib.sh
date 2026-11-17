@@ -37,6 +37,41 @@ require_cmd() {
   done
 }
 
+# psql: lokalni ili docker postgres:16-alpine (za Windows host bez klijenta).
+run_psql() {
+  if command -v psql >/dev/null 2>&1; then
+    psql "$@"
+    return $?
+  fi
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "GREŠKA: nema psql ni docker." >&2
+    return 2
+  fi
+  local args=("$@") url="" i
+  for ((i=0; i<${#args[@]}; i++)); do
+    case "${args[$i]}" in
+      postgresql://*|postgres://*) url="${args[$i]}" ;;
+    esac
+  done
+  local docker_args=(run --rm)
+  if [ -n "${PGSSLROOTCERT:-}" ] && [ -f "${PGSSLROOTCERT}" ]; then
+    docker_args+=(-e "PGSSLROOTCERT=/certs/ca.crt" -v "${PGSSLROOTCERT}:/certs/ca.crt:ro")
+  elif [ -n "${POSTGRES_CA_FILE:-}" ] && [ -f "${POSTGRES_CA_FILE}" ]; then
+    docker_args+=(-e "PGSSLROOTCERT=/certs/ca.crt" -v "${POSTGRES_CA_FILE}:/certs/ca.crt:ro")
+  fi
+  # Host.docker.internal za localhost URL-ove s Windowsa.
+  if [ -n "$url" ]; then
+    url="${url//127.0.0.1/host.docker.internal}"
+    url="${url//localhost/host.docker.internal}"
+    for ((i=0; i<${#args[@]}; i++)); do
+      case "${args[$i]}" in
+        postgresql://*|postgres://*) args[$i]="$url" ;;
+      esac
+    done
+  fi
+  docker "${docker_args[@]}" postgres:16-alpine psql "${args[@]}"
+}
+
 encrypt_file() {
   local src="$1" dst="$2"
   : "${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY je obavezan (šifrovanje prije čuvanja/slanja)}"
