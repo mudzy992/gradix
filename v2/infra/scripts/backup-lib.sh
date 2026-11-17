@@ -202,7 +202,7 @@ upload_encrypted() {
   prefix="${prefix#/}"
   prefix="${prefix%/}"
   local key="$prefix/$(basename "$file")"
-  echo "→ upload s3://$BACKUP_S3_BUCKET/$key"
+  echo "→ upload s3://(backup-bucket)/$key"
   aws_s3 cp "$file" "s3://$BACKUP_S3_BUCKET/$key" --only-show-errors
   aws_s3 cp "${file}.sha256" "s3://$BACKUP_S3_BUCKET/${key}.sha256" --only-show-errors
   local man="${file%.dump.enc}.manifest.tsv"

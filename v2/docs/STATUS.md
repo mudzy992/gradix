@@ -49,4 +49,6 @@
 
 1. Staging deploy + prolaz po rolama.
 2. Pilot: `PILOT.md`; `SEED_DEMO` se gasi samo `remove-demo.ts`.
-3. Produkcija: ugasiti javnu MinIO konzolu; backup raspored na hostu (§12).
+3. Produkcija: ugasiti javnu MinIO konzolu; backup raspored (§12.2 COOLIFY) — odvojeni
+   servis, ne trajni BACKUP_* na webu; poslije drill-a cleanup (§12.1).
+4. Plan 2c (neuredni Excel): sekcija u `PILOT.md` — čeka odobrenje vlasnika prije koda.

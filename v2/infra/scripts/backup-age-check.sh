@@ -25,7 +25,7 @@ if [ "$DEST" = "s3" ]; then
   line=$(aws_s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" \
     | awk '/\.dump\.enc$/ {print}' | tail -n1)
   if [ -z "$line" ]; then
-    echo "UPOZORENJE: nema nijedne .dump.enc kopije na s3://$BACKUP_S3_BUCKET/$prefix/" >&2
+    echo "UPOZORENJE: nema nijedne .dump.enc kopije na s3://(backup-bucket)/$prefix/" >&2
     exit 1
   fi
   # format: 2026-11-16 03:30:01   12345 gradix-....dump.enc

@@ -84,4 +84,4 @@ aws_s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$man_name" --only-show-errors || true
 rm -rf "$BACKUP_DIR"
 echo "✓ probna kopija obrisana"
 
-echo "✓ minio-check PROŠAO (bucket ime sakriveno u logu nije potrebno; status OK)"
+echo "✓ minio-check PROŠAO (status OK; ime bucketa nije u ispisu)"

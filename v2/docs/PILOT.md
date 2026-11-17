@@ -39,3 +39,36 @@ Aplikacija se gasi, pilot podaci se izvoze iz ureda (lista radnih dana), rad se
 nastavlja dotadašnjim načinom. Nijedan podatak ne ostaje zarobljen: izvoz je
 uvijek dostupan vlasniku, a lokalni zapisi na telefonima ostaju čitljivi u
 aplikaciji do deinstalacije.
+
+## Plan 2c — uvoz iz neurednih Excela (bez koda dok vlasnik ne odobri)
+
+**Već postoji (R2, proširuje se):** `/ured/uvoz` — vrste `workers` i `equipment`;
+`import-parser` (xlsx/csv); mapiranje kolona po aliasima; **pregled bez upisa**;
+**potvrda u jednoj transakciji** (sve ili ništa); greške/duplikati po redu; nepoznata
+kategorija mašine se ne stvara tiho; inventarska oznaka = ključ mašine; radnici bez
+automatskog spajanja; audit traga; testovi parser/servis/izolacija/NUL. Demo seed ide
+kroz isti servis.
+
+**Model podataka (2c):** ostaje tenant (`companies`) + postojeće tabele radnika/mašina/
+kategorija/obaveza. Proširenje vrsta uvoza (projekti, partneri) koristi iste tablice ili
+minimalne FK koje model već ima. **B15 \[Rano u model\]:** (1) stacionaža — predviđena u
+šemi/komentaru, 2c je **ne mora** uvoziti km+m dok nema kolone u izvornom Excelu, ali
+uvoz projekata ne smije zaključati model bez dionice; (14) tok odobravanja — 2c ne gradi
+workflow, samo ne uvodi polja koja bi ga kasnije blokirala; (22) SaaS/tenant — uvoz uvijek
+u okviru firme (`withCompany`), valuta već na `Company`. Stavka B15.19 (onboarding/uvoz)
+je upravo ovaj tok.
+
+**Tok korisnika:** (1) otpremi Excel (sintetički/`.test` u CI; anonimizirani stvarni fajl
+samo kod vlasnika); (2) izaberi vrstu; (3) mapiraj kolone; (4) pregled ishoda po redu
+(ok / greška / duplikat / preskok); (5) potvrdi samo čiste odluke — potvrda piše ili
+pada cijela.
+
+**Neuredni redovi:** ostaju u izvještaju pregleda; ne upisuju se; korisnik ispravlja
+Excel ili mapiranje i ponavlja. Nema djelimičnog commit-a.
+
+**Testovi:** proširiti postojeće import testove (parser, preview, apply, izolacija tenanta,
+kontrolni znakovi); fixturei samo sintetički (`.test`). E2E: jedan sretan + jedan fajl s
+miješanim greškama.
+
+**Van obima 2c:** OCR/AI čitanje (B15.18); situacije/predmjer (B15.2); GeoJSON trase;
+R4b; produkcijski PII u repou; 2d.

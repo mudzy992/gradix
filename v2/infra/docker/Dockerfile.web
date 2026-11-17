@@ -108,6 +108,7 @@ COPY --chown=nextjs:nodejs infra/scripts/backup-lib.sh \
      infra/scripts/backup-assert-role.sh \
      infra/scripts/backup-minio-check.sh \
      infra/scripts/backup-age-check.sh \
+     infra/scripts/backup-cleanup-staging.sh \
      ./backup/
 RUN chmod +x /app/backup/*.sh
 

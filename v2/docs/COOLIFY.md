@@ -557,64 +557,62 @@ Dokaz u CI: (a)–(d) + RLS (≥2 firme, izvor=restore kao admin, dump bez BYPAS
 `43874147777` na `21f92ec`).
 **RPO:** ≤ 26 h uz dnevni zakazani zadatak ispod.
 
-Raspored: `DATABASE_ADMIN_URL` / `BACKUP_ENCRYPTION_KEY` / backup S3 tajne **ne idu u web
-kontejner**. Coolify Scheduled Task (ili host cron), dnevno ~02:30 Europe/Sarajevo:
+### 12.1 Čišćenje poslije MinIO drill-a (staging)
+
+U **web** kontejneru (privremeno još ima `DATABASE_ADMIN_URL`):
 
 ```sh
-# Jednokratno: export rola sa BYPASSRLS + SELECT (zamijeni IME_BAZE).
-psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gradix_backup') THEN
-    CREATE ROLE gradix_backup LOGIN NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
-  END IF;
-END $$;
-ALTER ROLE gradix_backup NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
-SQL
-psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c 'GRANT CONNECT ON DATABASE "IME_BAZE" TO gradix_backup'
-psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
-GRANT USAGE ON SCHEMA public TO gradix_backup;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO gradix_backup;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO gradix_backup;
-SQL
+cd /app/backup
+./backup-cleanup-staging.sh
 ```
 
-```sh
-set -euo pipefail
-export DATABASE_BACKUP_URL=...          # samo gradix_backup
-export BACKUP_ENCRYPTION_KEY=...        # Coolify/host secret, ne u MinIO
-export BACKUP_DEST=s3
-export BACKUP_S3_ENDPOINT=https://minio.gradix.ba101.top
-export BACKUP_S3_BUCKET=gradix-stg-backups   # zaseban bucket, ne app bucket
-export BACKUP_S3_PREFIX=backups
-export BACKUP_S3_ACCESS_KEY=...         # zaseban nalog; ne MINIO_ACCESS_KEY
-export BACKUP_S3_SECRET_KEY=...
-export BACKUP_DIR=/var/backups/gradix-v2
-export BACKUP_RETENTION=30
-./infra/scripts/backup.sh
-./infra/scripts/backup-age-check.sh
-```
+Očekivano: `PASS: baza gradix_restore ne postoji`, zatim
+`PASS: /tmp/backups-minio-check i /tmp/backups ne postoje`, pa `✓ cleanup PROŠAO`.
 
-Starost zadnje kopije (pada ako je starija od 26 h):
+**Ukloni s web servisa (imena), zatim redeploy** — backup tajne **ne** ostaju trajno na
+webu:
 
-```sh
-BACKUP_DEST=s3 BACKUP_S3_ENDPOINT=... BACKUP_S3_BUCKET=... BACKUP_S3_PREFIX=backups \
-  BACKUP_S3_ACCESS_KEY=... BACKUP_S3_SECRET_KEY=... \
-  ./infra/scripts/backup-age-check.sh
-```
+| Ukloniti s weba | Zašto |
+|---|---|
+| `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` | samo provision; nikad na web trajno |
+| `BACKUP_ROLE_PASSWORD` | samo provision role |
+| `BACKUP_ENCRYPTION_KEY` | ide na backup job, ne web |
+| `BACKUP_DEST`, `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_PREFIX` | backup job |
+| `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY` | backup job |
+| `DATABASE_BACKUP_URL`, `RESTORE_ADMIN_URL` | drill / backup job |
+| `BACKUP_DIR`, `BACKUP_RETENTION`, `BACKUP_MAX_AGE_HOURS`, `BACKUP_ROLE_NAME` | ako su dodati |
 
-Ručni MinIO check (jednom na stagingu; prazna probna baza unaprijed):
+**Ostavi na webu** (ako već koristiš): `DATABASE_URL`, `DATABASE_ADMIN_URL` (migracije),
+`PGSSLROOTCERT` / `PGSSLMODE`, `MINIO_ENDPOINT`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`,
+`MINIO_SECRET_KEY` (app, ne backup nalog).
 
-```sh
-cd v2
-export DATABASE_BACKUP_URL=... RESTORE_ADMIN_URL=... RESTORE_DATABASE_URL=...
-export BACKUP_ENCRYPTION_KEY=...
-export BACKUP_S3_ENDPOINT=... BACKUP_S3_BUCKET=... BACKUP_S3_PREFIX=backups
-export BACKUP_S3_ACCESS_KEY=... BACKUP_S3_SECRET_KEY=...
-export BACKUP_DIR=./backups-minio-check
-./infra/scripts/backup-minio-check.sh
-```
+### 12.2 Noćni raspored (bez trajnih BACKUP_* na webu)
 
-Coolify native backup: dokumentacija Coolifyja opisuje zakazani `pg_dump` (+ opcionalni
-S3) za Coolify database resource
-([coolify.io/docs/databases/backups](https://coolify.io/docs/databases/backups)). Gradix
-koristi vlastiti `backup.sh` (šifrovanje, zaseban bucket, restore-drill, read-only rola).
+**Kontejner:** odvojeni Coolify servis (npr. `gradix-backup`) sa **istom** web slikom
+(`Dockerfile.web`), bez javnog porta / health HTTP. Ne koristi web env za backup tajne.
+(Alternativa: host cron `docker run --rm` iste slike s `-e` samo za taj run.)
+
+**Env samo na tom servisu (imena):** `DATABASE_BACKUP_URL`, `DATABASE_ADMIN_URL`,
+`PGSSLROOTCERT`, `PGSSLMODE`, `BACKUP_ENCRYPTION_KEY`, `BACKUP_DEST=s3`,
+`BACKUP_S3_ENDPOINT` (`http://minio:9000` u mreži stacka), `BACKUP_S3_BUCKET`,
+`BACKUP_S3_PREFIX`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY`,
+`BACKUP_DIR=/tmp/backups`, `BACKUP_RETENTION=30`, `BACKUP_MAX_AGE_HOURS=26`.
+
+**Coolify koraci:**
+
+1. New Resource → Docker Image / isti build kao web → ime `gradix-backup` → ista Docker
+   network kao `minio` i Postgres.
+2. Environment: samo lista iznad (vrijednosti u Coolify secrets; ne u git).
+3. Scheduled Task (Europe/Sarajevo), cron npr. `30 2 * * *`:
+   `cd /app/backup && ./backup.sh && ./backup-age-check.sh`
+4. Jednokratno ručno pokreni isti command → u MinIO konzoli/bucketu vidi novi
+   `*.dump.enc` pod prefixom `backups/` (prva noćna/ručna kopija).
+5. Sutradan: `backup-age-check.sh` sam (ili čekaj cron) — ne smije pasti ako je kopija
+   mlađa od 26 h.
+
+Role `gradix_backup` i backup MinIO user već su kreirani drill-om
+(`backup-provision-role.sh` / `backup-provision-minio.sh`); ne ponavljaj root tajne na webu.
+
+Coolify native DB backup
+([coolify.io/docs/databases/backups](https://coolify.io/docs/databases/backups))
+**ne** zamjenjuje Gradix `backup.sh` (šifrovanje, zaseban bucket, restore-drill, BYPASSRLS).
