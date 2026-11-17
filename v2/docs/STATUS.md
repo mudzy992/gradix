@@ -2,35 +2,51 @@
 
 **Datum:** 2026-11-17 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
 
+## Pilot: spremnost
+
+Pilot **ne počinje** dok vlasnik ne kaže **POČNI PILOT**. Ispod samo potvrđeni unosi.
+
+| Uslov (PILOT.md) | Stanje (odluka / unos vlasnika) | Oznaka |
+|---|---|---|
+| Oblik A | DA (potvrđen) | spremno |
+| Trajanje 5 dana | DA (potvrđen) | spremno |
+| Sintetički podaci (`.test` / seed) | Preimenovanje `@demo.test` **ODOBRENO**; staging seed **PROŠLO** | spremno |
+| Rotacija tajni prije stvarnih podataka | Odluka **DA**; izvršenje rotacije **nije** potvrđeno ovdje | čeka vlasnika |
+| Emulator 2c i A1 | **PRIHVAĆEN** | spremno |
+| Telefon za šefa (oblik A) | **NEMA** | ne radi |
+| Seed + prijava `sef@demo.test`, `ured@demo.test` | **PROŠLO** | spremno |
+
+**Provjera web kontejnera** (poslije čišćenja backup/drill env — COOLIFY §12.1): u Coolify
+terminalu **web** servisa:
+
+```sh
+env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP_|MINIO_ROOT_)' \
+  && echo 'FAIL: admin/backup varijable još na webu' \
+  || echo 'PASS: nema DATABASE_ADMIN_URL ni backup/root MinIO varijabli'
+```
+
 ## Odluke / ops (vlasnik)
 
 | Stavka | Ishod |
 |---|---|
 | 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** |
-| Preimenovanje naloga `@demo.ba` → `@demo.test` | **ODOBRENO** |
-| Rotacija tajni | **DA** (odluka); stvarni podaci tek poslije izvršene rotacije |
+| `@demo.test` nalozi | **ODOBRENO**; staging seed/prijava **PROŠLO** |
+| Rotacija tajni | **DA** (odluka); izvršenje čeka potvrdu |
 | Telefon za šefa | **NEMA** |
-| Oblik pilota A, 5 dana | **DA** |
-| MinIO konzola do produkcije | **ostaje** |
+| Oblik A, 5 dana | **DA** |
 | R4b / R5 / partneri | **ne počinju** |
-| Expo Go SDK 58 | očekivano radi (`check-expo`); **nije** na fizičkom uređaju |
-| `--reset-pilot` | `seed.ts --reset-pilot` |
+| POČNI PILOT | **nije** rečeno |
 
 ## Radi (CI)
 
 - R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`, `--reset-pilot`.
 
-## Role (sažetak)
-
-OWNER/ADMIN: evidencije + Uvoz + Korisnici. PM/šef: bez Korisnici/Uvoz.
-Mobilni: Moj dan (workerId); Grupa (SITE_SUPERVISOR + foremanScope).
-
 ## Ne radi / namjerno još nema
 
-- R4b, R5, partneri; fizički telefon šefa; mobilni E2E u CI se ne traži.
+- R4b, R5, partneri; fizički telefon šefa; izvršenje pilota bez **POČNI PILOT**.
 
 ## Dugovi / otvoreno
 
-- Coolify: postavi `PLATFORM_ADMIN_EMAILS` na `ured@demo.test` (ili `vlasnik@demo.test`)
-  poslije redeploy + seed — inače katalog u produkcijskom modu ne prepoznaje admina.
-- Rotacija tajni; MinIO konzola u produkciji; retencija; B11; email provajder; ADR 0014 prod.
+- Izvršiti/potvrditi rotaciju tajni prije stvarnih podataka; telefon za oblik A;
+  `PLATFORM_ADMIN_EMAILS` na stagingu ako katalog treba platform admina; MinIO konzola;
+  retencija; B11; email; ADR 0014 u produkciji.
