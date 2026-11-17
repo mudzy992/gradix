@@ -43,10 +43,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
       DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
-      DATABASE_BACKUP_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      DATABASE_BACKUP_URL: postgresql://gradix_backup:backup-ci-only@127.0.0.1:5432/gradix
       RESTORE_DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix_restore
       RESTORE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix_restore
       PG_ADMIN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      BACKUP_ROLE_PASSWORD: backup-ci-only
       BACKUP_DIR: ${{ github.workspace }}/v2/backups
       BACKUP_DEST: local
       BACKUP_RETENTION: "7"
@@ -88,6 +89,14 @@ jobs:
             exit 1
           fi
 
+      - name: Backup rola (BYPASSRLS + SELECT-only)
+        working-directory: v2
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/backup*.sh infra/scripts/restore.sh
+          ./infra/scripts/backup-provision-role.sh
+          ./infra/scripts/backup-assert-role.sh
+
       - name: Ključ šifrovanja (sintetički, samo CI)
         run: echo "BACKUP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
@@ -95,7 +104,6 @@ jobs:
         working-directory: v2
         run: |
           set -euo pipefail
-          chmod +x infra/scripts/backup*.sh infra/scripts/restore.sh
           BAD_DIR=$(mktemp -d)
           if DATABASE_BACKUP_URL="$DATABASE_URL" \
                DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL" \

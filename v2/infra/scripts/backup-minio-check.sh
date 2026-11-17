@@ -58,10 +58,30 @@ if env BACKUP_ENCRYPTION_KEY=wrong-key-for-negative-test \
 fi
 echo "✓ pogrešan ključ odbijen"
 
-echo "=== 4) restore + brojevi ==="
+echo "=== 4) restore baza + brojevi ==="
+# Prazna ciljna baza (admin na istom clusteru kao RESTORE_ADMIN_URL).
+RESTORE_DB=$(printf '%s' "$(pg_conn "$RESTORE_ADMIN_URL")" | sed -E 's#^.*/([^/?]+).*#\1#')
+ADMIN_MAINT="${DATABASE_ADMIN_URL:-$RESTORE_ADMIN_URL}"
+ADMIN_MAINT_CONN="$(pg_conn "$ADMIN_MAINT")"
+ADMIN_BASE="${ADMIN_MAINT_CONN%/*}"
+ADMIN_Q=""
+case "$ADMIN_MAINT_CONN" in *\?*) ADMIN_Q="?${ADMIN_MAINT_CONN#*\?}" ;; esac
+psql "${ADMIN_BASE}/postgres${ADMIN_Q}" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"${RESTORE_DB}\"" >/dev/null
+psql "${ADMIN_BASE}/postgres${ADMIN_Q}" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${RESTORE_DB}\" OWNER CURRENT_USER" >/dev/null
 "$script_dir/restore.sh" "$ENC_PULLED"
-if [ -n "${RESTORE_DATABASE_URL:-}" ]; then
-  "$script_dir/backup-verify-counts.sh" "$MAN"
-fi
+"$script_dir/backup-verify-counts.sh" "$MAN"
 
-echo "✓ minio-check PROŠAO (bucket=$BACKUP_S3_BUCKET)"
+echo "=== 5) obriši probnu kopiju s MinIO ==="
+apply_backup_s3_creds
+prefix="${BACKUP_S3_PREFIX:-backups}"
+prefix="${prefix#/}"
+prefix="${prefix%/}"
+base="$(basename "$ENC")"
+AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$base" --only-show-errors || true
+AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/${base}.sha256" --only-show-errors || true
+man_name="$(basename "$MAN")"
+AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$man_name" --only-show-errors || true
+rm -rf "$BACKUP_DIR"
+echo "✓ probna kopija obrisana"
+
+echo "✓ minio-check PROŠAO (bucket ime sakriveno u logu nije potrebno; status OK)"
