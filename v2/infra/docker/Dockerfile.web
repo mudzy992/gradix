@@ -59,11 +59,18 @@ ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 # mc iz oficijalne slike (dl.min.io archive često 410); potreban za backup-provision-minio.sh.
 COPY --from=quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z /usr/bin/mc /usr/local/bin/mc
-# postgresql-client: psql/pg_dump/pg_restore (migracije + backup drill).
+# Staging Postgres je 18.x; Debian default client (15) ruši pg_dump (version mismatch).
+# PGDG → postgresql-client-18 (psql/pg_dump/pg_restore).
 # bash/openssl/awscli: backup-*.sh u /app/backup (privremeni drill u web kontejneru).
 RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
  && apt-get install -y --no-install-recommends \
-      postgresql-client ca-certificates bash openssl awscli coreutils \
+      postgresql-client-18 bash openssl awscli coreutils \
  && chmod +x /usr/local/bin/mc \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 1001 nodejs \
