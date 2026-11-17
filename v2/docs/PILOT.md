@@ -1,54 +1,65 @@
-# Pilot — probni rad s jednom ekipom
+# Pilot — probni rad (oblik A)
+
+**Odluke vlasnika (2026-11-17):** oblik **A** = jedan Android telefon za šefa; trajanje **5 dana**;
+rotacija svih tajni **prije stvarnih podataka = DA**. Dok rotacija nije urađena → samo
+**sintetički** demo (domene `.test` / seed, bez stvarnih ličnih podataka).
 
 ## Ko učestvuje
-- **Vlasnik/ured (1-2 osobe):** pozivnice, unos radnika/mašina/projekata, pregled
-  radnih dana, razrješavanje sukoba. Direktan kontakt s Gradix podrškom.
-- **Šef gradilišta (1):** vodi svoju ekipu na telefonu, unosi grupne dane.
-- **Radnici (3-5):** unose vlastiti dan na telefonu; bez naloga oni koje šef vodi u grupi.
+- **Vlasnik/ured (1):** web na `https://gradix.ba101.top` — pozivnice, uvoz, pregled dana/sukoba.
+  Rola OWNER (ili ADMIN). **Radi (STATUS.md):** R1–R4a-2, Pregled, Uvoz, Radni dani.
+- **Šef gradilišta (1):** jedan Android telefon — grupni unos ekipe. Rola SITE_SUPERVISOR.
+  **Radi (STATUS.md):** R4a-2 Grupa / Moj dan (mobilni).
+- **Radnici:** u obliku A **bez vlastitih telefona/naloga** — šef ih vodi u Grupi.
+  **Ne radi još** kao zasebni pilot-uređaji (to bi bio drugi oblik).
+
+**Ne radi još u pilotu (namjerno):** R4b, R5 (stacionaža, partneri, workflow), partneri.
 
 ## Priprema (prije prvog dana)
-1. Vlasnik šalje Excel primjere: spisak radnika, mašina i jedan aktivan projekat.
-2. Ured ih uvozi kroz ekran **Uvoz** (isti format kao primjer) i provjeri brojke.
-3. Korisnici se pozivaju pozivnicom iz **Korisnici**; svako postavi svoju lozinku.
-4. Šef i radnici instaliraju aplikaciju i prijave se jednom **uz mrežu** (prva
-   prijava mora biti online).
+1. Rotacija tajni urađena **ili** ostaje samo sintetički seed (odluka: DA prije stvarnih).
+2. Ured na `https://gradix.ba101.top` uvozi sintetičke radnike/mašine/projekte (**Uvoz** —
+   **radi (STATUS.md)**) i pozove šefa (**Korisnici** — **radi (STATUS.md)**).
+3. Šef instalira mobilnu app po `MOBILE-EXPO-GO.md` i prijavi se **jednom uz mrežu**.
+4. Telefon zaključan PIN-om/otiskom.
 
-## Kontrolna lista prvog dana
-- [ ] Svi pozvani su se prijavili; šef vidi svoju ekipu, radnik svoj „Moj dan“.
-- [ ] Jedan probni unos poslan i vidljiv uredu u Radnim danima.
-- [ ] Telefon zaključan PIN-om/otiskom; ugašen ekran ne gasi prijavu.
-- [ ] Pokazan rad bez mreže: unos se sprema na telefon i šalje kad veza dođe.
+## Kontrolna lista prvog dana (vlasnik, po ulozi)
+
+Web: `https://gradix.ba101.top`. Matrica: `permissions.ts` + STATUS Role; mobilni meni: `mobile-nav.ts`.
+
+| Uloga | Prijava → ekran | Mora vidjeti | Ne smije vidjeti |
+|---|---|---|---|
+| OWNER/ADMIN (ured) | web → `/pregled`, `/ured/*` | Pregled; Projekti; Rokovi; Mašine; Radnici; **Uvoz**; Radni dani; Sukobi; **Korisnici**; Pristup i role; Audit | tuđe tenant podatke (RLS); R4b/R5 ekrane (**ne radi još**) |
+| SITE_SUPERVISOR (šef, Android) | mobilni → početni | **Grupa** (uz workerId + foremanScope); opseg ekipe; Moj dan ako je vezan na radnika; Moji rokovi/projekti | **Korisnici**, **Uvoz**, Audit, Pristup i role (nema `users.manage` / `workers.manage`); tuđu firmu |
+| WORKER (nije u obliku A) | — | — | nema uređaja u ovom pilotu |
+
+**Offline (Moj dan / Grupa)** — **radi (STATUS.md / MOBILNI-CHECKLISTA):** prva prijava online;
+bez veze unos → „Čeka slanje“ / banner Bez veze; „Pošalji sada“ kad veza dođe; rokovi/projekti
+pokazuju zadnje preuzeto uz „Nema veze…“. Van opsega ostaje na telefonu (nije odbijen).
+
+**Prvi dan ček:** [ ] šef prijavljen; [ ] jedan grupni unos vidljiv uredu u Radnim danima;
+[ ] offline probni unos pa sync.
 
 ## Šta reći pilot-korisnicima
-- **Zaključavanje ekrana obavezno** — na telefonu su podaci firme.
-- **Problem se javlja isti dan** vlasniku (poruka/poziv), ne na kraju sedmice:
-  šta ste radili, šta je pisalo, fotografija ekrana pomaže.
-- **Bez mreže se radi normalno.** Banner „Bez veze“ znači da zapisi čekaju na
-  telefonu; „Pošalji sada“ kad veza dođe. Zapis označen „Van opsega“ nije
-  odbijen — ostaje na telefonu i ured ga vidi kad opseg obuhvati taj datum.
+- Zaključavanje ekrana obavezno. Problem isti dan vlasniku (šta, poruka, screenshot).
+- Bez mreže se radi; „Pošalji sada“ kad veza dođe. Samo sintetički podaci dok tajne nisu rotirane.
 
-## Šta mjerimo (sedmično, bez ulaska u bazu)
-Vlasnik sve vidi iz aplikacije: **Radni dani** (unosi po danu, otvoreni dani),
-**Pregled** (sukobi koji čekaju razrješenje i njihova starost), **Revizija/Audit**
-(izmjene i greške slanja), svaki telefon pokazuje neposlane zapise i ishode
-slanja. Ciljne mjere: unosi/dan po radniku, broj i starost sukoba, broj
-otvorenih dana, vrijeme unosa (ručna procjena šefa), greške sinhronizacije.
+## Šta mjerimo (za 5 dana, bez ulaska u bazu)
+Iz aplikacije: Radni dani, Pregled/Sukobi, Audit; na telefonu neposlani zapisi.
+Cilj: unosi/dan (grupni), broj/starost sukoba, otvoreni dani, greške sync — **radi (STATUS.md)**
+pregled tih ekrana. R4b metrike odobravanja — **ne radi još**.
 
 ## Ako pilot ne uspije
-Aplikacija se gasi, pilot podaci se izvoze iz ureda (lista radnih dana), rad se
-nastavlja dotadašnjim načinom. Nijedan podatak ne ostaje zarobljen: izvoz je
-uvijek dostupan vlasniku, a lokalni zapisi na telefonima ostaju čitljivi u
-aplikaciji do deinstalacije.
+Aplikacija se gasi; ured izvozi radne dane; rad se vraća starom načinu. Lokalni zapisi na
+telefonu ostaju do deinstalacije.
 
 ## Plan 2c — uvoz projekata (proširenje R2 uvoza)
 
-**Status:** ODOBREN (vlasnik). Vrsta u 2c: **samo `projects`**.
+**Status:** ODOBREN (vlasnik). Vrsta u 2c: **samo `projects`**. **Radi (STATUS.md).**
 
 **Već postoji (R2):** `/ured/uvoz` — `workers` / `equipment`; parser; mapiranje;
 pregled bez upisa; potvrda u jednoj transakciji; audit; testovi. 2c dodaje `projects`.
 
 **Model:** `projects` (r3); uvoz kroz `withCompany`. Uvoz **ne** uvodi stacionažu,
-partnere ni workflow (B15 NE → R5).
+partnere ni workflow (B15 NE → R5) — **ne radi još**.
 
 ### Kolone uvoza projekata (iz šeme `projects`)
 
@@ -72,4 +83,4 @@ partnere ni workflow (B15 NE → R5).
 OK; izolacija tenanta; NUL/kontrolni znakovi; E2E sretan + miješane greške.
 
 **Van obima 2c:** partneri/klijent (nema tabele; R5); stacionaža (R5); tok odobravanja
-(R5/R4b); OCR; situacije; GeoJSON; R4b; 2d; PII u repou.
+(R5/R4b); OCR; situacije; GeoJSON; R4b; PII u repou.
