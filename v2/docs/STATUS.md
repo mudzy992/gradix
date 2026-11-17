@@ -2,39 +2,34 @@
 
 **Datum:** 2026-11-17 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
 
-## Odluke / ops (2026-11-17)
+## Odluke / ops (vlasnik)
 
 | Stavka | Ishod |
 |---|---|
-| Cleanup + raspored (po koracima) | **prošlo** |
+| Cleanup + raspored | **prošlo** |
 | 2a (backup/MinIO) | **PRIHVAĆEN** |
 | ADR 0014 | **PRIHVAĆEN** |
-| Plan 2c | **ODOBREN** — samo projekti; partneri van obima |
-| Anonimizirani Exceli | **DA** (kod vlasnika; ne u repou) |
-| B15 NE (stacionaža, partner, workflow) | u planu **R5** |
+| Plan 2c / ručni uvoz projekata | **PRIHVAĆEN** (riječ vlasnika) |
+| Anonimizirani Exceli | **DA** (kod vlasnika) |
+| Rotacija tajni | **NE** |
+| MinIO konzola / odredište do produkcije | **ostaje** (odluka) |
+| B15 NE → R5 | stacionaža, partner, workflow |
+| 2d | checklist u `COOLIFY.md` §13 — **nema koda** |
 
 ## Radi (CI)
 
-- R1–R4a-2, Pregled, UI, C.2 backup (MinIO drill + cleanup + raspored).
-- **2c uvoz projekata:** `/ured/uvoz` → Projekti; preview/apply; integracija + E2E.
+- R1–R4a-2, Pregled, UI, C.2 backup, 2c uvoz projekata (`/ured/uvoz`).
 
-## Role — ko šta vidi
+## Role (sažetak)
 
-| Rola | Web | Mobilni | Ne vidi |
-|---|---|---|---|
-| OWNER | sve | Moj dan / Grupa | tuđe firme |
-| ADMIN | − upravljanje vlasnikom | isto | vlasnika |
-| PROJECT_MANAGER | Projekti… Radni dani | po vezi | Korisnici, Uvoz |
-| SITE_SUPERVISOR | Radnici… Radni dani | Grupa / Moj dan | Korisnici, Uvoz |
-| WORKER / DRIVER / … | po matrici | Moj dan | uredsko van opsega |
-| ACCOUNTANT | Pregled + Radni dani (čitanje) | Moji rokovi | Korisnici, Uvoz |
+OWNER/ADMIN: sve evidencije + Uvoz. PM/šef: bez Korisnici/Uvoz. WORKER…: po matrici.
 
 ## Ne radi / namjerno još nema
 
-- **R4b**, **2d**, **partneri** (nema tabele) — nisu započeti.
+- **R4b**, **pilot**, **partneri**, produkcijski start po §13 — nisu započeti.
 - Mobilni E2E u CI zatvoren; A1 mobilna prijava poslije odjave — vlasnik.
-- Redis samo dijagnostika; katalog nije javan.
 
-## Dugovi
+## Dugovi / otvoreno (§13)
 
-- `PLATFORM_ADMIN_EMAILS` privremeno; produkcija: ugasiti javnu MinIO konzolu.
+- `PLATFORM_ADMIN_EMAILS`; ugasiti javnu MinIO konzolu u produkciji; retencija (pravnik);
+  domene B11 \[OTVORENO\]; email provajder; uključenje ADR 0014 u produkciji.
