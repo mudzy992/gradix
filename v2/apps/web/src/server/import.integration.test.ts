@@ -422,6 +422,19 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
     expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
   }, 30_000);
 
+  it("projekti: NUL u ćeliji dobija error u pregledu", async () => {
+    const bytes = Buffer.from("Šifra,Naziv,Status\nP-NUL,Naz\u0000iv,ACTIVE\n", "utf8");
+    const parsed = await parseWorkbook(bytes, "projekti-nul.csv");
+    if ("code" in parsed) throw new Error(`parser: ${parsed.message}`);
+    const preview = await previewImport(pool, COMPANY as never, "projects", parsed, {
+      ...projectMapping,
+      sitePlace: null,
+    });
+    if (isServiceError(preview)) throw new Error(preview.message);
+    expect(preview.rows[0]!.outcome).toBe("error");
+    expect(preview.rows[0]!.reason).toContain("kontrolne");
+  }, 30_000);
+
   it("projekti: ista šifra u drugoj firmi nije duplikat; tuđi projekti nisu vidljivi", async () => {
     await admin.query("INSERT INTO companies (id, name, slug) VALUES ($1, 'Uvoz Firma B', 'uvoz-firma-b') ON CONFLICT (id) DO NOTHING", [
       OTHER,

@@ -105,3 +105,16 @@ mobilni ekran pokrenut na webu (`expo export -p web` + `expo start --web`), obje
 **Nije provjereno:** mobilni na **stvarnom uređaju / u Expo Go** (u sandboxu nema emulatora ni
 telefona) — provjereno je samo web izdanje istog koda. Fontovi su na uređaju statičke instance
 istih fajlova (vidi `apps/mobile/assets/fonts/`), ali to nije isto što i pogled na telefonu.
+
+## 6. 2c — Uvoz projekata (`/ured/uvoz` → Projekti)
+
+**Vlasnik PRIHVAĆEN 2026-11-17:** ručna provjera obje teme × 360 px × 1440 px.
+
+**Snimci u `docs/demo-dizajn/`:** nisu dodati (demo-shots skripta nije proširena za ovaj
+ekran). Dokaz = vlasnikovo prihvatanje + CI axe/contrast na webu.
+
+**Sintetički fajlovi za ručni prolaz** (bez stvarnih ličnih podataka):
+
+- čist: `apps/web/fixtures/import/projekti-cisto.csv`
+- miješane greške (nepoznat status + duplikat šifre u fajlu):
+  `apps/web/fixtures/import/projekti-greske.csv`
