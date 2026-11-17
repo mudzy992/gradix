@@ -3,10 +3,7 @@
  * Fixturei sintetički; domene .test nisu potrebne (šifre E2E-*).
  */
 import { expect, test, type Page } from "@playwright/test";
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const ExcelJS = require("exceljs") as typeof import("exceljs");
+import ExcelJS from "exceljs";
 
 const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";
