@@ -141,6 +141,16 @@ apply_backup_s3_creds() {
   if [ -n "${BACKUP_S3_SECRET_KEY:-}" ]; then
     export AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_KEY"
   fi
+  export AWS_DEFAULT_REGION="${BACKUP_S3_REGION:-${MINIO_REGION:-us-east-1}}"
+  # Path-style: MinIO + stariji awscli pouzdanije nego virtual-host.
+  export AWS_DEFAULT_S3_ADDRESSING_STYLE=path
+}
+
+# Debian awscli (v1) ignoriše AWS_ENDPOINT_URL → ide na pravi AWS (InvalidAccessKeyId).
+# Uvijek proslijedi --endpoint-url.
+aws_s3() {
+  : "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT obavezan}"
+  aws --endpoint-url="$BACKUP_S3_ENDPOINT" s3 "$@"
 }
 
 validate_dest() {
@@ -182,11 +192,11 @@ upload_encrypted() {
   prefix="${prefix%/}"
   local key="$prefix/$(basename "$file")"
   echo "→ upload s3://$BACKUP_S3_BUCKET/$key"
-  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "$file" "s3://$BACKUP_S3_BUCKET/$key" --only-show-errors
-  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "${file}.sha256" "s3://$BACKUP_S3_BUCKET/${key}.sha256" --only-show-errors
+  aws_s3 cp "$file" "s3://$BACKUP_S3_BUCKET/$key" --only-show-errors
+  aws_s3 cp "${file}.sha256" "s3://$BACKUP_S3_BUCKET/${key}.sha256" --only-show-errors
   local man="${file%.dump.enc}.manifest.tsv"
   if [ -f "$man" ]; then
-    AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "$man" "s3://$BACKUP_S3_BUCKET/$prefix/$(basename "$man")" --only-show-errors
+    aws_s3 cp "$man" "s3://$BACKUP_S3_BUCKET/$prefix/$(basename "$man")" --only-show-errors
   fi
 }
 
@@ -201,6 +211,6 @@ download_encrypted() {
   prefix="${prefix#/}"
   prefix="${prefix%/}"
   mkdir -p "$dest_dir"
-  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/$name" "$dest_dir/$name" --only-show-errors
-  AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${name}.sha256" "$dest_dir/${name}.sha256" --only-show-errors
+  aws_s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/$name" "$dest_dir/$name" --only-show-errors
+  aws_s3 cp "s3://$BACKUP_S3_BUCKET/$prefix/${name}.sha256" "$dest_dir/${name}.sha256" --only-show-errors
 }

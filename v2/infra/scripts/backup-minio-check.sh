@@ -28,7 +28,7 @@ validate_dest
 apply_backup_s3_creds
 
 echo "=== 0) dostupnost MinIO odredišta ==="
-AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 ls "s3://$BACKUP_S3_BUCKET/" >/dev/null
+aws_s3 ls "s3://$BACKUP_S3_BUCKET/" >/dev/null
 echo "✓ bucket dostupan"
 
 echo "=== 1) backup + upload ==="
@@ -78,10 +78,10 @@ prefix="${BACKUP_S3_PREFIX:-backups}"
 prefix="${prefix#/}"
 prefix="${prefix%/}"
 base="$(basename "$ENC")"
-AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$base" --only-show-errors || true
-AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/${base}.sha256" --only-show-errors || true
+aws_s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$base" --only-show-errors || true
+aws_s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/${base}.sha256" --only-show-errors || true
 man_name="$(basename "$MAN")"
-AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$man_name" --only-show-errors || true
+aws_s3 rm "s3://$BACKUP_S3_BUCKET/$prefix/$man_name" --only-show-errors || true
 rm -rf "$BACKUP_DIR"
 echo "✓ probna kopija obrisana"
 

@@ -22,7 +22,7 @@ if [ "$DEST" = "s3" ]; then
   prefix="${BACKUP_S3_PREFIX:-backups}"
   prefix="${prefix#/}"
   prefix="${prefix%/}"
-  line=$(AWS_ENDPOINT_URL="$BACKUP_S3_ENDPOINT" aws s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" \
+  line=$(aws_s3 ls "s3://$BACKUP_S3_BUCKET/$prefix/" \
     | awk '/\.dump\.enc$/ {print}' | tail -n1)
   if [ -z "$line" ]; then
     echo "UPOZORENJE: nema nijedne .dump.enc kopije na s3://$BACKUP_S3_BUCKET/$prefix/" >&2
