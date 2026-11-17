@@ -310,6 +310,9 @@ cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
 kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ured@demo.ba`,
 `vlasnik@demo.ba`, `sef@demo.ba` (firma 1) i `vlasnik@druga.test` (firma 2) — svi sa `SEED_PASSWORD`.
+Za **pilot oblik A** ovo je i „vrati sintetičku ekipu na početno“ (šef, radnici, projekti,
+dodjele): ponovi istu naredbu. Razriješeni sukobi ostaju razriješeni (ne zaobilazi guard);
+vidi §5.2 za nove demo sukobe. Dokaz: `seed-demo.integration.test.ts`.
 
 Bez seeda aplikacija radi, ali nema korisnika za prijavu (`/api/auth/login` → 401).
 
