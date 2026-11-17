@@ -6,7 +6,7 @@
  *   DATABASE_ADMIN_URL=... SEED_PASSWORD=... \
  *     pnpm --filter @gradix/web exec tsx scripts/seed.ts --reset-pilot
  */
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 
 export const DEMO_COMPANY_ID = "cmp_demo";
