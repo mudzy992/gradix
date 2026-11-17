@@ -387,7 +387,7 @@ export const MeterPatch = z.object({
 
 /* ------------------------------------------------------------------ uvoz iz Excela */
 
-export const ImportKind = z.enum(["workers", "equipment"]);
+export const ImportKind = z.enum(["workers", "equipment", "projects"]);
 export type ImportKind = z.infer<typeof ImportKind>;
 
 export const ImportRowOutcome = z.enum([

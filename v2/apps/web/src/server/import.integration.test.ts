@@ -360,4 +360,117 @@ describeDb("uvoz (integracija na pravoj bazi)", () => {
     expect(preview.notices.join(" ")).toContain("lični podaci");
     expect(preview.blockers).toHaveLength(0);
   }, 30_000);
+
+  const PROJECT_HEADER = ["Šifra", "Naziv", "Status", "Mjesto", "Klijent"];
+  const projectMapping = {
+    code: "Šifra",
+    name: "Naziv",
+    status: "Status",
+    siteAddress: null,
+    sitePlace: "Mjesto",
+    startsOn: null,
+    endsOn: null,
+    manager: null,
+    note: null,
+  };
+
+  it("projekti: pregled ne piše u bazu", async () => {
+    const parsed = await parse(
+      await makeWorkbook([PROJECT_HEADER, ["P-2C-01", "Cesta test", "ACTIVE", "Zenica", "Firma X"]]),
+    );
+    const before = await admin.query("SELECT count(*)::int AS n FROM projects WHERE company_id = $1", [COMPANY]);
+    const preview = await previewImport(pool, COMPANY as never, "projects", parsed, projectMapping);
+    expect(isServiceError(preview)).toBe(false);
+    if (!isServiceError(preview)) {
+      expect(preview.rows[0]!.outcome).toBe("import");
+      expect(preview.notices.join(" ")).toContain("van obima");
+    }
+    const after = await admin.query("SELECT count(*)::int AS n FROM projects WHERE company_id = $1", [COMPANY]);
+    expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
+  }, 30_000);
+
+  it("projekti: nepoznat status je greška; potvrda s greškom ne upisuje ništa", async () => {
+    const parsed = await parse(
+      await makeWorkbook([
+        PROJECT_HEADER,
+        ["P-2C-OK", "Dobar", "ACTIVE", "Zenica", null],
+        ["P-2C-BAD", "Loš", "NEPOZNAT", "Zenica", null],
+      ]),
+    );
+    const preview = await previewImport(pool, COMPANY as never, "projects", parsed, projectMapping);
+    if (isServiceError(preview)) throw new Error(preview.message);
+    expect(preview.rows[0]!.outcome).toBe("import");
+    expect(preview.rows[1]!.outcome).toBe("error");
+    expect(preview.rows[1]!.reason).toContain("nije prepoznat");
+
+    const before = await admin.query("SELECT count(*)::int AS n FROM projects WHERE company_id = $1", [COMPANY]);
+    const applied = await applyImport(
+      pool,
+      COMPANY as never,
+      actor,
+      "projects",
+      parsed,
+      projectMapping,
+      [
+        { rowNumber: 2, action: "import" },
+        { rowNumber: 3, action: "import" },
+      ],
+      "projekti-test.xlsx",
+    );
+    expect(isServiceError(applied)).toBe(true);
+    const after = await admin.query("SELECT count(*)::int AS n FROM projects WHERE company_id = $1", [COMPANY]);
+    expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
+  }, 30_000);
+
+  it("projekti: ista šifra u drugoj firmi nije duplikat; tuđi projekti nisu vidljivi", async () => {
+    await admin.query("INSERT INTO companies (id, name, slug) VALUES ($1, 'Uvoz Firma B', 'uvoz-firma-b') ON CONFLICT (id) DO NOTHING", [
+      OTHER,
+    ]);
+    await admin.query("DELETE FROM projects WHERE code = 'P-SHARED'");
+    const { withCompany, companyId } = await import("@gradix/db");
+    const seedPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    await withCompany(seedPool, companyId(OTHER), async (client) => {
+      await client.query(
+        `INSERT INTO projects (id, company_id, code, name, status)
+         VALUES ('prj_other_2c', $1, 'P-SHARED', 'Tuđi projekat', 'ACTIVE')`,
+        [OTHER],
+      );
+    });
+    await seedPool.end();
+
+    const parsed = await parse(
+      await makeWorkbook([PROJECT_HEADER, ["P-SHARED", "Naš projekat", "ACTIVE", "Sarajevo", null]]),
+    );
+    const preview = await previewImport(pool, COMPANY as never, "projects", parsed, projectMapping);
+    if (isServiceError(preview)) throw new Error(preview.message);
+    expect(preview.rows[0]!.outcome).toBe("import");
+
+    const applied = await applyImport(
+      pool,
+      COMPANY as never,
+      actor,
+      "projects",
+      parsed,
+      projectMapping,
+      [{ rowNumber: 2, action: "import" }],
+      "projekti-shared.xlsx",
+    );
+    if (isServiceError(applied)) throw new Error(applied.message);
+    expect(applied.imported).toBe(1);
+
+    const ours = await admin.query(
+      "SELECT count(*)::int AS n FROM projects WHERE company_id = $1 AND code = 'P-SHARED'",
+      [COMPANY],
+    );
+    const theirs = await admin.query(
+      "SELECT count(*)::int AS n FROM projects WHERE company_id = $1 AND code = 'P-SHARED'",
+      [OTHER],
+    );
+    expect(ours.rows[0]!.n).toBe(1);
+    expect(theirs.rows[0]!.n).toBe(1);
+
+    const again = await previewImport(pool, COMPANY as never, "projects", parsed, projectMapping);
+    if (isServiceError(again)) throw new Error(again.message);
+    expect(again.rows[0]!.outcome).toBe("skip");
+  }, 30_000);
 });

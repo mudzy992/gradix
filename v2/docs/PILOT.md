@@ -40,35 +40,36 @@ nastavlja dotadašnjim načinom. Nijedan podatak ne ostaje zarobljen: izvoz je
 uvijek dostupan vlasniku, a lokalni zapisi na telefonima ostaju čitljivi u
 aplikaciji do deinstalacije.
 
-## Plan 2c — uvoz iz neurednih Excela (bez koda dok vlasnik ne odobri)
+## Plan 2c — uvoz projekata (proširenje R2 uvoza)
 
-**Već postoji (R2, proširuje se):** `/ured/uvoz` — vrste `workers` i `equipment`;
-`import-parser` (xlsx/csv); mapiranje kolona po aliasima; **pregled bez upisa**;
-**potvrda u jednoj transakciji** (sve ili ništa); greške/duplikati po redu; nepoznata
-kategorija mašine se ne stvara tiho; inventarska oznaka = ključ mašine; radnici bez
-automatskog spajanja; audit traga; testovi parser/servis/izolacija/NUL. Demo seed ide
-kroz isti servis.
+**Status:** ODOBREN (vlasnik). Vrsta u 2c: **samo `projects`**.
 
-**Model podataka (2c):** ostaje tenant (`companies`) + postojeće tabele radnika/mašina/
-kategorija/obaveza. Proširenje vrsta uvoza (projekti, partneri) koristi iste tablice ili
-minimalne FK koje model već ima. **B15 \[Rano u model\]:** (1) stacionaža — predviđena u
-šemi/komentaru, 2c je **ne mora** uvoziti km+m dok nema kolone u izvornom Excelu, ali
-uvoz projekata ne smije zaključati model bez dionice; (14) tok odobravanja — 2c ne gradi
-workflow, samo ne uvodi polja koja bi ga kasnije blokirala; (22) SaaS/tenant — uvoz uvijek
-u okviru firme (`withCompany`), valuta već na `Company`. Stavka B15.19 (onboarding/uvoz)
-je upravo ovaj tok.
+**Već postoji (R2):** `/ured/uvoz` — `workers` / `equipment`; parser; mapiranje;
+pregled bez upisa; potvrda u jednoj transakciji; audit; testovi. 2c dodaje `projects`.
 
-**Tok korisnika:** (1) otpremi Excel (sintetički/`.test` u CI; anonimizirani stvarni fajl
-samo kod vlasnika); (2) izaberi vrstu; (3) mapiraj kolone; (4) pregled ishoda po redu
-(ok / greška / duplikat / preskok); (5) potvrdi samo čiste odluke — potvrda piše ili
-pada cijela.
+**Model:** `projects` (r3); uvoz kroz `withCompany`. Uvoz **ne** uvodi stacionažu,
+partnere ni workflow (B15 NE → R5).
 
-**Neuredni redovi:** ostaju u izvještaju pregleda; ne upisuju se; korisnik ispravlja
-Excel ili mapiranje i ponavlja. Nema djelimičnog commit-a.
+### Kolone uvoza projekata (iz šeme `projects`)
 
-**Testovi:** proširiti postojeće import testove (parser, preview, apply, izolacija tenanta,
-kontrolni znakovi); fixturei samo sintetički (`.test`). E2E: jedan sretan + jedan fajl s
-miješanim greškama.
+| Polje | Obavezno | Aliasi (primjeri) | Napomena |
+|---|---|---|---|
+| `code` | da | šifra, oznaka, code | jedinstvena u firmi; 1–40 |
+| `name` | da | naziv, ime, name | do 200 |
+| `status` | ne | status, stanje | default ACTIVE; nepoznat → greška |
+| `site_address` | ne | adresa, lokacija | do 300 |
+| `site_place` | ne | mjesto, grad | do 120 |
+| `starts_on` | ne | početak, datum početka | datum |
+| `ends_on` | ne | kraj, završetak | ≥ početak |
+| `manager` | ne | rukovodilac, voditelj | postojeći radnik (ime+prezime) |
+| `note` | ne | napomena, note | do 2000 |
 
-**Van obima 2c:** OCR/AI čitanje (B15.18); situacije/predmjer (B15.2); GeoJSON trase;
-R4b; produkcijski PII u repou; 2d.
+**Tok:** otpremi → vrsta Projekti → mapiranje → pregled → potvrda (sve ili ništa).
+
+**Neuredni redovi:** samo u pregledu; ne upis; ispravi Excel/mapiranje.
+
+**Testovi:** preview bez upisa; apply s greškom = 0 upisa; ista šifra u drugoj firmi
+OK; izolacija tenanta; NUL/kontrolni znakovi; E2E sretan + miješane greške.
+
+**Van obima 2c:** partneri/klijent (nema tabele; R5); stacionaža (R5); tok odobravanja
+(R5/R4b); OCR; situacije; GeoJSON; R4b; 2d; PII u repou.

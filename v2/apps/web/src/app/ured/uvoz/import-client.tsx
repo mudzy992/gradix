@@ -25,10 +25,10 @@ import {
 } from "@/components/ui/index";
 import { DecisionRow, PreviewTable, ResultCard } from "./import-tables";
 
-type Kind = "workers" | "equipment";
+type Kind = "workers" | "equipment" | "projects";
 
 /**
- * Polja za mapiranje — ista imena kao na serveru (`WORKER_FIELDS` / `EQUIPMENT_FIELDS`).
+ * Polja za mapiranje — ista imena kao na serveru (`WORKER_FIELDS` / `EQUIPMENT_FIELDS` / `PROJECT_FIELDS`).
  * Ovdje su samo natpisi i redoslijed; server je izvor istine i sam odbija nepotpuno mapiranje.
  */
 const FIELDS: Record<Kind, { key: string; label: string; required: boolean }[]> = {
@@ -55,6 +55,17 @@ const FIELDS: Record<Kind, { key: string; label: string; required: boolean }[]> 
     { key: "year", label: "Godina", required: false },
     { key: "ownership", label: "Vlasništvo", required: false },
     { key: "meterValue", label: "Stanje brojila", required: false },
+  ],
+  projects: [
+    { key: "code", label: "Šifra", required: true },
+    { key: "name", label: "Naziv", required: true },
+    { key: "status", label: "Status", required: false },
+    { key: "siteAddress", label: "Adresa gradilišta", required: false },
+    { key: "sitePlace", label: "Mjesto", required: false },
+    { key: "startsOn", label: "Početak", required: false },
+    { key: "endsOn", label: "Kraj", required: false },
+    { key: "manager", label: "Rukovodilac", required: false },
+    { key: "note", label: "Napomena", required: false },
   ],
 };
 
@@ -158,7 +169,7 @@ export default function ImportClient() {
     <div>
       <PageHeader
         title="Uvoz iz Excela"
-        subtitle="Spisak radnika ili mašina. Pregled ne mijenja ništa — uvoz se potvrđuje red po red."
+        subtitle="Spisak radnika, mašina ili projekata. Pregled ne mijenja ništa — uvoz se potvrđuje red po red."
         actions={step > 1 ? <Button onClick={reset}>Novi uvoz</Button> : null}
       />
 
@@ -192,7 +203,11 @@ export default function ImportClient() {
               label="Vrsta uvoza"
               value={kind}
               onChange={(v) => setKind(v as Kind)}
-              options={[{ value: "workers", label: "Radnici" }, { value: "equipment", label: "Mašine i vozila" }]}
+              options={[
+                { value: "workers", label: "Radnici" },
+                { value: "equipment", label: "Mašine i vozila" },
+                { value: "projects", label: "Projekti" },
+              ]}
             />
 
             <Input label="Datoteka" hint=".xlsx ili .csv, do 5 MB i 5000 redova. Prvi list se čita; ostali se prijavljuju." ref={fileInput}
@@ -210,7 +225,9 @@ export default function ImportClient() {
             <p className="gx-page-sub">
               {kind === "workers"
                 ? "Obavezno: ime, prezime, datum početka. Lični podaci (JMBG, adresa, račun) se ne uvoze."
-                : "Obavezno: inventarska oznaka, naziv, kategorija. Nepoznata kategorija se prijavljuje, ne stvara."}
+                : kind === "equipment"
+                  ? "Obavezno: inventarska oznaka, naziv, kategorija. Nepoznata kategorija se prijavljuje, ne stvara."
+                  : "Obavezno: šifra i naziv. Nepoznat status ili rukovodilac se prijavljuje, ne stvara. Partneri/klijent su van obima."}
             </p>
 
             <div>

@@ -13335,7 +13335,8 @@
                           "type": "string",
                           "enum": [
                             "workers",
-                            "equipment"
+                            "equipment",
+                            "projects"
                           ]
                         },
                         "mapping": {
@@ -13901,7 +13902,8 @@
                     "type": "string",
                     "enum": [
                       "workers",
-                      "equipment"
+                      "equipment",
+                      "projects"
                     ]
                   },
                   "file": {
@@ -14450,7 +14452,8 @@
                     "type": "string",
                     "enum": [
                       "workers",
-                      "equipment"
+                      "equipment",
+                      "projects"
                     ]
                   },
                   "file": {

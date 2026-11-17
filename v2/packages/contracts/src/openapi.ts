@@ -160,7 +160,7 @@ export function buildOpenApi(): Record<string, unknown> {
               type: "object",
               required: ["kind", "file"],
               properties: {
-                kind: { type: "string", enum: ["workers", "equipment"] },
+                kind: { type: "string", enum: ["workers", "equipment", "projects"] },
                 file: { type: "string", format: "binary" },
                 mapping: {
                   type: "string",

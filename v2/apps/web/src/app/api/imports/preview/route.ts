@@ -28,8 +28,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!form) return fail("VALIDATION_FAILED", "Pošaljite datoteku kao multipart/form-data.");
 
     const kind = String(form.get("kind") ?? "") as ImportKind;
-    if (kind !== "workers" && kind !== "equipment") {
-      return fail("VALIDATION_FAILED", "Vrsta uvoza je „workers“ ili „equipment“.");
+    if (kind !== "workers" && kind !== "equipment" && kind !== "projects") {
+      return fail("VALIDATION_FAILED", "Vrsta uvoza je „workers“, „equipment“ ili „projects“.");
     }
 
     const file = form.get("file");

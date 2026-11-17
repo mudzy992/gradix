@@ -19,8 +19,14 @@ import { isServiceError } from "./equipment-service";
 import type { ServiceError } from "./equipment-service";
 import type { Actor } from "./rbac-service";
 import { toIsoDate, toNumber, toText, normaliseHeader, type ParsedSheet } from "./import-parser";
+import {
+  PROJECT_FIELDS,
+  insertProjectRow,
+  previewProjects,
+  updateProjectRow,
+} from "./import-projects";
 
-export type ImportKind = "workers" | "equipment";
+export type ImportKind = "workers" | "equipment" | "projects";
 
 export type FieldSpec = {
   key: string;
@@ -58,7 +64,9 @@ export const EQUIPMENT_FIELDS: FieldSpec[] = [
 ];
 
 export function fieldsFor(kind: ImportKind): FieldSpec[] {
-  return kind === "workers" ? WORKER_FIELDS : EQUIPMENT_FIELDS;
+  if (kind === "workers") return WORKER_FIELDS;
+  if (kind === "equipment") return EQUIPMENT_FIELDS;
+  return PROJECT_FIELDS;
 }
 
 /** Predlaže mapiranje kolona po zaglavlju; korisnik ga poslije mijenja. */
@@ -187,11 +195,13 @@ export async function previewImport(
   for (const column of ignoredColumns) {
     const normalised = normaliseHeader(column);
     const knownPersonal = ["jmbg", "licna karta", "broj licne", "adresa", "iban", "bankovni racun", "racun"];
-    notices.push(
-      knownPersonal.some((pattern) => normalised.includes(pattern))
-        ? `Kolona „${column}“ nije podržana i nije uvezena: lični podaci se u R2 ne unose.`
-        : `Kolona „${column}“ nije mapirana i nije uvezena.`,
-    );
+    if (kind === "projects" && (normalised.includes("klijent") || normalised.includes("partner"))) {
+      notices.push(`Kolona „${column}“ nije uvezena: partneri/klijent su van obima 2c (nema tabele).`);
+    } else if (knownPersonal.some((pattern) => normalised.includes(pattern))) {
+      notices.push(`Kolona „${column}“ nije podržana i nije uvezena: lični podaci se u R2 ne unose.`);
+    } else {
+      notices.push(`Kolona „${column}“ nije mapirana i nije uvezena.`);
+    }
   }
 
   if (blockers.length > 0) {
@@ -211,7 +221,9 @@ export async function previewImport(
     const rows =
       kind === "workers"
         ? await previewWorkers(client, companyId, sheet, mapping)
-        : await previewEquipment(client, companyId, sheet, mapping);
+        : kind === "equipment"
+          ? await previewEquipment(client, companyId, sheet, mapping)
+          : await previewProjects(client, companyId, sheet, mapping);
 
     const counts = { import: 0, skip: 0, error: 0, duplicate: 0 };
     for (const row of rows) counts[row.outcome] += 1;
@@ -552,6 +564,14 @@ export async function applyImport(
             await insertWorkerRow(client, companyId, row, supervisors);
             result.imported += 1;
           }
+        } else if (kind === "projects") {
+          if (decision.action === "update") {
+            await updateProjectRow(client, companyId, row);
+            result.updated += 1;
+          } else {
+            await insertProjectRow(client, companyId, actor.userId, row);
+            result.imported += 1;
+          }
         } else if (decision.action === "update") {
           await updateMachineRow(client, companyId, row);
           result.updated += 1;
@@ -573,7 +593,7 @@ export async function applyImport(
       actorId: actor.userId,
       actorEmail: null,
       action: "import.applied",
-      entityType: kind === "workers" ? "worker" : "equipment",
+      entityType: kind === "workers" ? "worker" : kind === "projects" ? "project" : "equipment",
       entityId: fileName,
       // Bez imena, telefona i emailova: trag je za radnju, ne za kopiju ličnih podataka.
       metadata: {
