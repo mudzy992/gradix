@@ -1089,14 +1089,16 @@ export const WorkdayApprovalOutcome = z.object({
 });
 export type WorkdayApprovalOutcome = z.infer<typeof WorkdayApprovalOutcome>;
 
+const BusinessDate = SafeText.regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/);
+
 export const WeekDecideInput = z.object({
-  weekStart: IsoDate,
+  weekStart: BusinessDate,
   decision: z.enum(["APPROVE", "REJECT"]),
   reason: SafeText.min(10).max(500).optional(),
 });
 export type WeekDecideInput = z.infer<typeof WeekDecideInput>;
 
-export const WeekLockInput = z.object({ weekStart: IsoDate });
+export const WeekLockInput = z.object({ weekStart: BusinessDate });
 export type WeekLockInput = z.infer<typeof WeekLockInput>;
 
 export const WorkdayReviseInput = z.object({
