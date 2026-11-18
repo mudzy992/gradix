@@ -26,7 +26,8 @@ describeDb("R4b confirm gates (PostgreSQL)", () => {
     await dbAdmin.query(
       `INSERT INTO public.workers (id, company_id, first_name, last_name, user_id, hired_at)
        VALUES ('wrk_r4bg_ss_${RUN}', $1, 'Sef', 'T', $2, '2024-01-01'),
-              ('wrk_r4bg_in_${RUN}', $1, 'Rad', 'In', NULL, '2024-01-01')`,
+              ('wrk_r4bg_in_${RUN}', $1, 'Rad', 'In', NULL, '2024-01-01'),
+              ('wrk_r4bg_cnf_${RUN}', $1, 'Rad', 'Cnf', NULL, '2024-01-01')`,
       [CO, ss.userId],
     );
     await dbAdmin.query(
@@ -36,14 +37,15 @@ describeDb("R4b confirm gates (PostgreSQL)", () => {
     await dbAdmin.query(
       `INSERT INTO public.project_assignments (id, company_id, project_id, worker_id, from_date)
        VALUES ('pas_r4bg_1_${RUN}', $1, 'prj_r4bg_${RUN}', 'wrk_r4bg_ss_${RUN}', '2026-01-01'),
-              ('pas_r4bg_2_${RUN}', $1, 'prj_r4bg_${RUN}', 'wrk_r4bg_in_${RUN}', '2026-01-01')`,
+              ('pas_r4bg_2_${RUN}', $1, 'prj_r4bg_${RUN}', 'wrk_r4bg_in_${RUN}', '2026-01-01'),
+              ('pas_r4bg_3_${RUN}', $1, 'prj_r4bg_${RUN}', 'wrk_r4bg_cnf_${RUN}', '2026-01-01')`,
       [CO],
     );
     await dbAdmin.query(
       `INSERT INTO public.workdays
          (id, company_id, worker_id, work_date, status, approval_status, created_by, updated_by)
        VALUES ('wd_r4bg_open_${RUN}', $1, 'wrk_r4bg_in_${RUN}', $2::date, 'SUBMITTED', 'SUBMITTED', $3, $3),
-              ('wd_r4bg_cnf_${RUN}', $1, 'wrk_r4bg_in_${RUN}', '2026-11-19'::date, 'SUBMITTED', 'SUBMITTED', $3, $3)`,
+              ('wd_r4bg_cnf_${RUN}', $1, 'wrk_r4bg_cnf_${RUN}', $2::date, 'SUBMITTED', 'SUBMITTED', $3, $3)`,
       [CO, DATE, ss.userId],
     );
     await dbAdmin.query(
@@ -51,8 +53,8 @@ describeDb("R4b confirm gates (PostgreSQL)", () => {
          (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
        VALUES ('we_r4bg_open_${RUN}', $1, 'wd_r4bg_open_${RUN}', 'wrk_r4bg_in_${RUN}', 'WORK',
                '2026-11-18T08:00:00Z', NULL, 'OPEN', 'prj_r4bg_${RUN}', $2, $2),
-              ('we_r4bg_cnf_${RUN}', $1, 'wd_r4bg_cnf_${RUN}', 'wrk_r4bg_in_${RUN}', 'WORK',
-               '2026-11-19T08:00:00Z', '2026-11-19T16:00:00Z', 'KNOWN_END', 'prj_r4bg_${RUN}', $2, $2)`,
+              ('we_r4bg_cnf_${RUN}', $1, 'wd_r4bg_cnf_${RUN}', 'wrk_r4bg_cnf_${RUN}', 'WORK',
+               '2026-11-18T08:00:00Z', '2026-11-18T16:00:00Z', 'KNOWN_END', 'prj_r4bg_${RUN}', $2, $2)`,
       [CO, ss.userId],
     );
     await dbAdmin.query(

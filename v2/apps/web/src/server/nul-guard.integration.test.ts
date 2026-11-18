@@ -51,6 +51,10 @@ import { PATCH as assignmentChangeRoute } from "@/app/api/projects/[id]/assignme
 import { POST as overrideReqRoute } from "@/app/api/projects/[id]/override-requests/route";
 import { POST as overrideApproveRoute } from "@/app/api/projects/[id]/override-requests/[requestId]/route";
 import { POST as resolveRoute } from "@/app/api/workday-conflicts/[id]/resolve/route";
+import { POST as workdayConfirmRoute } from "@/app/api/workdays/[id]/confirm/route";
+import { POST as workdayReviseRoute } from "@/app/api/workdays/[id]/revise/route";
+import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
+import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
 import { GET as obligationsGet } from "@/app/api/obligations/route";
 import { POST as importsPreviewRoute } from "@/app/api/imports/preview/route";
@@ -168,6 +172,10 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/projects/{id}/override-requests": { GET: overrideListGet, POST: overrideReqRoute },
   "/api/projects/{id}/override-requests/{requestId}": { POST: overrideApproveRoute },
   "/api/workday-conflicts/{id}/resolve": { POST: resolveRoute },
+  "/api/workdays/{id}/confirm": { POST: workdayConfirmRoute },
+  "/api/workdays/{id}/revise": { POST: workdayReviseRoute },
+  "/api/work-weeks/decide": { POST: weekDecideRoute },
+  "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },
   "/api/audit": { GET: auditGet },
   "/api/sync/pull": { GET: pullGet },
