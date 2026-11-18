@@ -327,6 +327,8 @@ BEGIN
       ('sync_cursor_slots', 'sync_cursor_slots_tenant_isolation'),
       ('sync_change_log', 'sync_change_log_tenant_isolation'),
       ('workdays', 'workdays_tenant_isolation'),
+      ('work_week_approvals', 'work_week_approvals_tenant_isolation'),
+      ('workday_revisions', 'workday_revisions_tenant_isolation'),
       ('work_entries', 'work_entries_tenant_isolation'),
       ('sync_receipts', 'sync_receipts_tenant_isolation'),
       ('sync_conflicts', 'sync_conflicts_tenant_isolation')

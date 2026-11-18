@@ -23,6 +23,8 @@ table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/
 table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
 table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
 table	workdays	SELECT;INSERT;UPDATE	-		Canonical daily header; upsert/update lifecycle with immutable worker/date identity and no hard-delete path.
+table	work_week_approvals	SELECT;INSERT;UPDATE	-		R4b week approve/reject/lock; FORCE RLS; no hard-delete path.
+table	workday_revisions	SELECT;INSERT	-		R4b office revisions after confirm; append-only; FORCE RLS; no UPDATE/DELETE.
 table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overlap trigger protects OPEN/KNOWN_END intervals; no hard-delete path.
 table	sync_receipts	SELECT;INSERT	-		Idempotency receipts are append-only; server-side retention may purge result details but preserves the compact key/hash.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.

@@ -75,6 +75,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.projects TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.project_assignments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.project_assignment_overrides TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.workdays TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.work_week_approvals TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.workday_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.work_entries TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.sync_receipts TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.sync_conflicts TO gradix_app;

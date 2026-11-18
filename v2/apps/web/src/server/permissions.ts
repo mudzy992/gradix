@@ -120,6 +120,11 @@ export const PERMISSIONS = {
   // R4a-2: razrješenje sukoba je odvojeno od pregleda — ACCOUNTANT vidi, ne razrješava.
   // Strana u sukobu ne razrješava vlastiti sukob (workday-review.canResolveConflict).
   "workdays.resolve": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  // R4b (ODOBREN): potvrda / sedmica / zaključavanje / revizija — bez UI ekrana u ovom rezu.
+  "workdays.confirm": ["SITE_SUPERVISOR"],
+  "workdays.week_decide": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "workdays.lock": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "workdays.revise": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -197,6 +202,22 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "workdays.resolve": {
     label: "Razrješenje sukoba radnih dana",
     description: "Odluka o sukobu server/telefon unosa: prihvati jedan, ispravi vremena ili odbaci uz razlog koji autor vidi. Vlasnik/admin cijela firma; vođa projekta i šef samo svoj opseg. Strana u sukobu ne razrješava vlastiti sukob.",
+  },
+  "workdays.confirm": {
+    label: "Potvrda radnog dana (šef)",
+    description: "Šef potvrđuje predani dan u svom R3 opsegu (samo web, online). Blokirano uz otvoren sukob ili otvoren segment.",
+  },
+  "workdays.week_decide": {
+    label: "Odobrenje ili odbijanje sedmice",
+    description: "Vlasnik, admin ili vođa projekta odobrava/odbija sedmicu (pon–ned) uz razlog pri odbijanju.",
+  },
+  "workdays.lock": {
+    label: "Zaključavanje sedmice",
+    description: "Zaključava odobrenu sedmicu; ista uloga kao odobravanje. Poslije toga sync unosa je odbijen.",
+  },
+  "workdays.revise": {
+    label: "Ispravka (revizija) poslije potvrde",
+    description: "Vlasnik/admin upisuje reviziju s razlogom; ne prepisuje LOCKED original.",
   },
 };
 
