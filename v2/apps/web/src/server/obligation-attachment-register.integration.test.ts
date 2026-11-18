@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { companyId } from "@gradix/db";
 
 vi.mock("./storage", async () => {
-  const actual = await vi.importActual<typeof import("./storage")>("./storage");
+  const actual = await vi.importActual("./storage") as typeof import("./storage");
   return {
     ...actual,
     storageConfig: () => ({
