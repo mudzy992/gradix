@@ -1,6 +1,6 @@
 /**
  * R4b E2E: šef potvrđuje dan, ured odobrava i zaključava, računovođa samo čita.
- * Demo seed + demo-pregled daju SUBMITTED dan s zatvorenim segmentima u šefovom opsegu.
+ * Asserte na trajna stanja (Chip/dugmad), ne na flash poruku koju refresh skine.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -25,17 +25,19 @@ test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita"
   const confirm = page.getByRole("button", { name: "Potvrdi dan" }).first();
   await expect(confirm).toBeVisible();
   await confirm.click();
-  await expect(page.getByText("Dan je potvrđen.")).toBeVisible();
+  await expect(page.getByText("Potvrđeno").first()).toBeVisible({ timeout: 15_000 });
 
   const officeCtx = await browser.newContext();
   const office = await officeCtx.newPage();
   await login(office, "ured@demo.test");
   await office.goto("/ured/radni-dani");
   await expect(office.getByRole("heading", { name: "Radni dani" })).toBeVisible();
-  await office.getByRole("button", { name: "Odobri sedmicu" }).click();
-  await expect(office.getByText("Sedmica je odobrena.")).toBeVisible();
+  const approve = office.getByRole("button", { name: "Odobri sedmicu" });
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect(office.getByRole("button", { name: "Zaključaj" })).toBeEnabled({ timeout: 15_000 });
   await office.getByRole("button", { name: "Zaključaj" }).click();
-  await expect(office.getByText("Sedmica je zaključana.")).toBeVisible();
+  await expect(office.getByText("Sedmica zaključana").first()).toBeVisible({ timeout: 15_000 });
   await officeCtx.close();
 
   const acctCtx = await browser.newContext();
