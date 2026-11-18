@@ -26,7 +26,7 @@ try {
     );
     if (!sef.rows[0]) throw new Error("Nedostaje sef@demo.test / povezani radnik.");
 
-    const peer = await client.query<{ id: string }>(
+    const peers = await client.query<{ id: string }>(
       `SELECT ta.worker_id AS id
          FROM public.project_assignments va
          JOIN public.project_assignments ta
@@ -35,43 +35,48 @@ try {
          JOIN public.workers w ON w.company_id = ta.company_id AND w.id = ta.worker_id
         WHERE va.company_id = $1 AND va.worker_id = $2 AND va.voided_at IS NULL
           AND w.user_id IS NULL
-        LIMIT 1`,
+        GROUP BY ta.worker_id
+        LIMIT 2`,
       [COMPANY, sef.rows[0].worker_id],
     );
-    if (!peer.rows[0]) throw new Error("Nema radnika u šefovom opsegu za R4b sidro.");
+    if (peers.rows.length < 1) throw new Error("Nema radnika u šefovom opsegu za R4b sidro.");
 
-    const project = await client.query<{ id: string }>(
-      `SELECT project_id AS id FROM public.project_assignments
-        WHERE company_id = $1 AND worker_id = $2 AND voided_at IS NULL LIMIT 1`,
-      [COMPANY, peer.rows[0].id],
-    );
-    const day = await client.query<{ d: string }>(
-      `SELECT (CURRENT_DATE - ($1::int + n))::text AS d
-         FROM generate_series(0, 40) AS n
-        WHERE NOT EXISTS (
-          SELECT 1 FROM public.workdays
-           WHERE company_id = $2 AND worker_id = $3 AND work_date = (CURRENT_DATE - ($1::int + n))
-        )
-        LIMIT 1`,
-      [3, COMPANY, peer.rows[0].id],
-    );
-    if (!day.rows[0]) throw new Error("Nema slobodnog datuma za R4b sidro.");
+    const insertClean = async (suffix: string, workerId: string, offset: number) => {
+      const project = await client.query<{ id: string }>(
+        `SELECT project_id AS id FROM public.project_assignments
+          WHERE company_id = $1 AND worker_id = $2 AND voided_at IS NULL LIMIT 1`,
+        [COMPANY, workerId],
+      );
+      const day = await client.query<{ d: string }>(
+        `SELECT (CURRENT_DATE - ($1::int + n))::text AS d
+           FROM generate_series(0, 40) AS n
+          WHERE NOT EXISTS (
+            SELECT 1 FROM public.workdays
+             WHERE company_id = $2 AND worker_id = $3 AND work_date = (CURRENT_DATE - ($1::int + n))
+          )
+          LIMIT 1`,
+        [offset, COMPANY, workerId],
+      );
+      if (!day.rows[0]) throw new Error(`Nema slobodnog datuma za R4b sidro ${suffix}.`);
+      const wd = `${PREFIX}wd_${suffix}`;
+      const we = `${PREFIX}we_${suffix}`;
+      await client.query(
+        `INSERT INTO public.workdays (id, company_id, worker_id, work_date, status, approval_status, created_by, updated_by)
+         VALUES ($1, $2, $3, $4::date, 'SUBMITTED', 'SUBMITTED', $5, $5)`,
+        [wd, COMPANY, workerId, day.rows[0].d, sef.rows[0].user_id],
+      );
+      await client.query(
+        `INSERT INTO public.work_entries
+           (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, 'WORK', ($5 || 'T08:00:00+01:00')::timestamptz,
+                 ($5 || 'T16:00:00+01:00')::timestamptz, 'KNOWN_END', $6, $7, $7)`,
+        [we, COMPANY, wd, workerId, day.rows[0].d, project.rows[0]?.id ?? null, sef.rows[0].user_id],
+      );
+      console.log(`R4b sidro: ${wd} ${day.rows[0].d} worker=${workerId}`);
+    };
 
-    const wd = `${PREFIX}wd_ok`;
-    const we = `${PREFIX}we_ok`;
-    await client.query(
-      `INSERT INTO public.workdays (id, company_id, worker_id, work_date, status, approval_status, created_by, updated_by)
-       VALUES ($1, $2, $3, $4::date, 'SUBMITTED', 'SUBMITTED', $5, $5)`,
-      [wd, COMPANY, peer.rows[0].id, day.rows[0].d, sef.rows[0].user_id],
-    );
-    await client.query(
-      `INSERT INTO public.work_entries
-         (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, 'WORK', ($5 || 'T08:00:00+01:00')::timestamptz,
-               ($5 || 'T16:00:00+01:00')::timestamptz, 'KNOWN_END', $6, $7, $7)`,
-      [we, COMPANY, wd, peer.rows[0].id, day.rows[0].d, project.rows[0]?.id ?? null, sef.rows[0].user_id],
-    );
-    console.log(`R4b sidro: ${wd} ${day.rows[0].d} worker=${peer.rows[0].id}`);
+    await insertClean("ok", peers.rows[0]!.id, 3);
+    await insertClean("ok2", (peers.rows[1] ?? peers.rows[0])!.id, 4);
   });
 } finally {
   await pool.end();

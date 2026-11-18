@@ -21,7 +21,7 @@ import { weekStartFromWorkDate } from "./approval-label";
 export const dynamic = "force-dynamic";
 
 /**
- * Radni dani — pregled + R4b potvrda/sedmica (bez revizije UI u ovom bloku).
+ * Radni dani — pregled + R4b potvrda/sedmica/ispravka.
  * Capability flagovi su booleani; funkcije se ne prosljeđuju klijentu (pravilo 12).
  */
 export default async function RadniDaniPage({
@@ -60,7 +60,7 @@ export default async function RadniDaniPage({
         subtitle={
           onlyReview
             ? "Samo dani s oznakom „Za provjeru“ (otvoren segment ili kraj nepoznat)."
-            : "Pregled dana s terena. Šef potvrđuje dan; ured odobrava, odbija ili zaključava sedmicu."
+            : "Pregled dana s terena. Šef potvrđuje dan; ured odobrava, odbija, zaključava ili ispravlja."
         }
       />
       {onlyReview && days.length === 0 ? (
@@ -77,6 +77,7 @@ export default async function RadniDaniPage({
             canConfirm: can(auth.ctx.roles, "workdays.confirm"),
             canDecide: can(auth.ctx.roles, "workdays.week_decide"),
             canLock: can(auth.ctx.roles, "workdays.lock"),
+            canRevise: can(auth.ctx.roles, "workdays.revise"),
           }}
         />
       )}

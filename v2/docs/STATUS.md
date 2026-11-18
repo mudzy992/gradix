@@ -14,8 +14,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | Emulator 2c i A1 | **PRIHVAĆEN** | spremno |
 | Kontrolna lista prvog dana (PILOT.md tabela) | na snazi | spremno |
 | R4b API / migracije | **isporučeno** (`5ffa667`+) | spremno |
-| R4b UI potvrda / sedmica / zaključaj | **isporučeno** (dizajn ODOBREN) | spremno |
-| R4b UI ispravka (revise) | sljedeći blok | ne radi |
+| R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
+| R4b UI ispravka (revise) | **isporučeno** | spremno |
 | R5 / partneri | ne počinju | ne radi |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
@@ -32,25 +32,21 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 |---|---|
 | 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** |
 | `@demo.test`; staging seed/prijava | **ODOBRENO** / **PROŠLO** |
-| Rotacija tajni | **URAĐENO** (vlasnik); i dalje stavka COOLIFY §13 za produkciju |
-| Telefon | Android (ostaje); nije uslov pilota |
-| Mobilni put | Expo Go (zadano) |
-| R4b plan §11 · dozvole · dizajn | **ODOBREN** / **POTVRĐENO** / **ODOBREN** |
-| Prilog Rokovi | `b5c06d1` + staging upload/download; CI tok |
-| s3.bucket_object | dijagnostika na Put/Get (ne politika) |
+| Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
+| R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
+| R4b revise UI | **DA** (isporučeno) |
 | R5 / partneri | **ne počinju** |
 
 ## Radi (CI)
 
-- R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`, `--reset-pilot`.
-- R4b: API + UI potvrda/sedmica/zaključaj na `/ured/radni-dani`; revise UI još ne.
-- Prilozi rokova: registracija + CI tok; staging potvrdio vlasnik.
+- R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`.
+- R4b: API + UI potvrda/sedmica/zaključaj/ispravka na `/ured/radni-dani`.
+- Prilozi rokova; s3 dijagnostika Put/Get.
 
 ## Ne radi / namjerno još nema
 
-- R4b UI ispravka (revise); R5; partneri; Android store/dev build.
+- R5; partneri; Android store/dev build.
 
 ## Dugovi / otvoreno
 
-- R4b revise UI; `PLATFORM_ADMIN_EMAILS` ako treba katalog;
-  MinIO konzola / retencija / B11 / email / ADR 0014 u produkciji (COOLIFY §13).
+- `PLATFORM_ADMIN_EMAILS` ako treba katalog; MinIO konzola / retencija / B11 / email / ADR 0014 (COOLIFY §13).

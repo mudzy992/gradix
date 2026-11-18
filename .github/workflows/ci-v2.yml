@@ -414,6 +414,10 @@ jobs:
             psql "$DATABASE_ADMIN_URL" -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /tmp/e2e-stabilnost/reset-$n.log 2>&1 \
               && (cd ../.. && ./infra/scripts/db-apply.sh >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
               && (cd ../.. && pnpm --filter @gradix/web seed >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-r4b-approval.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
               || echo "::error::STAB dio=$DIO run $n: reset baze nije uspio"
             log="/tmp/e2e-stabilnost/run-$n.log"
             if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then

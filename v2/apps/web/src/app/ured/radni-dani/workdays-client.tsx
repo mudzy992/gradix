@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * R4b: potvrda dana (šef) i sedmično odobri/odbij/zaključaj (ured/PM).
+ * R4b: potvrda dana, sedmica, zaključaj, ispravka.
  * Server šalje samo podatke i boolean capability — bez funkcija (pravilo 12).
  */
 import { useMemo, useState } from "react";
@@ -14,8 +14,9 @@ import {
 import type { WeekApprovalRow, WorkdayReviewRow } from "@/server/workday-review";
 import { reviewLabel } from "./review-label";
 import { approvalLabel, weekStartFromWorkDate, weekStatusLabel } from "./approval-label";
+import { WorkdayRowActions } from "./workdays-row-actions";
 
-type Caps = { canConfirm: boolean; canDecide: boolean; canLock: boolean };
+type Caps = { canConfirm: boolean; canDecide: boolean; canLock: boolean; canRevise: boolean };
 type Outcome = { outcome: string; status?: string; message?: string; code?: string };
 
 export function WorkdaysClient({
@@ -35,23 +36,21 @@ export function WorkdaysClient({
   const initialWeek = useMemo(() => {
     if (caps.canConfirm) {
       const pending = weekOptions.find((start) =>
-        days.some(
-          (day) =>
-            weekStartFromWorkDate(day.work_date) === start
-            && day.status === "SUBMITTED"
-            && day.approval_status === "SUBMITTED"
-            && day.open_entries === 0
-            && day.open_conflicts === 0,
+        days.some((day) =>
+          weekStartFromWorkDate(day.work_date) === start
+          && day.status === "SUBMITTED"
+          && day.approval_status === "SUBMITTED"
+          && day.open_entries === 0
+          && day.open_conflicts === 0,
         ),
       );
       if (pending) return pending;
     }
     if (caps.canDecide || caps.canLock) {
       const confirmed = weekOptions.find((start) =>
-        days.some(
-          (day) =>
-            weekStartFromWorkDate(day.work_date) === start
-            && day.approval_status === "FOREMAN_CONFIRMED",
+        days.some((day) =>
+          weekStartFromWorkDate(day.work_date) === start
+          && day.approval_status === "FOREMAN_CONFIRMED",
         ),
       );
       if (confirmed) return confirmed;
@@ -66,7 +65,6 @@ export function WorkdaysClient({
   const weekMap = useMemo(() => new Map(weeks.map((row) => [row.week_start, row])), [weeks]);
   const week = weekMap.get(weekStart);
   const visible = days.filter((day) => weekStartFromWorkDate(day.work_date) === weekStart);
-
   const refresh = () => { setBusy(false); router.refresh(); };
 
   const run = async (path: string, body?: unknown) => {
@@ -80,7 +78,13 @@ export function WorkdaysClient({
     }
     const data = res.data;
     if (data.outcome === "OK") {
-      setNotice({ tone: "success", text: data.status === "LOCKED" ? "Sedmica je zaključana." : data.status === "WEEK_APPROVED" ? "Sedmica je odobrena." : data.status === "WEEK_REJECTED" ? "Sedmica je odbijena." : "Dan je potvrđen." });
+      setNotice({
+        tone: "success",
+        text: data.status === "LOCKED" ? "Sedmica je zaključana."
+          : data.status === "WEEK_APPROVED" ? "Sedmica je odobrena."
+            : data.status === "WEEK_REJECTED" ? "Sedmica je odbijena."
+              : "Dan je potvrđen.",
+      });
       refresh();
       return;
     }
@@ -114,18 +118,12 @@ export function WorkdaysClient({
         <Inline gap="var(--space-2)">
           {caps.canDecide ? (
             <>
-              <Button variant="primary" disabled={busy || week?.status === "LOCKED" || week?.status === "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/decide", { weekStart, decision: "APPROVE" })}>
-                Odobri sedmicu
-              </Button>
-              <Button disabled={busy || week?.status === "LOCKED"} onClick={() => { setReason(""); setRejectOpen(true); }}>
-                Odbij uz razlog
-              </Button>
+              <Button variant="primary" disabled={busy || week?.status === "LOCKED" || week?.status === "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/decide", { weekStart, decision: "APPROVE" })}>Odobri sedmicu</Button>
+              <Button disabled={busy || week?.status === "LOCKED"} onClick={() => { setReason(""); setRejectOpen(true); }}>Odbij uz razlog</Button>
             </>
           ) : null}
           {caps.canLock ? (
-            <Button disabled={busy || week?.status !== "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/lock", { weekStart })}>
-              Zaključaj
-            </Button>
+            <Button disabled={busy || week?.status !== "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/lock", { weekStart })}>Zaključaj</Button>
           ) : null}
         </Inline>
       ) : null}
@@ -135,46 +133,28 @@ export function WorkdaysClient({
         rowKey={(day) => day.id}
         emptyText="Nema dana za izabranu sedmicu."
         columns={[
-          {
-            key: "worker",
-            header: "Radnik · datum",
-            cell: (day) => (
-              <span><strong>{day.worker_name}</strong><br />{day.work_date}</span>
-            ),
-          },
+          { key: "worker", header: "Radnik · datum", cell: (day) => (<span><strong>{day.worker_name}</strong><br />{day.work_date}</span>) },
           { key: "projects", header: "Projekti", cell: (day) => day.project_codes ?? "—" },
           { key: "entries", header: "Unosi", cell: (day) => day.entries },
-          {
-            key: "approval",
-            header: "Stanje",
-            cell: (day) => (
-              <Chip tone={day.approval_status === "SUBMITTED" ? "hot" : undefined}>
-                {approvalLabel(day.approval_status)}
-              </Chip>
-            ),
-          },
+          { key: "approval", header: "Stanje", cell: (day) => (<Chip tone={day.approval_status === "SUBMITTED" ? "hot" : undefined}>{approvalLabel(day.approval_status)}</Chip>) },
           { key: "label", header: "Oznaka", cell: (day) => reviewLabel(day) ?? "—" },
           {
             key: "actions",
             header: "",
             cell: (day) => (
-              caps.canConfirm
-                && day.status === "SUBMITTED"
-                && day.open_entries === 0
-                && day.open_conflicts === 0
-                && (
-                  day.approval_status === "SUBMITTED"
-                  || (day.approval_status === "FOREMAN_CONFIRMED" && week?.status === "WEEK_REJECTED")
-                )
-                ? (
-                  <Button
-                    disabled={busy}
-                    onClick={() => void run(`/api/workdays/${day.id}/confirm`)}
-                  >
-                    Potvrdi dan
-                  </Button>
-                )
-                : null
+              <WorkdayRowActions
+                day={day}
+                weekStatus={week?.status}
+                caps={caps}
+                busy={busy}
+                onConfirm={() => void run(`/api/workdays/${day.id}/confirm`)}
+                onBusy={setBusy}
+                onReviseDone={() => {
+                  setNotice({ tone: "success", text: "Ispravka je sačuvana. Originalni dan nije prepisan." });
+                  refresh();
+                }}
+                onReviseError={(message) => setNotice({ tone: "error", text: message })}
+              />
             ),
           },
         ]}
