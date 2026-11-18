@@ -55,6 +55,8 @@ const TENANT_TABLES = [
   "sync_cursor_slots",
   "sync_receipts",
   "work_entries",
+  "work_week_approvals",
+  "workday_revisions",
   "workdays",
   "workers",
 ];
