@@ -1,6 +1,5 @@
 /**
- * R4b E2E: šef potvrđuje dan, ured odobrava i zaključava, računovođa samo čita.
- * Asserte na trajna stanja (Chip/dugmad), ne na flash poruku koju refresh skine.
+ * R4b E2E: šef potvrđuje dan bez OPEN sukoba, ured odobrava i zaključava, računovođa samo čita.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -22,8 +21,8 @@ test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita"
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();
-  const confirm = page.getByRole("button", { name: "Potvrdi dan" }).first();
-  await expect(confirm).toBeVisible();
+  const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();
+  await expect(confirm).toBeVisible({ timeout: 15_000 });
   await confirm.click();
   await expect(page.getByText("Potvrđeno").first()).toBeVisible({ timeout: 15_000 });
 

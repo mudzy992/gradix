@@ -18,6 +18,7 @@ export type WorkdayReviewRow = {
   entries: number;
   unknown_end: number;
   open_entries: number;
+  open_conflicts: number;
   project_codes: string | null;
 };
 
@@ -68,10 +69,12 @@ export async function listWorkdaysForReview(
             count(e.id)::int AS entries,
             count(e.id) FILTER (WHERE e.end_state = 'UNKNOWN_END')::int AS unknown_end,
             count(e.id) FILTER (WHERE e.ended_at IS NULL AND e.end_state = 'OPEN')::int AS open_entries,
+            count(DISTINCT c.id) FILTER (WHERE c.status = 'OPEN')::int AS open_conflicts,
             string_agg(DISTINCT p.code, ', ') AS project_codes
        FROM public.workdays d
        JOIN public.workers w ON w.company_id = d.company_id AND w.id = d.worker_id
        LEFT JOIN public.work_entries e ON e.company_id = d.company_id AND e.workday_id = d.id
+       LEFT JOIN public.sync_conflicts c ON c.company_id = e.company_id AND c.work_entry_id = e.id
        LEFT JOIN public.projects p ON p.company_id = d.company_id AND p.id = e.project_id
       WHERE d.company_id = $1
         AND (

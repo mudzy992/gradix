@@ -40,7 +40,8 @@ export function WorkdaysClient({
             weekStartFromWorkDate(day.work_date) === start
             && day.status === "SUBMITTED"
             && day.approval_status === "SUBMITTED"
-            && day.open_entries === 0,
+            && day.open_entries === 0
+            && day.open_conflicts === 0,
         ),
       );
       if (pending) return pending;
@@ -165,7 +166,8 @@ export function WorkdaysClient({
                 )
                 ? (
                   <Button
-                    disabled={busy || day.open_entries > 0}
+                    disabled={busy || day.open_entries > 0 || day.open_conflicts > 0}
+                    title={day.open_conflicts > 0 ? "Prvo razrijesi sukob." : day.open_entries > 0 ? "Segment još nije zatvoren." : undefined}
                     onClick={() => void run(`/api/workdays/${day.id}/confirm`)}
                   >
                     Potvrdi dan
