@@ -1201,8 +1201,8 @@ export async function registerAttachment(
     await client.query(
       `INSERT INTO obligation_attachments (id, company_id, obligation_id, object_key, file_name, content_type,
                                            size_bytes, sha256, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')`,
-      [id, companyId, obligationId, key, sanitiseFileName(input.fileName), contentType, input.sizeBytes, input.sha256],
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)`,
+      [id, companyId, obligationId, key, sanitiseFileName(input.fileName), contentType, input.sizeBytes, input.sha256, actor.userId],
     );
 
     const created = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1 AND company_id = $2`, [id, companyId]);

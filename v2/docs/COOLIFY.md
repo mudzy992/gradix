@@ -167,17 +167,15 @@ zamjenjuje završni test otvaranja Consolea i browser priloga nakon deploya.
 
 ### 2.2. Redis ACL koji dijagnostika traži (Redis se ne koristi u aplikaciji)
 
-Aplikacija Redis uopšte ne koristi (rate limit prijave je PostgreSQL); dijagnostika je
-informativna i ništa ne blokira. Da `redis.auth_rw` bude PASS, ACL korisnik `gradix_v2` treba:
-
-- ključ-obrazac: `~gradix:stg:*` (dijagnostika piše isključivo pod `gradix:stg:diag:`),
-- komande: `+ping +set +get +del +pttl` (dijagnostika koristi i `expire` obrazac kroz
-  `SET ... PX`, pa gdje ACL to razdvaja dodati i `+expire`),
-- AUTH sa korisnikom i lozinkom preko TLS-a (port 6380, CA po §3.6).
-
-Dijagnostika u `redis.auth_rw` ispisuje sanitizovano ime Redis greške (npr. `WRONGPASS`,
-`NOPERM`), komandu koja je pala (`failed_command`) i `key_pattern` — bez lozinke i bez
-vrijednosti ključeva. Audit postojećeg korisnika: `v2/infra/redis/acl-v2.txt`.
+Aplikacija Redis **ne koristi** (prijava/rate-limit je PostgreSQL); `NOPERM` u dijagnostici
+znači samo da ACL korisnik `gradix_v2` nema pravo na dijagnostički uzorak ključeva/komandi —
+to ne utiče na runtime weba. Za `redis.auth_rw` PASS efektivni ugovor je:
+`~gradix:stg:*` (dijagnostika piše samo pod `gradix:stg:diag:*`) uz
+`+ping +set +get +del +pttl` (i `+expire` ako ACL razdvaja `SET … PX`); AUTH+TLS na 6380
+(CA §3.6). Primjer ACL linije za diag prefiks:
+`ACL SETUSER gradix_v2 on >… ~gradix:stg:diag:* +ping +set +get +del +pttl`
+(ne pokretati s `reset` na live; audit: `v2/infra/redis/acl-v2.txt`). Dijagnostika loguje
+samo ime greške (`NOPERM`/`WRONGPASS`), `failed_command` i `key_pattern` — bez lozinke.
 
 ### 2.3. Čišćenje probnih objekata dijagnostike u bucketu
 
