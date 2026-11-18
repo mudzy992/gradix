@@ -1,21 +1,19 @@
 /**
  * R4b E2E sidro: jedan SUBMITTED dan bez OPEN sukoba/segmenta u šefovom R3 opsegu.
- * Idempotentno (briše prethodni PREFIX red). Sintetički podaci.
+ * Administratorska naredba (DATABASE_ADMIN_URL) — kao demo-pregled/demo-sukobi.
  */
 import { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 
 const PREFIX = "demo_r4b_";
 const COMPANY = "cmp_demo";
-const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
-if (!appUrl || !adminUrl) throw new Error("DATABASE_URL i DATABASE_ADMIN_URL su obavezni.");
+if (!adminUrl) throw new Error("DATABASE_ADMIN_URL je obavezan.");
 
-const admin = new Pool({ connectionString: adminUrl, max: 2 });
-const app = new Pool({ connectionString: appUrl, max: 2 });
+const pool = new Pool({ connectionString: adminUrl, max: 2 });
 
 try {
-  await withCompany(app, companyId(COMPANY), async (client) => {
+  await withCompany(pool, companyId(COMPANY), async (client) => {
     await client.query("DELETE FROM public.work_entries WHERE company_id = $1 AND id LIKE $2", [COMPANY, `${PREFIX}%`]);
     await client.query("DELETE FROM public.workdays WHERE company_id = $1 AND id LIKE $2", [COMPANY, `${PREFIX}%`]);
 
@@ -76,6 +74,5 @@ try {
     console.log(`R4b sidro: ${wd} ${day.rows[0].d} worker=${peer.rows[0].id}`);
   });
 } finally {
-  await admin.end();
-  await app.end();
+  await pool.end();
 }
