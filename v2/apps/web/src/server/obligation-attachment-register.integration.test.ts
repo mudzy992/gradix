@@ -9,13 +9,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { companyId } from "@gradix/db";
 
 vi.mock("./storage", async () => {
-  const actual = await vi.importActual("./storage") as typeof import("./storage");
+  const actual = await vi.importActual("./storage");
   return {
-    ...actual,
+    ...(actual as Record<string, unknown>),
     storageConfig: () => ({
-      configured: true as const,
-      client: {} as never,
-      presignClient: {} as never,
+      configured: true,
+      client: {},
+      presignClient: {},
       bucket: "gradix-stg",
       publicEndpoint: "https://minio.test.example",
     }),
