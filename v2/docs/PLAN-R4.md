@@ -361,59 +361,117 @@ R4a-2 dodaje:
 **R4a-2 gate:** CI simulator, dvije realne DB konekcije, offline grupni tok i konfliktni UI prolaze;
 vlasnik prihvata tok na stvarnom telefonu. Tek tada se planira/počinje R4b.
 
-## 11. R4b — plan (samo plan; čeka odobrenje vlasnika — bez koda)
+## 11. R4b — plan (bez koda dok vlasnik ne upiše **ODOBREN**)
 
-**Status plana:** smije se predati na odobrenje (**DA** vlasnik); implementacija **ne** počinje
-prije odobrenja. **Postoji (STATUS.md):** R4a-1/R4a-2 (unos, sync, sukobi, uredski pregled).
-**Novo:** potvrda / sedmično odobrenje / zaključavanje / ispravke.
+**Status:** dopunjen NEDOSTAJE (1)–(7); **čeka eksplicitno ODOBREN** (ne upisujem odluku umjesto
+vlasnika). **Postoji (STATUS.md):** R4a unos/sync/sukobi, `/ured/radni-dani`, `/ured/sukobi`,
+`workdays.view` / `workdays.resolve`. **Novo:** potvrda, sedmica, zaključavanje, revizije.
+**Van R4b:** stacionaža, partner, opšti B15 workflow, R5. B15§14 bio NE→R5; R4b rješava samo
+odobravanje **radnih dana** bez izmjene isporučenog R4a sync modela (**postoji**).
 
-### B15 \[Rano u model\] vs isporučeno
+### Dijagram stanja (tekst)
 
-B15 stavka 14 (tok odobravanja) bila je u ranijoj tabeli **NE → R5** uz stacionažu i partnere.
-R4b **ne** mijenja već isporučeni R4a model unosa/sync-a: dodaje **samo** statuse i radnje nad
-postojećim `workdays` / `work_entries` (**postoji**). Opšti B15 workflow (nabavka, troškovi,
-pragovi iznosa) ostaje **van R4b** → i dalje R5. **Stacionaža i partner ostaju van R4b** (R5).
+```
+SUBMITTED --[šef potvrdi]--> FOREMAN_CONFIRMED
+FOREMAN_CONFIRMED --[ured odobri sedmicu]--> WEEK_APPROVED
+FOREMAN_CONFIRMED --[ured odbije sedmicu]--> WEEK_REJECTED
+WEEK_REJECTED --[šef ispravi / ponovo potvrdi dan]--> FOREMAN_CONFIRMED
+WEEK_APPROVED --[zaključaj]--> LOCKED
+* --[ispravka poslije potvrde]--> nova REVIZIJA (veza na prethodnu); LOCKED original se ne prepisuje
+```
 
-### Model podataka (**novo** nad postojećim danima)
+Svaki prelaz: uloga + ishod + test (tabela ispod).
 
-Tok: `SUBMITTED` → `FOREMAN_CONFIRMED` → `WEEK_APPROVED` → `LOCKED` (pon–ned sedmica).
-Ispravke nakon potvrde = **nova revizija** (razlog, autor, vrijeme, veza na prethodnu); nakon
-`LOCKED` original se ne prepisuje. Nema auto-zatvaranja ni izmišljenog vremena (**postoji**
-pravilo 16h otvorenog dana u R4a).
+### (1) Odbijanje sedmice
 
-### Tok po rolama
-
-| Radnja | Ko |
+| | |
 |---|---|
-| Potvrda dana | SITE_SUPERVISOR (šef) — **novo** |
-| Odobrenje / odbijanje sedmice | uredska rola (OWNER/ADMIN ili kako vlasnik odabere u R4b) — **novo** |
-| Zaključavanje sedmice | ista uredska odluka nakon odobrenja — **novo** |
-| Ispravka (revizija) | ured / ovlašteni; audit — **novo** |
+| Stanje | **novo** `WEEK_REJECTED` na zapisu sedmice (`work_week_approvals`) |
+| Poslije | dani ostaju `FOREMAN_CONFIRMED`; šef vidi razlog; mora ponovo potvrditi / ispraviti pa ured
+  ponovo odlučuje → nazad na `FOREMAN_CONFIRMED` tok |
+| Uloga | ista kao odobravanje — **\[OTVORENO\]** OWNER/ADMIN **ili** +PROJECT_MANAGER |
+| Test | odbijanje s razlogom ≥10 znakova; bez razloga = VALIDATION_FAILED; PM van opsega = 403 |
 
-### Dizajn ekrana
+### (2) Sync poslije WEEK_APPROVED / LOCKED
 
-Sastaviti od **postojećih** komponenti (Radni dani, Sukobi, Pregled). Svaka **nova** vrsta
-komponente traži odobrenje vlasnika prije koda.
-
-### Migracije / privilegije / preflight
-
-Nove tabele ili kolone statusa: **FORCE RLS**, privilege matrica (ADR 0013 obrazac), preflight,
-test **jedinstvenosti imena** constrainta. Bez slabljenja postojećih guardova sukoba/revizije
-(**postoji**).
-
-### Testovi (šta dokazuje)
-
-| Test | Dokaz |
+| Trenutak | Ishod push (**postoji** receipt/outcome na uređaju) |
 |---|---|
-| Prelaz statusa / zabranjeni skokovi | matrica stanja |
-| RLS + privilegije | tenant i rola |
-| Revizija ne dira LOCKED original | immutability |
-| Sedmica pon–ned + audit odbijanja | poslovni tok |
-| Regresija R4a sync/sukobi | **postoji** CI suite ne smije pasti |
+| Poslije `WEEK_APPROVED`, prije `LOCKED` | segment → **CONFLICT** (postojeći sukob tok); ne tiha revizija |
+| Poslije `LOCKED` | push **odbijen** (`REJECTED` / postojeći ishod); uređaj pokazuje odbijeno; **nema**
+  automatske nove revizije — reviziju radi ured (**novo**) |
+| Test | push nakon LOCKED → receipt odbijen; outbox ne nestaje tiho; R4a conflict UI i dalje radi |
 
-### Van obima R4b
+### (3) Potvrda dana — preduslovi
 
-Stacionaža; partneri; opšti B15 workflow; obračun; GPS; R5; nove zavisnosti bez ADR.
+| Uslov | Smije potvrditi? |
+|---|---|
+| Nerazriješen `OPEN` sukob za taj dan | **Ne** |
+| Otvoren segment (nema kraja, nije `UNKNOWN_END`) | **Ne** |
+| Samo `UNKNOWN_END` (zatvoren označeno) | **Da**, uz vidljivu oznaku uredu (**postoji** semantika UNKNOWN_END) |
+| Test | potvrda uz OPEN conflict = 409/VALIDATION; uz OPEN segment = odbijeno; UNKNOWN_END = OK + flag |
+
+### (4) Gdje šef potvrđuje; offline; ekrani
+
+- **Kanal:** web (**novo** akcija na postojećem `/ured/radni-dani`); mobilna potvrda **van prvog
+  reza** dok vlasnik ne odobri poseban ekran.
+- **Offline:** potvrda **samo online** (nema outbox za potvrdu).
+- Ekrani od **postojećih** dijelova: AppShell + nav; lista Radni dani; kartice/filteri; Sukobi
+  lista; Pregled (`pregled.view`). Nova vrsta komponente = odobrenje vlasnika prije koda.
+
+### (5) Nove tabele / kolone / dozvole / nav
+
+| Objekat | Šta (**novo**) |
+|---|---|
+| `workdays.approval_status` | enum: SUBMITTED, FOREMAN_CONFIRMED, … (ili paralelna kolona uz postojeći status) |
+| `work_week_approvals` | company_id, week_start (date), status, decided_by, reason, FORCE RLS |
+| `workday_revisions` | workday_id, base_version, reason, author, created_at, payload; FORCE RLS |
+| `workdays.confirm` | SITE_SUPERVISOR (+ opseg R3) |
+| `workdays.week_decide` | **\[OTVORENO\]** OWNER+ADMIN **ili** +PROJECT_MANAGER |
+| `workdays.lock` | **\[OTVORENO\]** ista kao week_decide **ili** samo OWNER |
+| `workdays.revise` | **\[OTVORENO\]** skup uloga koje vlasnik upiše |
+| nav | stavke vezane na nove dozvole; E2E: meni vidljiv/403 po roli (pravilo 8) |
+
+Preflight + test jedinstvenosti imena constrainta; matrica privilegija (ADR 0013 obrazac).
+
+### (6) Granice sedmice
+
+Ponedjeljak 00:00 – nedjelja 24:00 u **`companies.timezone`** (**postoji** zona firme).
+`week_start` = datum ponedjeljka u toj zoni. Test: DST / ponoć ne pomjera `week_start` krivo.
+
+### (7) Ko vidi / ne vidi
+
+| Rola | Vidljivost |
+|---|---|
+| ACCOUNTANT | samo čitanje radnih dana (**postoji** `workdays.view`); **bez** confirm/decide/lock/revise |
+| PROJECT_MANAGER / SITE_SUPERVISOR | samo R3 opseg (**postoji** obrazac A2); odluke sedmice samo ako im
+  vlasnik da `week_decide` |
+| OWNER/ADMIN | cijela firma (**postoji**) |
+
+### Uloge — čeka upis vlasnika (ne biram umjesto njega)
+
+Odobri/odbij sedmicu · zaključaj · ispravka poslije potvrde: vlasnik mora upisati jednu granu
+(ne „A / B“). Do tada plan nije ODOBREN za kod.
+
+### Testovi (obavezni; šta dokazuje)
+
+| Test | Dokazuje |
+|---|---|
+| Matrica prelaza po roli (dozvoljen / 403) | samo predviđene uloge mijenjaju stanje |
+| Odbijanje → WEEK_REJECTED + razlog; povratak na FOREMAN_CONFIRMED tok | (1) |
+| Push poslije WEEK_APPROVED → CONFLICT; poslije LOCKED → REJECTED na uređaju | (2) + postojeći outcome |
+| Potvrda blokirana uz OPEN conflict / OPEN segment; UNKNOWN_END prolazi s flagom | (3) |
+| Potvrda offline odbijena; online na `/ured/radni-dani` prolazi | (4) |
+| RLS na `work_week_approvals` / `workday_revisions`; tuđi tenant 0 redova | nove tabele |
+| Privilege matrica + preflight; jedinstvena imena constrainta | migracije |
+| Revizija ne UPDATE-a LOCKED original; nova revizija + audit | immutability |
+| E2E meni: uloga sa dozvolom vidi stavku; bez dozvole nema u nav + ruta 403 | pravilo 8 |
+| ACCOUNTANT vidi, ne decide; PM/šef samo R3 opseg | (7) |
+| week_start u company timezone (DST fixture) | (6) |
+| Regresija R4a: sync, sukobi, overlap, receipt | **postoji** CI suite ostaje zelen |
+
+### Van obima
+
+Stacionaža; partner; R5; obračun; GPS; nove zavisnosti bez ADR; kod/migracije prije **ODOBREN**.
 
 ## 12. Dokaz ispravnosti u CI-ju
 
