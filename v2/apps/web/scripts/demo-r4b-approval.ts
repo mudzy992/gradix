@@ -75,8 +75,9 @@ try {
       console.log(`R4b sidro: ${wd} ${day.rows[0].d} worker=${workerId}`);
     };
 
+    // Dvije sedmice: approval i revise E2E ne dijele WEEK_CLOSED nakon zaključavanja.
     await insertClean("ok", peers.rows[0]!.id, 3);
-    await insertClean("ok2", (peers.rows[1] ?? peers.rows[0])!.id, 4);
+    await insertClean("ok2", (peers.rows[1] ?? peers.rows[0])!.id, 10);
   });
 } finally {
   await pool.end();

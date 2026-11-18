@@ -20,8 +20,16 @@ test.beforeAll(() => {
 });
 
 test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", async ({ page, browser }) => {
+  // Vlastita sedmica (sidro ok2, offset 10) — ne dijeli WEEK_CLOSED s approval.spec.
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
+  const week = page.getByLabel("Sedmica");
+  await expect(week).toBeVisible({ timeout: 15_000 });
+  const options = await week.locator("option").allTextContents();
+  const target = options.find((label) => !/zaključana/i.test(label));
+  expect(target, "treba sedmica koja nije zaključana").toBeTruthy();
+  const value = await week.locator("option", { hasText: target! }).first().getAttribute("value");
+  await week.selectOption(value!);
   const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();
   await expect(confirm).toBeVisible({ timeout: 15_000 });
   await confirm.click();
@@ -31,6 +39,8 @@ test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmet
   const office = await officeCtx.newPage();
   await login(office, "ured@demo.test");
   await office.goto("/ured/radni-dani");
+  const officeWeek = office.getByLabel("Sedmica");
+  await officeWeek.selectOption(value!);
   await office.getByRole("button", { name: "Odobri sedmicu" }).click();
   await expect(office.getByRole("button", { name: "Zaključaj" })).toBeEnabled({ timeout: 15_000 });
   await office.getByRole("button", { name: "Zaključaj" }).click();

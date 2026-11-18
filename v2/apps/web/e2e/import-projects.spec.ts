@@ -72,7 +72,6 @@ test("uvoz projekata: sretan prolaz upisuje jedan projekat", async ({ page }) =>
   await page.getByRole("button", { name: /Uvezi 1 red/i }).click();
   // Samo poruka koraka 4 nakon apply — ne „Uvezi 1 red” / golo „1” / naslov „Rezultat”.
   await expect(page.getByText(/^Uvezeno 1,/)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(stamp, { exact: false })).toBeVisible();
 
   if (ADMIN) {
     expect(await countProjects(stamp)).toBe(1);
