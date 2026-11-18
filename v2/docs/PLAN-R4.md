@@ -361,13 +361,12 @@ R4a-2 dodaje:
 **R4a-2 gate:** CI simulator, dvije realne DB konekcije, offline grupni tok i konfliktni UI prolaze;
 vlasnik prihvata tok na stvarnom telefonu. Tek tada se planira/počinje R4b.
 
-## 11. R4b — plan (bez koda dok vlasnik ne upiše **ODOBREN**)
+## 11. R4b — plan (**ODOBREN** vlasnik 2026-11-18; kod po ovom dokumentu)
 
-**Status:** dopunjen NEDOSTAJE (1)–(7); **čeka eksplicitno ODOBREN** (ne upisujem odluku umjesto
-vlasnika). **Postoji (STATUS.md):** R4a unos/sync/sukobi, `/ured/radni-dani`, `/ured/sukobi`,
-`workdays.view` / `workdays.resolve`. **Novo:** potvrda, sedmica, zaključavanje, revizije.
-**Van R4b:** stacionaža, partner, opšti B15 workflow, R5. B15§14 bio NE→R5; R4b rješava samo
-odobravanje **radnih dana** bez izmjene isporučenog R4a sync modela (**postoji**).
+**Status: ODOBREN.** **Postoji (STATUS.md):** R4a unos/sync/sukobi, `/ured/radni-dani`,
+`/ured/sukobi`, `workdays.view` / `workdays.resolve`. **Novo:** potvrda, sedmica, zaključavanje,
+revizije. **Van R4b:** stacionaža, partner, opšti B15 workflow, R5. B15§14 bio NE→R5; R4b samo
+odobravanje **radnih dana** bez izmjene R4a sync modela (**postoji**).
 
 ### Dijagram stanja (tekst)
 
@@ -389,7 +388,7 @@ Svaki prelaz: uloga + ishod + test (tabela ispod).
 | Stanje | **novo** `WEEK_REJECTED` na zapisu sedmice (`work_week_approvals`) |
 | Poslije | dani ostaju `FOREMAN_CONFIRMED`; šef vidi razlog; mora ponovo potvrditi / ispraviti pa ured
   ponovo odlučuje → nazad na `FOREMAN_CONFIRMED` tok |
-| Uloga | ista kao odobravanje — **\[OTVORENO\]** OWNER/ADMIN **ili** +PROJECT_MANAGER |
+| Uloga | `workdays.week_decide`: OWNER, ADMIN, PROJECT_MANAGER |
 | Test | odbijanje s razlogom ≥10 znakova; bez razloga = VALIDATION_FAILED; PM van opsega = 403 |
 
 ### (2) Sync poslije WEEK_APPROVED / LOCKED
@@ -412,11 +411,9 @@ Svaki prelaz: uloga + ishod + test (tabela ispod).
 
 ### (4) Gdje šef potvrđuje; offline; ekrani
 
-- **Kanal:** web (**novo** akcija na postojećem `/ured/radni-dani`); mobilna potvrda **van prvog
-  reza** dok vlasnik ne odobri poseban ekran.
-- **Offline:** potvrda **samo online** (nema outbox za potvrdu).
-- Ekrani od **postojećih** dijelova: AppShell + nav; lista Radni dani; kartice/filteri; Sukobi
-  lista; Pregled (`pregled.view`). Nova vrsta komponente = odobrenje vlasnika prije koda.
+- **Kanal:** šef potvrđuje **samo web, online** (ovaj rez); mobilni = odvojen rez.
+- **Offline:** potvrda zabranjena (nema outbox za potvrdu).
+- Ekrani (tek poslije dizajna): od **postojećih** dijelova (AppShell, Radni dani, Sukobi, Pregled).
 
 ### (5) Nove tabele / kolone / dozvole / nav
 
@@ -426,31 +423,26 @@ Svaki prelaz: uloga + ishod + test (tabela ispod).
 | `work_week_approvals` | company_id, week_start (date), status, decided_by, reason, FORCE RLS |
 | `workday_revisions` | workday_id, base_version, reason, author, created_at, payload; FORCE RLS |
 | `workdays.confirm` | SITE_SUPERVISOR (+ opseg R3) |
-| `workdays.week_decide` | **\[OTVORENO\]** OWNER+ADMIN **ili** +PROJECT_MANAGER |
-| `workdays.lock` | **\[OTVORENO\]** ista kao week_decide **ili** samo OWNER |
-| `workdays.revise` | **\[OTVORENO\]** skup uloga koje vlasnik upiše |
-| nav | stavke vezane na nove dozvole; E2E: meni vidljiv/403 po roli (pravilo 8) |
+| `workdays.week_decide` | OWNER, ADMIN, PROJECT_MANAGER |
+| `workdays.lock` | OWNER, ADMIN, PROJECT_MANAGER (ista kao week_decide) |
+| `workdays.revise` | OWNER, ADMIN |
+| nav / matrica | dozvole u `permissions.ts` + roles matrica; ekrani kasnije (pravilo 8 API/403) |
 
 Preflight + test jedinstvenosti imena constrainta; matrica privilegija (ADR 0013 obrazac).
 
 ### (6) Granice sedmice
 
-Ponedjeljak 00:00 – nedjelja 24:00 u **`companies.timezone`** (**postoji** zona firme).
-`week_start` = datum ponedjeljka u toj zoni. Test: DST / ponoć ne pomjera `week_start` krivo.
+Ponedjeljak 00:00 – nedjelja 24:00; `week_start` = ponedjeljak od `work_date` (poslovni DATE
+firme). Test: ISODOW ponedjeljak.
 
 ### (7) Ko vidi / ne vidi
 
 | Rola | Vidljivost |
 |---|---|
-| ACCOUNTANT | samo čitanje radnih dana (**postoji** `workdays.view`); **bez** confirm/decide/lock/revise |
-| PROJECT_MANAGER / SITE_SUPERVISOR | samo R3 opseg (**postoji** obrazac A2); odluke sedmice samo ako im
-  vlasnik da `week_decide` |
-| OWNER/ADMIN | cijela firma (**postoji**) |
-
-### Uloge — čeka upis vlasnika (ne biram umjesto njega)
-
-Odobri/odbij sedmicu · zaključaj · ispravka poslije potvrde: vlasnik mora upisati jednu granu
-(ne „A / B“). Do tada plan nije ODOBREN za kod.
+| ACCOUNTANT | samo `workdays.view`; **bez** confirm/decide/lock/revise |
+| PROJECT_MANAGER | R3 opseg; smije `week_decide` / `lock` u opsegu |
+| SITE_SUPERVISOR | R3 opseg; samo `confirm` (+ view/resolve **postoji**) |
+| OWNER/ADMIN | cijela firma; decide/lock/revise |
 
 ### Testovi (obavezni; šta dokazuje)
 
@@ -471,7 +463,7 @@ Odobri/odbij sedmicu · zaključaj · ispravka poslije potvrde: vlasnik mora upi
 
 ### Van obima
 
-Stacionaža; partner; R5; obračun; GPS; nove zavisnosti bez ADR; kod/migracije prije **ODOBREN**.
+Stacionaža; partner; R5; obračun; GPS; nove zavisnosti bez ADR; UI ekrani do dizajna + riječi vlasnika.
 
 ## 12. Dokaz ispravnosti u CI-ju
 
