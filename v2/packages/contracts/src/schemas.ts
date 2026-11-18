@@ -1076,3 +1076,31 @@ export const PregledResponse = z.object({
   scope: z.enum(["company", "projects"]),
 });
 export type PregledResponse = z.infer<typeof PregledResponse>;
+
+/* ============================================================ R4b — potvrda / sedmica */
+
+export const WorkdayApprovalOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "NOT_FOUND", "CONFLICT"]),
+  workdayId: z.string().optional(),
+  weekStart: z.string().optional(),
+  status: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type WorkdayApprovalOutcome = z.infer<typeof WorkdayApprovalOutcome>;
+
+export const WeekDecideInput = z.object({
+  weekStart: IsoDate,
+  decision: z.enum(["APPROVE", "REJECT"]),
+  reason: SafeText.min(10).max(500).optional(),
+});
+export type WeekDecideInput = z.infer<typeof WeekDecideInput>;
+
+export const WeekLockInput = z.object({ weekStart: IsoDate });
+export type WeekLockInput = z.infer<typeof WeekLockInput>;
+
+export const WorkdayReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type WorkdayReviseInput = z.infer<typeof WorkdayReviseInput>;

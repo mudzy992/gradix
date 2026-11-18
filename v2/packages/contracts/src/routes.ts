@@ -77,6 +77,10 @@ import {
   ResolveConflictInput,
   ResolveConflictResponse,
   PregledResponse,
+  WorkdayApprovalOutcome,
+  WeekDecideInput,
+  WeekLockInput,
+  WorkdayReviseInput,
 } from "./schemas";
 
 export type RouteSpec = {
@@ -704,6 +708,42 @@ export const ROUTES = [
     permission: "workdays.resolve",
     request: ResolveConflictInput,
     response: ResolveConflictResponse,
+  },
+  {
+    method: "POST",
+    path: "/api/workdays/{id}/confirm",
+    summary: "Šef potvrđuje predani dan (workdays.confirm; samo web/online; R3 opseg).",
+    auth: true,
+    permission: "workdays.confirm",
+    request: null,
+    response: WorkdayApprovalOutcome,
+  },
+  {
+    method: "POST",
+    path: "/api/work-weeks/decide",
+    summary: "Odobri ili odbij sedmicu (workdays.week_decide; REJECT zahtijeva razlog ≥10).",
+    auth: true,
+    permission: "workdays.week_decide",
+    request: WeekDecideInput,
+    response: WorkdayApprovalOutcome,
+  },
+  {
+    method: "POST",
+    path: "/api/work-weeks/lock",
+    summary: "Zaključaj odobrenu sedmicu (workdays.lock).",
+    auth: true,
+    permission: "workdays.lock",
+    request: WeekLockInput,
+    response: WorkdayApprovalOutcome,
+  },
+  {
+    method: "POST",
+    path: "/api/workdays/{id}/revise",
+    summary: "Uredska revizija poslije potvrde (workdays.revise); ne prepisuje LOCKED original.",
+    auth: true,
+    permission: "workdays.revise",
+    request: WorkdayReviseInput,
+    response: WorkdayApprovalOutcome,
   },
   {
     method: "POST",
