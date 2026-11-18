@@ -51,11 +51,13 @@ function resolver(vars) {
 }
 
 function parseBlock(css, selector) {
-  const start = css.indexOf(selector);
-  const open = css.indexOf("{", start);
-  const close = css.indexOf("}", open) === -1 ? css.length : css.indexOf("}", open);
+  // Windows CRLF: selector literali u skripti koriste \n; fajl može imati \r\n.
+  const normalized = css.replace(/\r\n/g, "\n");
+  const start = normalized.indexOf(selector);
+  const open = normalized.indexOf("{", start);
+  const close = normalized.indexOf("}", open) === -1 ? normalized.length : normalized.indexOf("}", open);
   const vars = {};
-  for (const m of css.slice(open, close).matchAll(/(--[a-z-]+):\s*([^;]+);/g)) vars[m[1]] = m[2].trim();
+  for (const m of normalized.slice(open, close).matchAll(/(--[a-z-]+):\s*([^;]+);/g)) vars[m[1]] = m[2].trim();
   return vars;
 }
 

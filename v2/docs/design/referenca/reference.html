@@ -342,6 +342,15 @@ body[data-r4a-preview="office"] .r4a-office .r4o-page{min-height:calc(100vh - 64
 .c1-matrix td:first-child{font-weight:700}
 .c1-matrix .da{color:var(--link);font-weight:700}
 .c1-matrix .ne{color:var(--muted)}
+body[data-r4b-approval-preview] .shell{display:none}
+body[data-r4b-approval-preview] #r4b-approval-reference{max-width:none;margin:0;padding:0}
+body[data-r4b-approval-preview] .r4a-reference-head,body[data-r4b-approval-preview] .r4a-artboard-label,body[data-r4b-approval-preview] #r4b-approval-reference>.card{display:none}
+body[data-r4b-approval-preview] .r4a-artboard{margin:0;padding:0;border:0;border-radius:0;background:transparent}
+body[data-r4b-approval-preview] .r4a-artboard-canvas{margin:0;border:0;border-radius:0}
+body[data-r4b-approval-preview="office"] .r4a-artboard:not([data-screen="office"]){display:none}
+body[data-r4b-approval-preview="foreman"] .r4a-artboard:not([data-screen="foreman"]){display:none}
+body[data-r4b-approval-preview="foreman"] .r4a-mobile-screen{width:100vw;max-width:none;min-height:100vh}
+html[data-theme="light"] body[data-r4b-approval-preview="foreman"] .r4a-mobile-screen[data-theme="dark"],html[data-theme="dark"] body[data-r4b-approval-preview="foreman"] .r4a-mobile-screen[data-theme="light"]{display:none}
 body[data-c1-preview] .shell{display:none}
 body[data-c1-preview] #c1-pregled-reference{max-width:none;margin:0;padding:0}
 body[data-c1-preview] .r4a-reference-head,body[data-c1-preview] .r4a-seed-note,body[data-c1-preview] .r4a-artboard-label,body[data-c1-preview] .c1-copy{display:none}
@@ -850,6 +859,112 @@ body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r
     <p class="hint">Vremena se NE spajaju automatski: ured bira jedan unos i smije ručno ispraviti vremena (24 h, HH:MM) prije prihvatanja; original ostaje u auditu. „Odbaci uz razlog" otvara dijalog s obaveznim razlogom (prijedlog: ConfirmDialog + opciono polje razloga) — razlog radnik vidi na telefonu, interne napomene ne vidi. Nakon razrješenja red prelazi u stanje „Razriješeno" s odlukom, autorom i vremenom u audit tragu, a telefon ishod povlači sljedećim syncom.</p>
   </section>
 </section>
+<section class="r4a-reference" id="r4b-approval-reference" aria-labelledby="r4b-approval-heading">
+  <div class="r4a-reference-head">
+    <div class="r4a-reference-copy">
+      <span class="r4a-pending">PRIJEDLOG · čeka odobrenje vlasnika — bez koda ekrana</span>
+      <h1 id="r4b-approval-heading">R4b · Potvrda, sedmica, zaključavanje, ispravka</h1>
+      <p class="sub">Samo postojeće komponente kataloga (PageHeader, FilterBar, DataTable, Chip, Button, ConfirmDialog s razlogom, EmptyState, Skeleton, Alert, DescriptionList). Šef: potvrda dana na webu online (/ured/radni-dani). Ured: odobri/odbij sedmicu, zaključaj, ispravka (OWNER/ADMIN). PM: odobri/odbij/zaključaj u R3 opsegu. Nema nove vrste komponente.</p>
+    </div>
+    <nav class="r4a-preview-links" aria-label="Prikazi R4b odobravanja">
+      <a href="reference.html?preview=r4b-approval&amp;screen=office&amp;theme=light">1440 · Ured · Svijetlo</a>
+      <a href="reference.html?preview=r4b-approval&amp;screen=office&amp;theme=dark">1440 · Ured · Tamno</a>
+      <a href="reference.html?preview=r4b-approval&amp;screen=foreman&amp;theme=light">360 · Šef · Svijetlo</a>
+      <a href="reference.html?preview=r4b-approval&amp;screen=foreman&amp;theme=dark">360 · Šef · Tamno</a>
+    </nav>
+  </div>
+  <section class="card" style="margin-bottom:16px">
+    <h2 style="margin-bottom:12px">Uloge i putanje</h2>
+    <table class="table">
+      <thead><tr><th>Akcija</th><th>Rola</th><th>Putanja</th><th>Napomena</th></tr></thead>
+      <tbody>
+        <tr><td>Potvrdi dan</td><td>SITE_SUPERVISOR</td><td class="mono">/ured/radni-dani</td><td>Samo web, online; R3 opseg</td></tr>
+        <tr><td>Odobri / odbij sedmicu</td><td>OWNER, ADMIN, PROJECT_MANAGER</td><td class="mono">/ured/radni-dani</td><td>Odbijanje: razlog ≥10; PM u opsegu</td></tr>
+        <tr><td>Zaključaj</td><td>ista kao odobrenje</td><td class="mono">/ured/radni-dani</td><td>Samo poslije WEEK_APPROVED</td></tr>
+        <tr><td>Ispravka (revizija)</td><td>OWNER, ADMIN</td><td class="mono">/ured/radni-dani</td><td>Ne prepisuje LOCKED original</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <div class="grid grid--2" style="margin-bottom:16px">
+    <article class="r4a-artboard" data-screen="office" aria-label="Uredska sedmica 1440, svijetlo">
+      <div class="r4a-artboard-label"><b>1440 px · Ured · Svijetlo</b><span>Sedmica 16–22. 11. · odobrenje</span></div>
+      <div class="card">
+        <h2 style="margin-bottom:8px">Radni dani · sedmica</h2>
+        <p class="hint">FilterBar: sedmica · projekat · stanje. DataTable + Chip.</p>
+        <table class="table">
+          <thead><tr><th>Dan</th><th>Radnik</th><th>Stanje</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>pon 16. 11.</td><td>Amar Hadžić</td><td><span class="chip">Potvrđeno</span></td><td></td></tr>
+            <tr><td>uto 17. 11.</td><td>Mario Perić</td><td><span class="chip chip--hot">Čeka potvrdu</span></td><td></td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn btn--primary" type="button">Odobri sedmicu</button>
+          <button class="btn" type="button">Odbij uz razlog</button>
+          <button class="btn" type="button" disabled>Zaključaj</button>
+        </div>
+      </div>
+    </article>
+    <article class="r4a-artboard" data-screen="office" aria-label="Stanja uredskog toka">
+      <div class="r4a-artboard-label"><b>Stanja</b><span>prazno · učitavanje · greška · odbijeno · zaključano</span></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="empty"><b>Nema dana u ovoj sedmici</b><span>Kad stignu unosi s terena, pojaviće se ovdje.</span></div>
+      </div>
+      <div class="card" style="margin-bottom:12px" aria-busy="true" aria-label="Učitavanje sedmice">
+        <div class="skel" aria-hidden="true"><i></i><i style="width:70%"></i></div>
+      </div>
+      <div class="note err" role="alert" style="margin-bottom:12px"><svg aria-hidden="true"><use href="#i-warn"/></svg><span>Veza s serverom nije uspjela. Pokušajte ponovo.</span></div>
+      <div class="card" style="margin-bottom:12px">
+        <span class="chip chip--hot">Odbijeno</span>
+        <dl class="desc" style="margin-top:8px"><div><dt>Razlog</dt><dd>Nedostaju sati na terenu za utorak.</dd></div></dl>
+        <p class="hint">Šef ispravlja / ponovo potvrđuje; ured odlučuje iznova.</p>
+      </div>
+      <div class="card">
+        <span class="chip">Zaključano</span>
+        <p class="hint" style="margin-top:8px">Izmjene idu samo kao ispravka (revizija). Sync unosa je odbijen.</p>
+        <button class="btn" type="button">Nova ispravka</button>
+      </div>
+    </article>
+  </div>
+  <div class="grid grid--2">
+    <article class="r4a-artboard" data-screen="foreman" aria-label="Šef potvrda 360 svijetlo">
+      <div class="r4a-artboard-label"><b>360 px · Šef · Svijetlo</b><span>Potvrda dana · online</span></div>
+      <div class="r4a-artboard-canvas"><div class="r4a-mobile-screen" data-theme="light">
+        <header class="r4m-header"><div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>TEREN</small></div></div></header>
+        <main class="r4m-main">
+          <div class="r4m-title-row"><div><h1>Potvrda dana</h1><p>Uto, 17. 11. 2026.</p></div></div>
+          <section class="r4m-card">
+            <dl class="desc">
+              <div><dt>Radnik</dt><dd>Amar Hadžić</dd></div>
+              <div><dt>Projekat</dt><dd>P-24/2026</dd></div>
+              <div><dt>Segmenti</dt><dd class="mono">08:00–16:00</dd></div>
+            </dl>
+            <button class="big" type="button">Potvrdi dan</button>
+            <p class="r4m-footnote">Samo online. Otvoren sukob ili segment blokira potvrdu.</p>
+          </section>
+        </main>
+      </div></div>
+    </article>
+    <article class="r4a-artboard" data-screen="foreman" aria-label="Šef potvrda 360 tamno">
+      <div class="r4a-artboard-label"><b>360 px · Šef · Tamno</b><span>Isti tok</span></div>
+      <div class="r4a-artboard-canvas"><div class="r4a-mobile-screen" data-theme="dark">
+        <header class="r4m-header"><div class="r4m-brand"><i class="r4m-mark" aria-hidden="true">G</i><div>Gradix<small>TEREN</small></div></div></header>
+        <main class="r4m-main">
+          <div class="r4m-title-row"><div><h1>Potvrda dana</h1><p>Uto, 17. 11. 2026.</p></div></div>
+          <section class="r4m-card">
+            <dl class="desc">
+              <div><dt>Radnik</dt><dd>Amar Hadžić</dd></div>
+              <div><dt>Projekat</dt><dd>P-24/2026</dd></div>
+              <div><dt>Segmenti</dt><dd class="mono">08:00–16:00</dd></div>
+            </dl>
+            <button class="big" type="button">Potvrdi dan</button>
+            <p class="r4m-footnote">Samo online. Otvoren sukob ili segment blokira potvrdu.</p>
+          </section>
+        </main>
+      </div></div>
+    </article>
+  </div>
+</section>
 <section class="r4a-reference" id="c1-pregled-reference" aria-labelledby="c1-heading">
   <div class="r4a-reference-head">
     <div class="r4a-reference-copy">
@@ -1303,6 +1418,7 @@ const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),pa
 const requestedTheme=params.get("theme");
 r.dataset.theme=requestedTheme==="light"||requestedTheme==="dark"?requestedTheme:(m.matches?"dark":"light");
 if(params.get("preview")==="r4a1"&&(params.get("screen")==="worker"||params.get("screen")==="office"))document.body.dataset.r4aPreview=params.get("screen");
+if(params.get("preview")==="r4b-approval"&&["office","foreman"].includes(params.get("screen")))document.body.dataset.r4bApprovalPreview=params.get("screen");
 if(params.get("preview")==="c1"&&["ured","mob","prazno"].includes(params.get("screen")))document.body.dataset.c1Preview=params.get("screen");
 const toggleTheme=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
 document.getElementById("theme").onclick=toggleTheme;
