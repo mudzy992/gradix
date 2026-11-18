@@ -160,14 +160,15 @@ export function WorkdaysClient({
             cell: (day) => (
               caps.canConfirm
                 && day.status === "SUBMITTED"
+                && day.open_entries === 0
+                && day.open_conflicts === 0
                 && (
                   day.approval_status === "SUBMITTED"
                   || (day.approval_status === "FOREMAN_CONFIRMED" && week?.status === "WEEK_REJECTED")
                 )
                 ? (
                   <Button
-                    disabled={busy || day.open_entries > 0 || day.open_conflicts > 0}
-                    title={day.open_conflicts > 0 ? "Prvo razrijesi sukob." : day.open_entries > 0 ? "Segment još nije zatvoren." : undefined}
+                    disabled={busy}
                     onClick={() => void run(`/api/workdays/${day.id}/confirm`)}
                   >
                     Potvrdi dan

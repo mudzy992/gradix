@@ -212,6 +212,7 @@ jobs:
           pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
           pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
           pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts || { echo "::error::SEED_PREGLED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-r4b-approval.ts || { echo "::error::SEED_R4B_FAILED"; exit 1; }
           pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
