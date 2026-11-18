@@ -13,11 +13,18 @@ export type WorkdayReviewRow = {
   id: string;
   work_date: string;
   status: string;
+  approval_status: string;
   worker_name: string;
   entries: number;
   unknown_end: number;
   open_entries: number;
   project_codes: string | null;
+};
+
+export type WeekApprovalRow = {
+  week_start: string;
+  status: string;
+  reason: string | null;
 };
 
 export type WorkdayReviewScope =
@@ -56,6 +63,7 @@ export async function listWorkdaysForReview(
     `SELECT d.id,
             d.work_date::text AS work_date,
             d.status,
+            d.approval_status,
             (w.first_name || ' ' || w.last_name) AS worker_name,
             count(e.id)::int AS entries,
             count(e.id) FILTER (WHERE e.end_state = 'UNKNOWN_END')::int AS unknown_end,
@@ -85,10 +93,25 @@ export async function listWorkdaysForReview(
             )
           )
         )
-      GROUP BY d.id, d.work_date, d.status, w.first_name, w.last_name
+      GROUP BY d.id, d.work_date, d.status, d.approval_status, w.first_name, w.last_name
       ORDER BY d.work_date DESC, worker_name
       LIMIT $4`,
     [companyId, scope.kind, scope.kind === "assignments" ? scope.viewerWorkerId : null, limit],
+  );
+  return result.rows;
+}
+
+export async function listWeekApprovals(
+  client: PoolClient,
+  companyId: string,
+  weekStarts: readonly string[],
+): Promise<WeekApprovalRow[]> {
+  if (weekStarts.length === 0) return [];
+  const result = await client.query<WeekApprovalRow>(
+    `SELECT week_start::text AS week_start, status, reason
+       FROM public.work_week_approvals
+      WHERE company_id = $1 AND week_start = ANY($2::date[])`,
+    [companyId, weekStarts],
   );
   return result.rows;
 }

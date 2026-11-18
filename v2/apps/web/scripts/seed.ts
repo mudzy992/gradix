@@ -54,6 +54,7 @@ const users: SeedUser[] = [
   // C.1: voditelj projekta sa suženim opsegom — E2E i snimci moraju vidjeti pregled „u
   // svom opsegu“, a ne samo cijelu firmu. Dodijeljen je na dionicu (wrk_demo_kenan).
   { id: "usr_voditelj", email: "voditelj@demo.test", first: "Kenan", last: "Softić", role: "PROJECT_MANAGER", companyId: "cmp_demo", scope: "PROJECTS" },
+  { id: "usr_racun", email: "racunovodja@demo.test", first: "Sara", last: "Mujić", role: "ACCOUNTANT", companyId: "cmp_demo" },
   { id: "usr_stranac", email: "vlasnik@druga.test", first: "Nikola", last: "Jović", role: "OWNER", companyId: "cmp_druga" },
 ];
 

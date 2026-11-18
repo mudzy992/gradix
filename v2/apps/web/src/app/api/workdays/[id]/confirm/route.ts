@@ -1,4 +1,4 @@
-/** POST /api/workdays/:id/confirm — šef potvrđuje dan (`workdays.confirm`). Bez UI. */
+/** POST /api/workdays/:id/confirm — šef potvrđuje dan (`workdays.confirm`). */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";

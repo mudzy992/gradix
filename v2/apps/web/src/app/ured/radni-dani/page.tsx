@@ -8,20 +8,21 @@ import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
 import { can } from "@/server/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/index";
-import { WorkdaysTable } from "./workdays-table";
-import { listWorkdaysForReview, resolveViewerWorkerId, workdayReviewScopeFor } from "@/server/workday-review";
+import { WorkdaysClient } from "./workdays-client";
+import {
+  listWeekApprovals,
+  listWorkdaysForReview,
+  resolveViewerWorkerId,
+  workdayReviewScopeFor,
+} from "@/server/workday-review";
 import { reviewLabel } from "./review-label";
+import { weekStartFromWorkDate } from "./approval-label";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Uredski pregled radnih dana (UI Step 7) — samo čitanje.
- *
- * Oznake za provjeru se računaju iz serverovog stanja, ne iz klijenta: nepoznat kraj,
- * otvoren segment, sukob u sync-u. Potvrđivanje/razrješenje nije dio ovog koraka (R4b).
- *
- * C.1: `?filter=za-provjeru` sužava listu na dane s oznakom — na nj vodi red
- * „Dani za provjeru“ s Pregleda, pa šta god taj broj kaže, to čovjek ovdje vidi.
+ * Radni dani — pregled + R4b potvrda/sedmica (bez revizije UI u ovom bloku).
+ * Capability flagovi su booleani; funkcije se ne prosljeđuju klijentu (pravilo 12).
  */
 export default async function RadniDaniPage({
   searchParams,
@@ -43,10 +44,13 @@ export default async function RadniDaniPage({
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
   const onlyReview = first(params.filter) === "za-provjeru";
 
-  const days = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
+  const { days, weeks } = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
     const all = await listWorkdaysForReview(client, auth.ctx.companyId, workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId));
-    return onlyReview ? all.filter((day) => reviewLabel(day) !== null) : all;
+    const filtered = onlyReview ? all.filter((day) => reviewLabel(day) !== null) : all;
+    const weekStarts = [...new Set(filtered.map((day) => weekStartFromWorkDate(day.work_date)))];
+    const weeks = await listWeekApprovals(client, auth.ctx.companyId, weekStarts);
+    return { days: filtered, weeks };
   });
 
   return (
@@ -56,7 +60,7 @@ export default async function RadniDaniPage({
         subtitle={
           onlyReview
             ? "Samo dani s oznakom „Za provjeru“ (otvoren segment ili kraj nepoznat)."
-            : "Pregled dana pristiglih sa terena. Samo čitanje — potvrda i razrješenje nisu dio ovog koraka."
+            : "Pregled dana s terena. Šef potvrđuje dan; ured odobrava, odbija ili zaključava sedmicu."
         }
       />
       {onlyReview && days.length === 0 ? (
@@ -66,7 +70,15 @@ export default async function RadniDaniPage({
           action={<Link href="/ured/radni-dani">Prikaži sve radne dane</Link>}
         />
       ) : (
-        <WorkdaysTable days={days} />
+        <WorkdaysClient
+          days={days}
+          weeks={weeks}
+          caps={{
+            canConfirm: can(auth.ctx.roles, "workdays.confirm"),
+            canDecide: can(auth.ctx.roles, "workdays.week_decide"),
+            canLock: can(auth.ctx.roles, "workdays.lock"),
+          }}
+        />
       )}
     </main>
   );

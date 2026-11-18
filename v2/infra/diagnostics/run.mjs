@@ -630,16 +630,17 @@ async function main() {
   await runPhase("s3.bucket_object", 1_900, async (signal) => {
     if (endpoint.error || !accessKey || !secretKey) return { status: "SKIP", cause: "s3_config_incomplete", action: "Set the app endpoint and access keys before checking the bucket." };
     try {
+      // App path = Put/Get (presign). HeadBucket ≈ ListBucket i nije potreban za priloge —
+      // ne koristi ga kao kapiju; samo opcionalni detalj.
       const [{ S3Client, HeadBucketCommand, PutObjectCommand, GetObjectCommand }] = await Promise.all([
         import("@aws-sdk/client-s3"),
       ]);
       const client = new S3Client(s3ClientOptions(endpointText, env));
       state.s3.client = client;
-      await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: signal });
-      state.s3.bucketReady = true;
       const key = `gradix:diag/${randomBytes(12).toString("hex")}.png`;
       const body = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQX8AAAAASUVORK5CYII=", "base64");
       await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: "image/png" }), { abortSignal: signal });
+      state.s3.bucketReady = true;
       state.s3.key = key;
       state.s3.body = body;
       const get = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: signal });
@@ -648,7 +649,27 @@ async function main() {
         throw Object.assign(new Error("object verification mismatch"), { name: "ObjectIntegrityMismatch" });
       }
       state.s3.objectReady = true;
-      return { status: "PASS", cause: "credentials_bucket_and_object_rw_ok", action: "No S3/MinIO credential or bucket action required.", details: { head_bucket: "PASS(bucket exists and credentials accepted)", put: "PASS", get: "PASS(content and type verified)", delete: "pending browser phase cleanup", bucket: bucket, diagnostic_prefix: "gradix:diag/" } };
+      let headBucket = "SKIP(not required for Put/Get app path)";
+      try {
+        await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: signal });
+        headBucket = "PASS(optional ListBucket probe)";
+      } catch (headError) {
+        const headClassified = sanitizeS3Error(headError);
+        headBucket = `SKIP(${headClassified.cause}; Put/Get still OK)`;
+      }
+      return {
+        status: "PASS",
+        cause: "credentials_bucket_and_object_rw_ok",
+        action: "No S3/MinIO credential or bucket action required.",
+        details: {
+          head_bucket: headBucket,
+          put: "PASS",
+          get: "PASS(content and type verified)",
+          delete: "pending browser phase cleanup",
+          bucket,
+          diagnostic_prefix: "gradix:diag/",
+        },
+      };
     } catch (error) {
       const classified = sanitizeS3Error(error);
       return {
@@ -658,7 +679,7 @@ async function main() {
           : classified.cause === "credentials_or_bucket_policy_denied"
             ? "Check the Coolify MinIO app keys and bucket-scoped policy; do not paste secret values into logs."
             : "Check MinIO DNS, service health, access policy, and endpoint; the application still starts.",
-        details: { head_bucket: classified.status ? `HTTP ${classified.status}` : "failed", error_code: errorCode(error), bucket },
+        details: { put_get: classified.status ? `HTTP ${classified.status}` : "failed", error_code: errorCode(error), bucket },
       };
     }
   });
