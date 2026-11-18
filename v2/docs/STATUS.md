@@ -1,23 +1,22 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-17 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
+**Datum:** 2026-11-18 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
 
 ## Pilot: spremnost
 
-Pilot **ne počinje** dok vlasnik ne kaže **POČNI PILOT**. Ispod samo potvrđeni unosi.
+Pilot = vlasnik testira **sve role** na Expo Go/emulatoru → `https://gradix.ba101.top` (**DA**).
+Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 
-| Uslov (PILOT.md) | Stanje (odluka / unos vlasnika) | Oznaka |
+| Uslov | Stanje (unos vlasnika) | Oznaka |
 |---|---|---|
-| Oblik A | DA (potvrđen) | spremno |
-| Trajanje 5 dana | DA (potvrđen) | spremno |
-| Sintetički podaci (`.test` / seed) | Preimenovanje `@demo.test` **ODOBRENO**; staging seed **PROŠLO** | spremno |
-| Rotacija tajni prije stvarnih podataka | Odluka **DA**; izvršenje rotacije **nije** potvrđeno ovdje | čeka vlasnika |
+| Pilot: sve role (Expo Go / emulator) | **DA** | spremno |
+| Sintetički seed `@demo.test` | seed + prijava **PROŠLO** | spremno |
 | Emulator 2c i A1 | **PRIHVAĆEN** | spremno |
-| Telefon za šefa (oblik A) | **NEMA** | ne radi |
-| Seed + prijava `sef@demo.test`, `ured@demo.test` | **PROŠLO** | spremno |
+| Kontrolna lista prvog dana (PILOT.md tabela) | na snazi | spremno |
+| R4b kod / migracije | samo **plan** na odobrenje | čeka vlasnika |
+| R5 / partneri | ne počinju | ne radi |
 
-**Provjera web kontejnera** (poslije čišćenja backup/drill env — COOLIFY §12.1): u Coolify
-terminalu **web** servisa:
+**Provjera web kontejnera** (COOLIFY §12.1):
 
 ```sh
 env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP_|MINIO_ROOT_)' \
@@ -30,12 +29,12 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | Stavka | Ishod |
 |---|---|
 | 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** |
-| `@demo.test` nalozi | **ODOBRENO**; staging seed/prijava **PROŠLO** |
-| Rotacija tajni | **DA** (odluka); izvršenje čeka potvrdu |
-| Telefon za šefa | **NEMA** |
-| Oblik A, 5 dana | **DA** |
-| R4b / R5 / partneri | **ne počinju** |
-| POČNI PILOT | **nije** rečeno |
+| `@demo.test`; staging seed/prijava | **ODOBRENO** / **PROŠLO** |
+| Rotacija tajni | **URAĐENO** (vlasnik); i dalje stavka COOLIFY §13 za produkciju |
+| Telefon | Android (ostaje); nije uslov pilota |
+| Mobilni put | Expo Go (zadano) |
+| R4b | **plan smije** (čeka odobrenje); kod **ne** |
+| R5 / partneri | **ne počinju** |
 
 ## Radi (CI)
 
@@ -43,10 +42,9 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 
 ## Ne radi / namjerno još nema
 
-- R4b, R5, partneri; fizički telefon šefa; izvršenje pilota bez **POČNI PILOT**.
+- R4b implementacija; R5; partneri; Android store/dev build (zahtjev zabilježen, nije urađen).
 
 ## Dugovi / otvoreno
 
-- Izvršiti/potvrditi rotaciju tajni prije stvarnih podataka; telefon za oblik A;
-  `PLATFORM_ADMIN_EMAILS` na stagingu ako katalog treba platform admina; MinIO konzola;
-  retencija; B11; email; ADR 0014 u produkciji.
+- Odobrenje R4b plana (`PLAN-R4.md` §11); `PLATFORM_ADMIN_EMAILS` ako treba katalog;
+  MinIO konzola / retencija / B11 / email / ADR 0014 u produkciji (COOLIFY §13).

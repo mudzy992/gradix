@@ -1,55 +1,45 @@
-# Pilot — probni rad (oblik A)
+# Pilot — vlasnik testira sve role
 
-**Odluke vlasnika (2026-11-17):** oblik **A** = jedan Android telefon za šefa; trajanje **5 dana**;
-rotacija svih tajni **prije stvarnih podataka = DA**. Dok rotacija nije urađena → samo
-**sintetički** demo (domene `.test` / seed, bez stvarnih ličnih podataka).
+**Odluka vlasnika:** pilot = vlasnik testira **sve role** na Expo Go / emulatoru protiv
+`https://gradix.ba101.top` (**DA**). Isporuka mobilnog: **Expo Go** (zadano); developer build
+opciono kasnije. Sintetički podaci (`.test`). Telefon i rotacija tajni **nisu** uslov ovog
+pilota (rotacija → COOLIFY §13, prije produkcije / stvarnih podataka).
 
 ## Ko učestvuje
-- **Vlasnik/ured (1):** web na `https://gradix.ba101.top` — pozivnice, uvoz, pregled dana/sukoba.
-  Rola OWNER (ili ADMIN). **Radi (STATUS.md):** R1–R4a-2, Pregled, Uvoz, Radni dani.
-- **Šef gradilišta (1):** jedan Android telefon — grupni unos ekipe. Rola SITE_SUPERVISOR.
-  **Radi (STATUS.md):** R4a-2 Grupa / Moj dan (mobilni).
-- **Radnici:** u obliku A **bez vlastitih telefona/naloga** — šef ih vodi u Grupi.
-  **Ne radi još** kao zasebni pilot-uređaji (to bi bio drugi oblik).
+- **Vlasnik** testira naloge po ulogama (web + Expo Go/emulator). **Radi (STATUS.md):**
+  R1–R4a-2, Pregled, Uvoz, Radni dani, mobilni Moj dan / Grupa.
+- Seed nalozi: vidi `MOBILE-EXPO-GO.md` (samo `.test`, bez lozinki u chatu).
 
-**Ne radi još u pilotu (namjerno):** R4b, R5 (stacionaža, partneri, workflow), partneri.
+**Ne radi još u pilotu (namjerno):** R4b (samo plan na odobrenju), R5 (stacionaža, partneri,
+opšti workflow), partneri.
 
-## Priprema (prije prvog dana)
-1. Rotacija tajni urađena **ili** ostaje samo sintetički seed (odluka: DA prije stvarnih).
-2. Ured na `https://gradix.ba101.top` uvozi sintetičke radnike/mašine/projekte (**Uvoz** —
-   **radi (STATUS.md)**) i pozove šefa (**Korisnici** — **radi (STATUS.md)**).
-3. Šef instalira mobilnu app po `MOBILE-EXPO-GO.md` i prijavi se **jednom uz mrežu**.
-4. Telefon zaključan PIN-om/otiskom.
+## Priprema
+1. Staging seed (`@demo.test`) — **radi (STATUS.md)** (seed/prijava **PROŠLO**).
+2. Expo Go / emulator po `MOBILE-EXPO-GO.md`, API `https://gradix.ba101.top`.
+3. Prva prijava **uz mrežu**.
 
 ## Kontrolna lista prvog dana (vlasnik, po ulozi)
 
-Web: `https://gradix.ba101.top`. Matrica: `permissions.ts` + STATUS Role; mobilni meni: `mobile-nav.ts`.
+Web: `https://gradix.ba101.top`. Matrica: `permissions.ts` + STATUS Role; mobilni: `mobile-nav.ts`.
 
 | Uloga | Prijava → ekran | Mora vidjeti | Ne smije vidjeti |
 |---|---|---|---|
 | OWNER/ADMIN (ured) | web → `/pregled`, `/ured/*` | Pregled; Projekti; Rokovi; Mašine; Radnici; **Uvoz**; Radni dani; Sukobi; **Korisnici**; Pristup i role; Audit | tuđe tenant podatke (RLS); R4b/R5 ekrane (**ne radi još**) |
-| SITE_SUPERVISOR (šef, Android) | mobilni → početni | **Grupa** (uz workerId + foremanScope); opseg ekipe; Moj dan ako je vezan na radnika; Moji rokovi/projekti | **Korisnici**, **Uvoz**, Audit, Pristup i role (nema `users.manage` / `workers.manage`); tuđu firmu |
-| WORKER (nije u obliku A) | — | — | nema uređaja u ovom pilotu |
+| SITE_SUPERVISOR (šef) | mobilni → početni | **Grupa** (uz workerId + foremanScope); opseg ekipe; Moj dan ako je vezan na radnika; Moji rokovi/projekti | **Korisnici**, **Uvoz**, Audit, Pristup i role; tuđu firmu |
+| WORKER / ostale role | mobilni ili web po matrici | Moj dan (ako workerId); rokovi/projekti u opsegu | Grupa (nije šef); Korisnici/Uvoz |
 
 **Offline (Moj dan / Grupa)** — **radi (STATUS.md / MOBILNI-CHECKLISTA):** prva prijava online;
-bez veze unos → „Čeka slanje“ / banner Bez veze; „Pošalji sada“ kad veza dođe; rokovi/projekti
-pokazuju zadnje preuzeto uz „Nema veze…“. Van opsega ostaje na telefonu (nije odbijen).
+bez veze → „Čeka slanje”; „Pošalji sada” kad veza dođe.
 
-**Prvi dan ček:** [ ] šef prijavljen; [ ] jedan grupni unos vidljiv uredu u Radnim danima;
-[ ] offline probni unos pa sync.
+**Prvi dan ček:** [ ] prijava po ulogama; [ ] jedan unos vidljiv uredu u Radnim danima;
+[ ] offline probni unos pa sync (emulator/Expo Go).
 
-## Šta reći pilot-korisnicima
-- Zaključavanje ekrana obavezno. Problem isti dan vlasniku (šta, poruka, screenshot).
-- Bez mreže se radi; „Pošalji sada“ kad veza dođe. Samo sintetički podaci dok tajne nisu rotirane.
-
-## Šta mjerimo (za 5 dana, bez ulaska u bazu)
-Iz aplikacije: Radni dani, Pregled/Sukobi, Audit; na telefonu neposlani zapisi.
-Cilj: unosi/dan (grupni), broj/starost sukoba, otvoreni dani, greške sync — **radi (STATUS.md)**
-pregled tih ekrana. R4b metrike odobravanja — **ne radi još**.
+## Šta mjerimo
+Radni dani, Pregled/Sukobi, Audit; neposlani zapisi na klijentu — **radi (STATUS.md)**.
+R4b metrike odobravanja — **ne radi još**.
 
 ## Ako pilot ne uspije
-Aplikacija se gasi; ured izvozi radne dane; rad se vraća starom načinu. Lokalni zapisi na
-telefonu ostaju do deinstalacije.
+Ured izvozi radne dane; rad se vraća starom načinu. Lokalni zapisi ostaju do deinstalacije.
 
 ## Plan 2c — uvoz projekata (proširenje R2 uvoza)
 
@@ -59,7 +49,7 @@ telefonu ostaju do deinstalacije.
 pregled bez upisa; potvrda u jednoj transakciji; audit; testovi. 2c dodaje `projects`.
 
 **Model:** `projects` (r3); uvoz kroz `withCompany`. Uvoz **ne** uvodi stacionažu,
-partnere ni workflow (B15 NE → R5) — **ne radi još**.
+partnere ni opšti B15 workflow (B15 NE → R5) — **ne radi još**.
 
 ### Kolone uvoza projekata (iz šeme `projects`)
 
@@ -77,10 +67,5 @@ partnere ni workflow (B15 NE → R5) — **ne radi još**.
 
 **Tok:** otpremi → vrsta Projekti → mapiranje → pregled → potvrda (sve ili ništa).
 
-**Neuredni redovi:** samo u pregledu; ne upis; ispravi Excel/mapiranje.
-
-**Testovi:** preview bez upisa; apply s greškom = 0 upisa; ista šifra u drugoj firmi
-OK; izolacija tenanta; NUL/kontrolni znakovi; E2E sretan + miješane greške.
-
-**Van obima 2c:** partneri/klijent (nema tabele; R5); stacionaža (R5); tok odobravanja
-(R5/R4b); OCR; situacije; GeoJSON; R4b; PII u repou.
+**Van obima 2c:** partneri (R5); stacionaža (R5); OCR; situacije; GeoJSON; PII u repou.
+(R4b = zaseban plan u `PLAN-R4.md` §11, ne dio 2c.)

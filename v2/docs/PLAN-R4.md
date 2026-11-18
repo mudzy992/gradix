@@ -361,21 +361,59 @@ R4a-2 dodaje:
 **R4a-2 gate:** CI simulator, dvije realne DB konekcije, offline grupni tok i konfliktni UI prolaze;
 vlasnik prihvata tok na stvarnom telefonu. Tek tada se planira/počinje R4b.
 
-## 11. R4b — potvrda, sedmično odobrenje i ispravke
+## 11. R4b — plan (samo plan; čeka odobrenje vlasnika — bez koda)
 
-Potvrđeni poslovni tok:
+**Status plana:** smije se predati na odobrenje (**DA** vlasnik); implementacija **ne** počinje
+prije odobrenja. **Postoji (STATUS.md):** R4a-1/R4a-2 (unos, sync, sukobi, uredski pregled).
+**Novo:** potvrda / sedmično odobrenje / zaključavanje / ispravke.
 
-`SUBMITTED` → `FOREMAN_CONFIRMED` → `WEEK_APPROVED` → `LOCKED`.
+### B15 \[Rano u model\] vs isporučeno
 
-- Šef potvrđuje dan. Ured odobrava sedmicu ponedjeljak–nedjelja. Vlasnik bira tačnu uredsku rolu
-  u R4b.
-- Autor može otvoriti novu verziju do šefove potvrde; svaka izmjena je auditirana. Nakon
-  `FOREMAN_CONFIRMED`, ispravka ide kao nova revizija sa razlogom, autorom, vremenom i vezom na
-  prethodnu verziju.
-- Nakon `LOCKED` original se ne prepisuje. Ured vidi listu dana otvorenih preko granice 16h;
-  nema auto-zatvaranja i izmišljenog vremena.
-- Sedmično odobrenje ima audit i eksplicitno odbijanje sa razlogom; detalj ko može „vratiti“ sedmicu
-  potvrđuje se pri dizajnu R4b.
+B15 stavka 14 (tok odobravanja) bila je u ranijoj tabeli **NE → R5** uz stacionažu i partnere.
+R4b **ne** mijenja već isporučeni R4a model unosa/sync-a: dodaje **samo** statuse i radnje nad
+postojećim `workdays` / `work_entries` (**postoji**). Opšti B15 workflow (nabavka, troškovi,
+pragovi iznosa) ostaje **van R4b** → i dalje R5. **Stacionaža i partner ostaju van R4b** (R5).
+
+### Model podataka (**novo** nad postojećim danima)
+
+Tok: `SUBMITTED` → `FOREMAN_CONFIRMED` → `WEEK_APPROVED` → `LOCKED` (pon–ned sedmica).
+Ispravke nakon potvrde = **nova revizija** (razlog, autor, vrijeme, veza na prethodnu); nakon
+`LOCKED` original se ne prepisuje. Nema auto-zatvaranja ni izmišljenog vremena (**postoji**
+pravilo 16h otvorenog dana u R4a).
+
+### Tok po rolama
+
+| Radnja | Ko |
+|---|---|
+| Potvrda dana | SITE_SUPERVISOR (šef) — **novo** |
+| Odobrenje / odbijanje sedmice | uredska rola (OWNER/ADMIN ili kako vlasnik odabere u R4b) — **novo** |
+| Zaključavanje sedmice | ista uredska odluka nakon odobrenja — **novo** |
+| Ispravka (revizija) | ured / ovlašteni; audit — **novo** |
+
+### Dizajn ekrana
+
+Sastaviti od **postojećih** komponenti (Radni dani, Sukobi, Pregled). Svaka **nova** vrsta
+komponente traži odobrenje vlasnika prije koda.
+
+### Migracije / privilegije / preflight
+
+Nove tabele ili kolone statusa: **FORCE RLS**, privilege matrica (ADR 0013 obrazac), preflight,
+test **jedinstvenosti imena** constrainta. Bez slabljenja postojećih guardova sukoba/revizije
+(**postoji**).
+
+### Testovi (šta dokazuje)
+
+| Test | Dokaz |
+|---|---|
+| Prelaz statusa / zabranjeni skokovi | matrica stanja |
+| RLS + privilegije | tenant i rola |
+| Revizija ne dira LOCKED original | immutability |
+| Sedmica pon–ned + audit odbijanja | poslovni tok |
+| Regresija R4a sync/sukobi | **postoji** CI suite ne smije pasti |
+
+### Van obima R4b
+
+Stacionaža; partneri; opšti B15 workflow; obračun; GPS; R5; nove zavisnosti bez ADR.
 
 ## 12. Dokaz ispravnosti u CI-ju
 

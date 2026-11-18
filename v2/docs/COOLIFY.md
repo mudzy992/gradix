@@ -633,7 +633,7 @@ Coolify native DB backup
 |---|---|---|---|
 | Baza TLS (`verify-full` / CA mount, `PGSSLROOTCERT`) | vlasnik | Coolify env + web terminal `echo $PGSSLMODE`; preflight na startu | staging OK; **produkcija: otvoreno: odluka vlasnika** (isti obrazac) |
 | Backup/restore + raspored; RPO ≤26 h; RTO demo | vlasnik + implementator | CI drill; staging minio-check **prošao**; §12.2 cron; RTO_demo=2 s (run `43874147777`) | **prošlo** na stagingu; produkcija: isti obrazac **otvoreno** |
-| Rotacija tajni (što je bilo u repo/porukama) | vlasnik | Coolify rotacija + redeploy | **NE** (odluka 2026-11-17) |
+| Rotacija tajni (što je bilo u repo/porukama) | vlasnik | Coolify rotacija + redeploy | **URAĐENO** (vlasnik); i dalje checklist prije produkcije / stvarnih podataka |
 | Zamjena `PLATFORM_ADMIN_EMAILS` pravim platform korisnicima | vlasnik + implementator | STATUS dugovi; platform nalog | **otvoreno** (dug) |
 | Javna MinIO konzola | vlasnik | ugasiti public konzolu prije produkcije | **otvoreno**; odredište/konzola „ostaje“ do produkcije (odluka) |
 | Retencija (rokovi u §11) | vlasnik → pravnik/računovođa | §11 tabela; potvrda prije produkcije | **otvoreno: odluka vlasnika** (pravno) |
@@ -641,4 +641,4 @@ Coolify native DB backup
 | Praćenje grešaka | vlasnik + implementator | ADR 0014 **PRIHVAĆEN**; DPA prije SaaS trackera | ADR prihvaćen; **uključenje u produkciji otvoreno** |
 | Provajder emaila (pozivnice/reset) | vlasnik | nema ADR-a o SMTP/SaaS mailu (0008 = ugovor u paketu, ne email) | **otvoreno: odluka vlasnika** |
 
-Pilot i R4b **nisu** dio ove liste (ne počinju ovdje).
+Ova lista je **produkcija**, ne pilot. R4b **kod** ne počinje ovdje (plan: `PLAN-R4.md` §11).
