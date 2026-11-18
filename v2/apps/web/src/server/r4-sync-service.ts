@@ -9,6 +9,7 @@ import {
 } from "@gradix/domain";
 import type { Pool, PoolClient } from "pg";
 import { encodeSyncCursor } from "./sync-cursor";
+import { syncGateForWorkDate } from "./workday-approval";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -568,6 +569,14 @@ async function applyItem(
 
   const date = await businessDate(client, actor.companyId, item.entry.startedAt);
   if (!date) return reject();
+  const gate = await syncGateForWorkDate(client, actor.companyId, date);
+  if (gate === "LOCKED") {
+    return reject(invalidItem(item, "SYNC_ITEM_REJECTED"));
+  }
+  if (gate === "WEEK_APPROVED") {
+    return createConflict(client, actor, worker, item, date, requestHash, reservation,
+      null, null, "SYNC_VERSION_CONFLICT", workdaySlot);
+  }
   const projectId = item.entry.kind === "WORK" ? item.entry.projectId : null;
   if (foremanWorkerId && !(await foremanHasAssignmentScope(
     client, actor, foremanWorkerId, worker.id, date, projectId,
