@@ -39,7 +39,8 @@ env:
 jobs:
   verify:
     if: ${{ !inputs.e2e_stabilnost }}
-    runs-on: ubuntu-latest
+    # Playwright Chromium još nema build za ubuntu 26.04 (ubuntu-latest od 2026-11).
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     services:
@@ -332,7 +333,7 @@ jobs:
   # (@playwright/test 1.57.0), pa instalacija ne može biti uzrok padova.
   e2e-stabilnost:
     if: ${{ inputs.e2e_stabilnost }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
