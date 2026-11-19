@@ -97,8 +97,8 @@ describeDb("R5.2 fuel-entry web API", () => {
   it("ACCOUNTANT može listu ali ne može kreirati unos", async () => {
     const list = await listRoute(new NextRequest("http://interni/api/fuel-entries", { headers: { cookie: cookieAcct } }));
     expect(list.status).toBe(200);
-    const body = await list.json() as { entries: { amount: string | null }[] };
-    expect(body.entries[0]?.amount).toBe("85.00");
+    const body = await list.json() as { data: { entries: { amount: string | null }[] } };
+    expect(body.data.entries[0]?.amount).toBe("85.00");
     const denied = await createRoute(new NextRequest("http://interni/api/fuel-entries", {
       method: "POST",
       headers: { cookie: cookieAcct, "content-type": "application/json" },
@@ -115,10 +115,10 @@ describeDb("R5.2 fuel-entry web API", () => {
   it("DRIVER vidi zapis ali ne cijenu", async () => {
     const list = await listRoute(new NextRequest("http://interni/api/fuel-entries", { headers: { cookie: cookieDriver } }));
     expect(list.status).toBe(200);
-    const body = await list.json() as { entries: { amount: string | null; liters: number }[] };
-    expect(body.entries.length).toBeGreaterThan(0);
-    expect(body.entries[0]?.amount).toBeNull();
-    expect(body.entries[0]?.liters).toBe(40.5);
+    const body = await list.json() as { data: { entries: { amount: string | null; liters: number }[] } };
+    expect(body.data.entries.length).toBeGreaterThan(0);
+    expect(body.data.entries[0]?.amount).toBeNull();
+    expect(body.data.entries[0]?.liters).toBe(40.5);
     const created = await createRoute(new NextRequest("http://interni/api/fuel-entries", {
       method: "POST",
       headers: { cookie: cookieDriver, "content-type": "application/json" },
