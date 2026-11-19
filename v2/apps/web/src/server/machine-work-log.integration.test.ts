@@ -114,14 +114,17 @@ describeDb("R5.1 machine work-log web API", () => {
       );
       return { mode: log.rows[0]?.mode, version: log.rows[0]?.version, revisions: Number(revisions.rows[0]?.n ?? 0) };
     });
-    const revised = await reviseRoute(new NextRequest(`http://interni/api/machine-work-logs/${LOG}/revise`, {
-      method: "POST",
-      headers: { cookie: cookieOwner, "content-type": "application/json" },
-      body: JSON.stringify({
-        reason: "Ispravka režima rada zbog greške unosa.",
-        payload: { mode: "IDLE" },
+    const revised = await reviseRoute(
+      new NextRequest(`http://interni/api/machine-work-logs/${LOG}/revise`, {
+        method: "POST",
+        headers: { cookie: cookieOwner, "content-type": "application/json" },
+        body: JSON.stringify({
+          reason: "Ispravka režima rada zbog greške unosa.",
+          payload: { mode: "IDLE" },
+        }),
       }),
-    }));
+      { params: Promise.resolve({ id: LOG }) },
+    );
     expect(revised.status).toBe(200);
     const after = await withCompany(admin, companyId(COMPANY), async (client) => {
       const log = await client.query<{ mode: string; version: number }>(
