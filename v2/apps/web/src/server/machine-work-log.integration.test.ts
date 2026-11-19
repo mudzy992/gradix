@@ -79,6 +79,15 @@ describeDb("R5.1 machine work-log web API", () => {
   }, 60_000);
 
   afterAll(async () => {
+    await withCompany(admin, companyId(COMPANY), async (client) => {
+      await client.query("DELETE FROM machine_work_log_revisions WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM machine_meter_readings WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM machine_work_logs WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM machines WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM workers WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM memberships WHERE company_id = $1", [COMPANY]);
+    });
     await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
     await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER_OWNER, USER_ACCT]]);
     await admin.end();
