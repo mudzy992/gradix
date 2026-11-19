@@ -53,6 +53,8 @@ import { POST as overrideApproveRoute } from "@/app/api/projects/[id]/override-r
 import { POST as resolveRoute } from "@/app/api/workday-conflicts/[id]/resolve/route";
 import { POST as workdayConfirmRoute } from "@/app/api/workdays/[id]/confirm/route";
 import { POST as workdayReviseRoute } from "@/app/api/workdays/[id]/revise/route";
+import { POST as machineWorkLogsPost } from "@/app/api/machine-work-logs/route";
+import { POST as machineWorkLogReviseRoute } from "@/app/api/machine-work-logs/[id]/revise/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
@@ -174,6 +176,8 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/workday-conflicts/{id}/resolve": { POST: resolveRoute },
   "/api/workdays/{id}/confirm": { POST: workdayConfirmRoute },
   "/api/workdays/{id}/revise": { POST: workdayReviseRoute },
+  "/api/machine-work-logs": { POST: machineWorkLogsPost },
+  "/api/machine-work-logs/{id}/revise": { POST: machineWorkLogReviseRoute },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },
