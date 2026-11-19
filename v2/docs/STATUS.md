@@ -22,7 +22,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R5.4 Dnevni pregled | **isporučeno** (`ab0b81c`, CI 44592292030) | spremno |
 | R5.5 Kvarovi | **isporučeno** (`1b11b6e`, CI 44601944551) | spremno |
 | R6.0 Sidebar regroup | **isporučeno** (`06658f5`) | spremno |
-| R6.1 Trošak mašine / knjiženje | **isporučeno** (`1081cff`, CI 44627817410) | spremno |
+| R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
