@@ -615,6 +615,16 @@ export const SyncWorkEntryPayload = z.object({
   note: z.string().max(2000).nullable(),
 }).strict();
 
+export const SyncMachineWorkLogPayload = z.object({
+  machineId: z.string().min(1).max(128),
+  projectId: z.string().min(1).max(128).nullable(),
+  startedAt: OffsetDateTime,
+  endedAt: OffsetDateTime,
+  mode: z.enum(["WORK", "IDLE", "BREAKDOWN"]),
+  meterEnd: z.number().finite().min(0).nullable(),
+  note: z.string().max(2000).nullable(),
+}).strict();
+
 export const SyncPushItem = z.discriminatedUnion("entityType", [
   z.object({
     localId: z.string().uuid(),
@@ -635,6 +645,13 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
     baseVersion: z.number().int().positive(),
     deviceSentAt: OffsetDateTime,
     status: z.literal("SUBMITTED"),
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("machine_work_log"),
+    workLogId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    log: SyncMachineWorkLogPayload,
   }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
@@ -661,7 +678,7 @@ export type SyncPushResponse = z.infer<typeof SyncPushResponse>;
 export const SyncPullEvent = z.object({
   id: z.string(),
   cursorSeq: z.string(),
-  entityType: z.enum(["workday", "work_entry", "sync_conflict"]),
+  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log"]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
   payload: z.record(z.string(), z.unknown()).nullable(),

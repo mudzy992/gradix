@@ -31,6 +31,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: "/ured/radnici", label: "Radnici", icon: "users", description: "Ljudi, kontakt, angažman", group: "Evidencija", permission: "workers.view" },
   { href: "/ured/uvoz", label: "Uvoz iz Excela", icon: "upload", description: "Spisak sa papira", group: "Evidencija", permission: "workers.manage" },
   { href: "/ured/radni-dani", label: "Radni dani", icon: "calendar", description: "Potvrda dana, sedmica, zaključavanje", group: "Ured", permission: "workdays.view" },
+  { href: "/ured/sati-masine", label: "Sati mašina", icon: "truck", description: "Radni sati mašina i očitanja brojila", group: "Ured", permission: "machines.work_log.view" },
   { href: "/ured/sukobi", label: "Sukobi", icon: "list", description: "Razrješenje sukoba radnih dana", group: "Ured", permission: "workdays.resolve" },
   { href: "/ured/korisnici", label: "Korisnici", icon: "users", description: "Ljudi, role, pristup", group: "Ured", permission: "users.manage" },
   { href: "/ured/role", label: "Pristup i role", icon: "shield", description: "Ko šta smije", group: "Ured", permission: "roles.view" },

@@ -64,7 +64,7 @@ describe("R4 SQLite outbox and account privacy", () => {
     }, () => localUuid(++sequence));
 
     expect(queued).toHaveLength(2);
-    expect(queued.map((item) => item.workerId)).toEqual(["worker-1", "worker-2"]);
+    expect(queued.map((item) => ("workerId" in item ? item.workerId : null))).toEqual(["worker-1", "worker-2"]);
     expect(await pendingOutboxCount(db, ACCOUNT_A)).toBe(2);
     expect(await createSqliteR4SyncStore(db, ACCOUNT_A).pending()).toEqual(queued);
     const rosterColumns = await db.getAllAsync<{ name: string }>("PRAGMA table_info(foreman_workers_cache)");

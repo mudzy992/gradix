@@ -3,7 +3,7 @@
  * R0 note submission is deliberately removed; SQLite outbox wiring follows its approved step.
  */
 import { useEffect, useState } from "react";
-import { Link } from "expo-router";
+import { Link, type Href } from "expo-router";
 import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 import { login, me, getAccessToken, type Me } from "../api/client";
 import { getLogoutSummary, logoutMobile, REVOKED_SESSION_MESSAGE } from "../api/session-lifecycle";
@@ -194,7 +194,7 @@ export default function IndexScreen() {
       {/* Stavke dolaze iz lib/mobile-nav (jedina definicija po roli). `asChild` + jedan
           stil kroz jedanStil(...) je obavezno: niz stilova kroz Slot baca grešku. */}
       {mobileNavForProfile({ roles: profile?.user.roles ?? [], workerId: profile?.workerId ?? null, foremanScope: profile?.foremanScope ?? false }).map((entry) => (
-        <Link key={entry.href} href={entry.href} asChild>
+        <Link key={entry.href} href={entry.href as Href} asChild>
           <Button variant="secondary" label={entry.label} accessibilityRole="link" />
         </Link>
       ))}

@@ -53,7 +53,9 @@ DECLARE
     'public.guard_workday_identity()',
     'public.guard_work_entry_overlap()',
     'public.guard_sync_receipt_update()',
-    'public.guard_sync_conflict_update()'
+    'public.guard_sync_conflict_update()',
+    'public.guard_machine_work_log_overlap()',
+    'public.guard_machine_meter_reading_insert()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

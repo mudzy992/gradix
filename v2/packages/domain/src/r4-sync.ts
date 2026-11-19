@@ -2,6 +2,19 @@
  * R4a sync protocol primitives shared by web, mobile, and deterministic simulator tests.
  * No database, React Native, or Node-only dependencies belong in this module.
  */
+import { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
+import {
+  validMachineWorkLogPayload,
+  type R4MachineWorkLogPushItem,
+} from "./r5-machine-work-log-sync";
+
+export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
+export type {
+  R4MachineWorkLogMode,
+  R4MachineWorkLogPayload,
+  R4MachineWorkLogPushItem,
+} from "./r5-machine-work-log-sync";
+
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
 export const R4_SYNC_PUSH_MAX_ITEM_BYTES = 16 * 1024;
@@ -47,7 +60,7 @@ export type R4WorkdayPushItem = {
   status: "SUBMITTED";
 };
 
-export type R4SyncPushItem = R4WorkEntryPushItem | R4WorkdayPushItem;
+export type R4SyncPushItem = R4WorkEntryPushItem | R4WorkdayPushItem | R4MachineWorkLogPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -65,7 +78,7 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict";
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -92,34 +105,6 @@ export type R4SyncValidationCode =
   | "SYNC_ITEM_REJECTED";
 
 export type R4SyncValidationResult = { ok: true } | { ok: false; code: R4SyncValidationCode };
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const OFFSET_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|([+-])(\d{2}):(\d{2}))$/;
-
-export function isR4Uuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_PATTERN.test(value);
-}
-
-export function isOffsetDateTime(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const match = OFFSET_DATE_TIME_PATTERN.exec(value);
-  if (!match) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , offsetHourText, offsetMinuteText] = match;
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  const second = Number(secondText);
-  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
-  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
-  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
-  if (offsetHour > 23 || offsetMinute > 59) return false;
-  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  if (day < 1 || day > (daysInMonth[month - 1] ?? 0)) return false;
-  return Number.isFinite(Date.parse(value));
-}
 
 function validEntryPayload(entry: R4WorkEntryPayload): boolean {
   if (!entry || typeof entry !== "object") return false;
@@ -154,7 +139,17 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
       return { ok: false, code: "SYNC_LOCAL_ID_INVALID" };
     }
     localIds.add(item.localId);
-    if (!isR4Uuid(item.workdayId) || !isOffsetDateTime(item.deviceSentAt)) {
+    if (!isOffsetDateTime(item.deviceSentAt)) {
+      return { ok: false, code: "SYNC_ITEM_INVALID" };
+    }
+    if (item.entityType === "machine_work_log") {
+      if (typeof item.workLogId !== "string" || item.workLogId.length < 1 || item.workLogId.length > 128) {
+        return { ok: false, code: "SYNC_ITEM_INVALID" };
+      }
+      if (!validMachineWorkLogPayload(item.log)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (!isR4Uuid(item.workdayId)) {
       return { ok: false, code: "SYNC_ITEM_INVALID" };
     }
     if (item.workerId !== undefined && (typeof item.workerId !== "string" || item.workerId.length < 1 || item.workerId.length > 128)) {

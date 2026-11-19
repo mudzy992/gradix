@@ -52,8 +52,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const auth = await guard(request);
     if (!auth.ok) return auth.response;
-    if (!auth.ctx.roles.includes("WORKER") && !auth.ctx.roles.includes("SITE_SUPERVISOR")) {
-      return fail("FORBIDDEN", "Samo radnik ili šef gradilišta može slati radne zapise u svom dozvoljenom opsegu.");
+    const mayPush = auth.ctx.roles.some((role) =>
+      role === "WORKER" || role === "SITE_SUPERVISOR" || role === "MACHINE_OPERATOR",
+    );
+    if (!mayPush) {
+      return fail("FORBIDDEN", "Samo radnik, rukovalac mašine ili šef gradilišta može slati terenske zapise.");
     }
 
     const body = await readBoundedJson(request);

@@ -14,7 +14,7 @@ export type MobileNavProfile = {
 };
 
 export type MobileNavEntry = {
-  href: "/moj-dan" | "/grupa" | "/rokovi" | "/projekti";
+  href: "/moj-dan" | "/grupa" | "/sati-masine" | "/rokovi" | "/projekti";
   label: string;
   visible: (profile: MobileNavProfile) => boolean;
 };
@@ -25,6 +25,11 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
     href: "/grupa",
     label: "Grupa — unos za ekipu",
     visible: (p) => p.workerId !== null && p.foremanScope && p.roles.includes("SITE_SUPERVISOR"),
+  },
+  {
+    href: "/sati-masine",
+    label: "Sati mašine",
+    visible: (p) => p.workerId !== null && p.roles.includes("MACHINE_OPERATOR"),
   },
   { href: "/rokovi", label: "Moji rokovi", visible: () => true },
   { href: "/projekti", label: "Moji projekti", visible: () => true },

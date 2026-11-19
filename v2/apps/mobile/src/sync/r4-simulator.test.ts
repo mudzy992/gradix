@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  R4MachineWorkLogPushItem,
   R4SyncEvent,
   R4SyncPullPage,
   R4SyncPushItem,
@@ -21,6 +22,24 @@ function canonical(value: unknown): string {
     return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(",")}}`;
   }
   return JSON.stringify(value) ?? "null";
+}
+
+function machineLogItem(local: number): R4MachineWorkLogPushItem {
+  return {
+    localId: uuid(String(local)),
+    entityType: "machine_work_log",
+    workLogId: `mwl_sim_${local}`,
+    deviceSentAt: "2026-11-19T10:00:00+01:00",
+    log: {
+      machineId: "mch_simulator",
+      projectId: null,
+      startedAt: "2026-11-19T08:00:00+01:00",
+      endedAt: "2026-11-19T09:00:00+01:00",
+      mode: "WORK",
+      meterEnd: null,
+      note: `machine log ${local}`,
+    },
+  };
 }
 
 function item(local: number): R4WorkEntryPushItem {
@@ -96,19 +115,24 @@ class SimulatedNetwork implements R4SyncTransport {
       const workDate = pushed.entityType === "work_entry"
         ? businessDate(new Date(pushed.entry.startedAt), "Europe/Sarajevo")
         : null;
-      const canonicalWorkdayId = workDate
-        ? this.canonicalWorkdays.get(workDate) ?? pushed.workdayId
-        : pushed.workdayId;
-      const entityId = pushed.entityType === "work_entry" ? pushed.workEntryId : pushed.workdayId;
+      const workdayId = pushed.entityType === "machine_work_log" ? null : pushed.workdayId;
+      const canonicalWorkdayId = workDate && workdayId
+        ? this.canonicalWorkdays.get(workDate) ?? workdayId
+        : workdayId;
+      const entityId = pushed.entityType === "work_entry"
+        ? pushed.workEntryId
+        : pushed.entityType === "machine_work_log"
+          ? pushed.workLogId
+          : pushed.workdayId;
       const result: R4SyncPushItemResult = {
         localId: pushed.localId,
         status: "APPLIED",
         entityId,
         version: 1,
         cursor: String(slot.seq),
-        ...(workDate ? { canonicalWorkdayId } : {}),
+        ...(workDate && canonicalWorkdayId ? { canonicalWorkdayId } : {}),
       };
-      if (pushed.entityType === "work_entry" && workdaySlot && workDate) {
+      if (pushed.entityType === "work_entry" && workdaySlot && workDate && canonicalWorkdayId) {
         if (this.canonicalWorkdays.has(workDate)) {
           workdaySlot.status = "SKIPPED";
         } else {
@@ -124,7 +148,7 @@ class SimulatedNetwork implements R4SyncTransport {
       this.publish(slot, entityId, {
         localId: pushed.localId,
         entityType: pushed.entityType,
-        ...(workDate ? { workdayId: canonicalWorkdayId } : {}),
+        ...(workDate && canonicalWorkdayId ? { workdayId: canonicalWorkdayId } : {}),
       });
       this.receipts.set(pushed.localId, { hash, result });
       results.push(result);
@@ -269,6 +293,17 @@ describe("R4 deterministic sync simulator", () => {
     // Ponovni sync ne donosi duplikate.
     const again = await runR4Sync(store, server);
     expect(again.pulledEvents).toBe(0);
+  });
+
+  it("R5.1: isti localId za machine_work_log vraća DUPLICATE, ne dupli zapis", async () => {
+    const server = new SimulatedNetwork();
+    const queued = machineLogItem(901);
+    const store = memoryStore([queued]);
+    const first = await runR4Sync(store, server);
+    expect(first.applied).toBe(1);
+    store.pendingItems.push(queued);
+    const second = await runR4Sync(store, server);
+    expect(second.applied).toBe(0);
   });
 
   it("splits outbox into protocol-sized batches", () => {

@@ -52,6 +52,9 @@ export {
   type R4WorkEntryPushItem,
   type R4WorkdayPushItem,
   type R4WorkdayStatus,
+  type R4MachineWorkLogMode,
+  type R4MachineWorkLogPayload,
+  type R4MachineWorkLogPushItem,
 } from "./r4-sync";
 
 export { DEFAULT_TIMEZONE, businessDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";

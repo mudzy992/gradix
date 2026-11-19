@@ -80,6 +80,9 @@ GRANT SELECT, INSERT ON TABLE public.workday_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.work_entries TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.sync_receipts TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.sync_conflicts TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_work_logs TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.machine_meter_readings TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.machine_work_log_revisions TO gradix_app;
 -- No direct sequence rights; login_attempts_id_seq is used only by its definer function.
 
 -- App-callable lookup and rate-limit functions. Revoke default PUBLIC EXECUTE first; these
@@ -121,6 +124,8 @@ REVOKE ALL ON FUNCTION public.guard_workday_identity() FROM PUBLIC, gradix_app;
 REVOKE ALL ON FUNCTION public.guard_work_entry_overlap() FROM PUBLIC, gradix_app;
 REVOKE ALL ON FUNCTION public.guard_sync_receipt_update() FROM PUBLIC, gradix_app;
 REVOKE ALL ON FUNCTION public.guard_sync_conflict_update() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_machine_work_log_overlap() FROM PUBLIC, gradix_app;
+REVOKE ALL ON FUNCTION public.guard_machine_meter_reading_insert() FROM PUBLIC, gradix_app;
 
 -- The R3 overlap helper exists only on the no-btree_gist trigger fallback.
 DO $$

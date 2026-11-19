@@ -28,4 +28,7 @@ table	workday_revisions	SELECT;INSERT	-		R4b office revisions after confirm; app
 table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overlap trigger protects OPEN/KNOWN_END intervals; no hard-delete path.
 table	sync_receipts	SELECT;INSERT	-		Idempotency receipts are append-only; server-side retention may purge result details but preserves the compact key/hash.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.
+table	machine_work_logs	SELECT;INSERT;UPDATE	-		R5.1 work-log CRUD; no hard-delete path; overlap trigger protects intervals; FORCE RLS.
+table	machine_meter_readings	SELECT;INSERT	-		Append-only meter readings; trigger updates machines.meter_value; FORCE RLS; no UPDATE/DELETE.
+table	machine_work_log_revisions	SELECT;INSERT	-		R5.1 office revisions after create; append-only; FORCE RLS; no UPDATE/DELETE.
 sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

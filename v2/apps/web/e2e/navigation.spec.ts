@@ -75,6 +75,23 @@ test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu, ne 
   await page.waitForURL("**/pregled");
 });
 
+test("vlasnik i računovođa: meni sadrži Sati mašina", async ({ page }) => {
+  await login(page, "vlasnik@demo.test");
+  expect(await navLabels(page)).toContain("Sati mašina");
+  await page.getByRole("button", { name: /Korisnički meni/ }).click();
+  await page.getByRole("menuitem", { name: "Odjavi se" }).click();
+  await page.waitForURL("**/login");
+  await login(page, "racunovodja@demo.test");
+  expect(await navLabels(page)).toContain("Sati mašina");
+});
+
+test("računovođa: na Sati mašina nema dugmeta Novi unos", async ({ page }) => {
+  await login(page, "racunovodja@demo.test");
+  await page.goto("/ured/sati-masine");
+  await expect(page.getByRole("heading", { name: "Sati mašina" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
+});
+
 test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
   await login(page, "sef@demo.test");
   const labels = await navLabels(page);

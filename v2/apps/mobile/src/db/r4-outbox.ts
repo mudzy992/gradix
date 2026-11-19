@@ -1,5 +1,6 @@
 import {
   validateR4SyncPush,
+  type R4MachineWorkLogPayload,
   type R4SyncEvent,
   type R4SyncPullPage,
   type R4SyncPushItem,
@@ -163,7 +164,7 @@ export async function enqueueR4Items(
            (company_id, user_id, local_id, worker_id, entity_type, payload_json, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
         [account.companyId, account.userId, item.localId,
-          item.workerId ?? null, item.entityType, payload, createdAt, createdAt],
+          "workerId" in item ? (item.workerId ?? null) : null, item.entityType, payload, createdAt, createdAt],
       );
       inserted += 1;
     }
@@ -409,6 +410,25 @@ export async function readOutboxEntries(db: LocalSqlite, account: LocalAccount):
 }
 
 /** Vlastiti unos radnika: bez workerId — server iz sesije zna čiji je dan. */
+export async function queueMachineWorkLog(
+  db: LocalSqlite,
+  account: LocalAccount,
+  workLogId: string,
+  log: R4MachineWorkLogPayload,
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "machine_work_log",
+    workLogId,
+    deviceSentAt,
+    log,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
 export async function queueOwnWorkEntry(
   db: LocalSqlite,
   account: LocalAccount,

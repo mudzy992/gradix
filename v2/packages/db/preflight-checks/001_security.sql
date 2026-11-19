@@ -331,7 +331,10 @@ BEGIN
       ('workday_revisions', 'workday_revisions_tenant_isolation'),
       ('work_entries', 'work_entries_tenant_isolation'),
       ('sync_receipts', 'sync_receipts_tenant_isolation'),
-      ('sync_conflicts', 'sync_conflicts_tenant_isolation')
+      ('sync_conflicts', 'sync_conflicts_tenant_isolation'),
+      ('machine_work_logs', 'machine_work_logs_tenant_isolation'),
+      ('machine_meter_readings', 'machine_meter_readings_tenant_isolation'),
+      ('machine_work_log_revisions', 'machine_work_log_revisions_tenant_isolation')
     ) AS required(table_name, policy_name)
     LEFT JOIN pg_namespace n ON n.nspname = 'public'
     LEFT JOIN pg_class c ON c.relname = required.table_name AND c.relnamespace = n.oid

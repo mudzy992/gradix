@@ -10,6 +10,7 @@ import {
 import type { Pool, PoolClient } from "pg";
 import { encodeSyncCursor } from "./sync-cursor";
 import { syncGateForWorkDate } from "./workday-approval";
+import { applyMachineWorkLogSyncItem } from "./r4-sync-machine-work-log";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -375,7 +376,7 @@ async function publishEvent(
   actor: SyncPushActor,
   reservation: Reservation,
   requestHash: string,
-  entityType: "workday" | "work_entry" | "sync_conflict",
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log",
   entityId: string,
   version: number,
   payload: Record<string, unknown>,
@@ -418,7 +419,11 @@ async function createConflict(
   additionalReservation?: Reservation,
 ): Promise<R4SyncPushItemResult> {
   const conflictId = randomUUID();
-  const receivedPayload = item.entityType === "work_entry" ? item.entry : item;
+  const receivedPayload = item.entityType === "work_entry"
+    ? item.entry
+    : item.entityType === "machine_work_log"
+      ? item.log
+      : item;
   await client.query(
     `INSERT INTO public.sync_conflicts
        (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version)
@@ -490,6 +495,22 @@ async function applyItem(
   now: Date,
   workdayReservation?: Reservation,
 ): Promise<R4SyncPushItemResult> {
+  if (item.entityType === "machine_work_log") {
+    return applyMachineWorkLogSyncItem(client, {
+      actor,
+      worker,
+      requestHash,
+      reservation,
+      helpers: {
+        businessDate: (scoped, instant) => businessDate(scoped, actor.companyId, instant),
+        invalidItem,
+        rejectInTransaction,
+        createConflict,
+        publishEvent,
+        saveReceipt,
+      },
+    }, item);
+  }
   if (item.entityType === "workday") {
     const current = await client.query<WorkdayRow>(
       `SELECT id, worker_id, status, header_version, work_date::text
@@ -780,7 +801,8 @@ export async function pushR4SyncItems(
 ): Promise<R4SyncPushItemResult[]> {
   const isWorker = actor.roles.includes("WORKER");
   const isForeman = actor.roles.includes("SITE_SUPERVISOR");
-  if (!isWorker && !isForeman) throw new SyncPushAccessError("FORBIDDEN");
+  const isMachineOperator = actor.roles.includes("MACHINE_OPERATOR");
+  if (!isWorker && !isForeman && !isMachineOperator) throw new SyncPushAccessError("FORBIDDEN");
   const actorWorker = await readWorker(pool, actor);
   if (!actorWorker) throw new SyncPushAccessError("NOT_FOUND");
   await withCompany(pool, actor.companyId, async (client) => {
@@ -796,7 +818,13 @@ export async function pushR4SyncItems(
     }
     let worker: Worker;
     let foremanWorkerId: string | null = null;
-    if (item.workerId !== undefined) {
+    if (item.entityType === "machine_work_log") {
+      if (!isMachineOperator) {
+        results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
+        continue;
+      }
+      worker = actorWorker;
+    } else if (item.workerId !== undefined) {
       if (!isForeman) {
         results.push(invalidItem(item, "WORKER_TARGET_FORBIDDEN"));
         continue;

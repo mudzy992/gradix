@@ -16,7 +16,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R4b API / migracije | **isporučeno** (`5ffa667`+) | spremno |
 | R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
 | R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
-| R5 / partneri | plan `PLAN-R5.md` čeka vlasnika | ne radi |
+| R5.1 Sati mašine | **isporučeno** (čekа CI + prolaz vlasnika) | rad |
+| R5.2+ | **nije počelo** | ne radi |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -35,17 +36,19 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
 | R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
 | R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
-| R5 plan | `PLAN-R5.md` — **ODOBREN** (rezovi; kod ne počinje dok vlasnik ne kaže start) |
+| R5 plan | `PLAN-R5.md` — **ODOBREN**; R5.1 kod spreman za CI |
 
 ## Radi (CI)
 
 - R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`.
 - R4b: API + UI potvrda/sedmica/zaključaj/ispravka na `/ured/radni-dani`.
 - Prilozi rokova; s3 dijagnostika Put/Get.
+- R5.1: `machine_work_logs` + očitanja + revizije; `/ured/sati-masine`; sync `machine_work_log`; mobil `/sati-masine`; seed `rukovalac@demo.test`.
 
 ## Ne radi / namjerno još nema
 
-- R5 kod (plan čeka); partneri; Android store/dev build.
+- R5.2+ (gorivo, ture, kvarovi); partneri; Android store/dev build.
+- R5.1 vlasnikov prolaz na stagingu: **ručno nije provjereno**.
 
 ## Dugovi / otvoreno
 

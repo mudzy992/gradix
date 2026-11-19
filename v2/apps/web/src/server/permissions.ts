@@ -125,6 +125,10 @@ export const PERMISSIONS = {
   "workdays.week_decide": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "workdays.lock": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "workdays.revise": ["OWNER", "ADMIN"],
+  // R5.1: sati mašine — ured lista, mobilni unos, revizija.
+  "machines.work_log.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MACHINE_OPERATOR"],
+  "machines.work_log.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR"],
+  "machines.work_log.revise": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -218,6 +222,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "workdays.revise": {
     label: "Ispravka (revizija) poslije potvrde",
     description: "Vlasnik/admin upisuje reviziju s razlogom; ne prepisuje LOCKED original.",
+  },
+  "machines.work_log.view": {
+    label: "Pregled sati mašine",
+    description: "Lista radnih sati mašina — samo pregled. Računovođa vidi sve, rukovalac samo svoje.",
+  },
+  "machines.work_log.create": {
+    label: "Unos sati mašine",
+    description: "Novi zapis radnih sati mašine uz očitanje brojila. Rukovalac unosi vlastite sate.",
+  },
+  "machines.work_log.revise": {
+    label: "Ispravka sati mašine",
+    description: "Vlasnik/admin upisuje reviziju sati mašine s razlogom; original ostaje nepromijenjen.",
   },
 };
 

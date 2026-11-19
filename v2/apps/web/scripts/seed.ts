@@ -55,6 +55,8 @@ const users: SeedUser[] = [
   // svom opsegu“, a ne samo cijelu firmu. Dodijeljen je na dionicu (wrk_demo_kenan).
   { id: "usr_voditelj", email: "voditelj@demo.test", first: "Kenan", last: "Softić", role: "PROJECT_MANAGER", companyId: "cmp_demo", scope: "PROJECTS" },
   { id: "usr_racun", email: "racunovodja@demo.test", first: "Sara", last: "Mujić", role: "ACCOUNTANT", companyId: "cmp_demo" },
+  // R5.1: rukovalac za mobilni unos sati mašine (worker veza wrk_demo_selmir).
+  { id: "usr_rukovalac", email: "rukovalac@demo.test", first: "Selmir", last: "Begić", role: "MACHINE_OPERATOR", companyId: "cmp_demo" },
   { id: "usr_stranac", email: "vlasnik@druga.test", first: "Nikola", last: "Jović", role: "OWNER", companyId: "cmp_druga" },
 ];
 
@@ -118,7 +120,7 @@ const workers = [
   { id: "wrk_demo_amar", first: "Amar", last: "Hadžić", job: "Rukovalac bagerom", hired: "2023-02-01", userId: "usr_radnik" },
   { id: "wrk_demo_mario", first: "Mario", last: "Perić", job: "Vozač kipera", hired: "2024-09-15", userId: "usr_sef" },
   { id: "wrk_demo_nedim", first: "Nedim", last: "Softić", job: "Radnik na iskopu", hired: "2025-01-20" },
-  { id: "wrk_demo_selmir", first: "Selmir", last: "Begić", job: "Rukovalac valjkom", hired: "2024-03-11" },
+  { id: "wrk_demo_selmir", first: "Selmir", last: "Begić", job: "Rukovalac valjkom", hired: "2024-03-11", userId: "usr_rukovalac" },
   { id: "wrk_demo_haris", first: "Haris", last: "Kovačević", job: "Radnik na asfaltiranju", hired: "2025-05-05" },
   { id: "wrk_demo_kenan", first: "Kenan", last: "Softić", job: "Voditelj projekta", hired: "2024-06-01", userId: "usr_voditelj" },
 ];
