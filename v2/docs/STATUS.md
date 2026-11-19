@@ -18,7 +18,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
 | R5.1 Sati mašine | **isporučeno** (`046404e`, CI) | spremno |
 | R5.2 Gorivo | **isporučeno** (`563c403`, CI 44573517449) | spremno |
-| R5.3 Ture | **isporučeno** (ovaj commit) | rad |
+| R5.3 Ture | **isporučeno** (`35fba11`) | rad |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
