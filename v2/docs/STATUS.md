@@ -35,7 +35,7 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
 | R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
 | R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
-| R5 plan | `PLAN-R5.md` — **čeka odobrenje** |
+| R5 plan | `PLAN-R5.md` — **ODOBREN** (rezovi; kod ne počinje dok vlasnik ne kaže start) |
 
 ## Radi (CI)
 

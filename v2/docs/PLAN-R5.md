@@ -1,51 +1,77 @@
 # R5 — Mehanizacija u radu (plan, bez koda)
 
-**Status:** čeka odobrenje vlasnika. **Izvor opsega:** `MASTER_BRIEF.md` §R5 / mehanizacija;
-R4b zatvoren (`PLAN-R4.md` §11). Nema implementacije dok vlasnik ne kaže DA.
+**Status: ODOBREN** (vlasnik 2026-11-19). Kod/migracije tek nakon ovog dokumenta. Izvor: `MASTER_BRIEF.md` §R5; R4b zatvoren (`PLAN-R4.md` §11, STATUS.md).
 
-## Model podataka (predlog)
+## (1) Vertikalni rezovi (redoslijed vlasnika)
 
-| Entitet | Svrha | Tenant |
-|---|---|---|
-| `machine_work_logs` | Radni sati mašine (rad / praznohod / kvar) po danu + veza na projekat/dodjelu | `company_id` |
-| `machine_meter_readings` | Brojilo (sati ili km); append-only historija | `company_id` |
-| `hauls` (ture) | Vožnja: mašina, vozač, projekat, količina, polazak/dolazak | `company_id` |
-| `fuel_entries` | Točenje (l, cijena+valuta, odometar/sati, lokacija); jedan izvor istine | `company_id` |
-| `machine_daily_checks` | Dnevni pregled (check-lista, foto, ishod) | `company_id` |
-| `machine_faults` | Prijava kvara; veza na pregled/log | `company_id` |
+| # | Rez | Entiteti (prvi rez ≤1 + ured lista) | B15 u rez |
+|---|---|---|---|
+| **R5.1** | **Sati mašine** | `machine_work_logs` + ured lista; očitanje → `machine_meter_readings` + update `machines.meter_value` | — |
+| R5.2 | Gorivo | `fuel_entries` (Money: centi + `currency_code`) | valuta uz iznos |
+| R5.3 | Ture | `hauls` | stacionaža nullable FK ako tura veže dionicu |
+| R5.4 | Dnevni pregled | `machine_daily_checks` + foto preko postojećeg attachment toka | — |
+| R5.5 | Kvarovi | `machine_faults` | partner nullable ako vanjski servis; tok odobravanja ako prag troška servisa |
 
-Trošak po satu = izvod iz amortizacije/goriva/servisa/rukovaoca (računato, ne dupli unos). Ispravke ture/goriva: amendment (kao R4b revise), original se ne prepisuje.
+Amendment (kao R4b revise): ture/gorivo/sati — original se ne prepisuje. **Trošak po satu → R6** (izvan R5).
 
-## Dizajn (ukratko)
+## (2) Mašine / brojila: postoji vs novo
 
-Apple-linear; mobilni: vozač (ture, gorivo), rukovalac (sati, pregled, kvar); ured: lista + filteri.
-Boolean → switch; razlozi ≥10 znakova gdje treba audit. Nove vrste UI komponenti samo uz odobrenje.
-
-## Migracije / sigurnost
-
-FORCE RLS na sve nove tabele; `privilege-matrix.tsv` + preflight (nema DELETE app roli gdje nije odobreno);
-tenant samo kroz `withCompany`; indeksi za (company_id, machine_id, work_date). Bez ad-hoc SQL van migracije.
-
-## Testovi
-
-| Šta | Dokazuje |
+| | |
 |---|---|
-| Integracija RLS | druga firma ne vidi logove/ture/gorivo |
-| Unique / overlap | dva aktivna brojila istog tipa / preklop sati → odbijeno |
-| Idempotencija sync | ponovljeni mobilni receipt ne duplira turu/gorivo |
-| Amendment | ispravka kreira reviziju; original LOCKED/nepromjenjiv ostaje |
-| E2E (ured) | unos sati → vidi se na listi; računovođa bez mutate dugmadi |
+| `machines` (+ `meter` HOURS/KM, `meter_value`, `meter_updated_at`) | **postoji** (`schema.prisma` L116–131; STATUS R2a/R3) — samo **trenutna** vrijednost |
+| `equipment_categories.meter` | **postoji** (zadana vrsta brojila) |
+| `machine_meter_readings` | **novo** — append-only historija; pri upisu ažurira `machines.meter_*` |
+| `machine_work_logs`, `fuel_entries`, `hauls`, `machine_daily_checks`, `machine_faults` | **novo** |
+
+## (3) Mobilni sync
+
+Isti obrazac kao R4a (**postoji**, STATUS / PLAN-R4): outbox na uređaju; server receipt + idempotency po `local_id`; change-log/cursor po firmi; sukob = OPEN sync_conflict (ne tihi overwrite); offline unos pa sync. Nove vrste stavki (sati/gorivo/tura/pregled/kvar) u istom sync ugovoru — **novo** payload tipovi, ne novi sync motor.
+
+## (4) Role i dozvole
+
+| Dozvola (novo u `permissions.ts` + nav) | Ko |
+|---|---|
+| `machines.work_log.*` | MACHINE_OPERATOR (svoje), SITE_SUPERVISOR (opseg), PM/OWNER/ADMIN |
+| `machines.fuel.*` | DRIVER (+ OPERATOR), mutate; **cijenu goriva vide:** OWNER, ADMIN, ACCOUNTANT, PM, SITE_SUPERVISOR (odluka vlasnika) — WORKER/DRIVER bez price u API/UI |
+| `machines.haul.*` | DRIVER, PM, OWNER/ADMIN |
+| `machines.check.*` / `machines.fault.*` | OPERATOR, MECHANIC, SS, PM, OWNER/ADMIN |
+
+E2E dosegljivost: ured lista R5.1; role bez mutate → nema dugmeta; cijena goriva sakrivena za DRIVER u R5.2.
+
+## (5) Trošak po satu
+
+**R6** — nije u R5. R5 skuplja sati/gorivo/servisne ulaze; izvod €/h kasnije.
+
+## (6) Foto pregleda
+
+**postoji** tok priloga obaveza (presign → confirm → lista; STATUS prilozi). R5.4 veže isti obrazac na `machine_daily_checks` (isti limiti veličine/tipa kao `MAX_ATTACHMENT_BYTES` / content-type guard u obligation-service — **postoji**). Bez nove UI komponente dok vlasnik ne odobri.
+
+## (7) B15 — u kojem rezu (nullable kolona ili tabela)
+
+| Stavka | Rez | Oblik |
+|---|---|---|
+| Stacionaža | R5.3 (+ kasnije sati ako treba) | tabela `route_segments` (**novo**) + nullable `segment_id` na `hauls` / po potrebi `machine_work_logs` |
+| Partner | R5.5 | tabela `partners` (**novo**) + nullable `partner_id` na `machine_faults` / servis |
+| Tok odobravanja | R5.5 kad uđe prag troška | `approval_flows` (**novo**) ili reuse R4b week pattern samo za fault cost — odluka u rez plan-u pri kodu |
+| Valuta uz iznos | R5.2 | Money: `amount_cents` + `currency_code` na `fuel_entries` (**novo** kolone; default `companies.currency` **postoji**) |
+
+## Migracije / sigurnost (svi rezovi)
+
+FORCE RLS; privilege-matrix + preflight; `withCompany`; bez ad-hoc SQL. Money samo centi + valuta.
 
 ## Van obima R5
 
-Stacionaža UI/uvoz trase; partneri UI; opšti B15 workflow nabavke; SaaS naplata; GPS; servisni nalozi u dubinu; Android store.
+Trošak po satu (R6); SaaS naplata; GPS; store build; nove UI vrste bez odobrenja.
 
-## B15 \[Rano u model\] — dopušta li trenutni model?
+## Testovi po rezu
 
-| Stavka | | |
+| Rez | Test | Dokazuje |
 |---|---|---|
-| Stacionaže (1) | **NE** | Nema tabela; samo komentar u `schema.prisma` L7. *Izmjena (ne primjenjuj):* `route_segments` (project_id, from_km_m, to_km_m) + FK na unose rada. |
-| Partneri | **NE** | Nema `partners`; komentar L7. *Izmjena:* `partners` + `partner_roles` (supplier/subcontractor/client), `company_id`, FORCE RLS. |
-| Tok odobravanja (14) | **NE** | R4b je samo radni dani/sedmica (`PLAN-R4.md` §11 „B15§14 bio NE→R5“); nema pragova iznosa. *Izmjena:* `approval_flows` / `approval_steps` / pragovi po `company_id`, vezivo za nabavku/trošak. |
-| Valuta uz iznos | **NE** (djelimično DA) | `companies.currency` postoji (`init` migracija); nema `currency` uz svaki iznos u troškovnim tabelama. *Izmjena:* pravilo Money — svaki `amount` + `currency_code` (default iz firme). |
-| SaaS tenant | **DA** (spremnost) | Tenant = `companies` + `memberships` bez `User.companyId` (`schema.prisma` L4–5, L69–70); planovi/naplata još nisu tabele (namjerno kasnije). |
+| **R5.1 Sati mašine** | integracija RLS | firma B ne vidi logove A |
+| R5.1 | unique/overlap | preklop intervala sati iste mašine → odbijeno; meter reading ne ide unazad bez amendment |
+| R5.1 | sync idempotencija | isti `local_id` → jedan log |
+| R5.1 | amendment | ispravka sati → revizija; original ostaje |
+| R5.1 | role + E2E | OPERATOR vidi unos; ACCOUNTANT lista read-only; ured lista dosegljiva |
+| R5.2 | RLS + Money | cijena samo dozvoljenim rolama; centi+valuta |
+| R5.2 | sync idempotencija | dupli receipt točenja → jedan red |
+| R5.3–5 | RLS, sync, amendment, E2E role | isto kao R5.1 po entitetu; R5.4 attachment limit |
