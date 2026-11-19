@@ -29,7 +29,6 @@
  */
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import type { PoolClient } from "pg";
 import { companyId, withCompany } from "@gradix/db";
@@ -388,28 +387,34 @@ export async function seedDemoPregled(
   });
 }
 
-const entry = process.argv[1] ?? "";
-const isMain = /demo-pregled\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
-  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
+// Samo basename: u esbuild bundlu import.meta.url dijeli CLI blok s uvezanim modulima.
+const isMain = /demo-pregled\.(cjs|mjs|ts)$/.test(
+  basename((process.argv[1] ?? "").replace(/\\/g, "/")),
+);
 if (isMain) {
-  const adminUrl = process.env.DATABASE_ADMIN_URL;
-  if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");
-  const slugArg = process.argv[2];
-  const pool = new Pool({ connectionString: adminUrl });
-  try {
-    const report = await seedDemoPregled(pool, slugArg ?? DEMO_COMPANY_SLUG);
-    console.log("Demo podaci za Pregled napravljeni:");
-    console.log(
-      `  blokirana dodjela: ${report.blockedAssignment?.machineCode} (${report.blockedAssignment?.typeLabel}, isteklo ${report.blockedAssignment?.expiresAt}) — dodjela ${report.blockedAssignment?.assignmentId}`,
-    );
-    for (const day of report.workdays) {
-      console.log(`  dan ${day.workDate} ${day.status} — ${day.workerName}: ${day.segments.join(", ") || "bez segmenata"}`);
+  void (async () => {
+    const adminUrl = process.env.DATABASE_ADMIN_URL;
+    if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");
+    const slugArg = process.argv[2];
+    const pool = new Pool({ connectionString: adminUrl });
+    try {
+      const report = await seedDemoPregled(pool, slugArg ?? DEMO_COMPANY_SLUG);
+      console.log("Demo podaci za Pregled napravljeni:");
+      console.log(
+        `  blokirana dodjela: ${report.blockedAssignment?.machineCode} (${report.blockedAssignment?.typeLabel}, isteklo ${report.blockedAssignment?.expiresAt}) — dodjela ${report.blockedAssignment?.assignmentId}`,
+      );
+      for (const day of report.workdays) {
+        console.log(`  dan ${day.workDate} ${day.status} — ${day.workerName}: ${day.segments.join(", ") || "bez segmenata"}`);
+      }
+      for (const sync of report.sync) {
+        console.log(`  zadnja sinhronizacija: ${sync.actorId} — ${sync.lastSyncAt} (${sync.receipts} računa)`);
+      }
+      console.log(`  neuspjele stavke: ${report.failedItems.map((item) => `${item.id} (${item.actorId})`).join(", ")}`);
+    } finally {
+      await pool.end();
     }
-    for (const sync of report.sync) {
-      console.log(`  zadnja sinhronizacija: ${sync.actorId} — ${sync.lastSyncAt} (${sync.receipts} računa)`);
-    }
-    console.log(`  neuspjele stavke: ${report.failedItems.map((item) => `${item.id} (${item.actorId})`).join(", ")}`);
-  } finally {
-    await pool.end();
-  }
+  })().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

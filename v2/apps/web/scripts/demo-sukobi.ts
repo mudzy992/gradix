@@ -20,7 +20,6 @@
  *   DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts
  */
 import { basename } from "node:path";
-import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 
@@ -160,18 +159,24 @@ export async function createDemoConflicts(
   return { created };
 }
 
-const entry = process.argv[1] ?? "";
-const isMain = /demo-sukobi\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
-  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
+// Samo basename: u esbuild bundlu import.meta.url dijeli CLI blok s uvezanim modulima.
+const isMain = /demo-sukobi\.(cjs|mjs|ts)$/.test(
+  basename((process.argv[1] ?? "").replace(/\\/g, "/")),
+);
 if (isMain) {
-  const adminUrl = process.env.DATABASE_ADMIN_URL;
-  if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");
-  const slugArg = process.argv[2];
-  const pool = new Pool({ connectionString: adminUrl });
-  try {
-    const { created } = await createDemoConflicts(pool, slugArg ?? DEMO_COMPANY_SLUG);
-    console.log(`Demo sukobi napravljeni (${created.length}): ${created.join(", ")}`);
-  } finally {
-    await pool.end();
-  }
+  void (async () => {
+    const adminUrl = process.env.DATABASE_ADMIN_URL;
+    if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");
+    const slugArg = process.argv[2];
+    const pool = new Pool({ connectionString: adminUrl });
+    try {
+      const { created } = await createDemoConflicts(pool, slugArg ?? DEMO_COMPANY_SLUG);
+      console.log(`Demo sukobi napravljeni (${created.length}): ${created.join(", ")}`);
+    } finally {
+      await pool.end();
+    }
+  })().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

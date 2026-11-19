@@ -47,12 +47,16 @@ RUN pnpm --filter @gradix/web build \
       --bundle --platform=node --format=esm --target=node22 \
       --outfile=/app/diagnostics.bundle.mjs \
  && cd apps/web \
- && for s in seed seed-demo-podaci demo-sukobi demo-pregled demo-r4b-approval; do \
+ && for s in seed demo-sukobi demo-pregled demo-r4b-approval; do \
       pnpm exec esbuild "scripts/${s}.ts" \
         --bundle --platform=node --format=esm --target=node22 \
         --outfile="${s}.mjs" \
         --external:pg --external:argon2; \
-    done
+    done \
+ && pnpm exec esbuild scripts/seed-demo-podaci.ts \
+      --bundle --platform=node --format=cjs --target=node22 \
+      --outfile=seed-demo-podaci.cjs \
+      --external:pg --external:argon2
 
 # 3) Runtime: samo ono što treba, bez pnpm-a i dev zavisnosti.
 FROM node:22-slim AS runner
@@ -97,7 +101,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db
 # koju bi `import("@aws-sdk/...")` iz /app/diagnostics našao (ERR_MODULE_NOT_FOUND na stagingu).
 COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed-demo-podaci.mjs ./seed-demo-podaci.mjs
+# seed-demo-podaci je CJS: exceljs radi dynamic require("crypto") koji ESM bundle ne podržava.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed-demo-podaci.cjs ./seed-demo-podaci.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-sukobi.mjs ./demo-sukobi.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-pregled.mjs ./demo-pregled.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-r4b-approval.mjs ./demo-r4b-approval.mjs

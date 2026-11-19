@@ -27,7 +27,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 import { parseWorkbook, toIsoDate } from "../src/server/import-parser";
@@ -43,7 +43,10 @@ import { DEMO_COMPANY_SLUG } from "./demo-sukobi";
 /** Dev: `docs/demo-podaci`; runtime slika: `/app/demo-podaci` pored bundla. */
 function resolveDemoPodaciDir(): string {
   if (process.env.DEMO_PODACI_DIR) return process.env.DEMO_PODACI_DIR;
-  const here = dirname(fileURLToPath(import.meta.url));
+  // CJS bundle (exceljs): __dirname; ESM/tsx: import.meta.url.
+  const here = typeof __dirname !== "undefined"
+    ? __dirname
+    : dirname(fileURLToPath(import.meta.url));
   const bundled = join(here, "demo-podaci");
   if (existsSync(bundled)) return bundled;
   return join(here, "..", "..", "..", "docs", "demo-podaci");
@@ -310,28 +313,34 @@ export async function seedDemoPodaci(
   return report;
 }
 
-const entry = process.argv[1] ?? "";
-const isMain = /seed-demo-podaci\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
-  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
+// Samo basename: u esbuild bundlu import.meta.url dijeli CLI blok s uvezanim modulima.
+const isMain = /seed-demo-podaci\.(cjs|mjs|ts)$/.test(
+  basename((process.argv[1] ?? "").replace(/\\/g, "/")),
+);
 if (isMain) {
-  const adminUrl = process.env.DATABASE_ADMIN_URL;
-  const dbUrl = process.env.DATABASE_URL;
-  if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL (za pronalazak demo firme)");
-  if (!dbUrl) throw new Error("Potreban DATABASE_URL (aplikacijska rola, za servis uvoza)");
-  const adminPool = new Pool({ connectionString: adminUrl });
-  const pool = new Pool({ connectionString: dbUrl });
-  try {
-    const companyIdValue = await resolveDemoCompany(adminPool, process.argv[2] ?? DEMO_COMPANY_SLUG);
-    const result = await seedDemoPodaci(pool, companyIdValue);
-    console.log("Seed demo podataka — izvještaj:");
-    console.log(`  radnici:  uvezeno=${result.workers.imported} duplikati=${result.workers.duplicates} greške=${result.workers.errors} preskočeno=${result.workers.skipped}`);
-    console.log(`  mašine:   uvezeno=${result.machines.imported} duplikati=${result.machines.duplicates} greške=${result.machines.errors} preskočeno=${result.machines.skipped}`);
-    console.log(`  obaveze:  napravljeno=${result.obligations.created} duplikati=${result.obligations.duplicates} preskočeno=${result.obligations.skipped.length}`);
-    for (const item of result.obligations.skipped) console.log(`    - ${item.reason}`);
-    console.log(`  datumi rokova pomjereni za ${result.dateShiftDays} dana (sidro ${ROKOVI_ANCHOR} → danas).`);
-    console.log("Pravilo duplikata: radnik = isto ime+prezime ili isti telefon; mašina = ista inventarska oznaka; obaveza = isti tip + entitet + broj isprave + datum isteka.");
-  } finally {
-    await pool.end();
-    await adminPool.end();
-  }
+  void (async () => {
+    const adminUrl = process.env.DATABASE_ADMIN_URL;
+    const dbUrl = process.env.DATABASE_URL;
+    if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL (za pronalazak demo firme)");
+    if (!dbUrl) throw new Error("Potreban DATABASE_URL (aplikacijska rola, za servis uvoza)");
+    const adminPool = new Pool({ connectionString: adminUrl });
+    const pool = new Pool({ connectionString: dbUrl });
+    try {
+      const companyIdValue = await resolveDemoCompany(adminPool, process.argv[2] ?? DEMO_COMPANY_SLUG);
+      const result = await seedDemoPodaci(pool, companyIdValue);
+      console.log("Seed demo podataka — izvještaj:");
+      console.log(`  radnici:  uvezeno=${result.workers.imported} duplikati=${result.workers.duplicates} greške=${result.workers.errors} preskočeno=${result.workers.skipped}`);
+      console.log(`  mašine:   uvezeno=${result.machines.imported} duplikati=${result.machines.duplicates} greške=${result.machines.errors} preskočeno=${result.machines.skipped}`);
+      console.log(`  obaveze:  napravljeno=${result.obligations.created} duplikati=${result.obligations.duplicates} preskočeno=${result.obligations.skipped.length}`);
+      for (const item of result.obligations.skipped) console.log(`    - ${item.reason}`);
+      console.log(`  datumi rokova pomjereni za ${result.dateShiftDays} dana (sidro ${ROKOVI_ANCHOR} → danas).`);
+      console.log("Pravilo duplikata: radnik = isto ime+prezime ili isti telefon; mašina = ista inventarska oznaka; obaveza = isti tip + entitet + broj isprave + datum isteka.");
+    } finally {
+      await pool.end();
+      await adminPool.end();
+    }
+  })().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

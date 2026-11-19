@@ -17,9 +17,15 @@ if [ "$need_app" = "--need-app-url" ] && [ -z "${DATABASE_URL:-}" ]; then
 fi
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-bundle="$script_dir/${name}.mjs"
-if [ ! -f "$bundle" ]; then
-  echo "GREŠKA: nema $bundle — redeployaj sliku koja uključuje demo bundlove." >&2
+bundle=""
+for ext in mjs cjs; do
+  if [ -f "$script_dir/${name}.${ext}" ]; then
+    bundle="$script_dir/${name}.${ext}"
+    break
+  fi
+done
+if [ -z "$bundle" ]; then
+  echo "GREŠKA: nema ${name}.mjs/.cjs — redeployaj sliku koja uključuje demo bundlove." >&2
   exit 1
 fi
 
