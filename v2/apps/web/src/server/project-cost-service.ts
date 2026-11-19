@@ -121,7 +121,7 @@ export async function bookProjectCosts(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const conditions = ["mwl.company_id = $1", "mwl.project_id IS NOT NULL"];
+    const conditions = ["mwl.project_id IS NOT NULL"];
     const params: unknown[] = [actor.companyId];
     let idx = 2;
     if (hasIds) {
@@ -142,7 +142,7 @@ export async function bookProjectCosts(
     const logs = await client.query<DbWorkLogRow>(
       `SELECT mwl.id, mwl.machine_id, mwl.project_id, mwl.started_at::text, mwl.ended_at::text
          FROM public.machine_work_logs mwl
-        WHERE ${conditions.join(" AND ")}
+        WHERE mwl.company_id = $1 AND ${conditions.join(" AND ")}
         ORDER BY mwl.started_at, mwl.id
         LIMIT 500`,
       params,
