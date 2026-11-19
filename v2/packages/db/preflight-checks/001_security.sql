@@ -339,7 +339,9 @@ BEGIN
       ('fuel_entry_revisions', 'fuel_entry_revisions_tenant_isolation'),
       ('route_segments', 'route_segments_tenant_isolation'),
       ('hauls', 'hauls_tenant_isolation'),
-      ('haul_revisions', 'haul_revisions_tenant_isolation')
+      ('haul_revisions', 'haul_revisions_tenant_isolation'),
+      ('machine_cost_rates', 'machine_cost_rates_tenant_isolation'),
+      ('project_cost_entries', 'project_cost_entries_tenant_isolation')
     ) AS required(table_name, policy_name)
     LEFT JOIN pg_namespace n ON n.nspname = 'public'
     LEFT JOIN pg_class c ON c.relname = required.table_name AND c.relnamespace = n.oid

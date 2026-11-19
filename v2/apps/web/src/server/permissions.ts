@@ -162,6 +162,13 @@ export const PERMISSIONS = {
     "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
   ],
   "partners.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  // R6.1: stope €/h i knjiženje na projekat — ACCOUNTANT/SS view; book/manage bez ACCOUNTANT.
+  "machines.cost_rate.view": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT", "SITE_SUPERVISOR",
+  ],
+  "machines.cost_rate.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "projects.costs.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "projects.costs.book": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -327,6 +334,22 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "partners.manage": {
     label: "Upravljanje partnerima",
     description: "Unos i ažuriranje partnera (servis/dobavljač).",
+  },
+  "machines.cost_rate.view": {
+    label: "Pregled stope troška mašine",
+    description: "Cijena po satu rada mašine (Money) — samo pregled.",
+  },
+  "machines.cost_rate.manage": {
+    label: "Upravljanje stopom troška mašine",
+    description: "Unos i izmjena stope (€/h ili BAM/h) s periodom važenja.",
+  },
+  "projects.costs.view": {
+    label: "Pregled troškova projekta",
+    description: "Knjiženja troška sati mašine na projekat — samo pregled.",
+  },
+  "projects.costs.book": {
+    label: "Knjiženje troška na projekat",
+    description: "Knjiži sati mašine × stopa na projekat (idempotentno po izvoru).",
   },
 };
 

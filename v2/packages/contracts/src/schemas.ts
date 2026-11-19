@@ -1542,3 +1542,83 @@ export const PartnerMutationOutcome = z.object({
   message: z.string().optional(),
 });
 export type PartnerMutationOutcome = z.infer<typeof PartnerMutationOutcome>;
+
+/* ------------------------------------------------------------------ R6.1 trošak mašine */
+
+export const MachineCostRateRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  amount: z.string(),
+  currency_code: z.string(),
+  valid_from: z.string(),
+  valid_to: z.string().nullable(),
+  created_at: z.string(),
+});
+export type MachineCostRateRow = z.infer<typeof MachineCostRateRow>;
+
+export const MachineCostRatesResponse = z.object({
+  rates: z.array(MachineCostRateRow),
+});
+export type MachineCostRatesResponse = z.infer<typeof MachineCostRatesResponse>;
+
+export const MachineCostRateUpsertInput = z.object({
+  id: SafeText.min(1).max(128).optional(),
+  machineId: SafeText.min(1).max(128),
+  amount: SafeText.regex(/^\d+\.\d{2}$/),
+  currencyCode: SafeText.length(3).optional(),
+  validFrom: SafeText.min(10).max(10),
+  validTo: SafeText.min(10).max(10).nullable().optional(),
+}).strict();
+export type MachineCostRateUpsertInput = z.infer<typeof MachineCostRateUpsertInput>;
+
+export const MachineCostRateMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type MachineCostRateMutationOutcome = z.infer<typeof MachineCostRateMutationOutcome>;
+
+export const ProjectCostEntryRow = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  project_code: z.string(),
+  project_name: z.string(),
+  source_type: z.literal("MACHINE_WORK_LOG"),
+  source_id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  hours: z.string(),
+  rate: z.string(),
+  amount: z.string(),
+  currency_code: z.string(),
+  booked_at: z.string(),
+  note: z.string().nullable(),
+});
+export type ProjectCostEntryRow = z.infer<typeof ProjectCostEntryRow>;
+
+export const ProjectCostEntriesResponse = z.object({
+  entries: z.array(ProjectCostEntryRow),
+});
+export type ProjectCostEntriesResponse = z.infer<typeof ProjectCostEntriesResponse>;
+
+export const ProjectCostBookInput = z.object({
+  from: SafeText.min(10).max(40).optional(),
+  to: SafeText.min(10).max(40).optional(),
+  workLogIds: z.array(SafeText.min(1).max(128)).max(500).optional(),
+  note: SafeText.max(2000).nullable().optional(),
+}).strict();
+export type ProjectCostBookInput = z.infer<typeof ProjectCostBookInput>;
+
+export const ProjectCostBookOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  booked: z.number().int().nonnegative().optional(),
+  skippedExisting: z.number().int().nonnegative().optional(),
+  skippedNoRate: z.number().int().nonnegative().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type ProjectCostBookOutcome = z.infer<typeof ProjectCostBookOutcome>;

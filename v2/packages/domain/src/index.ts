@@ -16,6 +16,11 @@ export {
 } from "./money";
 
 export {
+  computeCostAmount,
+  computeHoursFromInterval,
+} from "./machine-cost";
+
+export {
   ACCESS_TTL_SECONDS,
   REFRESH_TOKEN_BYTES,
   REFRESH_TTL_DAYS,

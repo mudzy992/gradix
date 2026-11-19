@@ -148,6 +148,25 @@ test("računovođa: na Kvarovi nema dugmeta Novi unos", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
 });
 
+test("vlasnik: stiže do Trošak mašina i Troškovi projekta iz menija", async ({ page }) => {
+  await login(page, "vlasnik@demo.test");
+  const labels = await navLabels(page);
+  expect(labels).toContain("Trošak mašina");
+  expect(labels).toContain("Troškovi projekta");
+  await page.goto("/ured/trosak-masina");
+  await expect(page.getByRole("heading", { name: "Trošak mašina" })).toBeVisible();
+  await page.goto("/ured/troskovi-projekta");
+  await expect(page.getByRole("heading", { name: "Troškovi projekta" })).toBeVisible();
+});
+
+test("računovođa: vidi Troškovi projekta, nema dugme Knjiži period", async ({ page }) => {
+  await login(page, "racunovodja@demo.test");
+  expect(await navLabels(page)).toContain("Troškovi projekta");
+  await page.goto("/ured/troskovi-projekta");
+  await expect(page.getByRole("heading", { name: "Troškovi projekta" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Knjiži period" })).toHaveCount(0);
+});
+
 test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
   await login(page, "sef@demo.test");
   const labels = await navLabels(page);

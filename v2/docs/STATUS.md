@@ -21,6 +21,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R5.3 Ture | **isporučeno** (`9b6193e`, CI 44580192908) | spremno |
 | R5.4 Dnevni pregled | **isporučeno** (`ab0b81c`, CI 44592292030) | spremno |
 | R5.5 Kvarovi | **isporučeno** (`1b11b6e`, CI 44601944551) | spremno |
+| R6.0 Sidebar regroup | **isporučeno** (`06658f5`) | spremno |
+| R6.1 Trošak mašine / knjiženje | **isporučeno** (`03b407b`) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -48,10 +50,12 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 - R5.1–R5.4: sati, gorivo, ture, dnevni pregled + sync + mobilni.
 - R5.5: `partners` + `machine_faults` + `approval_requests`; Money; prag → WAITING_APPROVAL;
   `/ured/kvarovi`; sync `machine_fault`; mobil `/kvarovi`.
+- R6.0: sidebar Pregled / Evidencija / Mehanizacija / Rad·obračun / Administracija.
+- R6.1: `machine_cost_rates` + `project_cost_entries`; `/ured/trosak-masina`, `/ured/troskovi-projekta`.
 
 ## Ne radi / namjerno još nema
 
-- R6 (trošak po satu); Android store/dev build.
+- R6.2 (CSV/dashboard); partneri UI; Android store/dev build.
 
 ## Dugovi / otvoreno
 
