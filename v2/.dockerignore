@@ -34,8 +34,10 @@ coverage
 .idea
 .DS_Store
 
-# dokumentacija i lokalni docker fajlovi nisu potrebni u slici
+# dokumentacija nije potrebna u slici — osim sintetičkih xlsx za seed-demo-podaci
 docs
+!docs/demo-podaci
+!docs/demo-podaci/**
 infra/compose
 README.md
 AGENTS.md
