@@ -19,6 +19,10 @@ import {
   validDailyCheckPayload,
   type R4DailyCheckPushItem,
 } from "./r5-daily-check-sync";
+import {
+  validFaultPayload,
+  type R4FaultPushItem,
+} from "./r5-fault-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -33,6 +37,17 @@ export type {
   R4DailyCheckPushItem,
   R4DailyCheckResult,
 } from "./r5-daily-check-sync";
+export type {
+  R4FaultPayload,
+  R4FaultPriority,
+  R4FaultPushItem,
+  R4FaultStatus,
+} from "./r5-fault-sync";
+export {
+  FAULT_COST_APPROVAL_THRESHOLD_CENTS,
+  needsFaultCostApproval,
+  validFaultPayload,
+} from "./r5-fault-sync";
 
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
@@ -85,7 +100,8 @@ export type R4SyncPushItem =
   | R4MachineWorkLogPushItem
   | R4FuelEntryPushItem
   | R4HaulPushItem
-  | R4DailyCheckPushItem;
+  | R4DailyCheckPushItem
+  | R4FaultPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -103,7 +119,7 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check";
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check" | "machine_fault";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -193,6 +209,13 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
         return { ok: false, code: "SYNC_ITEM_INVALID" };
       }
       if (!validDailyCheckPayload(item.check)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "machine_fault") {
+      if (typeof item.faultId !== "string" || item.faultId.length < 1 || item.faultId.length > 128) {
+        return { ok: false, code: "SYNC_ITEM_INVALID" };
+      }
+      if (!validFaultPayload(item.fault)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

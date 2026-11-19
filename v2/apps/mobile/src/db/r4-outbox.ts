@@ -1,6 +1,7 @@
 import {
   validateR4SyncPush,
   type R4DailyCheckPayload,
+  type R4FaultPayload,
   type R4FuelEntryPayload,
   type R4HaulPayload,
   type R4MachineWorkLogPayload,
@@ -465,6 +466,25 @@ export async function queueDailyCheck(
     checkId,
     deviceSentAt,
     check,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+export async function queueMachineFault(
+  db: LocalSqlite,
+  account: LocalAccount,
+  faultId: string,
+  fault: R4FaultPayload,
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "machine_fault",
+    faultId,
+    deviceSentAt,
+    fault,
   };
   await enqueueR4Items(db, account, [item], deviceSentAt);
   return item;

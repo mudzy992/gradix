@@ -63,6 +63,13 @@ export {
   type R4DailyCheckPayload,
   type R4DailyCheckPushItem,
   type R4DailyCheckResult,
+  type R4FaultPayload,
+  type R4FaultPriority,
+  type R4FaultPushItem,
+  type R4FaultStatus,
+  FAULT_COST_APPROVAL_THRESHOLD_CENTS,
+  needsFaultCostApproval,
+  validFaultPayload,
 } from "./r4-sync";
 
 export { DEFAULT_TIMEZONE, businessDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";

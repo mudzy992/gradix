@@ -49,7 +49,8 @@ export type SyncDailyCheckApplyDeps = {
         | "machine_work_log"
         | "fuel_entry"
         | "haul"
-        | "machine_daily_check",
+        | "machine_daily_check"
+        | "machine_fault",
       entityId: string,
       version: number,
       payload: Record<string, unknown>,

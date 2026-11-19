@@ -704,6 +704,24 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       note: z.string().max(2000).nullable(),
     }).strict(),
   }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("machine_fault"),
+    faultId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    fault: z.object({
+      machineId: z.string().min(1).max(128),
+      projectId: z.string().min(1).max(128).nullable(),
+      partnerId: z.string().min(1).max(128).nullable(),
+      reportedAt: OffsetDateTime,
+      title: SafeText.min(1).max(200),
+      description: z.string().max(4000).nullable(),
+      priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+      estimatedCostAmount: z.string().min(1).nullable(),
+      currencyCode: z.string().length(3).nullable(),
+      downtimeMinutes: z.number().int().min(0).nullable(),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -730,7 +748,8 @@ export const SyncPullEvent = z.object({
   id: z.string(),
   cursorSeq: z.string(),
   entityType: z.enum([
-    "workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul", "machine_daily_check",
+    "workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul",
+    "machine_daily_check", "machine_fault",
   ]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
@@ -1426,3 +1445,100 @@ export const DailyCheckAttachmentRegisterResponse = z.object({
   uploadExpiresAt: IsoDate,
 });
 export type DailyCheckAttachmentRegisterResponse = z.infer<typeof DailyCheckAttachmentRegisterResponse>;
+
+export const MachineFaultRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  reporter_worker_id: z.string().nullable(),
+  reporter_name: z.string().nullable(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  partner_id: z.string().nullable(),
+  partner_name: z.string().nullable(),
+  reported_at: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  status: z.enum(["OPEN", "WAITING_APPROVAL", "APPROVED", "IN_PROGRESS", "DONE", "CANCELLED"]),
+  estimated_cost: z.string().nullable(),
+  currency_code: z.string().nullable(),
+  downtime_minutes: z.number().int().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.string(),
+  approval_request_id: z.string().nullable(),
+  approval_status: z.string().nullable(),
+});
+export type MachineFaultRow = z.infer<typeof MachineFaultRow>;
+
+export const MachineFaultsResponse = z.object({
+  faults: z.array(MachineFaultRow),
+});
+export type MachineFaultsResponse = z.infer<typeof MachineFaultsResponse>;
+
+export const MachineFaultCreateInput = z.object({
+  machineId: z.string().min(1).max(128),
+  reporterWorkerId: z.string().min(1).max(128).nullable().optional(),
+  projectId: z.string().min(1).max(128).nullable().optional(),
+  partnerId: z.string().min(1).max(128).nullable().optional(),
+  reportedAt: OffsetDateTime,
+  title: SafeText.min(1).max(200),
+  description: z.string().max(4000).nullable().optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  estimatedCostAmount: z.string().min(1).nullable().optional(),
+  currencyCode: z.string().length(3).nullable().optional(),
+  downtimeMinutes: z.number().int().min(0).nullable().optional(),
+}).strict();
+export type MachineFaultCreateInput = z.infer<typeof MachineFaultCreateInput>;
+
+export const MachineFaultMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type MachineFaultMutationOutcome = z.infer<typeof MachineFaultMutationOutcome>;
+
+export const MachineFaultReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type MachineFaultReviseInput = z.infer<typeof MachineFaultReviseInput>;
+
+export const MachineFaultRejectInput = z.object({
+  reason: SafeText.min(10).max(500).nullable().optional(),
+}).strict();
+export type MachineFaultRejectInput = z.infer<typeof MachineFaultRejectInput>;
+
+export const PartnerRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  kind: z.enum(["VENDOR", "SERVICE", "OTHER"]),
+  note: z.string().nullable(),
+  active: z.boolean(),
+});
+export type PartnerRow = z.infer<typeof PartnerRow>;
+
+export const PartnersResponse = z.object({
+  partners: z.array(PartnerRow),
+});
+export type PartnersResponse = z.infer<typeof PartnersResponse>;
+
+export const PartnerCreateInput = z.object({
+  code: SafeText.min(1).max(64),
+  name: SafeText.min(1).max(200),
+  kind: z.enum(["VENDOR", "SERVICE", "OTHER"]),
+  note: z.string().max(2000).nullable().optional(),
+}).strict();
+export type PartnerCreateInput = z.infer<typeof PartnerCreateInput>;
+
+export const PartnerMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type PartnerMutationOutcome = z.infer<typeof PartnerMutationOutcome>;

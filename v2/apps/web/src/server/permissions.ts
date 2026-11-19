@@ -147,6 +147,21 @@ export const PERMISSIONS = {
   "machines.check.revise": [
     "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC",
   ],
+  // R5.5: kvarovi — OPERATOR/MECHANIC/SS/PM + ured; approve samo OWNER/ADMIN; ACCOUNTANT view RO.
+  "machines.fault.view": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MACHINE_OPERATOR", "MECHANIC",
+  ],
+  "machines.fault.create": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC",
+  ],
+  "machines.fault.revise": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
+  ],
+  "machines.fault.approve": ["OWNER", "ADMIN"],
+  "partners.view": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
+  ],
+  "partners.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -288,6 +303,30 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "machines.check.revise": {
     label: "Ispravka dnevnog pregleda",
     description: "Ispravka s razlogom; original ostaje nepromijenjen (append-only revizija).",
+  },
+  "machines.fault.view": {
+    label: "Pregled kvarova",
+    description: "Kvarovi mašina — samo pregled. Računovođa vidi listu i procijenjeni trošak.",
+  },
+  "machines.fault.create": {
+    label: "Prijava kvara",
+    description: "Nova prijava kvara uz prioritet i opcionalni procijenjeni trošak.",
+  },
+  "machines.fault.revise": {
+    label: "Ispravka kvara",
+    description: "Ispravka s razlogom; original ostaje u reviziji (append-only).",
+  },
+  "machines.fault.approve": {
+    label: "Odobrenje troška kvara",
+    description: "Vlasnik/admin odobrava ili odbija trošak iznad praga.",
+  },
+  "partners.view": {
+    label: "Pregled partnera",
+    description: "Vanjski servisi i dobavljači za kvarove — samo pregled.",
+  },
+  "partners.manage": {
+    label: "Upravljanje partnerima",
+    description: "Unos i ažuriranje partnera (servis/dobavljač).",
   },
 };
 

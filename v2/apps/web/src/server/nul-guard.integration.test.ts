@@ -63,6 +63,11 @@ import { POST as dailyChecksPost } from "@/app/api/machine-daily-checks/route";
 import { POST as dailyCheckReviseRoute } from "@/app/api/machine-daily-checks/[id]/revise/route";
 import { GET as dailyCheckAttachmentsGet, POST as dailyCheckAttachmentsPost } from "@/app/api/machine-daily-checks/[id]/attachments/route";
 import { POST as dailyCheckAttachmentConfirmPost } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/confirm/route";
+import { POST as machineFaultsPost } from "@/app/api/machine-faults/route";
+import { POST as machineFaultReviseRoute } from "@/app/api/machine-faults/[id]/revise/route";
+import { POST as machineFaultApproveRoute } from "@/app/api/machine-faults/[id]/approve/route";
+import { POST as machineFaultRejectRoute } from "@/app/api/machine-faults/[id]/reject/route";
+import { POST as partnersPost } from "@/app/api/partners/route";
 import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
@@ -196,6 +201,11 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/machine-daily-checks/{id}/attachments": { GET: dailyCheckAttachmentsGet, POST: dailyCheckAttachmentsPost },
   "/api/machine-daily-checks/{id}/attachments/{attachmentId}/confirm": { POST: dailyCheckAttachmentConfirmPost },
   "/api/machine-daily-checks/{id}/attachments/{attachmentId}/url": { GET: dailyCheckAttachmentUrlGet },
+  "/api/machine-faults": { POST: machineFaultsPost },
+  "/api/machine-faults/{id}/revise": { POST: machineFaultReviseRoute },
+  "/api/machine-faults/{id}/approve": { POST: machineFaultApproveRoute },
+  "/api/machine-faults/{id}/reject": { POST: machineFaultRejectRoute },
+  "/api/partners": { POST: partnersPost },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },
