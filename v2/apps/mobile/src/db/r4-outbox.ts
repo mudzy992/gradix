@@ -1,6 +1,7 @@
 import {
   validateR4SyncPush,
   type R4FuelEntryPayload,
+  type R4HaulPayload,
   type R4MachineWorkLogPayload,
   type R4SyncEvent,
   type R4SyncPullPage,
@@ -425,6 +426,25 @@ export async function queueFuelEntry(
     fuelEntryId,
     deviceSentAt,
     entry,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+export async function queueHaul(
+  db: LocalSqlite,
+  account: LocalAccount,
+  haulId: string,
+  haul: R4HaulPayload,
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "haul",
+    haulId,
+    deviceSentAt,
+    haul,
   };
   await enqueueR4Items(db, account, [item], deviceSentAt);
   return item;

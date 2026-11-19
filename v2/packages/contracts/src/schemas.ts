@@ -670,6 +670,26 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       note: z.string().max(2000).nullable(),
     }).strict(),
   }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("haul"),
+    haulId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    haul: z.object({
+      machineId: z.string().min(1).max(128),
+      projectId: z.string().min(1).max(128).nullable(),
+      segmentId: z.string().min(1).max(128).nullable(),
+      hauledAt: OffsetDateTime,
+      originText: z.string().min(1).max(200),
+      destinationText: z.string().min(1).max(200),
+      materialText: z.string().min(1).max(200),
+      quantity: z.number().finite().positive(),
+      quantityUnit: z.enum(["M3", "T"]),
+      scaleTicketText: z.string().max(120).nullable(),
+      tripCount: z.number().int().positive(),
+      note: z.string().max(2000).nullable(),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -695,7 +715,7 @@ export type SyncPushResponse = z.infer<typeof SyncPushResponse>;
 export const SyncPullEvent = z.object({
   id: z.string(),
   cursorSeq: z.string(),
-  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry"]),
+  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul"]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
   payload: z.record(z.string(), z.unknown()).nullable(),
@@ -1252,3 +1272,68 @@ export const FuelEntryReviseInput = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
 });
 export type FuelEntryReviseInput = z.infer<typeof FuelEntryReviseInput>;
+
+/* ============================================================ R5.3 — ture */
+
+export const HaulRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  driver_worker_id: z.string(),
+  driver_name: z.string(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  segment_id: z.string().nullable(),
+  segment_code: z.string().nullable(),
+  segment_name: z.string().nullable(),
+  hauled_at: z.string(),
+  origin_text: z.string(),
+  destination_text: z.string(),
+  material_text: z.string(),
+  quantity: z.number(),
+  quantity_unit: z.enum(["M3", "T"]),
+  scale_ticket_text: z.string().nullable(),
+  trip_count: z.number().int().positive(),
+  note: z.string().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.string(),
+});
+export type HaulRow = z.infer<typeof HaulRow>;
+
+export const HaulsResponse = z.object({
+  hauls: z.array(HaulRow),
+});
+export type HaulsResponse = z.infer<typeof HaulsResponse>;
+
+export const HaulCreateInput = z.object({
+  machineId: z.string().min(1).max(128),
+  driverWorkerId: z.string().min(1).max(128).nullable().optional(),
+  projectId: z.string().min(1).max(128).nullable().optional(),
+  segmentId: z.string().min(1).max(128).nullable().optional(),
+  hauledAt: OffsetDateTime,
+  originText: z.string().min(1).max(200),
+  destinationText: z.string().min(1).max(200),
+  materialText: z.string().min(1).max(200),
+  quantity: z.number().finite().positive(),
+  quantityUnit: z.enum(["M3", "T"]),
+  scaleTicketText: z.string().max(120).nullable().optional(),
+  tripCount: z.number().int().positive().optional(),
+  note: z.string().max(2000).nullable().optional(),
+}).strict();
+export type HaulCreateInput = z.infer<typeof HaulCreateInput>;
+
+export const HaulMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type HaulMutationOutcome = z.infer<typeof HaulMutationOutcome>;
+
+export const HaulReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type HaulReviseInput = z.infer<typeof HaulReviseInput>;

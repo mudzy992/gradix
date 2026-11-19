@@ -42,7 +42,7 @@ export type SyncFuelEntryApplyDeps = {
       actor: SyncPushActor,
       reservation: SyncReservation,
       requestHash: string,
-      entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry",
+      entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul",
       entityId: string,
       version: number,
       payload: Record<string, unknown>,

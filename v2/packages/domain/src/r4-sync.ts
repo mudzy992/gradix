@@ -11,6 +11,10 @@ import {
   validFuelEntryPayload,
   type R4FuelEntryPushItem,
 } from "./r5-fuel-entry-sync";
+import {
+  validHaulPayload,
+  type R4HaulPushItem,
+} from "./r5-haul-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -19,6 +23,7 @@ export type {
   R4MachineWorkLogPushItem,
 } from "./r5-machine-work-log-sync";
 export type { R4FuelEntryPayload, R4FuelEntryPushItem } from "./r5-fuel-entry-sync";
+export type { R4HaulPayload, R4HaulPushItem, R4HaulQuantityUnit } from "./r5-haul-sync";
 
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
@@ -69,7 +74,8 @@ export type R4SyncPushItem =
   | R4WorkEntryPushItem
   | R4WorkdayPushItem
   | R4MachineWorkLogPushItem
-  | R4FuelEntryPushItem;
+  | R4FuelEntryPushItem
+  | R4HaulPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -87,7 +93,7 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry";
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -163,6 +169,13 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
         return { ok: false, code: "SYNC_ITEM_INVALID" };
       }
       if (!validFuelEntryPayload(item.entry)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "haul") {
+      if (typeof item.haulId !== "string" || item.haulId.length < 1 || item.haulId.length > 128) {
+        return { ok: false, code: "SYNC_ITEM_INVALID" };
+      }
+      if (!validHaulPayload(item.haul)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

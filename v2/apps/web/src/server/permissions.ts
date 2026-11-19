@@ -133,6 +133,10 @@ export const PERMISSIONS = {
   "machines.fuel.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "DRIVER", "MACHINE_OPERATOR"],
   "machines.fuel.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "DRIVER", "MACHINE_OPERATOR"],
   "machines.fuel.revise": ["OWNER", "ADMIN"],
+  // R5.3: ture — vozač unos; ured (PM/OWNER/ADMIN) mutate; ACCOUNTANT+SS read-only.
+  "machines.haul.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "DRIVER"],
+  "machines.haul.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "DRIVER"],
+  "machines.haul.revise": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -249,6 +253,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   },
   "machines.fuel.revise": {
     label: "Ispravka točenja goriva",
+    description: "Vlasnik/admin upisuje reviziju s razlogom; original ostaje nepromijenjen.",
+  },
+  "machines.haul.view": {
+    label: "Pregled tura",
+    description: "Ture po mašini i vozaču — samo pregled. Računovođa i šef vide listu bez unosa.",
+  },
+  "machines.haul.create": {
+    label: "Unos ture",
+    description: "Nova tura uz polazište, odredište, materijal, količinu i broj tura.",
+  },
+  "machines.haul.revise": {
+    label: "Ispravka ture",
     description: "Vlasnik/admin upisuje reviziju s razlogom; original ostaje nepromijenjen.",
   },
 };

@@ -127,6 +127,49 @@ describe("R4 sync protocol validation", () => {
     }])).toEqual({ ok: true });
   });
 
+  it("accepts R5.3 haul push items", () => {
+    expect(validateR4SyncPush([{
+      localId: uuid("83"),
+      entityType: "haul",
+      haulId: "haul_test_01",
+      deviceSentAt: "2026-11-19T10:00:00+01:00",
+      haul: {
+        machineId: "mch_1",
+        projectId: null,
+        segmentId: null,
+        hauledAt: "2026-11-19T08:00:00+01:00",
+        originText: "Depo",
+        destinationText: "Gradilište",
+        materialText: "Šljunak",
+        quantity: 12.5,
+        quantityUnit: "M3",
+        scaleTicketText: null,
+        tripCount: 2,
+        note: null,
+      },
+    }])).toEqual({ ok: true });
+    expect(validateR4SyncPush([{
+      localId: uuid("84"),
+      entityType: "haul",
+      haulId: "haul_bad",
+      deviceSentAt: "2026-11-19T10:00:00+01:00",
+      haul: {
+        machineId: "mch_1",
+        projectId: null,
+        segmentId: null,
+        hauledAt: "2026-11-19T08:00:00+01:00",
+        originText: "Depo",
+        destinationText: "Gradilište",
+        materialText: "Šljunak",
+        quantity: 0,
+        quantityUnit: "M3",
+        scaleTicketText: null,
+        tripCount: 1,
+        note: null,
+      },
+    }])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
+  });
+
   it("enforces WORK/BREAK target rules and version constraints", () => {
     expect(validateR4SyncPush([entryItem({
       entry: { ...entryItem().entry, kind: "BREAK", projectId: null, machineId: null },

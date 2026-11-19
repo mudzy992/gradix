@@ -17,7 +17,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
 | R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
 | R5.1 Sati mašine | **isporučeno** (`046404e`, CI) | spremno |
-| R5.2 Gorivo | **isporučeno** (čeka CI + prolaz vlasnika) | rad |
+| R5.2 Gorivo | **isporučeno** (`563c403`, CI 44573517449) | spremno |
+| R5.3 Ture | **isporučeno** (ovaj commit) | rad |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -36,19 +37,20 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
 | R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
 | R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
-| R5 plan | `PLAN-R5.md` — **ODOBREN**; R5.1 kod spreman za CI |
+| R5 plan | `PLAN-R5.md` — **ODOBREN**; R5.1–R5.3 kod |
 
 ## Radi (CI)
 
 - R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`.
 - R4b: API + UI potvrda/sedmica/zaključaj/ispravka na `/ured/radni-dani`.
 - Prilozi rokova; s3 dijagnostika Put/Get.
-- R5.1: `machine_work_logs` + očitanja + revizije; `/ured/sati-masine`; sync `machine_work_log`; mobil `/sati-masine`; seed `rukovalac@demo.test`.
-- R5.2: `fuel_entries` (Money) + revizije; `/ured/gorivo`; sync `fuel_entry`; mobil `/gorivo`; seed `vozac@demo.test`; cijena sakrivena za DRIVER u API.
+- R5.1: `machine_work_logs` + očitanja + revizije; `/ured/sati-masine`; sync `machine_work_log`; mobil `/sati-masine`.
+- R5.2: `fuel_entries` (Money) + revizije; `/ured/gorivo`; sync `fuel_entry`; mobil `/gorivo`; cijena sakrivena za DRIVER.
+- R5.3: `hauls` + `route_segments` + revizije; `/ured/ture`; sync `haul`; mobil `/ture`; seed `vozac@demo.test`.
 
 ## Ne radi / namjerno još nema
 
-- R5.3+ (ture, kvarovi); partneri; Android store/dev build.
+- R5.4+ (dnevni pregled, kvarovi); partneri; Android store/dev build.
 
 ## Dugovi / otvoreno
 

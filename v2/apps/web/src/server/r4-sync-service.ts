@@ -12,6 +12,7 @@ import { encodeSyncCursor } from "./sync-cursor";
 import { syncGateForWorkDate } from "./workday-approval";
 import { applyMachineWorkLogSyncItem } from "./r4-sync-machine-work-log";
 import { applyFuelEntrySyncItem } from "./r4-sync-fuel-entry";
+import { applyHaulSyncItem } from "./r4-sync-haul";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -377,7 +378,7 @@ async function publishEvent(
   actor: SyncPushActor,
   reservation: Reservation,
   requestHash: string,
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry",
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul",
   entityId: string,
   version: number,
   payload: Record<string, unknown>,
@@ -426,7 +427,9 @@ async function createConflict(
       ? item.log
       : item.entityType === "fuel_entry"
         ? item.entry
-        : item;
+        : item.entityType === "haul"
+          ? item.haul
+          : item;
   await client.query(
     `INSERT INTO public.sync_conflicts
        (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version)
@@ -516,6 +519,22 @@ async function applyItem(
   }
   if (item.entityType === "fuel_entry") {
     return applyFuelEntrySyncItem(client, {
+      actor,
+      worker,
+      requestHash,
+      reservation,
+      helpers: {
+        businessDate: (scoped, instant) => businessDate(scoped, actor.companyId, instant),
+        invalidItem,
+        rejectInTransaction,
+        createConflict,
+        publishEvent,
+        saveReceipt,
+      },
+    }, item);
+  }
+  if (item.entityType === "haul") {
+    return applyHaulSyncItem(client, {
       actor,
       worker,
       requestHash,
@@ -846,6 +865,12 @@ export async function pushR4SyncItems(
       worker = actorWorker;
     } else if (item.entityType === "fuel_entry") {
       if (!isDriver && !isMachineOperator) {
+        results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
+        continue;
+      }
+      worker = actorWorker;
+    } else if (item.entityType === "haul") {
+      if (!isDriver) {
         results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
         continue;
       }
