@@ -23,6 +23,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R5.5 Kvarovi | **isporučeno** (`1b11b6e`, CI 44601944551) | spremno |
 | R6.0 Sidebar regroup | **isporučeno** (`06658f5`) | spremno |
 | R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
+| R6.2 Obračun sati CSV + dashboard | **isporučeno** (ovaj commit) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -42,6 +43,7 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
 | R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
 | R5 plan | `PLAN-R5.md` — **ODOBREN**; R5.1–R5.5 kod |
+| R6 plan | `PLAN-R6.md` — **ODOBREN**; R6.0–R6.2 kod |
 
 ## Radi (CI)
 
@@ -52,10 +54,11 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
   `/ured/kvarovi`; sync `machine_fault`; mobil `/kvarovi`.
 - R6.0: sidebar Pregled / Evidencija / Mehanizacija / Rad·obračun / Administracija.
 - R6.1: `machine_cost_rates` + `project_cost_entries`; `/ured/trosak-masina`, `/ured/troskovi-projekta`.
+- R6.2: `GET /api/workdays/hours-export` CSV; `/ured/obracun-sati`; dashboard agregati na `/pregled`.
 
 ## Ne radi / namjerno još nema
 
-- R6.2 (CSV/dashboard); partneri UI; Android store/dev build.
+- Partneri UI; R7+; Android store/dev build; puna plata.
 
 ## Dugovi / otvoreno
 

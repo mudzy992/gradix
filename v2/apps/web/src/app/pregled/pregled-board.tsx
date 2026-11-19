@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { PregledResponse } from "@gradix/contracts";
 import { Card, Chip, EmptyState, Icon, PageHeader, TextLink, type IconName } from "@/components/ui/index";
 import { formatDate, formatDayTime, formatLongDate } from "@/format";
+import { PregledSummaryCard } from "./pregled-summary";
 
 /**
  * C.1 pregled — prikaz odobrenog dizajna (docs/design/reference.html #c1-pregled-reference).
@@ -235,34 +236,7 @@ export function PregledBoard({
         )}
       </Card>
 
-      <Card>
-        <div className="gx-section-head">
-          <div className="gx-section-head__text">
-            <h2 className="gx-section-title">Sažetak</h2>
-            <span className="gx-section-hint">
-              {data.scope === "projects" ? "svijet u vašem opsegu" : "stanje firme na prvi pogled"}
-            </span>
-          </div>
-        </div>
-        <ul className="gx-summary-list">
-          <li>
-            <span className="gx-summary-value gx-mono">{data.summary.activeProjects}</span>
-            <span className="gx-summary-label">aktivni projekti</span>
-          </li>
-          <li>
-            <span className="gx-summary-value gx-mono">{data.summary.activeWorkers}</span>
-            <span className="gx-summary-label">aktivni radnici</span>
-          </li>
-          <li>
-            <span className="gx-summary-value gx-mono">{data.summary.activeMachines}</span>
-            <span className="gx-summary-label">mašine</span>
-          </li>
-          <li>
-            <span className="gx-summary-value gx-mono">{data.summary.entriesThisWeek}</span>
-            <span className="gx-summary-label">unosi rada ovaj tjedan</span>
-          </li>
-        </ul>
-      </Card>
+      <PregledSummaryCard data={data} />
 
       {data.sync !== null ? (
         <Card>

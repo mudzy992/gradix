@@ -1140,6 +1140,17 @@ export const PregledSummary = z.object({
 });
 export type PregledSummary = z.infer<typeof PregledSummary>;
 
+/** R6.2 dashboard agregati (dashboard.view); null ako osoba nema dozvolu. */
+export const PregledDashboard = z.object({
+  activeProjects: z.number(),
+  bookedCostsAmount: z.string(),
+  bookedCostsCurrency: z.string(),
+  hoursInPeriod: z.string(),
+  periodFrom: IsoDate,
+  periodTo: IsoDate,
+});
+export type PregledDashboard = z.infer<typeof PregledDashboard>;
+
 /**
  * Sinhronizacija po korisniku koji je ikad poslao stavku: zadnji trenutak i broj
  * njegovih neuspješnih stavki (odbijeni računi + nerazriješeni sukobi).
@@ -1159,6 +1170,8 @@ export const PregledResponse = z.object({
   timezone: z.string(),
   attention: PregledAttention,
   summary: PregledSummary,
+  /** R6.2: null bez `dashboard.view`. */
+  dashboard: PregledDashboard.nullable(),
   /** Samo OWNER i ADMIN; ostali ne dobijaju ni praznu listu, nego `null`. */
   sync: z.array(PregledSyncRow).nullable(),
   /** `"projects"` = brojevi su suženi na opseg iz sesije (PM/šef s PROJECTS opsegom). */
@@ -1622,3 +1635,15 @@ export const ProjectCostBookOutcome = z.object({
   message: z.string().optional(),
 });
 export type ProjectCostBookOutcome = z.infer<typeof ProjectCostBookOutcome>;
+
+/* ============================================================ R6.2 — obračun sati CSV */
+
+export const HoursExportQuery = z.object({
+  from: BusinessDate,
+  to: BusinessDate,
+});
+export type HoursExportQuery = z.infer<typeof HoursExportQuery>;
+
+/** Odgovor je text/csv (raw), ne JSON envelope. */
+export const HoursExportCsv = z.string();
+export type HoursExportCsv = z.infer<typeof HoursExportCsv>;

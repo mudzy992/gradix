@@ -111,13 +111,20 @@ export function buildOpenApi(): Record<string, unknown> {
       responses: {
         "200": {
           description: "Uspjeh",
-          content: {
-            "application/json": {
-              schema: route.raw
-                ? jsonSchema(route.response)
-                : envelopeSchema(jsonSchema(route.response)),
-            },
-          },
+          content:
+            route.contentType === "text/csv"
+              ? {
+                  "text/csv": {
+                    schema: { type: "string", description: "CSV (UTF-8, RFC 4180)" },
+                  },
+                }
+              : {
+                  "application/json": {
+                    schema: route.raw
+                      ? jsonSchema(route.response)
+                      : envelopeSchema(jsonSchema(route.response)),
+                  },
+                },
         },
         ...Object.fromEntries(
           failureStatuses(route.auth)

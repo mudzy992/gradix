@@ -169,6 +169,9 @@ export const PERMISSIONS = {
   "machines.cost_rate.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "projects.costs.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "projects.costs.book": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  // R6.2: CSV obračun sati + dashboard agregati (G0: sati, ne puna plata).
+  "payroll.hours.export": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "dashboard.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -350,6 +353,14 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "projects.costs.book": {
     label: "Knjiženje troška na projekat",
     description: "Knjiži sati mašine × stopa na projekat (idempotentno po izvoru).",
+  },
+  "payroll.hours.export": {
+    label: "Izvoz sati za obračun",
+    description: "CSV izvoz zaključenih i potvrđenih radničkih sati (LOCKED/CONFIRMED) za period.",
+  },
+  "dashboard.view": {
+    label: "Dashboard agregati",
+    description: "Na pregledu: aktivni projekti, zbir knjiženih troškova i sati u tekućem mjesecu.",
   },
 };
 

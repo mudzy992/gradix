@@ -93,6 +93,15 @@ describe("meni po roli == matrica dozvola (A4b, web)", () => {
     );
     expect(byHref["/ured/sati-masine"]).toBe("Mehanizacija");
     expect(byHref["/ured/radni-dani"]).toBe("Rad / obračun");
+    expect(byHref["/ured/obracun-sati"]).toBe("Rad / obračun");
     expect(byHref["/ured/korisnici"]).toBe("Administracija");
+  });
+
+  it("R6.2: Obračun sati vide OWNER/ADMIN/PM/ACCOUNTANT", () => {
+    const allowed = ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"];
+    for (const role of ROLES) {
+      const visible = navEntriesForRoles([role]).some((entry) => entry.href === "/ured/obracun-sati");
+      expect(visible).toBe(allowed.includes(role));
+    }
   });
 });

@@ -70,6 +70,7 @@ import { POST as machineFaultRejectRoute } from "@/app/api/machine-faults/[id]/r
 import { POST as partnersPost } from "@/app/api/partners/route";
 import { POST as machineCostRatesPost } from "@/app/api/machine-cost-rates/route";
 import { POST as projectCostBookPost } from "@/app/api/project-cost-entries/book/route";
+import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
 import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
@@ -210,6 +211,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/partners": { POST: partnersPost },
   "/api/machine-cost-rates": { POST: machineCostRatesPost },
   "/api/project-cost-entries/book": { POST: projectCostBookPost },
+  "/api/workdays/hours-export": { GET: hoursExportGet },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },

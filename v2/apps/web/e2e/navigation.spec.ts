@@ -167,6 +167,19 @@ test("računovođa: vidi Troškovi projekta, nema dugme Knjiži period", async (
   await expect(page.getByRole("button", { name: "Knjiži period" })).toHaveCount(0);
 });
 
+test("računovođa: stiže do Obračun sati i vidi Preuzmi CSV", async ({ page }) => {
+  await login(page, "racunovodja@demo.test");
+  expect(await navLabels(page)).toContain("Obračun sati");
+  await page.goto("/ured/obracun-sati");
+  await expect(page.getByRole("heading", { name: "Obračun sati" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Preuzmi CSV" })).toBeVisible();
+});
+
+test("radnik: ne vidi Obračun sati u meniju", async ({ page }) => {
+  await login(page, "radnik@demo.test");
+  expect(await navLabels(page)).not.toContain("Obračun sati");
+});
+
 test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
   await login(page, "sef@demo.test");
   const labels = await navLabels(page);

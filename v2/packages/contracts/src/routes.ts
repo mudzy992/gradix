@@ -114,6 +114,8 @@ import {
   WeekDecideInput,
   WeekLockInput,
   WorkdayReviseInput,
+  HoursExportQuery,
+  HoursExportCsv,
 } from "./schemas";
 
 export type RouteSpec = {
@@ -127,7 +129,7 @@ export type RouteSpec = {
   request: z.ZodType | null;
   response: z.ZodType;
   /** Za rute koje ne primaju JSON (uvoz): `multipart/form-data` umjesto `application/json`. */
-  contentType?: "application/json" | "multipart/form-data";
+  contentType?: "application/json" | "multipart/form-data" | "text/csv";
   /** Query parametri koje ruta čita (za OpenAPI; klijent ih dobija kroz `query` opciju). */
   query?: z.ZodObject;
   /** Neke rute vraćaju `meta` u envelope-u (sync pull, sync push). */
@@ -1029,6 +1031,18 @@ export const ROUTES = [
     permission: "projects.costs.book",
     request: ProjectCostBookInput,
     response: ProjectCostBookOutcome,
+  },
+  {
+    method: "GET",
+    path: "/api/workdays/hours-export",
+    summary: "CSV izvoz potvrđenih/zaključanih sati (payroll.hours.export).",
+    auth: true,
+    permission: "payroll.hours.export",
+    request: null,
+    response: HoursExportCsv,
+    contentType: "text/csv",
+    query: HoursExportQuery,
+    raw: true,
   },
 ] as const;
 

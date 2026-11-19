@@ -31,6 +31,7 @@ import type {
 } from "@gradix/contracts";
 import { can } from "./permissions";
 import type { Actor } from "./rbac-service";
+import { computeDashboardAggregates } from "./dashboard-aggregates";
 import { countOpenConflicts, listConflicts, type ConflictListItem } from "./workday-resolve";
 import {
   listWorkdaysForReview,
@@ -332,6 +333,14 @@ export async function buildPregled(
       },
     };
 
+    const dashboard = await computeDashboardAggregates(client, {
+      userId: actor.userId,
+      companyId: companyIdValue,
+      roles: actor.roles,
+      scope: actor.scope,
+      projectIds: actor.projectIds ?? [],
+    });
+
     return {
       today,
       timezone,
@@ -342,6 +351,7 @@ export async function buildPregled(
         activeMachines: summary.rows[0]!.machines,
         entriesThisWeek: summary.rows[0]!.entries,
       },
+      dashboard,
       sync,
       scope: scoped ? "projects" : "company",
     };

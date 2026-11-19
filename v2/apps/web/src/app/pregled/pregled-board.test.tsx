@@ -53,6 +53,14 @@ const base: PregledResponse = {
     },
   },
   summary: { activeProjects: 12, activeWorkers: 31, activeMachines: 19, entriesThisWeek: 6 },
+  dashboard: {
+    activeProjects: 12,
+    bookedCostsAmount: "1250.00",
+    bookedCostsCurrency: "BAM",
+    hoursInPeriod: "320.500",
+    periodFrom: "2026-11-01",
+    periodTo: "2026-11-13",
+  },
   sync: [
     { userId: "u1", name: "Amar Hadžić", lastSyncAt: "2026-11-13T06:30:00.000Z", failedItems: 2 },
     { userId: "u2", name: "Mario Perić", lastSyncAt: "2026-11-12T12:30:00.000Z", failedItems: 0 },
@@ -138,9 +146,17 @@ describe("PregledBoard — redovi pažnje", () => {
     expect(screen.getByRole("link", { name: "Svejedno pogledaj rokove" })).toHaveAttribute("href", "/ured/rokovi");
   });
 
-  it("sažetak nosi četiri broja iz opsega", () => {
+  it("sažetak s dashboard.view pokazuje tri R6.2 agregata", () => {
     render(<PregledBoard data={base} firstName="Emir" greeting="Dobro jutro" />);
     expect(screen.getByText("aktivni projekti")).toBeTruthy();
+    expect(screen.getByText("knjiženi troškovi")).toBeTruthy();
+    expect(screen.getByText("sati (LOCKED/CONFIRMED)")).toBeTruthy();
+    expect(screen.queryByText("unosi rada ovaj tjedan")).toBeNull();
+  });
+
+  it("sažetak bez dashboard zadržava četiri klasična broja", () => {
+    const noDash: PregledResponse = { ...base, dashboard: null };
+    render(<PregledBoard data={noDash} firstName="Emir" greeting="Dobro jutro" />);
     expect(screen.getByText("aktivni radnici")).toBeTruthy();
     expect(screen.getByText("mašine")).toBeTruthy();
     expect(screen.getByText("unosi rada ovaj tjedan")).toBeTruthy();
