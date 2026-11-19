@@ -275,19 +275,30 @@ export async function seedDemoPodaci(
       const expiresAt = shiftIsoDate(expiresRaw, report.dateShiftDays);
       const number = String(row.cells["Broj isprave"] ?? "").trim() || null;
 
-      const duplicate = await client.query(
-        `SELECT 1 FROM public.obligations
-          WHERE company_id = $1 AND type_id = $2
-            AND COALESCE(worker_id, '') = COALESCE($3, '')
-            AND COALESCE(machine_id, '') = COALESCE($4, '')
-            AND COALESCE(project_id, '') = COALESCE($5, '')
-            AND COALESCE(number, '') = COALESCE($6, '')
-            AND expires_at IS NOT DISTINCT FROM $7::date`,
-        [
-          companyIdValue, typeId, entity.workerId ?? null, entity.machineId ?? null,
-          entity.projectId ?? null, number, expiresAt,
-        ],
-      );
+      // Isto kao unique indeksi: jedna aktivna obaveza po tipu+entitetu
+      // (ne po broju/isteku — obnova ide renew, ne drugi INSERT).
+      const duplicate = kind === "COMPANY"
+        ? await client.query(
+          `SELECT 1 FROM public.obligations
+            WHERE company_id = $1 AND type_id = $2 AND scope_company`,
+          [companyIdValue, typeId],
+        )
+        : kind === "PROJECT"
+          ? await client.query(
+            `SELECT 1 FROM public.obligations
+              WHERE company_id = $1 AND type_id = $2 AND project_id = $3
+                AND COALESCE(number, '') = COALESCE($4, '')
+                AND expires_at IS NOT DISTINCT FROM $5::date`,
+            [companyIdValue, typeId, entity.projectId ?? null, number, expiresAt],
+          )
+          : await client.query(
+            `SELECT 1 FROM public.obligations
+              WHERE company_id = $1 AND type_id = $2
+                AND COALESCE(worker_id, '') = COALESCE($3, '')
+                AND COALESCE(machine_id, '') = COALESCE($4, '')
+                AND superseded_by IS NULL`,
+            [companyIdValue, typeId, entity.workerId ?? null, entity.machineId ?? null],
+          );
       if (duplicate.rowCount && duplicate.rowCount > 0) {
         report.obligations.duplicates += 1;
         continue;
