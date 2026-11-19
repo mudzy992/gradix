@@ -1,6 +1,6 @@
 /** GET /api/project-cost-entries — R6.1 lista knjiženja. */
 import type { NextRequest } from "next/server";
-import { fail, internal, ok } from "@/server/api";
+import { internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import type { Role } from "@/server/permissions";
