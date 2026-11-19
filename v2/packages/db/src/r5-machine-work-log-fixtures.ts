@@ -65,8 +65,9 @@ export async function seedTenantR5(admin: Pool, fixture: typeof A | typeof B): P
       ],
     );
     await client.query(
-      `INSERT INTO public.machines (id, company_id, code, name, category_id, meter_value)
-       VALUES ($1, $2, $3, 'R5 test machine', $2 || '_cat_excavator', 100.0)`,
+      `INSERT INTO public.machines
+         (id, company_id, code, name, category_id, meter_value, meter_updated_at)
+       VALUES ($1, $2, $3, 'R5 test machine', $2 || '_cat_excavator', 100.0, clock_timestamp())`,
       [fixture.machine, fixture.company, `R5-M-${fixture === A ? "A" : "B"}-${RUN}`],
     );
     await client.query(
