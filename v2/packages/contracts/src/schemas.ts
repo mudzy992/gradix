@@ -715,7 +715,7 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       partnerId: z.string().min(1).max(128).nullable(),
       reportedAt: OffsetDateTime,
       title: SafeText.min(1).max(200),
-      description: z.string().max(4000).nullable(),
+      description: SafeText.max(4000).nullable(),
       priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
       estimatedCostAmount: z.string().min(1).nullable(),
       currencyCode: z.string().length(3).nullable(),
@@ -1231,7 +1231,7 @@ export const MachineWorkLogCreateInput = z.object({
   endedAt: OffsetDateTime,
   mode: z.enum(["WORK", "IDLE", "BREAKDOWN"]),
   meterEnd: z.number().finite().nonnegative().nullable().optional(),
-  note: z.string().max(2000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type MachineWorkLogCreateInput = z.infer<typeof MachineWorkLogCreateInput>;
 
@@ -1290,7 +1290,7 @@ export const FuelEntryCreateInput = z.object({
   currencyCode: z.string().length(3).optional(),
   unitPriceAmount: MoneyAmount.nullable().optional(),
   meterReading: z.number().finite().nonnegative().nullable().optional(),
-  note: z.string().max(2000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type FuelEntryCreateInput = z.infer<typeof FuelEntryCreateInput>;
 
@@ -1355,7 +1355,7 @@ export const HaulCreateInput = z.object({
   quantityUnit: z.enum(["M3", "T"]),
   scaleTicketText: z.string().max(120).nullable().optional(),
   tripCount: z.number().int().positive().optional(),
-  note: z.string().max(2000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type HaulCreateInput = z.infer<typeof HaulCreateInput>;
 
@@ -1406,7 +1406,7 @@ export const DailyCheckCreateInput = z.object({
   checkedAt: OffsetDateTime,
   result: z.enum(["PASS", "FAIL", "CONDITIONAL"]),
   checklistJson: z.record(z.string(), z.unknown()).optional(),
-  note: z.string().max(2000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type DailyCheckCreateInput = z.infer<typeof DailyCheckCreateInput>;
 
@@ -1485,7 +1485,7 @@ export const MachineFaultCreateInput = z.object({
   partnerId: z.string().min(1).max(128).nullable().optional(),
   reportedAt: OffsetDateTime,
   title: SafeText.min(1).max(200),
-  description: z.string().max(4000).nullable().optional(),
+  description: SafeText.max(4000).nullable().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
   estimatedCostAmount: z.string().min(1).nullable().optional(),
   currencyCode: z.string().length(3).nullable().optional(),
@@ -1531,7 +1531,7 @@ export const PartnerCreateInput = z.object({
   code: SafeText.min(1).max(64),
   name: SafeText.min(1).max(200),
   kind: z.enum(["VENDOR", "SERVICE", "OTHER"]),
-  note: z.string().max(2000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type PartnerCreateInput = z.infer<typeof PartnerCreateInput>;
 
