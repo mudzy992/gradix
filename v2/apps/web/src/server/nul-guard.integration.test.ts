@@ -61,7 +61,7 @@ import { POST as haulsPost } from "@/app/api/hauls/route";
 import { POST as haulReviseRoute } from "@/app/api/hauls/[id]/revise/route";
 import { POST as dailyChecksPost } from "@/app/api/machine-daily-checks/route";
 import { POST as dailyCheckReviseRoute } from "@/app/api/machine-daily-checks/[id]/revise/route";
-import { POST as dailyCheckAttachmentsPost } from "@/app/api/machine-daily-checks/[id]/attachments/route";
+import { GET as dailyCheckAttachmentsGet, POST as dailyCheckAttachmentsPost } from "@/app/api/machine-daily-checks/[id]/attachments/route";
 import { POST as dailyCheckAttachmentConfirmPost } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/confirm/route";
 import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
@@ -193,7 +193,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/hauls/{id}/revise": { POST: haulReviseRoute },
   "/api/machine-daily-checks": { POST: dailyChecksPost },
   "/api/machine-daily-checks/{id}/revise": { POST: dailyCheckReviseRoute },
-  "/api/machine-daily-checks/{id}/attachments": { POST: dailyCheckAttachmentsPost },
+  "/api/machine-daily-checks/{id}/attachments": { GET: dailyCheckAttachmentsGet, POST: dailyCheckAttachmentsPost },
   "/api/machine-daily-checks/{id}/attachments/{attachmentId}/confirm": { POST: dailyCheckAttachmentConfirmPost },
   "/api/machine-daily-checks/{id}/attachments/{attachmentId}/url": { GET: dailyCheckAttachmentUrlGet },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
