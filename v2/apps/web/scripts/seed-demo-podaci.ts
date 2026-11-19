@@ -275,49 +275,44 @@ export async function seedDemoPodaci(
       const expiresAt = shiftIsoDate(expiresRaw, report.dateShiftDays);
       const number = String(row.cells["Broj isprave"] ?? "").trim() || null;
 
-      // Isto kao unique indeksi: jedna aktivna obaveza po tipu+entitetu
-      // (ne po broju/isteku — obnova ide renew, ne drugi INSERT).
-      const duplicate = kind === "COMPANY"
-        ? await client.query(
-          `SELECT 1 FROM public.obligations
-            WHERE company_id = $1 AND type_id = $2 AND scope_company`,
-          [companyIdValue, typeId],
-        )
-        : kind === "PROJECT"
-          ? await client.query(
-            `SELECT 1 FROM public.obligations
-              WHERE company_id = $1 AND type_id = $2 AND project_id = $3
-                AND COALESCE(number, '') = COALESCE($4, '')
-                AND expires_at IS NOT DISTINCT FROM $5::date`,
-            [companyIdValue, typeId, entity.projectId ?? null, number, expiresAt],
-          )
-          : await client.query(
-            `SELECT 1 FROM public.obligations
-              WHERE company_id = $1 AND type_id = $2
-                AND COALESCE(worker_id, '') = COALESCE($3, '')
-                AND COALESCE(machine_id, '') = COALESCE($4, '')
-                AND superseded_by IS NULL`,
-            [companyIdValue, typeId, entity.workerId ?? null, entity.machineId ?? null],
-          );
+      // Unique indeksi (worker/machine/project/company × type): jedna aktivna.
+      const duplicateSql =
+        kind === "COMPANY"
+          ? { text: `SELECT 1 FROM public.obligations WHERE company_id = $1 AND type_id = $2 AND scope_company`, values: [companyIdValue, typeId] }
+          : kind === "PROJECT"
+            ? { text: `SELECT 1 FROM public.obligations WHERE company_id = $1 AND type_id = $2 AND project_id = $3 AND superseded_by IS NULL`, values: [companyIdValue, typeId, entity.projectId ?? null] }
+            : kind === "WORKER"
+              ? { text: `SELECT 1 FROM public.obligations WHERE company_id = $1 AND type_id = $2 AND worker_id = $3 AND superseded_by IS NULL`, values: [companyIdValue, typeId, entity.workerId ?? null] }
+              : { text: `SELECT 1 FROM public.obligations WHERE company_id = $1 AND type_id = $2 AND machine_id = $3 AND superseded_by IS NULL`, values: [companyIdValue, typeId, entity.machineId ?? null] };
+      const duplicate = await client.query(duplicateSql.text, duplicateSql.values);
       if (duplicate.rowCount && duplicate.rowCount > 0) {
         report.obligations.duplicates += 1;
         continue;
       }
 
-      const created = await createObligation(pool, tenant, actor, {
-        typeId,
-        ...entity,
-        number,
-        issuer: String(row.cells["Izdavalac"] ?? "").trim() || null,
-        issuedAt,
-        expiresAt,
-        note: String(row.cells["Napomena"] ?? "").trim() || null,
-      });
-      if (isServiceError(created)) {
-        skip(`Red ${row.rowNumber}: ${created.message}`);
-        continue;
+      try {
+        const created = await createObligation(pool, tenant, actor, {
+          typeId,
+          ...entity,
+          number,
+          issuer: String(row.cells["Izdavalac"] ?? "").trim() || null,
+          issuedAt,
+          expiresAt,
+          note: String(row.cells["Napomena"] ?? "").trim() || null,
+        });
+        if (isServiceError(created)) {
+          skip(`Red ${row.rowNumber}: ${created.message}`);
+          continue;
+        }
+        report.obligations.created += 1;
+      } catch (error) {
+        const code = typeof error === "object" && error && "code" in error ? String((error as { code: unknown }).code) : "";
+        if (code === "23505") {
+          report.obligations.duplicates += 1;
+          continue;
+        }
+        throw error;
       }
-      report.obligations.created += 1;
     }
   });
 
