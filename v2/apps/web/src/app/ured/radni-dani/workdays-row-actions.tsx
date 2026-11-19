@@ -25,7 +25,9 @@ export function WorkdayRowActions({
   onReviseDone: () => void;
   onReviseError: (message: string) => void;
 }) {
+  const weekClosed = weekStatus === "LOCKED" || weekStatus === "WEEK_APPROVED";
   const canConfirmDay = caps.canConfirm
+    && !weekClosed
     && day.status === "SUBMITTED"
     && day.open_entries === 0
     && day.open_conflicts === 0

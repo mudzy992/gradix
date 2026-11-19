@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Chip, ConfirmDialog, DataTable, DescriptionList, EmptyState,
-  FilterBar, Inline, Select, Skeleton,
+  FilterBar, Inline, Select, Skeleton, Stack,
 } from "@/components/ui/index";
 import type { WeekApprovalRow, WorkdayReviewRow } from "@/server/workday-review";
 import { reviewLabel } from "./review-label";
@@ -99,34 +99,47 @@ export function WorkdaysClient({
     return <EmptyState title="Nema dana u ovoj sedmici" description="Kad stignu unosi s terena, pojaviće se ovdje." />;
   }
 
+  const weekLocked = week?.status === "LOCKED";
+  const weekApproved = week?.status === "WEEK_APPROVED";
+  const strandedSubmitted = weekLocked
+    && visible.some((day) => day.approval_status === "SUBMITTED");
+  const showWeekActions = (caps.canDecide || caps.canLock) && weekStart && !weekLocked;
+
   return (
-    <>
+    <Stack gap="var(--space-5)">
       {busy ? <Skeleton rows={3} /> : null}
       {notice ? <Alert tone={notice.tone} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</Alert> : null}
       {week?.status === "WEEK_REJECTED" ? (
         <DescriptionList items={[{ term: "Odbijeno", value: week.reason ?? "Bez razloga" }]} />
       ) : null}
-      {week?.status === "LOCKED" ? <Chip>{weekStatusLabel("LOCKED")}</Chip> : null}
-      <FilterBar>
-        <Select label="Sedmica" value={weekStart} onChange={(event) => setWeekStart(event.target.value)}>
-          {weekOptions.map((start) => (
-            <option key={start} value={start}>{start} · {weekStatusLabel(weekMap.get(start)?.status)}</option>
-          ))}
-        </Select>
-      </FilterBar>
-      {(caps.canDecide || caps.canLock) && weekStart ? (
-        <Inline gap="var(--space-2)">
-          {caps.canDecide ? (
-            <>
-              <Button variant="primary" disabled={busy || week?.status === "LOCKED" || week?.status === "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/decide", { weekStart, decision: "APPROVE" })}>Odobri sedmicu</Button>
-              <Button disabled={busy || week?.status === "LOCKED"} onClick={() => { setReason(""); setRejectOpen(true); }}>Odbij uz razlog</Button>
-            </>
-          ) : null}
-          {caps.canLock ? (
-            <Button disabled={busy || week?.status !== "WEEK_APPROVED"} onClick={() => void run("/api/work-weeks/lock", { weekStart })}>Zaključaj</Button>
-          ) : null}
-        </Inline>
+      {strandedSubmitted ? (
+        <Alert tone="warning" role="status">
+          Sedmica je zaključana prije potvrde dana — potvrda i ispravka na ovim danima nisu dostupne. Izaberi drugu sedmicu (R4b sidro) ili ponovo pokreni demo-r4b sidro.
+        </Alert>
       ) : null}
+      <Stack gap="var(--space-4)">
+        {weekLocked ? <Chip>{weekStatusLabel("LOCKED")}</Chip> : null}
+        <FilterBar>
+          <Select label="Sedmica" value={weekStart} onChange={(event) => setWeekStart(event.target.value)}>
+            {weekOptions.map((start) => (
+              <option key={start} value={start}>{start} · {weekStatusLabel(weekMap.get(start)?.status)}</option>
+            ))}
+          </Select>
+        </FilterBar>
+        {showWeekActions ? (
+          <Inline gap="var(--space-3)">
+            {caps.canDecide && !weekApproved ? (
+              <>
+                <Button variant="primary" disabled={busy} onClick={() => void run("/api/work-weeks/decide", { weekStart, decision: "APPROVE" })}>Odobri sedmicu</Button>
+                <Button disabled={busy} onClick={() => { setReason(""); setRejectOpen(true); }}>Odbij uz razlog</Button>
+              </>
+            ) : null}
+            {caps.canLock && weekApproved ? (
+              <Button disabled={busy} onClick={() => void run("/api/work-weeks/lock", { weekStart })}>Zaključaj</Button>
+            ) : null}
+          </Inline>
+        ) : null}
+      </Stack>
       <DataTable
         caption="Radni dani"
         rows={visible}
@@ -170,6 +183,6 @@ export function WorkdaysClient({
         onCancel={() => setRejectOpen(false)}
         onConfirm={() => { setRejectOpen(false); void run("/api/work-weeks/decide", { weekStart, decision: "REJECT", reason }); }}
       />
-    </>
+    </Stack>
   );
 }

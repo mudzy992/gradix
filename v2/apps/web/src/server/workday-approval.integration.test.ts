@@ -91,6 +91,8 @@ describeDb("R4b approval (PostgreSQL)", () => {
   it("matrica prelaza: confirm → decide → lock; zabranjeni skokovi i uloge", async () => {
     expect((await confirmWorkday(dbApp, acct, `wd_r4b_in_${RUN}`)).outcome).toBe("FORBIDDEN");
     expect((await confirmWorkday(dbApp, owner, `wd_r4b_in_${RUN}`)).outcome).toBe("FORBIDDEN");
+    expect((await decideWeek(dbApp, owner, { weekStart: WEEK, decision: "APPROVE" })).outcome)
+      .toBe("VALIDATION_FAILED");
     const confirmed = await confirmWorkday(dbApp, ss, `wd_r4b_in_${RUN}`);
     expect(confirmed).toEqual({ outcome: "OK", workdayId: `wd_r4b_in_${RUN}`, status: "FOREMAN_CONFIRMED" });
 

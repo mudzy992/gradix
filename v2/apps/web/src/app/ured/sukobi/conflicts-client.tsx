@@ -10,7 +10,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiCall } from "@/api-client";
 import {
-  Card, Chip, DataTable, FilterBar, Inline, Mono, Select, Stat, TextLink,
+  Card, Chip, DataTable, FilterBar, Inline, Mono, Select, Stack, Stat, TextLink,
 } from "@/components/ui/index";
 import { formatDate } from "@/format";
 import type {
@@ -58,7 +58,7 @@ export function ConflictsClient({
   const detailHref = (id: string) => `/ured/sukobi/${id}?${filtersToQuery(filters)}`;
 
   return (
-    <>
+    <Stack gap="var(--space-5)">
       <Card>
         <Inline>
           <Stat label="Nerazriješeni sukobi" value={String(countsState.open)} />
@@ -137,6 +137,6 @@ export function ConflictsClient({
         zadano filtrirana na nerazriješene — isto važi za bedž u navigaciji i
         karticu na Pregledu.
       </p>
-    </>
+    </Stack>
   );
 }

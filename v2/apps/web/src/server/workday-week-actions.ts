@@ -51,6 +51,23 @@ export async function decideWeek(
     if (existing.rows[0]?.status === "LOCKED") {
       return { outcome: "CONFLICT", code: "LOCKED", message: "Sedmica je zaključana." };
     }
+    if (input.decision === "APPROVE") {
+      const confirmed = await client.query(
+        `SELECT 1 FROM public.workdays
+          WHERE company_id = $1
+            AND work_date >= $2::date AND work_date < ($2::date + 7)
+            AND approval_status = 'FOREMAN_CONFIRMED'
+          LIMIT 1`,
+        [actor.companyId, input.weekStart],
+      );
+      if ((confirmed.rowCount ?? 0) === 0) {
+        return {
+          outcome: "VALIDATION_FAILED",
+          code: "NO_CONFIRMED_DAYS",
+          message: "Prvo šef mora potvrditi barem jedan dan u sedmici.",
+        };
+      }
+    }
     const next = input.decision === "APPROVE" ? "WEEK_APPROVED" : "WEEK_REJECTED";
     const reason = input.decision === "REJECT" ? input.reason!.trim() : null;
     if (existing.rows[0]) {
