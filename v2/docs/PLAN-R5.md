@@ -18,14 +18,14 @@ Amendment (kao R4b revise): ture/gorivo/sati — original se ne prepisuje. **Tro
 
 | | |
 |---|---|
-| `machines` (+ `meter` HOURS/KM, `meter_value`, `meter_updated_at`) | **postoji** (`schema.prisma` L116–131; STATUS R2a/R3) — samo **trenutna** vrijednost |
-| `equipment_categories.meter` | **postoji** (zadana vrsta brojila) |
+| `machines` (+ `meter` HOURS/KM, `meter_value`, `meter_updated_at`) | **postoji (STATUS.md)** — samo **trenutna** vrijednost (`schema.prisma`) |
+| `equipment_categories.meter` | **postoji (STATUS.md)** — zadana vrsta brojila |
 | `machine_meter_readings` | **novo** — append-only historija; pri upisu ažurira `machines.meter_*` |
 | `machine_work_logs`, `fuel_entries`, `hauls`, `machine_daily_checks`, `machine_faults` | **novo** |
 
 ## (3) Mobilni sync
 
-Isti obrazac kao R4a (**postoji**, STATUS / PLAN-R4): outbox na uređaju; server receipt + idempotency po `local_id`; change-log/cursor po firmi; sukob = OPEN sync_conflict (ne tihi overwrite); offline unos pa sync. Nove vrste stavki (sati/gorivo/tura/pregled/kvar) u istom sync ugovoru — **novo** payload tipovi, ne novi sync motor.
+Isti obrazac kao R4a (**postoji (STATUS.md)** / PLAN-R4): outbox na uređaju; server receipt + idempotency po `local_id`; change-log/cursor po firmi; sukob = OPEN sync_conflict (ne tihi overwrite); offline unos pa sync. Nove vrste stavki (sati/gorivo/tura/pregled/kvar) u istom sync ugovoru — **novo** payload tipovi, ne novi sync motor.
 
 ## (4) Role i dozvole
 
@@ -44,7 +44,7 @@ E2E dosegljivost: ured lista R5.1; role bez mutate → nema dugmeta; cijena gori
 
 ## (6) Foto pregleda
 
-**postoji** tok priloga obaveza (presign → confirm → lista; STATUS prilozi). R5.4 veže isti obrazac na `machine_daily_checks` (isti limiti veličine/tipa kao `MAX_ATTACHMENT_BYTES` / content-type guard u obligation-service — **postoji**). Bez nove UI komponente dok vlasnik ne odobri.
+**postoji (STATUS.md)** tok priloga obaveza (presign → confirm → lista). R5.4 veže isti obrazac na `machine_daily_checks` (isti limiti `MAX_ATTACHMENT_BYTES` / content-type — **postoji (STATUS.md)**). Bez nove UI komponente dok vlasnik ne odobri.
 
 ## (7) B15 — u kojem rezu (nullable kolona ili tabela)
 
@@ -53,7 +53,7 @@ E2E dosegljivost: ured lista R5.1; role bez mutate → nema dugmeta; cijena gori
 | Stacionaža | R5.3 (+ kasnije sati ako treba) | tabela `route_segments` (**novo**) + nullable `segment_id` na `hauls` / po potrebi `machine_work_logs` |
 | Partner | R5.5 | tabela `partners` (**novo**) + nullable `partner_id` na `machine_faults` / servis |
 | Tok odobravanja | R5.5 kad uđe prag troška | `approval_flows` (**novo**) ili reuse R4b week pattern samo za fault cost — odluka u rez plan-u pri kodu |
-| Valuta uz iznos | R5.2 | Money: `amount_cents` + `currency_code` na `fuel_entries` (**novo** kolone; default `companies.currency` **postoji**) |
+| Valuta uz iznos | R5.2 | Money: `amount_cents` + `currency_code` na `fuel_entries` (**novo** kolone; default `companies.currency` **postoji (STATUS.md)**) |
 
 ## Migracije / sigurnost (svi rezovi)
 
