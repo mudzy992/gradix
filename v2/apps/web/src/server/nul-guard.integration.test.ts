@@ -55,6 +55,8 @@ import { POST as workdayConfirmRoute } from "@/app/api/workdays/[id]/confirm/rou
 import { POST as workdayReviseRoute } from "@/app/api/workdays/[id]/revise/route";
 import { POST as machineWorkLogsPost } from "@/app/api/machine-work-logs/route";
 import { POST as machineWorkLogReviseRoute } from "@/app/api/machine-work-logs/[id]/revise/route";
+import { POST as fuelEntriesPost } from "@/app/api/fuel-entries/route";
+import { POST as fuelEntryReviseRoute } from "@/app/api/fuel-entries/[id]/revise/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
@@ -178,6 +180,8 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/workdays/{id}/revise": { POST: workdayReviseRoute },
   "/api/machine-work-logs": { POST: machineWorkLogsPost },
   "/api/machine-work-logs/{id}/revise": { POST: machineWorkLogReviseRoute },
+  "/api/fuel-entries": { POST: fuelEntriesPost },
+  "/api/fuel-entries/{id}/revise": { POST: fuelEntryReviseRoute },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },

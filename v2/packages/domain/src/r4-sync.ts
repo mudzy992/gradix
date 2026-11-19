@@ -7,6 +7,10 @@ import {
   validMachineWorkLogPayload,
   type R4MachineWorkLogPushItem,
 } from "./r5-machine-work-log-sync";
+import {
+  validFuelEntryPayload,
+  type R4FuelEntryPushItem,
+} from "./r5-fuel-entry-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -14,6 +18,7 @@ export type {
   R4MachineWorkLogPayload,
   R4MachineWorkLogPushItem,
 } from "./r5-machine-work-log-sync";
+export type { R4FuelEntryPayload, R4FuelEntryPushItem } from "./r5-fuel-entry-sync";
 
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
@@ -60,7 +65,11 @@ export type R4WorkdayPushItem = {
   status: "SUBMITTED";
 };
 
-export type R4SyncPushItem = R4WorkEntryPushItem | R4WorkdayPushItem | R4MachineWorkLogPushItem;
+export type R4SyncPushItem =
+  | R4WorkEntryPushItem
+  | R4WorkdayPushItem
+  | R4MachineWorkLogPushItem
+  | R4FuelEntryPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -78,7 +87,7 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log";
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -147,6 +156,13 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
         return { ok: false, code: "SYNC_ITEM_INVALID" };
       }
       if (!validMachineWorkLogPayload(item.log)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "fuel_entry") {
+      if (typeof item.fuelEntryId !== "string" || item.fuelEntryId.length < 1 || item.fuelEntryId.length > 128) {
+        return { ok: false, code: "SYNC_ITEM_INVALID" };
+      }
+      if (!validFuelEntryPayload(item.entry)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

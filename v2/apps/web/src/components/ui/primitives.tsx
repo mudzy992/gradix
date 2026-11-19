@@ -52,6 +52,7 @@ const ICONS: Record<string, ReactNode> = {
       <circle cx="17.5" cy="18.5" r="1.8" />
     </>
   ),
+  fuel: <path d="M4 21V5a2 2 0 012-2h6a2 2 0 012 2v16M4 21h10M14 9h2a2 2 0 012 2v5a1.5 1.5 0 003 0V8l-3-3" />,
   upload: (
     <>
       <path d="M12 16V4M7.5 8.5L12 4l4.5 4.5" />

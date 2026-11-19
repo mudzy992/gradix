@@ -107,6 +107,26 @@ describe("R4 sync protocol validation", () => {
     }])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
   });
 
+  it("accepts R5.2 fuel_entry push items", () => {
+    expect(validateR4SyncPush([{
+      localId: uuid("82"),
+      entityType: "fuel_entry",
+      fuelEntryId: "fuel_test_01",
+      deviceSentAt: "2026-11-19T10:00:00+01:00",
+      entry: {
+        machineId: "mch_1",
+        projectId: null,
+        filledAt: "2026-11-19T08:00:00+01:00",
+        liters: 45.5,
+        totalAmount: "95.50",
+        currencyCode: "BAM",
+        unitPriceAmount: null,
+        meterReading: null,
+        note: null,
+      },
+    }])).toEqual({ ok: true });
+  });
+
   it("enforces WORK/BREAK target rules and version constraints", () => {
     expect(validateR4SyncPush([entryItem({
       entry: { ...entryItem().entry, kind: "BREAK", projectId: null, machineId: null },

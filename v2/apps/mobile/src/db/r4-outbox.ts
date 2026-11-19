@@ -1,5 +1,6 @@
 import {
   validateR4SyncPush,
+  type R4FuelEntryPayload,
   type R4MachineWorkLogPayload,
   type R4SyncEvent,
   type R4SyncPullPage,
@@ -410,6 +411,25 @@ export async function readOutboxEntries(db: LocalSqlite, account: LocalAccount):
 }
 
 /** Vlastiti unos radnika: bez workerId — server iz sesije zna čiji je dan. */
+export async function queueFuelEntry(
+  db: LocalSqlite,
+  account: LocalAccount,
+  fuelEntryId: string,
+  entry: R4FuelEntryPayload,
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "fuel_entry",
+    fuelEntryId,
+    deviceSentAt,
+    entry,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
 export async function queueMachineWorkLog(
   db: LocalSqlite,
   account: LocalAccount,

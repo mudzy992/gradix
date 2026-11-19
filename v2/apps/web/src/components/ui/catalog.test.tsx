@@ -8,6 +8,7 @@ import { expectNoSeriousA11yViolations } from "@/test/axe";
 
 describe("katalog komponenti (U5)", () => {
   it("nema serious/critical a11y nalaza, modali imaju X, podnožje i zatvaranje", async () => {
+    // axe + više modala u paralelnom vitest workeru ponekad prelazi 5s
     const { container } = render(<ComponentCatalog />);
     expect(screen.getByRole("heading", { name: "Katalog komponenti" })).toBeInTheDocument();
     // Select lista: opcije postoje i nose tekst (boje nosi CSS: select option iz tokena).
@@ -28,7 +29,7 @@ describe("katalog komponenti (U5)", () => {
     await expectNoSeriousA11yViolations(container);
     await userEvent.click(screen.getByRole("button", { name: "Odustani" }));
     expect(screen.queryByRole("dialog")).toBeNull();
-  });
+  }, 15_000);
 
   it("tabela iz kataloga sortira klikom na zaglavlje", async () => {
     render(<ComponentCatalog />);

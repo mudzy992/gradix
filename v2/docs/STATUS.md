@@ -16,8 +16,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R4b API / migracije | **isporučeno** (`5ffa667`+) | spremno |
 | R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
 | R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
-| R5.1 Sati mašine | **isporučeno** (čekа CI + prolaz vlasnika) | rad |
-| R5.2+ | **nije počelo** | ne radi |
+| R5.1 Sati mašine | **isporučeno** (`046404e`, CI) | spremno |
+| R5.2 Gorivo | **isporučeno** (čeka CI + prolaz vlasnika) | rad |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -44,11 +44,11 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 - R4b: API + UI potvrda/sedmica/zaključaj/ispravka na `/ured/radni-dani`.
 - Prilozi rokova; s3 dijagnostika Put/Get.
 - R5.1: `machine_work_logs` + očitanja + revizije; `/ured/sati-masine`; sync `machine_work_log`; mobil `/sati-masine`; seed `rukovalac@demo.test`.
+- R5.2: `fuel_entries` (Money) + revizije; `/ured/gorivo`; sync `fuel_entry`; mobil `/gorivo`; seed `vozac@demo.test`; cijena sakrivena za DRIVER u API.
 
 ## Ne radi / namjerno još nema
 
-- R5.2+ (gorivo, ture, kvarovi); partneri; Android store/dev build.
-- R5.1 vlasnikov prolaz na stagingu: **ručno nije provjereno**.
+- R5.3+ (ture, kvarovi); partneri; Android store/dev build.
 
 ## Dugovi / otvoreno
 

@@ -129,6 +129,10 @@ export const PERMISSIONS = {
   "machines.work_log.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MACHINE_OPERATOR"],
   "machines.work_log.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR"],
   "machines.work_log.revise": ["OWNER", "ADMIN"],
+  // R5.2: gorivo — vozač/rukovatil unos; cijena u API samo uredskim rolama (fuel-entry-price.ts).
+  "machines.fuel.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "DRIVER", "MACHINE_OPERATOR"],
+  "machines.fuel.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "DRIVER", "MACHINE_OPERATOR"],
+  "machines.fuel.revise": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -234,6 +238,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "machines.work_log.revise": {
     label: "Ispravka sati mašine",
     description: "Vlasnik/admin upisuje reviziju sati mašine s razlogom; original ostaje nepromijenjen.",
+  },
+  "machines.fuel.view": {
+    label: "Pregled goriva",
+    description: "Točenja goriva po mašini. Računovođa vidi cijenu; vozač vidi litre, ne cijenu.",
+  },
+  "machines.fuel.create": {
+    label: "Unos goriva",
+    description: "Novo točenje uz mašinu, litre i po želji očitanje brojila.",
+  },
+  "machines.fuel.revise": {
+    label: "Ispravka točenja goriva",
+    description: "Vlasnik/admin upisuje reviziju s razlogom; original ostaje nepromijenjen.",
   },
 };
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  R4FuelEntryPushItem,
   R4MachineWorkLogPushItem,
   R4SyncEvent,
   R4SyncPullPage,
@@ -22,6 +23,26 @@ function canonical(value: unknown): string {
     return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(",")}}`;
   }
   return JSON.stringify(value) ?? "null";
+}
+
+function fuelEntryItem(local: number): R4FuelEntryPushItem {
+  return {
+    localId: uuid(String(local)),
+    entityType: "fuel_entry",
+    fuelEntryId: `fuel_sim_${local}`,
+    deviceSentAt: "2026-11-19T10:00:00+01:00",
+    entry: {
+      machineId: "mch_simulator",
+      projectId: null,
+      filledAt: "2026-11-19T08:00:00+01:00",
+      liters: 40,
+      totalAmount: "80.00",
+      currencyCode: "BAM",
+      unitPriceAmount: null,
+      meterReading: null,
+      note: null,
+    },
+  };
 }
 
 function machineLogItem(local: number): R4MachineWorkLogPushItem {
@@ -114,8 +135,12 @@ class SimulatedNetwork implements R4SyncTransport {
       const slot = this.reserve();
       const workDate = pushed.entityType === "work_entry"
         ? businessDate(new Date(pushed.entry.startedAt), "Europe/Sarajevo")
-        : null;
-      const workdayId = pushed.entityType === "machine_work_log" ? null : pushed.workdayId;
+        : pushed.entityType === "fuel_entry"
+          ? businessDate(new Date(pushed.entry.filledAt), "Europe/Sarajevo")
+          : null;
+      const workdayId = pushed.entityType === "machine_work_log" || pushed.entityType === "fuel_entry"
+        ? null
+        : pushed.workdayId;
       const canonicalWorkdayId = workDate && workdayId
         ? this.canonicalWorkdays.get(workDate) ?? workdayId
         : workdayId;
@@ -123,7 +148,9 @@ class SimulatedNetwork implements R4SyncTransport {
         ? pushed.workEntryId
         : pushed.entityType === "machine_work_log"
           ? pushed.workLogId
-          : pushed.workdayId;
+          : pushed.entityType === "fuel_entry"
+            ? pushed.fuelEntryId
+            : pushed.workdayId;
       const result: R4SyncPushItemResult = {
         localId: pushed.localId,
         status: "APPLIED",
@@ -293,6 +320,18 @@ describe("R4 deterministic sync simulator", () => {
     // Ponovni sync ne donosi duplikate.
     const again = await runR4Sync(store, server);
     expect(again.pulledEvents).toBe(0);
+  });
+
+  it("R5.2: isti localId za fuel_entry vraća DUPLICATE", async () => {
+    const server = new SimulatedNetwork();
+    const queued = fuelEntryItem(902);
+    const store = memoryStore([queued]);
+    const first = await runR4Sync(store, server);
+    expect(first.applied).toBe(1);
+    store.pendingItems.push(queued);
+    const second = await runR4Sync(store, server);
+    expect(second.applied).toBe(0);
+    expect(second.duplicate).toBe(1);
   });
 
   it("R5.1: isti localId za machine_work_log vraća DUPLICATE, ne dupli zapis", async () => {

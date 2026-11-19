@@ -653,6 +653,23 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
     deviceSentAt: OffsetDateTime,
     log: SyncMachineWorkLogPayload,
   }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("fuel_entry"),
+    fuelEntryId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    entry: z.object({
+      machineId: z.string().min(1).max(128),
+      projectId: z.string().min(1).max(128).nullable(),
+      filledAt: OffsetDateTime,
+      liters: z.number().finite().positive(),
+      totalAmount: z.string().min(1),
+      currencyCode: z.string().length(3),
+      unitPriceAmount: z.string().min(1).nullable(),
+      meterReading: z.number().finite().min(0).nullable(),
+      note: z.string().max(2000).nullable(),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -678,7 +695,7 @@ export type SyncPushResponse = z.infer<typeof SyncPushResponse>;
 export const SyncPullEvent = z.object({
   id: z.string(),
   cursorSeq: z.string(),
-  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log"]),
+  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry"]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
   payload: z.record(z.string(), z.unknown()).nullable(),
@@ -1176,3 +1193,62 @@ export const MachineWorkLogReviseInput = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
 });
 export type MachineWorkLogReviseInput = z.infer<typeof MachineWorkLogReviseInput>;
+
+/* ============================================================ R5.2 — gorivo */
+
+export const FuelEntryRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  driver_worker_id: z.string(),
+  driver_name: z.string(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  filled_at: z.string(),
+  liters: z.number(),
+  amount: z.string().nullable(),
+  currency_code: z.string().nullable(),
+  unit_price: z.string().nullable(),
+  meter_reading: z.number().nullable(),
+  note: z.string().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.string(),
+});
+export type FuelEntryRow = z.infer<typeof FuelEntryRow>;
+
+export const FuelEntriesResponse = z.object({
+  entries: z.array(FuelEntryRow),
+});
+export type FuelEntriesResponse = z.infer<typeof FuelEntriesResponse>;
+
+const MoneyAmount = z.string().regex(/^\d+\.\d{2}$/);
+
+export const FuelEntryCreateInput = z.object({
+  machineId: z.string().min(1).max(128),
+  driverWorkerId: z.string().min(1).max(128).nullable().optional(),
+  projectId: z.string().min(1).max(128).nullable().optional(),
+  filledAt: OffsetDateTime,
+  liters: z.number().finite().positive(),
+  totalAmount: MoneyAmount,
+  currencyCode: z.string().length(3).optional(),
+  unitPriceAmount: MoneyAmount.nullable().optional(),
+  meterReading: z.number().finite().nonnegative().nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+}).strict();
+export type FuelEntryCreateInput = z.infer<typeof FuelEntryCreateInput>;
+
+export const FuelEntryMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type FuelEntryMutationOutcome = z.infer<typeof FuelEntryMutationOutcome>;
+
+export const FuelEntryReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type FuelEntryReviseInput = z.infer<typeof FuelEntryReviseInput>;

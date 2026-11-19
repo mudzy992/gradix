@@ -41,6 +41,8 @@ const TENANT_TABLES = [
   "machine_meter_readings",
   "machine_work_log_revisions",
   "machine_work_logs",
+  "fuel_entry_revisions",
+  "fuel_entries",
   "machines",
   "memberships",
   "obligation_attachments",

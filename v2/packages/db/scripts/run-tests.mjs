@@ -56,6 +56,7 @@ const requiredSuites = [
   "assignment-history.integration.test.ts",
   "r4-workday.integration.test.ts",
   "r5-machine-work-log.integration.test.ts",
+  "r5-fuel-entries.integration.test.ts",
   "scope-default-migration.test.ts",
   "sync-cursor.integration.test.ts",
   "tenant.test.ts",
