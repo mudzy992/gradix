@@ -20,7 +20,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R5.2 Gorivo | **isporučeno** (`563c403`, CI 44573517449) | spremno |
 | R5.3 Ture | **isporučeno** (`9b6193e`, CI 44580192908) | spremno |
 | R5.4 Dnevni pregled | **isporučeno** (`ab0b81c`, CI 44592292030) | spremno |
-| R5.5 Kvarovi | **isporučeno** (ovaj commit) | spremno |
+| R5.5 Kvarovi | **isporučeno** (`1b11b6e`, CI 44601944551) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
