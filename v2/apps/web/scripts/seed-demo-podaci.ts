@@ -25,8 +25,8 @@
  * servis uvoza se oslanja na RLS opseg firme (s administratorskom rolom bi
  * pregled vidio kategorije i radnike svih firmi i pogriješio firmu).
  */
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
@@ -40,7 +40,16 @@ import {
 } from "../src/server/obligation-service";
 import { DEMO_COMPANY_SLUG } from "./demo-sukobi";
 
-const FILES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs", "demo-podaci");
+/** Dev: `docs/demo-podaci`; runtime slika: `/app/demo-podaci` pored bundla. */
+function resolveDemoPodaciDir(): string {
+  if (process.env.DEMO_PODACI_DIR) return process.env.DEMO_PODACI_DIR;
+  const here = dirname(fileURLToPath(import.meta.url));
+  const bundled = join(here, "demo-podaci");
+  if (existsSync(bundled)) return bundled;
+  return join(here, "..", "..", "..", "docs", "demo-podaci");
+}
+
+const FILES_DIR = resolveDemoPodaciDir();
 /** Datum prema kojem su podešeni rokovi u fajlu (relativno pomjeranje). */
 export const ROKOVI_ANCHOR = "2026-11-12";
 
@@ -301,7 +310,9 @@ export async function seedDemoPodaci(
   return report;
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const entry = process.argv[1] ?? "";
+const isMain = /seed-demo-podaci\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
+  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
 if (isMain) {
   const adminUrl = process.env.DATABASE_ADMIN_URL;
   const dbUrl = process.env.DATABASE_URL;

@@ -29,6 +29,7 @@ FROM deps AS builder
 COPY packages packages
 COPY apps/web apps/web
 COPY infra/diagnostics infra/diagnostics
+COPY docs/demo-podaci docs/demo-podaci
 # `next build` traži DATABASE_URL i AUTH_SECRET jer se konfiguracija validira pri uvozu.
 # Sve poslovne stranice su `force-dynamic`, pa placeholder ne utiče na izlaz slike.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
@@ -46,10 +47,12 @@ RUN pnpm --filter @gradix/web build \
       --bundle --platform=node --format=esm --target=node22 \
       --outfile=/app/diagnostics.bundle.mjs \
  && cd apps/web \
- && pnpm exec esbuild scripts/seed.ts \
-      --bundle --platform=node --format=esm --target=node22 \
-      --outfile=seed.mjs \
-      --external:pg --external:argon2
+ && for s in seed seed-demo-podaci demo-sukobi demo-pregled demo-r4b-approval; do \
+      pnpm exec esbuild "scripts/${s}.ts" \
+        --bundle --platform=node --format=esm --target=node22 \
+        --outfile="${s}.mjs" \
+        --external:pg --external:argon2; \
+    done
 
 # 3) Runtime: samo ono što treba, bez pnpm-a i dev zavisnosti.
 FROM node:22-slim AS runner
@@ -94,9 +97,24 @@ COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db
 # koju bi `import("@aws-sdk/...")` iz /app/diagnostics našao (ERR_MODULE_NOT_FOUND na stagingu).
 COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed-demo-podaci.mjs ./seed-demo-podaci.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-sukobi.mjs ./demo-sukobi.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-pregled.mjs ./demo-pregled.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-r4b-approval.mjs ./demo-r4b-approval.mjs
+# Sintetički xlsx za seed-demo-podaci (isti fajlovi kao docs/demo-podaci).
+COPY --from=builder --chown=nextjs:nodejs /app/docs/demo-podaci ./demo-podaci
 COPY --chown=nextjs:nodejs infra/docker/entrypoint-web.sh ./entrypoint.sh
 COPY --chown=nextjs:nodejs infra/docker/seed-web.sh ./seed.sh
+COPY --chown=nextjs:nodejs infra/docker/run-demo-mjs.sh \
+     infra/docker/seed-demo-podaci.sh \
+     infra/docker/demo-sukobi.sh \
+     infra/docker/demo-pregled.sh \
+     infra/docker/demo-r4b-approval.sh \
+     ./
 COPY --chown=nextjs:nodejs infra/scripts/db-apply.sh ./db/apply.sh
+RUN chmod +x /app/seed.sh /app/run-demo-mjs.sh \
+      /app/seed-demo-podaci.sh /app/demo-sukobi.sh \
+      /app/demo-pregled.sh /app/demo-r4b-approval.sh
 # Backup/restore drill skripte (pokreće vlasnik privremeno u web kontejneru).
 COPY --chown=nextjs:nodejs infra/scripts/backup-lib.sh \
      infra/scripts/backup.sh \

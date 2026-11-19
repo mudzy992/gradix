@@ -19,8 +19,9 @@
  * Pokretanje (vidi docs/COOLIFY.md):
  *   DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts
  */
-import { Pool } from "pg";
+import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
+import { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 
 export const DEMO_COMPANY_SLUG = "niskogradnja-demo";
@@ -159,7 +160,9 @@ export async function createDemoConflicts(
   return { created };
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const entry = process.argv[1] ?? "";
+const isMain = /demo-sukobi\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
+  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
 if (isMain) {
   const adminUrl = process.env.DATABASE_ADMIN_URL;
   if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");

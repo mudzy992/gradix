@@ -296,13 +296,16 @@ su pod posebnim RLS pravilima za tenant, login i pozivnicu; procjenu i rollback 
 
 ## 5. Demo podaci (opciono, jednom) — radi iz slike
 
-Seed je u runtime slici kao `seed.mjs` (u build fazi se kompajlira iz `scripts/seed.ts`,
-pa runtime ne treba `tsx` ni dev zavisnosti).
-
-Coolify → resource `gradix-web` → **Terminal**:
+Seed i demo naredbe su u runtime slici kao `.mjs` + `.sh` (build kompajlira
+TypeScript; runtime **nema** `pnpm`/`tsx`). Coolify → resource `gradix-web` → **Terminal**:
 
 ```sh
 cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
+# zatim (env DATABASE_* već u kontejneru):
+./seed-demo-podaci.sh
+./demo-sukobi.sh
+./demo-pregled.sh
+./demo-r4b-approval.sh
 ```
 
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
@@ -348,8 +351,10 @@ unos radnika i šefa, unos s odstupanjem sata telefona i jedan stariji od
 praga podsjetnika firme:
 
 ```sh
-DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts
+cd /app && ./demo-sukobi.sh
 ```
+
+(Dev: `pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts`.)
 
 ### 5.3. Demo podaci iz fajlova (radnici, mašine, rokovi)
 
@@ -365,9 +370,10 @@ baza se otvara aplikacijskom rolom (`DATABASE_URL`, servis uvoza se oslanja
 na RLS), a administratorska služi samo da se demo firma pronađe po slug-u:
 
 ```sh
-DATABASE_ADMIN_URL=... DATABASE_URL=... \
-  pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts
+cd /app && ./seed-demo-podaci.sh
 ```
+
+(Dev: `DATABASE_ADMIN_URL=... DATABASE_URL=... pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts`.)
 
 ### 5.4. Demo podaci za Pregled (B4)
 
@@ -386,8 +392,11 @@ demo firmu i pokreće se ručno pod administratorskom rolom baze — nikad iz
 aplikacije i nikad automatski:
 
 ```sh
-DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts
+cd /app && ./demo-pregled.sh
 ```
+
+(Dev: `pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts`.)
+R4b sidro: `cd /app && ./demo-r4b-approval.sh`.
 
 Ponašanje pokriva `src/server/demo-pregled.integration.test.ts`: odbijanje
 druge firme prije upisa, tačno jedna blokirana dodjela kroz pravi servis

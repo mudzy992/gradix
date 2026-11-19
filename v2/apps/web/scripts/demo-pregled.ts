@@ -28,6 +28,7 @@
  *   DATABASE_ADMIN_URL=... pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts
  */
 import { createHash } from "node:crypto";
+import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Pool } from "pg";
 import type { PoolClient } from "pg";
@@ -387,7 +388,9 @@ export async function seedDemoPregled(
   });
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const entry = process.argv[1] ?? "";
+const isMain = /demo-pregled\.(mjs|ts)$/.test(basename(entry.replace(/\\/g, "/")))
+  || (entry !== "" && import.meta.url === pathToFileURL(entry).href);
 if (isMain) {
   const adminUrl = process.env.DATABASE_ADMIN_URL;
   if (!adminUrl) throw new Error("Potreban DATABASE_ADMIN_URL");
