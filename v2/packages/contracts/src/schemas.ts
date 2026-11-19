@@ -690,6 +690,20 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       note: z.string().max(2000).nullable(),
     }).strict(),
   }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("machine_daily_check"),
+    checkId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    check: z.object({
+      machineId: z.string().min(1).max(128),
+      projectId: z.string().min(1).max(128).nullable(),
+      checkedAt: OffsetDateTime,
+      result: z.enum(["PASS", "FAIL", "CONDITIONAL"]),
+      checklistJson: z.record(z.string(), z.unknown()),
+      note: z.string().max(2000).nullable(),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -715,7 +729,9 @@ export type SyncPushResponse = z.infer<typeof SyncPushResponse>;
 export const SyncPullEvent = z.object({
   id: z.string(),
   cursorSeq: z.string(),
-  entityType: z.enum(["workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul"]),
+  entityType: z.enum([
+    "workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul", "machine_daily_check",
+  ]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
   payload: z.record(z.string(), z.unknown()).nullable(),
@@ -1337,3 +1353,76 @@ export const HaulReviseInput = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
 });
 export type HaulReviseInput = z.infer<typeof HaulReviseInput>;
+
+/* ============================================================ R5.4 — dnevni pregled */
+
+export const DailyCheckRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  worker_id: z.string(),
+  worker_name: z.string(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  checked_at: z.string(),
+  result: z.enum(["PASS", "FAIL", "CONDITIONAL"]),
+  checklist_json: z.record(z.string(), z.unknown()),
+  note: z.string().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.string(),
+});
+export type DailyCheckRow = z.infer<typeof DailyCheckRow>;
+
+export const DailyChecksResponse = z.object({
+  checks: z.array(DailyCheckRow),
+});
+export type DailyChecksResponse = z.infer<typeof DailyChecksResponse>;
+
+export const DailyCheckCreateInput = z.object({
+  machineId: z.string().min(1).max(128),
+  workerId: z.string().min(1).max(128).nullable().optional(),
+  projectId: z.string().min(1).max(128).nullable().optional(),
+  checkedAt: OffsetDateTime,
+  result: z.enum(["PASS", "FAIL", "CONDITIONAL"]),
+  checklistJson: z.record(z.string(), z.unknown()).optional(),
+  note: z.string().max(2000).nullable().optional(),
+}).strict();
+export type DailyCheckCreateInput = z.infer<typeof DailyCheckCreateInput>;
+
+export const DailyCheckMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type DailyCheckMutationOutcome = z.infer<typeof DailyCheckMutationOutcome>;
+
+export const DailyCheckReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type DailyCheckReviseInput = z.infer<typeof DailyCheckReviseInput>;
+
+export const DailyCheckAttachment = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number(),
+  status: z.enum(["pending", "confirmed"]),
+  createdAt: IsoDate,
+});
+export type DailyCheckAttachment = z.infer<typeof DailyCheckAttachment>;
+
+export const DailyCheckAttachmentsResponse = z.object({
+  attachments: z.array(DailyCheckAttachment),
+});
+export type DailyCheckAttachmentsResponse = z.infer<typeof DailyCheckAttachmentsResponse>;
+
+export const DailyCheckAttachmentRegisterResponse = z.object({
+  attachment: DailyCheckAttachment,
+  uploadUrl: z.string(),
+  uploadExpiresAt: IsoDate,
+});
+export type DailyCheckAttachmentRegisterResponse = z.infer<typeof DailyCheckAttachmentRegisterResponse>;

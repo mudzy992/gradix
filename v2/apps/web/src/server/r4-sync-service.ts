@@ -13,6 +13,7 @@ import { syncGateForWorkDate } from "./workday-approval";
 import { applyMachineWorkLogSyncItem } from "./r4-sync-machine-work-log";
 import { applyFuelEntrySyncItem } from "./r4-sync-fuel-entry";
 import { applyHaulSyncItem } from "./r4-sync-haul";
+import { applyDailyCheckSyncItem } from "./r4-sync-daily-check";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -378,7 +379,7 @@ async function publishEvent(
   actor: SyncPushActor,
   reservation: Reservation,
   requestHash: string,
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul",
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check",
   entityId: string,
   version: number,
   payload: Record<string, unknown>,
@@ -429,7 +430,9 @@ async function createConflict(
         ? item.entry
         : item.entityType === "haul"
           ? item.haul
-          : item;
+          : item.entityType === "machine_daily_check"
+            ? item.check
+            : item;
   await client.query(
     `INSERT INTO public.sync_conflicts
        (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version)
@@ -535,6 +538,22 @@ async function applyItem(
   }
   if (item.entityType === "haul") {
     return applyHaulSyncItem(client, {
+      actor,
+      worker,
+      requestHash,
+      reservation,
+      helpers: {
+        businessDate: (scoped, instant) => businessDate(scoped, actor.companyId, instant),
+        invalidItem,
+        rejectInTransaction,
+        createConflict,
+        publishEvent,
+        saveReceipt,
+      },
+    }, item);
+  }
+  if (item.entityType === "machine_daily_check") {
+    return applyDailyCheckSyncItem(client, {
       actor,
       worker,
       requestHash,
@@ -841,7 +860,10 @@ export async function pushR4SyncItems(
   const isForeman = actor.roles.includes("SITE_SUPERVISOR");
   const isMachineOperator = actor.roles.includes("MACHINE_OPERATOR");
   const isDriver = actor.roles.includes("DRIVER");
-  if (!isWorker && !isForeman && !isMachineOperator && !isDriver) throw new SyncPushAccessError("FORBIDDEN");
+  const isMechanic = actor.roles.includes("MECHANIC");
+  if (!isWorker && !isForeman && !isMachineOperator && !isDriver && !isMechanic) {
+    throw new SyncPushAccessError("FORBIDDEN");
+  }
   const actorWorker = await readWorker(pool, actor);
   if (!actorWorker) throw new SyncPushAccessError("NOT_FOUND");
   await withCompany(pool, actor.companyId, async (client) => {
@@ -871,6 +893,12 @@ export async function pushR4SyncItems(
       worker = actorWorker;
     } else if (item.entityType === "haul") {
       if (!isDriver) {
+        results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
+        continue;
+      }
+      worker = actorWorker;
+    } else if (item.entityType === "machine_daily_check") {
+      if (!isMachineOperator && !isMechanic) {
         results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
         continue;
       }

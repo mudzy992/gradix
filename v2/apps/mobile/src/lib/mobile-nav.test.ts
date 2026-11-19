@@ -41,6 +41,13 @@ describe("mobilni meni (A2): veza korisnik-radnik, ne samo rola", () => {
     expect(hrefs(profile({ roles: ["MACHINE_OPERATOR"], workerId: "w1" }))).not.toContain("/ture");
   });
 
+  it("Dnevni pregled: rukovalac ili mehaničar uz povezanog radnika", () => {
+    expect(hrefs(profile({ roles: ["MACHINE_OPERATOR"], workerId: "w1" }))).toContain("/dnevni-pregled");
+    expect(hrefs(profile({ roles: ["MECHANIC"], workerId: "w1" }))).toContain("/dnevni-pregled");
+    expect(hrefs(profile({ roles: ["MACHINE_OPERATOR"], workerId: null }))).not.toContain("/dnevni-pregled");
+    expect(hrefs(profile({ roles: ["DRIVER"], workerId: "w1" }))).not.toContain("/dnevni-pregled");
+  });
+
   it("Rokovi i Projekti su uvijek tu za prijavljen nalog", () => {
     for (const p of [profile({}), profile({ roles: ["OWNER"] })]) {
       expect(hrefs(p)).toEqual(expect.arrayContaining(["/rokovi", "/projekti"]));

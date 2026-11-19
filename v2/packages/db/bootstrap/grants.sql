@@ -88,6 +88,9 @@ GRANT SELECT, INSERT ON TABLE public.fuel_entry_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.route_segments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.hauls TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.haul_revisions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_daily_checks TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.machine_daily_check_revisions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_daily_check_attachments TO gradix_app;
 -- No direct sequence rights; login_attempts_id_seq is used only by its definer function.
 
 -- App-callable lookup and rate-limit functions. Revoke default PUBLIC EXECUTE first; these

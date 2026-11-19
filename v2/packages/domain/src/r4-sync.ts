@@ -15,6 +15,10 @@ import {
   validHaulPayload,
   type R4HaulPushItem,
 } from "./r5-haul-sync";
+import {
+  validDailyCheckPayload,
+  type R4DailyCheckPushItem,
+} from "./r5-daily-check-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -24,6 +28,11 @@ export type {
 } from "./r5-machine-work-log-sync";
 export type { R4FuelEntryPayload, R4FuelEntryPushItem } from "./r5-fuel-entry-sync";
 export type { R4HaulPayload, R4HaulPushItem, R4HaulQuantityUnit } from "./r5-haul-sync";
+export type {
+  R4DailyCheckPayload,
+  R4DailyCheckPushItem,
+  R4DailyCheckResult,
+} from "./r5-daily-check-sync";
 
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
@@ -75,7 +84,8 @@ export type R4SyncPushItem =
   | R4WorkdayPushItem
   | R4MachineWorkLogPushItem
   | R4FuelEntryPushItem
-  | R4HaulPushItem;
+  | R4HaulPushItem
+  | R4DailyCheckPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -93,7 +103,7 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul";
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -176,6 +186,13 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
         return { ok: false, code: "SYNC_ITEM_INVALID" };
       }
       if (!validHaulPayload(item.haul)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "machine_daily_check") {
+      if (typeof item.checkId !== "string" || item.checkId.length < 1 || item.checkId.length > 128) {
+        return { ok: false, code: "SYNC_ITEM_INVALID" };
+      }
+      if (!validDailyCheckPayload(item.check)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

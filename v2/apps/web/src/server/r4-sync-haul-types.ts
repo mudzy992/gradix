@@ -42,7 +42,7 @@ export type SyncHaulApplyDeps = {
       actor: SyncPushActor,
       reservation: SyncReservation,
       requestHash: string,
-      entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul",
+      entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check",
       entityId: string,
       version: number,
       payload: Record<string, unknown>,

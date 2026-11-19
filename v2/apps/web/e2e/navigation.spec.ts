@@ -120,6 +120,20 @@ test("računovođa: na Ture nema dugmeta Novi unos", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
 });
 
+test("vlasnik i računovođa: stižu do Dnevni pregled iz menija", async ({ page }) => {
+  await login(page, "vlasnik@demo.test");
+  expect(await navLabels(page)).toContain("Dnevni pregled");
+  await login(page, "racunovodja@demo.test");
+  expect(await navLabels(page)).toContain("Dnevni pregled");
+});
+
+test("računovođa: na Dnevni pregled nema dugmeta Novi unos", async ({ page }) => {
+  await login(page, "racunovodja@demo.test");
+  await page.goto("/ured/dnevni-pregled");
+  await expect(page.getByRole("heading", { name: "Dnevni pregled" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
+});
+
 test("šef: vidi Radnike i Radne dane (svoj opseg), ne vidi Korisnike", async ({ page }) => {
   await login(page, "sef@demo.test");
   const labels = await navLabels(page);

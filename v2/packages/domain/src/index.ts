@@ -60,6 +60,9 @@ export {
   type R4HaulPayload,
   type R4HaulPushItem,
   type R4HaulQuantityUnit,
+  type R4DailyCheckPayload,
+  type R4DailyCheckPushItem,
+  type R4DailyCheckResult,
 } from "./r4-sync";
 
 export { DEFAULT_TIMEZONE, businessDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";

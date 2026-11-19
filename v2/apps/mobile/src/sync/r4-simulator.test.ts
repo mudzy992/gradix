@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  R4DailyCheckPushItem,
   R4FuelEntryPushItem,
   R4HaulPushItem,
   R4MachineWorkLogPushItem,
@@ -64,6 +65,23 @@ function haulItem(local: number): R4HaulPushItem {
       quantityUnit: "M3",
       scaleTicketText: null,
       tripCount: 1,
+      note: null,
+    },
+  };
+}
+
+function dailyCheckItem(local: number): R4DailyCheckPushItem {
+  return {
+    localId: uuid(String(local)),
+    entityType: "machine_daily_check",
+    checkId: `mdc_sim_${local}`,
+    deviceSentAt: "2026-11-19T10:00:00+01:00",
+    check: {
+      machineId: "mch_simulator",
+      projectId: null,
+      checkedAt: "2026-11-19T07:00:00+01:00",
+      result: "PASS",
+      checklistJson: {},
       note: null,
     },
   };
@@ -163,10 +181,13 @@ class SimulatedNetwork implements R4SyncTransport {
           ? businessDate(new Date(pushed.entry.filledAt), "Europe/Sarajevo")
           : pushed.entityType === "haul"
             ? businessDate(new Date(pushed.haul.hauledAt), "Europe/Sarajevo")
-            : null;
+            : pushed.entityType === "machine_daily_check"
+              ? businessDate(new Date(pushed.check.checkedAt), "Europe/Sarajevo")
+              : null;
       const workdayId = pushed.entityType === "machine_work_log"
         || pushed.entityType === "fuel_entry"
         || pushed.entityType === "haul"
+        || pushed.entityType === "machine_daily_check"
         ? null
         : pushed.workdayId;
       const canonicalWorkdayId = workDate && workdayId
@@ -180,7 +201,9 @@ class SimulatedNetwork implements R4SyncTransport {
             ? pushed.fuelEntryId
             : pushed.entityType === "haul"
               ? pushed.haulId
-              : pushed.workdayId;
+              : pushed.entityType === "machine_daily_check"
+                ? pushed.checkId
+                : pushed.workdayId;
       const result: R4SyncPushItemResult = {
         localId: pushed.localId,
         status: "APPLIED",
@@ -367,6 +390,18 @@ describe("R4 deterministic sync simulator", () => {
   it("R5.3: isti localId za haul vraća DUPLICATE", async () => {
     const server = new SimulatedNetwork();
     const queued = haulItem(903);
+    const store = memoryStore([queued]);
+    const first = await runR4Sync(store, server);
+    expect(first.applied).toBe(1);
+    store.pendingItems.push(queued);
+    const second = await runR4Sync(store, server);
+    expect(second.applied).toBe(0);
+    expect(second.duplicate).toBe(1);
+  });
+
+  it("R5.4: isti localId za machine_daily_check vraća DUPLICATE", async () => {
+    const server = new SimulatedNetwork();
+    const queued = dailyCheckItem(904);
     const store = memoryStore([queued]);
     const first = await runR4Sync(store, server);
     expect(first.applied).toBe(1);

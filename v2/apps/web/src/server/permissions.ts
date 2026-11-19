@@ -137,6 +137,16 @@ export const PERMISSIONS = {
   "machines.haul.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "DRIVER"],
   "machines.haul.create": ["OWNER", "ADMIN", "PROJECT_MANAGER", "DRIVER"],
   "machines.haul.revise": ["OWNER", "ADMIN"],
+  // R5.4: dnevni pregled — OPERATOR/MECHANIC + ured; ACCOUNTANT view RO.
+  "machines.check.view": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MACHINE_OPERATOR", "MECHANIC",
+  ],
+  "machines.check.create": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC",
+  ],
+  "machines.check.revise": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC",
+  ],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -266,6 +276,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "machines.haul.revise": {
     label: "Ispravka ture",
     description: "Vlasnik/admin upisuje reviziju s razlogom; original ostaje nepromijenjen.",
+  },
+  "machines.check.view": {
+    label: "Pregled dnevnih pregleda",
+    description: "Dnevni pregledi mašina — samo pregled. Računovođa vidi listu bez unosa.",
+  },
+  "machines.check.create": {
+    label: "Unos dnevnog pregleda",
+    description: "Novi dnevni pregled uz ishod (PASS/FAIL/CONDITIONAL) i napomenu.",
+  },
+  "machines.check.revise": {
+    label: "Ispravka dnevnog pregleda",
+    description: "Ispravka s razlogom; original ostaje nepromijenjen (append-only revizija).",
   },
 };
 

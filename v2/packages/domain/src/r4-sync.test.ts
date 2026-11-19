@@ -170,6 +170,37 @@ describe("R4 sync protocol validation", () => {
     }])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
   });
 
+  it("accepts R5.4 machine_daily_check push items", () => {
+    expect(validateR4SyncPush([{
+      localId: uuid("85"),
+      entityType: "machine_daily_check",
+      checkId: "mdc_test_01",
+      deviceSentAt: "2026-11-19T10:00:00+01:00",
+      check: {
+        machineId: "mch_1",
+        projectId: null,
+        checkedAt: "2026-11-19T07:00:00+01:00",
+        result: "PASS",
+        checklistJson: {},
+        note: null,
+      },
+    }])).toEqual({ ok: true });
+    expect(validateR4SyncPush([{
+      localId: uuid("86"),
+      entityType: "machine_daily_check",
+      checkId: "mdc_bad",
+      deviceSentAt: "2026-11-19T10:00:00+01:00",
+      check: {
+        machineId: "mch_1",
+        projectId: null,
+        checkedAt: "2026-11-19T07:00:00+01:00",
+        result: "MAYBE" as "PASS",
+        checklistJson: {},
+        note: null,
+      },
+    }])).toEqual({ ok: false, code: "SYNC_ITEM_INVALID" });
+  });
+
   it("enforces WORK/BREAK target rules and version constraints", () => {
     expect(validateR4SyncPush([entryItem({
       entry: { ...entryItem().entry, kind: "BREAK", projectId: null, machineId: null },

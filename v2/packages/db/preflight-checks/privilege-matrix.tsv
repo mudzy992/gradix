@@ -36,4 +36,7 @@ table	fuel_entry_revisions	SELECT;INSERT	-		R5.2 append-only office revisions; F
 table	route_segments	SELECT;INSERT;UPDATE	-		R5.3 stacionaža / dionice; nullable FK from hauls; FORCE RLS; no DELETE.
 table	hauls	SELECT;INSERT;UPDATE	-		R5.3 ture CRUD path; FORCE RLS; no DELETE.
 table	haul_revisions	SELECT;INSERT	-		R5.3 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	machine_daily_checks	SELECT;INSERT;UPDATE	-		R5.4 dnevni pregled; FORCE RLS; no DELETE.
+table	machine_daily_check_revisions	SELECT;INSERT	-		R5.4 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	machine_daily_check_attachments	SELECT;INSERT;UPDATE	-		R5.4 check photos; mirror obligations; FORCE RLS; no DELETE.
 sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

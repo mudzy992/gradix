@@ -59,6 +59,11 @@ import { POST as fuelEntriesPost } from "@/app/api/fuel-entries/route";
 import { POST as fuelEntryReviseRoute } from "@/app/api/fuel-entries/[id]/revise/route";
 import { POST as haulsPost } from "@/app/api/hauls/route";
 import { POST as haulReviseRoute } from "@/app/api/hauls/[id]/revise/route";
+import { POST as dailyChecksPost } from "@/app/api/machine-daily-checks/route";
+import { POST as dailyCheckReviseRoute } from "@/app/api/machine-daily-checks/[id]/revise/route";
+import { POST as dailyCheckAttachmentsPost } from "@/app/api/machine-daily-checks/[id]/attachments/route";
+import { POST as dailyCheckAttachmentConfirmPost } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/confirm/route";
+import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
@@ -186,6 +191,11 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/fuel-entries/{id}/revise": { POST: fuelEntryReviseRoute },
   "/api/hauls": { POST: haulsPost },
   "/api/hauls/{id}/revise": { POST: haulReviseRoute },
+  "/api/machine-daily-checks": { POST: dailyChecksPost },
+  "/api/machine-daily-checks/{id}/revise": { POST: dailyCheckReviseRoute },
+  "/api/machine-daily-checks/{id}/attachments": { POST: dailyCheckAttachmentsPost },
+  "/api/machine-daily-checks/{id}/attachments/{attachmentId}/confirm": { POST: dailyCheckAttachmentConfirmPost },
+  "/api/machine-daily-checks/{id}/attachments/{attachmentId}/url": { GET: dailyCheckAttachmentUrlGet },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },
   "/api/sync/push": { POST: pushRoute },
