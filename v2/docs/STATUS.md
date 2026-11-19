@@ -1,6 +1,6 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-18 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
+**Datum:** 2026-11-19 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
 
 ## Pilot: spremnost
 
@@ -15,8 +15,8 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | Kontrolna lista prvog dana (PILOT.md tabela) | na snazi | spremno |
 | R4b API / migracije | **isporučeno** (`5ffa667`+) | spremno |
 | R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
-| R4b UI ispravka (revise) | **isporučeno** | spremno |
-| R5 / partneri | ne počinju | ne radi |
+| R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
+| R5 / partneri | plan `PLAN-R5.md` čeka vlasnika | ne radi |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -34,8 +34,8 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 | `@demo.test`; staging seed/prijava | **ODOBRENO** / **PROŠLO** |
 | Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
 | R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
-| R4b revise UI | **DA** (isporučeno) |
-| R5 / partneri | **ne počinju** |
+| R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
+| R5 plan | `PLAN-R5.md` — **čeka odobrenje** |
 
 ## Radi (CI)
 
@@ -45,7 +45,7 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 
 ## Ne radi / namjerno još nema
 
-- R5; partneri; Android store/dev build.
+- R5 kod (plan čeka); partneri; Android store/dev build.
 
 ## Dugovi / otvoreno
 

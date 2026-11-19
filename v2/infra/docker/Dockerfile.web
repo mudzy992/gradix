@@ -115,11 +115,13 @@ COPY --chown=nextjs:nodejs infra/docker/run-demo-mjs.sh \
      infra/docker/demo-sukobi.sh \
      infra/docker/demo-pregled.sh \
      infra/docker/demo-r4b-approval.sh \
+     infra/docker/seed-demo-full.sh \
      ./
 COPY --chown=nextjs:nodejs infra/scripts/db-apply.sh ./db/apply.sh
 RUN chmod +x /app/seed.sh /app/run-demo-mjs.sh \
       /app/seed-demo-podaci.sh /app/demo-sukobi.sh \
-      /app/demo-pregled.sh /app/demo-r4b-approval.sh
+      /app/demo-pregled.sh /app/demo-r4b-approval.sh \
+      /app/seed-demo-full.sh
 # Backup/restore drill skripte (pokreće vlasnik privremeno u web kontejneru).
 COPY --chown=nextjs:nodejs infra/scripts/backup-lib.sh \
      infra/scripts/backup.sh \

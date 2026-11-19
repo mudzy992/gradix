@@ -300,13 +300,18 @@ Seed i demo naredbe su u runtime slici kao `.mjs` + `.sh` (build kompajlira
 TypeScript; runtime **nema** `pnpm`/`tsx`). Coolify → resource `gradix-web` → **Terminal**:
 
 ```sh
-cd /app && SEED_PASSWORD='jaka-lozinka' ./seed.sh
-# zatim (env DATABASE_* već u kontejneru):
-./seed-demo-podaci.sh
-./demo-sukobi.sh
-./demo-pregled.sh
-./demo-r4b-approval.sh
+# Jedna naredba (preporučeno). SEED_PASSWORD ne u historiji:
+read -s SEED_PASSWORD; export SEED_PASSWORD
+cd /app && ./seed-demo-full.sh
+unset SEED_PASSWORD
 ```
+
+`seed.sh` samo naloge (`seed.mjs`). Demo skripte su **u slici** kao
+`seed-demo-podaci.cjs` / `demo-*.mjs` + wrapperi; `seed-demo-full.sh` ih zove redom.
+`DATABASE_ADMIN_URL` u web kontejneru drži **samo privremeno** za seed (admin rola
+piše globalne/demo redove); nakon uspjeha ukloni je iz Coolify env i restartuj.
+Pojedinačno i dalje: `./seed-demo-podaci.sh`, `./demo-sukobi.sh`, `./demo-pregled.sh`,
+`./demo-r4b-approval.sh`.
 
 Skripta je idempotentna (provjereno: dva pokretanja zaredom, isti ishod) i piše tenant tabele
 kroz tenant scope, pa aplikacijska rola ne treba biti vlasnik šeme. Nalozi: `ured@demo.test`,
