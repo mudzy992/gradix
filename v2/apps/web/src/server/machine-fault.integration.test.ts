@@ -122,16 +122,17 @@ describeDb("R5.5 machine fault web API", () => {
       }),
     }));
     expect(create.status).toBe(200);
-    const created = await create.json() as { outcome: string; id: string };
-    expect(created.outcome).toBe("OK");
+    const createdBody = await create.json() as { data: { outcome: string; id: string } };
+    expect(createdBody.data.outcome).toBe("OK");
+    const created = createdBody.data;
 
     const list = await listRoute(new NextRequest("http://t/api/machine-faults", {
       headers: { cookie: cookieOwner },
     }));
     const body = await list.json() as {
-      faults: Array<{ id: string; status: string; estimated_cost: string | null; currency_code: string | null }>;
+      data: { faults: Array<{ id: string; status: string; estimated_cost: string | null; currency_code: string | null }> };
     };
-    const row = body.faults.find((f) => f.id === created.id);
+    const row = body.data.faults.find((f) => f.id === created.id);
     expect(row?.status).toBe("WAITING_APPROVAL");
     expect(row?.estimated_cost).toBe("600.00");
     expect(row?.currency_code).toBe("BAM");
@@ -162,7 +163,7 @@ describeDb("R5.5 machine fault web API", () => {
     const after = await listRoute(new NextRequest("http://t/api/machine-faults", {
       headers: { cookie: cookieOwner },
     }));
-    const afterBody = await after.json() as { faults: Array<{ id: string; status: string }> };
-    expect(afterBody.faults.find((f) => f.id === created.id)?.status).toBe("APPROVED");
+    const afterBody = await after.json() as { data: { faults: Array<{ id: string; status: string }> } };
+    expect(afterBody.data.faults.find((f) => f.id === created.id)?.status).toBe("APPROVED");
   });
 });
