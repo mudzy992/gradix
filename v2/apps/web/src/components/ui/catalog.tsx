@@ -270,9 +270,10 @@ export function ComponentCatalog() {
             <div style={{ borderRight: "1px solid var(--line)", padding: "var(--space-3)", background: "var(--panel)" }}>
               <p className="gx-nav__group">Pregled</p>
               <a className="gx-nav-item" aria-current="page" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="home" /></span>Pregled</a>
+              <p className="gx-nav__group">Evidencija</p>
               <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="users" /></span>Radnici</a>
               <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="truck" /></span>Mašine</a>
-              <p className="gx-nav__group">Ured</p>
+              <p className="gx-nav__group">Rad / obračun</p>
               <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="calendar" /></span>Radni dani <Badge>2</Badge></a>
             </div>
             <div>

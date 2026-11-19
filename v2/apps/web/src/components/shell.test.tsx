@@ -23,7 +23,7 @@ const groups: NavGroup[] = [
     items: [{ href: "/pregled", label: "Pregled", icon: "home", description: "Mašine" }],
   },
   {
-    label: "Ured",
+    label: "Rad / obračun",
     items: [
       { href: "/ured/korisnici", label: "Korisnici", icon: "users", description: "Ljudi" },
       { href: "/ured/role", label: "Pristup i role", icon: "shield", description: "Ko šta smije" },

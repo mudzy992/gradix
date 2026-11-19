@@ -9,7 +9,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { NAV_ENTRIES, navEntriesForRoles } from "./nav";
+import { NAV_ENTRIES, navEntriesForRoles, navGroupsForRoles } from "./nav";
 import { PERMISSIONS, ROLES, can } from "@/server/permissions";
 
 const appDir = fileURLToPath(new URL("../app", import.meta.url));
@@ -77,5 +77,22 @@ describe("meni po roli == matrica dozvola (A4b, web)", () => {
       const visible = navEntriesForRoles([role]).some((entry) => entry.href === "/ured/radni-dani");
       expect(visible).toBe(allowed.includes(role));
     }
+  });
+
+  it("R6.0: sidebar grupe su Pregled / Evidencija / Mehanizacija / Rad-obračun / Administracija", () => {
+    const groups = navGroupsForRoles(["OWNER"]).map((group) => group.label);
+    expect(groups).toEqual([
+      "Pregled",
+      "Evidencija",
+      "Mehanizacija",
+      "Rad / obračun",
+      "Administracija",
+    ]);
+    const byHref = Object.fromEntries(
+      NAV_ENTRIES.map((entry) => [entry.href, entry.group]),
+    );
+    expect(byHref["/ured/sati-masine"]).toBe("Mehanizacija");
+    expect(byHref["/ured/radni-dani"]).toBe("Rad / obračun");
+    expect(byHref["/ured/korisnici"]).toBe("Administracija");
   });
 });
