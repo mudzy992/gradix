@@ -1123,3 +1123,56 @@ export const WorkdayReviseInput = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
 });
 export type WorkdayReviseInput = z.infer<typeof WorkdayReviseInput>;
+
+/* ============================================================ R5.1 — sati mašine */
+
+export const MachineWorkLogRow = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  worker_id: z.string(),
+  worker_name: z.string(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  started_at: z.string(),
+  ended_at: z.string(),
+  mode: z.enum(["WORK", "IDLE", "BREAKDOWN"]),
+  meter_end: z.number().nullable(),
+  note: z.string().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.string(),
+});
+export type MachineWorkLogRow = z.infer<typeof MachineWorkLogRow>;
+
+export const MachineWorkLogsResponse = z.object({
+  logs: z.array(MachineWorkLogRow),
+});
+export type MachineWorkLogsResponse = z.infer<typeof MachineWorkLogsResponse>;
+
+export const MachineWorkLogCreateInput = z.object({
+  machineId: z.string().min(1).max(128),
+  workerId: z.string().min(1).max(128).nullable().optional(),
+  projectId: z.string().min(1).max(128).nullable().optional(),
+  startedAt: OffsetDateTime,
+  endedAt: OffsetDateTime,
+  mode: z.enum(["WORK", "IDLE", "BREAKDOWN"]),
+  meterEnd: z.number().finite().nonnegative().nullable().optional(),
+  note: z.string().max(2000).nullable().optional(),
+}).strict();
+export type MachineWorkLogCreateInput = z.infer<typeof MachineWorkLogCreateInput>;
+
+export const MachineWorkLogMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type MachineWorkLogMutationOutcome = z.infer<typeof MachineWorkLogMutationOutcome>;
+
+export const MachineWorkLogReviseInput = z.object({
+  reason: SafeText.min(10).max(500),
+  payload: z.record(z.string(), z.unknown()).default({}),
+});
+export type MachineWorkLogReviseInput = z.infer<typeof MachineWorkLogReviseInput>;
