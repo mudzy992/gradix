@@ -24,6 +24,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R6.0 Sidebar regroup | **isporučeno** (`06658f5`) | spremno |
 | R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
 | R6.2 Obračun sati CSV + dashboard | **isporučeno** (`9096017`, CI 44709218406) | spremno |
+| L0–L2 Shell layout + catalog-first | **isporučeno** (fiksni 100dvh, collapse nav, pravilo) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -55,10 +56,12 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 - R6.0: sidebar Pregled / Evidencija / Mehanizacija / Rad·obračun / Administracija.
 - R6.1: `machine_cost_rates` + `project_cost_entries`; `/ured/trosak-masina`, `/ured/troskovi-projekta`.
 - R6.2: `GET /api/workdays/hours-export` CSV; `/ured/obracun-sati`; dashboard agregati na `/pregled`.
+- L0–L2 (prije R7): fiksni shell `100dvh`, interni skrol bez scrollbar-a (`.gx-page` / `.gx-nav`),
+  collapsible nav grupe (`sessionStorage` `gx.nav.groups`), catalog-first u DESIGN.md + AGENTS.md.
 
 ## Ne radi / namjerno još nema
 
-- Partneri UI; R7+; Android store/dev build; puna plata.
+- Partneri UI; R7+ (namjerno STOP nakon L0–L2); Android store/dev build; puna plata.
 
 ## Dugovi / otvoreno
 

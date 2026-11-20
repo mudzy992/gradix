@@ -72,6 +72,9 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
     odobrenje**. Nova vrsta komponente ili novi vizuelni obrazac traži vlasnikovo odobrenje
     i dopunu kataloga i `reference.html` u istom commitu. Sirovi elementi po ekranima su
     zabranjeni lintom (U3); izuzeci žive u `docs/UI-EXCEPTIONS.md` i smiju se samo smanjivati.
+    **Catalog-first:** nova stranica ili novi vizuelni obrazac → prvo `reference.html` +
+    `/katalog`, pa vlasnikovo **„ovako“**, tek onda route/servis. Nova komponenta van
+    kataloga → **STOP** (vidi `docs/design/DESIGN.md` §Catalog-first).
 
 ## Dublje
 
