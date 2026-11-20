@@ -29,6 +29,12 @@ export function daysLabel(obligation: Obligation): string {
 export const targetLabel = (obligation: Obligation): string => {
   if (obligation.workerName) return obligation.workerName;
   if (obligation.machineCode) return `${obligation.machineCode} · ${obligation.machineName ?? ""}`.trim();
+  if (obligation.projectName) {
+    return obligation.projectCode
+      ? `${obligation.projectCode} · ${obligation.projectName}`
+      : obligation.projectName;
+  }
+  if (obligation.tenderTitle) return obligation.tenderTitle;
   return "Cijela firma";
 };
 

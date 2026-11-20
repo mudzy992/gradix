@@ -28,6 +28,8 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: "/ured/projekti", label: "Projekti", icon: "pin", description: "Gradilišta, tim, mašine", group: "Evidencija", permission: "projects.view" },
   { href: "/ured/radnici", label: "Radnici", icon: "users", description: "Ljudi, kontakt, angažman", group: "Evidencija", permission: "workers.view" },
   { href: "/ured/masine", label: "Mašine i vozila", icon: "truck", description: "Inventar, kategorije, brojilo", group: "Evidencija", permission: "equipment.view" },
+  { href: "/ured/partneri", label: "Partneri", icon: "users", description: "Naručioci, dobavljači, servisi", group: "Evidencija", permission: "partners.view" },
+  { href: "/ured/tenderi", label: "Tenderi", icon: "folder", description: "Ponude, status, konverzija", group: "Evidencija", permission: "tenders.view" },
   { href: "/ured/rokovi", label: "Rokovi", icon: "calendar", description: "Ljekarski, registracije, licence", group: "Evidencija", permission: "obligations.view" },
   { href: "/ured/uvoz", label: "Uvoz iz Excela", icon: "upload", description: "Spisak sa papira", group: "Evidencija", permission: "workers.manage" },
   { href: "/ured/sati-masine", label: "Sati mašina", icon: "truck", description: "Radni sati mašina i očitanja brojila", group: "Mehanizacija", permission: "machines.work_log.view" },

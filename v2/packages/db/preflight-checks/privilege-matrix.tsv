@@ -40,6 +40,8 @@ table	machine_daily_checks	SELECT;INSERT;UPDATE	-		R5.4 dnevni pregled; FORCE RL
 table	machine_daily_check_revisions	SELECT;INSERT	-		R5.4 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	machine_daily_check_attachments	SELECT;INSERT;UPDATE	-		R5.4 check photos; mirror obligations; FORCE RLS; no DELETE.
 table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
+table	tenders	SELECT;INSERT;UPDATE	-		R7 tenders; Money; FORCE RLS; no DELETE.
+table	tender_attachments	SELECT;INSERT;UPDATE	-		R7 tender MinIO attachments; FORCE RLS; no DELETE.
 table	machine_faults	SELECT;INSERT;UPDATE	-		R5.5 kvarovi; Money centi+valuta; FORCE RLS; no DELETE.
 table	machine_fault_revisions	SELECT;INSERT	-		R5.5 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	approval_requests	SELECT;INSERT;UPDATE	-		R5.5 fault cost approval status reuse; FORCE RLS; no DELETE.

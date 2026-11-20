@@ -83,6 +83,15 @@ export function objectKey(companyId: string, obligationId: string, attachmentId:
   return `${ATTACHMENT_PREFIX}${companyId}/obligations/${obligationId}/${attachmentId}`;
 }
 
+/** R7: tender prilozi — isti prefix, druga putanja. */
+export function tenderAttachmentObjectKey(
+  companyId: string,
+  tenderId: string,
+  attachmentId: string,
+): string {
+  return `${ATTACHMENT_PREFIX}${companyId}/tenders/${tenderId}/${attachmentId}`;
+}
+
 export type StorageConfig =
   | { configured: true; client: S3Client; presignClient: S3Client; bucket: string; publicEndpoint: string }
   | { configured: false; reason: string };

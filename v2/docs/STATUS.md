@@ -25,6 +25,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
 | R6.2 Obračun sati CSV + dashboard | **isporučeno** (`9096017`, CI 44709218406) | spremno |
 | L0–L2 Shell layout + catalog-first | **isporučeno** (`ca306a3`, CI 44721018930) | spremno |
+| R7 Tenderi + Partneri UI | **isporučeno** (R7.0–R7.7; CI TBD) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
@@ -61,10 +62,12 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 - Shell×liste audit: `gx-table-scroll`, floating portal meni (RowActions/user), actionbar sticky u page;
   Expo shell bez izmjene (Stack `headerShown: false` — namjerno, nije web parity).
   Commit `55d111d`, CI 44730677663.
+- R7: `partners.CLIENT`; `/ured/partneri`; `tenders` + attachments + convert WON→project;
+  obligations `entity_kind=TENDER`; `/ured/tenderi` (+ detalj); matrica `.cursor/docs/matrices/tenders/`.
 
 ## Ne radi / namjerno još nema
 
-- Partneri UI; R7+ (namjerno STOP nakon L0–L2); Android store/dev build; puna plata.
+- Predmjer/garancije/checklista (van R7); R8+; Android store/dev build; puna plata.
 
 ## Dugovi / otvoreno
 

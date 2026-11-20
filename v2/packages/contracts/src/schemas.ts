@@ -444,7 +444,7 @@ export type ImportResult = z.infer<typeof ImportResult>;
 
 /* ------------------------------------------------------------------ obaveze (R2b) */
 
-export const ObligationEntityKind = z.enum(["WORKER", "MACHINE", "PROJECT", "COMPANY"]);
+export const ObligationEntityKind = z.enum(["WORKER", "MACHINE", "PROJECT", "COMPANY", "TENDER"]);
 export type ObligationEntityKind = z.infer<typeof ObligationEntityKind>;
 
 export const ObligationStateEnum = z.enum(["valid", "expiring", "expired", "superseded", "no_expiry"]);
@@ -533,6 +533,9 @@ export const Obligation = z.object({
   projectId: z.string().nullable(),
   projectCode: z.string().nullable(),
   projectName: z.string().nullable(),
+  /** R7: obaveza na tenderu. */
+  tenderId: z.string().nullable(),
+  tenderTitle: z.string().nullable(),
   number: z.string().nullable(),
   issuer: z.string().nullable(),
   issuedAt: z.string().nullable(),
@@ -575,6 +578,7 @@ export const ObligationInput = z.object({
   workerId: SafeText.nullable().optional(),
   machineId: SafeText.nullable().optional(),
   projectId: SafeText.nullable().optional(),
+  tenderId: SafeText.nullable().optional(),
   scopeCompany: z.boolean().optional(),
   number: SafeText.max(120).nullable().optional(),
   issuer: SafeText.max(200).nullable().optional(),
@@ -1529,7 +1533,7 @@ export const PartnerRow = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  kind: z.enum(["VENDOR", "SERVICE", "OTHER"]),
+  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]),
   note: z.string().nullable(),
   active: z.boolean(),
 });
@@ -1543,10 +1547,18 @@ export type PartnersResponse = z.infer<typeof PartnersResponse>;
 export const PartnerCreateInput = z.object({
   code: SafeText.min(1).max(64),
   name: SafeText.min(1).max(200),
-  kind: z.enum(["VENDOR", "SERVICE", "OTHER"]),
+  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]),
   note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type PartnerCreateInput = z.infer<typeof PartnerCreateInput>;
+
+export const PartnerPatchInput = z.object({
+  name: SafeText.min(1).max(200).optional(),
+  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]).optional(),
+  note: SafeText.max(2000).nullable().optional(),
+  active: z.boolean().optional(),
+}).strict();
+export type PartnerPatchInput = z.infer<typeof PartnerPatchInput>;
 
 export const PartnerMutationOutcome = z.object({
   outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
@@ -1555,6 +1567,79 @@ export const PartnerMutationOutcome = z.object({
   message: z.string().optional(),
 });
 export type PartnerMutationOutcome = z.infer<typeof PartnerMutationOutcome>;
+
+/* ------------------------------------------------------------------ R7 tenderi */
+
+export const TenderStatus = z.enum(["DRAFT", "SUBMITTED", "WON", "LOST", "WITHDRAWN"]);
+export type TenderStatus = z.infer<typeof TenderStatus>;
+
+export const TenderRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  partnerId: z.string(),
+  partnerName: z.string(),
+  submittedValueAmount: z.string(),
+  currencyCode: z.string().length(3),
+  submittedAt: z.string().nullable(),
+  status: TenderStatus,
+  note: z.string().nullable(),
+  convertedProjectId: z.string().nullable(),
+});
+export type TenderRow = z.infer<typeof TenderRow>;
+
+export const TendersResponse = z.object({ tenders: z.array(TenderRow) });
+export type TendersResponse = z.infer<typeof TendersResponse>;
+
+export const TenderCreateInput = z.object({
+  title: SafeText.min(1).max(300),
+  partnerId: z.string().min(1),
+  submittedValueAmount: z.string().regex(/^\d+\.\d{2}$/),
+  currencyCode: z.string().length(3),
+  note: SafeText.max(4000).nullable().optional(),
+}).strict();
+export type TenderCreateInput = z.infer<typeof TenderCreateInput>;
+
+export const TenderPatchInput = z.object({
+  title: SafeText.min(1).max(300).optional(),
+  partnerId: z.string().min(1).optional(),
+  submittedValueAmount: z.string().regex(/^\d+\.\d{2}$/).optional(),
+  currencyCode: z.string().length(3).optional(),
+  status: TenderStatus.optional(),
+  note: SafeText.max(4000).nullable().optional(),
+}).strict();
+export type TenderPatchInput = z.infer<typeof TenderPatchInput>;
+
+export const TenderMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT", "NOT_FOUND"]),
+  id: z.string().optional(),
+  projectId: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type TenderMutationOutcome = z.infer<typeof TenderMutationOutcome>;
+
+export const TenderAttachment = z.object({
+  id: z.string(),
+  tenderId: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number(),
+  status: z.enum(["pending", "ready"]),
+  createdAt: IsoDate,
+});
+export type TenderAttachment = z.infer<typeof TenderAttachment>;
+
+export const TenderAttachmentsResponse = z.object({
+  attachments: z.array(TenderAttachment),
+});
+export type TenderAttachmentsResponse = z.infer<typeof TenderAttachmentsResponse>;
+
+export const TenderAttachmentRegisterResponse = z.object({
+  attachment: TenderAttachment,
+  uploadUrl: z.string(),
+  uploadExpiresAt: IsoDate,
+});
+export type TenderAttachmentRegisterResponse = z.infer<typeof TenderAttachmentRegisterResponse>;
 
 /* ------------------------------------------------------------------ R6.1 trošak mašine */
 

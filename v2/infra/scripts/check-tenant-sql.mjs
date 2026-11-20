@@ -53,6 +53,8 @@ const TENANT_TABLES = [
   "machine_fault_revisions",
   "machine_faults",
   "partners",
+  "tenders",
+  "tender_attachments",
   "machine_cost_rates",
   "project_cost_entries",
   "machines",

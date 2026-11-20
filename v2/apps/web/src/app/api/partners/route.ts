@@ -13,11 +13,16 @@ export async function GET(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "partners.view");
     if (!guardResult.ok) return guardResult.response;
-    const rows = await listPartners(await getVerifiedPool(), {
-      userId: guardResult.ctx.userId,
-      companyId: guardResult.ctx.companyId,
-      roles: guardResult.ctx.roles as Role[],
-    });
+    const includeInactive = request.nextUrl.searchParams.get("includeInactive") === "1";
+    const rows = await listPartners(
+      await getVerifiedPool(),
+      {
+        userId: guardResult.ctx.userId,
+        companyId: guardResult.ctx.companyId,
+        roles: guardResult.ctx.roles as Role[],
+      },
+      { includeInactive },
+    );
     return ok({ partners: rows });
   } catch (error) {
     return internal(error, "partners.list");

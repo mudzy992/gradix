@@ -162,6 +162,10 @@ export const PERMISSIONS = {
     "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
   ],
   "partners.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  // R7: tenderi (v1 matrica) + convert.
+  "tenders.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "tenders.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "tenders.convert": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   // R6.1: stope €/h i knjiženje na projekat — ACCOUNTANT/SS view; book/manage bez ACCOUNTANT.
   "machines.cost_rate.view": [
     "OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT", "SITE_SUPERVISOR",
@@ -336,7 +340,19 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   },
   "partners.manage": {
     label: "Upravljanje partnerima",
-    description: "Unos i ažuriranje partnera (servis/dobavljač).",
+    description: "Unos i ažuriranje partnera (naručilac/servis/dobavljač).",
+  },
+  "tenders.view": {
+    label: "Pregled tendera",
+    description: "Lista i detalj tendera, status i naručilac.",
+  },
+  "tenders.manage": {
+    label: "Upravljanje tenderima",
+    description: "Unos tendera, prilozi i promjena statusa po matrici.",
+  },
+  "tenders.convert": {
+    label: "Konverzija tendera u projekat",
+    description: "Jednim klikom pretvara dobijeni tender u projekat (atomski).",
   },
   "machines.cost_rate.view": {
     label: "Pregled stope troška mašine",

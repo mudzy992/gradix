@@ -45,13 +45,17 @@ const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
 export default function ObligationsClient({
   canManage,
   initialStateFilter = "",
+  initialEntityKind = "",
 }: {
   canManage: boolean;
   /** C.1: stanje iz adrese (?stanje=isteklo i sl.) — dolazi iz servera, već provjereno. */
   initialStateFilter?: string;
+  /** R7: ?entityKind=TENDER (i ostali) — filter sa detalja tendera. */
+  initialEntityKind?: string;
 }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [stateFilter, setStateFilter] = useState(initialStateFilter);
+  const [entityKindFilter, setEntityKindFilter] = useState(initialEntityKind);
   const [typeFilter, setTypeFilter] = useState("");
   const [filter, setFilter] = useState("");
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -61,8 +65,9 @@ export default function ObligationsClient({
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
+    const qs = entityKindFilter ? `?entityKind=${encodeURIComponent(entityKindFilter)}` : "";
     const [obligations, types] = await Promise.all([
-      apiCall<{ obligations: Obligation[]; counts: Counts; today: string }>("/api/obligations"),
+      apiCall<{ obligations: Obligation[]; counts: Counts; today: string }>(`/api/obligations${qs}`),
       apiCall<{ types: ObligationType[] }>("/api/obligation-types"),
     ]);
     if (!obligations.ok) {
@@ -80,7 +85,7 @@ export default function ObligationsClient({
       today: obligations.data.today,
       types: types.data.types,
     });
-  }, []);
+  }, [entityKindFilter]);
 
   useEffect(() => {
     void load();
@@ -141,6 +146,19 @@ export default function ObligationsClient({
                 <option value="valid">Važeće ({state.counts.valid})</option>
                 <option value="no_expiry">Bez roka ({state.counts.no_expiry})</option>
               </Select>
+            <Select
+              label="Entitet"
+              id="obligation-entity"
+              value={entityKindFilter}
+              onChange={(event) => setEntityKindFilter(event.target.value)}
+            >
+              <option value="">Svi entiteti</option>
+              <option value="WORKER">Radnik</option>
+              <option value="MACHINE">Mašina</option>
+              <option value="PROJECT">Projekat</option>
+              <option value="TENDER">Tender</option>
+              <option value="COMPANY">Firma</option>
+            </Select>
             <Select label="Tip obaveze"id="obligation-type"
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value)}

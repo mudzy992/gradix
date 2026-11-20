@@ -150,6 +150,32 @@ test("vlasnik i računovođa: stižu do Kvarovi iz menija", async ({ page }) => 
   expect(await navLabels(page)).toContain("Kvarovi");
 });
 
+test("vlasnik: stiže do Partneri i Tenderi iz menija", async ({ page }) => {
+  await login(page, "vlasnik@demo.test");
+  const labels = await navLabels(page);
+  expect(labels).toContain("Partneri");
+  expect(labels).toContain("Tenderi");
+  await page.goto("/ured/partneri");
+  await expect(page.getByRole("heading", { name: "Partneri" })).toBeVisible();
+  await page.goto("/ured/tenderi");
+  await expect(page.getByRole("heading", { name: "Tenderi" })).toBeVisible();
+});
+
+test("računovođa: vidi Tenderi, nema dugme Novi tender", async ({ page }) => {
+  await login(page, "racunovodja@demo.test");
+  expect(await navLabels(page)).toContain("Tenderi");
+  await page.goto("/ured/tenderi");
+  await expect(page.getByRole("heading", { name: "Tenderi" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "+ Novi tender" })).toHaveCount(0);
+});
+
+test("radnik: ne vidi Partneri ni Tenderi u meniju", async ({ page }) => {
+  await login(page, "radnik@demo.test");
+  const labels = await navLabels(page);
+  expect(labels).not.toContain("Partneri");
+  expect(labels).not.toContain("Tenderi");
+});
+
 test("računovođa: na Kvarovi nema dugmeta Novi unos", async ({ page }) => {
   await login(page, "racunovodja@demo.test");
   await page.goto("/ured/kvarovi");

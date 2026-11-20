@@ -36,12 +36,17 @@ export default async function ObligationsPage({
   const params = await searchParams;
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
   const initialStateFilter = STATE_FROM_URL[first(params.stanje) ?? ""] ?? "";
+  const entityKindRaw = first(params.entityKind) ?? "";
+  const initialEntityKind = ["WORKER", "MACHINE", "PROJECT", "COMPANY", "TENDER"].includes(entityKindRaw)
+    ? entityKindRaw
+    : "";
 
   return (
     <main className="mx-auto w-full max-w-6xl">
       <ObligationsClient
         canManage={can(auth.ctx.roles, "obligations.manage")}
         initialStateFilter={initialStateFilter}
+        initialEntityKind={initialEntityKind}
       />
     </main>
   );

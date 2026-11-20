@@ -38,6 +38,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       workerId: params.get("workerId") ?? undefined,
       machineId: params.get("machineId") ?? undefined,
       projectId: params.get("projectId") ?? undefined,
+      tenderId: params.get("tenderId") ?? undefined,
       responsibleUserId: params.get("responsibleUserId") ?? undefined,
       ofLinkedWorkerUserId: params.get("mine") === "1" ? guardResult.ctx.userId : undefined,
       includeSuperseded: params.get("includeSuperseded") === "1",

@@ -72,7 +72,7 @@ export type PartnerRow = {
   id: string;
   code: string;
   name: string;
-  kind: "VENDOR" | "SERVICE" | "OTHER";
+  kind: "VENDOR" | "SERVICE" | "OTHER" | "CLIENT";
   note: string | null;
   active: boolean;
 };
@@ -80,6 +80,6 @@ export type PartnerRow = {
 export type PartnerCreateInput = {
   code: string;
   name: string;
-  kind: "VENDOR" | "SERVICE" | "OTHER";
+  kind: "VENDOR" | "SERVICE" | "OTHER" | "CLIENT";
   note?: string | null;
 };

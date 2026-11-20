@@ -62,6 +62,11 @@ export const AUDIT_ACTIONS = [
   "project.override_requested",
   // R4a-2
   "workday.conflict_resolved",
+  // R7
+  "tender.created",
+  "tender.updated",
+  "tender.converted",
+  "tender.attachment.registered",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -79,6 +84,7 @@ export const AUDIT_ENTITY_TYPES = [
   "project_assignment",
   "project_overrides",
   "sync_conflict",
+  "tender",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -126,6 +132,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "project.assignment_overridden": "Iznimka od blokade odobrena",
   "project.override_requested": "Zatražena iznimka od blokade",
   "workday.conflict_resolved": "Sukob radnog dana razriješen",
+  "tender.created": "Tender kreiran",
+  "tender.updated": "Tender izmijenjen",
+  "tender.converted": "Tender pretvoren u projekat",
+  "tender.attachment.registered": "Prilog tendera registriran",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */
