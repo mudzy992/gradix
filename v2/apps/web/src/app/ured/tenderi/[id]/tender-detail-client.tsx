@@ -93,7 +93,7 @@ export function TenderDetailClient({
         ]}
       />
       {caps.canManage && next.length > 0 ? (
-        <div className="gx-inline" style={{ gap: "var(--space-2)", flexWrap: "wrap" }}>
+        <div className="gx-inline-flex">
           {next.map((status) => (
             <Button key={status} disabled={busy} onClick={() => void setStatus(status)}>
               Označi: {STATUS_LABEL[status]}
