@@ -88,6 +88,8 @@ const ICONS: Record<string, ReactNode> = {
       <circle cx="19" cy="12" r="1.2" />
     </>
   ),
+  /** Collapsible nav / accordion — strelica desno; CSS rotira kad je otvoreno. */
+  chevron: <path d="M9 6l6 6-6 6" />,
 };
 
 export type IconName = keyof typeof ICONS;

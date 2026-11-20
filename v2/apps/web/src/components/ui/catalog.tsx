@@ -27,9 +27,19 @@ const rows = [
   { id: "3", name: "Amar Hodžić", role: "Vozač", days: 15, active: true },
 ];
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({
+  title,
+  hint,
+  id,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  id?: string;
+  children: ReactNode;
+}) {
   return (
-    <section>
+    <section id={id}>
       <SectionTitle hint={hint}>{title}</SectionTitle>
       {children}
     </section>
@@ -264,33 +274,44 @@ export function ComponentCatalog() {
       </Section>
 
 
-      <Section title="Layout i shell" hint="Okvir aplikacije: bočna navigacija 232 px, gornja traka 66 px, sadržaj do 1240 px. Ispod — živi okvir u malom.">
+      <Section id="katalog-layout" title="Layout i shell" hint="Fiksna ploča 100dvh: body ne skrola; skrol u gx-page i gx-nav (scrollbar nevidljiv). Topbar fiksiran. Collapsible nav grupe.">
         <Card>
-          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", border: "1px solid var(--line)", borderRadius: "var(--radius-card)", overflow: "hidden", minHeight: 220 }}>
-            <div style={{ borderRight: "1px solid var(--line)", padding: "var(--space-3)", background: "var(--panel)" }}>
-              <p className="gx-nav__group">Pregled</p>
-              <a className="gx-nav-item" aria-current="page" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="home" /></span>Pregled</a>
-              <p className="gx-nav__group">Evidencija</p>
-              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="users" /></span>Radnici</a>
-              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="truck" /></span>Mašine</a>
-              <p className="gx-nav__group">Rad / obračun</p>
-              <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="calendar" /></span>Radni dani <Badge>2</Badge></a>
+          <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", border: "1px solid var(--line)", borderRadius: "var(--radius-card)", overflow: "hidden", height: 260 }}>
+            <div style={{ display: "flex", flexDirection: "column", borderRight: "1px solid var(--line)", padding: "var(--space-3)", background: "var(--panel)", minHeight: 0 }}>
+              <p style={{ fontWeight: 800, marginBottom: "var(--space-2)" }}>Gradix</p>
+              <div className="gx-scroll-hidden" style={{ flex: 1, minHeight: 0 }}>
+                <button type="button" className="gx-nav__group-btn" aria-expanded={true} style={{ marginTop: 0 }}>
+                  Pregled <Icon name="chevron" />
+                </button>
+                <a className="gx-nav-item" aria-current="page" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="home" /></span>Pregled</a>
+                <button type="button" className="gx-nav__group-btn" aria-expanded={false}>
+                  Evidencija <Icon name="chevron" />
+                </button>
+                <button type="button" className="gx-nav__group-btn" aria-expanded={true}>
+                  Rad / obračun <Icon name="chevron" />
+                </button>
+                <a className="gx-nav-item" href="#katalog-layout"><span className="gx-nav-item__icon"><Icon name="calendar" /></span>Radni dani <Badge>2</Badge></a>
+              </div>
+              <p className="gx-page-sub" style={{ marginTop: "var(--space-2)", flex: "none" }}>Org footer</p>
             </div>
-            <div>
-              <div className="gx-topbar" style={{ borderBottom: "1px solid var(--line)" }}>
-                <strong>Topbar (shell)</strong>
+            <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <div className="gx-topbar" style={{ borderBottom: "1px solid var(--line)", flex: "none" }}>
+                <strong>Topbar (fiksan)</strong>
                 <span className="gx-topbar__spacer" />
                 <IconButton icon="search" label="Pretraga (shell primjer)" />
                 <IconButton icon="sun" label="Tema (shell primjer)" />
                 <Avatar name="Amina Karić" size="sm" />
               </div>
-              <div style={{ padding: "var(--space-4)" }}>
+              <div className="gx-scroll-hidden" style={{ flex: 1, minHeight: 0, padding: "var(--space-4)" }}>
                 <Breadcrumbs items={[{ label: "Pregled", href: "#katalog-layout" }, { label: "Radnici", href: "#katalog-layout" }, { label: "Amina Karić" }]} />
-                <p className="gx-page-sub" style={{ marginTop: "var(--space-3)" }}>Sadržaj ide u gx-main: naslov stranice, filteri, kartice i tabele — uvijek istim redom.</p>
+                <p className="gx-page-sub" style={{ marginTop: "var(--space-3)" }}>
+                  Okvir: fiksna ploča + interni skrol. Dug sadržaj skrola ovdje, ne cijeli dokument.
+                </p>
+                <p className="gx-page-sub">Collapsible grupe: aktivna otvorena; klik na naslov toggle; stanje u sessionStorage.</p>
               </div>
             </div>
           </div>
-          <p style={{ marginTop: "var(--space-3)" }}>Layout primitivi: <Mono>Stack</Mono> (vertikalno), <Mono>Inline</Mono> (vodoravno), <Mono>FormGrid</Mono> (2 kolone → 1 na mobilnom), <Mono>PageHeader</Mono>, <Mono>FilterBar</Mono>.</p>
+          <p style={{ marginTop: "var(--space-3)" }}>Layout primitivi: <Mono>Stack</Mono>, <Mono>Inline</Mono>, <Mono>FormGrid</Mono>, <Mono>PageHeader</Mono>, <Mono>FilterBar</Mono>. Klase: <Mono>gx-shell</Mono>, <Mono>gx-scroll-hidden</Mono>, <Mono>gx-nav__group-btn</Mono>.</p>
         </Card>
       </Section>
 

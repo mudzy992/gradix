@@ -32,30 +32,38 @@ button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--link);outline-offset:2px}
 svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-.shell{display:grid;grid-template-columns:232px 1fr;gap:8px;padding:8px;min-height:100vh}
+/* Fiksni viewport: body ne skrola; skrol u .nav i .page (scrollbar nevidljiv). */
+html,body{height:100%;overflow:hidden}
+body[data-r4a-preview],body[data-r4b-approval-preview],body[data-c1-preview]{height:auto;overflow:auto}
+.shell{display:grid;grid-template-columns:232px 1fr;gap:8px;padding:8px;height:100vh;height:100dvh;max-height:100dvh;box-sizing:border-box;overflow:hidden}
 .scrim{display:none}
-.side{display:flex;flex-direction:column;padding:12px 8px;position:sticky;top:8px;height:calc(100vh - 16px)}
-.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em;padding:4px 10px 16px}
+.side{display:flex;flex-direction:column;padding:12px 8px;min-height:0;height:100%;max-height:100%}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em;padding:4px 10px 16px;flex:none}
 .logo i{width:22px;height:22px;border-radius:7px;background:var(--primary);position:relative}
 .logo i::after{content:"";position:absolute;left:5px;right:5px;top:10px;height:2px;background:var(--accent);border-radius:2px;box-shadow:0 -4px 0 -0 transparent}
-.nav{display:flex;flex-direction:column;gap:2px}
-.nav small{color:var(--muted);font-size:12px;font-weight:600;margin:16px 10px 6px}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav::-webkit-scrollbar{display:none}
+.nav small,.nav .group-btn{color:var(--muted);font-size:12px;font-weight:600;margin:16px 10px 6px}
+.nav .group-btn{display:flex;align-items:center;justify-content:space-between;width:calc(100% - 8px);margin:12px 4px 4px;padding:6px 10px;border:0;border-radius:8px;background:transparent;font:inherit;color:var(--muted);cursor:pointer;text-align:left}
+.nav .group-btn:hover{background:var(--raise);color:var(--text)}
+.nav .group-btn:first-child{margin-top:0}
 .nav a{display:flex;align-items:center;gap:12px;height:38px;padding:0 10px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:600}
 .nav a:hover{background:var(--raise);color:var(--text)}
 .nav a[aria-current]{background:var(--panel);color:var(--text);box-shadow:var(--shadow);outline:1px solid var(--line)}
 .nav a[aria-current] svg{color:var(--link)}
-.org{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--raise)}
+.org{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--raise);flex:none}
 .av{width:30px;height:30px;border-radius:50%;background:var(--tint);color:var(--link);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
 .org b{display:block;font-size:13px;line-height:1.2}.org span{font-size:12px;color:var(--muted)}
 
-.main{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
-.top{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--line)}
+.main{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0;min-height:0;height:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--line);flex:none}
 .search{flex:1;max-width:420px;display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;border-radius:999px;background:var(--raise);color:var(--muted)}
 .kbd{margin-left:auto;font:12px "IBM Plex Mono",monospace;padding:1px 7px;border-radius:6px;border:1px solid var(--line)}
 .sp{flex:1}
 .icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
 .icon-btn:hover{background:var(--raise);color:var(--text)}
-.page{padding:32px 28px 56px;max-width:1240px}
+.page{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;padding:32px 28px 56px;max-width:1240px;box-sizing:border-box;width:100%;margin:0 auto}
+.page::-webkit-scrollbar{display:none}
 .ph{display:flex;gap:16px;align-items:flex-end;margin-bottom:28px}
 h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;font-weight:800}
 h2{font-size:16px;font-weight:700;letter-spacing:-.01em}
@@ -395,15 +403,22 @@ body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r
   <div class="scrim" id="scrim"></div>
   <aside class="side" aria-label="Glavna navigacija">
     <div class="logo"><i aria-hidden="true"></i>Gradix</div>
-    <nav class="nav">
-      <a href="#" aria-current="page"><svg><use href="#i-home"/></svg>Pregled</a>
-      <small>Posao</small>
-      <a href="#"><svg><use href="#i-folder"/></svg>Projekti</a>
-      <a href="#"><svg><use href="#i-users"/></svg>Radnici</a>
-      <a href="#"><svg><use href="#i-truck"/></svg>Mehanizacija</a>
-      <a href="#"><svg><use href="#i-cal"/></svg>Rokovi</a>
-      <small>Firma</small>
-      <a href="#"><svg><use href="#i-shield"/></svg>Pristup i role</a>
+    <nav class="nav" aria-label="Glavna navigacija">
+      <button type="button" class="group-btn" aria-expanded="true" aria-controls="ref-nav-pregled">Pregled</button>
+      <div id="ref-nav-pregled">
+        <a href="#" aria-current="page"><svg><use href="#i-home"/></svg>Pregled</a>
+      </div>
+      <button type="button" class="group-btn" aria-expanded="true" aria-controls="ref-nav-posao">Evidencija</button>
+      <div id="ref-nav-posao">
+        <a href="#"><svg><use href="#i-folder"/></svg>Projekti</a>
+        <a href="#"><svg><use href="#i-users"/></svg>Radnici</a>
+        <a href="#"><svg><use href="#i-truck"/></svg>Mehanizacija</a>
+        <a href="#"><svg><use href="#i-cal"/></svg>Rokovi</a>
+      </div>
+      <button type="button" class="group-btn" aria-expanded="false" aria-controls="ref-nav-firma">Administracija</button>
+      <div id="ref-nav-firma" hidden>
+        <a href="#"><svg><use href="#i-shield"/></svg>Pristup i role</a>
+      </div>
     </nav>
     <div class="org"><div class="av">NG</div><div><b>Niskogradnja Demo</b><span>Emir Hodžić · Vlasnik</span></div></div>
   </aside>
@@ -1430,6 +1445,15 @@ mb.onclick=()=>setOpen(sh.dataset.open!=="true");
 sc.onclick=()=>setOpen(false);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")setOpen(false)});
 document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b)));
+document.querySelectorAll(".nav .group-btn").forEach((btn)=>{
+  btn.addEventListener("click",()=>{
+    const panel=document.getElementById(btn.getAttribute("aria-controls"));
+    if(!panel)return;
+    const open=btn.getAttribute("aria-expanded")!=="true";
+    btn.setAttribute("aria-expanded",String(open));
+    panel.hidden=!open;
+  });
+});
 </script>
 </body>
 </html>
