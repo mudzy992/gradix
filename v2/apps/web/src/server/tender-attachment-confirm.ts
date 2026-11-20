@@ -4,30 +4,19 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import type { TenderActor } from "./tender-service";
 import { presignDownload, statObject, storageConfig } from "./storage";
-import type { TenderAttachmentRow } from "./tender-attachment-service";
-
-type Err = { code: "FORBIDDEN" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"; message: string };
-
-const COLS = "id, tender_id, file_name, content_type, size_bytes, status, created_at";
-
-function toRow(row: Record<string, unknown>): TenderAttachmentRow {
-  return {
-    id: String(row.id),
-    tenderId: String(row.tender_id),
-    fileName: String(row.file_name),
-    contentType: String(row.content_type),
-    sizeBytes: Number(row.size_bytes),
-    status: String(row.status),
-    createdAt: new Date(String(row.created_at)).toISOString(),
-  };
-}
+import {
+  TENDER_ATTACHMENT_COLS,
+  toTenderAttachmentRow,
+  type TenderAttachmentError,
+  type TenderAttachmentRow,
+} from "./tender-attachment-types";
 
 export async function confirmTenderAttachment(
   pool: Pool,
   actor: TenderActor,
   tenderId: string,
   attachmentId: string,
-): Promise<{ attachment: TenderAttachmentRow } | Err> {
+): Promise<{ attachment: TenderAttachmentRow } | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.manage")) {
     return { code: "FORBIDDEN", message: "Nemate pravo potvrde priloga." };
   }
@@ -58,10 +47,10 @@ export async function confirmTenderAttachment(
       [attachmentId, actor.companyId],
     );
     const updated = await client.query(
-      `SELECT ${COLS} FROM public.tender_attachments WHERE id = $1 AND company_id = $2`,
+      `SELECT ${TENDER_ATTACHMENT_COLS} FROM public.tender_attachments WHERE id = $1 AND company_id = $2`,
       [attachmentId, actor.companyId],
     );
-    return { attachment: toRow(updated.rows[0]! as Record<string, unknown>) };
+    return { attachment: toTenderAttachmentRow(updated.rows[0]! as Record<string, unknown>) };
   });
 }
 
@@ -70,7 +59,7 @@ export async function tenderAttachmentDownloadUrl(
   actor: TenderActor,
   tenderId: string,
   attachmentId: string,
-): Promise<{ url: string; expiresAt: string } | Err> {
+): Promise<{ url: string; expiresAt: string } | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   const config = storageConfig();
   if (!config.configured) return { code: "CONFLICT", message: config.reason };

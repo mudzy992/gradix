@@ -1,9 +1,17 @@
-/** R7.3: tender_attachments — list + register. Confirm/url in companion file. */
+/** R7.3: tender_attachments — list + register. */
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { writeAudit } from "./audit";
 import { can } from "./permissions";
 import type { TenderActor } from "./tender-service";
+import {
+  isTenderAttachmentError,
+  TENDER_ATTACHMENT_COLS,
+  toTenderAttachmentRow,
+  type TenderAttachmentError,
+  type TenderAttachmentRequest,
+  type TenderAttachmentRow,
+} from "./tender-attachment-types";
 import {
   MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS_PER_OBLIGATION,
@@ -14,43 +22,8 @@ import {
   tenderAttachmentObjectKey,
 } from "./storage";
 
-export type TenderAttachmentRow = {
-  id: string;
-  tenderId: string;
-  fileName: string;
-  contentType: string;
-  sizeBytes: number;
-  status: string;
-  createdAt: string;
-};
-
-export type TenderAttachmentRequest = {
-  fileName: string;
-  sizeBytes: number;
-  sha256: string;
-  head: Buffer;
-};
-
-type Err = { code: "FORBIDDEN" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"; message: string };
-
-const COLS = "id, tender_id, file_name, content_type, size_bytes, status, created_at";
-
-export function toTenderAttachmentRow(row: Record<string, unknown>): TenderAttachmentRow {
-  return {
-    id: String(row.id),
-    tenderId: String(row.tender_id),
-    fileName: String(row.file_name),
-    contentType: String(row.content_type),
-    sizeBytes: Number(row.size_bytes),
-    status: String(row.status),
-    createdAt: new Date(String(row.created_at)).toISOString(),
-  };
-}
-
-export function isTenderAttachmentError(value: unknown): value is Err {
-  return Boolean(value && typeof value === "object" && "code" in value && "message" in value);
-}
-
+export type { TenderAttachmentRow, TenderAttachmentRequest };
+export { isTenderAttachmentError };
 export {
   confirmTenderAttachment,
   tenderAttachmentDownloadUrl,
@@ -60,7 +33,7 @@ export async function listTenderAttachments(
   pool: Pool,
   actor: TenderActor,
   tenderId: string,
-): Promise<TenderAttachmentRow[] | Err> {
+): Promise<TenderAttachmentRow[] | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const tender = await client.query(`SELECT 1 FROM public.tenders WHERE id = $1 AND company_id = $2`, [
@@ -69,7 +42,7 @@ export async function listTenderAttachments(
     ]);
     if (tender.rowCount === 0) return { code: "NOT_FOUND", message: "Tender nije pronađen." };
     const rows = await client.query(
-      `SELECT ${COLS} FROM public.tender_attachments
+      `SELECT ${TENDER_ATTACHMENT_COLS} FROM public.tender_attachments
         WHERE company_id = $1 AND tender_id = $2 ORDER BY created_at DESC`,
       [actor.companyId, tenderId],
     );
@@ -82,7 +55,7 @@ export async function registerTenderAttachment(
   actor: TenderActor,
   tenderId: string,
   input: TenderAttachmentRequest,
-): Promise<{ attachment: TenderAttachmentRow; uploadUrl: string; uploadExpiresAt: string } | Err> {
+): Promise<{ attachment: TenderAttachmentRow; uploadUrl: string; uploadExpiresAt: string } | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.manage")) {
     return { code: "FORBIDDEN", message: "Nemate pravo unosa priloga." };
   }
@@ -140,7 +113,7 @@ export async function registerTenderAttachment(
       metadata: { attachmentId: id },
     });
     const created = await client.query(
-      `SELECT ${COLS} FROM public.tender_attachments WHERE id = $1 AND company_id = $2`,
+      `SELECT ${TENDER_ATTACHMENT_COLS} FROM public.tender_attachments WHERE id = $1 AND company_id = $2`,
       [id, actor.companyId],
     );
     return {
