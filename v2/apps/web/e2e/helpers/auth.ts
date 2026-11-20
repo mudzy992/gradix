@@ -36,12 +36,19 @@ export async function loginApi(page: Page, email: string): Promise<void> {
 }
 
 /**
- * Odjava preko API (isti endpoint kao forma u user meniju).
+ * Odjava preko fetch u page kontekstu (cookie jar preglednika).
  * UI meni na Pixel 5 je nestabilan kad je drawer otvoren (sidebar intercept).
  */
 export async function logoutUi(page: Page): Promise<void> {
-  const response = await page.request.post("/api/auth/logout");
-  expect(response.ok(), "logout").toBeTruthy();
+  const status = await page.evaluate(async () => {
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    return response.status;
+  });
+  expect(status, "logout status").toBeLessThan(400);
   await page.goto("/login");
   await page.waitForURL("**/login");
 }
