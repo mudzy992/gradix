@@ -14,8 +14,17 @@ async function login(page: Page, email: string) {
   await page.waitForURL("**/pregled");
 }
 
+/** Otvara sve collapsible grupe pa čita linkove (L1: zatvorene grupe nisu u a11y stablu). */
 async function navLabels(page: Page): Promise<string[]> {
   const nav = page.getByRole("navigation", { name: "Glavna navigacija" });
+  const groupButtons = nav.getByRole("button");
+  const count = await groupButtons.count();
+  for (let index = 0; index < count; index += 1) {
+    const button = groupButtons.nth(index);
+    if ((await button.getAttribute("aria-expanded")) === "false") {
+      await button.click();
+    }
+  }
   return (await nav.getByRole("link").allInnerTexts()).map((text) => text.trim());
 }
 
