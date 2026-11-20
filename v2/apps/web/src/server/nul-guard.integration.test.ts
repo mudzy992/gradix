@@ -68,6 +68,16 @@ import { POST as machineFaultReviseRoute } from "@/app/api/machine-faults/[id]/r
 import { POST as machineFaultApproveRoute } from "@/app/api/machine-faults/[id]/approve/route";
 import { POST as machineFaultRejectRoute } from "@/app/api/machine-faults/[id]/reject/route";
 import { POST as partnersPost } from "@/app/api/partners/route";
+import { PATCH as partnersPatch } from "@/app/api/partners/[id]/route";
+import { GET as tendersGet, POST as tendersPost } from "@/app/api/tenders/route";
+import { GET as tenderGet, PATCH as tendersPatch } from "@/app/api/tenders/[id]/route";
+import { POST as tendersConvertPost } from "@/app/api/tenders/[id]/convert/route";
+import {
+  GET as tenderAttachmentsGet,
+  POST as tenderAttachmentsPost,
+} from "@/app/api/tenders/[id]/attachments/route";
+import { POST as tenderAttachmentConfirmPost } from "@/app/api/tenders/[id]/attachments/[attachmentId]/confirm/route";
+import { GET as tenderAttachmentUrlGet } from "@/app/api/tenders/[id]/attachments/[attachmentId]/url/route";
 import { POST as machineCostRatesPost } from "@/app/api/machine-cost-rates/route";
 import { POST as projectCostBookPost } from "@/app/api/project-cost-entries/book/route";
 import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
@@ -209,6 +219,13 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/machine-faults/{id}/approve": { POST: machineFaultApproveRoute },
   "/api/machine-faults/{id}/reject": { POST: machineFaultRejectRoute },
   "/api/partners": { POST: partnersPost },
+  "/api/partners/{id}": { PATCH: partnersPatch },
+  "/api/tenders": { GET: tendersGet, POST: tendersPost },
+  "/api/tenders/{id}": { GET: tenderGet, PATCH: tendersPatch },
+  "/api/tenders/{id}/convert": { POST: tendersConvertPost },
+  "/api/tenders/{id}/attachments": { GET: tenderAttachmentsGet, POST: tenderAttachmentsPost },
+  "/api/tenders/{id}/attachments/{attachmentId}/confirm": { POST: tenderAttachmentConfirmPost },
+  "/api/tenders/{id}/attachments/{attachmentId}/url": { GET: tenderAttachmentUrlGet },
   "/api/machine-cost-rates": { POST: machineCostRatesPost },
   "/api/project-cost-entries/book": { POST: projectCostBookPost },
   "/api/workdays/hours-export": { GET: hoursExportGet },
