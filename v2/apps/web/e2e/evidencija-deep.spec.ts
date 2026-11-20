@@ -4,7 +4,7 @@
  */
 import { expect, test } from "@playwright/test";
 import {
-  apiFrom,
+  apiPatch,
   convertTender,
   createMachine,
   createPartner,
@@ -24,12 +24,11 @@ test.beforeAll(() => {
 test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
   test("partner + tender DRAFT→SUBMITTED→WON→convert; UI vidi tender", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
-    const api = apiFrom(page);
-    const partner = await createPartner(api);
-    const tender = await createTender(api, partner.id);
-    await patchTenderStatus(api, tender.id, "SUBMITTED");
-    await patchTenderStatus(api, tender.id, "WON");
-    const { projectId } = await convertTender(api, tender.id);
+    const partner = await createPartner(page);
+    const tender = await createTender(page, partner.id);
+    await patchTenderStatus(page, tender.id, "SUBMITTED");
+    await patchTenderStatus(page, tender.id, "WON");
+    const { projectId } = await convertTender(page, tender.id);
     expect(projectId).toBeTruthy();
 
     await page.goto("/ured/tenderi");
@@ -39,12 +38,11 @@ test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
 
   test("projekat, radnik, mašina self-owned vidljivi u listama", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
-    const api = apiFrom(page);
-    const project = await createProject(api);
-    const worker = await createWorker(api);
-    const categories = await listEquipmentCategories(api);
+    const project = await createProject(page);
+    const worker = await createWorker(page);
+    const categories = await listEquipmentCategories(page);
     expect(categories.length, "seed kategorije").toBeGreaterThan(0);
-    const machine = await createMachine(api, categories[0]!.id);
+    const machine = await createMachine(page, categories[0]!.id);
 
     await page.goto("/ured/projekti");
     await expectHeading(page, "Projekti");
@@ -62,7 +60,7 @@ test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
 
   test("partneri UI: self-owned CLIENT u listi", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
-    const partner = await createPartner(apiFrom(page), { kind: "CLIENT" });
+    const partner = await createPartner(page, { kind: "CLIENT" });
     await page.goto("/ured/partneri");
     await expectHeading(page, "Partneri");
     await expect(page.getByText(partner.code, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
@@ -81,13 +79,12 @@ test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
 
   test("tender LOST terminal; invalid skip DRAFT→WON odbijen", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
-    const api = apiFrom(page);
-    const partner = await createPartner(api);
-    const tender = await createTender(api, partner.id);
-    const bad = await api.patch(`/api/tenders/${tender.id}`, { data: { status: "WON" } });
-    expect(bad.ok()).toBeFalsy();
-    await patchTenderStatus(api, tender.id, "SUBMITTED");
-    await patchTenderStatus(api, tender.id, "LOST");
+    const partner = await createPartner(page);
+    const tender = await createTender(page, partner.id);
+    const bad = await apiPatch(page, `/api/tenders/${tender.id}`, { status: "WON" });
+    expect(bad.status >= 400).toBeTruthy();
+    await patchTenderStatus(page, tender.id, "SUBMITTED");
+    await patchTenderStatus(page, tender.id, "LOST");
     await page.goto(`/ured/tenderi`);
     await expect(page.getByText(tender.title, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
   });

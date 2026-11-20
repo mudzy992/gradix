@@ -3,7 +3,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import {
-  apiFrom,
+  apiPost,
   createMachine,
   createProject,
   listEquipmentCategories,
@@ -18,11 +18,10 @@ test.beforeAll(() => {
 
 async function setupMachine(page: Page) {
   await loginApi(page, E2E_USERS.admin);
-  const api = apiFrom(page);
-  const categories = await listEquipmentCategories(api);
-  const machine = await createMachine(api, categories[0]!.id);
-  const project = await createProject(api);
-  return { api, machine, project };
+  const categories = await listEquipmentCategories(page);
+  const machine = await createMachine(page, categories[0]!.id);
+  const project = await createProject(page);
+  return { machine, project };
 }
 
 function isoHoursAgo(hours: number): string {
@@ -31,59 +30,53 @@ function isoHoursAgo(hours: number): string {
 
 test.describe("mehanizacija deep", { tag: ["@deep", "@deep-mehanizacija"] }, () => {
   test("sati mašine: API unos + UI lista", async ({ page }) => {
-    const { api, machine, project } = await setupMachine(page);
-    const res = await api.post("/api/machine-work-logs", {
-      data: {
-        machineId: machine.id,
-        projectId: project.id,
-        startedAt: isoHoursAgo(3),
-        endedAt: isoHoursAgo(1),
-        mode: "WORK",
-        note: uniqueCode("sat"),
-      },
+    const { machine, project } = await setupMachine(page);
+    const res = await apiPost(page, "/api/machine-work-logs", {
+      machineId: machine.id,
+      projectId: project.id,
+      startedAt: isoHoursAgo(3),
+      endedAt: isoHoursAgo(1),
+      mode: "WORK",
+      note: uniqueCode("sat"),
     });
-    expect(res.ok(), await res.text()).toBeTruthy();
+    expect(res.status < 400, JSON.stringify(res.body)).toBeTruthy();
     await page.goto("/ured/sati-masine");
     await expectHeading(page, "Sati mašina");
     await expect(page.getByText(machine.code, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("gorivo: API unos + UI", async ({ page }) => {
-    const { api, machine, project } = await setupMachine(page);
-    const res = await api.post("/api/fuel-entries", {
-      data: {
-        machineId: machine.id,
-        projectId: project.id,
-        filledAt: new Date().toISOString(),
-        liters: 12.5,
-        totalAmount: "50.00",
-        currencyCode: "BAM",
-        note: uniqueCode("fuel"),
-      },
+    const { machine, project } = await setupMachine(page);
+    const res = await apiPost(page, "/api/fuel-entries", {
+      machineId: machine.id,
+      projectId: project.id,
+      filledAt: new Date().toISOString(),
+      liters: 12.5,
+      totalAmount: "50.00",
+      currencyCode: "BAM",
+      note: uniqueCode("fuel"),
     });
-    expect(res.ok(), await res.text()).toBeTruthy();
+    expect(res.status < 400, JSON.stringify(res.body)).toBeTruthy();
     await page.goto("/ured/gorivo");
     await expectHeading(page, "Gorivo");
     await expect(page.getByText(machine.code, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("ture: API unos + UI", async ({ page }) => {
-    const { api, machine, project } = await setupMachine(page);
-    const res = await api.post("/api/hauls", {
-      data: {
-        machineId: machine.id,
-        projectId: project.id,
-        hauledAt: new Date().toISOString(),
-        originText: "E2E origin",
-        destinationText: "E2E dest",
-        materialText: "šljunak",
-        quantity: 10,
-        quantityUnit: "M3",
-        tripCount: 2,
-        note: uniqueCode("haul"),
-      },
+    const { machine, project } = await setupMachine(page);
+    const res = await apiPost(page, "/api/hauls", {
+      machineId: machine.id,
+      projectId: project.id,
+      hauledAt: new Date().toISOString(),
+      originText: "E2E origin",
+      destinationText: "E2E dest",
+      materialText: "šljunak",
+      quantity: 10,
+      quantityUnit: "M3",
+      tripCount: 2,
+      note: uniqueCode("haul"),
     });
-    expect(res.ok(), await res.text()).toBeTruthy();
+    expect(res.status < 400, JSON.stringify(res.body)).toBeTruthy();
     await page.goto("/ured/ture");
     await expectHeading(page, "Ture");
     await expect(page.getByText(machine.code, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
