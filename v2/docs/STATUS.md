@@ -60,6 +60,7 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
   collapsible nav grupe (`sessionStorage` `gx.nav.groups`), catalog-first u DESIGN.md + AGENTS.md.
 - Shell×liste audit: `gx-table-scroll`, floating portal meni (RowActions/user), actionbar sticky u page;
   Expo shell bez izmjene (Stack `headerShown: false` — namjerno, nije web parity).
+  Commit `55d111d`, CI 44730677663.
 
 ## Ne radi / namjerno još nema
 
