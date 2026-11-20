@@ -36,14 +36,12 @@ export async function loginApi(page: Page, email: string): Promise<void> {
 }
 
 export async function logoutUi(page: Page): Promise<void> {
-  // Drawer (<960px) može prekriti avatar — zatvori prije user menija.
-  const closeNav = page.getByRole("button", { name: "Zatvori meni" });
-  if (await closeNav.isVisible().catch(() => false)) {
-    await closeNav.click();
-  }
+  // Drawer (<960px) prekriva topbar — scrim/Escape zatvara; force za avatar.
   const scrim = page.getByRole("button", { name: "Zatvori navigaciju" });
   if (await scrim.isVisible().catch(() => false)) {
-    await scrim.click();
+    await scrim.click({ force: true });
+  } else {
+    await page.keyboard.press("Escape");
   }
   await page.getByRole("button", { name: /Korisnički meni/ }).click({ force: true });
   await page.getByRole("menuitem", { name: "Odjavi se" }).click();
