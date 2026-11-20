@@ -1,7 +1,7 @@
 /**
  * Deep Mehanizacija — API create sati/gorivo/ture + UI lista.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   apiFrom,
   createMachine,
@@ -16,7 +16,7 @@ test.beforeAll(() => {
   requireE2ePassword();
 });
 
-async function setupMachine(page: import("@playwright/test").Page) {
+async function setupMachine(page: Page) {
   await loginApi(page, E2E_USERS.admin);
   const api = apiFrom(page);
   const categories = await listEquipmentCategories(api);
