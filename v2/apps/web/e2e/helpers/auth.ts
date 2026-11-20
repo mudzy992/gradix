@@ -35,15 +35,13 @@ export async function loginApi(page: Page, email: string): Promise<void> {
   expect(response.ok(), `login ${email}`).toBeTruthy();
 }
 
+/**
+ * Odjava preko API (isti endpoint kao forma u user meniju).
+ * UI meni na Pixel 5 je nestabilan kad je drawer otvoren (sidebar intercept).
+ */
 export async function logoutUi(page: Page): Promise<void> {
-  // Drawer (<960px) prekriva topbar — scrim/Escape zatvara; force za avatar.
-  const scrim = page.getByRole("button", { name: "Zatvori navigaciju" });
-  if (await scrim.isVisible().catch(() => false)) {
-    await scrim.click({ force: true });
-  } else {
-    await page.keyboard.press("Escape");
-  }
-  await page.getByRole("button", { name: /Korisnički meni/ }).click({ force: true });
-  await page.getByRole("menuitem", { name: "Odjavi se" }).click();
+  const response = await page.request.post("/api/auth/logout");
+  expect(response.ok(), "logout").toBeTruthy();
+  await page.goto("/login");
   await page.waitForURL("**/login");
 }
