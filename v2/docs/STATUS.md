@@ -58,6 +58,8 @@ env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP
 - R6.2: `GET /api/workdays/hours-export` CSV; `/ured/obracun-sati`; dashboard agregati na `/pregled`.
 - L0–L2 (prije R7): fiksni shell `100dvh`, interni skrol bez scrollbar-a (`.gx-page` / `.gx-nav`),
   collapsible nav grupe (`sessionStorage` `gx.nav.groups`), catalog-first u DESIGN.md + AGENTS.md.
+- Shell×liste audit: `gx-table-scroll`, floating portal meni (RowActions/user), actionbar sticky u page;
+  Expo shell bez izmjene (Stack `headerShown: false` — namjerno, nije web parity).
 
 ## Ne radi / namjerno još nema
 

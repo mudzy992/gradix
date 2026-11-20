@@ -329,6 +329,7 @@
   margin: 0 auto;
   padding: var(--space-6) var(--space-7) 56px;
   box-sizing: border-box;
+  overflow-x: clip; /* horizontal ostaje u .gx-table-scroll, ne na ploči */
 }
 
 /* Zaglavlje stranice: naslov 30/800 + podnaslov, akcije desno (na telefonu ispod). */
@@ -395,6 +396,7 @@
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -465,6 +467,14 @@
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow-lift);
+}
+
+/* Portal meni: ne siječe ga overflow .gx-page / .gx-main. */
+.gx-menu--floating {
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 60;
 }
 
 .gx-menu-item {
@@ -953,6 +963,18 @@ textarea.gx-input {
 
 /* ------------------------------------------------------------------ tabela */
 
+/*
+  Omotač tabele u fiksnom shellu: horizontalni skrol ovdje (ne na .gx-page).
+  Vertikalni skrol ostaje na .gx-page; ljepljiva .gx-actionbar drži se unutar page scrollporta.
+*/
+.gx-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Bez zebre; hover podiže red. Cifre tabularne, naslovi kolona tihi i mali. */
 .gx-table {
   width: 100%;
@@ -1340,8 +1362,7 @@ select.gx-input option, select.gx-input optgroup {
 .gx-mt-4 { margin-top: var(--space-4); }
 .gx-mt-5 { margin-top: var(--space-5); }
 
-/* R4a-2/B: ljepljiva traka akcija na stranici detalja sukoba — akcije su
-   uvijek na istom mjestu ekrana, i na 360 px i na širokom ekranu. */
+/* R4a-2/B: ljepljiva traka — sticky unutar .gx-page (scrollport), ne viewport/body. */
 .gx-actionbar {
   position: sticky;
   bottom: var(--space-3);

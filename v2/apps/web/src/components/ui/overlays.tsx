@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@/components/dialog";
 import { Button } from "./primitives";
 import { Textarea } from "./controls";
+import { FloatingMenu } from "./floating-menu";
 
 export { Dialog };
 
@@ -101,15 +102,18 @@ export type RowAction = { key: string; label: string; danger?: boolean; onSelect
 export function RowActions({ actions, label }: { actions: RowAction[]; label: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: PointerEvent) {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (target instanceof Element && target.closest(".gx-menu--floating")) return;
+      setOpen(false);
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
-        // Fokus se vraća na „⋯“ koje je meni otvorilo — ne na <body>.
         ref.current?.querySelector<HTMLElement>("button")?.focus();
       }
     }
@@ -119,7 +123,7 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open ]);
+  }, [open]);
   if (actions.length === 0) return null;
   const [primary, ...rest] = actions;
   return (
@@ -128,30 +132,36 @@ export function RowActions({ actions, label }: { actions: RowAction[]; label: st
         {primary!.label}
       </Button>
       {rest.length > 0 ? (
-        <div style={{ position: "relative" }} ref={ref}>
-          <Button variant="quiet" aria-haspopup="menu" aria-expanded={open} aria-label={label} onClick={() => setOpen((v) => !v)}>
+        <div ref={ref}>
+          <Button
+            variant="quiet"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label={label}
+            onClick={(event) => {
+              setAnchor(event.currentTarget);
+              setOpen((value) => !value);
+            }}
+          >
             ⋯
           </Button>
-          {open ? (
-            <div role="menu" aria-label={label} className="gx-menu" style={{ top: "calc(100% + 8px)", right: 0 }}>
-              {rest.map((action) => (
-                <button
-                  key={action.key}
-                  role="menuitem"
-                  type="button"
-                  className="gx-menu-item"
-                  style={action.danger ? { color: "var(--danger)" } : undefined}
-                  onClick={() => {
-                    setOpen(false);
-                    // Fokus/cilj je „⋯“ okidač, ne stavka menija (ona nestaje).
-                    action.onSelect(ref.current?.querySelector<HTMLElement>("button") ?? null);
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <FloatingMenu open={open} anchor={anchor} label={label}>
+            {rest.map((action) => (
+              <button
+                key={action.key}
+                role="menuitem"
+                type="button"
+                className="gx-menu-item"
+                style={action.danger ? { color: "var(--danger)" } : undefined}
+                onClick={() => {
+                  setOpen(false);
+                  action.onSelect(ref.current?.querySelector<HTMLElement>("button") ?? null);
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </FloatingMenu>
         </div>
       ) : null}
     </div>

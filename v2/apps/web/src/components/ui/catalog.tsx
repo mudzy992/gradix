@@ -311,7 +311,11 @@ export function ComponentCatalog() {
               </div>
             </div>
           </div>
-          <p style={{ marginTop: "var(--space-3)" }}>Layout primitivi: <Mono>Stack</Mono>, <Mono>Inline</Mono>, <Mono>FormGrid</Mono>, <Mono>PageHeader</Mono>, <Mono>FilterBar</Mono>. Klase: <Mono>gx-shell</Mono>, <Mono>gx-scroll-hidden</Mono>, <Mono>gx-nav__group-btn</Mono>.</p>
+          <p style={{ marginTop: "var(--space-3)" }}>
+            Layout: <Mono>Stack</Mono>, <Mono>Inline</Mono>, <Mono>FormGrid</Mono>, <Mono>PageHeader</Mono>, <Mono>FilterBar</Mono>.
+            Shell: <Mono>gx-shell</Mono>, <Mono>gx-scroll-hidden</Mono>, <Mono>gx-nav__group-btn</Mono>.
+            Liste: <Mono>gx-table-scroll</Mono> + portal meni <Mono>gx-menu--floating</Mono> (ne siječe ga page overflow).
+          </p>
         </Card>
       </Section>
 
