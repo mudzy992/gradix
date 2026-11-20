@@ -151,11 +151,10 @@ export function formatDayTime(value: string | null | undefined, timezone?: strin
     minute: "2-digit",
   }).format(date);
   const today = dayIn(new Date());
-  // Juče = današnji datum pomjeren za jedan dan, opet u zoni firme (DST granični sat
-  // pomjeri rok za sat, ali kalendarski datum ostaje taj dan).
-  const yesterdayDate = new Date();
-  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
-  const yesterday = dayIn(yesterdayDate);
+  // Juče = kalendarski dan prije „danas“ U ZONI FIRME (ne UTC-1 od sadašnjeg
+  // trenutka: oko ponoći u Sarajevu UTC-1 još uvijek može pasti na „danas“).
+  const [y, m, d] = today.split("-").map(Number);
+  const yesterday = dayIn(new Date(Date.UTC(y!, m! - 1, d! - 1, 12, 0, 0)));
   const that = dayIn(date);
   if (that === today) return `danas u ${time}`;
   if (that === yesterday) return `juče u ${time}`;

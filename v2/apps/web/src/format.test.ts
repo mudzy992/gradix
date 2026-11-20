@@ -63,17 +63,19 @@ describe("format — C.1 pregled", () => {
   });
 
   it("vrijeme sinhronizacije: danas/juče u zoni firme, ne po satu servera", () => {
-    // Fiksni trenuci u odnosu na „sada“ — jedini pošteni način da se relativno vrijeme testira.
-    const now = Date.now();
     const zone = "Europe/Sarajevo";
-    const justNow = new Date(now - 60_000).toISOString();
-    const dayAgo = new Date(now - 26 * 3600_000).toISOString();
+    const justNow = new Date(Date.now() - 60_000).toISOString();
+    // Kalendarski juče u zoni firme (podne lokalno), ne „sada − N sati“ — oko ponoći
+    // UTC-1 dan može pasti na pogrešan kalendarski datum.
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date()).split("/");
+    const [day, month, year] = parts;
+    const yesterdayNoon = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day) - 1, 11, 0, 0));
     const longAgo = new Date(Date.UTC(2026, 10, 3, 15, 5, 0)).toISOString();
 
     expect(formatDayTime(justNow, zone)).toMatch(/^danas u \d{2}:\d{2}$/);
-    // 26 sati unazad je juče samo ako između nije bilo prelaska sati; u Europe/Sarajevo
-    // (CET, +1) prelaz je u martu/oktobru — u novembru 26 h sigurno pada u juče.
-    expect(formatDayTime(dayAgo, zone)).toMatch(/^juče u \d{2}:\d{2}$/);
+    expect(formatDayTime(yesterdayNoon.toISOString(), zone)).toMatch(/^juče u \d{2}:\d{2}$/);
     expect(formatDayTime(longAgo, zone)).toMatch(/^3\. 11\. 2026\. u \d{2}:\d{2}$/);
     expect(formatDayTime(null, zone)).toBe("—");
     expect(formatDayTime("cudno", zone)).toBe("cudno");
