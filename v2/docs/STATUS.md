@@ -25,7 +25,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
 | R6.2 Obračun sati CSV + dashboard | **isporučeno** (`9096017`, CI 44709218406) | spremno |
 | L0–L2 Shell layout + catalog-first | **isporučeno** (`ca306a3`, CI 44721018930) | spremno |
-| R7 Tenderi + Partneri UI | **isporučeno** (R7.0–R7.7; CI TBD) | spremno |
+| R7 Tenderi + Partneri UI | **isporučeno** (`8959598`, CI 44741905603) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 
