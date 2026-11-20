@@ -50,6 +50,19 @@ function renderShell() {
 beforeEach(() => {
   document.documentElement.dataset.theme = "light";
   push.mockClear();
+  sessionStorage.clear();
+});
+
+describe("okvir — layout (L0)", () => {
+  it("page i nav imaju interni skrol bez scrollbar klase", () => {
+    renderShell();
+    expect(document.querySelector("#sadrzaj")).toHaveClass("gx-page", "gx-scroll-hidden");
+    expect(screen.getByRole("navigation", { name: "Glavna navigacija" })).toHaveClass(
+      "gx-nav",
+      "gx-scroll-hidden",
+    );
+    expect(document.querySelector(".gx-shell")).not.toBeNull();
+  });
 });
 
 describe("okvir — tastatura", () => {
@@ -62,11 +75,12 @@ describe("okvir — tastatura", () => {
     expect(document.querySelector("#sadrzaj")).not.toBeNull();
   });
 
-  it("strelicama se prolazi kroz sidebar, Home/End idu na krajeve", async () => {
+  it("strelicama se prolazi kroz VIDLJIVE linkove (otvorene grupe), Home/End na krajeve", async () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Glavna navigacija" });
+    // Aktivna grupa „Rad / obračun“ otvorena → 3 linka; „Pregled“ zatvoren.
     const links = within(nav).getAllByRole("link");
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(3);
 
     links[0]!.focus();
     await userEvent.keyboard("{ArrowDown}");
@@ -76,9 +90,9 @@ describe("okvir — tastatura", () => {
     await userEvent.keyboard("{ArrowUp}");
     expect(links[1]).toHaveFocus();
     await userEvent.keyboard("{End}");
-    expect(links[3]).toHaveFocus();
+    expect(links[2]).toHaveFocus();
     await userEvent.keyboard("{ArrowDown}");
-    expect(links[3]).toHaveFocus();
+    expect(links[2]).toHaveFocus();
     await userEvent.keyboard("{Home}");
     expect(links[0]).toHaveFocus();
   });
@@ -170,6 +184,40 @@ describe("okvir — tema", () => {
     const reset = screen.getByRole("menuitem", { name: "Tema prati sistem" });
     await userEvent.click(reset);
     expect(window.localStorage.getItem("gx-theme")).toBeNull();
+  });
+});
+
+describe("okvir — collapse grupe (L1)", () => {
+  it("grupa aktivne stranice je otvorena, ostale zatvorene", () => {
+    renderShell();
+    const activeGroup = screen.getByRole("button", { name: "Rad / obračun" });
+    const otherGroup = screen.getByRole("button", { name: "Pregled" });
+    expect(activeGroup).toHaveAttribute("aria-expanded", "true");
+    expect(otherGroup).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("link", { name: /Korisnici/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Pregled$/ })).toBeNull();
+  });
+
+  it("klik na naslov grupe toggle-a i piše u sessionStorage", async () => {
+    renderShell();
+    const pregled = screen.getByRole("button", { name: "Pregled" });
+    expect(pregled).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(pregled);
+    expect(pregled).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /^Pregled$/ })).toBeInTheDocument();
+    const stored = JSON.parse(sessionStorage.getItem("gx.nav.groups") ?? "{}") as Record<string, boolean>;
+    expect(stored.Pregled).toBe(true);
+    expect(stored["Rad / obračun"]).toBe(true);
+  });
+
+  it("Enter/Space na naslovu grupe toggle-a", async () => {
+    renderShell();
+    const pregled = screen.getByRole("button", { name: "Pregled" });
+    pregled.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(pregled).toHaveAttribute("aria-expanded", "true");
+    await userEvent.keyboard(" ");
+    expect(pregled).toHaveAttribute("aria-expanded", "false");
   });
 });
 
