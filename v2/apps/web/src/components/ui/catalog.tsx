@@ -400,6 +400,95 @@ export function ComponentCatalog() {
       </Section>
 
       <Section
+        id="katalog-r7-partneri"
+        title="R7 — Partneri (katalog)"
+        hint="Lista + dijalog forme. Vrste: Naručilac (CLIENT), Dobavljač, Servis, Ostalo. Deaktivacija umjesto brisanja. Komponente: PageHeader, FilterBar, DataTable, Dialog, Chip."
+      >
+        <Card>
+          <PageHeader title="Partneri" subtitle="Naručioci, dobavljači i servisi." actions={<Button variant="primary">+ Novi partner</Button>} />
+          <FilterBar>
+            <Select label="Vrsta" id="cat-ptr-kind" defaultValue="">
+              <option value="">Sve</option>
+              <option value="CLIENT">Naručilac</option>
+              <option value="VENDOR">Dobavljač</option>
+            </Select>
+          </FilterBar>
+          <DataTable
+            caption="Partneri (demo)"
+            rowKey={(row) => row.id}
+            rows={[
+              { id: "1", code: "NAR-01", name: "JP Ceste FBiH", kind: "Naručilac", active: true },
+              { id: "2", code: "SRV-02", name: "Auto servis Zenica", kind: "Servis", active: true },
+            ]}
+            columns={[
+              { key: "code", header: "Šifra", cell: (row) => <Mono>{row.code}</Mono> },
+              { key: "name", header: "Naziv", cell: (row) => row.name },
+              { key: "kind", header: "Vrsta", cell: (row) => row.kind },
+              { key: "st", header: "Status", cell: (row) => <Chip tone={row.active ? "full" : "hollow"}>{row.active ? "Aktivan" : "Neaktivan"}</Chip> },
+            ]}
+            actions={() => [
+              { key: "edit", label: "Izmijeni", onSelect: () => undefined },
+              { key: "off", label: "Deaktiviraj", danger: true, onSelect: () => undefined },
+            ]}
+          />
+        </Card>
+      </Section>
+
+      <Section
+        id="katalog-r7-tenderi"
+        title="R7 — Tenderi (lista + detalj)"
+        hint="Status: Nacrt → Predano → Dobijeno|Izgubljeno|Povučeno. Naručilac = partner CLIENT. Convert (Dobijeno) → projekat. Rokovi tipa TENDER. Prilozi kao na Rokovima. Bez nove UI vrste."
+      >
+        <Stack>
+          <Card>
+            <PageHeader title="Tenderi" subtitle="Od prilike do ishoda i konverzije u projekat." actions={<Button variant="primary">+ Novi tender</Button>} />
+            <FilterBar>
+              <Select label="Status" id="cat-tnd-st" defaultValue="">
+                <option value="">Svi</option>
+                <option value="DRAFT">Nacrt</option>
+                <option value="SUBMITTED">Predano</option>
+                <option value="WON">Dobijeno</option>
+              </Select>
+            </FilterBar>
+            <DataTable
+              caption="Tenderi (demo)"
+              rowKey={(row) => row.id}
+              rows={[
+                { id: "t1", title: "Rekonstrukcija M-17 dionica 3", client: "JP Ceste FBiH", value: "1.250.000,00 KM", status: "Predano" },
+                { id: "t2", title: "Kanalizacija Visoko centar", client: "Općina Visoko", value: "420.000,00 KM", status: "Dobijeno" },
+              ]}
+              columns={[
+                { key: "title", header: "Predmet", cell: (row) => row.title },
+                { key: "client", header: "Naručilac", cell: (row) => row.client },
+                { key: "value", header: "Vrijednost", numeric: true, cell: (row) => <Mono>{row.value}</Mono> },
+                { key: "st", header: "Status", cell: (row) => <Chip tone={row.status === "Dobijeno" ? "full" : "hollow"}>{row.status}</Chip> },
+              ]}
+              actions={(row) => [
+                { key: "open", label: "Otvori", onSelect: () => undefined },
+                ...(row.status === "Dobijeno"
+                  ? [{ key: "conv", label: "Pretvori u projekat", onSelect: () => undefined }]
+                  : []),
+              ]}
+            />
+          </Card>
+          <Card>
+            <PageHeader title="Tender — detalj" subtitle="Predano · JP Ceste FBiH" actions={<Button>Označi kao dobijeno</Button>} />
+            <DescriptionList
+              items={[
+                { term: "Status", value: "Predano" },
+                { term: "Naručilac", value: "JP Ceste FBiH" },
+                { term: "Vrijednost ponude", value: <Mono>1.250.000,00 KM</Mono> },
+                { term: "Rok dostave", value: "14. 12. 2026." },
+              ]}
+            />
+            <p className="gx-page-sub" style={{ marginTop: "var(--space-4)" }}>
+              Prilozi i rokovi (obaveze TENDER) ispod — isti obrasci kao /ured/rokovi.
+            </p>
+          </Card>
+        </Stack>
+      </Section>
+
+      <Section
         title="R4a-2 — razrješenje sukoba (implementirano; B: detalj na zasebnoj stranici)"
         hint="Lista = DataTable s filterima u adresi; klik na red vodi na zasebnu stranicu detalja (/ured/sukobi/[id]): putanja Radni dani / Sukobi / detalj, dva DescriptionList jedan pored drugog (na 360 px jedan ispod drugog), akcije u ljepljivoj traci pri dnu, dijalog samo za potvrdu s obaveznim razlogom, interna napomena ostaje na stranici. Vremena se ne spajaju automatski — ured bira jedan unos i smije ručno ispraviti vremena. Nerazriješen sukob u R4b blokira odobravanje te sedmice; podsjetnik uredu stiže nakon 3 dana (podesivo po firmi). Radnik na telefonu vidi ishod i kratak razlog odbacivanja, ne interne napomene."
       >

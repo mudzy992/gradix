@@ -1428,6 +1428,24 @@ body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r
     </article>
   </div>
 </section>
+
+<section class="r4a-reference" id="r7-tenderi-reference" aria-labelledby="r7-h">
+  <div class="r4a-reference-head">
+    <div class="r4a-reference-copy">
+      <h1 id="r7-h">R7 — Partneri i Tenderi</h1>
+      <p class="sub">Katalog partnera (naručilac CLIENT) i tenderi: Nacrt → Predano → Dobijeno|Izgubljeno|Povučeno; konverzija u projekat; rokovi na tenderu. Samo postojeće komponente. Detalj u <b>/katalog</b> (#katalog-r7-partneri, #katalog-r7-tenderi).</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2 style="margin-bottom:12px">Partneri</h2>
+    <p class="sub">Šifra, naziv, vrsta (Naručilac / Dobavljač / Servis / Ostalo), aktivan. Deaktivacija, ne brisanje.</p>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2 style="margin-bottom:12px">Tenderi</h2>
+    <p class="sub">Predmet, naručilac (partner), vrijednost (Money), status, prilozi, pretvori u projekat kad je Dobijeno. Obaveze entity_kind=TENDER na /ured/rokovi.</p>
+  </div>
+</section>
+
 <script>
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),params=new URLSearchParams(location.search);
 const requestedTheme=params.get("theme");
