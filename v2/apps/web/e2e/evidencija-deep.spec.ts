@@ -68,12 +68,14 @@ test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
     await expect(page.getByText(partner.code, { exact: false }).first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("rokovi stranica render + radnik bez pristupa", async ({ page }) => {
+  test("rokovi render za admin; radnik vidi rokovi, ne uvoz", async ({ page }) => {
     await loginUi(page, E2E_USERS.admin);
     await page.goto("/ured/rokovi");
     await expectHeading(page, "Rokovi");
     await loginUi(page, E2E_USERS.worker);
     await page.goto("/ured/rokovi");
+    await expectHeading(page, "Rokovi");
+    await page.goto("/ured/uvoz");
     await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
   });
 

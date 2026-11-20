@@ -26,13 +26,12 @@ export async function loginUi(page: Page, email: string): Promise<void> {
   await page.waitForURL("**/pregled");
 }
 
-/** API prijava preko page.request (dijeli cookie jar s page). */
+/**
+ * Sesija za API setup: UI login puni browser cookie jar;
+ * page.request često ne zadrži cookie nakon čistog API logina u CI.
+ */
 export async function loginApi(page: Page, email: string): Promise<void> {
-  requireE2ePassword();
-  const response = await page.request.post("/api/auth/login", {
-    data: { email, password: E2E_PASSWORD },
-  });
-  expect(response.ok(), `login ${email}`).toBeTruthy();
+  await loginUi(page, email);
 }
 
 /**
