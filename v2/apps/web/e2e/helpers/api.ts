@@ -144,7 +144,8 @@ export async function createMachine(
   categoryId: string,
   input?: { code?: string; name?: string },
 ): Promise<{ id: string; code: string }> {
-  const code = (input?.code ?? uniqueCode("mas")).slice(0, 20);
+  // Inventarska oznaka: A–Z, 0–9, crtica (bez underscore).
+  const code = (input?.code ?? `MAS-${Date.now().toString(36).toUpperCase()}`.slice(0, 20));
   const data = await readData(page, "POST", "/api/equipment", {
     code,
     name: input?.name ?? `E2E Mašina ${code}`,
