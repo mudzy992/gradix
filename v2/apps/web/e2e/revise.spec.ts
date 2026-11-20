@@ -20,7 +20,7 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen.");
 });
 
-test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", async ({ page, browser }) => {
+test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();

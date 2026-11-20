@@ -21,7 +21,7 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
 });
 
-test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješeno", async ({ page, browser }) => {
+test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješeno", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
   await login(page, "ured@demo.test");
   await page.goto("/ured/sukobi?stanje=OPEN");
   await expect(page.getByRole("heading", { name: "Sukobi radnih dana" })).toBeVisible();

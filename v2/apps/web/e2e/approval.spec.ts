@@ -17,7 +17,7 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
 });
 
-test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita", async ({ page, browser }) => {
+test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();

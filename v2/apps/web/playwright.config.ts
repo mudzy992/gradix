@@ -1,23 +1,30 @@
 /**
- * Playwright E2E (A4c, 2026-11-07) — najmanji skup koji dokazuje navigaciju i sesiju
- * u pravom pregledniku: prijava po rolama, meni po roli, odjava -> prijava, istek sesije.
- * Server i seed diže CI korak (ili lokalno `pnpm test:e2e` uz već pokrenut `pnpm dev`
- * i poseedovanu bazu); ovdje se server ne starta da lokalni dev ne bi bio ubijen.
+ * Playwright E2E — A3 + B2 (desktop + Pixel 5).
+ * Tagovi: @smoke (PR brzo), @deep / @deep-* (shardovi po segmentu).
+ * Server diže CI; lokalno uz već pokrenut app + seed.
  */
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
+
+const grepEnv = process.env.E2E_GREP?.trim();
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30_000,
-  // Bez automatskog ponavljanja: retry u CI-ju je skrivao povremene padove E2E
-  // (tri pada pa prolaz na rerun, R4a-2/A). Stabilnost se mjeri workflowom
-  // `e2e-stabilnost.yml` (20+ pokretanja, svako bez retryja).
+  timeout: 45_000,
   retries: 0,
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { browserName: "chromium" } }],
-  // CI: github reporter pretvara padove u anotacije (logovi runa nisu uvijek dostupni).
+  grep: grepEnv ? new RegExp(grepEnv) : undefined,
+  projects: [
+    {
+      name: "desktop",
+      use: { ...devices["Desktop Chrome"], browserName: "chromium" },
+    },
+    {
+      name: "mobile",
+      use: { ...devices["Pixel 5"], browserName: "chromium" },
+    },
+  ],
   reporter: process.env.CI ? "github" : "list",
 });

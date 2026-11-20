@@ -31,7 +31,8 @@ async function login(page: Page) {
   await page.waitForURL("**/pregled");
 }
 
-test("snimci kataloga i ključnih stranica (obje teme, 360/1440)", async ({ page }) => {
+test("snimci kataloga i ključnih stranica (obje teme, 360/1440)", { tag: ["@snimci"] }, async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "snimci sami postavljaju 360/1440; samo desktop");
   test.setTimeout(240_000);
   mkdirSync(OUT, { recursive: true });
 

@@ -41,7 +41,7 @@ jobs:
     if: ${{ !inputs.e2e_stabilnost }}
     # Playwright Chromium još nema build za ubuntu 26.04 (ubuntu-latest od 2026-11).
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     services:
       postgres:
@@ -193,21 +193,18 @@ jobs:
           REQUIRE_DB_TESTS: "1"
         run: pnpm test
 
-      # E2E (A4c): pravi preglednik protiv seedovane baze — prijava po rolama, meni po roli,
-      # odjava -> prijava, sesija u drugom tabu. Najmanji skup, namjerno bez poslovnih tokova.
-      - name: E2E navigacija i sesija (Playwright)
+      # E2E A3/B2: ephemeral DB + seed + build/start; @smoke pa @deep-* shardovi (desktop+mobile).
+      # MinIO: CI-SKIP za attachment deep (vidi e2e-coverage MATRIX + 00_ci-harness.md).
+      - name: E2E Playwright (@smoke + @deep shards)
         working-directory: v2
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
-          # Snimci kataloga (Dio 3c): vlasnik demo firme je i platformski admin za CI server.
           PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
         run: |
           pnpm --filter @gradix/web exec playwright install --with-deps chromium || echo "::error::PW_INSTALL_DEPS_FAILED (nastavljam bez deps koraka)"
           pnpm --filter @gradix/web exec playwright install chromium || echo "::error::PW_INSTALL_FAILED"
           ls "$HOME/.cache/ms-playwright" 2>/dev/null | sed 's/^/::warning::PW_CACHE /' || echo "::error::PW_CACHE_EMPTY"
-          # C.1: E2E po rolama treba demo svijet (rokovi, sukobi, dani za provjeru,
-          # sinhronizacija), ne samo praznu firmu — zato i demo skripte iza osnovnog seeda.
           pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
           pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
           pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
@@ -216,7 +213,26 @@ jobs:
           pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
           (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
-          pnpm --filter @gradix/web test:e2e || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+          run_shard() {
+            local grep="$1"
+            local project="${2:-}"
+            echo "::group::E2E shard $grep ${project:-all-projects}"
+            if [ -n "$project" ]; then
+              E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test --project="$project" \
+                || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+            else
+              E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test \
+                || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+            fi
+            echo "::endgroup::"
+          }
+          run_shard "@smoke"
+          run_shard "@deep-auth"
+          run_shard "@deep-evidencija"
+          run_shard "@deep-mehanizacija"
+          run_shard "@deep-rad"
+          run_shard "@deep-admin"
+          run_shard "@snimci" "desktop"
 
       # Dio 3c: snimci se objavljuju uvijek (i kad E2E padne) — nisu kapija, nego materijal za pregled.
       - name: Snimci ekrana kao artefakt (Dio 3c)

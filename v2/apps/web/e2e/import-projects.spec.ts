@@ -51,7 +51,7 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen.");
 });
 
-test("uvoz projekata: sretan prolaz upisuje jedan projekat", async ({ page }) => {
+test("uvoz projekata: sretan prolaz upisuje jedan projekat", { tag: ["@deep", "@deep-evidencija"] }, async ({ page }) => {
   const stamp = `E2E-OK-${Date.now()}`;
   const bytes = await xlsxBuffer([
     ["Šifra", "Naziv", "Status", "Mjesto"],
@@ -78,7 +78,7 @@ test("uvoz projekata: sretan prolaz upisuje jedan projekat", async ({ page }) =>
   }
 });
 
-test("uvoz projekata: miješane greške — potvrda s greškom ne upisuje ništa", async ({ page }) => {
+test("uvoz projekata: miješane greške — potvrda s greškom ne upisuje ništa", { tag: ["@deep", "@deep-evidencija"] }, async ({ page }) => {
   const stamp = `E2E-BAD-${Date.now()}`;
   const bytes = await xlsxBuffer([
     ["Šifra", "Naziv", "Status", "Mjesto"],
