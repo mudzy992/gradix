@@ -3,14 +3,9 @@
 /**
  * Dijalog — jedan obrazac za sve dijaloge (fokus ulazi, `Escape` zatvara, fokus se vraća).
  *
- * Obrazac (U, katalog): zaglavlje s naslovom i **X za izlazak**, tijelo koje se skrola
- * **bez vidljivog scrollbar-a**, i podnožje (`footer`) u kojem stoje akcije — uvijek na
- * istom mjestu, i kad je sadržaj dug. Zašto komponenta: ista pravila su se do sada
- * ponavljala u svakom dijalogu; kad se u jednom zaborave, tastatura ostane van dijaloga
- * ili fokus padne na `<body>` — a to je upravo ono što a11y provjera primijeti prvo.
- *
- * Fokus se vraća na `returnFocusTo` (element koji je dijalog otvorio), a ne na
- * `document.activeElement` u trenutku zatvaranja — taj element često više ne postoji.
+ * Početni fokus ide SAMO jednom na mount. `onClose` / `returnFocusTo` idu preko ref-a
+ * da re-render roditelja (npr. tipkanje u kontrolisanom polju) ne bi ponovo fokusirao
+ * prvo polje — bug Partneri/Tenderi (2026-11-20).
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { Icon } from "@/components/ui/index";
@@ -27,7 +22,6 @@ export function Dialog({
   title: string;
   hint?: ReactNode;
   children: ReactNode;
-  /** Akcije u podnožju (npr. Otkaži / Sačuvaj). Stoje i kad tijelo skrola. */
   footer?: ReactNode;
   returnFocusTo?: HTMLElement | null;
   onClose: () => void;
@@ -35,10 +29,12 @@ export function Dialog({
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const firstField = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const returnFocusToRef = useRef(returnFocusTo);
+  onCloseRef.current = onClose;
+  returnFocusToRef.current = returnFocusTo;
 
   useEffect(() => {
-    // Prvo fokusira polje ako ga ima; ako dijalog nema polja (npr. potvrda), fokus ide na panel,
-    // pa `Tab` kreće od prve kontrole unutar dijaloga umjesto sa strane.
     const target = firstField.current?.querySelector<HTMLElement>(
       "input, select, textarea, button, [href]",
     );
@@ -47,15 +43,15 @@ export function Dialog({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      returnFocusTo?.focus?.();
+      returnFocusToRef.current?.focus?.();
     };
-  }, [onClose, returnFocusTo]);
+  }, []);
 
   return (
     <div className="gx-overlay" role="presentation">
