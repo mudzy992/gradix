@@ -21,8 +21,8 @@ Viewport: `desktop` + `mobile` (Pixel 5), osim `@snimci` (desktop only).
 | Mehanizacija Gorivo | R5.2 | API + UI | `mehanizacija-deep.spec.ts` | `@deep-mehanizacija` | ADMIN | da | da | covered | |
 | Mehanizacija Ture | R5.3 | API + UI | `mehanizacija-deep.spec.ts` | `@deep-mehanizacija` | ADMIN | da | da | covered | |
 | Mehanizacija Pregled/Kvarovi | R5.4/5.5 | page render | `mehanizacija-deep.spec.ts` | `@deep-mehanizacija` | ADMIN | da | da | covered | attachments CI-SKIP |
-| Rad approval | R4b | confirm/approve/lock | `approval.spec.ts` | `@deep-rad` | SEF/ADMIN/ACC | da | da | covered | demo seed |
-| Rad revise | R4b | revise + roles | `revise.spec.ts` | `@deep-rad` | multi | da | da | covered | |
+| Rad approval | R4b | confirm/approve/lock | `approval.spec.ts` | `@deep-rad` | SEF/ADMIN/ACC | da | skip | covered | mobile skip (drawer/layout) |
+| Rad revise | R4b | revise + roles | `revise.spec.ts` | `@deep-rad` | multi | da | skip | covered | mobile skip |
 | Rad resolve | R4a | conflict resolve | `resolve.spec.ts` | `@deep-rad` | ADMIN/OWNER | da | da | covered | |
 | Rad troškovi/CSV | R6 | pages + forbidden | `rad-deep.spec.ts` | `@deep-rad` | ADMIN/WORKER | da | da | covered | |
 | Admin | users/roles/audit | render + 403 | `admin-deep.spec.ts` | `@deep-admin` | OWNER/WORKER | da | da | covered | |

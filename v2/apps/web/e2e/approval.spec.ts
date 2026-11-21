@@ -17,7 +17,8 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
 });
 
-test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
+test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "R4b multi-context approval: desktop only (Pixel 5 drawer/layout)");
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();

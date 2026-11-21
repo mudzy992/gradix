@@ -20,7 +20,8 @@ test.beforeAll(() => {
   if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen.");
 });
 
-test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
+test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "R4b revise multi-context: desktop only");
   await login(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();
