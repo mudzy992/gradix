@@ -1,0 +1,4 @@
+Šifra,Naziv,Status,Mjesto,Klijent
+P-DEMO-OK,Ispravan projekat,ACTIVE,Zenica,
+P-DEMO-BAD,Nepoznat status,XYZSTATUS,Zenica,Firma Test
+P-DEMO-OK,Duplikat šifre u fajlu,ACTIVE,Mostar,

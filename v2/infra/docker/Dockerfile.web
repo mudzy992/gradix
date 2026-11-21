@@ -1,0 +1,145 @@
+# Web (Next.js standalone) + API. Jedan kontejner, jedan domen, /api na istoj adresi (G0/P4).
+#
+# Build kontekst = KORIJEN v2 monorepa (Coolify: Base Directory /v2 → context ".").
+# Zato su sve COPY putanje relativne na v2/, a ne na ovaj fajl.
+#
+# Slika je Debian-slim, NE Alpine — namjerno: `argon2` dolazi sa prebuilt musl binarijem
+# koji traži libstdc++ (potvrđeno čitanjem simbola: libc.musl-x86_64, libgcc_s, libstdc++.so.6).
+# Alpine bi zahtijevao ručnu instalaciju libstdc++ i dodatni rizik u runtime-u; slim je
+# predvidiv i ima glibc koji argon2 prebuilt očekuje.
+FROM node:22-slim AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /app
+
+# 1) Zavisnosti: samo manifesti, da se ovaj sloj kešira dok se kod ne mijenja.
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc turbo.json ./
+COPY packages/config/package.json packages/config/
+COPY packages/domain/package.json packages/domain/
+COPY packages/db/package.json packages/db/
+COPY apps/web/package.json apps/web/
+COPY apps/mobile/package.json apps/mobile/
+RUN pnpm install --frozen-lockfile --filter @gradix/web...
+
+# 2) Build
+FROM deps AS builder
+COPY packages packages
+COPY apps/web apps/web
+COPY infra/diagnostics infra/diagnostics
+COPY docs/demo-podaci docs/demo-podaci
+# `next build` traži DATABASE_URL i AUTH_SECRET jer se konfiguracija validira pri uvozu.
+# Sve poslovne stranice su `force-dynamic`, pa placeholder ne utiče na izlaz slike.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV AUTH_SECRET=build-time-placeholder-secret-min-32-chars
+# Seed za demo se kompajlira ovdje: runtime slika nema `tsx` ni dev zavisnosti.
+# `pg` i `argon2` ostaju vanjski (native/Node moduli, serverExternalPackages).
+#
+# `@gradix/db` se NAMJERNO bundluje, ne ostavlja vanjski: to je workspace paket koji
+# postoji samo u build fazi (`node_modules/@gradix/db` je symlink na packages/db, a
+# @gradix/db/src je TypeScript). Ako se ostavi `--external:@gradix/db`, runtime pukne sa
+# `ERR_MODULE_NOT_FOUND: Cannot find package '@gradix/db'`. Unutra je samo `pg` kao
+# type import (briše se pri transpile-u), pa u bundle ne uvlači ništa dodatno.
+RUN pnpm --filter @gradix/web build \
+ && pnpm --filter @gradix/web exec esbuild ../../infra/diagnostics/run.mjs \
+      --bundle --platform=node --format=esm --target=node22 \
+      --outfile=/app/diagnostics.bundle.mjs \
+ && cd apps/web \
+ && for s in seed demo-sukobi demo-pregled demo-r4b-approval; do \
+      pnpm exec esbuild "scripts/${s}.ts" \
+        --bundle --platform=node --format=esm --target=node22 \
+        --outfile="${s}.mjs" \
+        --external:pg --external:argon2; \
+    done \
+ && pnpm exec esbuild scripts/seed-demo-podaci.ts \
+      --bundle --platform=node --format=cjs --target=node22 \
+      --outfile=seed-demo-podaci.cjs \
+      --external:pg --external:argon2
+
+# 3) Runtime: samo ono što treba, bez pnpm-a i dev zavisnosti.
+FROM node:22-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
+# mc iz oficijalne slike (dl.min.io archive često 410); potreban za backup-provision-minio.sh.
+COPY --from=quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z /usr/bin/mc /usr/local/bin/mc
+# Staging Postgres je 18.x; Debian default client (15) ruši pg_dump (version mismatch).
+# PGDG → postgresql-client-18 (psql/pg_dump/pg_restore).
+# bash/openssl/awscli: backup-*.sh u /app/backup (privremeni drill u web kontejneru).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      postgresql-client-18 bash openssl awscli coreutils \
+ && chmod +x /usr/local/bin/mc \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd -g 1001 nodejs \
+ && useradd -m -u 1001 -g nodejs nextjs \
+ && mkdir -p /run/secrets
+
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# `public/` se prvo stvara: COPY iz praznog/nepostojećeg direktorija ruši build
+# ("failed to calculate checksum ... /app/apps/web/public: not found"), a prazan
+# direktorij git ne prati. Sadržaj namjerno postoji (favicon, robots.txt); ova linija
+# je pojas i za slučaj da neko doda `public/` u .gitignore.
+RUN mkdir -p apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+# Migracije i bootstrap idu u sliku: entrypoint ih primjenjuje prije starta.
+# `db-apply.sh` sam prepoznaje ovaj raspored (migrations/ + bootstrap/ pored skripte).
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma/migrations ./db/migrations
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/bootstrap ./db/bootstrap
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db/preflight-checks
+# Dijagnostika je JEDAN bundlovani fajl: u runtime slici nema @aws-sdk u node_modules stazi
+# koju bi `import("@aws-sdk/...")` iz /app/diagnostics našao (ERR_MODULE_NOT_FOUND na stagingu).
+COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
+# seed-demo-podaci je CJS: exceljs radi dynamic require("crypto") koji ESM bundle ne podržava.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed-demo-podaci.cjs ./seed-demo-podaci.cjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-sukobi.mjs ./demo-sukobi.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-pregled.mjs ./demo-pregled.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-r4b-approval.mjs ./demo-r4b-approval.mjs
+# Sintetički xlsx za seed-demo-podaci (isti fajlovi kao docs/demo-podaci).
+COPY --from=builder --chown=nextjs:nodejs /app/docs/demo-podaci ./demo-podaci
+COPY --chown=nextjs:nodejs infra/docker/entrypoint-web.sh ./entrypoint.sh
+COPY --chown=nextjs:nodejs infra/docker/seed-web.sh ./seed.sh
+COPY --chown=nextjs:nodejs infra/docker/run-demo-mjs.sh \
+     infra/docker/seed-demo-podaci.sh \
+     infra/docker/demo-sukobi.sh \
+     infra/docker/demo-pregled.sh \
+     infra/docker/demo-r4b-approval.sh \
+     infra/docker/seed-demo-full.sh \
+     ./
+COPY --chown=nextjs:nodejs infra/scripts/db-apply.sh ./db/apply.sh
+RUN chmod +x /app/seed.sh /app/run-demo-mjs.sh \
+      /app/seed-demo-podaci.sh /app/demo-sukobi.sh \
+      /app/demo-pregled.sh /app/demo-r4b-approval.sh \
+      /app/seed-demo-full.sh
+# Backup/restore drill skripte (pokreće vlasnik privremeno u web kontejneru).
+COPY --chown=nextjs:nodejs infra/scripts/backup-lib.sh \
+     infra/scripts/backup.sh \
+     infra/scripts/restore.sh \
+     infra/scripts/backup-manifest.tsv \
+     infra/scripts/backup-verify-counts.sh \
+     infra/scripts/backup-provision-role.sh \
+     infra/scripts/backup-provision-minio.sh \
+     infra/scripts/backup-assert-role.sh \
+     infra/scripts/backup-minio-check.sh \
+     infra/scripts/backup-age-check.sh \
+     infra/scripts/backup-cleanup-staging.sh \
+     ./backup/
+RUN chmod +x /app/backup/*.sh
+
+USER nextjs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+ENTRYPOINT ["./entrypoint.sh"]

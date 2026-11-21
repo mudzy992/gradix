@@ -1,0 +1,50 @@
+kind	object	needed	current_before	rlS_exception_reason	rationale
+table	schema_migrations	-	SELECT;INSERT;UPDATE;DELETE	Only DATABASE_ADMIN_URL/db-apply.sh may use the migration ledger; runtime readiness never reads it.	Migration bookkeeping is administrator-only and has no app query path.
+table	companies	SELECT	SELECT;INSERT;UPDATE;DELETE		Global tenant registry; runtime reads are limited by RLS to the active tenant or exact login/invitation lookup. Seed and migrations use DATABASE_ADMIN_URL.
+table	users	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Global identity table; RLS scopes reads/updates to memberships and allows pre-login lookup only by exact normalized email; invitation acceptance is the sole app insert path.
+table	memberships	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Membership lookup, invitation acceptance, role/scope changes and deactivation; no hard-delete path.
+table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
+table	machines	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Equipment CRUD uses soft deactivation; no hard-delete path.
+table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
+table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
+table	sync_cursor_allocators	-	-		Internal cursor allocator; only tenant-checking SECURITY DEFINER reserve/pull functions may access it.
+table	sync_cursor_slots	-	-		Internal PENDING/COMMITTED/SKIPPED cursor slots; only tenant-checking SECURITY DEFINER cursor functions may access them.
+table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
+table	invitations	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Invite management and exact-token preview/claim; use/revoke are updates; no hard-delete path.
+table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset issue/lookup/claim/revoke; no hard-delete path.
+table	login_attempts	-	-		Only SECURITY DEFINER rate-limit functions access this table; the app and sequence have no direct table rights.
+table	workers	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Worker CRUD uses soft deactivation; no hard-delete path.
+table	equipment_categories	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Read and create category API; no update/delete endpoint.
+table	obligation_types	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Type listing/create/update; no hard-delete endpoint.
+table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Obligation create/renew/correct/delete and read.
+table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
+table	obligation_attachments	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Attachment lifecycle includes upload-state updates and delete.
+table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/update and read; no hard-delete path.
+table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
+table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
+table	workdays	SELECT;INSERT;UPDATE	-		Canonical daily header; upsert/update lifecycle with immutable worker/date identity and no hard-delete path.
+table	work_week_approvals	SELECT;INSERT;UPDATE	-		R4b week approve/reject/lock; FORCE RLS; no hard-delete path.
+table	workday_revisions	SELECT;INSERT	-		R4b office revisions after confirm; append-only; FORCE RLS; no UPDATE/DELETE.
+table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overlap trigger protects OPEN/KNOWN_END intervals; no hard-delete path.
+table	sync_receipts	SELECT;INSERT	-		Idempotency receipts are append-only; server-side retention may purge result details but preserves the compact key/hash.
+table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.
+table	machine_work_logs	SELECT;INSERT;UPDATE	-		R5.1 work-log CRUD; no hard-delete path; overlap trigger protects intervals; FORCE RLS.
+table	machine_meter_readings	SELECT;INSERT	-		Append-only meter readings; trigger updates machines.meter_value; FORCE RLS; no UPDATE/DELETE.
+table	machine_work_log_revisions	SELECT;INSERT	-		R5.1 office revisions after create; append-only; FORCE RLS; no UPDATE/DELETE.
+table	fuel_entries	SELECT;INSERT;UPDATE	-		R5.2 fuel CRUD path; Money centi+valuta; FORCE RLS; no DELETE.
+table	fuel_entry_revisions	SELECT;INSERT	-		R5.2 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	route_segments	SELECT;INSERT;UPDATE	-		R5.3 stacionaža / dionice; nullable FK from hauls; FORCE RLS; no DELETE.
+table	hauls	SELECT;INSERT;UPDATE	-		R5.3 ture CRUD path; FORCE RLS; no DELETE.
+table	haul_revisions	SELECT;INSERT	-		R5.3 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	machine_daily_checks	SELECT;INSERT;UPDATE	-		R5.4 dnevni pregled; FORCE RLS; no DELETE.
+table	machine_daily_check_revisions	SELECT;INSERT	-		R5.4 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	machine_daily_check_attachments	SELECT;INSERT;UPDATE	-		R5.4 check photos; mirror obligations; FORCE RLS; no DELETE.
+table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
+table	tenders	SELECT;INSERT;UPDATE	-		R7 tenders; Money; FORCE RLS; no DELETE.
+table	tender_attachments	SELECT;INSERT;UPDATE	-		R7 tender MinIO attachments; FORCE RLS; no DELETE.
+table	machine_faults	SELECT;INSERT;UPDATE	-		R5.5 kvarovi; Money centi+valuta; FORCE RLS; no DELETE.
+table	machine_fault_revisions	SELECT;INSERT	-		R5.5 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	approval_requests	SELECT;INSERT;UPDATE	-		R5.5 fault cost approval status reuse; FORCE RLS; no DELETE.
+table	machine_cost_rates	SELECT;INSERT;UPDATE	-		R6.1 €/h stope mašina; FORCE RLS; no DELETE.
+table	project_cost_entries	SELECT;INSERT	-		R6.1 knjiženje troška na projekat; append-only; FORCE RLS; no UPDATE/DELETE.
+sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

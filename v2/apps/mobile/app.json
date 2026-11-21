@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Gradix teren",
+    "slug": "gradix-teren",
+    "version": "0.1.0",
+    "scheme": "gradix",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "ba.gradix.teren",
+      "permissions": [],
+      "userInterfaceStyle": "automatic"
+    },
+    "ios": {
+      "bundleIdentifier": "ba.gradix.teren",
+      "supportsTablet": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-asset",
+      "expo-font",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

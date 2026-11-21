@@ -1,0 +1,45 @@
+# CI tok 1/5 — obilazak ekrana radnika + A1e regresija: prijava NAKON odjave.
+#
+# Autonomna verzija snimci.yaml za CI emulator: nema ručnih koraka; email i
+# lozinku unosi orkestrator (adb_login), tok samo submituje. NE dira
+# „Grupa" — radnik je nema u meniju (matrica rola); grupu pokriva tok 05 sa šefom.
+#
+# Snimke (takeScreenshot) idu u maestro-artifacts/test-output/<sesija>/<tok>/takeScreenshot/.
+appId: ba.gradix.teren
+name: snimci-i-A1e
+---
+- assertVisible: "Prijava za teren."
+- takeScreenshot: 01-prijava-svjetla
+# Email i lozinku je unio orkestrator (adb input text preko mini-flow
+# fokusâ — vidi maestro-ci.sh adb_login); polja ostaju popunjena i poslije
+# odjave, pa je i A1e re-prijava samo tap na „Prijavi se".
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- tapOn: "Moj dan"
+- takeScreenshot: 02-moj-dan-svjetla
+- back
+- tapOn: "Moji rokovi"
+- assertVisible: "Moji rokovi"
+- takeScreenshot: 03-rokovi-svjetla
+- tapOn: "‹ Nazad"
+- tapOn: "Moji projekti"
+- assertVisible: "Moji projekti"
+- takeScreenshot: 04-projekti-svjetla
+- tapOn: "‹ Nazad"
+- tapOn: "Odjavi se"
+- assertVisible: "Potvrdi odjavu"
+- takeScreenshot: 05-odjava-potvrda-svjetla
+# Potvrda u dijalogu: Alert.alert je NATIVNI dijalog = zaseban prozor; dok je
+# otvoren, a11y stablo izlaže samo njegove čvorove, pa je „Odjavi se" u dijalogu
+# JEDINI dostupni match (index: 1 je bio pogrešna pretpostavka — run 43646763583).
+- tapOn:
+    text: "Odjavi se"
+# A1e regresija: originalni mobilni bug — prijava nakon odjave vraćala je
+# „Došlo je do greške." (server 500 na NUL-u u emailu). Ovdje se dokazuje na CI-ju.
+- assertVisible: "Prijava za teren."
+- takeScreenshot: 06-odjava-svjetla
+# Re-prijava: polja su ostala popunjena poslije odjave (finishSignOut ih
+# ne dira) — dovoljan je submit.
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+- takeScreenshot: 07-ponovna-prijava-svjetla

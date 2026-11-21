@@ -1,0 +1,53 @@
+{
+  "name": "@gradix/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured src/app/pregled",
+    "seed": "tsx scripts/seed.ts",
+    "check-preklapanje": "node scripts/check-preklapanje.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
+    "@aws-sdk/s3-request-presigner": "^3.1164.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@gradix/contracts": "workspace:*",
+    "@gradix/db": "workspace:*",
+    "@gradix/domain": "workspace:*",
+    "@tailwindcss/postcss": "4.3.5",
+    "argon2": "0.45.2",
+    "exceljs": "4.4.0",
+    "next": "16.0.1",
+    "pg": "8.16.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.5",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@gradix/config": "workspace:*",
+    "@gradix/design": "workspace:*",
+    "@playwright/test": "1.57.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/node": "22.20.0",
+    "@types/pg": "8.15.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "axe-core": "^4.14.0",
+    "jsdom": "^31.0.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0",
+    "vitest-axe": "^0.1.0"
+  }
+}

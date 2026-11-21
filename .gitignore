@@ -1,14 +1,7 @@
+# Tajne i lokalno okruženje — nikad u repo
 .env
-.env.local
-.env.*.local
-node_modules/
-dist/
-generated/
-backend/generated/
-backend/dist/
-*.log
-.DS_Store
-coverage/
-.idea/
-upload-tmp/
-backups/
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example

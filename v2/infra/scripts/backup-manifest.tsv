@@ -1,0 +1,14 @@
+# Tabele čiji se broj redova upisuje u manifest i provjerava nakon restore-a.
+# Format: jedna tabela po redu (bez sheme; public.).
+companies
+users
+memberships
+sessions
+machines
+workers
+projects
+project_assignments
+workdays
+work_entries
+audit_events
+schema_migrations

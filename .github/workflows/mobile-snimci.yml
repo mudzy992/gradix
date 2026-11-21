@@ -1,0 +1,54 @@
+# Mobilni snimci STVARNE aplikacije (Dio 1c) — nije kapija.
+# Ručno (workflow_dispatch) i noćno. GitHub-hosted runneri podržavaju Android emulator
+# (macOS/ubuntu s KVM), pa job: build dev klijenta, emulator, Maestro takeScreenshot.
+# Ako job padne (emulator/Maestro), ostaje ručni prolaz vlasnika iz DEMO-STEP7.md.
+name: Mobilni snimci (emulator, nije kapija)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  snimci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+      - name: Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Emulator + snimci
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          working-directory: v2/apps/mobile
+          script: |
+            npx expo run:android --variant debug --no-bundler || true
+            npx expo start --dev-client --port 8081 &
+            sleep 45
+            maestro test maestro/snimci.yaml || true
+      - name: Snimci kao artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradix-mobilni-snimci
+          path: v2/apps/mobile/snimci
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,0 +1,5 @@
+- `v1/` je ZAMRZNUTA referenca. Samo čitaš. Ne mijenjaš, ne pokrećeš, ne importuješ.
+- `v2/` je jedino mjesto na kojem radiš.
+- Izvor istine za opseg i način rada je `MASTER_BRIEF.md` u rootu.
+- Kad radiš u `v2/`, prati `v2/AGENTS.md` (kreira se u Fazi 1).
+- Sve preuzeto iz v1 označi sa `Izvor: v1/<putanja>`.
