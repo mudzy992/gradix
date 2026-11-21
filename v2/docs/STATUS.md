@@ -26,7 +26,7 @@ Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
 | R6.2 Obračun sati CSV + dashboard | **isporučeno** (`9096017`, CI 44709218406) | spremno |
 | L0–L2 Shell layout + catalog-first | **isporučeno** (`ca306a3`, CI 44721018930) | spremno |
 | R7 Tenderi + Partneri UI | **isporučeno** (`8959598`, CI 44741905603) | spremno |
-| Dialog fokus-once + E2E A3/B2 | **isporučeno** (fokus unit; Playwright `@smoke`/`@deep-*`; MinIO CI-SKIP) | spremno |
+| Dialog fokus-once + E2E A3/B2 | **isporučeno** (`3f45217`, CI 44850592055; `@smoke`/`@deep-*`; MinIO CI-SKIP) | spremno |
 
 **Provjera web kontejnera** (COOLIFY §12.1):
 

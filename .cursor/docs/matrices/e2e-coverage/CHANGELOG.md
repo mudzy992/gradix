@@ -1,5 +1,11 @@
 # E2E coverage changelog
 
+## 2026-11-21 — CI green 44850592055
+
+- Shardovi `@smoke` → `@deep-*` → `@snimci` zeleni na `v2-bootstrap`.
+- API setup preko in-page `fetch` (cookie jar); logout isto.
+- R4b approval/revise: mobile skip (MATRIX).
+
 ## 2026-11-20 — Foundation + A3/B2
 
 - Inicijalna MATRIX: moduli R1–R7, tagovi `@smoke` / `@deep-*`, desktop+mobile.

@@ -5,6 +5,8 @@
 
 ## Završeno
 
+CI zelen: https://github.com/mudzy992/gradix/actions/runs/44850592055 (`3f45217`)
+
 | Faza | Ishod |
 |---|---|
 | 0 | Dialog fokus-once + Vitest/RTL |
