@@ -6,6 +6,7 @@ import {
   apiPost,
   createMachine,
   createProject,
+  createWorker,
   listEquipmentCategories,
   uniqueCode,
 } from "./helpers/api";
@@ -21,7 +22,8 @@ async function setupMachine(page: Page) {
   const categories = await listEquipmentCategories(page);
   const machine = await createMachine(page, categories[0]!.id);
   const project = await createProject(page);
-  return { machine, project };
+  const worker = await createWorker(page);
+  return { machine, project, worker };
 }
 
 function isoHoursAgo(hours: number): string {
@@ -30,9 +32,10 @@ function isoHoursAgo(hours: number): string {
 
 test.describe("mehanizacija deep", { tag: ["@deep", "@deep-mehanizacija"] }, () => {
   test("sati mašine: API unos + UI lista", async ({ page }) => {
-    const { machine, project } = await setupMachine(page);
+    const { machine, project, worker } = await setupMachine(page);
     const res = await apiPost(page, "/api/machine-work-logs", {
       machineId: machine.id,
+      workerId: worker.id,
       projectId: project.id,
       startedAt: isoHoursAgo(3),
       endedAt: isoHoursAgo(1),
@@ -46,9 +49,10 @@ test.describe("mehanizacija deep", { tag: ["@deep", "@deep-mehanizacija"] }, () 
   });
 
   test("gorivo: API unos + UI", async ({ page }) => {
-    const { machine, project } = await setupMachine(page);
+    const { machine, project, worker } = await setupMachine(page);
     const res = await apiPost(page, "/api/fuel-entries", {
       machineId: machine.id,
+      driverWorkerId: worker.id,
       projectId: project.id,
       filledAt: new Date().toISOString(),
       liters: 12.5,
@@ -63,9 +67,10 @@ test.describe("mehanizacija deep", { tag: ["@deep", "@deep-mehanizacija"] }, () 
   });
 
   test("ture: API unos + UI", async ({ page }) => {
-    const { machine, project } = await setupMachine(page);
+    const { machine, project, worker } = await setupMachine(page);
     const res = await apiPost(page, "/api/hauls", {
       machineId: machine.id,
+      driverWorkerId: worker.id,
       projectId: project.id,
       hauledAt: new Date().toISOString(),
       originText: "E2E origin",
