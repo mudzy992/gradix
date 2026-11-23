@@ -1,0 +1,173 @@
+{
+  "outcomes": [
+    {
+      "id": "R7.tender.field.title-listed",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Created tender title is visible in the office list",
+      "group": "tender-list",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "ui-entity",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/e2e/evidencija-deep.spec.ts",
+          "title": "partner + tender DRAFT→SUBMITTED→WON→convert; UI vidi tender",
+          "bodyIncludes": [
+            "getByText(tender.title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.submitted-at",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "submitted_at is set only on DRAFT to SUBMITTED",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "submitted_at se postavlja samo na DRAFT→SUBMITTED",
+          "bodyIncludes": [
+            "submitted_at",
+            "SUBMITTED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.money",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Negative money or a bad currency is rejected",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "negativan iznos ne pravi tender",
+          "bodyIncludes": [
+            "-1.00",
+            "VALIDATION_FAILED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.partner-fk",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Partner must belong to the same company",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "nepoznat partner se odbija",
+          "bodyIncludes": [
+            "VALIDATION_FAILED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.attachment.pending-ready",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Attachment moves pending to ready only after confirm",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "CI-SKIP",
+      "owner": "Phase D, MinIO is not a ci-v2 service",
+      "review": "Cover when ci-v2.yml runs MinIO and a test confirms pending to ready. The unconfigured path is R7.tender.attachment.unconfigured."
+    },
+    {
+      "id": "R7.tender.attachment.browser-upload",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/e2e-coverage/MATRIX.md",
+      "summary": "Browser upload through MinIO",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "ui-entity",
+      "status": "CI-SKIP",
+      "owner": "e2e-coverage MATRIX, MinIO decision 2026-11-20",
+      "review": "Remove when ci-v2.yml runs a MinIO service and a Playwright upload asserts pending to ready"
+    },
+    {
+      "id": "R7.tender.attachment.not-copied",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Convert does not copy attachments onto the project",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "convert ne prebacuje prilog na projekat",
+          "bodyIncludes": [
+            "tender_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.obligation.one-scope",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Obligations × TENDER",
+      "summary": "A TENDER obligation has exactly one scope target",
+      "group": "tender-obligation",
+      "gate": "required",
+      "section": "Obligations × TENDER",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "obaveza na tenderu ima jedan opseg; dva opsega padaju",
+          "bodyIncludes": [
+            "obligations_one_scope"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.attachment.unconfigured",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Registering an attachment without storage inserts no row",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "prilog bez skladišta ne upisuje red",
+          "bodyIncludes": [
+            "CONFLICT",
+            "tender_attachments"
+          ]
+        }
+      ]
+    }
+  ]
+}

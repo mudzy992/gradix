@@ -1,0 +1,195 @@
+{
+  "edgeDefaults": {
+    "status": "COVERED",
+    "group": "tender-matrix",
+    "assertion": "unit",
+    "file": "apps/web/src/server/tender-status.test.ts",
+    "title": "svaki par statusa slijedi matricu"
+  },
+  "edges": [
+    {
+      "edge": "DRAFT>SUBMITTED",
+      "bodyIncludes": [
+        "DRAFT",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "DRAFT>WITHDRAWN",
+      "bodyIncludes": [
+        "DRAFT",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>WON",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>LOST",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>WITHDRAWN",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>terminal",
+      "bodyIncludes": [
+        "WON",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>terminal",
+      "bodyIncludes": [
+        "LOST",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>terminal",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "DRAFT>WON",
+      "bodyIncludes": [
+        "DRAFT",
+        "WON",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "DRAFT>LOST",
+      "bodyIncludes": [
+        "DRAFT",
+        "LOST",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>DRAFT",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "DRAFT",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WON>DRAFT",
+      "bodyIncludes": [
+        "WON",
+        "DRAFT",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WON>SUBMITTED",
+      "bodyIncludes": [
+        "WON",
+        "SUBMITTED",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WON>LOST",
+      "bodyIncludes": [
+        "WON",
+        "LOST",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WON>WITHDRAWN",
+      "bodyIncludes": [
+        "WON",
+        "WITHDRAWN",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>DRAFT",
+      "bodyIncludes": [
+        "LOST",
+        "DRAFT",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>SUBMITTED",
+      "bodyIncludes": [
+        "LOST",
+        "SUBMITTED",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>WON",
+      "bodyIncludes": [
+        "LOST",
+        "WON",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>WITHDRAWN",
+      "bodyIncludes": [
+        "LOST",
+        "WITHDRAWN",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>DRAFT",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "DRAFT",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>SUBMITTED",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "SUBMITTED",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>WON",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "WON",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>LOST",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "LOST",
+        "toThrow"
+      ]
+    }
+  ]
+}

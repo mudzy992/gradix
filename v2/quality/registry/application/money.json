@@ -1,0 +1,227 @@
+{
+  "outcomes": [
+    {
+      "id": "app.money.rounding",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.7",
+      "summary": "Money rounds half up at one place",
+      "group": "money-round",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/domain/src/money.test.ts",
+          "title": "zaokružuje pola naviše na jednom mjestu",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.money.currency",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.7",
+      "summary": "Adding two currencies is rejected",
+      "group": "money-currency",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/domain/src/money.test.ts",
+          "title": "ne dozvoljava sabiranje različitih valuta",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.machine-cost.rate",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "Machine hours times a rate use Money",
+      "group": "machine-cost",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/domain/src/machine-cost.test.ts",
+          "title": "množi sate stopom preko Money",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.hours.locked-export",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.7",
+      "summary": "Hours export contains locked rows and not submitted rows",
+      "group": "hours-export",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/hours-export.integration.test.ts",
+          "title": "OWNER CSV sadrži LOCKED, ne SUBMITTED",
+          "bodyIncludes": [
+            "LOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.hours.worker-denied",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.7",
+      "summary": "A worker cannot export hours",
+      "group": "hours-worker",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/hours-export.integration.test.ts",
+          "title": "WORKER dobija 403",
+          "bodyIncludes": [
+            "403"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.fuel.tenant",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "Company B cannot read company A's fuel entries",
+      "group": "fuel-tenant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-fuel-entries.integration.test.ts",
+          "title": "RLS: firma B ne vidi točenja firme A",
+          "bodyIncludes": [
+            "toBe(0)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.fuel.liters",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "Zero or negative liters are rejected",
+      "group": "fuel-liters",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-fuel-entries.integration.test.ts",
+          "title": "odbija litara <= 0 (fuel_entries_liters_check)",
+          "bodyIncludes": [
+            "fuel_entries_liters_check"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.fuel.driver-list-hides-amount",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "A driver list returns liters and a null amount",
+      "group": "fuel-driver-read",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/fuel-entry.integration.test.ts",
+          "title": "DRIVER vidi zapis ali ne cijenu",
+          "bodyIncludes": [
+            "toBeNull()",
+            "0.00",
+            "400"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.fuel.price.unknown-vs-zero",
+      "slice": "R5",
+      "source": ".cursor/plans/qe-r7/06_product-decisions.md#D1",
+      "summary": "Field roles submit liters only. Amount stays NULL. Synthetic 0.00 is rejected. Office may store a real zero.",
+      "group": "fuel-price",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "implementation": "IMPLEMENTED",
+      "evidence": [{
+        "file": "apps/web/src/server/fuel-entry.integration.test.ts",
+        "title": "ured unosi stvarnu nulu, a prazan iznos odbija",
+        "bodyIncludes": ["0.00", "amount_cents", "toBe(\"0\")"]
+      }, {
+        "file": "apps/web/src/server/fuel-price.integration.test.ts",
+        "title": "ured naknadno upisuje nepoznat iznos, vozač ne može",
+        "bodyIncludes": ["403", "amount_cents", "toBe(\"0\")"]
+      }]
+    },
+    {
+      "id": "app.haul.quantity",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "A haul quantity of zero or less is rejected",
+      "group": "haul-quantity",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-hauls.integration.test.ts",
+          "title": "odbija quantity <= 0 (hauls_quantity_check)",
+          "bodyIncludes": [
+            "hauls_quantity_check"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.fault.approval",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.9",
+      "summary": "A fault above the cost threshold waits for approval",
+      "group": "fault-approval",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/machine-fault.integration.test.ts",
+          "title": "prag troška → WAITING_APPROVAL; approve → APPROVED; Money u listi",
+          "bodyIncludes": [
+            "WAITING_APPROVAL"
+          ]
+        }
+      ]
+    }
+  ]
+}

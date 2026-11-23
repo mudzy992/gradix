@@ -1,0 +1,37 @@
+# zavisnosti i build
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# okruženja — nikad u repo
+.env
+.env.*
+!.env.example
+
+# testovi i alat
+coverage/
+.turbo/
+.vitest/
+playwright-report/
+test-results/
+quality/report.json
+quality/application-report.json
+
+# baza i lokalni podaci
+pgdata/
+*.sqlite
+*.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# generisano (Prisma klijent, OpenAPI)
+packages/**/src/generated/
+
+# mobilni web izvoz i Turborepo keš
+apps/mobile/dist-web/

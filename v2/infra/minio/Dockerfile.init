@@ -1,0 +1,7 @@
+# Use the official MinIO AIStor mc image from Quay, which includes bash and mc.
+# Bake the bootstrap into this image and set its entrypoint here; never pass /bin/sh to mc.
+FROM quay.io/minio/aistor/mc:RELEASE.2025-12-19T20-11-44Z
+
+COPY infra/minio/init-staging.sh /init.sh
+COPY infra/minio/staging-policy.json /policy.json
+ENTRYPOINT ["/bin/bash", "/init.sh"]

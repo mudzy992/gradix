@@ -1,0 +1,212 @@
+{
+  "outcomes": [
+    {
+      "id": "app.auth.session",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "Login returns a session cookie",
+      "group": "auth-login",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/api.integration.test.ts",
+        "title": "prijava vraća sesiju i cookie",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.auth.same-failure",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "Unknown email and a wrong password return the same code",
+      "group": "auth-failure",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/api.integration.test.ts",
+        "title": "nepoznat email i pogrešna lozinka daju isti kod",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.auth.invite-hash",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "An invitation link is stored as a hash and the audit row has no token",
+      "group": "auth-invite",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/access.integration.test.ts",
+        "title": "pozivnica: link postoji jednom, u bazi je samo hash, audit ne sadrži token",
+        "bodyIncludes": ["hash"]
+      }]
+    },
+    {
+      "id": "app.auth.must-change",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "A session that must change its password cannot continue",
+      "group": "auth-password",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/access.integration.test.ts",
+        "title": "sesija sa obaveznom promjenom lozinke ne smije dalje od promjene",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.auth.last-owner",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "The last owner cannot lose the owner role",
+      "group": "auth-owner",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/rbac.integration.test.ts",
+        "title": "posljednji vlasnik ne može izgubiti rolu (409), a drugi vlasnik to smije",
+        "bodyIncludes": ["409"]
+      }]
+    },
+    {
+      "id": "app.auth.cross-tenant-user",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "Another company cannot change this user",
+      "group": "auth-tenant-user",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/rbac.integration.test.ts",
+        "title": "tuđa firma ne može mijenjati ovu osobu (NOT_FOUND, ne 403 — bez odavanja)",
+        "bodyIncludes": ["NOT_FOUND"]
+      }]
+    },
+    {
+      "id": "app.auth.session-expiry",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "An expired or revoked session is not usable",
+      "group": "auth-session-unit",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "packages/domain/src/auth.test.ts",
+        "title": "sesija nije upotrebljiva nakon isteka ni nakon opoziva",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.auth.device-revoke",
+      "slice": "R4",
+      "source": "MASTER_BRIEF.md#B5.14",
+      "summary": "An administrator session revoke stops push and pull for that device",
+      "group": "auth-device",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/foreman-sync.integration.test.ts",
+        "title": "izgubljen telefon: administratorski opoziv sesije zaustavlja push i pull tog uređaja (401)",
+        "bodyIncludes": ["401"]
+      }]
+    },
+    {
+      "id": "app.audit.worker-denied",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "A worker cannot read the audit trail",
+      "group": "audit-worker",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/rbac.integration.test.ts",
+        "title": "WORKER ne vidi trag (403)",
+        "bodyIncludes": ["403"]
+      }]
+    },
+    {
+      "id": "app.audit.cross-tenant",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "Company B sees none of company A's audit rows",
+      "group": "audit-tenant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/rbac.integration.test.ts",
+        "title": "firma B u tragu ne vidi nijedan zapis firme A",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.tenant.fail-closed",
+      "slice": "R1",
+      "source": "MASTER_BRIEF.md#B5.1",
+      "summary": "With no company set, tenant tables return no rows",
+      "group": "tenant-fail-closed",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/rbac.integration.test.ts",
+        "title": "bez postavljene firme nijedna tenant tabela ne vraća red (fail-closed)",
+        "bodyIncludes": ["expect("]
+      }]
+    },
+    {
+      "id": "app.tenant.r4-read",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md",
+      "summary": "Each R4 tenant row is readable only with that company id",
+      "group": "tenant-r4-read",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "packages/db/src/r4-workday.integration.test.ts",
+        "title": "RLS matrix: svaki R4 tenant red čita se samo uz pripadajući SET LOCAL company_id",
+        "bodyIncludes": ["company_id"]
+      }]
+    },
+    {
+      "id": "app.tenant.r4-insert",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md",
+      "summary": "A cross-company INSERT into a writable R4 table is rejected",
+      "group": "tenant-r4-insert",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "packages/db/src/r4-workday.integration.test.ts",
+        "title": "tenant RLS rejects cross-company INSERT on every directly writable R4 table",
+        "bodyIncludes": ["INSERT"]
+      }]
+    }
+  ]
+}

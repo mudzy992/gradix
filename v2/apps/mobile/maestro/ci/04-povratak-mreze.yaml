@@ -1,0 +1,50 @@
+# CI tok 4/5 — povratak mreže: čekani zapis se šalje TAČNO jednom, bez duplikata.
+#
+# Mrežu UKLJUČUJE skripta emulator-net.sh PRIJE ovog toka. Tok 03 je ostavio
+# jedan zapis u „Čeka slanje"; ovdje se šalje, pa se slanje PONAVLJA — drugi
+# put nema ničega za poslati („poslano 0"), što je dokaz da duplikat NIJE
+# napravljen. Konačnu provjeru „tačno jednom" radi i server (idempotency
+# testovi u CI-ju) i ured na webu.
+#
+# LAYOUT činjenice: banner „N čeka slanje." je na VRHU forme (vidljiv čim se
+# forma otvori — dokaz da zapor čeka), dugmad su na dnu prve kartice (skrolamo
+# do njih), poruka „Slanje završeno: …" je odmah ispod dugmadi, a status
+# „Poslano" u kartici „Moji zapisi" niže (skrol na kraju).
+appId: ba.gradix.teren
+name: povratak-mreze
+---
+# Poslije force-stop + am start app se HLADNO startuje — pričekajmo home
+# (kao u toku 03; run 43764693794 je pokazao da tapOn bez čekanja zna
+# isteci prije rendera).
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 45000
+- tapOn: "Moj dan"
+# Banner na vrhu pokazuje da zapis iz toka 03 i dalje čeka (dokaz prije
+# slanja) — malo „čeka slanje." matcha „1 čeka slanje.", a NE statusni label
+# „Čeka slanje" (veliko Č, dno forme).
+- assertVisible:
+    text: "čeka slanje\\."
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj na telefon"
+    timeout: 20000
+- takeScreenshot: povratak-ceka
+- tapOn: "Pošalji sada"
+# takeScreenshot je pauza da slanje završi prije provjere poruke.
+- takeScreenshot: povratak-poslao
+- assertVisible:
+    text: "poslano 1, za provjeru 0"
+# Ponovno slanje NE smije napraviti duplikat — outbox je prazan pa poruka
+# kaže „poslano 0" (server ništa novo nije primio).
+- tapOn: "Pošalji sada"
+- takeScreenshot: povratak-bez-duplikata
+- assertVisible:
+    text: "poslano 0, za provjeru 0"
+# Status zapisa „Poslano" je u kartici „Moji zapisi" — skrolamo do njega.
+- scrollUntilVisible:
+    element:
+      text: "Poslano"
+    timeout: 20000
+- assertVisible: "Poslano"
+- takeScreenshot: povratak-poslano

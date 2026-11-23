@@ -27,3 +27,6 @@ node_modules/.pnpm-task-run-state-v1/
 # OS / editor
 .DS_Store
 .idea/
+
+# Stari v1 kod — ostaje u git historiji, ne u radnom stablu
+/v1/

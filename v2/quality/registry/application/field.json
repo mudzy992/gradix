@@ -1,0 +1,185 @@
+{
+  "outcomes": [
+    {
+      "id": "app.project.tenant-list",
+      "slice": "R3",
+      "source": "MASTER_BRIEF.md#B5.2",
+      "summary": "A project list does not include another company's project",
+      "group": "project-tenant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/project-isolation.integration.test.ts",
+          "title": "lista i detalj ne vide projekat druge firme; tuđa šifra nije zauzeta",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.project.overlap",
+      "slice": "R3",
+      "source": "MASTER_BRIEF.md#B5.2",
+      "summary": "Overlapping assignment of the same worker on the same project is rejected",
+      "group": "project-overlap",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/projects.integration.test.ts",
+          "title": "preklapanje istog radnika na istom projektu je odbijeno ČITLJIVOM porukom",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.project.scope",
+      "slice": "R3",
+      "source": "MASTER_BRIEF.md#B5.2",
+      "summary": "PROJECTS scope sees only the assigned project",
+      "group": "project-scope",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/projects.integration.test.ts",
+          "title": "opseg PROJECTS vidi samo dodijeljeni projekat; tuđi u istoj firmi je 403",
+          "bodyIncludes": [
+            "403"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.project.status-audit",
+      "slice": "R3",
+      "source": "MASTER_BRIEF.md#B5.2",
+      "summary": "A project status change is written to the audit trail",
+      "group": "project-status",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/projects.integration.test.ts",
+          "title": "PATCH mijenja status i to ide u audit kao status_changed",
+          "bodyIncludes": [
+            "status_changed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.assignment.no-void-after-work",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md",
+      "summary": "A worker assignment cannot be voided after a workday exists in its period",
+      "group": "assignment-void",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r4-workday.integration.test.ts",
+          "title": "R3 worker assignment cannot be VOIDed after any workday exists in its period",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.workday.transitions",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md",
+      "summary": "Workday confirm, decide, and lock follow the role matrix",
+      "group": "workday-transition",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/workday-approval.integration.test.ts",
+          "title": "matrica prelaza: confirm → decide → lock; zabranjeni skokovi i uloge",
+          "bodyIncludes": [
+            "FOREMAN_CONFIRMED",
+            "LOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.workday.revision",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md",
+      "summary": "A locked workday original is not updated in place",
+      "group": "workday-revision",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/workday-approval.integration.test.ts",
+          "title": "revizija: razlog ≥10; LOCKED original ne UPDATE; ACCOUNTANT/PM zabranjeni",
+          "bodyIncludes": [
+            "LOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.workday.unique-day",
+      "slice": "R4",
+      "source": "MASTER_BRIEF.md#B5.6",
+      "summary": "A canonical workday is unique per company, worker, and date",
+      "group": "workday-unique",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r4-workday.integration.test.ts",
+          "title": "kanonski dan je jedinstven po firmi/radniku/datumu i segment FK mora pratiti zaglavlje",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.workday.conflict-once",
+      "slice": "R4",
+      "source": "MASTER_BRIEF.md#B5.14",
+      "summary": "A sync conflict is resolved once",
+      "group": "workday-conflict",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r4-workday.integration.test.ts",
+          "title": "konflikt se razrješava jednom uz server vrijeme i per-company payload rok",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    }
+  ]
+}

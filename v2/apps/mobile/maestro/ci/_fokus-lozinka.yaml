@@ -1,0 +1,7 @@
+# Pomoćni mini-flow (poziva ga samo orkestrator, NIJE samostalni tok):
+# fokusira Lozinka polje na prijavi — vidi _fokus-email.yaml za razloge.
+appId: ba.gradix.teren
+name: fokus-lozinka
+---
+- tapOn:
+    id: "Lozinka"

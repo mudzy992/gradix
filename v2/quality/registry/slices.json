@@ -1,0 +1,147 @@
+{
+  "outcomes": [
+    {
+      "id": "R1.role.matrix-matches-code",
+      "slice": "R1",
+      "source": "v2/docs/PLAN-R1b.md#Testovi",
+      "summary": "The role screen and PERMISSIONS are the same table",
+      "group": "r1-matrix",
+      "gate": "track",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/rbac.integration.test.ts",
+          "title": "matrica u UI-u i PERMISSIONS u kodu su isti podatak",
+          "bodyIncludes": [
+            "toEqual"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R1.tenant.tables-through-r2",
+      "slice": "R1",
+      "source": "apps/web/src/server/rbac.integration.test.ts",
+      "summary": "Generated tenant list stops before R3–R7 tables",
+      "group": "r1-tenant",
+      "gate": "track",
+      "assertion": "persistence",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "R4.approval.confirm-decide-lock",
+      "slice": "R4",
+      "source": "v2/docs/PLAN-R4.md#11",
+      "summary": "Confirm, week decision, and lock follow the approved graph",
+      "group": "r4-approval",
+      "gate": "track",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/workday-approval.integration.test.ts",
+          "title": "matrica prelaza: confirm → decide → lock; zabranjeni skokovi i uloge",
+          "bodyIncludes": [
+            "FOREMAN_CONFIRMED",
+            "LOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R5.fuel.rls",
+      "slice": "R5",
+      "source": "v2/docs/PLAN-R5.md",
+      "summary": "Company B cannot read company A fuel rows",
+      "group": "r5-fuel-rls",
+      "gate": "track",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-fuel-entries.integration.test.ts",
+          "title": "RLS: firma B ne vidi točenja firme A",
+          "bodyIncludes": [
+            "SELECT",
+            "toBe(0)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R5.fuel.liters-positive",
+      "slice": "R5",
+      "source": "v2/packages/db/prisma/migrations/20261119150000_r5_2_fuel_entries/migration.sql",
+      "summary": "Zero liters are rejected by the check constraint",
+      "group": "r5-fuel-liters",
+      "gate": "track",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-fuel-entries.integration.test.ts",
+          "title": "odbija litara <= 0 (fuel_entries_liters_check)",
+          "bodyIncludes": [
+            "fuel_entries_liters_check",
+            "INSERT INTO public.fuel_entries"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R5.fuel.amount.unknown-vs-zero",
+      "slice": "R5",
+      "source": ".cursor/plans/qe-r7/06_product-decisions.md#D1",
+      "summary": "Field roles submit liters only. Amount stays NULL until an office role sets a price. Synthetic 0.00 is rejected.",
+      "group": "r5-fuel-price",
+      "gate": "required",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [{
+        "file": "apps/web/src/server/fuel-entry.integration.test.ts",
+        "title": "DRIVER vidi zapis ali ne cijenu",
+        "bodyIncludes": ["amount_cents", "0.00", "toBeNull"]
+      }]
+    },
+    {
+      "id": "R6.cost.book-once",
+      "slice": "R6",
+      "source": "v2/docs/PLAN-R6.md",
+      "summary": "Booking without a rate fails. A second book does not create another row",
+      "group": "r6-book",
+      "gate": "track",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/project-cost.integration.test.ts",
+          "title": "bez stope → VALIDATION; s stopom knjiži jednom (idempotent)",
+          "bodyIncludes": [
+            "VALIDATION_FAILED",
+            "skippedExisting"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R6.cost.accountant-denied",
+      "slice": "R6",
+      "source": "v2/docs/PLAN-R6.md",
+      "summary": "ACCOUNTANT cannot book project costs",
+      "group": "r6-authz",
+      "gate": "track",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/project-cost.integration.test.ts",
+          "title": "ACCOUNTANT ne smije knjižiti",
+          "bodyIncludes": [
+            "toBe(403)"
+          ]
+        }
+      ]
+    }
+  ]
+}
