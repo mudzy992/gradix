@@ -44,7 +44,10 @@ jobs:
     if: ${{ !inputs.e2e_stabilnost }}
     # Playwright Chromium još nema build za ubuntu 26.04 (ubuntu-latest od 2026-11).
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # E2E lanac (@smoke + 6 @deep shardova + @snimci) traje ~7 min kad prijava radi; 30 min je
+    # bilo dovoljno sve do F1, kada je drugi korak prijave počeo da troši cijeli budžet.
+    # 45 min daje prostor za taj lanac, a i dalje hvata stvarno zaglavljivanje.
+    timeout-minutes: 45
 
     services:
       postgres:
@@ -205,6 +208,11 @@ jobs:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
           PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
+          # E2E prijavljuje iste demo naloge desetinama puta u minuti, a replay zaštita
+          # (`user_totp.last_used_step`) dozvoljava tri prijave po 30-s periodu. Helper zato
+          # resetuje brojač sintetičkog naloga; zaštita se time ne gasi — testira je
+          # `f1-access.integration.test.ts` protiv pravog servera.
+          E2E_RESET_TOTP_STEP: "1"
         run: |
           pnpm --filter @gradix/web exec playwright install --with-deps chromium
           test -d "$HOME/.cache/ms-playwright" || { echo "::error::PW_CACHE_EMPTY"; exit 1; }
@@ -434,6 +442,7 @@ jobs:
         env:
           E2E_PASSWORD: E2eDemoLozinka-123
           SEED_PASSWORD: E2eDemoLozinka-123
+          E2E_RESET_TOTP_STEP: "1"
           DIO: ${{ matrix.dio }}
         run: |
           set -u

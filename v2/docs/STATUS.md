@@ -28,6 +28,7 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 | # | Korak CI-ja | Uzrok | Popravka |
 |---|---|---|---|
 | 1 | „Nema stvarnih ličnih podataka" (`ci-v2.yml`) | `check-privacy.mjs` je IBAN tretirao kao lični podatak, iako spec 01 §3.2 traži IBAN **firme**; 4 test mejla su bila van rezervisanih domena | IBAN izuzet iz `PERSONAL_SQL`/`PERSONAL_TS` (+ 2 self-test slučaja koja to čuvaju); test mejlovi prebačeni na `*.test` / `example.com` |
+| 3 | `E2E Playwright` — **istekao job-timeout (30 min)**, sve prije njega zeleno | F1 prijava ima **drugi korak**, a replay zaštita (`user_totp.last_used_step`) dozvoljava tri prijave istog naloga po 30-s periodu. E2E prijavljuje `vlasnik@`/`racunovodja@` desetinama puta → drugi login pada kao „pogrešan kod", `loginUi` čeka `**/pregled` do isteka testa, lanac od 7 shardova pojede cijeli budžet | Helper `loginUi` sada traži **svjež kod** (`freshTotpCode`: tekući korak → dozvoljeni prozor `+1` → novi period) i resetuje brojač sintetičkog naloga (`resetTotpReplayGuard`) kad je `E2E_RESET_TOTP_STEP=1`; seed resetuje `last_used_step`; timeout joba 30 → 45 min |
 | 2 | `assembleRelease` (mobilni E2E) | `packages/domain/src/totp.ts` uvozi `node:crypto`, a barrel `@gradix/domain` ga je uvlačio u Android bundle preko `r4-outbox.ts`. Metro nema Node stdlib → bundling pada | Novi ulaz `@gradix/domain/server` za serverske module; barrel više ne izvozi TOTP; uvoznici prebačeni. Greška se vidi **samo** pri bundlovanju, ne u `vitest`/`tsc` |
 
 ### Usklađeni ugovori i dokumentacija (F1 je promijenio ponašanje, ne samo kod)
@@ -41,10 +42,12 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 - **Mobilna prijava ne ostavlja poluspremnu sesiju.** Nalog sa obaveznom 2FA sada dobija jasnu
   `AUTH_2FA_REQUIRED` grešku („prijavite se na webu") umjesto praznog ekrana, i test provjerava
   da se tokeni **ne** upisuju.
-- **E2E prijava je dvostepena.** `loginUi` popunjava kod iz autentikatora kad se polje pojavi;
+- **E2E prijava je dvostepena i ponovljiva.** `loginUi` popunjava kod iz autentikatora kad se polje pojavi;
   demo seed daje sintetičku TOTP tajnu uredskim rolama. Bez toga bi svaki E2E shard stao na
   `/login` — a integracioni testovi bi i dalje bili zeleni (to je bila slijepa tačka).
   Novi integracioni test prolazi **istu** putanju kao čovjek: lozinka → pre-auth → kod → `gx_at`.
+  Zaštita od replay-a se time **ne gasi** — testira je integracioni test protiv pravog servera; u
+  E2E-u se resetuje samo brojač sintetičkog naloga, i to pod izričitom env zastavicom.
 - **`@gradix/domain/server`** je dokumentovan kao jedini dozvoljeni ulaz za serverske module
   (TOTP). Mobilni ga nikad ne uvozi — pravilo stoji u zaglavlju barrella.
 - **`STATUS.md` je tvrdio da je sljedeća „Faza 2 — projekti i mehanizacija"**, što je u suprotnosti
@@ -55,7 +58,7 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ```
 migracije       38          tabele          59 (51 tenant)
 OpenAPI         109 putanja
-pnpm test       806 testa   (web 496 + domain 135 + mobile 81 + db 67 + contracts 21 + worker 8)
+pnpm test       813 testa   (web 501 + domain 135 + mobile 81 + db 67 + contracts 21 + worker 8)
 pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 508 upita ✓
 check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
 ```

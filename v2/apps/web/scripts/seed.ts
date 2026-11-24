@@ -189,7 +189,11 @@ try {
     await pool.query(
       `INSERT INTO user_totp (id, user_id, secret_enc, confirmed_at)
        VALUES ($1, $2, $3, now())
-       ON CONFLICT (user_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, confirmed_at = now()`,
+       ON CONFLICT (user_id) DO UPDATE
+         SET secret_enc = EXCLUDED.secret_enc, confirmed_at = now(),
+             -- Svježa fikstura = svjež brojač: zaštita od replay-a bi inače nosila stanje
+             -- iz prethodnog pokretanja i E2E bi padao na "pogrešan kod".
+             last_used_step = NULL, updated_at = now()`,
       [`totp_${user.id}`, user.id, encryptTotpSecret(secret, demoAuthSecret)],
     );
     await pool.query("UPDATE users SET totp_enabled = true, must_enroll_2fa = false WHERE id = $1", [user.id]);
