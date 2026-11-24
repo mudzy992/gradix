@@ -50,7 +50,7 @@ test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješen
   // Drugi korisnik (vlasnik) direktnim linkom vidi isto stanje, bez akcija.
   const ctx = await browser.newContext();
   const owner = await ctx.newPage();
-  await login(owner, "vlasnik@demo.test");
+  await loginUi(owner, "vlasnik@demo.test");
   await owner.goto(detailUrl);
   await expect(owner.getByText(/Razriješio\/la Amina Karić/).first()).toBeVisible();
   await expect(owner.getByRole("button", { name: /Prihvati unos sa servera/ })).toBeDisabled();

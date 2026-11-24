@@ -4,7 +4,7 @@
  */
 import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
-import { E2E_USERS, loginUi } from "./helpers/auth";
+import { E2E_USERS, loginUi, requireE2ePassword } from "./helpers/auth";
 import ExcelJS from "exceljs";
 
 const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";

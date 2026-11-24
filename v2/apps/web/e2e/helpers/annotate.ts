@@ -27,7 +27,9 @@ export const test = base.extend<{ _announce: void }>({
     // eslint-disable-next-line no-empty-pattern -- auto-fixture bez zavisnosti, samo hook.
     async ({}, use, testInfo) => {
       await use();
-      const failure = testInfo.errors[0]?.error ?? testInfo.errors[0]?.message;
+      // `TestInfoError` nosi `message` (i `stack`), ne `error` — ranija verzija je tražila
+      // polje koje ne postoji, pa se dijagnostika gubila tačno kad je najpotrebnija.
+      const failure = testInfo.errors[0]?.stack ?? testInfo.errors[0]?.message;
       if (failure !== undefined) announceFailure(testInfo, failure);
     },
     { auto: true },

@@ -23,7 +23,7 @@ test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita"
 
   const officeCtx = await browser.newContext();
   const office = await officeCtx.newPage();
-  await login(office, "ured@demo.test");
+  await loginUi(office, "ured@demo.test");
   await office.goto("/ured/radni-dani");
   await expect(office.getByRole("heading", { name: "Radni dani" })).toBeVisible();
   const approve = office.getByRole("button", { name: "Odobri sedmicu" });
@@ -36,7 +36,7 @@ test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita"
 
   const acctCtx = await browser.newContext();
   const acct = await acctCtx.newPage();
-  await login(acct, "racunovodja@demo.test");
+  await loginUi(acct, "racunovodja@demo.test");
   await acct.goto("/ured/radni-dani");
   await expect(acct.getByRole("heading", { name: "Radni dani" })).toBeVisible();
   await expect(acct.getByRole("button", { name: "Potvrdi dan" })).toHaveCount(0);

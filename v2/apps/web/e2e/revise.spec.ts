@@ -26,7 +26,7 @@ test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmet
 
   const officeCtx = await browser.newContext();
   const office = await officeCtx.newPage();
-  await login(office, "ured@demo.test");
+  await loginUi(office, "ured@demo.test");
   await office.goto("/ured/radni-dani");
   await office.getByRole("button", { name: "Odobri sedmicu" }).click();
   await expect(office.getByRole("button", { name: "Zaključaj" })).toBeEnabled({ timeout: 15_000 });
@@ -72,7 +72,7 @@ test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmet
   for (const email of ["voditelj@demo.test", "racunovodja@demo.test", "sef@demo.test"] as const) {
     const ctx = await browser.newContext();
     const other = await ctx.newPage();
-    await login(other, email);
+    await loginUi(other, email);
     await other.goto("/ured/radni-dani");
     await expect(other.getByRole("heading", { name: "Radni dani" })).toBeVisible();
     await expect(other.getByRole("button", { name: "Nova ispravka" })).toHaveCount(0);

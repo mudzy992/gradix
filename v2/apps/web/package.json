@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc -p tsconfig.e2e.json --noEmit",
     "test": "node scripts/run-tests.mjs",
     "test:a11y": "vitest run src/components/shell.test.tsx src/app/ured src/app/pregled",
     "seed": "tsx scripts/seed.ts",
