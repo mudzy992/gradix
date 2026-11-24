@@ -11,6 +11,12 @@
 --   * `sync_conflicts` po entitetu (7 terenskih tipova), ne samo po `work_entry_id`;
 --   * kadrovski profil, istorija satnica bez prepisivanja, saldo godišnjeg, zaduženja, OZO šabloni.
 --
+-- NAPOMENA (2026-11-23): ova migracija je IZMIJENJENA na mjestu, poslije CI runa 45454051757.
+-- Migracije su inače naprijed-samo, ali ovdje je izmjena jedini ispravan put: stara verzija je na
+-- serveru bez `btree_gist` PADALA u cjelini, pa baza nikad nije došla do `schema_migrations` reda i
+-- naknadna migracija se ne bi imala gdje primijeniti. F3 u tom trenutku nije bila puštena izvan ove
+-- grane (nema deploya), pa nema baze koja je upisala staru verziju. Detalj je u §4.9 izvještaja.
+--
 -- Sve novo je tenant-scope-ovano, FORCE RLS, bez DELETE granta aplikaciji gdje spec kaže
 -- „ne briše se". Grantovi idu u `bootstrap/grants.sql`, matrica u `privilege-matrix.tsv`.
 BEGIN;

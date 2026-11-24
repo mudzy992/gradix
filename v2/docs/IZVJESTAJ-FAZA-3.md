@@ -158,7 +158,15 @@ preflight 001+002    OK
 7. **`sync.purge` poštuje guard.** `payload_purged_at` piše baza, ne posao; posao šalje samo
    `received_payload = NULL` i to samo kad je `payload_purge_after` istekao.
 8. **`OPEN` sukob se nikad ne čisti**, ma koliko star bio.
-9. **`href` obavještenja je web ekran, ne mobilni.** Razrješenje sukoba je prvo pisalo
+9. **Isto pravilo u bazi ima JEDAN mehanizam, i to onaj koji server može podnijeti.** Svako
+   `EXCLUDE USING gist` traži `btree_gist`; ako ga nema, migracija ne smije pasti nego ostaviti
+   triger sa `pg_advisory_xact_lock`. R3 je to poštovala za `project_assignments`, F3 nije za
+   `worker_rates` — i to je oborilo korak „Preklapanje dodjela" na CI runu `45454051757`. Zato
+   `check-preklapanje` od sada tvrdi mehanizam za **obje** tabele i da su isti, a servis prepoznaje
+   oba oblika greške (`23P01` i `RATE_OVERLAP`). Migracija `20261124140000_f3_1_workdays_workers`
+   je zato izmijenjena na mjestu: stara verzija je padala prije upisa u `schema_migrations`, pa
+   naknadna migracija nije imala gdje da se primijeni; F3 nije bila van ove grane.
+10. **`href` obavještenja je web ekran, ne mobilni.** Razrješenje sukoba je prvo pisalo
    `href: "/moj-dan"`; `/moj-dan` postoji **samo u mobilnoj aplikaciji**, pa je web inbox
    (`<Link>` + prefetch) pravio 404 u konzoli i oborio WORKER smoke na desktopu i mobilu.
    Putanje sada žive u `src/server/notification-hrefs.ts`, a `notification-hrefs.test.ts` traži
