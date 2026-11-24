@@ -1596,6 +1596,45 @@ select.gx-input option, select.gx-input optgroup {
   font-family: var(--font-mono, ui-monospace), monospace;
 }
 
+/*
+  QR za 2FA uparivanje (Korak 0). Podloga je NAMJERNO `--palette-surface` (bijela) u obje teme:
+  skener telefona traži tamne module na svjetlom, a inverzija u tamnoj temi je najčešći razlog
+  „kod neće da se očita". Zato ovdje nije `var(--panel)` — on se u tamnoj temi mijenja. Hex se
+  ne piše (paleta je zatvorena), pa se koristi paletni token koji je bijel u obje teme.
+*/
+.gx-qr {
+  display: inline-grid;
+  place-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-field);
+  background: var(--palette-surface);
+}
+
+.gx-qr__img {
+  display: block;
+  width: 232px;
+  height: 232px;
+  /* Bez zaglađivanja: skalirani QR sa `image-rendering: pixelated` ostaje oštar i čitljiv. */
+  image-rendering: pixelated;
+}
+
+/* Isti prostor dok QR ne stigne — forma ne smije skočiti pod rukom koja kuca ključ. */
+.gx-qr__placeholder {
+  width: 232px;
+  height: 232px;
+  border-radius: var(--radius-field);
+  background: var(--raise);
+}
+
+@media (max-width: 639px) {
+  .gx-qr__img,
+  .gx-qr__placeholder {
+    width: 200px;
+    height: 200px;
+  }
+}
+
 /* Platforma: svoj okvir, bez tenanta. Nikad ne dijeli `gx-sidebar` sa firmom. */
 .gx-shell--platform {
   min-height: 100dvh;

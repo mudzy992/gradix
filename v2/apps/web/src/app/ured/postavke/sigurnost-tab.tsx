@@ -8,7 +8,8 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { apiCall } from "@/api-client";
-import { Alert, Button, Card, FormSection, Input, Skeleton, Stack } from "@/components/ui/index";
+import { Alert, Button, Card, FormSection, Inline, Input, Skeleton, Stack } from "@/components/ui/index";
+import { TotpQrCode } from "@/components/totp-qr-code";
 
 type TwoFactorStatus = {
   enabled: boolean;
@@ -24,6 +25,7 @@ export function SigurnostTab() {
   const [enrollment, setEnrollment] = useState<{ uri: string; secret: string } | null>(null);
   const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     const result = await apiCall<TwoFactorStatus>("/api/auth/2fa/status");
@@ -45,6 +47,18 @@ export function SigurnostTab() {
       return;
     }
     setEnrollment(result.data);
+    setCopied(false);
+  };
+
+  /*
+   * Kopiranje ključa je za one koji autentikator drže na ISTOM telefonu — QR tada nema kome
+   * da se skenira. `navigator.clipboard` traži siguran kontekst (https ili localhost), pa se
+   * izostanak ne prijavljuje kao greška: ključ je i dalje vidljiv i može se prepisati.
+   */
+  const copySecret = () => {
+    if (!enrollment) return;
+    void navigator.clipboard?.writeText(enrollment.secret);
+    setCopied(true);
   };
 
   const confirm = async () => {
@@ -101,8 +115,29 @@ export function SigurnostTab() {
               </Button>
             ) : (
               <Stack>
-                <p>Upišite ovaj ključ u autentikator (Google Authenticator, Aegis, 1Password):</p>
-                <code className="gx-code">{enrollment.secret}</code>
+                <p>
+                  Skenirajte QR kod aplikacijom za autentikaciju (Google Authenticator, Aegis, 1Password).
+                  Ako skeniranje nije moguće, upišite ključ ručno.
+                </p>
+                {/*
+                  * QR i ključ stoje JEDAN pored drugog, ne u dva koraka: ko ne može da skenira
+                  * (telefon je taj na kojem je aplikacija) odmah vidi drugi put, bez traženja.
+                  */}
+                <Inline>
+                  <TotpQrCode uri={enrollment.uri} label="Gradix 2FA" />
+                  <Stack>
+                    <p className="gx-muted">Ključ za ručni unos:</p>
+                    <code className="gx-code">{enrollment.secret}</code>
+                    <div>
+                      <Button variant="quiet" onClick={copySecret}>
+                        {copied ? "Kopirano" : "Kopiraj ključ"}
+                      </Button>
+                    </div>
+                    <p className="gx-muted" role="status" aria-live="polite">
+                      {copied ? "Ključ je u međuspremniku." : ""}
+                    </p>
+                  </Stack>
+                </Inline>
                 <Input
                   label="Kod iz aplikacije (6 cifara)"
                   inputMode="numeric"
