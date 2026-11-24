@@ -17,6 +17,7 @@ import { JOB_NAMES, pingHealth, type JobLogger } from "./jobs";
 import { deliverNotifications } from "./notifications-deliver";
 import { scanReminders } from "./reminders-scan";
 import { purgeAttachments } from "./attachments-purge";
+import { purgeSyncPayloads } from "./sync-purge";
 import { createObjectRemover } from "./object-storage";
 
 const config = loadConfig();
@@ -92,6 +93,16 @@ async function runAttachmentsPurge(): Promise<void> {
   await purgeAttachments(pool, { logger, removeObject: storage.removeObject });
 }
 
+/**
+ * `sync.purge` — tijela razriješenih sukoba po retenciji (90 dana od razrješenja).
+ *
+ * Posao ne traži bucket ni bilo koju vanjsku uslugu: briše se kolona, pa nema „preskočeno jer
+ * nije konfigurisano“. Ako padne, sljedeći dnevni prolaz ga ponavlja — idempotentan je.
+ */
+async function runSyncPurge(): Promise<void> {
+  await purgeSyncPayloads(pool, { logger });
+}
+
 async function main(): Promise<void> {
   boss.on("error", (error) => logger.error("pg-boss greška", { message: error.message }));
 
@@ -101,6 +112,7 @@ async function main(): Promise<void> {
   await boss.createQueue(JOB_NAMES.notificationsDeliver);
   await boss.createQueue(JOB_NAMES.remindersScan);
   await boss.createQueue(JOB_NAMES.attachmentsPurge);
+  await boss.createQueue(JOB_NAMES.syncPurge);
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -112,6 +124,7 @@ async function main(): Promise<void> {
 
   await boss.work(JOB_NAMES.remindersScan, async () => runReminders());
   await boss.work(JOB_NAMES.attachmentsPurge, async () => runAttachmentsPurge());
+  await boss.work(JOB_NAMES.syncPurge, async () => runSyncPurge());
 
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
@@ -120,6 +133,9 @@ async function main(): Promise<void> {
   // Retencija: jedan prolaz dnevno u 03:00 UTC — van radnog vremena, a prije jutarnjeg
   // pregleda rokova, pa obrisano ne izgleda kao „nestalo preko noći“.
   await boss.schedule(JOB_NAMES.attachmentsPurge, "0 3 * * *");
+  // Retencija sukoba: 03:30 UTC — pola sata poslije priloga, da se dva brisanja ne preklope
+  // i da se u logu vidi koje je šta obrisalo.
+  await boss.schedule(JOB_NAMES.syncPurge, "30 3 * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),

@@ -60,5 +60,10 @@ table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overla
 table	work_week_approvals	SELECT;INSERT;UPDATE	-		R4b week approve/reject/lock; FORCE RLS; no hard-delete path.
 table	workday_revisions	SELECT;INSERT	-		R4b office revisions after confirm; append-only; FORCE RLS; no UPDATE/DELETE.
 table	workdays	SELECT;INSERT;UPDATE	-		Canonical daily header; upsert/update lifecycle with immutable worker/date identity and no hard-delete path.
+table	worker_rates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 istorija satnica: nova stopa = novi red, stara dobija valid_to; iznos se ne prepisuje (trigger). Samo OWNER/ADMIN/ACCOUNTANT vide (workers.rates.*).
+table	worker_leave_entitlements	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 pravo na godišnji po godini; konzumacija se računa iz workdays.day_kind, ne upisuje se ovdje.
+table	worker_issuances	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 zaduženja OZO/alata; povrat je UPDATE (returned_at), zaduženje se ne briše.
+table	ppe_templates	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F3 OZO set po radnom mjestu; šablon se briše kad radno mjesto nestane — ne nosi historiju (zaduženja je nose).
+table	worker_history	SELECT;INSERT	SELECT;INSERT		F3 vremenska linija kartice; append-only i za vlasnika — ispravka se vidi kao nov red.
 table	workers	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Worker CRUD uses soft deactivation; no hard-delete path.
 sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

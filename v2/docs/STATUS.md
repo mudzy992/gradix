@@ -1,9 +1,9 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **Faza 3: završena** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 3 — Evidencija rada** po planu.
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 4** po `docs/IMPLEMENTATION_PLAN.md`.
 
 ## Šta je gotovo
 
@@ -24,6 +24,11 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 3 — Evidencija ra
 | 2.3 | API: 10 F2 ruta — nedostajuće obaveze (spisak + kreiranje), pravila (CRUD), provjera, pomjeranje datuma provjere, masovna obnova, izvoz CSV/PDF, uvoz (pregled + primjena) | ✅ |
 | 2.4 | UI: `/ured/rokovi` sa 9 stanja i karticom „Nedostaje“; mobilni ekran rokova razlikuje **blokadu** (isteklo/odbijeno) od upozorenja | ✅ |
 | 2.5 | Worker: `reminders.scan` (po roli primaoca iz `obligation_notify_roles`, dedupe), `attachments.purge` (retencija) | ✅ |
+| 3.1 | Baza: `day_kind`/`absence_note`/`assignment_warning`, segmenti sa `tz_offset_minutes`/`segment_source`, `one_open_per_worker_per_day`, `sync_conflicts` + `entity_type`/`entity_id`, `work_week_approvals.reviewed_snapshot`; nove tabele `worker_rates` (EXCLUDE po tipu), `worker_leave_entitlements`, `worker_issuances`, `ppe_templates`, `worker_history` — sve FORCE RLS | ✅ |
+| 3.2 | Domena: 7 vrsta dana, zaokruživanje **po segmentu** (`sumSegmentMinutes`), zaboravljen dan (`forgottenDayOutcome`), stanje provjere dana — 20 testova | ✅ |
+| 3.3 | API: 23 rute — timer (start/pause/resume/finish, idempotentno po `localId`), `me/day`, zaboravljen dan, sedmica, grupna potvrda, vrsta dana; kartica radnika, cijene (istorija, ne prepisivanje), dopust, zaduženja, OZO šabloni, historija, „Radnik odlazi“, masovne izmjene | ✅ |
+| 3.4 | UI: web `/ured/radnici/[id]` (5 sekcija, dozvola po sekciji), `/ured/radni-dani/sedmica` (radnik × dan + CSV), mobilni „Moj dan“ timer-first (`≥ 56 dp`, ručni unos iza dugmeta) | ✅ |
+| 3.5 | Worker: `sync.purge` (retencija tijela razriješenih sukoba); obavještenje radniku pri razrješenju sukoba; filter sukoba po `entity_type` | ✅ |
 
 ## Korak 0 — zašto je CI bio crven i šta je popravljeno
 
@@ -60,11 +65,12 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ## Brojevi (lokalna provjera, 2026-11-23)
 
 ```
-migracije       38          tabele          59 (51 tenant)
-OpenAPI         109 putanja
-pnpm test       813 testa   (web 501 + domain 135 + mobile 81 + db 67 + contracts 21 + worker 8)
-pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 508 upita ✓
+migracije       40          tabele          61 (58 tenant)
+OpenAPI         136 putanja (172 metode)
+pnpm test       945 testa   (web 562 + domain 178 + mobile 86 + db 67 + contracts 21 + worker 21 + mobile-ekran 10)
+pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 606 upita / 58 tabela ✓
 check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
+a11y            113 testa (axe, WCAG 2.1 AA, obje teme)
 ```
 
 Baza lokalno: embedded Postgres na portu 5433 (`v2/.pg/`, gitignorisano).
@@ -128,8 +134,8 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 
 ## Namjerno još nema
 
-- 2 od 6 worker poslova (`budget.thresholds`, `sync.purge`) — dolaze sa svojim modulima, jer
-  traže tabele koje još ne postoje.
+- 1 od 6 worker poslova (`budget.thresholds`) — dolazi sa svojim modulom, jer traži tabele koje
+  još ne postoje. (`sync.purge` je isporučen u Fazi 3.)
 - Email/push provajder: isporuka je `BLOCKED_NO_PROVIDER`, in-app radi bez njega.
 - `report_jobs`, `daily_rollups` — tabele i kostur postoje, poslovi dolaze sa izvještajima (Faza 6).
 

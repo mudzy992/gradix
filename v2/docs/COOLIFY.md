@@ -67,6 +67,18 @@ Redoslijed fallbacka je u `apps/worker/src/config.ts` i pokriven testom: posao i
 `DATABASE_URL`. Ranije je worker padao na startu ako je postavljen samo `DATABASE_URL`
 („nedostaje DATABASE_ADMIN_URL"), iako baza radi.
 
+### Faza 3 (radno vrijeme + radnici) — nema novih ENV varijabli
+
+F3 ne uvodi nijednu novu varijablu. Dvije stvari koje deploy mora uraditi:
+
+1. **`RUN_MIGRATIONS=true`** jednom — primjenjuje `20261124140000_f3_1_workdays_workers`
+   (5 novih tabela, `day_kind`, `segment_source`, `entity_type` na sukobima).
+2. **Grantovi** moraju biti primijenjeni (`packages/db/bootstrap/grants.sql`). Bez njih kartica
+   radnika pada sa `permission denied for table worker_rates`. Provjera: preflight `OK 001` + `OK 002`.
+
+`sync.purge` (novi worker posao) ima **fiksni** raspored `30 3 * * *` UTC i ne traži konfiguraciju.
+Detalji: `docs/IZVJESTAJ-FAZA-3.md` §3.
+
 ### 2FA (TOTP) — šta mora biti postavljeno
 
 2FA **nema svojih ENV varijabli**; sve ide kroz `AUTH_SECRET`:

@@ -118,6 +118,29 @@ export const PERMISSIONS = {
   "projects.override": ["OWNER", "ADMIN"],
   "workers.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "workers.manage": ["OWNER", "ADMIN"],
+  /*
+   * F3: osjetljivi podaci radnika (datum rođenja, adresa, krvna grupa, hitni kontakt).
+   * Samo vlasnik i admin (spec 04 §1.1.4); svako čitanje upisuje ACCESS audit.
+   * Zašto nije uz `workers.view`: šef gradilišta treba listu i kontakt za posao, ali krvna
+   * grupa i adresa stanovanja nisu podaci za gradilište.
+   */
+  "workers.sensitive.view": ["OWNER", "ADMIN"],
+  /*
+   * F3: satnice. `PM` i šef gradilišta ih NE vide (spec 04 §1.2.10) — ne zato što bi ih
+   * zloupotrijebili, nego zato što plata kolege nije podatak za gradilište. Mijenja samo
+   * vlasnik/admin; računovođa čita jer pravi obračun.
+   */
+  "workers.rates.view": ["OWNER", "ADMIN", "ACCOUNTANT"],
+  "workers.rates.manage": ["OWNER", "ADMIN"],
+  "workers.leave.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
+  "workers.leave.manage": ["OWNER", "ADMIN"],
+  "workers.issuances.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "workers.issuances.manage": ["OWNER", "ADMIN", "SITE_SUPERVISOR"],
+  /*
+   * F3: promjena vrste dana (izostanak). Šef unosi izostanak jednim klikom za svoju ekipu —
+   * čekati ured bi značilo da se izostanak upiše danima kasnije ili nikad.
+   */
+  "workdays.kind": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "equipment.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC"],
   // `equipment.manage` uključuje ispravku brojila (namjerno ne za rukovaoca: on unosi novo
   // stanje, ali ne prepisuje staro — to je posao ureda).
@@ -270,6 +293,35 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     label: "Upravljanje radnicima",
     description: "Dodavanje, izmjena, deaktivacija i veza radnika sa nalogom.",
   },
+  "workers.sensitive.view": {
+    label: "Osjetljivi podaci radnika",
+    description:
+      "Datum rođenja, adresa, krvna grupa i hitni kontakt. Svako čitanje ide u audit (klasa ACCESS).",
+  },
+  "workers.rates.view": {
+    label: "Pregled satnica",
+    description: "Istorija satnica i koeficijenata. Vođa projekta i šef gradilišta ih ne vide.",
+  },
+  "workers.rates.manage": {
+    label: "Izmjena satnica",
+    description: "Nova stopa kao novi red; iznos postojeće se ne prepisuje.",
+  },
+  "workers.leave.view": {
+    label: "Pregled godišnjeg",
+    description: "Pravo po godini i saldo izostanaka (korištenje se računa iz radnih dana).",
+  },
+  "workers.leave.manage": {
+    label: "Upravljanje godišnjim",
+    description: "Pravo i prenos po godini za radnike.",
+  },
+  "workers.issuances.view": {
+    label: "Pregled zaduženja",
+    description: "OZO, alat i uređaji kod radnika — aktivna zaduženja i povijest.",
+  },
+  "workers.issuances.manage": {
+    label: "Izdavanje i povrat",
+    description: "Zaduženje OZO/alata/uređaja i povrat; OZO set jednim klikom.",
+  },
   "equipment.view": {
     label: "Pregled mašina",
     description: "Lista mašina i vozila, kategorije i stanje brojila — bez izmjena.",
@@ -277,6 +329,11 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "equipment.manage": {
     label: "Upravljanje mašinama",
     description: "Mašine, kategorije, brojilo i ispravke brojila.",
+  },
+  "workdays.kind": {
+    label: "Vrsta dana i izostanci",
+    description:
+      "Izostanak, godišnji, bolovanje i praznik jednim klikom; dan sa izostankom ne nosi sate.",
   },
   "workdays.view": {
     label: "Pregled radnih dana",

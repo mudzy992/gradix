@@ -22,6 +22,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { companyId as toCompanyId, withCompany, type CompanyId } from "@gradix/db";
 import type { Pool, PoolClient } from "pg";
 import { writeAudit } from "./audit";
+import { notify } from "./notification-service";
 import { canResolveConflict, isConflictParty, workdayResolveScopeFor } from "./workday-review";
 
 export type ResolutionKind = "ACCEPT_SERVER" | "ACCEPT_RECEIVED" | "CORRECTED_TIMES" | "REJECTED";
@@ -521,6 +522,35 @@ export async function resolveWorkdayConflict(
         conflict.id, JSON.stringify(devicePayload)],
     );
 
+    /*
+     * Obavještenje radniku (spec 03 §1.6.31): razrješenje sukoba je odluka o NJEGOVIM satima, a
+     * do sada je saznavao tek kad sam otvori aplikaciju. Ide u ISTOJ transakciji: ako obavještenje
+     * padne, ne smije ostati razriješen sukob o kojem radnik nije obaviješten.
+     *
+     * Kad sukob nije vezan za osobu (npr. mašina), nema kome da se šalje — tada se preskače.
+     */
+    const workerUser = targetWorkerId
+      ? await client.query<{ user_id: string | null }>(
+          "SELECT user_id FROM public.workers WHERE company_id = $1 AND id = $2",
+          [company, targetWorkerId],
+        )
+      : null;
+    const recipient = workerUser?.rows[0]?.user_id ?? null;
+    if (recipient) {
+      await notify(client, company, {
+        kind: "workday.conflict_resolved",
+        title: "Tvoj radni dan je provjeren",
+        // Razlog ide u obavještenje: radnik ima pravo da zna šta je odlučeno o njegovim satima.
+        body: `Ured je razriješio neslaganje za ${workDate ?? "tvoj dan"}: ${input.reason.trim()}`,
+        href: "/moj-dan",
+        severity: "INFO",
+        userId: recipient,
+        sourceType: "sync_conflict",
+        sourceId: conflict.id,
+        dedupeKey: `sync_conflict:${conflict.id}:resolved`,
+      });
+    }
+
     return {
       outcome: "RESOLVED",
       conflictId: conflict.id,
@@ -553,11 +583,28 @@ export type ConflictListItem = {
   resolvedByName: string | null;
   resolvedAt: string | null;
   resolvedByParty: boolean;
+  /** Na šta se sukob odnosi — do F3 se znalo samo `work_entry_id`. */
+  entityType: string;
+  entityId: string | null;
 };
+
+/** Sedam terenskih entiteta iz spec 03 §1.6.29 — filter po njima, ne po slobodnom tekstu. */
+export const CONFLICT_ENTITY_TYPES = [
+  "workday",
+  "work_entry",
+  "machine_work_log",
+  "fuel_entry",
+  "haul",
+  "machine_daily_check",
+  "machine_fault",
+] as const;
+export type ConflictEntityType = (typeof CONFLICT_ENTITY_TYPES)[number];
 
 export type ConflictListFilters = {
   status?: "OPEN" | "RESOLVED";
   projectId?: string;
+  /** Sukob samo za jedan tip entiteta (spec 03 §1.6.29). */
+  entityType?: ConflictEntityType;
   olderThanDays?: number;
   limit?: number;
   offset?: number;
@@ -576,6 +623,7 @@ const CONFLICT_SELECT = `
          conflict.resolved_at, conflict.resolved_by_party,
          e.review_flags AS server_flags,
          conflict.resolution_reason, conflict.internal_note,
+         conflict.entity_type, conflict.entity_id,
          e.kind AS server_kind, e.project_id AS server_project, e.machine_id AS server_machine,
          e.created_at AS server_created, e.worker_id AS server_worker_id,
          (aw.first_name || ' ' || aw.last_name) AS server_author_name,
@@ -623,6 +671,7 @@ type ConflictDbRow = {
   resolution_kind: ResolutionKind | null; resolved_by_name: string | null;
   resolved_at: Date | null; resolved_by_party: boolean;
   server_flags: string[] | null; resolution_reason: string | null; internal_note: string | null;
+  entity_type: string; entity_id: string | null;
   server_kind: string | null; server_project: string | null; server_machine: string | null;
   server_created: Date | null; server_worker_id: string | null;
   server_author_name: string | null; received_author_name: string | null;
@@ -650,6 +699,8 @@ function toListItem(row: ConflictDbRow): ConflictListItem {
     resolvedByName: row.resolved_by_name,
     resolvedAt: row.resolved_at?.toISOString() ?? null,
     resolvedByParty: row.resolved_by_party,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
   };
 }
 
@@ -669,10 +720,12 @@ export async function listConflicts(
         AND ($3::text IS NULL OR conflict.status = $3)
         AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
         AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))
+        AND ($8::text IS NULL OR conflict.entity_type = $8)
       ORDER BY conflict.status, conflict.created_at ASC
       LIMIT $6 OFFSET $7`,
     [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
-      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null, limit, offset],
+      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null, limit, offset,
+      filters.entityType ?? null],
   );
   const total = await client.query<{ n: string }>(
     `SELECT count(*)::text AS n FROM public.sync_conflicts conflict
@@ -682,9 +735,11 @@ export async function listConflicts(
         AND ${scopeSql}
         AND ($3::text IS NULL OR conflict.status = $3)
         AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
-        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))`,
+        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))
+        AND ($6::text IS NULL OR conflict.entity_type = $6)`,
     [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
-      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null],
+      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null,
+      filters.entityType ?? null],
   );
   return { conflicts: rows.rows.map(toListItem), total: Number(total.rows[0]?.n ?? 0) };
 }

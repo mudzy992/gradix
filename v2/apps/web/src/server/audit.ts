@@ -101,6 +101,20 @@ export const AUDIT_ACTIONS = [
   // Trag PRISTUPA osjetljivim podacima (spec 01 §1.9.42) — `retention_class = ACCESS`.
   "payroll.viewed",
   "attachment.sensitive_viewed",
+  // Faza 3 — radno vrijeme i radnici
+  "workday.unknown_end",
+  "workday.kind_changed",
+  "workday.bulk_confirmed",
+  "worker.profile_changed",
+  "worker.sensitive_viewed",
+  "worker.rate_opened",
+  "worker.rate_closed",
+  "worker.leave_changed",
+  "worker.issuance_created",
+  "worker.issuance_returned",
+  "worker.ppe_template_changed",
+  "worker.offboarded",
+  "worker.bulk_changed",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -108,6 +122,11 @@ export const AUDIT_ENTITY_TYPES = [
   "user",
   "session",
   "worker",
+  "workday",
+  "worker_rate",
+  "worker_leave",
+  "worker_issuance",
+  "ppe_template",
   "equipment",
   "equipment_category",
   "import",
@@ -206,6 +225,19 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "audit.retention_purged": "Stari audit zapisi uklonjeni po retenciji",
   "payroll.viewed": "Pregled obračuna",
   "attachment.sensitive_viewed": "Pregled osjetljivog priloga",
+  "workday.unknown_end": "Dan zatvoren bez poznatog kraja",
+  "workday.kind_changed": "Promijenjena vrsta dana",
+  "workday.bulk_confirmed": "Grupna potvrda radnih dana",
+  "worker.profile_changed": "Izmjena profila radnika",
+  "worker.sensitive_viewed": "Pregled osjetljivih podataka radnika",
+  "worker.rate_opened": "Nova cijena rada",
+  "worker.rate_closed": "Zatvorena cijena rada",
+  "worker.leave_changed": "Izmjena salda dopusta",
+  "worker.issuance_created": "Izdato sredstvo radniku",
+  "worker.issuance_returned": "Vraćeno sredstvo radnika",
+  "worker.ppe_template_changed": "Izmjena šablona zaštitne opreme",
+  "worker.offboarded": "Radnik odlazi — razdužen",
+  "worker.bulk_changed": "Masovna izmjena radnika",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

@@ -82,6 +82,8 @@ describe("JOB_NAMES", () => {
       // ostaju poslije deploya — preimenovanje bi ih ostavilo da vise zauvijek.
       remindersScan: "reminders.scan",
       attachmentsPurge: "attachments.purge",
+      // F3: retencija tijela sukoba.
+      syncPurge: "sync.purge",
     });
   });
 });

@@ -7,7 +7,7 @@ import { withCompany } from "@gradix/db";
 import { internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
-import { listConflicts } from "@/server/workday-resolve";
+import { CONFLICT_ENTITY_TYPES, listConflicts, type ConflictEntityType } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       return listConflicts(client, ctx.companyId, scope, {
         status: status === "OPEN" || status === "RESOLVED" ? status : undefined,
         projectId: params.get("projectId") ?? undefined,
+        // Nepoznat tip se odbacuje, ne prenosi: filter koji baza ne razumije dao bi praznu listu
+        // koja izgleda kao „nema sukoba“, a to je laž.
+        entityType: CONFLICT_ENTITY_TYPES.includes(params.get("entityType") as ConflictEntityType)
+          ? (params.get("entityType") as ConflictEntityType)
+          : undefined,
         olderThanDays: older !== null && Number.isFinite(Number(older)) ? Number(older) : undefined,
         limit: Number(params.get("limit") ?? 50) || 50,
         offset: Number(params.get("offset") ?? 0) || 0,

@@ -50,6 +50,14 @@ export const ERROR_CODES = [
   "OBLIGATION_REVIEW_REQUIRED",
   "OBLIGATION_REQUIREMENT_EXISTS",
   "OBLIGATION_IMPORT_INVALID",
+  // Faza 3 — radno vrijeme i radnici
+  "WORKDAY_ALREADY_OPEN",
+  "WORKDAY_FORGOTTEN",
+  "WORKDAY_LOCKED",
+  // Radnici
+  "WORKER_SENSITIVE_FORBIDDEN",
+  "WORKER_HAS_ACTIVE_ISSUANCES",
+  "RATE_OVERLAP",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -95,7 +103,22 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   OBLIGATION_REQUIREMENT_EXISTS: 409,
   OBLIGATION_IMPORT_INVALID: 400,
   SUPPORT_ACCESS_EXPIRED: 403,
+  // Faza 3 — radno vrijeme i radnici
+  WORKDAY_ALREADY_OPEN: 409,
+  // 409, a ne 400: dan postoji i nije greška u unosu — traži odluku (zatvori ili „ne znam").
+  WORKDAY_FORGOTTEN: 409,
+  // 422: zahtjev je ispravan, ali stanje na terenu ga ne dozvoljava (npr. izmjena zaključanog dana).
+  WORKDAY_LOCKED: 422,
+  WORKER_SENSITIVE_FORBIDDEN: 403,
+  WORKER_HAS_ACTIVE_ISSUANCES: 409,
+  RATE_OVERLAP: 409,
 };
+
+/*
+ * „Rad bez važeće dodjele" NIJE kod greške (spec 03 §1.6.25): to je upozorenje koje ide uz
+ * uspješan odgovor (`assignmentWarning` u danu). Katalog kodova je za neuspjehe, pa ga ovdje
+ * nema — inače bi klijent imao dvije istine o istom slučaju.
+ */
 
 export type ApiMeta = Record<string, unknown>;
 

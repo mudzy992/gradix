@@ -108,6 +108,10 @@ export interface Companies {
   default_currency: string | null;
   default_locale: Locale | null;
   email: string | null;
+  /**
+   * Poslije koliko sati otvoren segment postaje „zaboravljen dan" (spec 03 §1.2). Nigdje ne zatvara zapis automatski — samo pravi pitanje na telefonu i red „za provjeru" u uredu.
+   */
+  forgotten_day_hours: Generated<number>;
   holiday_paid: Generated<boolean>;
   iban: string | null;
   id: string;
@@ -123,6 +127,11 @@ export interface Companies {
   overtime_daily_threshold: Generated<Numeric>;
   phone: string | null;
   postal_code: string | null;
+  /**
+   * Zaokruživanje PO SEGMENTU, ne po danu (spec 03 §1.4). 0 = bez zaokruživanja (default).
+   */
+  rounding_minutes: Generated<number>;
+  rounding_mode: Generated<string>;
   seeded_at: Timestamp | null;
   settings_updated_at: Timestamp | null;
   settings_updated_by: string | null;
@@ -607,6 +616,16 @@ export interface PlatformUsers {
   totp_enabled: Generated<boolean>;
 }
 
+export interface PpeTemplates {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  items: Generated<Json>;
+  job_title: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface ProjectAssignmentOverrides {
   approved_at: Timestamp | null;
   approved_by: string | null;
@@ -736,6 +755,11 @@ export interface SyncConflicts {
   actor_id: string;
   company_id: string;
   created_at: Generated<Timestamp>;
+  entity_id: string | null;
+  /**
+   * Na koji terenski entitet se sukob odnosi (spec 03 §1.7.29). Prije je postojao samo `work_entry_id`, pa sukob nad gorivom, turom ili kvarom nije imao gdje stati. 
+   */
+  entity_type: string | null;
   id: string;
   internal_note: string | null;
   local_id: string;
@@ -882,10 +906,19 @@ export interface WorkdayRevisions {
 }
 
 export interface Workdays {
+  absence_note: string | null;
   approval_status: Generated<string>;
+  /**
+   * Rad na projektu bez važeće dodjele: upozorenje, ne blokada (spec 03 §1.6). Šef zna bolje od baze, ali ured mora vidjeti da je zapis nastao bez dodjele.
+   */
+  assignment_warning: Generated<boolean>;
   company_id: string;
   created_at: Generated<Timestamp>;
   created_by: string;
+  /**
+   * Vrsta dana (spec 03 §1.3). Izostanak NIJE nula sati: dan nema segmenata i ne ulazi u sate rada, ali ulazi u obračun po svom pravilu (Modul 6) i u saldo godišnjeg (Modul 4).
+   */
+  day_kind: Generated<string>;
   header_version: Generated<number>;
   id: string;
   status: Generated<string>;
@@ -912,7 +945,15 @@ export interface WorkEntries {
   rejection_reason: string | null;
   resolution_state: Generated<string>;
   review_flags: Generated<string[]>;
+  /**
+   * TIMER = veliko dugme na „Moj dan", MANUAL = forma iza prekidača, SYNC = zapis došao iz outbox-a sa terena. Bez ovoga se ne zna koliko je podataka ručno prepravljeno.
+   */
+  segment_source: Generated<string>;
   started_at: Timestamp;
+  /**
+   * Informativo (spec 03 §1.1.4): istina je UTC u `started_at`/`ended_at`. Služi da ured vidi u kojoj je zoni zapis nastao kad se sat telefona ne poklapa sa serverom.
+   */
+  tz_offset_minutes: number | null;
   updated_at: Generated<Timestamp>;
   updated_by: string;
   version: Generated<number>;
@@ -920,10 +961,84 @@ export interface WorkEntries {
   worker_id: string;
 }
 
-export interface Workers {
+export interface WorkerHistory {
+  changed_at: Generated<Timestamp>;
+  changed_by: string;
+  company_id: string;
+  field: string;
+  id: string;
+  new_value: string | null;
+  old_value: string | null;
+  reason: string | null;
+  worker_id: string;
+}
+
+export interface WorkerIssuances {
+  company_id: string;
+  condition: Generated<string>;
+  created_at: Generated<Timestamp>;
+  id: string;
+  issued_at: string;
+  issued_by: string;
+  item_kind: string;
+  item_name: string;
+  note: string | null;
+  quantity: Generated<Numeric>;
+  returned_at: string | null;
+  returned_to: string | null;
+  serial_no: string | null;
+  size: string | null;
+  stock_item_id: string | null;
+  updated_at: Generated<Timestamp>;
+  worker_id: string;
+}
+
+export interface WorkerLeaveEntitlements {
   company_id: string;
   created_at: Generated<Timestamp>;
+  created_by: string;
+  days_carryover: Generated<Numeric>;
+  days_entitled: Numeric;
+  id: string;
+  note: string | null;
+  updated_at: Generated<Timestamp>;
+  worker_id: string;
+  year: number;
+}
+
+export interface WorkerRates {
+  amount_cents: Int8 | null;
+  coefficient: Numeric | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string | null;
+  id: string;
+  note: string | null;
+  rate_kind: string;
+  valid_from: string;
+  valid_to: string | null;
+  worker_id: string;
+}
+
+export interface Workers {
+  address: string | null;
+  birth_date: string | null;
+  /**
+   * Osjetljivo polje (spec 04 §1.1.4): čita ga samo `workers.sensitive.view`, svako čitanje ide u ACCESS audit. Nema JMBG-a i nema bankovnog računa — odluka vlasnika.
+   */
+  blood_type: string | null;
+  clothing_size: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  /**
+   * Trajna osobina (spec 04 §1.5.21): kategorije koje radnik IMA, ne dokument. Vozačka kao dokument sa rokom je obaveza u Modulu 2 i ona blokira kad istekne; ovo daje samo upozorenje u `canUseEntity` za `drive_vehicle`.
+   */
+  driving_categories: Generated<string[]>;
+  education_level: string | null;
   email: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
   ended_at: string | null;
   engagement: Generated<string>;
   first_name: string;
@@ -932,7 +1047,12 @@ export interface Workers {
   is_active: Generated<boolean>;
   job_title: string | null;
   last_name: string;
+  middle_name: string | null;
+  notes: string | null;
   phone: string | null;
+  photo_object_key: string | null;
+  profession: string | null;
+  shoe_size: number | null;
   supervisor_id: string | null;
   team: string | null;
   updated_at: Generated<Timestamp>;
@@ -946,6 +1066,10 @@ export interface WorkWeekApprovals {
   decided_by: string | null;
   id: string;
   reason: string | null;
+  /**
+   * Sume koje je vlasnik VIDIO u trenutku odluke (spec 03 §1.5.22). Bez ovoga se poslije ne može dokazati na osnovu čega je sedmica odobrena, jer se dani mogu mijenjati revizijom.
+   */
+  reviewed_snapshot: Json | null;
   status: string;
   updated_at: Generated<Timestamp>;
   week_start: string;
@@ -990,6 +1114,7 @@ export interface DB {
   platform_sessions: PlatformSessions;
   platform_support_sessions: PlatformSupportSessions;
   platform_users: PlatformUsers;
+  ppe_templates: PpeTemplates;
   project_assignment_overrides: ProjectAssignmentOverrides;
   project_assignments: ProjectAssignments;
   project_cost_entries: ProjectCostEntries;
@@ -1012,5 +1137,9 @@ export interface DB {
   work_week_approvals: WorkWeekApprovals;
   workday_revisions: WorkdayRevisions;
   workdays: Workdays;
+  worker_history: WorkerHistory;
+  worker_issuances: WorkerIssuances;
+  worker_leave_entitlements: WorkerLeaveEntitlements;
+  worker_rates: WorkerRates;
   workers: Workers;
 }

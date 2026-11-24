@@ -76,6 +76,14 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_versions TO gradix_app;
 -- `notify_roles` se NE briše kroz aplikaciju (samo se mijenja `role`), pa app rola nema DELETE.
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.obligation_requirements TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_notify_roles TO gradix_app;
+-- F3: kadrovska evidencija. Nijedna od ovih tabela se ne briše kroz aplikaciju:
+-- satnica se zatvara novim redom, zaduženje povratom, historija i šabloni se ispravljaju
+-- novim redom. `DELETE` bi bio tiha izmjena prošlosti (spec 04 §1.2.8, §1.4.17).
+GRANT SELECT, INSERT, UPDATE ON TABLE public.worker_rates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.worker_leave_entitlements TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.worker_issuances TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ppe_templates TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.worker_history TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.attachments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.usage_overrides TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.notifications TO gradix_app;

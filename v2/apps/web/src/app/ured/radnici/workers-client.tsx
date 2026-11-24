@@ -12,6 +12,7 @@
  *  - Stanje se nikad ne prenosi samo bojom: chip ima tekst („Aktivan“ / „Neaktivan“).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { Worker } from "@gradix/contracts";
 import { apiCall, patchBody } from "@/api-client";
 import { engagementLabel, formatDate, initialsOf } from "@/format";
@@ -109,7 +110,10 @@ export default function WorkersClient({
             {initialsOf(worker.firstName, worker.lastName)}
           </span>
           <span className="gx-who">
-            {worker.firstName} {worker.lastName}
+            {/* Ime vodi na karticu: cijena, dopust i zaduženja se žive tamo, ne u listi. */}
+            <Link className="gx-link" href={`/ured/radnici/${worker.id}`}>
+              {worker.firstName} {worker.lastName}
+            </Link>
             <span>
               {worker.jobTitle ?? "—"}
               {worker.team ? ` · ${worker.team}` : ""}

@@ -116,6 +116,32 @@ export {
   type AttachmentStatus,
 } from "./attachments";
 
+export {
+  ABSENCE_DAY_KINDS,
+  DAY_KINDS,
+  FORGOTTEN_CLOSE_KINDS,
+  FORGOTTEN_DAY_HOURS_OPTIONS,
+  LEAVE_CONSUMING_DAY_KINDS,
+  ROUNDING_MINUTES_OPTIONS,
+  ROUNDING_MODES,
+  consumesLeave,
+  forgottenDayOutcome,
+  isAbsenceDay,
+  isDayKind,
+  isForgottenDay,
+  needsOfficeReview,
+  overlapMessage,
+  roundSegmentMinutes,
+  segmentMinutes,
+  sumSegmentMinutes,
+  workdayReviewState,
+  type DayKind,
+  type ForgottenCloseKind,
+  type RawSegment,
+  type RoundingMinutes,
+  type RoundingMode,
+  type WorkdayReviewState,
+} from "./workdays";
 export { DEFAULT_TIMEZONE, businessDate, calendarDateFromLocalDate, formatPgDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";
 
 export {

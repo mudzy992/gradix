@@ -24,6 +24,8 @@ export const NOTIFICATION_KINDS = [
   "report.ready",
   "export.ready",
   "system",
+  // F3: radnik dobija ishod razrješenja sukoba bez otvaranja aplikacije (spec 03 §1.6.31).
+  "workday.conflict_resolved",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

@@ -55,6 +55,11 @@ export default async function RadniDaniPage({
 
   return (
     <main>
+      <p className="mb-4 text-sm">
+        <Link className="gx-link" href="/ured/radni-dani/sedmica">
+          Sedmični pregled (radnik × dan) →
+        </Link>
+      </p>
       <PageHeader
         title="Radni dani"
         subtitle={

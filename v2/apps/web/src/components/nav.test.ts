@@ -35,6 +35,8 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/platform/login": "prijava operatora prije platform sesije (odvojen cookie)",
   "/platform/firme": "platforma nije dio tenant navigacije — operator nije član firme",
   "/platform/firme/nova": "onboarding čarobnjak, ulaz sa liste firmi",
+  "/ured/radni-dani/sedmica":
+    "pogled „radnik × dan“ je dio ekrana Radni dani — ulaz je link na vrhu tog ekrana, i važi ista dozvola (workdays.view), pa ne dobija svoju stavku u meniju",
 };
 
 describe("dosegljivost stranica (A4a)", () => {

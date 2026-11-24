@@ -4,8 +4,9 @@
  * Faza 0: `ping.health`, `notifications.deliver`.
  * Faza 2: `reminders.scan` (dnevni prolaz kroz rokove) i `attachments.purge` (retencija).
  *
- * Ostali (`budget.thresholds`, `sync.purge`) dolaze sa svojim modulima, jer traže tabele koje
- * još ne postoje.
+ * Faza 3: `sync.purge` (retencija tijela sukoba).
+ *
+ * Ostali (`budget.thresholds`) dolaze sa svojim modulom, jer traži tabele koje još ne postoje.
  *
  * Pravilo za svaki posao: **idempotentan** (spec 12 §14). Pad i ponovni prolaz ne smiju
  * napraviti duplu poruku ni dupli trošak.
@@ -18,6 +19,8 @@ export const JOB_NAMES = {
   remindersScan: "reminders.scan",
   /** F2: brisanje priloga po retenciji (24 mj. osjetljivi / 10 g. ostali). */
   attachmentsPurge: "attachments.purge",
+  /** F3: brisanje `received_payload` razriješenih sukoba po retenciji. */
+  syncPurge: "sync.purge",
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

@@ -2243,3 +2243,397 @@ export const ObligationBulkRenewResponse = z.object({
   renewed: z.number(),
   failed: z.array(z.object({ obligationId: z.string(), reason: z.string() })),
 });
+
+// ---------------------------------------------------------------------------
+// Faza 3 — radno vrijeme (Modul 3)
+// ---------------------------------------------------------------------------
+
+/** Vrste dana; iste vrijednosti kao CHECK u bazi i `DAY_KINDS` u domeni. */
+export const DayKindEnum = z.enum([
+  "WORK",
+  "VACATION",
+  "SICK",
+  "PAID_LEAVE",
+  "UNPAID_LEAVE",
+  "HOLIDAY",
+  "NO_SHOW",
+]);
+
+export const RoundingModeEnum = z.enum(["NEAREST", "UP", "DOWN"]);
+
+/** Timer „Moj dan": jedna velika akcija mijenja stanje (spec 03 §1.1). */
+export const WorkdayTimerAction = z.enum(["start", "pause", "resume", "finish"]);
+
+/**
+ * Ulaz timera. `localId` je idempotentni ključ sa telefona: mreža može poslati isti događaj
+ * dvaput (retry), a dvostruki `start` ne smije otvoriti dva segmenta.
+ */
+export const WorkdayTimerInput = z.object({
+  localId: SafeText.max(120).optional(),
+  action: WorkdayTimerAction,
+  /** Obavezno kad radnik ima više dodjela; kad ima jednu, server je izvodi sam. */
+  projectId: SafeText.nullable().optional(),
+  machineId: SafeText.nullable().optional(),
+  /** Klijentski UTC; server provjerava plausibilnost (±5 min) i to je postojeće pravilo. */
+  at: SafeText.optional(),
+  tzOffsetMinutes: z.number().int().min(-840).max(840).optional(),
+  note: SafeText.max(1000).nullable().optional(),
+});
+
+export const WorkdaySegment = z.object({
+  id: z.string(),
+  kind: z.enum(["WORK", "BREAK"]),
+  startedAt: z.string(),
+  endedAt: z.string().nullable(),
+  endState: z.enum(["OPEN", "KNOWN_END", "UNKNOWN_END"]),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
+  machineId: z.string().nullable(),
+  machineName: z.string().nullable(),
+  segmentSource: z.enum(["TIMER", "MANUAL", "SYNC"]),
+});
+
+export const WorkdayDay = z.object({
+  id: z.string(),
+  workerId: z.string(),
+  workDate: z.string(),
+  status: z.enum(["DRAFT", "SUBMITTED"]),
+  approvalStatus: z.string(),
+  dayKind: DayKindEnum,
+  absenceNote: z.string().nullable(),
+  assignmentWarning: z.boolean(),
+  segments: z.array(WorkdaySegment),
+  /** Zbir po ZAOKRUŽENIM segmentima (spec 03 §1.4) — ovo vidi radnik. */
+  minutes: z.number(),
+  /** Zbir bez zaokruživanja — za dokaz i za obračun. */
+  rawMinutes: z.number(),
+  openSegments: z.number(),
+  /** „ZA PROVJERU" u uredu: zaboravljen dan ili `UNKNOWN_END`. */
+  reviewState: z.enum(["OK", "FORGOTTEN", "UNKNOWN_END", "OPEN_TODAY"]),
+});
+
+export const WorkdayTimerResponse = z.object({
+  day: WorkdayDay,
+  /** Crvena traka iz `canUseEntity`; NIKAD blokada prijave dana (spec 03 §1.6.28). */
+  blockers: z.array(
+    z.object({
+      typeId: z.string(),
+      typeLabel: z.string(),
+      state: z.string(),
+      message: z.string(),
+    }),
+  ),
+});
+
+/** Zatvaranje zaboravljenog dana (spec 03 §1.2.8): tri izbora, nijedno automatsko. */
+export const WorkdayCloseForgottenInput = z.object({
+  kind: z.enum(["TIME", "LAST_PING", "UNKNOWN"]),
+  /** Obavezno za `TIME`. */
+  endedAt: SafeText.optional(),
+  /** Vrijeme zadnjeg otpucaja sa telefona; koristi se za `LAST_PING`. */
+  lastPingAt: SafeText.optional(),
+  note: SafeText.max(1000).nullable().optional(),
+});
+
+export const WorkdayKindInput = z.object({
+  dayKind: DayKindEnum,
+  /** Obavezna uz izostanak: zašto radnik nije radio. */
+  absenceNote: SafeText.max(500).optional(),
+  /** Obavezan za ispravku već postojećeg dana (≥10 znakova, kao svaka revizija). */
+  reason: SafeText.max(1000).optional(),
+});
+
+export const WorkdayWeekRow = z.object({
+  workerId: z.string(),
+  workerName: z.string(),
+  /** `YYYY-MM-DD` → sati (zaokruženo), vrsta dana, stanje. */
+  days: z.record(
+    z.string(),
+    z.object({
+      workdayId: z.string().nullable(),
+      minutes: z.number(),
+      dayKind: DayKindEnum,
+      approvalStatus: z.string(),
+      reviewState: z.enum(["OK", "FORGOTTEN", "UNKNOWN_END", "OPEN_TODAY"]),
+    }),
+  ),
+  totalMinutes: z.number(),
+});
+
+export const WorkdayWeekResponse = z.object({
+  weekStart: z.string(),
+  weekEnd: z.string(),
+  rows: z.array(WorkdayWeekRow),
+  totals: z.object({
+    minutes: z.number(),
+    /** Po vrsti dana: `{ WORK: 2400, SICK: 480, … }` — izostanci ne ulaze u `minutes`. */
+    byDayKind: z.record(z.string(), z.number()),
+  }),
+  /** Nerazriješeni sukobi u sedmici — vlasnik vidi da li teren ima problem sa mrežom. */
+  openConflicts: z.number(),
+});
+
+export const WorkdayBulkConfirmInput = z.object({
+  projectId: SafeText,
+  workDate: SafeText,
+  /** Prazno = svi na projektu za taj datum (spec 03 §1.5.21). */
+  workerIds: z.array(SafeText).max(200).optional(),
+});
+
+export const WorkdayBulkConfirmResponse = z.object({
+  confirmed: z.number(),
+  skipped: z.array(z.object({ workerId: z.string(), workerName: z.string(), reason: z.string() })),
+});
+
+// ---------------------------------------------------------------------------
+// Faza 3 — radnici (Modul 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Osjetljiva polja radnika. U odgovoru ih ima SAMO uz `workers.sensitive.view`, a svako
+ * čitanje upisuje ACCESS audit (spec 04 §1.1.4).
+ */
+export const WorkerSensitive = z.object({
+  birthDate: z.string().nullable(),
+  address: z.string().nullable(),
+  bloodType: z.string().nullable(),
+  emergencyContactName: z.string().nullable(),
+  emergencyContactPhone: z.string().nullable(),
+});
+
+export const WorkerProfile = Worker.extend({
+  middleName: z.string().nullable(),
+  educationLevel: z.string().nullable(),
+  profession: z.string().nullable(),
+  drivingCategories: z.array(z.string()),
+  shoeSize: z.number().nullable(),
+  clothingSize: z.string().nullable(),
+  photoObjectKey: z.string().nullable(),
+  notes: z.string().nullable(),
+  /** `null` = korisnik NEMA pravo da ih vidi; nije isto kao „prazno". */
+  sensitive: WorkerSensitive.nullable(),
+});
+
+/** Polja koja se mijenjaju kroz karticu radnika (bez `firstName/lastName` — to je `WorkerInput`). */
+export const WorkerProfilePatch = z.object({
+  middleName: SafeText.max(100).nullable().optional(),
+  birthDate: SafeText.nullable().optional(),
+  address: SafeText.max(300).nullable().optional(),
+  educationLevel: z.enum(["NK", "KV", "SSS", "VŠS", "VSS"]).nullable().optional(),
+  profession: SafeText.max(150).nullable().optional(),
+  drivingCategories: z.array(SafeText.max(10)).max(12).optional(),
+  bloodType: SafeText.max(10).nullable().optional(),
+  shoeSize: z.number().int().min(20).max(55).nullable().optional(),
+  clothingSize: SafeText.max(20).nullable().optional(),
+  emergencyContactName: SafeText.max(150).nullable().optional(),
+  emergencyContactPhone: SafeText.max(40).nullable().optional(),
+  photoObjectKey: SafeText.max(300).nullable().optional(),
+  notes: SafeText.max(2000).nullable().optional(),
+  /** Obavezan kad se mijenja osjetljivo polje — bez razloga izmjena nije objašnjiva. */
+  reason: SafeText.max(500).optional(),
+});
+
+export const WorkerRateKindEnum = z.enum(["HOURLY", "MONTHLY", "DAILY", "COEFFICIENT"]);
+
+export const WorkerRate = z.object({
+  id: z.string(),
+  kind: WorkerRateKindEnum,
+  amountCents: z.string().nullable(),
+  currencyCode: z.string().nullable(),
+  coefficient: z.string().nullable(),
+  validFrom: z.string(),
+  validTo: z.string().nullable(),
+  note: z.string().nullable(),
+  createdBy: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export const WorkerRatesResponse = z.object({
+  rates: z.array(WorkerRate),
+  /** Stopa koja VAŽI danas; `null` ako je nema (nikad se ne izmišlja). */
+  current: WorkerRate.nullable(),
+});
+
+export const WorkerRateInput = z.object({
+  kind: WorkerRateKindEnum,
+  /** Za `COEFFICIENT` se ne šalje. */
+  amountCents: z.number().int().positive().nullable().optional(),
+  currencyCode: SafeText.length(3).nullable().optional(),
+  coefficient: z.number().positive().nullable().optional(),
+  validFrom: SafeText,
+  note: SafeText.max(500).nullable().optional(),
+});
+
+export const WorkerRateCloseInput = z.object({
+  /** Zadnji dan važenja; mora biti ≥ `validFrom`. */
+  validTo: SafeText,
+});
+
+export const WorkerLeaveRow = z.object({
+  year: z.number(),
+  daysEntitled: z.string(),
+  daysCarryover: z.string(),
+  daysUsed: z.number(),
+  balance: z.number(),
+  /** Datumi korištenja — saldo bez liste datuma se ne može provjeriti. */
+  usedDates: z.array(z.string()),
+  note: z.string().nullable(),
+});
+
+export const WorkerLeaveResponse = z.object({
+  workerId: z.string(),
+  years: z.array(WorkerLeaveRow),
+});
+
+export const WorkerLeaveEntitlementInput = z.object({
+  year: z.number().int().min(2000).max(2100),
+  daysEntitled: z.number().min(0).max(366),
+  daysCarryover: z.number().min(-366).max(366).optional(),
+  note: SafeText.max(500).nullable().optional(),
+});
+
+export const WorkerIssuanceKindEnum = z.enum(["PPE", "TOOL", "DEVICE", "OTHER"]);
+export const WorkerIssuanceConditionEnum = z.enum(["NEW", "USED", "DAMAGED"]);
+
+export const WorkerIssuance = z.object({
+  id: z.string(),
+  itemKind: WorkerIssuanceKindEnum,
+  itemName: z.string(),
+  size: z.string().nullable(),
+  serialNo: z.string().nullable(),
+  quantity: z.string(),
+  issuedAt: z.string(),
+  returnedAt: z.string().nullable(),
+  condition: WorkerIssuanceConditionEnum,
+  note: z.string().nullable(),
+  issuedBy: z.string().nullable(),
+  returnedTo: z.string().nullable(),
+  stockItemId: z.string().nullable(),
+});
+
+export const WorkerIssuancesResponse = z.object({
+  issuances: z.array(WorkerIssuance),
+  /** „Ko šta ima kod sebe" = `returned_at IS NULL`. */
+  activeCount: z.number(),
+});
+
+export const WorkerIssuanceInput = z.object({
+  itemKind: WorkerIssuanceKindEnum,
+  itemName: SafeText.min(1).max(200),
+  size: SafeText.max(20).nullable().optional(),
+  serialNo: SafeText.max(100).nullable().optional(),
+  quantity: z.number().positive().max(9999).optional(),
+  issuedAt: SafeText,
+  condition: WorkerIssuanceConditionEnum.optional(),
+  note: SafeText.max(500).nullable().optional(),
+  /** Ako je zadat, izdaje cijeli OZO set iz šablona radnog mjesta. */
+  templateId: SafeText.nullable().optional(),
+});
+
+export const WorkerIssuanceReturnInput = z.object({
+  returnedAt: SafeText,
+  condition: WorkerIssuanceConditionEnum.optional(),
+  note: SafeText.max(500).nullable().optional(),
+});
+
+export const PpeTemplateItem = z.object({
+  name: SafeText.min(1).max(120),
+  quantity: z.number().positive().max(99).optional(),
+  sizeRequired: z.boolean().optional(),
+});
+
+export const PpeTemplate = z.object({
+  id: z.string(),
+  jobTitle: z.string(),
+  items: z.array(PpeTemplateItem),
+});
+
+export const PpeTemplatesResponse = z.object({ templates: z.array(PpeTemplate) });
+
+export const PpeTemplateInput = z.object({
+  jobTitle: SafeText.min(1).max(120),
+  items: z.array(PpeTemplateItem).max(50),
+});
+
+export const WorkerHistoryEntry = z.object({
+  id: z.string(),
+  field: z.string(),
+  oldValue: z.string().nullable(),
+  newValue: z.string().nullable(),
+  changedAt: z.string(),
+  changedBy: z.string().nullable(),
+  changedByName: z.string().nullable(),
+  reason: z.string().nullable(),
+});
+
+export const WorkerHistoryResponse = z.object({ entries: z.array(WorkerHistoryEntry) });
+
+/** „Radnik odlazi" — jedan dijalog, jedna transakcija (spec 04 §1.6.24). */
+export const WorkerOffboardInput = z.object({
+  endedAt: SafeText,
+  reason: SafeText.min(10).max(1000),
+  /**
+   * Zaduženja koja se otpisuju umjesto vraćanja. Svako mora imati razlog; bez toga dijalog
+   * ne prolazi (spec 04 §1.6.24c).
+   */
+  writtenOff: z
+    .array(z.object({ issuanceId: SafeText, reason: SafeText.min(3).max(500) }))
+    .max(200)
+    .optional(),
+  /** Radnik odlazi, a nalog ostaje aktivan (npr. prelazi na drugu firmu u sistemu). */
+  keepUserAccount: z.boolean().optional(),
+});
+
+export const WorkerOffboardResponse = z.object({
+  workerId: z.string(),
+  deactivatedAssignments: z.number(),
+  revokedSessions: z.number(),
+  returnedIssuances: z.number(),
+  writtenOffIssuances: z.number(),
+  /** Obaveze koje su ugašene jer više nemaju smisla (servis vezan na radnika). */
+  closedObligations: z.number(),
+  retentionStartedFor: z.number(),
+});
+
+/** Masovne izmjene (spec 04 §1.8): jedna transakcija, izvještaj preskočenih. */
+export const WorkerBulkInput = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("changeTeam"),
+    workerIds: z.array(SafeText).min(1).max(200),
+    team: SafeText.max(120).nullable(),
+  }),
+  z.object({
+    action: z.literal("changeSupervisor"),
+    workerIds: z.array(SafeText).min(1).max(200),
+    supervisorId: SafeText.nullable(),
+  }),
+  z.object({
+    action: z.literal("newRate"),
+    workerIds: z.array(SafeText).min(1).max(200),
+    rate: WorkerRateInput,
+  }),
+]);
+
+export const WorkerBulkResponse = z.object({
+  updated: z.number(),
+  skipped: z.array(z.object({ workerId: z.string(), workerName: z.string(), reason: z.string() })),
+});
+
+/** „Moj dan" za mobilni: danas + jutros otvoreni (mogući zaboravljen) dan. */
+export const MyDayResponse = z.object({
+  today: WorkdayDay.nullable(),
+  /** Zaboravljen ili `UNKNOWN_END` dan koji traži odgovor radnika. */
+  forgotten: WorkdayDay.nullable(),
+  /** Radnikove dodjele koje timer može da ponudi — bez njih bi `Počni rad` pitao u prazno. */
+  assignments: z.array(
+    z.object({
+      projectId: z.string(),
+      projectName: z.string(),
+      machineId: z.string().nullable(),
+      machineName: z.string().nullable(),
+    }),
+  ),
+  forgottenThresholdHours: z.number(),
+  roundingMinutes: z.number(),
+  roundingMode: RoundingModeEnum,
+});

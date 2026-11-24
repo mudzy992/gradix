@@ -238,6 +238,45 @@ export async function myProjects(): Promise<ProjectsResponse> {
   return data;
 }
 
+/**
+ * „Moj dan“ — jedan poziv koji nosi i današnji dan i zaboravljeni dan (F3).
+ *
+ * Namjerno jedan poziv: telefon na gradilištu ima lošu vezu, pa tri kruga za tri pitanja
+ * znače tri prilike da ekran ostane prazan.
+ */
+export async function myDay(): Promise<unknown> {
+  const { data } = await withToken((accessToken) => client.get("/api/me/day", undefined, { accessToken }));
+  return data;
+}
+
+/** Timer: `start` / `pause` / `resume` / `finish`. `localId` čini ponovni poziv bezopasnim. */
+export async function workdayTimer(input: {
+  action: "start" | "pause" | "resume" | "finish";
+  localId?: string;
+  projectId?: string | null;
+  machineId?: string | null;
+  at?: string;
+  tzOffsetMinutes?: number;
+}): Promise<unknown> {
+  const { data } = await withToken((accessToken) =>
+    client.post("/api/workdays/timer", input, undefined, { accessToken }),
+  );
+  return data;
+}
+
+/** Zatvaranje zaboravljenog dana: `TIME`, `LAST_PING` ili `UNKNOWN`. */
+export async function closeForgottenDay(input: {
+  kind: "TIME" | "LAST_PING" | "UNKNOWN";
+  endedAt?: string;
+  lastPingAt?: string;
+  note?: string | null;
+}): Promise<unknown> {
+  const { data } = await withToken((accessToken) =>
+    client.post("/api/workdays/close-forgotten", input, undefined, { accessToken }),
+  );
+  return data;
+}
+
 export async function machines(): Promise<MachinesResponse> {
   const { data } = await withToken((accessToken) => client.get("/api/equipment", undefined, { accessToken }));
   return data;

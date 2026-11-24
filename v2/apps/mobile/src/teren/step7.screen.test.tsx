@@ -43,6 +43,28 @@ vi.mock("../api/client", () => ({
     return { user: { id: "u1", firstName: "Mario", lastName: "Perić", roles: ["SITE_SUPERVISOR"] }, company: { id: "c1", name: "Demo" }, workerId: "w-sef", foremanScope: true };
   },
   myProjects: async () => ({ projects: state.projects }),
+  /*
+   * F3: ekran „Moj dan“ je timer-first i čita `myDay` pri otvaranju. Mok se dodaje ovdje jer
+   * bez njega ekran padne na prvi render — a test i dalje dokazuje stare tokove (outbox, odjava).
+   */
+  myDay: async () => {
+    if (state.meError) throw new Error("network down");
+    return {
+    today: null,
+    forgotten: null,
+    assignments: state.projects.map((project) => ({
+      projectId: project.id,
+      projectName: project.name,
+      machineId: null,
+      machineName: null,
+    })),
+    forgottenThresholdHours: 16,
+    roundingMinutes: 0,
+    roundingMode: "NEAREST",
+    };
+  },
+  workdayTimer: async () => ({}),
+  closeForgottenDay: async () => ({}),
   machines: async () => ({ machines: [{ id: "m1", code: "BAG-01", name: "Bager CAT 320" }] }),
   pullForemanWorkers: async () => {
     if (state.pullError) throw new Error("forbidden or network");

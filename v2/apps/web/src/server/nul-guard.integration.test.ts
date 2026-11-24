@@ -138,6 +138,32 @@ import { POST as attachmentConfirmNewPost } from "@/app/api/attachments/[id]/con
 import { GET as attachmentUrlNewGet } from "@/app/api/attachments/[id]/url/route";
 import { DELETE as attachmentDelete } from "@/app/api/attachments/[id]/route";
 import { GET as meBlockersGet } from "@/app/api/me/blockers/route";
+import { POST as f3TimerPost } from "@/app/api/workdays/timer/route";
+import { GET as f3MyDayGet } from "@/app/api/me/day/route";
+import { POST as f3CloseForgottenPost } from "@/app/api/workdays/close-forgotten/route";
+import { GET as f3WeekGet } from "@/app/api/workdays/week/route";
+import { POST as f3BulkConfirmPost } from "@/app/api/workdays/confirm-bulk/route";
+import { PATCH as f3DayKindPatch } from "@/app/api/workdays/[id]/kind/route";
+import {
+  GET as f3ProfileGet,
+  PATCH as f3ProfilePatch,
+} from "@/app/api/workers/[id]/profile/route";
+import { GET as f3RatesGet, POST as f3RatesPost } from "@/app/api/workers/[id]/rates/route";
+import { PATCH as f3RateClosePatch } from "@/app/api/workers/[id]/rates/[rateId]/close/route";
+import { GET as f3LeaveGet, POST as f3LeavePost } from "@/app/api/workers/[id]/leave/route";
+import {
+  GET as f3IssuancesGet,
+  POST as f3IssuancesPost,
+} from "@/app/api/workers/[id]/issuances/route";
+import { PATCH as f3IssuanceReturnPatch } from "@/app/api/workers/[id]/issuances/[issuanceId]/return/route";
+import { GET as f3PpeTemplatesGet, POST as f3PpeTemplatesPost } from "@/app/api/ppe-templates/route";
+import {
+  DELETE as f3PpeTemplateDelete,
+  PATCH as f3PpeTemplatePatch,
+} from "@/app/api/ppe-templates/[id]/route";
+import { GET as f3HistoryGet } from "@/app/api/workers/[id]/history/route";
+import { POST as f3OffboardPost } from "@/app/api/workers/[id]/offboard/route";
+import { POST as f3WorkersBulkPost } from "@/app/api/workers/bulk/route";
 import { GET as notificationsGet } from "@/app/api/notifications/route";
 import { POST as notificationReadPost } from "@/app/api/notifications/read/route";
 import { GET as queueHealthGet } from "@/app/api/health/queue/route";
@@ -323,7 +349,29 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/platform/companies/{id}/suspend": { POST: platformSuspend },
   "/api/platform/companies/{id}/activate": { POST: platformActivate },
   "/api/platform/companies/{id}/support-access": { POST: platformSupportAccess },
+
+  /* ---- F3 — radno vrijeme i radnici ---- */
+  // Svaka od ovih ruta prima tekst (napomene, razloge, datume), pa NUL mora stati na granici
+  // kao i svuda ostalo — inače bi kontrolni znak iz mobilne tipkovnice došao do Postgresa.
+  "/api/workdays/timer": { POST: f3TimerPost },
+  "/api/me/day": { GET: f3MyDayGet },
+  "/api/workdays/close-forgotten": { POST: f3CloseForgottenPost },
+  "/api/workdays/week": { GET: f3WeekGet },
+  "/api/workdays/confirm-bulk": { POST: f3BulkConfirmPost },
+  "/api/workdays/{id}/kind": { PATCH: f3DayKindPatch },
+  "/api/workers/{id}/profile": { GET: f3ProfileGet, PATCH: f3ProfilePatch },
+  "/api/workers/{id}/rates": { GET: f3RatesGet, POST: f3RatesPost },
+  "/api/workers/{id}/rates/{rateId}/close": { PATCH: f3RateClosePatch },
+  "/api/workers/{id}/leave": { GET: f3LeaveGet, POST: f3LeavePost },
+  "/api/workers/{id}/issuances": { GET: f3IssuancesGet, POST: f3IssuancesPost },
+  "/api/workers/{id}/issuances/{issuanceId}/return": { PATCH: f3IssuanceReturnPatch },
+  "/api/ppe-templates": { GET: f3PpeTemplatesGet, POST: f3PpeTemplatesPost },
+  "/api/ppe-templates/{id}": { PATCH: f3PpeTemplatePatch, DELETE: f3PpeTemplateDelete },
+  "/api/workers/{id}/history": { GET: f3HistoryGet },
+  "/api/workers/{id}/offboard": { POST: f3OffboardPost },
+  "/api/workers/bulk": { POST: f3WorkersBulkPost },
 };
+
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */
 const PUBLIC_PATHS = new Set([
@@ -393,6 +441,12 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
   async function cleanFixtures() {
     await resetLoginAttempts(admin);
     await admin.query("DELETE FROM public.sync_receipts WHERE company_id = $1", [COMPANY]);
+    // F3 tabele drže RESTRICT prema `companies`, pa se brišu prije nje: najveći dug prvo.
+    await admin.query("DELETE FROM public.worker_history WHERE company_id = $1", [COMPANY]);
+    await admin.query("DELETE FROM public.worker_issuances WHERE company_id = $1", [COMPANY]);
+    await admin.query("DELETE FROM public.worker_rates WHERE company_id = $1", [COMPANY]);
+    await admin.query("DELETE FROM public.worker_leave_entitlements WHERE company_id = $1", [COMPANY]);
+    await admin.query("DELETE FROM public.ppe_templates WHERE company_id = $1", [COMPANY]);
     await admin.query("DELETE FROM public.work_entries WHERE company_id = $1", [COMPANY]);
     await admin.query("DELETE FROM public.workdays WHERE company_id = $1", [COMPANY]);
     await admin.query("DELETE FROM public.sync_change_log WHERE company_id = $1", [COMPANY]);
