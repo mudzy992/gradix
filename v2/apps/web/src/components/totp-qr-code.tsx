@@ -70,7 +70,8 @@ export function TotpQrCode({ uri, label }: { uri: string; label: string }) {
     <div className="gx-qr">
       {src ? (
         /* `img` je namjerno: izvor je `data:` URL koji `next/image` ne optimizuje, a QR mora biti
-         * tačan piksel-po-piksel — svaka obrada kvari čitljivost koda. */
+         * tačan piksel-po-piksel — svaka obrada kvari čitljivost koda.
+         * Okvir (`.gx-qr`) nosi bijelu podlogu u OBJE teme, pa kod ostaje čitljiv i u mraku. */
         <img
           src={src}
           alt={`QR kod za uparivanje autentikatora: ${label}. Skenirajte ga aplikacijom, ili upišite ključ ispod ručno.`}

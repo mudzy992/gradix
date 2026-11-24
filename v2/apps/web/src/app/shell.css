@@ -1604,13 +1604,21 @@ select.gx-input option, select.gx-input optgroup {
   „kod neće da se očita". Zato ovdje nije `var(--panel)` — on se u tamnoj temi mijenja. Hex se
   ne piše (paleta je zatvorena), pa se koristi paletni token koji je bijel u obje teme.
 */
+/*
+ * Okvir QR-a ima SVOJU bijelu podlogu u obje teme (`--qr-surface`) i bijeli „unutrašnji“ okvir,
+ * da moduli nikad ne dodiruju tamnu plohu. Bez toga skener u tamnoj temi traži svijetlu zonu
+ * koju nema — a greška izgleda kao „2FA ne radi“, ne kao tema.
+ */
 .gx-qr {
   display: inline-grid;
   place-items: center;
   padding: var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-field);
-  background: var(--palette-surface);
+  background: var(--qr-surface);
+  /* Fiksna bijela unutrašnja zona: `padding` boje podloge je ono što skener koristi kao „quiet
+     zone“; 16 px (4 modula pri 232 px) je minimum po specifikaciji QR-a. */
+  box-shadow: inset 0 0 0 var(--space-3) var(--qr-surface);
 }
 
 .gx-qr__img {
@@ -1626,7 +1634,10 @@ select.gx-input option, select.gx-input optgroup {
   width: 232px;
   height: 232px;
   border-radius: var(--radius-field);
-  background: var(--raise);
+  /* Placeholder je ISTE svjetline kao QR koji dolazi — skok na bijelo iz tamne teme bio bi
+     treptaj tačno u trenutku kad korisnik počne skenirati. */
+  background: var(--qr-surface);
+  opacity: 0.6;
 }
 
 @media (max-width: 639px) {

@@ -23,6 +23,13 @@ const referencedNames = new Set();
 for (const match of source.matchAll(/\b(?:process\.env|env)\.([A-Z][A-Z0-9_]*)/g)) referencedNames.add(match[1]);
 
 const webSection = compose.match(/^ {2}web:\n([\s\S]*?)(?=^ {2}minio:\n)/m)?.[1];
+/*
+ * Worker ima SVOJ `DATABASE_ADMIN_URL` (pgboss) i `PGSSLMODE` — dovoljno je da mu nedostaje
+ * mount CA fajla pa da se proces ne digne: `ENOENT ... /etc/ssl/certs/coolify-ca.crt`.
+ * Zato ovdje ide tvrda provjera, a ne samo komentar: ista putanja, isti `read_only`, ista
+ * mogućnost da deploy PADNE kad sertifikata nema na hostu.
+ */
+const workerSection = compose.match(/^ {2}worker:\n([\s\S]*?)(?=^ {2}minio:\n)/m)?.[1];
 const minioSection = compose.match(/^ {2}minio:\n([\s\S]*?)(?=^ {2}minio-console-proxy:\n)/m)?.[1];
 const minioConsoleProxySection = compose.match(/^ {2}minio-console-proxy:\n([\s\S]*?)(?=^ {2}minio-init:\n)/m)?.[1];
 const minioInitSection = compose.match(/^ {2}minio-init:\n([\s\S]*?)(?=^networks:\n)/m)?.[1];
@@ -30,6 +37,20 @@ if (!webSection) throw new Error("Could not locate the Coolify web service in do
 if (!minioSection) throw new Error("Could not locate the Coolify MinIO service in docker-compose.yml.");
 if (!minioConsoleProxySection) throw new Error("Could not locate the MinIO Console proxy service in docker-compose.yml.");
 if (!minioInitSection) throw new Error("Could not locate the MinIO bootstrap service in docker-compose.yml.");
+
+/*
+ * Worker ima SVOJ `DATABASE_ADMIN_URL` (pgboss) i `PGSSLMODE` — dovoljno je da mu nedostaje
+ * mount CA fajla pa da se proces ne digne: `ENOENT ... /etc/ssl/certs/coolify-ca.crt`.
+ * Zato ovdje ide tvrda provjera, a ne samo komentar: ista putanja, isti `read_only`, ista
+ * mogućnost da deploy PADNE kad sertifikata nema na hostu.
+ */
+if (!workerSection) throw new Error("Could not locate the Coolify worker service in docker-compose.yml.");
+if (!/^\s{6}PGSSLMODE:\s*\$\{PGSSLMODE:-verify-full\}\s*$/m.test(workerSection)) {
+  throw new Error("Worker must keep PGSSLMODE default verify-full, the same as web.");
+}
+if (!/source:\s*\$\{POSTGRES_CA_FILE:-\/data\/coolify\/ssl\/coolify-ca\.crt\}\s+target:\s*\/etc\/ssl\/certs\/coolify-ca\.crt\s+read_only:\s*true\s+bind:\s+create_host_path:\s*\$\{POSTGRES_CA_MOUNT_CREATE_PATH:-false\}/.test(workerSection)) {
+  throw new Error("Worker must bind the PostgreSQL CA at /etc/ssl/certs/coolify-ca.crt read-only (same mount as web), otherwise PGSSLMODE=verify-full fails at startup with ENOENT.");
+}
 
 const webEnvironment = webSection.split(/^ {4}volumes:\s*$/m, 1)[0];
 const minioEnvironment = minioSection.split(/^ {4}volumes:\s*$/m, 1)[0];

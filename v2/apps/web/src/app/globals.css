@@ -75,6 +75,9 @@
 [data-theme="light"] {
   --bg: color-mix(in srgb, var(--palette-ink) 5%, var(--palette-surface));
   --panel: var(--palette-surface);
+  /* QR kod traži TAMNE module na SVIJETLOJ podlozi, u obje teme. Zato je ovo token koji se
+     NE mijenja u tamnoj temi — inače skener u mraku vidi inverziju i kod „neće da se očita“. */
+  --qr-surface: var(--palette-surface);
   --raise: color-mix(in srgb, var(--palette-ink) 4%, var(--palette-surface));
   --sunken: color-mix(in srgb, var(--palette-ink) 7%, var(--palette-surface));
 
@@ -135,6 +138,8 @@
   --danger-soft: color-mix(in srgb, var(--danger) 18%, var(--palette-ink));
   --warn-soft: color-mix(in srgb, var(--palette-accent) 24%, var(--palette-ink));
 
+  /* QR ostaje na bijelom i u tamnoj temi — vidi `--qr-surface` u svijetloj. */
+  --qr-surface: var(--palette-surface);
   --backdrop: color-mix(in srgb, var(--palette-ink) 72%, transparent);
   /* U tamnoj temi nema sjena — dubinu nosi podignuta podloga. */
   --shadow: none;

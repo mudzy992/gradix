@@ -98,6 +98,19 @@ services:
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_FROM: ${SMTP_FROM:-}
       EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+    volumes:
+      # PostgreSQL CA — ISTI mount kao na `web`, i to bez alternative:
+      # `PGSSLMODE=verify-full` traži tačno ovaj fajl na tačno ovoj putanji, a worker se
+      # spaja na bazu kao vlasnik šeme (pgboss). Bez mounta Node padne pri pokretanju sa
+      # `ENOENT: no such file or directory, open '/etc/ssl/certs/coolify-ca.crt'` — i to
+      # TEK na deployu, jer lokalno taj fajl postoji (ili SSL nije verify-full).
+      # `read_only` jer sertifikat nije ništa što proces smije mijenjati.
+      - type: bind
+        source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
+        target: /etc/ssl/certs/coolify-ca.crt
+        read_only: true
+        bind:
+          create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
     depends_on:
       - web
     networks:

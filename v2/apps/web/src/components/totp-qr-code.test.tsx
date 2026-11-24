@@ -61,6 +61,29 @@ describe("QR kod za 2FA", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
+  it("okvir i placeholder nose SVOJU bijelu podlogu (radi u tamnoj temi)", async () => {
+    /*
+     * Skener traži tamne module na svijetloj podlozi. Test čita `shell.css`, ne klasu iz
+     * `jsdom`-a: tema se u testu ne primjenjuje, pa bi provjera stilova uvijek prošla.
+     */
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(process.cwd(), "src/app/shell.css"), "utf8");
+    const qrBlock = /\.gx-qr\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(qrBlock).toMatch(/background:\s*var\(--qr-surface\)/);
+    // Unutrašnja „quiet zone“ iste boje — moduli ne smiju dodirivati tamnu plohu.
+    expect(qrBlock).toMatch(/box-shadow:\s*inset[^;]*var\(--qr-surface\)/);
+    const placeholder = /\.gx-qr__placeholder\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(placeholder).toMatch(/background:\s*var\(--qr-surface\)/);
+
+    // Token postoji u OBJE teme i u tamnoj NIJE izveden iz pozadine (`--panel`/`--raise`).
+    const globals = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const light = globals.slice(0, globals.indexOf('[data-theme="dark"]'));
+    const dark = globals.slice(globals.indexOf('[data-theme="dark"]'));
+    expect(light).toMatch(/--qr-surface:\s*var\(--palette-surface\)/);
+    expect(dark).toMatch(/--qr-surface:\s*var\(--palette-surface\)/);
+  });
+
   it("nema ozbiljnih a11y prekršaja", async () => {
     vi.doMock("qrcode", () => ({ toDataURL: vi.fn(async () => "data:image/png;base64,AAA") }));
     const { container } = await renderQr();
