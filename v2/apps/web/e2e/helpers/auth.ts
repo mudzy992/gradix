@@ -1,5 +1,20 @@
 /** E2E auth — Izvor obrasca: v2 e2e smoke/navigation (refaktor Faza 3). */
 import { expect, type Page } from "@playwright/test";
+import { totpCode, totpStep } from "@gradix/domain/server";
+
+/**
+ * Sintetička TOTP tajna iz demo seed-a (`scripts/seed.ts`).
+ *
+ * F1: OWNER/ADMIN/ACCOUNTANT imaju obaveznu 2FA, pa se E2E prijava sastoji iz dva koraka.
+ * Tajna je javna NAMJERNO — demo baza je sintetička; u produkciji korisnik tajnu nikad ne
+ * dijeli. Test računa kod istim algoritmom kao autentikator aplikacija.
+ */
+export const E2E_TOTP_SECRET = process.env.SEED_TOTP_SECRET ?? "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+
+/** Kod za tekući 30-s korak; `offset` pomjera korak (za test isteka). */
+export function e2eTotpCode(offset = 0): string {
+  return totpCode(E2E_TOTP_SECRET, totpStep(Date.now()) + offset);
+}
 
 export const E2E_PASSWORD = process.env.E2E_PASSWORD ?? "";
 
@@ -16,13 +31,28 @@ export function requireE2ePassword(): void {
   if (!E2E_PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
 }
 
-/** UI prijava (cookie u browser kontekstu). */
+/**
+ * UI prijava (cookie u browser kontekstu).
+ *
+ * Dva koraka od F1: lozinka, pa TOTP kod za role koje ga traže. Korak za kod se prepoznaje
+ * po polju, a ne po URL-u — pre-auth nije sesija i ekran ostaje isti.
+ */
 export async function loginUi(page: Page, email: string): Promise<void> {
   requireE2ePassword();
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Lozinka").fill(E2E_PASSWORD);
   await page.getByRole("button", { name: "Prijavi se" }).click();
+
+  // Drugi korak: polje za kod. `isVisible` odmah poslije prikaza lozinke; bez čekanja bi
+  // test prošao i kad 2FA nije ni tražena (lažno zeleno).
+  const codeField = page.getByLabel("Kod iz autentikatora ili recovery kod");
+  const needsCode = await codeField.isVisible({ timeout: 3_000 }).catch(() => false);
+  if (needsCode) {
+    await codeField.fill(e2eTotpCode());
+    await page.getByRole("button", { name: "Potvrdi kod" }).click();
+  }
+
   await page.waitForURL("**/pregled");
 }
 

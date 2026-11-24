@@ -6,7 +6,7 @@
  * test dalje nema sesiju. Tajna se upisuje u ISTU tabelu i na isti način kao kroz aplikaciju
  * (AES-256-GCM sa ključem iz `AUTH_SECRET`), pa `2fa/login` je prihvata bez posebnog puta.
  */
-import { encryptTotpSecret, generateTotpSecret } from "@gradix/domain";
+import { encryptTotpSecret, generateTotpSecret } from "@gradix/domain/server";
 
 export type TotpFixture = { secret: string; encrypted: string };
 

@@ -9,6 +9,9 @@
 import { Pool } from "pg";
 import argon2 from "argon2";
 import { companyId, withCompany } from "@gradix/db";
+import { ROLES_REQUIRING_2FA } from "@gradix/domain";
+import { encryptTotpSecret } from "@gradix/domain/server";
+import { loadConfig } from "../src/server/config";
 import { resetPilotSynthetic } from "./reset-pilot";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -169,6 +172,27 @@ try {
         );
       }
     });
+  }
+
+  /*
+   * F1: OWNER/ADMIN/ACCOUNTANT imaju OBAVEZNU 2FA (spec 01 §1.5). Demo fikstura zato
+   * dobija sintetičku TOTP tajnu — istu koju bi korisnik dobio uparivanjem (AES-256-GCM
+   * sa ključem iz AUTH_SECRET), pa se prijava u E2E-u ponaša kao stvarna.
+   *
+   * Tajna je fiksna i javna NAMJERNO: demo baza je sintetička, a E2E mora moći da izračuna
+   * kod bez čitanja baze. Produkcijski nalozi tajnu nikad ne dijele ni prikazuju.
+   */
+  const demoAuthSecret = loadConfig().AUTH_SECRET;
+  for (const user of users) {
+    if (!ROLES_REQUIRING_2FA.includes(user.role)) continue;
+    const secret = process.env.SEED_TOTP_SECRET ?? "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+    await pool.query(
+      `INSERT INTO user_totp (id, user_id, secret_enc, confirmed_at)
+       VALUES ($1, $2, $3, now())
+       ON CONFLICT (user_id) DO UPDATE SET secret_enc = EXCLUDED.secret_enc, confirmed_at = now()`,
+      [`totp_${user.id}`, user.id, encryptTotpSecret(secret, demoAuthSecret)],
+    );
+    await pool.query("UPDATE users SET totp_enabled = true, must_enroll_2fa = false WHERE id = $1", [user.id]);
   }
 
   for (const machine of machines) {

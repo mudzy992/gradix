@@ -1,3 +1,13 @@
+/**
+ * `@gradix/domain` — pravila poslovanja koja dijele web, worker i mobilni.
+ *
+ * NAMJERNO BEZ Node API-ja. Ovaj ulaz uvozi i mobilna aplikacija (Metro bundle), a tamo
+ * nema `node:crypto` — modul koji ga traži srušio bi Android bundle tek u CI-ju. Zato su
+ * kriptografija i tajne (TOTP, 2FA) u odvojenom ulazu `@gradix/domain/server`, koji
+ * uvoze samo server i testovi.
+ *
+ * Pravilo za dalje: ako modul traži `node:*`, ne ide u ovaj barrel.
+ */
 export {
   MoneyError,
   SUPPORTED_CURRENCIES,
@@ -168,25 +178,6 @@ export {
   PASSWORD_BLACKLIST,
   PASSWORD_BLACKLIST_SET,
 } from "./password-blacklist.data";
-
-export {
-  RECOVERY_CODE_COUNT,
-  TOTP_DIGITS,
-  TOTP_PERIOD_SECONDS,
-  TOTP_WINDOW_STEPS,
-  base32Decode,
-  base32Encode,
-  decryptTotpSecret,
-  encryptTotpSecret,
-  generateRecoveryCodes,
-  generateTotpSecret,
-  normalizeRecoveryCode,
-  totpCode,
-  totpStep,
-  totpUri,
-  verifyTotp,
-  type TotpVerifyResult,
-} from "./totp";
 
 export {
   describeDevice,

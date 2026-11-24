@@ -192,7 +192,16 @@ export const LoginRequest = z.object({
 });
 export type LoginRequest = z.infer<typeof LoginRequest>;
 
-export const LoginResponse = z.object({
+/**
+ * F1: `POST /api/auth/login` ima DVIJE ishoda i oba su uspjeh.
+ *
+ *  - puna prijava (role bez obavezne 2FA): tokeni + `user`;
+ *  - 2FA vrata (OWNER/ADMIN/ACCOUNTANT): `preAuthToken` i `gate`, BEZ sesije.
+ *
+ * Ugovor je ranije opisivao samo prvi slučaj, pa je mobilni klijent tiho dobijao
+ * `undefined` tokene i pad validacije. Zato je sada unija — klijent mora odlučiti.
+ */
+export const LoginSessionResponse = z.object({
   user: z.object({
     id: z.string(),
     displayName: z.string(),
@@ -204,8 +213,33 @@ export const LoginResponse = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
   passwordPolicy: z.string().optional(),
+  /**
+   * Sesija izdata samo za uparivanje 2FA (`gate: ENROLL`). Takva sesija vidi isključivo
+   * Postavke → Sigurnost; polje je u ugovoru da je klijent ne zamijeni punom sesijom.
+   */
+  enrollmentRequired: z.boolean().optional(),
 });
+export type LoginSessionResponse = z.infer<typeof LoginSessionResponse>;
+
+/** Drugi korak još nije prošao: nema sesije, samo kratkotrajni pre-auth token. */
+export const LoginTwoFactorRequiredResponse = z.object({
+  twoFactor: z.object({
+    required: z.literal(true),
+    /** `VERIFY` — korisnik ima TOTP; `ENROLL` — tek treba da ga upari. */
+    gate: z.enum(["VERIFY", "ENROLL"]),
+  }),
+  preAuthToken: z.string(),
+  user: z.object({ id: z.string() }),
+});
+export type LoginTwoFactorRequiredResponse = z.infer<typeof LoginTwoFactorRequiredResponse>;
+
+export const LoginResponse = z.union([LoginSessionResponse, LoginTwoFactorRequiredResponse]);
 export type LoginResponse = z.infer<typeof LoginResponse>;
+
+/** Diskriminant za klijente. Bez njega svaki pozivalac pogađa oblik odgovora. */
+export function isTwoFactorRequired(response: LoginResponse): response is LoginTwoFactorRequiredResponse {
+  return "preAuthToken" in response;
+}
 
 export const RefreshRequest = z.object({ refreshToken: SafeText.optional() });
 export const RefreshResponse = z.object({

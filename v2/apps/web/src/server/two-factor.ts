@@ -18,11 +18,10 @@ import {
   generateRecoveryCodes,
   generateTotpSecret,
   normalizeRecoveryCode,
-  requires2fa,
   totpUri,
-  twoFactorGate,
   verifyTotp,
-} from "@gradix/domain";
+} from "@gradix/domain/server";
+import { requires2fa, twoFactorGate } from "@gradix/domain";
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";

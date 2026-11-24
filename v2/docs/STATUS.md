@@ -1,9 +1,10 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-24 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint).**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 2 — projekti i mehanizacija**.
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 2 — Obaveze s rokom** (Modul 2,
+`docs/specs/02-obaveze-s-rokom.md`).
 
 ## Šta je gotovo
 
@@ -20,12 +21,41 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 2 — projekti i me
 | 1.3 | API: 2FA tok (obaveza za OWNER/ADMIN/ACCOUNTANT + uparivanje prije prve sesije), sesije i opoziv na daljinu, postavke firme i praznici, platforma (onboarding, suspend/activate, support pristup) | ✅ |
 | 1.4 | UI: `/ured/postavke` (4 taba), `/ured/profil/sesije` (web) + `/uredjaji` (mobile), `/platform/firme` + onboarding čarobnjak | ✅ |
 
-## Brojevi (lokalna provjera, 2026-11-24)
+## Korak 0 — zašto je CI bio crven i šta je popravljeno
+
+Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne korake.
+
+| # | Korak CI-ja | Uzrok | Popravka |
+|---|---|---|---|
+| 1 | „Nema stvarnih ličnih podataka" (`ci-v2.yml`) | `check-privacy.mjs` je IBAN tretirao kao lični podatak, iako spec 01 §3.2 traži IBAN **firme**; 4 test mejla su bila van rezervisanih domena | IBAN izuzet iz `PERSONAL_SQL`/`PERSONAL_TS` (+ 2 self-test slučaja koja to čuvaju); test mejlovi prebačeni na `*.test` / `example.com` |
+| 2 | `assembleRelease` (mobilni E2E) | `packages/domain/src/totp.ts` uvozi `node:crypto`, a barrel `@gradix/domain` ga je uvlačio u Android bundle preko `r4-outbox.ts`. Metro nema Node stdlib → bundling pada | Novi ulaz `@gradix/domain/server` za serverske module; barrel više ne izvozi TOTP; uvoznici prebačeni. Greška se vidi **samo** pri bundlovanju, ne u `vitest`/`tsc` |
+
+### Usklađeni ugovori i dokumentacija (F1 je promijenio ponašanje, ne samo kod)
+
+- **`LoginResponse` je sada unija dvije stvarne grane.** Ruta `POST /api/auth/login` od F1 ima dva
+  uspjeha: punu sesiju (role bez 2FA) i **2FA vrata** (`preAuthToken` + `gate`, bez sesije).
+  Ugovor je opisivao samo prvu, pa je mobilni klijent dobijao `undefined` tokene i padao na
+  validaciji, a web ekran je oblik odgovora pogađao ručno napisanim tipom. Sada:
+  `LoginSessionResponse | LoginTwoFactorRequiredResponse`, diskriminant `isTwoFactorRequired()`,
+  `enrollmentRequired` u ugovoru, i test uzorak za **oba** oblika.
+- **Mobilna prijava ne ostavlja poluspremnu sesiju.** Nalog sa obaveznom 2FA sada dobija jasnu
+  `AUTH_2FA_REQUIRED` grešku („prijavite se na webu") umjesto praznog ekrana, i test provjerava
+  da se tokeni **ne** upisuju.
+- **E2E prijava je dvostepena.** `loginUi` popunjava kod iz autentikatora kad se polje pojavi;
+  demo seed daje sintetičku TOTP tajnu uredskim rolama. Bez toga bi svaki E2E shard stao na
+  `/login` — a integracioni testovi bi i dalje bili zeleni (to je bila slijepa tačka).
+  Novi integracioni test prolazi **istu** putanju kao čovjek: lozinka → pre-auth → kod → `gx_at`.
+- **`@gradix/domain/server`** je dokumentovan kao jedini dozvoljeni ulaz za serverske module
+  (TOTP). Mobilni ga nikad ne uvozi — pravilo stoji u zaglavlju barrella.
+- **`STATUS.md` je tvrdio da je sljedeća „Faza 2 — projekti i mehanizacija"**, što je u suprotnosti
+  sa `IMPLEMENTATION_PLAN.md` (Faza 2 = Obaveze s rokom). Ispravljeno.
+
+## Brojevi (lokalna provjera, 2026-11-23)
 
 ```
 migracije       38          tabele          59 (51 tenant)
 OpenAPI         109 putanja
-pnpm test       802 testa   (web 492 + domain 135 + mobile 80 + db 67 + contracts 20 + worker 8)
+pnpm test       806 testa   (web 496 + domain 135 + mobile 81 + db 67 + contracts 21 + worker 8)
 pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 508 upita ✓
 check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
 ```

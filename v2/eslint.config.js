@@ -12,6 +12,9 @@ export default tseslint.config(
       "**/coverage/**",
       "**/generated/**",
       "**/.turbo/**",
+      // Lokalne pomoćne skripte (gitignorisane u `v2/.gitignore`): embedded Postgres,
+      // preflight probe. Nisu dio repoa, pa ne smiju ni padati ni „prolaziti" lint.
+      "**/.pg/**",
     ],
   },
   js.configs.recommended,

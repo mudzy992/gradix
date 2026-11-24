@@ -4,7 +4,7 @@
  *
  * Tokeni se drže u `lib/store` (na uređaju Keychain/Keystore, na webu `localStorage`), nikad u AsyncStorage.
  */
-import { ApiError, createClient, stripControlChars, type ErrorCode } from "@gradix/contracts";
+import { ApiError, createClient, isTwoFactorRequired, stripControlChars, type ErrorCode } from "@gradix/contracts";
 import type {
   ForemanWorkersResponse,
   LoginResponse,
@@ -105,6 +105,20 @@ export async function login(email: string, password: string): Promise<{ mustChan
   // znači pogrešan unos i tačno je da server odbije.
   const cleanEmail = stripControlChars(email).trim();
   const { data } = await client.post("/api/auth/login", { email: cleanEmail, password }, undefined, { accessToken: null });
+
+  /*
+   * F1: uredske role (OWNER/ADMIN/ACCOUNTANT) imaju obaveznu 2FA, pa prijava sa samom
+   * lozinkom vraća `preAuthToken` i NEMA tokene. Ugovor je unija — provjera ide preko
+   * diskriminanta, a ne preko `undefined`, da tipovi i ponašanje ostanu vezani.
+   */
+  if (isTwoFactorRequired(data)) {
+    throw new ApiError({
+      code: "AUTH_2FA_REQUIRED",
+      message: "Ovaj nalog traži dvostepenu prijavu. Prijavite se na webu.",
+      status: 401,
+    });
+  }
+
   await saveTokens(data.accessToken, data.refreshToken);
   return { mustChangePassword: data.mustChangePassword };
 }

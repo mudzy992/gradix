@@ -84,6 +84,42 @@ describe("login (A1): kontrolni znakovi ne idu na server", () => {
   });
 });
 
+/*
+ * F1: uredska rola bez TOTP koda. Server vraća `preAuthToken` i NEMA tokene — ako mobilni
+ * to ne prepozna, u skladište uđe `undefined` i korisnik gleda prazan ekran. Test traži
+ * jasnu grešku i, jednako važno, da se ništa ne zapiše.
+ */
+describe("login (F1): nalog sa obaveznom 2FA ne ostavlja poluspremnu sesiju", () => {
+  it("baca AUTH_2FA_REQUIRED i ne upisuje tokene", async () => {
+    secure.setItemAsync.mockClear();
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              user: { id: "u1", displayName: "Vlasnik", roles: ["OWNER"] },
+              companyId: "c1",
+              mustChangePassword: false,
+              twoFactor: { required: true, gate: "VERIFY" },
+              preAuthToken: "pre-token",
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      await expect(login("vlasnik@demo.test", "lozinka")).rejects.toMatchObject({
+        code: "AUTH_2FA_REQUIRED",
+      });
+      expect(secure.setItemAsync).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 afterEach(() => {
   vi.clearAllMocks();
 });

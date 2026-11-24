@@ -12,8 +12,12 @@
  *   7. **Support pristup**: max 60 min, obavezan razlog, vidljiv u auditu firme.
  */
 import { randomUUID } from "node:crypto";
-import { decryptTotpSecret, generateTotpSecret, totpCode, totpStep } from "@gradix/domain";
+import { decryptTotpSecret, generateTotpSecret, totpCode, totpStep } from "@gradix/domain/server";
 import { Pool, type PoolClient } from "pg";
+import { NextRequest } from "next/server";
+import { POST as loginRoute } from "@/app/api/auth/login/route";
+import { POST as twoFactorLoginRoute } from "@/app/api/auth/2fa/login/route";
+import { PRE_AUTH_HEADER } from "@/server/pre-auth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const appUrl = process.env.DATABASE_URL;
@@ -183,7 +187,7 @@ describeDb("F1 — firma, pristup, 2FA, sesije, platforma (PostgreSQL)", () => {
 
   describe("2FA", () => {
     it("tajna se šifruje i ne vraća se poslije uparivanja", async () => {
-      const { encryptTotpSecret, decryptTotpSecret, generateTotpSecret } = await import("@gradix/domain");
+      const { encryptTotpSecret, decryptTotpSecret, generateTotpSecret } = await import("@gradix/domain/server");
       const secret = generateTotpSecret();
       const enc = encryptTotpSecret(secret, "x".repeat(40));
       expect(enc).not.toContain(secret);
@@ -231,7 +235,7 @@ describeDb("F1 — firma, pristup, 2FA, sesije, platforma (PostgreSQL)", () => {
     });
 
     it("TOTP kod se ne može iskoristiti dva puta u istom koraku (last_used_step)", async () => {
-      const { verifyTotp, encryptTotpSecret } = await import("@gradix/domain");
+      const { verifyTotp, encryptTotpSecret } = await import("@gradix/domain/server");
       const secret = generateTotpSecret();
       const code = totpCode(secret, totpStep(Date.now()));
       const first = verifyTotp(code, secret);
@@ -511,3 +515,116 @@ describeDb("F1 — firma, pristup, 2FA, sesije, platforma (PostgreSQL)", () => {
 function decryptTotpSecretSafe(payload: string, secret: string): string {
   return decryptTotpSecret(payload, secret);
 }
+
+/*
+ * E2E-1 — prijavna putanja koju koristi i Playwright i mobilni.
+ *
+ * Zašto baš ovdje: CI je pao upravo zato što NIJEDAN test nije prolazio cijelu prijavu sa
+ * obaveznom 2FA. Ovaj test tjera isti put kao čovjek: lozinka → `preAuthToken` → kod →
+ * `gx_at` cookie. Bez drugog koraka E2E bi stao na `/login`, a integracioni testovi bi i
+ * dalje bili zeleni — to je bila slijepa tačka.
+ */
+describeDb("F1 — prijava sa obaveznom 2FA (putanja kao u E2E-u)", () => {
+  const admin = new Pool({ connectionString: adminUrl });
+  const COMPANY_ID = "cmp_login_a";
+  const OWNER_ID = "usr_login_owner";
+  const WORKER_ID = "usr_login_worker";
+  const PASSWORD = "Prijava-lozinka-123";
+  let totpSecret = "";
+
+  const cookieOf = (response: Response, name: string) =>
+    response.headers.getSetCookie().find((entry) => entry.startsWith(`${name}=`))?.split(";")[0] ?? "";
+
+  const login = (email: string) =>
+    loginRoute(
+      new NextRequest("http://test/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password: PASSWORD }),
+        headers: { "content-type": "application/json", "user-agent": "vitest-login/1" },
+      }),
+    );
+
+  beforeAll(async () => {
+    await admin.query("DELETE FROM login_attempts");
+    await admin.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY_ID]);
+    await admin.query("DELETE FROM memberships WHERE company_id = $1", [COMPANY_ID]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[OWNER_ID, WORKER_ID]]);
+    await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY_ID]);
+    await admin.query("INSERT INTO companies (id, name, slug) VALUES ($1, 'Login firma', 'login-firma')", [
+      COMPANY_ID,
+    ]);
+
+    const { hashPassword } = await import("@/server/password");
+    const hash = await hashPassword(PASSWORD);
+    await admin.query(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name, is_active, must_change_password)
+       VALUES ($1, 'login-owner@test.example', $3, 'Vlasnik', 'Prijava', true, false),
+              ($2, 'login-worker@test.example', $3, 'Radnik', 'Prijava', true, false)`,
+      [OWNER_ID, WORKER_ID, hash],
+    );
+    await admin.query(
+      `INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES
+       ('mem_login_owner', $1, $3, ARRAY['OWNER']::"Role"[], 'COMPANY'),
+       ('mem_login_worker', $2, $3, ARRAY['WORKER']::"Role"[], 'SELF')`,
+      [OWNER_ID, WORKER_ID, COMPANY_ID],
+    );
+
+    totpSecret = generateTotpSecret();
+    await admin.query(
+      `INSERT INTO user_totp (id, user_id, secret_enc, confirmed_at) VALUES ('totp_login_owner', $1, $2, now())`,
+      [OWNER_ID, (await import("@gradix/domain/server")).encryptTotpSecret(totpSecret, process.env.AUTH_SECRET ?? "")],
+    );
+    await admin.query("UPDATE users SET totp_enabled = true WHERE id = $1", [OWNER_ID]);
+  });
+
+  afterAll(async () => {
+    await admin.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY_ID]);
+    await admin.query("DELETE FROM memberships WHERE company_id = $1", [COMPANY_ID]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[OWNER_ID, WORKER_ID]]);
+    await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY_ID]);
+    await admin.end();
+  });
+
+  it("obavezna rola: lozinka sama NE daje sesiju, nego pre-auth token", async () => {
+    const response = await login("login-owner@test.example");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      data: { twoFactor?: { required: boolean; gate: string }; preAuthToken?: string };
+    };
+    expect(body.data.twoFactor).toEqual({ required: true, gate: "VERIFY" });
+    expect(body.data.preAuthToken).toBeTruthy();
+    // Nema sesije: bez ovoga bi „obavezna 2FA" bila samo preporuka.
+    expect(cookieOf(response, "gx_at")).toBe("");
+  });
+
+  it("tačna lozinka ne puni brojač promašaja (ni poslije pet prijava)", async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) await login("login-owner@test.example");
+    const sixth = await login("login-owner@test.example");
+    // Pet ispravnih prijava nekad je zaključavalo nalog — 429 ovdje znači da se vratilo.
+    expect(sixth.status).toBe(200);
+  });
+
+  it("kod iz autentikatora dovršava prijavu i daje sesiju", async () => {
+    const first = await login("login-owner@test.example");
+    const preAuthToken = ((await first.json()) as { data: { preAuthToken: string } }).data.preAuthToken;
+
+    const second = await twoFactorLoginRoute(
+      new NextRequest("http://test/api/auth/2fa/login", {
+        method: "POST",
+        body: JSON.stringify({ code: totpCode(totpSecret, totpStep(Date.now())) }),
+        headers: { "content-type": "application/json", [PRE_AUTH_HEADER]: preAuthToken },
+      }),
+    );
+    expect(second.status).toBe(200);
+    expect(cookieOf(second, "gx_at")).not.toBe("");
+    expect(cookieOf(second, "gx_rt")).not.toBe("");
+  });
+
+  it("radnik bez 2FA dobija sesiju odmah (2FA je obaveza samo uredskih rola)", async () => {
+    const response = await login("login-worker@test.example");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: { twoFactor?: unknown } };
+    expect(body.data.twoFactor).toBeUndefined();
+    expect(cookieOf(response, "gx_at")).not.toBe("");
+  });
+});

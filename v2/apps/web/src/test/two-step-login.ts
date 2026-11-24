@@ -10,7 +10,7 @@
  */
 import { NextRequest } from "next/server";
 import type { Pool } from "pg";
-import { generateTotpSecret, encryptTotpSecret, totpCode, totpStep } from "@gradix/domain";
+import { generateTotpSecret, encryptTotpSecret, totpCode, totpStep } from "@gradix/domain/server";
 import { POST as twoFactorLoginRoute } from "@/app/api/auth/2fa/login/route";
 import { PRE_AUTH_HEADER } from "@/server/pre-auth";
 

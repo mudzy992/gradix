@@ -122,8 +122,8 @@ describe("recovery kodovi", () => {
 
 describe("totpUri", () => {
   it("nosi tajnu, izdavaoca i parametre koje authenticator očekuje", () => {
-    const uri = totpUri({ secret: "ABC", account: "amir@firma.ba", issuer: "Gradix" });
-    expect(uri.startsWith("otpauth://totp/Gradix%3Aamir%40firma.ba?")).toBe(true);
+    const uri = totpUri({ secret: "ABC", account: "amir@firma.test", issuer: "Gradix" });
+    expect(uri.startsWith("otpauth://totp/Gradix%3Aamir%40firma.test?")).toBe(true);
     expect(uri).toContain("secret=ABC");
     expect(uri).toContain("digits=6");
     expect(uri).toContain("period=30");

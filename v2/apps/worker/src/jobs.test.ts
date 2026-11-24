@@ -70,7 +70,7 @@ describe("kanali", () => {
     expect(smtpConfigured({})).toBe(false);
     expect(smtpConfigured({ SMTP_HOST: "smtp.example.com" })).toBe(false);
     expect(smtpConfigured({ SMTP_FROM: "gradix@example.com" })).toBe(false);
-    expect(smtpConfigured({ SMTP_HOST: "smtp.example.com", SMTP_FROM: "g@e.com" })).toBe(true);
+    expect(smtpConfigured({ SMTP_HOST: "smtp.example.com", SMTP_FROM: "g@example.com" })).toBe(true);
   });
 
   it("push bez Expo tokena nije podešen", () => {

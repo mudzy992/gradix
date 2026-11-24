@@ -47,7 +47,7 @@ describe("checkPasswordPolicy", () => {
   });
 
   it("odbija lozinku sa liste prije nego što uopšte pogleda identitet", () => {
-    expect(checkPasswordPolicy({ password: "password123", email: "neko@firma.ba" })).toContain(
+    expect(checkPasswordPolicy({ password: "password123", email: "neko@firma.test" })).toContain(
       "najčešćih",
     );
   });
@@ -58,7 +58,7 @@ describe("checkPasswordPolicy", () => {
       checkPasswordPolicy({ password: "hodzicamir9", lastName: "Hodžić" }),
     ).toContain("prezime");
     expect(
-      checkPasswordPolicy({ password: "kancelarija9", email: "kancelarija@firma.ba" }),
+      checkPasswordPolicy({ password: "kancelarija9", email: "kancelarija@firma.test" }),
     ).toContain("email");
   });
 
@@ -70,7 +70,7 @@ describe("checkPasswordPolicy", () => {
     expect(
       checkPasswordPolicy({
         password: "Kranjska16Most",
-        email: "amir@firma.ba",
+        email: "amir@firma.test",
         firstName: "Amir",
         lastName: "Hodžić",
       }),

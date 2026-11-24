@@ -979,55 +979,109 @@
                       "const": true
                     },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "user": {
+                      "anyOf": [
+                        {
                           "type": "object",
                           "properties": {
-                            "id": {
+                            "user": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "roles": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "displayName",
+                                "roles"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "companyId": {
                               "type": "string"
                             },
-                            "displayName": {
+                            "mustChangePassword": {
+                              "type": "boolean"
+                            },
+                            "accessToken": {
                               "type": "string"
                             },
-                            "roles": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
+                            "refreshToken": {
+                              "type": "string"
+                            },
+                            "passwordPolicy": {
+                              "type": "string"
+                            },
+                            "enrollmentRequired": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
-                            "id",
-                            "displayName",
-                            "roles"
+                            "user",
+                            "companyId",
+                            "mustChangePassword",
+                            "accessToken",
+                            "refreshToken"
                           ],
                           "additionalProperties": false
                         },
-                        "companyId": {
-                          "type": "string"
-                        },
-                        "mustChangePassword": {
-                          "type": "boolean"
-                        },
-                        "accessToken": {
-                          "type": "string"
-                        },
-                        "refreshToken": {
-                          "type": "string"
-                        },
-                        "passwordPolicy": {
-                          "type": "string"
+                        {
+                          "type": "object",
+                          "properties": {
+                            "twoFactor": {
+                              "type": "object",
+                              "properties": {
+                                "required": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
+                                "gate": {
+                                  "type": "string",
+                                  "enum": [
+                                    "VERIFY",
+                                    "ENROLL"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "required",
+                                "gate"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "preAuthToken": {
+                              "type": "string"
+                            },
+                            "user": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "twoFactor",
+                            "preAuthToken",
+                            "user"
+                          ],
+                          "additionalProperties": false
                         }
-                      },
-                      "required": [
-                        "user",
-                        "companyId",
-                        "mustChangePassword",
-                        "accessToken",
-                        "refreshToken"
-                      ],
-                      "additionalProperties": false
+                      ]
                     },
                     "meta": {
                       "type": "object",
@@ -82325,55 +82379,109 @@
                       "const": true
                     },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "user": {
+                      "anyOf": [
+                        {
                           "type": "object",
                           "properties": {
-                            "id": {
+                            "user": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "roles": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "displayName",
+                                "roles"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "companyId": {
                               "type": "string"
                             },
-                            "displayName": {
+                            "mustChangePassword": {
+                              "type": "boolean"
+                            },
+                            "accessToken": {
                               "type": "string"
                             },
-                            "roles": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
+                            "refreshToken": {
+                              "type": "string"
+                            },
+                            "passwordPolicy": {
+                              "type": "string"
+                            },
+                            "enrollmentRequired": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
-                            "id",
-                            "displayName",
-                            "roles"
+                            "user",
+                            "companyId",
+                            "mustChangePassword",
+                            "accessToken",
+                            "refreshToken"
                           ],
                           "additionalProperties": false
                         },
-                        "companyId": {
-                          "type": "string"
-                        },
-                        "mustChangePassword": {
-                          "type": "boolean"
-                        },
-                        "accessToken": {
-                          "type": "string"
-                        },
-                        "refreshToken": {
-                          "type": "string"
-                        },
-                        "passwordPolicy": {
-                          "type": "string"
+                        {
+                          "type": "object",
+                          "properties": {
+                            "twoFactor": {
+                              "type": "object",
+                              "properties": {
+                                "required": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
+                                "gate": {
+                                  "type": "string",
+                                  "enum": [
+                                    "VERIFY",
+                                    "ENROLL"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "required",
+                                "gate"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "preAuthToken": {
+                              "type": "string"
+                            },
+                            "user": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "twoFactor",
+                            "preAuthToken",
+                            "user"
+                          ],
+                          "additionalProperties": false
                         }
-                      },
-                      "required": [
-                        "user",
-                        "companyId",
-                        "mustChangePassword",
-                        "accessToken",
-                        "refreshToken"
-                      ],
-                      "additionalProperties": false
+                      ]
                     },
                     "meta": {
                       "type": "object",

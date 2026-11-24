@@ -8,9 +8,15 @@
  * Šta se traži:
  *  1. JMBG — 13 cifara koje prolaze kontrolnu cifru (mod 11). Sam format nije dovoljan: bez
  *     kontrolne cifre bi svaki broj od 13 cifara (npr. vrijeme u milisekundama) bio pogodak.
- *  2. Polja ličnih podataka u KODU (`jmbg`, `broj_licne`, `bankovni_racun`, `iban`) — u R2a tih
- *     kolona nema, pa pojava imena polja znači da se nešto vratilo. U `docs/` su imena polja
- *     dozvoljena: plan mora da ih imenuje da bi ih zabranio.
+ *  2. Polja ličnih podataka u KODU (`jmbg`, `broj_licne`, `licna_karta`, `bankovni_racun`) — u
+ *     R2a tih kolona nema, pa pojava imena polja znači da se nešto vratilo. U `docs/` su imena
+ *     polja dozvoljena: plan mora da ih imenuje da bi ih zabranio.
+ *
+ *     `iban` NIJE na tom spisku i to je odluka, ne propust: spec 01 §3.2 traži IBAN **firme** u
+ *     zaglavlju (za fakture), a to nije lični podatak — isto kao PIB ili adresa sjedišta. Lični
+ *     IBAN radnika bi bio nalaz, ali radnik ga nema kao polje ni po jednoj specifikaciji; da se
+ *     pojavi, uhvatilo bi ga pravilo za `bankovni_racun` (isto polje, drugo ime) i pregled
+ *     migracije. Zato je IBAN izuzet IZRIČITO, a ne zato što se „ne sjetimo".
  *  3. Email adrese van rezervisanih domena (`*.test`, `example.*`, `@demo.test`).
  *
  * Ne traži imena i prezimena: „Amina Karić“ je sintetičko ime koje se ne razlikuje od stvarnog,
@@ -50,8 +56,8 @@ const CODE_FILE = /\.(ts|tsx|js|mjs|cjs|sql)$/;
  * Tako spisak zabranjenih imena („ne unosimo JMBG“) i komentar koji to objašnjava nisu nalaz —
  * a stvarna kolona ili polje jesu. Prva verzija pravila je kažnjavala upravo spisak zabrana.
  */
-const PERSONAL_SQL = /\b(jmbg|broj_licne|licna_karta|bankovni_racun|iban)\b\s+(text|varchar|char|bytea|bigint|numeric|uuid)/i;
-const PERSONAL_TS = /(^|[^\w.])(jmbg|brojLicne|licnaKarta|bankovniRacun|iban)\s*[?:]\s*/;
+const PERSONAL_SQL = /\b(jmbg|broj_licne|licna_karta|bankovni_racun)\b\s+(text|varchar|char|bytea|bigint|numeric|uuid)/i;
+const PERSONAL_TS = /(^|[^\w.])(jmbg|brojLicne|licnaKarta|bankovniRacun)\s*[?:]\s*/;
 const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|json|md|sql|ya?ml|html|css|txt|csv)$/;
 
 /**
@@ -125,6 +131,8 @@ const CASES = [
   { name: "demo domen prolazi", file: "a.md", body: "kontakt: ured@demo.test", expect: false },
   { name: "kolona JMBG-a u SQL-u se hvata", file: "schema.sql", body: "CREATE TABLE workers (jmbg TEXT);", expect: true },
   { name: "polje u TS tipu se hvata", file: "types.ts", body: "type Worker = { jmbg: string };", expect: true },
+  { name: "IBAN firme u zaglavlju prolazi (spec 01 §3.2)", file: "a.sql", body: "  ADD COLUMN iban TEXT,", expect: false },
+  { name: "lični račun radnika se hvata", file: "a.sql", body: "  ADD COLUMN bankovni_racun TEXT,", expect: true },
   { name: "spisak zabranjenih polja prolazi", file: "guard.ts", body: 'const BLOCKED = ["jmbg", "iban"];', expect: false },
   { name: "imenovanje polja u dokumentaciji prolazi", file: "docs/x.md", body: "- JMBG, adresa i bankovni račun se NE unose.", expect: false },
 ];

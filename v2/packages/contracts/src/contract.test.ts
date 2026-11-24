@@ -17,6 +17,7 @@ import {
   AuditResponse,
   ForemanWorkersResponse,
   LoginResponse,
+  isTwoFactorRequired,
   MeResponse,
   RolesResponse,
   SyncPullResponse,
@@ -171,6 +172,29 @@ describe("šeme prihvataju stvarne odgovore", () => {
       passwordPolicy: "min 10 znakova, slovo i broj",
     };
     expect(LoginResponse.parse(sample)).toEqual(sample);
+  });
+
+  /*
+   * F1: druga grana istog ugovora. Bez ovog uzorka ugovor bi opet opisivao samo punu
+   * prijavu, a 2FA vrata (koja stvarno postoje u ruti) ne bi bila pokrivena ni tipom ni testom.
+   */
+  it("POST /api/auth/login — 2FA vrata (nema sesije)", () => {
+    const sample = {
+      twoFactor: { required: true as const, gate: "VERIFY" as const },
+      preAuthToken: "e.y.z",
+      user: { id: "usr_1" },
+    };
+    expect(LoginResponse.parse(sample)).toEqual(sample);
+    expect(isTwoFactorRequired(sample)).toBe(true);
+    expect(
+      isTwoFactorRequired({
+        user: { id: "usr_1", displayName: "Amina", roles: ["OWNER"] },
+        companyId: "cmp_demo",
+        mustChangePassword: false,
+        accessToken: "a",
+        refreshToken: "r",
+      }),
+    ).toBe(false);
   });
 
   it("GET /api/roles", () => {
