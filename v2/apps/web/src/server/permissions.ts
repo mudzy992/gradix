@@ -79,6 +79,17 @@ export const PERMISSIONS = {
    * dotiču SADRŽAJ priloga traže ovu dozvolu, a ne `obligations.view`.
    */
   "obligations.attachments.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
+  /*
+   * F2: potvrda dokumenta (§17). Odvojeno od `obligations.manage` jer je odgovornost, ne unos:
+   * šef gradilišta potvrđuje da je vidio nalaz, ali ne mijenja tipove ni tuđe obaveze.
+   * `rejected` mora imati razlog — to je jedina „negativna“ radnja u modulu.
+   */
+  "obligations.review": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  /*
+   * F2: upravljanje PRILOZIMA uz obavezu (§27–29). Uže od `obligations.manage`: dodavanje i
+   * uklanjanje skenova je lični podatak, pa ga ne dobija svako ko smije unijeti obavezu.
+   */
+  "obligations.attachments.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   // R3. `projects.view` je široko — radnik mora znati na kojem je projektu. Pravo i dodjele ljudi
   // su odvojeni svjesno: `projects.assign` je NOVA dozvola, ne dio `users.manage` (odluka vlasnika
   // iz R1b, preseljena u R3). Mijenjanje role i dodjela projekta su dvije različite radnje.
@@ -219,6 +230,15 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     label: "Pregled priloga rokova",
     description:
       "Otvara skenove i nalaze uz obavezu. Radnik vidi svoj rok, ali ne i sam dokument — nalaz je lični podatak.",
+  },
+  "obligations.review": {
+    label: "Potvrda dokumenata rokova",
+    description:
+      "Potvrđivanje ili odbijanje dokumenta koji čeka provjeru, uz obavezan razlog kod odbijanja.",
+  },
+  "obligations.attachments.manage": {
+    label: "Upravljanje prilozima rokova",
+    description: "Dodavanje i uklanjanje skenova uz obavezu (prilog je lični podatak).",
   },
   "obligations.manage": {
     label: "Upravljanje rokovima",

@@ -57,11 +57,22 @@ async function loadSignals(
     label: string;
     state: string;
     blocks_assignment: boolean;
+    blocks_actions: string[] | null;
     expires_on: string | null;
   }>(
+    // F2: pragovi i stanje se računaju iz STVARNIH pragova obaveze (vlastiti `reminder_days`
+    // nadjačava tipove), a `review_at`/`review_state` ulaze u formulu — inače bi dokument koji
+    // čeka provjeru ili je odbijen izgledao „važeći“ i ne bi blokirao.
     `SELECT o.id, o.worker_id, o.machine_id, o.tender_id, t.label,
-            obligation_state(o.expires_at, t.default_reminder_days, $4) AS state,
-            t.blocks_assignment, to_char(o.expires_at, 'YYYY-MM-DD') AS expires_on
+            obligation_state(
+              o.expires_at,
+              COALESCE(o.reminder_days, t.default_reminder_days),
+              $4,
+              o.superseded_by IS NOT NULL,
+              o.review_at,
+              o.review_state
+            ) AS state,
+            t.blocks_assignment, t.blocks_actions, to_char(o.expires_at, 'YYYY-MM-DD') AS expires_on
        FROM obligations o
        JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
       WHERE o.company_id = $1
@@ -78,6 +89,11 @@ async function loadSignals(
       label: `${row.label}${row.expires_on ? ` (${row.expires_on})` : ""}`,
       state: String(row.state),
       blocking: Boolean(row.blocks_assignment),
+      // `blocks_actions` je tačan spisak radnji koje tip blokira; `blocking` ostaje za starije
+      // redove tipova gdje je kolona tek dodata sa podrazumijevanom vrijednošću.
+      blockingActions: Array.isArray(row.blocks_actions)
+        ? (row.blocks_actions as UsageAction[])
+        : undefined,
       referenceId: String(row.id),
     };
     if (row.worker_id) byEntity.get(signalKey("WORKER", String(row.worker_id)))?.push(signal);

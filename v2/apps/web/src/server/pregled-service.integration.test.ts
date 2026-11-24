@@ -168,8 +168,8 @@ describeDb("C.1 Pregled: opseg po rolama, izolacija i prazna stanja", () => {
         expiresOffsetDays: number,
       ) => {
         await client.query(
-          `INSERT INTO public.obligations (id, company_id, type_id, worker_id, machine_id, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO public.obligations (id, company_id, type_id, worker_id, machine_id, created_by, review_at)
+           VALUES ($1, $2, $3, $4, $5, $6, '2027-06-01')`,
           [id, CO, typeId, target.workerId ?? null, target.machineId ?? null, USERS.owner],
         );
         await client.query(
@@ -258,7 +258,7 @@ describeDb("C.1 Pregled: opseg po rolama, izolacija i prazna stanja", () => {
         [`obt_c1o_${RUN}`, CO_OTHER],
       );
       await client.query(
-        `INSERT INTO public.obligations (id, company_id, type_id, scope_company, created_by) VALUES ($1, $2, $3, true, $4)`,
+        `INSERT INTO public.obligations (id, company_id, type_id, scope_company, created_by, review_at) VALUES ($1, $2, $3, true, $4, '2027-06-01')`,
         [`obl_c1o_${RUN}`, CO_OTHER, `obt_c1o_${RUN}`, `usr_c1_admin_other_${RUN}`],
       );
       await client.query(

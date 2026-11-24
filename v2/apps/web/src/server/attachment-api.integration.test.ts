@@ -123,8 +123,8 @@ describeDb("F0.2 jedinstveni /api/attachments", () => {
       [TYPE, CO, `UA${RUN}`.toUpperCase().slice(0, 40)],
     );
     await admin.query(
-      `INSERT INTO public.obligations (id, company_id, type_id, worker_id, created_by)
-       VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO public.obligations (id, company_id, type_id, worker_id, created_by, review_at)
+       VALUES ($1, $2, $3, $4, $5, '2027-06-01')`,
       [OBL, CO, TYPE, WRK, USER],
     );
   }, 60_000);

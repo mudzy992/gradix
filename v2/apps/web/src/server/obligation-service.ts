@@ -20,6 +20,7 @@ import { withCompany, type CompanyId } from "@gradix/db";
 import { buildWhere, cond, type SqlCondition } from "./sql-conditions";
 import {
   businessDate,
+  compareObligationUrgency,
   daysLeft,
   formatPgDate,
   obligationState,
@@ -274,7 +275,17 @@ export type ObligationRow = {
   note: string | null;
   state: ObligationState;
   daysLeft: number | null;
+  /** Pragovi koji su STVARNO primijenjeni: vlastiti ako postoje, inače tipovi. */
   reminderDays: number[];
+  /** F2: datum do kojeg ured provjerava trajnu obavezu. `null` za obaveze s rokom. */
+  reviewAt: string | null;
+  /** F2: `none` / `pending_review` / `rejected`. */
+  reviewState: string;
+  /** F2: zašto je odbijeno — obavezno kad je `rejected`. */
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  /** F2: koje radnje tip blokira kad je istekao/odbijen (`obligation_types.blocks_actions`). */
+  blocksActions: string[];
   attachments: ObligationAttachmentRow[];
   createdAt: string;
 };
@@ -289,7 +300,9 @@ const OBLIGATION_SELECT = `
          o.responsible_user_id,
          ru.first_name AS ru_first_name, ru.last_name AS ru_last_name,
          o.note, o.created_at, o.superseded_by,
-         t.default_reminder_days::text AS reminder_days
+         o.review_at, o.review_state, o.review_note, o.reviewed_at,
+         COALESCE(o.reminder_days, t.default_reminder_days)::text AS reminder_days,
+         t.blocks_actions
     FROM obligations o
     JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
     LEFT JOIN workers w ON w.company_id = o.company_id AND w.id = o.worker_id
@@ -327,6 +340,12 @@ function toObligation(
   const expiresAt = toIsoDate(row.expires_at);
   const reminderDays = parseThresholds(row.reminder_days);
   const superseded = row.superseded_by !== null && row.superseded_by !== undefined;
+  const reviewAt = toIsoDate(row.review_at);
+  // `review_state` postoji samo za obaveze tipova koji traže provjeru; stariji redovi su `none`.
+  const reviewState = ((row.review_state as string | null) ?? "none") as
+    | "none"
+    | "pending_review"
+    | "rejected";
   const workerFirst = row.first_name as string | null;
   const workerLast = row.last_name as string | null;
   const responsibleFirst = row.ru_first_name as string | null;
@@ -357,9 +376,15 @@ function toObligation(
     responsibleName: responsibleFirst && responsibleLast ? `${responsibleFirst} ${responsibleLast}` : null,
     note: (row.note as string | null) ?? null,
     // Ista formula kao `obligation_state()` u bazi; test ih poredi na realnim redovima.
-    state: obligationState({ expiresAt, thresholds: reminderDays, today, superseded }),
-    daysLeft: daysLeft(today, expiresAt),
+    state: obligationState({ expiresAt, thresholds: reminderDays, today, superseded, reviewAt, reviewState }),
+    // Trajna obaveza nema „dana do isteka“ — ima dane do provjere, i to je ono što se prikazuje.
+    daysLeft: daysLeft(today, expiresAt ?? reviewAt),
     reminderDays,
+    reviewAt,
+    reviewState,
+    reviewNote: (row.review_note as string | null) ?? null,
+    reviewedAt: row.reviewed_at ? (row.reviewed_at as Date).toISOString() : null,
+    blocksActions: Array.isArray(row.blocks_actions) ? (row.blocks_actions as string[]) : ["assign"],
     attachments,
     createdAt: (row.created_at as Date).toISOString(),
   };
@@ -402,7 +427,16 @@ export type ObligationFilter = {
 
 export type ObligationsPage = {
   obligations: ObligationRow[];
-  counts: { all: number; expired: number; expiring: number; valid: number; no_expiry: number };
+  counts: {
+    all: number;
+    expired: number;
+    expiring: number;
+    valid: number;
+    no_expiry: number;
+    pending_review: number;
+    rejected: number;
+    review_due: number;
+  };
   today: string;
 };
 
@@ -488,21 +522,30 @@ export async function listObligations(
     let obligations = result.rows.map((row) => toObligation(row, today, byObligation.get(String(row.id)) ?? []));
     if (filter.state) obligations = obligations.filter((row) => row.state === filter.state);
 
-    // Najhitnije prvo: istekle, pa one koje istječu, pa po datumu. Bez roka na kraj.
-    obligations.sort((a, b) => {
-      const rank = (row: ObligationRow) => (row.state === "expired" ? 0 : row.state === "expiring" ? 1 : 2);
-      if (rank(a) !== rank(b)) return rank(a) - rank(b);
-      if (a.expiresAt === null) return 1;
-      if (b.expiresAt === null) return -1;
-      return a.expiresAt.localeCompare(b.expiresAt);
-    });
+    // Najhitnije prvo — isti redoslijed kao `compareObligationUrgency` u domeni, pa ekran i
+    // izvoz ne mogu sortirati dvaput različito.
+    obligations.sort(compareObligationUrgency);
 
-    const counts = { all: obligations.length, expired: 0, expiring: 0, valid: 0, no_expiry: 0 };
+    const counts = {
+      all: obligations.length,
+      expired: 0,
+      expiring: 0,
+      valid: 0,
+      no_expiry: 0,
+      // F2 stanja se broje odvojeno: „čekaju provjeru“ je red ureda, a „odbijeno“ je posao
+      // koji mora ponovo doći do radnika.
+      pending_review: 0,
+      rejected: 0,
+      review_due: 0,
+    };
     for (const row of obligations) {
       if (row.state === "expired") counts.expired += 1;
       else if (row.state === "expiring") counts.expiring += 1;
       else if (row.state === "valid") counts.valid += 1;
       else if (row.state === "no_expiry") counts.no_expiry += 1;
+      else if (row.state === "pending_review") counts.pending_review += 1;
+      else if (row.state === "rejected") counts.rejected += 1;
+      else if (row.state === "review_due") counts.review_due += 1;
     }
 
     return { obligations, counts, today };
@@ -614,6 +657,11 @@ export type ObligationInput = {
   issuer?: string | null;
   issuedAt?: string | null;
   expiresAt?: string | null;
+  /**
+   * F2: datum do kojeg ured provjerava TRAJNU obavezu (`expiresAt` prazan). Obavezan kad roka
+   * nema — „trajno“ bez datuma provjere je dokument za koji niko ne zna da li još važi.
+   */
+  reviewAt?: string | null;
   responsibleUserId?: string | null;
   note?: string | null;
 };
@@ -675,6 +723,8 @@ export async function createObligation(
   if (issuedAt && typeof issuedAt === "object") return issuedAt;
   const expiresAt = normaliseDate(input.expiresAt, "Datum isteka");
   if (expiresAt && typeof expiresAt === "object") return expiresAt;
+  const reviewAt = normaliseDate(input.reviewAt, "Datum provjere");
+  if (reviewAt && typeof reviewAt === "object") return reviewAt;
   if (issuedAt && expiresAt && issuedAt > expiresAt) {
     return { code: "VALIDATION_FAILED", message: "Datum izdavanja je poslije datuma isteka." };
   }
@@ -702,6 +752,14 @@ export async function createObligation(
         message: `Tip „${
           kind === "WORKER" ? "radnik" : kind === "MACHINE" ? "mašina" : kind === "PROJECT" ? "projekat" : kind === "TENDER" ? "tender" : "firma"
         }“ ne odgovara izabranom entitetu.`,
+      } as ServiceError;
+    }
+
+    // Tek sad: „trajna obaveza mora imati datum provjere“. Vidjeti komentar uz pravilo niže.
+    if (expiresAt === null && reviewAt === null) {
+      return {
+        code: "VALIDATION_FAILED",
+        message: "Obaveza bez roka mora imati datum provjere.",
       } as ServiceError;
     }
 
@@ -735,8 +793,8 @@ export async function createObligation(
     const id = `obl_${crypto.randomUUID()}`;
     await client.query(
       `INSERT INTO obligations (id, company_id, type_id, worker_id, machine_id, project_id, tender_id, scope_company,
-                                responsible_user_id, note, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                                responsible_user_id, note, created_by, review_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         id,
         companyId,
@@ -749,6 +807,7 @@ export async function createObligation(
         input.responsibleUserId ?? null,
         input.note?.trim() || null,
         actor.userId,
+        reviewAt,
       ],
     );
 
@@ -998,6 +1057,14 @@ export async function correctObligation(
   if (issuedAt && typeof issuedAt === "object") return issuedAt;
   const expiresAt = normaliseDate(input.expiresAt, "Datum isteka");
   if (expiresAt && typeof expiresAt === "object") return expiresAt;
+  // Obnova UVIJEK nosi novi rok — trajna obaveza se ne „obnavlja“, njoj se pomjera datum
+  // provjere (`PATCH /:id/review-at`).
+  if (expiresAt === null) {
+    return {
+      code: "VALIDATION_FAILED",
+      message: "Novi rok je obavezan. Za trajnu obavezu promijenite datum provjere.",
+    } as ServiceError;
+  }
 
   return withCompany(pool, companyId, async (client) => {
     const existing = await client.query<{

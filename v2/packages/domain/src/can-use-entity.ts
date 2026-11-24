@@ -60,6 +60,13 @@ export type UsageSignal = {
   state: string;
   /** Blokira li ovaj signal kad je stanje blokirajuće (npr. `obligation_types.blocks_assignment`). */
   blocking: boolean;
+  /**
+   * F2: koje TAČNO radnje tip blokira (`obligation_types.blocks_actions`). Registracija mašine
+   * blokira `haul` i `machine_hours`, ali ne `workday`; pa jedan signal mora reći za koju je
+   * radnju blokada — inače bi `blocking: true` blokiralo i ono što spec izričito ne blokira.
+   * Kad polja nema, važi `blocking` (stariji pozivaoci).
+   */
+  blockingActions?: readonly UsageAction[];
   /** Id za iznimku (`usage_overrides.subject_id`), kad iznimka postoji. */
   referenceId?: string | null;
 };
@@ -97,6 +104,18 @@ export type UsageDecision = {
 const BLOCKING_FAULT_STATES = ["OPEN", "WAITING_APPROVAL", "APPROVED", "IN_PROGRESS"] as const;
 const BLOCKING_SERVICE_STATES = ["OPEN", "SCHEDULED", "IN_PROGRESS"] as const;
 
+function signalBlocksAction(signal: UsageSignal, action: UsageAction): boolean {
+  if (signal.blockingActions) return signal.blockingActions.includes(action) && signal.blocking;
+  return signal.blocking;
+}
+
+/**
+ * Da li je STANJE signala takvo da blokira — bez obzira na to koju radnju pitamo.
+ *
+ * Odvojeno od `signalBlocksAction` namjerno: istekao ljekarski mora da se PRIKAŽE i kad se
+ * evidentira gorivo (radnja koja ne blokira). Ako bi se ova dva pitanja spojila, mašina bi
+ * točila gorivo bez ijednog upozorenja — tišina je gora od blokade.
+ */
 function isBlockingState(signal: UsageSignal): boolean {
   switch (signal.source) {
     case "OBLIGATION":
@@ -123,8 +142,15 @@ function isWarningOnly(signal: UsageSignal): boolean {
     return (BLOCKING_SERVICE_STATES as readonly string[]).includes(signal.state) && !isBlockingState(signal);
   }
   if (signal.source === "CATEGORY") return true;
-  // `expiring` i `pending_review` su upozorenja: dokument još važi, samo istječe.
-  if (signal.source === "OBLIGATION") return signal.state === "expiring" || signal.state === "pending_review";
+  // Upozorenja: dokument još važi, ali treba paziti.
+  //   expiring      — rok se bliži
+  //   review_due    — trajna obaveza čeka provjeru ureda
+  //   pending_review— dokument čeka potvrdu; NIKAD ne blokira (§18)
+  //   missing       — obaveze nema; isto samo upozorenje, inače bi neuneseni dokument
+  //                   zaustavio rad čija je svrha da se evidentira
+  if (signal.source === "OBLIGATION") {
+    return ["expiring", "pending_review", "review_due", "missing"].includes(signal.state);
+  }
   return false;
 }
 
@@ -157,8 +183,15 @@ export function canUseEntity(input: {
     );
 
     if (isBlockingState(signal)) {
-      if (!blockingAction) {
-        // Gorivo i radni dan: i blokirajuće stanje je samo jako upozorenje.
+      /*
+       * Dva razloga zašto stanje NE blokira OVU radnju, a mora se prikazati:
+       *   1. radnja sama po sebi ne blokira (`fuel`, `workday`) — blokada bi zaustavila unos
+       *      koji je svrha evidencije;
+       *   2. tip ne blokira tu radnju (`blocks_actions`), npr. registracija blokira `haul`,
+       *      ali ne `workday`.
+       * U oba slučaja signal ide u `warns`, nikad se ne gubi.
+       */
+      if (!blockingAction || !signalBlocksAction(signal, input.action)) {
         warns.push({ source: signal.source, label: signal.label, state: signal.state, overridden: false });
         continue;
       }

@@ -8,13 +8,28 @@ import type { Obligation, ObligationStateName } from "@gradix/contracts";
 export type WorkerOption = { id: string; firstName: string; lastName: string; isActive: boolean };
 export type MachineOption = { id: string; code: string; name: string; isActive: boolean };
 
+/**
+ * Nazivi stanja za ekran. Isti tekst kao `OBLIGATION_STATE_LABELS` u domeni — dva izvora bi
+ * značila da web i mobilni zovu isto stanje drugačije.
+ */
 export const STATE_LABEL: Record<ObligationStateName, string> = {
-  valid: "Važeće",
-  expiring: "Uskoro istječe",
+  missing: "Nedostaje",
   expired: "Isteklo",
-  superseded: "Zamijenjeno",
+  rejected: "Odbijeno",
+  pending_review: "Čeka provjeru",
+  expiring: "Uskoro istječe",
+  review_due: "Provjera dospjela",
+  valid: "Važeće",
   no_expiry: "Bez roka",
+  superseded: "Zamijenjeno",
 };
+
+/**
+ * Da li stanje BLOKIRA rad (spec 02 §15). Ekran time odlučuje da li prikazuje „blokirano“ —
+ * `missing` i `pending_review` su posao ureda, a ne razlog da radnik ne radi.
+ */
+export const STATE_BLOCKS = (state: ObligationStateName): boolean =>
+  state === "expired" || state === "rejected";
 
 /** Rok u riječima: „za 5 dana“, „istječe danas“, „prije 3 dana“ — bez računanja u glavi. */
 export function daysLabel(obligation: Obligation): string {

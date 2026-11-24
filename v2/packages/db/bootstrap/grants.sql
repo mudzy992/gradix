@@ -70,6 +70,12 @@ GRANT SELECT, INSERT ON TABLE public.equipment_categories TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_types TO gradix_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.obligations TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_versions TO gradix_app;
+-- F2: pravila „svaki X mora imati Y“ i kome ide podsjetnik.
+-- Pravila se brišu: `DELETE /api/obligation-requirements/:id` postoji za pogrešno uneseno
+-- pravilo, a deaktivacija bi ostavila „duh“ pravilo koje i dalje pravi nedostajuće obaveze.
+-- `notify_roles` se NE briše kroz aplikaciju (samo se mijenja `role`), pa app rola nema DELETE.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.obligation_requirements TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.obligation_notify_roles TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.attachments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.usage_overrides TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.notifications TO gradix_app;

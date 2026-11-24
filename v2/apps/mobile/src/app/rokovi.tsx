@@ -13,12 +13,34 @@ import { myObligations } from "../api/client";
 import { openDb, readObligations, saveObligations, type LocalObligation } from "../db/sqlite";
 import { Button, CardView, Screen, StatusChip, Text } from "../ui";
 
+/**
+ * Nazivi stanja — isti tekst kao na webu i u domeni.
+ *
+ * `missing` se ne pojavljuje u ovoj listi (radnik vidi samo SVOJE redove, a „nedostaje“ je
+ * pojam ureda), ali `rejected` i `pending_review` se pojavljuju i MORAJU biti prevedeni: bez
+ * toga bi radnik vidio `rejected` na ekranu i pomislio da je greška u aplikaciji.
+ */
 const STATE_LABEL: Record<string, string> = {
+  missing: "Nedostaje",
   expired: "Isteklo",
+  rejected: "Odbijeno",
+  pending_review: "Čeka provjeru",
   expiring: "Uskoro istječe",
+  review_due: "Provjera dospjela",
   valid: "Važeće",
   no_expiry: "Bez roka",
+  superseded: "Zamijenjeno",
 };
+
+/**
+ * Koja stanja traže radnju: isteklo i odbijeno BLOKIRAJU rad (spec 02 §15), pa idu crveno.
+ * `expiring` i `review_due` su upozorenja; `pending_review` je posao ureda, a ne radnika.
+ */
+function stateTone(state: string): "plain" | "warn" | "danger" {
+  if (state === "expired" || state === "rejected") return "danger";
+  if (state === "expiring" || state === "review_due") return "warn";
+  return "plain";
+}
 
 /** „od prije 2 sata“ — vrijeme preuzimanja se vidi, da se ne pomisli da je spisak svjež. */
 function sinceLabel(fetchedAt: string | null): string {
@@ -105,7 +127,7 @@ export default function ObligationsScreen() {
       {rows.map((row) => (
         <CardView key={row.id}>
           <Text variant="label">{row.typeLabel}</Text>
-          <StatusChip label={STATE_LABEL[row.state] ?? row.state} tone={row.state === "valid" ? "plain" : "warn"} />
+          <StatusChip label={STATE_LABEL[row.state] ?? row.state} tone={stateTone(row.state)} />
           <Text>{row.target}</Text>
           <Text variant="caption">
             {row.expiresAt ? domaciDatum(row.expiresAt) : "bez roka"} · {daysLabel(row)}

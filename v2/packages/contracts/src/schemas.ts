@@ -575,7 +575,21 @@ export type ImportResult = z.infer<typeof ImportResult>;
 export const ObligationEntityKind = z.enum(["WORKER", "MACHINE", "PROJECT", "COMPANY", "TENDER"]);
 export type ObligationEntityKind = z.infer<typeof ObligationEntityKind>;
 
-export const ObligationStateEnum = z.enum(["valid", "expiring", "expired", "superseded", "no_expiry"]);
+/**
+ * F2 dodaje `missing` (računato, nikad red), `expired`/`rejected`/`pending_review` i
+ * `review_due`. Redoslijed je po hitnosti — isti kao `OBLIGATION_STATE_ORDER` u domeni.
+ */
+export const ObligationStateEnum = z.enum([
+  "missing",
+  "expired",
+  "rejected",
+  "pending_review",
+  "expiring",
+  "review_due",
+  "valid",
+  "no_expiry",
+  "superseded",
+]);
 export type ObligationStateName = z.infer<typeof ObligationStateEnum>;
 
 export const ObligationType = z.object({
@@ -719,6 +733,14 @@ export const Obligation = z.object({
   state: ObligationStateEnum,
   daysLeft: z.number().nullable(),
   reminderDays: z.array(z.number()),
+  /** F2: datum do kojeg ured provjerava trajnu obavezu (`expires_at IS NULL`). */
+  reviewAt: z.string().nullable(),
+  reviewState: z.enum(["none", "pending_review", "rejected"]),
+  /** Zašto je odbijeno — obavezan kad je `reviewState` `rejected`. */
+  reviewNote: z.string().nullable(),
+  reviewedAt: z.string().nullable(),
+  /** Koje radnje tip blokira kad je istekao/odbijen (`canUseEntity`). */
+  blocksActions: z.array(z.string()),
   attachments: z.array(ObligationAttachment),
   createdAt: IsoDate,
 });
@@ -732,6 +754,10 @@ export const ObligationsResponse = z.object({
     expiring: z.number(),
     valid: z.number(),
     no_expiry: z.number(),
+    /** F2: posao ureda — koliko dokumenata čeka odluku. */
+    pending_review: z.number(),
+    rejected: z.number(),
+    review_due: z.number(),
   }),
   /** Današnji poslovni datum firme — ekran ga prikazuje da se zna po kojoj se zoni računa. */
   today: z.string(),
@@ -755,6 +781,8 @@ export const ObligationInput = z.object({
   issuer: SafeText.max(200).nullable().optional(),
   issuedAt: SafeText.nullable().optional(),
   expiresAt: SafeText.nullable().optional(),
+  /** F2: obavezan kad `expiresAt` nema — trajna obaveza se provjerava do tog datuma. */
+  reviewAt: SafeText.nullable().optional(),
   responsibleUserId: SafeText.nullable().optional(),
   note: SafeText.max(2000).nullable().optional(),
 });
@@ -2131,4 +2159,87 @@ export type PlatformSupportAccessInput = z.infer<typeof PlatformSupportAccessInp
 
 export const PlatformSupportAccessResponse = z.object({
   expiresAt: IsoDate,
+});
+
+// ---------------------------------------------------------------------------
+// F2 — zahtjevi, nedostajuće obaveze, potvrda dokumenta
+// ---------------------------------------------------------------------------
+
+export const ObligationRequirement = z.object({
+  id: z.string(),
+  entityKind: ObligationEntityKind,
+  typeId: z.string(),
+  /** `ALL` = svaki entitet roda; ostali opsezi nose `appliesValue`. */
+  appliesScope: z.enum(["ALL", "ENGAGEMENT", "MACHINE_CATEGORY", "PROJECT"]),
+  appliesValue: z.string().nullable(),
+  isRequired: z.boolean(),
+  isActive: z.boolean(),
+  typeLabel: z.string(),
+  typeCode: z.string(),
+});
+export type ObligationRequirement = z.infer<typeof ObligationRequirement>;
+
+export const ObligationRequirementsResponse = z.object({
+  requirements: z.array(ObligationRequirement),
+});
+
+export const MissingObligation = z.object({
+  entityKind: ObligationEntityKind,
+  entityId: z.string(),
+  typeId: z.string(),
+  requirementId: z.string(),
+  /** Uvijek `missing` — polje postoji da red stane u istu listu kao ostale obaveze. */
+  state: z.literal("missing"),
+  typeLabel: z.string(),
+  typeCode: z.string(),
+  entityName: z.string(),
+  entityCode: z.string().nullable(),
+  /** Tip traži prilog — „kreiraj sve“ bez priloga ostavlja dokument za kasnije. */
+  requiresAttachment: z.boolean(),
+});
+export type MissingObligation = z.infer<typeof MissingObligation>;
+
+export const MissingObligationsResponse = z.object({
+  items: z.array(MissingObligation),
+  groups: z.array(
+    z.object({
+      typeId: z.string(),
+      entityKind: ObligationEntityKind,
+      count: z.number(),
+      ids: z.array(z.string()),
+    }),
+  ),
+  counts: z.object({
+    total: z.number(),
+    workers: z.number(),
+    machines: z.number(),
+    projects: z.number(),
+  }),
+  today: z.string(),
+});
+
+export const ObligationReviewInput = z.object({
+  decision: z.enum(["approve", "reject"]),
+  /** Obavezan kod odbijanja (≥3 znaka) — odbijanje bez razloga se ne može ispraviti. */
+  reason: SafeText.max(1000).optional(),
+});
+
+export const ObligationReviewAtInput = z.object({
+  /** `YYYY-MM-DD`; ne smije biti u prošlosti. */
+  reviewAt: SafeText,
+});
+
+export const ObligationBulkRenewInput = z.object({
+  obligationIds: z.array(SafeText).min(1).max(200),
+  /** `null` = trajne obaveze; tada je `reviewAt` obavezan. */
+  expiresAt: SafeText.nullable(),
+  reviewAt: SafeText.nullable().optional(),
+  issuedAt: SafeText.nullable().optional(),
+  number: SafeText.nullable().optional(),
+  issuer: SafeText.nullable().optional(),
+});
+
+export const ObligationBulkRenewResponse = z.object({
+  renewed: z.number(),
+  failed: z.array(z.object({ obligationId: z.string(), reason: z.string() })),
 });

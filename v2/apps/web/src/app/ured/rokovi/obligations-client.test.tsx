@@ -88,6 +88,22 @@ function mockApi(handler?: (call: Call) => { ok: boolean; body: unknown }) {
       calls.push(call);
 
       if (call.method === "GET") {
+        // F2 panel: prazna lista nedostataka — ovaj test ne provjerava taj ekran, ali panel
+        // se učitava uz listu i bez ovog odgovora bi dobio pogrešan oblik podataka.
+        if (call.url.includes("/api/obligations/missing")) {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                items: [],
+                groups: [],
+                counts: { total: 0, workers: 0, machines: 0, projects: 0 },
+                today: "2026-11-07",
+              },
+            }),
+          } as unknown as Response;
+        }
         if (call.url.includes("/api/obligation-types")) {
           return { ok: true, json: async () => ({ success: true, data: { types } }) } as unknown as Response;
         }

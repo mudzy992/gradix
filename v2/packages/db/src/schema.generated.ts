@@ -461,6 +461,28 @@ export interface NotificationTemplates {
   variables: Generated<string[]>;
 }
 
+export interface ObligationNotifyRoles {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  role: Role;
+  type_id: string;
+}
+
+export interface ObligationRequirements {
+  applies_scope: string;
+  applies_value: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  entity_kind: string;
+  id: string;
+  is_active: Generated<boolean>;
+  is_required: Generated<boolean>;
+  type_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Obligations {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -474,7 +496,13 @@ export interface Obligations {
   note: string | null;
   number: string | null;
   project_id: string | null;
+  reminder_days: number[] | null;
   responsible_user_id: string | null;
+  review_at: string | null;
+  review_note: string | null;
+  review_state: Generated<string>;
+  reviewed_at: Timestamp | null;
+  reviewed_by: string | null;
   scope_company: Generated<boolean>;
   superseded_by: string | null;
   tender_id: string | null;
@@ -484,6 +512,7 @@ export interface Obligations {
 }
 
 export interface ObligationTypes {
+  blocks_actions: Generated<string[]>;
   blocks_assignment: Generated<boolean>;
   code: string;
   company_id: string;
@@ -494,6 +523,8 @@ export interface ObligationTypes {
   is_active: Generated<boolean>;
   label: string;
   requires_attachment: Generated<boolean>;
+  requires_review: Generated<boolean>;
+  sensitive: Generated<boolean>;
   sort_order: Generated<number>;
   updated_at: Generated<Timestamp>;
 }
@@ -948,6 +979,8 @@ export interface DB {
   notification_preferences: NotificationPreferences;
   notification_templates: NotificationTemplates;
   notifications: Notifications;
+  obligation_notify_roles: ObligationNotifyRoles;
+  obligation_requirements: ObligationRequirements;
   obligation_types: ObligationTypes;
   obligation_versions: ObligationVersions;
   obligations: Obligations;

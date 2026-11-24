@@ -1,10 +1,9 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 2 — Obaveze s rokom** (Modul 2,
-`docs/specs/02-obaveze-s-rokom.md`).
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 3 — Evidencija rada** po planu.
 
 ## Šta je gotovo
 
@@ -20,6 +19,11 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 2 — Obaveze s rok
 | 1.2 | Domena: politika lozinki (10k crna lista, istorija 3, lock 10/15 min, rotacija 180 d za uredske role), TOTP (AES-256-GCM, replay zaštita), sesije, uređaji | ✅ |
 | 1.3 | API: 2FA tok (obaveza za OWNER/ADMIN/ACCOUNTANT + uparivanje prije prve sesije), sesije i opoziv na daljinu, postavke firme i praznici, platforma (onboarding, suspend/activate, support pristup) | ✅ |
 | 1.4 | UI: `/ured/postavke` (4 taba), `/ured/profil/sesije` (web) + `/uredjaji` (mobile), `/platform/firme` + onboarding čarobnjak | ✅ |
+| 2.1 | Baza: `requires_review`/`sensitive`/`blocks_actions`, `review_at`/`reviewed_by`/`review_state`/`review_note`, `reminder_days`; trajna obaveza bez datuma provjere odbijena **odgođenim constraint triggerom**; `obligation_requirements`, `obligation_notify_roles` | ✅ |
+| 2.2 | Domena: 9 stanja (`missing`…`superseded`), `BLOCKING_OBLIGATION_STATES`, `isBlockingState` nezavisno od radnje, dozvole `obligations.review`/`.attachments.manage` | ✅ |
+| 2.3 | API: 10 F2 ruta — nedostajuće obaveze (spisak + kreiranje), pravila (CRUD), provjera, pomjeranje datuma provjere, masovna obnova, izvoz CSV/PDF, uvoz (pregled + primjena) | ✅ |
+| 2.4 | UI: `/ured/rokovi` sa 9 stanja i karticom „Nedostaje“; mobilni ekran rokova razlikuje **blokadu** (isteklo/odbijeno) od upozorenja | ✅ |
+| 2.5 | Worker: `reminders.scan` (po roli primaoca iz `obligation_notify_roles`, dedupe), `attachments.purge` (retencija) | ✅ |
 
 ## Korak 0 — zašto je CI bio crven i šta je popravljeno
 
@@ -107,10 +111,25 @@ skladište `TANK` · situacije prema naručiocu van MVP-a (B15) · dashboard po 
 `notifications` sa obaveznim `href` i `dedupe_key` · audit retention 2/5/10 g · `Cmd/Ctrl+K` pod
 RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP-u.
 
+## Faza 2 — odluke koje se ne smiju izgubiti
+
+- **Trajna obaveza ne može ostati bez roka.** `expires_at` piše trigger *poslije* INSERT-a, pa ga
+  CHECK ne može vidjeti; zato odgođeni constraint trigger (`obligations_review_at_required`,
+  `DEFERRABLE INITIALLY DEFERRED`) **ponovo čita red** i traži `review_at`. Isto pravilo u servisu
+  daje bolju poruku („Obaveza bez roka mora imati datum provjere“) i to je ugovor: provjera roda
+  entiteta ide **prije** te poruke, inače „ljekarski na mašini“ prijavi datum umjesto uzroka.
+- **`isBlockingState` ne zavisi od radnje.** `expired`/`rejected` blokiraju uvijek; da li blokiraju
+  *ovu* radnju odlučuje `signalBlocksAction`. Spajanje ta dva pojma je tiho uklonilo upozorenje pri
+  evidentiranju goriva — signal koji ne blokira ovu radnju ide u `warns`, nikad se ne gubi.
+- **„Nedostaje“ je posao, ne greška.** Spisak se računa iz pravila firme; kreiranje traži datum
+  provjere jer nove obaveze nemaju rok. Preskočeni redovi se prijavljuju kao djelimičan uspjeh.
+- **Mobilni ekran razlikuje blokadu od upozorenja i po boji.** Radnik na suncu ne čita tekst;
+  `danger` postoji baš za isteklo/odbijeno.
+
 ## Namjerno još nema
 
-- 4 od 6 worker poslova (`reminders.scan`, `budget.thresholds`, `attachments.purge`,
-  `sync.purge`) — dolaze sa svojim modulima, jer traže tabele koje još ne postoje.
+- 2 od 6 worker poslova (`budget.thresholds`, `sync.purge`) — dolaze sa svojim modulima, jer
+  traže tabele koje još ne postoje.
 - Email/push provajder: isporuka je `BLOCKED_NO_PROVIDER`, in-app radi bez njega.
 - `report_jobs`, `daily_rollups` — tabele i kostur postoje, poslovi dolaze sa izvještajima (Faza 6).
 

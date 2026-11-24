@@ -1,10 +1,11 @@
 /**
- * Poslovi Faze 0 — SAMO `ping.health` i `notifications.deliver`.
+ * Poslovi — imena i registracija na jednom mjestu.
  *
- * Ostala četiri posla iz spec 12 §13 (`reminders.scan`, `budget.thresholds`,
- * `attachments.purge`, `sync.purge`) dolaze sa svojim modulima, jer traže tabele koje još
- * ne postoje. Registracija imena poslova je ipak sada: kad modul doda posao, mijenja se
- * `JOB_NAMES`, ne infrastruktura.
+ * Faza 0: `ping.health`, `notifications.deliver`.
+ * Faza 2: `reminders.scan` (dnevni prolaz kroz rokove) i `attachments.purge` (retencija).
+ *
+ * Ostali (`budget.thresholds`, `sync.purge`) dolaze sa svojim modulima, jer traže tabele koje
+ * još ne postoje.
  *
  * Pravilo za svaki posao: **idempotentan** (spec 12 §14). Pad i ponovni prolaz ne smiju
  * napraviti duplu poruku ni dupli trošak.
@@ -13,6 +14,10 @@
 export const JOB_NAMES = {
   pingHealth: "ping.health",
   notificationsDeliver: "notifications.deliver",
+  /** F2: podsjetnici na rokove, 06:00 u zoni firme. */
+  remindersScan: "reminders.scan",
+  /** F2: brisanje priloga po retenciji (24 mj. osjetljivi / 10 g. ostali). */
+  attachmentsPurge: "attachments.purge",
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

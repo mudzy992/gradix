@@ -20,6 +20,7 @@ import {
   Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Input, PageHeader, Select, Skeleton,
 } from "@/components/ui/index";
 import { CreateDialog, RenewDialog } from "./obligations-dialogs";
+import MissingPanel from "./missing-panel";
 import { DetailDialog } from "./obligation-detail";
 export { STATE_LABEL, daysLabel, targetLabel, count3190, type MachineOption, type WorkerOption } from "./obligations-shared";
 import { STATE_LABEL, count3190, daysLabel, targetLabel } from "./obligations-shared";
@@ -29,15 +30,33 @@ type LoadState =
   | { kind: "error"; message: string }
   | { kind: "ready"; obligations: Obligation[]; types: ObligationType[]; counts: Counts; today: string };
 
-type Counts = { all: number; expired: number; expiring: number; valid: number; no_expiry: number };
+type Counts = {
+  all: number;
+  expired: number;
+  expiring: number;
+  valid: number;
+  no_expiry: number;
+  pending_review: number;
+  rejected: number;
+  review_due: number;
+};
 
 
+/**
+ * Vizuelna težina stanja. `hot` je ono što traži akciju danas: isteklo i odbijeno blokiraju rad,
+ * a `missing` je jedino stanje u kojem dokumenta NEMA — crveno je i ono.
+ * `pending_review` je `full` (ured radi svoj posao), a `review_due` `hot` (provjera je propuštena).
+ */
 const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
-  valid: "full",
-  expiring: "hot",
+  missing: "hot",
   expired: "hot",
-  superseded: "hollow",
+  rejected: "hot",
+  pending_review: "full",
+  expiring: "hot",
+  review_due: "hot",
+  valid: "full",
   no_expiry: "hollow",
+  superseded: "hollow",
 };
 
 
@@ -141,7 +160,10 @@ export default function ObligationsClient({
               >
                 <option value="">Sva stanja ({state.counts.all})</option>
                 <option value="expired">Isteklo ({state.counts.expired})</option>
+                <option value="rejected">Odbijeno ({state.counts.rejected})</option>
+                <option value="pending_review">Čeka provjeru ({state.counts.pending_review})</option>
                 <option value="expiring">Uskoro istječe ({state.counts.expiring})</option>
+                <option value="review_due">Provjera dospjela ({state.counts.review_due})</option>
                 <option value="31-90">31–90 dana ({count3190(obligations)})</option>
                 <option value="valid">Važeće ({state.counts.valid})</option>
                 <option value="no_expiry">Bez roka ({state.counts.no_expiry})</option>
@@ -266,6 +288,12 @@ export default function ObligationsClient({
           />
         ) : null}
       </Card>
+
+      {/*
+        F2: „Nedostaje“ stoji ISPOD liste, a ne iznad — lista je ono po što je korisnik došao,
+        a nedostajuće je podsjetnik na posao. Panel se sam sklanja kad nema šta da pokaže.
+      */}
+      <MissingPanel canManage={canManage} onCreated={() => void load()} />
 
       {creating ? (
         <CreateDialog

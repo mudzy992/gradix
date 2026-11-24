@@ -44,6 +44,19 @@ import { POST as correctRoute } from "@/app/api/obligations/[id]/correct/route";
 import { POST as typesPost } from "@/app/api/obligation-types/route";
 import { PATCH as typesPatch } from "@/app/api/obligation-types/[id]/route";
 import { POST as attachmentsPost } from "@/app/api/obligations/[id]/attachments/route";
+import { GET as missingGet } from "@/app/api/obligations/missing/route";
+import { POST as missingCreatePost } from "@/app/api/obligations/missing/create/route";
+import {
+  GET as requirementsGet,
+  POST as requirementsPost,
+} from "@/app/api/obligation-requirements/route";
+import {
+  DELETE as requirementsDelete,
+  PATCH as requirementsPatch,
+} from "@/app/api/obligation-requirements/[id]/route";
+import { POST as reviewPost } from "@/app/api/obligations/[id]/review/route";
+import { PATCH as reviewAtPatch } from "@/app/api/obligations/[id]/review-at/route";
+import { POST as bulkRenewPost } from "@/app/api/obligations/bulk-renew/route";
 import { POST as acceptInviteRoute } from "@/app/api/invitations/[token]/route";
 import { POST as applyResetRoute } from "@/app/api/password-resets/[token]/route";
 import { POST as projectsPost } from "@/app/api/projects/route";
@@ -224,6 +237,15 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/obligation-types": { POST: typesPost },
   "/api/obligation-types/{id}": { PATCH: typesPatch },
   "/api/obligations/{id}/attachments": { POST: attachmentsPost },
+  // F2 — nove rute. I množenje i pregled uvoza primaju tekstualna polja (datumi, razlozi,
+  // filteri), pa NUL mora stati na granici kao i svuda ostalo.
+  "/api/obligations/missing": { GET: missingGet },
+  "/api/obligations/missing/create": { POST: missingCreatePost },
+  "/api/obligation-requirements": { GET: requirementsGet, POST: requirementsPost },
+  "/api/obligation-requirements/{id}": { PATCH: requirementsPatch, DELETE: requirementsDelete },
+  "/api/obligations/{id}/review": { POST: reviewPost },
+  "/api/obligations/{id}/review-at": { PATCH: reviewAtPatch },
+  "/api/obligations/bulk-renew": { POST: bulkRenewPost },
   "/api/invitations/{token}": { GET: invitationGet, POST: acceptInviteRoute },
   "/api/password-resets/{token}": { POST: applyResetRoute },
   "/api/projects": { GET: projectsGet, POST: projectsPost },

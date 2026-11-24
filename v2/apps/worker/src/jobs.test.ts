@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "./config";
 import { JOB_NAMES, pingHealth, type JobLogger } from "./jobs";
 import { pushConfigured, smtpConfigured } from "./notifications-deliver";
+import { createObjectRemover } from "./object-storage";
+import { daysWord, localDate, localHour } from "./reminders-scan";
 
 describe("loadConfig", () => {
   it("pada bez DATABASE_ADMIN_URL — worker koji tiho ne radi je gori od ugašenog", () => {
@@ -46,6 +48,10 @@ describe("JOB_NAMES", () => {
     expect(JOB_NAMES).toEqual({
       pingHealth: "ping.health",
       notificationsDeliver: "notifications.deliver",
+      // F2 poslovi. Imena su dio ugovora: `pgboss` red nosi ime posla, a stari redovi u bazi
+      // ostaju poslije deploya — preimenovanje bi ih ostavilo da vise zauvijek.
+      remindersScan: "reminders.scan",
+      attachmentsPurge: "attachments.purge",
     });
   });
 });
@@ -77,5 +83,58 @@ describe("kanali", () => {
     expect(pushConfigured({})).toBe(false);
     expect(pushConfigured({ EXPO_ACCESS_TOKEN: "  " })).toBe(false);
     expect(pushConfigured({ EXPO_ACCESS_TOKEN: "tok" })).toBe(true);
+  });
+});
+
+describe("reminders.scan — poslovni sat i množina", () => {
+  it("06 h u zoni firme pokreće prolaz; 05 h ne", () => {
+    // 2026-11-23T05:00Z = 06:00 u Sarajevu (zima, UTC+1).
+    expect(localHour("Europe/Sarajevo", new Date("2026-11-23T05:00:00Z"))).toBe(6);
+    expect(localHour("Europe/Sarajevo", new Date("2026-11-23T04:00:00Z"))).toBe(5);
+  });
+
+  it("ponoć je 0, ne 24 — ICU vraća „24“ kad se koristi hour12:false", () => {
+    expect(localHour("UTC", new Date("2026-11-23T00:00:00Z"))).toBe(0);
+  });
+
+  it("poslovni datum je datum zone, ne UTC — 23:30 UTC je već sutra u Sarajevu", () => {
+    expect(localDate("Europe/Sarajevo", new Date("2026-11-23T23:30:00Z"))).toBe("2026-11-24");
+    expect(localDate("UTC", new Date("2026-11-23T23:30:00Z"))).toBe("2026-11-23");
+  });
+
+  it("množina u poruci: 1 dan, 2 dana, 5 dana, 11 dana", () => {
+    expect(daysWord(1)).toBe("dan");
+    expect(daysWord(2)).toBe("dana");
+    expect(daysWord(5)).toBe("dana");
+    expect(daysWord(11)).toBe("dana");
+    expect(daysWord(21)).toBe("dan");
+  });
+});
+
+describe("attachments.purge — konfiguracija bucketa", () => {
+  it("bez MINIO_* se NE tvrdi da je podešeno", () => {
+    const storage = createObjectRemover({});
+    expect(storage.configured).toBe(false);
+  });
+
+  it("djelimična konfiguracija nije konfiguracija", () => {
+    expect(createObjectRemover({ MINIO_ENDPOINT: "http://minio:9000" }).configured).toBe(false);
+    expect(
+      createObjectRemover({
+        MINIO_ENDPOINT: "http://minio:9000",
+        MINIO_ACCESS_KEY: "k",
+        MINIO_SECRET_KEY: "s",
+      }).configured,
+    ).toBe(true);
+  });
+
+  it("neispravan URL se prijavljuje, ne baca pri prvom brisanju", () => {
+    const storage = createObjectRemover({
+      MINIO_ENDPOINT: "nije-url",
+      MINIO_ACCESS_KEY: "k",
+      MINIO_SECRET_KEY: "s",
+    });
+    expect(storage.configured).toBe(false);
+    if (!storage.configured) expect(storage.reason).toMatch(/URL/);
   });
 });

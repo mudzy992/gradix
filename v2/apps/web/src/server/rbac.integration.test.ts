@@ -48,6 +48,8 @@ const TENANT_TABLES = [
   "obligation_types",
   "obligations",
   "obligation_versions",
+  "obligation_requirements",
+  "obligation_notify_roles",
   "attachments",
   "audit_events",
   "invitations",
@@ -205,6 +207,12 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
           `INSERT INTO password_resets (id, company_id, user_id, token_hash, expires_at)
            VALUES ($1, $2, $3, $4, now() + interval '1 day')`,
           [`rst_r1b_${suffix}`, companyId, `usr_r1b_${suffix === "a" ? "admin" : "owner_b"}`, `rsthash_${suffix}`],
+        );
+        // F2: kome ide podsjetnik po tipu. Red mora postojati da izolacija ima šta da provjeri.
+        await client.query(
+          `INSERT INTO obligation_notify_roles (id, company_id, type_id, role)
+           VALUES ($1, $2, (SELECT id FROM obligation_types WHERE company_id = $2 LIMIT 1), 'ADMIN')`,
+          [`onr_r1b_${suffix}`, companyId],
         );
         await client.query("COMMIT");
       } finally {

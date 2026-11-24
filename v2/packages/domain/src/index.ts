@@ -119,15 +119,30 @@ export {
 export { DEFAULT_TIMEZONE, businessDate, calendarDateFromLocalDate, formatPgDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";
 
 export {
+  BLOCKING_OBLIGATION_STATES,
+  OBLIGATION_REVIEW_STATES,
   OBLIGATION_STATES,
   OBLIGATION_STATE_LABELS,
   OBLIGATION_STATE_ORDER,
+  compareObligationUrgency,
   daysBetween,
   daysLeft,
+  effectiveThresholds,
+  groupMissingByType,
   isObligationState,
+  missingObligationsForSubject,
+  obligationCoversRequirement,
   obligationState,
   parseThresholds,
+  requirementApplies,
+  type ExistingObligation,
+  type MissingObligation,
+  type ObligationRequirement,
+  type ObligationReviewState,
   type ObligationState,
+  type RequirementEntityKind,
+  type RequirementScope,
+  type RequirementSubject,
 } from "./obligations";
 
 export {

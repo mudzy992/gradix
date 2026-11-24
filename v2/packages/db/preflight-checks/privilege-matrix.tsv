@@ -28,6 +28,8 @@ table	notification_templates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Šabloni
 table	notifications	SELECT;INSERT;UPDATE	-		F0.4 in-app inbox (obavezan kanal); brisanje po retenciji radi worker, bez DELETE granta.
 table	obligation_types	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Type listing/create/update; no hard-delete endpoint.
 table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
+table	obligation_requirements	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F2 pravila „svaki X mora imati Y“; deaktivacija je UPDATE, brisanje samo za pogrešno uneseno pravilo; FORCE RLS.
+table	obligation_notify_roles	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		F2 kome ide podsjetnik po tipu (npr. MEDICAL → šef + ured + radnik); čista veza tip↔rola; FORCE RLS.
 table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Obligation create/renew/correct/delete and read.
 table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
 table	password_history	SELECT;INSERT;DELETE	SELECT;INSERT;DELETE		Istorija hash-eva (max 3 po korisniku). DELETE je nužan za trim; servis je jedini put pisanja i bez DELETE-a bi trim tražio SECURITY DEFINER funkciju — dodatnu izvršivu površinu.

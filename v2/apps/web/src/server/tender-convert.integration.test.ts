@@ -140,14 +140,16 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
     );
     const typeId = `${companyA}_obt_tender_docs`;
     await admin.query(
-      `INSERT INTO public.obligations (id, company_id, type_id, tender_id) VALUES ($1, $2, $3, $4)`,
+      // Trajna obaveza (bez roka) mora imati datum provjere — F2 pravilo.
+      `INSERT INTO public.obligations (id, company_id, type_id, tender_id, review_at)
+       VALUES ($1, $2, $3, $4, '2027-06-01')`,
       [`ob_${RUN}`, companyA, typeId, tender.rows[0]!.id],
     );
     const saved = await admin.query(`SELECT tender_id FROM public.obligations WHERE id = $1`, [`ob_${RUN}`]);
     expect(saved.rows[0]?.tender_id).toBe(tender.rows[0]!.id);
     await expect(admin.query(
-      `INSERT INTO public.obligations (id, company_id, type_id, tender_id, project_id)
-       VALUES ($1, $2, $3, $4, $5)`,
+      `INSERT INTO public.obligations (id, company_id, type_id, tender_id, project_id, review_at)
+       VALUES ($1, $2, $3, $4, $5, '2027-06-01')`,
       [`ob_bad_${RUN}`, companyA, typeId, tender.rows[0]!.id, project.rows[0]!.id],
     )).rejects.toThrow(/obligations_one_scope/);
   });

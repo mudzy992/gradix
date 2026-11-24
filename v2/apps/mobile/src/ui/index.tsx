@@ -131,10 +131,17 @@ export function ListItem(props: { title: string; meta?: string; right?: string }
   );
 }
 
-export function StatusChip({ label, tone }: { label: string; tone?: "warn" | "plain" }) {
+/**
+ * Oznaka stanja. Tri tona:
+ *   `plain` — važeće, `warn` — upozorenje (istječe), `danger` — BLOKIRA (isteklo, odbijeno).
+ * Treći ton postoji jer spec 02 §15 pravi razliku između „pazi“ i „ne može“; jedna boja za
+ * oboje bi značila da radnik ne zna da li smije na gradilište.
+ */
+export function StatusChip({ label, tone }: { label: string; tone?: "warn" | "danger" | "plain" }) {
   const { styles } = useUiStyles();
+  const stil = tone === "danger" ? styles.chipDanger : tone === "warn" ? styles.chipOn : styles.chip;
   return (
-    <View style={jedanStil(styles.chip, tone === "warn" ? styles.chipOn : styles.chip)}>
+    <View style={jedanStil(styles.chip, stil)}>
       <RNText style={styles.chipText}>{label}</RNText>
     </View>
   );

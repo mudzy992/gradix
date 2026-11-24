@@ -38,6 +38,9 @@ export function makeStyles(t: ThemeTokens) {
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     chip: { borderWidth: 1, borderColor: t.line, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 40, justifyContent: "center" },
     chipOn: { backgroundColor: t.tint },
+    // Blokirajuće stanje (isteklo/odbijeno) mora se razlikovati od upozorenja i po boji, ne
+    // samo po tekstu — na suncu se tekst ne čita, a boja se vidi.
+    chipDanger: { backgroundColor: t.dangerSoft },
     chipText: { ...typography.label, color: t.text },
     row: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
     rowText: { ...typography.body, color: t.text, flex: 1 },

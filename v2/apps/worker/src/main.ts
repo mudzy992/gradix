@@ -15,6 +15,9 @@ import pg from "pg";
 import { loadConfig } from "./config";
 import { JOB_NAMES, pingHealth, type JobLogger } from "./jobs";
 import { deliverNotifications } from "./notifications-deliver";
+import { scanReminders } from "./reminders-scan";
+import { purgeAttachments } from "./attachments-purge";
+import { createObjectRemover } from "./object-storage";
 
 const config = loadConfig();
 
@@ -63,6 +66,32 @@ async function runDeliver(job: { data: { companyId?: string } }): Promise<void> 
   await deliverNotifications(pool, { companyId, logger });
 }
 
+/**
+ * `reminders.scan` — jedan posao za SVE firme; unutar sebe preskače firme koje nisu u 06 h
+ * svoje zone. Zato nije zakazano po firmi: raspored u pg-boss-u bi morao da se prepisuje kad
+ * se doda firma, a to je posao koji se zaboravi.
+ */
+async function runReminders(): Promise<void> {
+  await scanReminders(pool, { logger });
+}
+
+/**
+ * `attachments.purge` — briše objekat iz bucketa i red u bazi.
+ *
+ * Kad `MINIO_*` varijable nisu postavljene, posao ne briše ništa i to PRIJAVI: tiho preskakanje
+ * bi značilo da retencija „radi“ dok medicinski nalazi stoje.
+ */
+async function runAttachmentsPurge(): Promise<void> {
+  const storage = createObjectRemover();
+  if (!storage.configured) {
+    logger.warn("attachments.purge: bucket nije konfigurisan — retencija se ne primjenjuje", {
+      reason: storage.reason,
+    });
+    return;
+  }
+  await purgeAttachments(pool, { logger, removeObject: storage.removeObject });
+}
+
 async function main(): Promise<void> {
   boss.on("error", (error) => logger.error("pg-boss greška", { message: error.message }));
 
@@ -70,6 +99,8 @@ async function main(): Promise<void> {
   // `createQueue` je idempotentan; šema reda mora postojati prije `work`.
   await boss.createQueue(JOB_NAMES.pingHealth);
   await boss.createQueue(JOB_NAMES.notificationsDeliver);
+  await boss.createQueue(JOB_NAMES.remindersScan);
+  await boss.createQueue(JOB_NAMES.attachmentsPurge);
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -79,8 +110,16 @@ async function main(): Promise<void> {
     }
   });
 
+  await boss.work(JOB_NAMES.remindersScan, async () => runReminders());
+  await boss.work(JOB_NAMES.attachmentsPurge, async () => runAttachmentsPurge());
+
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
+  // Podsjetnici: svakih 15 minuta; posao sam pusti firmu samo u 06 h njene zone.
+  await boss.schedule(JOB_NAMES.remindersScan, "*/15 * * * *");
+  // Retencija: jedan prolaz dnevno u 03:00 UTC — van radnog vremena, a prije jutarnjeg
+  // pregleda rokova, pa obrisano ne izgleda kao „nestalo preko noći“.
+  await boss.schedule(JOB_NAMES.attachmentsPurge, "0 3 * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),
