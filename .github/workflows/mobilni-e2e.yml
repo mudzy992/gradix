@@ -54,7 +54,11 @@ permissions:
 jobs:
   apk:
     name: APK (prebuild + assembleRelease)
-    runs-on: ubuntu-latest
+    # Isti razlog kao glavni CI: `ubuntu-latest` je od 2026-11 = 26.04, gdje korisnik
+    # `runner` NIJE u grupi `kvm` (`crw-rw---- root kvm`), pa emulator padne na
+    # „Software CPU emulation (-accel off) is not supported" i boot nikad ne završi
+    # (runovi 45355091348, 45370246877). 24.04 je posljednji image na kojem emulator radi.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       # Peče se u JS bundle pri gradnji: emulator dolazi do hosta preko 10.0.2.2.
@@ -158,7 +162,8 @@ jobs:
   mobilni-e2e:
     name: Emulator + Maestro tokovi
     needs: apk
-    runs-on: ubuntu-latest
+    # Vidi objašnjenje iznad (job apk): 26.04 nema pristup /dev/kvm za `runner`.
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
       DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
