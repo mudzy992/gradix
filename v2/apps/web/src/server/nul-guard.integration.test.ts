@@ -101,6 +101,7 @@ import { GET as attachmentRootGet, POST as attachmentRootPost } from "@/app/api/
 import { POST as attachmentConfirmNewPost } from "@/app/api/attachments/[id]/confirm/route";
 import { GET as attachmentUrlNewGet } from "@/app/api/attachments/[id]/url/route";
 import { DELETE as attachmentDelete } from "@/app/api/attachments/[id]/route";
+import { GET as meBlockersGet } from "@/app/api/me/blockers/route";
 import { POST as attachmentConfirmPost } from "@/app/api/obligations/[id]/attachments/[attachmentId]/confirm/route";
 import { GET as invitationGet } from "@/app/api/invitations/[token]/route";
 import { GET as conflictsGet } from "@/app/api/workday-conflicts/route";
@@ -250,6 +251,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/attachments/{id}": { DELETE: attachmentDelete },
   "/api/attachments/{id}/confirm": { POST: attachmentConfirmNewPost },
   "/api/attachments/{id}/url": { GET: attachmentUrlNewGet },
+  "/api/me/blockers": { GET: meBlockersGet },
 };
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */

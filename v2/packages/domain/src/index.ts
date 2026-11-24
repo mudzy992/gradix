@@ -78,6 +78,22 @@ export {
 } from "./r4-sync";
 
 export {
+  BLOCKING_USAGE_ACTIONS,
+  USAGE_ACTIONS,
+  USAGE_ENTITY_KINDS,
+  canUseEntity,
+  usageBlockMessage,
+  usageBlocks,
+  usageWarningMessage,
+  type UsageAction,
+  type UsageCause,
+  type UsageDecision,
+  type UsageEntityKind,
+  type UsageOverride,
+  type UsageSignal,
+} from "./can-use-entity";
+
+export {
   ATTACHMENT_ENTITY_TYPES,
   ATTACHMENT_STATUSES,
   MAX_ATTACHMENTS_PER_ENTITY,

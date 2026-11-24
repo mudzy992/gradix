@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { checkUse } from "./usage-service";
+import { companyToday } from "./project-service";
+import { usageBlockMessage } from "@gradix/domain";
 import { resolveViewerWorkerId } from "./workday-review";
 import type {
   CreateInput,
@@ -140,6 +143,20 @@ export async function createMachineWorkLog(
         outcome: "FORBIDDEN",
         code: "NO_WORKER",
         message: isOffice ? "Izaberi radnika za unos." : "Nalog nije povezan s radnikom.",
+      };
+    }
+    // F0.3: radni sati mašine traže važeće obaveze mašine (spec 05 §29).
+    const decision = await checkUse(client, actor.companyId, {
+      entityKind: "MACHINE",
+      entityId: input.machineId,
+      action: "machine_hours",
+      today: await companyToday(client, toCompanyId(actor.companyId)),
+    });
+    if (!decision.allowed) {
+      return {
+        outcome: "CONFLICT",
+        code: "BLOCKED",
+        message: usageBlockMessage(decision) ?? "Mašina ne može raditi.",
       };
     }
     const id = `mwl_${randomUUID().replace(/-/g, "").slice(0, 16)}`;

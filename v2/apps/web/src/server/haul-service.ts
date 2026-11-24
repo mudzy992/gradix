@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { checkUse } from "./usage-service";
+import { companyToday } from "./project-service";
+import { usageBlockMessage } from "@gradix/domain";
 import { resolveViewerWorkerId } from "./workday-review";
 import { isQuantityUnit, mapHaulRow, resolveHaulActorWorkerId, type DbHaulRow } from "./haul-db-helpers";
 import type { CreateInput, HaulActor, HaulRow, ListFilters, MutationOutcome } from "./haul-types";
@@ -124,6 +127,20 @@ export async function createHaul(
       if (!segment.rows[0]) {
         return { outcome: "VALIDATION_FAILED", code: "SEGMENT", message: "Dionica nije pronađena." };
       }
+    }
+    // F0.3: tura je blokirana isteklom registracijom/tehničkim/osiguranjem mašine (spec 05 §29).
+    const decision = await checkUse(client, actor.companyId, {
+      entityKind: "MACHINE",
+      entityId: input.machineId,
+      action: "haul",
+      today: await companyToday(client, toCompanyId(actor.companyId)),
+    });
+    if (!decision.allowed) {
+      return {
+        outcome: "CONFLICT",
+        code: "BLOCKED",
+        message: usageBlockMessage(decision) ?? "Mašina ne može dobiti turu.",
+      };
     }
     const id = `haul_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
     await client.query(

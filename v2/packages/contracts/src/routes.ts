@@ -91,6 +91,7 @@ import {
   UsersResponse,
   AcceptInvitationRequest,
   AttachmentRegisterRequest,
+  MeBlockersResponse,
   SafeText,
   AttachmentConfirmResponse,
   AttachmentEntityType,
@@ -229,6 +230,15 @@ export const ROUTES = [
     permission: null,
     request: ChangePasswordRequest,
     response: ChangePasswordResponse,
+  },
+  {
+    method: "GET",
+    path: "/api/me/blockers",
+    summary: "Šta blokira mene i mašine koje smijem koristiti (odluka servera, ista poruka svuda).",
+    auth: true,
+    permission: null,
+    request: null,
+    response: MeBlockersResponse,
   },
   {
     method: "GET",

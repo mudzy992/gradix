@@ -92,6 +92,56 @@ export const MeResponse = z.object({
 });
 export type MeResponse = z.infer<typeof MeResponse>;
 
+/**
+ * F0.3 — `GET /api/me/blockers`: šta blokira MENE i mašine koje smijem koristiti.
+ *
+ * Mobilni dobija ODLUKU servera i ne može je zaobići; UI samo prikazuje. Zato odgovor nosi
+ * gotove poruke (`blockMessage`) pored strukturiranih uzroka — da radnik na terenu vidi isti
+ * tekst koji bi vidio u uredu.
+ */
+export const UsageCause = z.object({
+  source: z.enum(["OBLIGATION", "FAULT", "SERVICE", "MAINTENANCE", "CATEGORY"]),
+  label: z.string(),
+  state: z.string(),
+  overridden: z.boolean(),
+  reason: z.string().optional(),
+});
+
+export const UsageDecision = z.object({
+  allowed: z.boolean(),
+  blockers: z.array(UsageCause),
+  warns: z.array(UsageCause),
+  overrideAvailable: z.boolean(),
+});
+
+export const UsageDecisionWithMessages = UsageDecision.extend({
+  blockMessage: z.string().nullable(),
+  warnMessage: z.string().nullable(),
+});
+
+export const MeBlockersResponse = z.object({
+  /** `YYYY-MM-DD` — poslovni datum firme, isti koji koristi blokada. */
+  today: z.string(),
+  workerId: z.string().nullable(),
+  /** Radnik: `assign` i `workday` (radni dan ne blokira — samo traka). */
+  worker: z.object({
+    assign: UsageDecisionWithMessages,
+    workday: UsageDecisionWithMessages,
+  }).nullable(),
+  /** Mašine koje korisnik smije koristiti, sa odlukom za svaku radnju. */
+  machines: z.array(
+    z.object({
+      id: z.string(),
+      code: z.string(),
+      name: z.string(),
+      haul: UsageDecisionWithMessages,
+      machineHours: UsageDecisionWithMessages,
+      fuel: UsageDecisionWithMessages,
+    }),
+  ),
+});
+export type MeBlockersResponse = z.infer<typeof MeBlockersResponse>;
+
 export const LoginRequest = z.object({
   email: SafeText.min(3).max(200),
   password: SafeText.min(1).max(200),
