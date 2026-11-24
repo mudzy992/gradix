@@ -282,7 +282,7 @@ jobs:
             sudo chmod 666 /dev/kvm || true
           fi
           if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
-            echo "::error title=Runner::KVM postoji ali nije dostupan korisniku $(id -un) — emulator bi pao na „-accel off is not supported""
+            echo "::error title=Runner::KVM postoji ali nije dostupan korisniku $(id -un) — emulator bi pao na softversku emulaciju (bez -accel)"
             exit 1
           fi
           echo "::warning title=Runner::KVM dostupan za čitanje i pisanje korisniku $(id -un)"
