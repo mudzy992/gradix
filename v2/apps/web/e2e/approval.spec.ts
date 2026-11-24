@@ -1,26 +1,19 @@
 /**
  * R4b E2E: šef potvrđuje dan bez OPEN sukoba, ured odobrava i zaključava, računovođa samo čita.
  */
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
+import { loginUi, requireE2ePassword } from "./helpers/auth";
 
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 
-async function login(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Lozinka").fill(PASSWORD);
-  await page.getByRole("button", { name: "Prijavi se" }).click();
-  await page.waitForURL("**/pregled");
-}
 
 test.beforeAll(() => {
-  if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
+  requireE2ePassword();
 });
 
 test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "R4b multi-context approval: desktop only (Pixel 5 drawer/layout)");
-  await login(page, "sef@demo.test");
+  await loginUi(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();
   const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();

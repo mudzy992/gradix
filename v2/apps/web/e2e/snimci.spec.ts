@@ -5,10 +5,9 @@
  */
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { type Page } from "@playwright/test";
 import { test } from "./helpers/annotate";
+import { E2E_USERS, loginUi } from "./helpers/auth";
 
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const OUT = path.join(process.cwd(), "snimci");
 
 const PAGES: { name: string; href: string }[] = [
@@ -24,13 +23,6 @@ const PAGES: { name: string; href: string }[] = [
   { name: "sukobi-detalj", href: "/ured/sukobi/cnf_demo_1?stanje=OPEN" },
 ];
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("vlasnik@demo.test");
-  await page.getByLabel("Lozinka").fill(PASSWORD);
-  await page.getByRole("button", { name: "Prijavi se" }).click();
-  await page.waitForURL("**/pregled");
-}
 
 test("snimci kataloga i ključnih stranica (obje teme, 360/1440)", { tag: ["@snimci"] }, async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "snimci sami postavljaju 360/1440; samo desktop");
@@ -51,7 +43,7 @@ test("snimci kataloga i ključnih stranica (obje teme, 360/1440)", { tag: ["@sni
         // Prijava se snima prije logina, ostalo poslije.
         await page.goto("/login");
         await page.screenshot({ path: path.join(OUT, `prijava-${theme}-${width}.png`), fullPage: true });
-        await login(page);
+        await loginUi(page, E2E_USERS.owner);
         for (const target of PAGES) {
           try {
             await page.goto(target.href);

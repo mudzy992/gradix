@@ -3,28 +3,21 @@
  * PM / računovođa / šef nemaju dugme.
  * Sidro ok2 (druga sedmica od approval.spec) — vidi demo-r4b-approval.ts.
  */
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
+import { loginUi, requireE2ePassword } from "./helpers/auth";
 
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";
 
-async function login(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Lozinka").fill(PASSWORD);
-  await page.getByRole("button", { name: "Prijavi se" }).click();
-  await page.waitForURL("**/pregled");
-}
 
 test.beforeAll(() => {
-  if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen.");
+  requireE2ePassword();
 });
 
 test("ispravka kreira reviziju; original LOCKED; PM/računovođa/šef bez dugmeta", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }, testInfo) => {
   test.skip(testInfo.project.name === "mobile", "R4b revise multi-context: desktop only");
   test.setTimeout(120_000);
-  await login(page, "sef@demo.test");
+  await loginUi(page, "sef@demo.test");
   await page.goto("/ured/radni-dani");
   const confirm = page.getByRole("button", { name: "Potvrdi dan", disabled: false }).first();
   await expect(confirm).toBeVisible({ timeout: 15_000 });

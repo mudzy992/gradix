@@ -2,20 +2,13 @@
  * E2E 2c: uvoz projekata — sretan prolaz i miješane greške (ništa se ne upisuje).
  * Fixturei sintetički; domene .test nisu potrebne (šifre E2E-*).
  */
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
+import { E2E_USERS, loginUi } from "./helpers/auth";
 import ExcelJS from "exceljs";
 
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("ured@demo.test");
-  await page.getByLabel("Lozinka").fill(PASSWORD);
-  await page.getByRole("button", { name: "Prijavi se" }).click();
-  await page.waitForURL("**/pregled");
-}
 
 async function xlsxBuffer(rows: (string | null)[][]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -49,7 +42,7 @@ const mapping = {
 };
 
 test.beforeAll(() => {
-  if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen.");
+  requireE2ePassword();
 });
 
 test("uvoz projekata: sretan prolaz upisuje jedan projekat", { tag: ["@deep", "@deep-evidencija"] }, async ({ page }) => {
@@ -59,7 +52,7 @@ test("uvoz projekata: sretan prolaz upisuje jedan projekat", { tag: ["@deep", "@
     [stamp, "E2E projekat test", "ACTIVE", "Zenica"],
   ]);
 
-  await login(page);
+  await loginUi(page, E2E_USERS.admin);
   await page.goto("/ured/uvoz");
   await page.getByRole("button", { name: "Projekti" }).click();
   await page.locator("#import-file").setInputFiles({
@@ -88,7 +81,7 @@ test("uvoz projekata: miješane greške — potvrda s greškom ne upisuje ništa
   ]);
   const before = ADMIN ? await countProjects(stamp) : 0;
 
-  await login(page);
+  await loginUi(page, E2E_USERS.admin);
   await page.goto("/ured/uvoz");
   await page.getByRole("button", { name: "Projekti" }).click();
   await page.locator("#import-file").setInputFiles({

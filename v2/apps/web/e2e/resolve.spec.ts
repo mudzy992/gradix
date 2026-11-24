@@ -5,25 +5,18 @@
  * i ugašene akcije. Demo seed ima 3 sukoba; svako pokretanje u CI-ju kreće
  * od resetovane baze (mjerenje stabilnosti) ili svježeg seeda.
  */
-import { expect, type Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
+import { loginUi, requireE2ePassword } from "./helpers/auth";
 
-const PASSWORD = process.env.E2E_PASSWORD ?? "";
 
-async function login(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Lozinka").fill(PASSWORD);
-  await page.getByRole("button", { name: "Prijavi se" }).click();
-  await page.waitForURL("**/pregled");
-}
 
 test.beforeAll(() => {
-  if (!PASSWORD) throw new Error("E2E_PASSWORD nije postavljen (demo seed lozinka).");
+  requireE2ePassword();
 });
 
 test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješeno", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
-  await login(page, "ured@demo.test");
+  await loginUi(page, "ured@demo.test");
   await page.goto("/ured/sukobi?stanje=OPEN");
   await expect(page.getByRole("heading", { name: "Sukobi radnih dana" })).toBeVisible();
   await expect(page.getByText("Nerazriješeni sukobi")).toBeVisible();
