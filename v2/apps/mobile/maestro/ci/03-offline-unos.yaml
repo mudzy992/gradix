@@ -15,6 +15,15 @@
 appId: ba.gradix.teren
 name: offline-unos
 ---
+# Tok NE počinje prijavom i NE traži ekran „Prijava za teren.".
+#
+# Zašto: aplikacija sa važećim tokenom nikad ne pokazuje prijavu — bootstrap u
+# `src/app/index.tsx` čita token, poziva `/api/me` i ide pravo na home. Orkestrator
+# (`scripts/maestro-ci.sh`) namjerno radi `force-stop` (ne `pm clear`) za tokove
+# 03/04, jer nastavljaju stanje iz toka 02 (prijavljen `radnik`, keširani rokovi).
+# Ranija verzija je tražila prijavu, pa je tok padao 3/3 na prvoj aserciji iako je
+# aplikacija radila tačno ono što treba (runovi 45382447366 i raniji).
+#
 # Poslije force-stop + am start app se HLADNO startuje (na sporom emulatoru
 # i više od 15 s) — prije tapinga pričekajmo da home s tabovima stvarno
 # izrenderuje (bez ovoga tapOn istekne prije nego što se „Moj dan" pojavi —
