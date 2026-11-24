@@ -4,7 +4,7 @@
       "id": "app.cost.book-once",
       "slice": "R6",
       "source": "v2/docs/PLAN-R6.md",
-      "summary": "Project cost booking is idempotent and fails without a rate",
+      "summary": "PENDING stays PENDING without a price; a priced source books exactly once (idempotent per source)",
       "group": "cost-book",
       "gate": "required",
       "priority": "critical",
@@ -13,10 +13,11 @@
       "evidence": [
         {
           "file": "apps/web/src/server/project-cost.integration.test.ts",
-          "title": "bez stope → VALIDATION; s stopom knjiži jednom (idempotent)",
+          "title": "sa stopom knjiži jednom (idempotentno po izvoru)",
           "bodyIncludes": [
-            "VALIDATION_FAILED",
-            "skippedExisting"
+            "posted: 1, pending: 0",
+            "posted: 0, skipped: 1",
+            "toHaveLength(1)"
           ]
         }
       ]
@@ -25,7 +26,7 @@
       "id": "app.cost.accountant-denied",
       "slice": "R6",
       "source": "v2/docs/PLAN-R6.md",
-      "summary": "An accountant cannot book project cost",
+      "summary": "ACCOUNTANT reads project costs but cannot book a manual cost",
       "group": "cost-accountant",
       "gate": "required",
       "priority": "critical",
@@ -34,9 +35,9 @@
       "evidence": [
         {
           "file": "apps/web/src/server/project-cost.integration.test.ts",
-          "title": "ACCOUNTANT ne smije knjižiti",
+          "title": "ACCOUNTANT vidi troškove, ali ne smije knjižiti ručni trošak",
           "bodyIncludes": [
-            "403"
+            "toBe(403)"
           ]
         }
       ]

@@ -98,17 +98,23 @@
       "gate": "required",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/fuel-entry.integration.test.ts",
-        "title": "DRIVER vidi zapis ali ne cijenu",
-        "bodyIncludes": ["amount_cents", "0.00", "toBeNull"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/fuel-entry.integration.test.ts",
+          "title": "DRIVER vidi zapis ali ne cijenu",
+          "bodyIncludes": [
+            "amount_cents",
+            "0.00",
+            "toBeNull"
+          ]
+        }
+      ]
     },
     {
       "id": "R6.cost.book-once",
       "slice": "R6",
       "source": "v2/docs/PLAN-R6.md",
-      "summary": "Booking without a rate fails. A second book does not create another row",
+      "summary": "PENDING stays PENDING without a price; a priced source books exactly once (idempotent per source)",
       "group": "r6-book",
       "gate": "track",
       "assertion": "integration",
@@ -116,10 +122,11 @@
       "evidence": [
         {
           "file": "apps/web/src/server/project-cost.integration.test.ts",
-          "title": "bez stope → VALIDATION; s stopom knjiži jednom (idempotent)",
+          "title": "sa stopom knjiži jednom (idempotentno po izvoru)",
           "bodyIncludes": [
-            "VALIDATION_FAILED",
-            "skippedExisting"
+            "posted: 1, pending: 0",
+            "posted: 0, skipped: 1",
+            "toHaveLength(1)"
           ]
         }
       ]
@@ -128,7 +135,7 @@
       "id": "R6.cost.accountant-denied",
       "slice": "R6",
       "source": "v2/docs/PLAN-R6.md",
-      "summary": "ACCOUNTANT cannot book project costs",
+      "summary": "ACCOUNTANT reads project costs but cannot book a manual cost",
       "group": "r6-authz",
       "gate": "track",
       "assertion": "integration",
@@ -136,7 +143,7 @@
       "evidence": [
         {
           "file": "apps/web/src/server/project-cost.integration.test.ts",
-          "title": "ACCOUNTANT ne smije knjižiti",
+          "title": "ACCOUNTANT vidi troškove, ali ne smije knjižiti ručni trošak",
           "bodyIncludes": [
             "toBe(403)"
           ]

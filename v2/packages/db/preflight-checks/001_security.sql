@@ -341,7 +341,19 @@ BEGIN
       ('hauls', 'hauls_tenant_isolation'),
       ('haul_revisions', 'haul_revisions_tenant_isolation'),
       ('machine_cost_rates', 'machine_cost_rates_tenant_isolation'),
-      ('project_cost_entries', 'project_cost_entries_tenant_isolation')
+      /* F5 (Modul 6): jedinstveni ledger troškova zamjenjuje `project_cost_entries`; politike
+         nose zajedničko ime `tenant_isolation` (kao F4 tabele), ne `<tabela>_tenant_isolation`. */
+      ('cost_entries', 'tenant_isolation'),
+      ('cost_categories', 'tenant_isolation'),
+      ('project_phases', 'tenant_isolation'),
+      ('phase_dependencies', 'tenant_isolation'),
+      ('project_budget_lines', 'tenant_isolation'),
+      ('project_amendments', 'tenant_isolation'),
+      ('project_boq_items', 'tenant_isolation'),
+      ('project_tasks', 'tenant_isolation'),
+      ('task_comments', 'tenant_isolation'),
+      ('budget_alert_events', 'tenant_isolation'),
+      ('project_close_snapshots', 'tenant_isolation')
     ) AS required(table_name, policy_name)
     LEFT JOIN pg_namespace n ON n.nspname = 'public'
     LEFT JOIN pg_class c ON c.relname = required.table_name AND c.relnamespace = n.oid

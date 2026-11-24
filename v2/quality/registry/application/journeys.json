@@ -10,11 +10,16 @@
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/tender-convert.integration.test.ts",
-        "title": "WON convert upisuje jedan projekat i converted_project_id",
-        "bodyIncludes": ["converted_project_id", "tender.converted"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "WON convert upisuje jedan projekat i converted_project_id",
+          "bodyIncludes": [
+            "converted_project_id",
+            "tender.converted"
+          ]
+        }
+      ]
     },
     {
       "id": "app.journey.a-project-lifecycle",
@@ -27,11 +32,18 @@
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/journey-a-project-lifecycle.integration.test.ts",
-        "title": "projekat, dodjela, rad, odobrenje, knjiženje i pregled ostaju jedan lanac",
-        "bodyIncludes": ["project.created", "FOREMAN_CONFIRMED", "project_cost_entries", "activeProjects"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/journey-a-project-lifecycle.integration.test.ts",
+          "title": "projekat, dodjela, rad, odobrenje, knjiženje i pregled ostaju jedan lanac",
+          "bodyIncludes": [
+            "project.created",
+            "FOREMAN_CONFIRMED",
+            "public.cost_entries",
+            "activeProjects"
+          ]
+        }
+      ]
     },
     {
       "id": "app.journey.b-time-to-export",
@@ -44,28 +56,40 @@
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/journey-b-time-export.integration.test.ts",
-        "title": "potvrda, odobrenje i zaključavanje upisuju LOCKED sate u izvoz",
-        "bodyIncludes": ["LOCKED", "listHoursForExport", "SUBMITTED"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/journey-b-time-export.integration.test.ts",
+          "title": "potvrda, odobrenje i zaključavanje upisuju LOCKED sate u izvoz",
+          "bodyIncludes": [
+            "LOCKED",
+            "listHoursForExport",
+            "SUBMITTED"
+          ]
+        }
+      ]
     },
     {
       "id": "app.journey.c-machine-hour-booking",
       "slice": "R6",
       "source": "Phase D journey C",
-      "summary": "One machine-hour log books one project cost, and booking it again does not add a second row",
+      "summary": "One machine-hour log books one ledger row, and booking it again does not add a second row",
       "implementation": "IMPLEMENTED",
       "group": "journey-c",
       "gate": "track",
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/journey-c-machine-hour-booking.integration.test.ts",
-        "title": "knjiženje istog MACHINE_WORK_LOG ostavlja jedan project_cost_entries red",
-        "bodyIncludes": ["project_cost_entries", "skippedExisting", "MACHINE_WORK_LOG"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/journey-c-machine-hour-booking.integration.test.ts",
+          "title": "isti MACHINE_WORK_LOG ostavlja jedan red u ledgeru, i poslije ponovnog prolaza",
+          "bodyIncludes": [
+            "posted: 0, skipped: 1",
+            "MACHINE_WORK_LOG",
+            "toHaveLength(1)"
+          ]
+        }
+      ]
     },
     {
       "id": "app.journey.d-documents",
@@ -78,11 +102,18 @@
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/journey-d-documents.integration.test.ts",
-        "title": "istekla obaveza se obnavlja novom verzijom i stari rok ostaje",
-        "bodyIncludes": ["obligation.renewed", "obligation.created", "expired", "valid"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/journey-d-documents.integration.test.ts",
+          "title": "istekla obaveza se obnavlja novom verzijom i stari rok ostaje",
+          "bodyIncludes": [
+            "obligation.renewed",
+            "obligation.created",
+            "expired",
+            "valid"
+          ]
+        }
+      ]
     },
     {
       "id": "app.journey.f-organization",
@@ -95,11 +126,17 @@
       "priority": "high",
       "assertion": "persistence",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/src/server/journey-f-organization.integration.test.ts",
-        "title": "pozivnica, promjena role, zabrana i audit ostaju jedan lanac",
-        "bodyIncludes": ["invitation.accepted", "user.membership_changed", "ACCOUNTANT"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/src/server/journey-f-organization.integration.test.ts",
+          "title": "pozivnica, promjena role, zabrana i audit ostaju jedan lanac",
+          "bodyIncludes": [
+            "invitation.accepted",
+            "user.membership_changed",
+            "ACCOUNTANT"
+          ]
+        }
+      ]
     },
     {
       "id": "app.tender.worker-direct-route",
@@ -112,11 +149,17 @@
       "priority": "high",
       "assertion": "bound",
       "status": "COVERED",
-      "evidence": [{
-        "file": "apps/web/e2e/tender-worker-route.spec.ts",
-        "title": "radnik: direktan /ured/tenderi ne otvara listu i API je 403",
-        "bodyIncludes": ["403", "nemate-pristup", "Tenderi"]
-      }]
+      "evidence": [
+        {
+          "file": "apps/web/e2e/tender-worker-route.spec.ts",
+          "title": "radnik: direktan /ured/tenderi ne otvara listu i API je 403",
+          "bodyIncludes": [
+            "403",
+            "nemate-pristup",
+            "Tenderi"
+          ]
+        }
+      ]
     }
   ]
 }
