@@ -216,14 +216,92 @@ CREATE INDEX worker_rates_company_worker_idx
 
 -- Preklapanje istog vida stope nije dopušteno: dvije važeće satnice za isti dan nemaju
 -- značenje, a „uzmi prvu" bi bio tih gubitak novca.
-ALTER TABLE public.worker_rates
-  ADD CONSTRAINT worker_rates_no_overlap
-  EXCLUDE USING gist (
-    company_id WITH =,
-    worker_id WITH =,
-    rate_kind WITH =,
-    daterange(valid_from, COALESCE(valid_to, 'infinity'::date), '[]') WITH &&
-  ) DEFERRABLE INITIALLY IMMEDIATE;
+--
+-- ZAŠTO NIJE BEZUSLOVNI `EXCLUDE` (popravka poslije CI runa 45454051757):
+-- `EXCLUDE` nad `daterange` uz tekstualne kolone traži `btree_gist`. Prva verzija ove migracije
+-- ga je tražila bez uslova, pa je na serveru BEZ contrib paketa (ili pod prekidačem
+-- `gradix.bez_btree_gist`, koji `check-preklapanje` namjerno postavlja) cijela migracija pala sa
+-- „data type text has no default operator class for access method gist". R3 je isti problem
+-- riješila fallback-om; F3 ga je zaobišla, i to je jedini razlog pada koraka
+-- „Preklapanje dodjela — oba mehanizma".
+--
+-- Obrazac je isti kao u `r3_preklapanje_gist`: ili `EXCLUDE` (baza garantuje sama), ili triger sa
+-- savjetodavnom bravom — nikad oba, nikad nijedan.
+DO $$
+DECLARE
+  ima_gist BOOLEAN := false;
+BEGIN
+  IF current_setting('gradix.bez_btree_gist', true) = 'on' THEN
+    RAISE NOTICE 'worker_rates: btree_gist preskočen prekidačem, ide triger.';
+  ELSE
+    BEGIN
+      CREATE EXTENSION IF NOT EXISTS btree_gist;
+      ima_gist := true;
+    EXCEPTION WHEN OTHERS THEN
+      RAISE NOTICE 'worker_rates: btree_gist nije dostupan (%): ide triger sa bravom.', SQLERRM;
+      ima_gist := false;
+    END;
+  END IF;
+
+  IF ima_gist THEN
+    ALTER TABLE public.worker_rates
+      ADD CONSTRAINT worker_rates_no_overlap
+      EXCLUDE USING gist (
+        company_id WITH =,
+        worker_id WITH =,
+        rate_kind WITH =,
+        daterange(valid_from, COALESCE(valid_to, 'infinity'::date), '[]') WITH &&
+      ) DEFERRABLE INITIALLY IMMEDIATE;
+  ELSE
+    /*
+     * Fallback triger. Ime poruke (`RATE_OVERLAP`) je ISTO kao kod servisa, jer servis hvata
+     * SQLSTATE 23P01 (EXCLUDE) i vlastitu provjeru; ovdje se podiže eksplicitno da klijent dobije
+     * isti kod bez obzira na to koji je mehanizam aktivan.
+     *
+     * Brava je po (firma, radnik, vrsta) — bez nje dvije paralelne transakcije obje prođu provjeru
+     * i obje upišu stopu koja važi istog dana.
+     */
+    CREATE OR REPLACE FUNCTION public.worker_rate_no_overlap()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = pg_catalog, public, pg_temp
+    AS $worker_rate_no_overlap$
+    DECLARE
+      sukobi INTEGER;
+    BEGIN
+      IF NEW.valid_to IS NOT NULL AND NEW.valid_to < NEW.valid_from THEN
+        RETURN NEW; -- oblik perioda već brani CHECK; ovdje se ne dodaje druga poruka
+      END IF;
+
+      PERFORM pg_advisory_xact_lock(
+        hashtextextended(NEW.company_id || ':' || NEW.worker_id || ':' || NEW.rate_kind, 0)
+      );
+
+      SELECT count(*) INTO sukobi
+        FROM public.worker_rates r
+       WHERE r.company_id = NEW.company_id
+         AND r.worker_id = NEW.worker_id
+         AND r.rate_kind = NEW.rate_kind
+         AND r.id <> NEW.id
+         AND r.valid_from <= COALESCE(NEW.valid_to, 'infinity'::date)
+         AND NEW.valid_from <= COALESCE(r.valid_to, 'infinity'::date);
+
+      IF sukobi > 0 THEN
+        RAISE EXCEPTION 'RATE_OVERLAP'
+          USING DETAIL = 'Za istog radnika već važi stopa tog tipa u periodu koji se preklapa.';
+      END IF;
+
+      RETURN NEW;
+    END;
+    $worker_rate_no_overlap$;
+
+    CREATE TRIGGER worker_rates_no_overlap
+      BEFORE INSERT OR UPDATE ON public.worker_rates
+      FOR EACH ROW EXECUTE FUNCTION public.worker_rate_no_overlap();
+
+    RAISE NOTICE 'worker_rates: preklapanje čuva triger sa pg_advisory_xact_lock.';
+  END IF;
+END $$;
 
 COMMENT ON TABLE public.worker_rates IS
   'Istorija satnica (spec 04 §1.2.7): nova stopa je NOVI RED, stara dobija `valid_to`. '

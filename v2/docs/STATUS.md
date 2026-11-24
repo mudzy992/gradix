@@ -67,7 +67,7 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ```
 migracije       41          tabele          61 (58 tenant)
 OpenAPI         136 putanja (172 metode)
-pnpm test       950 testa   (web 567 + domain 178 + mobile 86 + db 67 + contracts 21 + worker 21 + mobile-ekran 10)
+pnpm test       962 testa   (web 572 + domain 178 + mobile 86 + db 67 + contracts 21 + worker 21 + mobile-ekran 10)
 pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 606 upita / 58 tabela ✓
 check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
 a11y            113 testa (axe, WCAG 2.1 AA, obje teme)

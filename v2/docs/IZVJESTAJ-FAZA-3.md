@@ -186,7 +186,19 @@ preflight 001+002    OK
 
 **Faza 4** po `docs/IMPLEMENTATION_PLAN.md`. Prije nje nema otvorenih kapija: sve gore navedeno je zeleno.
 
-> **Ispravka poslije prvog CI prolaza (2026-11-23):** prvi run F3 (`45450231464`) pao je na E2E
-> smoke-u za WORKER — 404 u konzoli zbog `href: "/moj-dan"` (§4.9). Popravka je u `workday-resolve.ts`
-> + nova kapija `notification-hrefs.test.ts` (4 testa) i integracioni test koji čita stvarni red
-> obavještenja. Broj testova: **950** (web 567; prije 562).
+> **Ispravke poslije CI prolaza (2026-11-23).** Dva odvojena uzroka, oba popravljena na izvoru:
+>
+> 1. **Run `45450231464`** — E2E smoke pao samo za WORKER, 404 u konzoli zbog `href: "/moj-dan"`
+>    (§4.9). Popravka: `workday-resolve.ts` + `notification-hrefs.ts` + kapija
+>    `notification-hrefs.test.ts` + integracioni test koji čita stvarni red obavještenja + migracija
+>    `20261124150000_f3_2_notification_href` (prepisuje stare redove).
+> 2. **Run `45454051757`** — E2E je zelen (52 passed), ali je pao korak „Preklapanje dodjela — oba
+>    mehanizma" jer je F3 migracija dodala **bezuslovni** `EXCLUDE USING gist` nad `worker_rates`:
+>    na bazi bez `btree_gist` (ili pod prekidačem `gradix.bez_btree_gist`) migracija puca sa
+>    „data type text has no default operator class for access method gist". R3 je za dodjele imala
+>    fallback; F3 ga nije. Popravka: isti `DO $$ … $$` obrazac (EXCLUDE **ili** triger sa
+>    `pg_advisory_xact_lock`, nikad oba), hvatanje oba mehanizma u servisu (`isRateOverlapError`),
+>    jedinični `rate-overlap.test.ts`, integracioni test da baza odbija preklapanje i kad servis nije
+>    taj koji provjerava, i `check-preklapanje` sada tvrdi mehanizam i za `worker_rates`.
+>
+> Broj testova: **962** (web 572; prije F3 popravki 562).

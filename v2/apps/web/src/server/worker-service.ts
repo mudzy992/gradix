@@ -360,6 +360,25 @@ async function loadRates(
 }
 
 /**
+ * Je li greška baze PREKLAPANJE satnica? Prepoznaje OBA mehanizma.
+ *
+ * Zašto oba (isti razlog kao `isOverlapError` za dodjele): pravilo u bazi ima dva moguća nosioca
+ * (vidi `20261124140000_f3_1_workdays_workers`) — `EXCLUDE USING gist` kad je `btree_gist`
+ * dostupan, triger sa savjetodavnom bravom kad nije:
+ *   - EXCLUDE: SQLSTATE `23P01`, tekst `… exclusion constraint "worker_rates_no_overlap"`,
+ *   - triger:  `RATE_OVERLAP` (naša poruka).
+ * Servisna provjera hvata normalan tok (nova cijena poslije važeće), a ovo je posljednja linija:
+ * bez nje bi paralelna transakcija na fallback bazi dala 500 umjesto 409.
+ */
+export function isRateOverlapError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const e = error as { message?: unknown; code?: unknown; constraint?: unknown };
+  if (String(e.code ?? "") === "23P01") return true;
+  if (String(e.constraint ?? "").includes("worker_rates_no_overlap")) return true;
+  return String(e.message ?? "").includes("RATE_OVERLAP");
+}
+
+/**
  * Nova cijena. Postojeća cijena istog `rate_kind` se zatvara dan prije nove (`valid_to`),
  * pa `EXCLUDE` ograničenje u bazi nikad ne puca za normalan tok rada.
  */
@@ -414,23 +433,39 @@ export async function addRate(
       );
     }
 
-    const inserted = await client.query(
-      `INSERT INTO worker_rates
-         (id, company_id, worker_id, rate_kind, amount_cents, currency_code, coefficient, valid_from, note, created_by)
-       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING *`,
-      [
-        actor.companyId,
-        workerId,
-        input.kind,
-        input.kind === "COEFFICIENT" ? null : input.amountCents,
-        input.kind === "COEFFICIENT" ? null : (input.currencyCode ?? "BAM"),
-        input.kind === "COEFFICIENT" ? input.coefficient : null,
-        input.validFrom,
-        input.note ?? null,
-        actor.userId,
-      ],
-    );
+    /*
+     * Posljednja linija: `EXCLUDE` ili triger u bazi hvataju ono što servisna provjera iznad ne
+     * može — dvije paralelne transakcije koje su obje pročitale „nema važeće cijene". Bez ovog
+     * `catch`-a to je 500, a korisnik treba da vidi isto pravilo kao u normalnom toku.
+     */
+    let inserted;
+    try {
+      inserted = await client.query(
+        `INSERT INTO worker_rates
+           (id, company_id, worker_id, rate_kind, amount_cents, currency_code, coefficient, valid_from, note, created_by)
+         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [
+          actor.companyId,
+          workerId,
+          input.kind,
+          input.kind === "COEFFICIENT" ? null : input.amountCents,
+          input.kind === "COEFFICIENT" ? null : (input.currencyCode ?? "BAM"),
+          input.kind === "COEFFICIENT" ? input.coefficient : null,
+          input.validFrom,
+          input.note ?? null,
+          actor.userId,
+        ],
+      );
+    } catch (error) {
+      if (!isRateOverlapError(error)) throw error;
+      return {
+        ok: false as const,
+        status: 409,
+        code: "RATE_OVERLAP",
+        message: "Za istog radnika već važi stopa tog tipa u periodu koji se preklapa.",
+      };
+    }
 
     await writeAudit(client, {
       companyId: actor.companyId,

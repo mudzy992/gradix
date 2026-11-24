@@ -35,6 +35,7 @@ import { POST as offboardRoute } from "@/app/api/workers/[id]/offboard/route";
 import { POST as bulkWorkersRoute } from "@/app/api/workers/bulk/route";
 import { GET as profileRoute, PATCH as profilePatchRoute } from "@/app/api/workers/[id]/profile/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
+import { isRateOverlapError } from "./worker-service";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appUrl = process.env.DATABASE_URL;
@@ -300,6 +301,34 @@ describeDb("F3 — radno vrijeme i radnici (HTTP)", () => {
     );
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("RATE_OVERLAP");
+  });
+
+  /*
+   * Zaštita na nivou BAZE, ne servisa: `addRate` servisna provjera normalnog toka je iznad, a ovdje
+   * se preskače da bi se dokazalo da preklapanje brani i sam mehanizam (EXCLUDE ili triger).
+   * Bez ovoga bi pad CI-ja na `check-preklapanje` (migracija traži `btree_gist` bez uslova) ostao
+   * neotkriven sve do deploya na server bez contrib-a.
+   */
+  it("baza odbija preklapanje satnica i kad servis nije taj koji provjerava", async () => {
+    const pool = new Pool({ connectionString: appUrl, max: 1 });
+    const direct = await withCompany(pool, companyId(COMPANY), async (client) => {
+      try {
+        await client.query(
+          `INSERT INTO worker_rates
+             (id, company_id, worker_id, rate_kind, amount_cents, currency_code, valid_from, created_by)
+           VALUES ($1, $2, $3, 'DAILY', 5000, 'BAM', '2026-01-01', $4),
+                  ($5, $2, $3, 'DAILY', 6000, 'BAM', '2026-03-01', $4)`,
+          [`rate_baza_a_${RUN}`, COMPANY, W_RADNIK, U_OWNER, `rate_baza_b_${RUN}`],
+        );
+        return null;
+      } catch (error) {
+        return error as { code?: string; message?: string; constraint?: string };
+      }
+    });
+    await pool.end();
+    expect(direct, "dva važeća dnevna iznosa za isti period moraju biti odbijena").not.toBeNull();
+    const odbijeno = isRateOverlapError(direct);
+    expect(odbijeno, `baza je odbila greškom ${JSON.stringify(direct)}`).toBe(true);
   });
 
   it("šef gradilišta ne vidi cijene", async () => {

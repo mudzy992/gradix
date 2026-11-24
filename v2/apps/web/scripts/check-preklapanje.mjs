@@ -82,16 +82,33 @@ async function probaj(ime, prinudnoBezGist = false) {
   const stanje = await psql(
     `SELECT
        (SELECT count(*) FROM pg_constraint WHERE conrelid = 'project_assignments'::regclass AND contype = 'x') AS iskljucujuci,
-       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND tgname = 'project_assignments_no_overlap' AND NOT tgisinternal) AS trigera`,
+       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'project_assignments'::regclass AND tgname = 'project_assignments_no_overlap' AND NOT tgisinternal) AS trigera,
+       -- F3: satnice imaju ISTO pravilo (dvije važeće stope istog tipa su nemoguće) i isti izbor
+       -- mehanizma. Bez ovoga bi druga tabela mogla tražiti btree_gist bez uslova i srušiti
+       -- migraciju na serveru bez contrib-a — tačno pad koji je ovaj korak i otkrio.
+       (SELECT count(*) FROM pg_constraint WHERE conrelid = 'worker_rates'::regclass AND contype = 'x') AS stope_iskljucujuci,
+       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'worker_rates'::regclass AND tgname = 'worker_rates_no_overlap' AND NOT tgisinternal) AS stope_trigera`,
     baza(ime),
   );
   const iskljucujuci = Number(stanje.rows[0].iskljucujuci);
   const trigera = Number(stanje.rows[0].trigera);
+  const stopeIskljucujuci = Number(stanje.rows[0].stope_iskljucujuci);
+  const stopeTrigera = Number(stanje.rows[0].stope_trigera);
   const mehanizam = iskljucujuci === 2 && trigera === 0
     ? "EXCLUDE USING gist"
     : trigera === 1 && iskljucujuci === 0
       ? "triger + pg_advisory_xact_lock"
       : `NEISPRAVNO (constraints=${iskljucujuci}, triggers=${trigera})`;
+  /*
+   * Satnice moraju imati ISTI mehanizam kao dodjele: oba pravila se biraju u istoj migraciji po
+   * istom uslovu (`btree_gist` postoji), pa razlika znači da je jedno od njih napisano bez
+   * fallback-a.
+   */
+  const stopeMehanizam = stopeIskljucujuci === 1 && stopeTrigera === 0
+    ? "EXCLUDE USING gist"
+    : stopeTrigera === 1 && stopeIskljucujuci === 0
+      ? "triger + pg_advisory_xact_lock"
+      : `NEISPRAVNO (constraints=${stopeIskljucujuci}, triggers=${stopeTrigera})`;
 
   const test = run(
     "npx",
@@ -103,10 +120,14 @@ async function probaj(ime, prinudnoBezGist = false) {
     },
   );
 
+  const saglasno = stopeMehanizam === mehanizam;
   return {
-    ok: test.code === 0 && !mehanizam.startsWith("NEISPRAVNO"),
+    ok: test.code === 0 && !mehanizam.startsWith("NEISPRAVNO") && saglasno && !stopeMehanizam.startsWith("NEISPRAVNO"),
     mehanizam,
-    razlog: test.code === 0 ? null : test.out.slice(-2500),
+    stopeMehanizam,
+    razlog: test.code !== 0
+      ? test.out.slice(-2500)
+      : saglasno ? null : `satnice: ${stopeMehanizam} (isto pravilo, drugi mehanizam nego dodjele)`,
   };
 }
 
@@ -135,7 +156,7 @@ for (const rezultat of rezultati) {
   const prolaz = rezultat.ok && saglasno && !rezultat.preskoceno;
   if (!prolaz) sveOk = false;
   const oznaka = rezultat.preskoceno ? "PRESKOČENO" : prolaz ? "OK" : "PAD";
-  console.log(`${oznaka}  ${rezultat.ime}: mehanizam = ${rezultat.mehanizam} (očekivano ${rezultat.ocekivano})`);
+  console.log(`${oznaka}  ${rezultat.ime}: dodjele = ${rezultat.mehanizam}, satnice = ${rezultat.stopeMehanizam} (očekivano ${rezultat.ocekivano})`);
   if (rezultat.razlog) console.log(`      ${rezultat.razlog.split("\n").slice(-6).join("\n      ")}`);
 }
 
