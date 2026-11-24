@@ -22,6 +22,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { companyId as toCompanyId, withCompany, type CompanyId } from "@gradix/db";
 import type { Pool, PoolClient } from "pg";
 import { writeAudit } from "./audit";
+import { NOTIFICATION_HREFS } from "./notification-hrefs";
 import { notify } from "./notification-service";
 import { canResolveConflict, isConflictParty, workdayResolveScopeFor } from "./workday-review";
 
@@ -542,7 +543,8 @@ export async function resolveWorkdayConflict(
         title: "Tvoj radni dan je provjeren",
         // Razlog ide u obavještenje: radnik ima pravo da zna šta je odlučeno o njegovim satima.
         body: `Ured je razriješio neslaganje za ${workDate ?? "tvoj dan"}: ${input.reason.trim()}`,
-        href: "/moj-dan",
+        // Putanja iz konstante, ne string: `/moj-dan` je mobilni ekran i na webu je 404.
+        href: NOTIFICATION_HREFS.workdayConflictResolved,
         severity: "INFO",
         userId: recipient,
         sourceType: "sync_conflict",

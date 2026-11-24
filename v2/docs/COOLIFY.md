@@ -69,6 +69,10 @@ Redoslijed fallbacka je u `apps/worker/src/config.ts` i pokriven testom: posao i
 
 ### Faza 3 (radno vrijeme + radnici) — nema novih ENV varijabli
 
+> Migracije F3: `20261124140000_f3_1_workdays_workers` i `20261124150000_f3_2_notification_href`.
+> Druga je popravka poslije prvog CI prolaza — prepisuje stare `notifications.href = '/moj-dan'`
+> (mobilna ruta, web je 404) na `/pregled`. Bez nje stari inbox redovi radnika i dalje vode na 404.
+
 F3 ne uvodi nijednu novu varijablu. Dvije stvari koje deploy mora uraditi:
 
 1. **`RUN_MIGRATIONS=true`** jednom — primjenjuje `20261124140000_f3_1_workdays_workers`

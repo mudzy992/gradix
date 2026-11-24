@@ -9,7 +9,7 @@ worker → testovi. Nijedan sloj nije ostavljen kao „doći će poslije“.
 
 ## 1. Šta je napravljeno
 
-### 1.1 Baza (1 migracija, `20261124140000_f3_1_workdays_workers`)
+### 1.1 Baza (2 migracije: `20261124140000_f3_1_workdays_workers`, `20261124150000_f3_2_notification_href`)
 
 | Tabela | Promjena | Zašto |
 |---|---|---|
@@ -113,7 +113,7 @@ preflight 001+002    OK
 | `DATABASE_URL` | ✅ | ✅ | Aplikacijska rola `gradix_app`; `?sslmode=verify-full&sslrootcert=/etc/ssl/certs/coolify-ca.crt` |
 | `DATABASE_ADMIN_URL` | ✅ (`RUN_MIGRATIONS=true`) | ⚠️ jako preporučeno | Workeru treba za `pgboss` šemu; migracije F3 idu kroz ovu konekciju |
 | `AUTH_SECRET` | ✅ | ➖ | 48+ bajtova base64; **ne mijenjati** — rotacija obara 2FA i sve sesije |
-| `RUN_MIGRATIONS` | `true` | ➖ | **Potrebno za ovaj deploy**: primjenjuje migraciju `20261124140000_f3_1_workdays_workers` |
+| `RUN_MIGRATIONS` | `true` | ➖ | **Potrebno za ovaj deploy**: primjenjuje `20261124140000_f3_1_workdays_workers` i `20261124150000_f3_2_notification_href` (prepisuje stare `href='/moj-dan'`) |
 | `BOSS_DATABASE_URL` | ➖ | ➖ | Samo ako je baza reda odvojena |
 | `REMINDER_INTERVAL_MINUTES` | ➖ | ➖ | Nepromijenjeno; `sync.purge` ima **fiksni** raspored `30 3 * * *` (UTC) |
 
@@ -158,6 +158,13 @@ preflight 001+002    OK
 7. **`sync.purge` poštuje guard.** `payload_purged_at` piše baza, ne posao; posao šalje samo
    `received_payload = NULL` i to samo kad je `payload_purge_after` istekao.
 8. **`OPEN` sukob se nikad ne čisti**, ma koliko star bio.
+9. **`href` obavještenja je web ekran, ne mobilni.** Razrješenje sukoba je prvo pisalo
+   `href: "/moj-dan"`; `/moj-dan` postoji **samo u mobilnoj aplikaciji**, pa je web inbox
+   (`<Link>` + prefetch) pravio 404 u konzoli i oborio WORKER smoke na desktopu i mobilu.
+   Putanje sada žive u `src/server/notification-hrefs.ts`, a `notification-hrefs.test.ts` traži
+   da svaka ima `page.tsx` i da ta stranica ne vraća `/nemate-pristup` (primalac može biti svaka
+   rola). Poruka radniku zato vodi na `/pregled` — jedini web ekran koji svaka rola otvara;
+   „Moj dan“ ostaje mobilni ekran do Faze 4 (web verzija istog ekrana).
 
 ---
 
@@ -171,9 +178,15 @@ preflight 001+002    OK
 | `reviewed_snapshot` se puni, ali ga UI još ne prikazuje | podatak je tu za dokaz | Faza 4 |
 | Maestro tok za „Moj dan“ timer | tok traži emulator u CI-ju | noćni workflow |
 | `enrollmentRedirect` u `tenant-context.ts` neiskorišten | postojeći dug iz F1 | Faza 4 |
+| „Moj dan“ nema web ekran | timer je mobilni (spec 03 §1.1.1); web obavještenje zato vodi na `/pregled` | Faza 4 |
 
 ---
 
 ## 6. Sljedeće
 
 **Faza 4** po `docs/IMPLEMENTATION_PLAN.md`. Prije nje nema otvorenih kapija: sve gore navedeno je zeleno.
+
+> **Ispravka poslije prvog CI prolaza (2026-11-23):** prvi run F3 (`45450231464`) pao je na E2E
+> smoke-u za WORKER — 404 u konzoli zbog `href: "/moj-dan"` (§4.9). Popravka je u `workday-resolve.ts`
+> + nova kapija `notification-hrefs.test.ts` (4 testa) i integracioni test koji čita stvarni red
+> obavještenja. Broj testova: **950** (web 567; prije 562).

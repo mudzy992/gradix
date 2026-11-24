@@ -10,6 +10,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
 import { resolveWorkdayConflict, countOpenConflicts, type ResolveActor } from "./workday-resolve";
+import { NOTIFICATION_HREFS } from "./notification-hrefs";
 import { workdayResolveScopeFor } from "./workday-review";
 
 const appUrl = process.env.DATABASE_URL;
@@ -29,7 +30,7 @@ const reason = "Dupli unos istog segmenta s telefona";
 const DATES: Record<string, string> = {
   acc: "2026-11-10", short: "2026-11-17", rej: "2026-11-11", recv: "2026-11-12",
   corr: "2026-11-13", race: "2026-11-14", party: "2026-11-15", scope: "2026-11-16",
-  keep: "2026-11-18", term: "2026-11-19", hours: "2026-11-20",
+  keep: "2026-11-18", term: "2026-11-19", hours: "2026-11-20", ntf: "2026-11-21",
 };
 
 async function seedConflict(admin: Pool, suffix: string): Promise<string> {
@@ -132,6 +133,31 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
       "SELECT payload FROM public.sync_change_log WHERE company_id = $1 AND entity_type = 'sync_conflict' AND entity_id = $2", [CO, conflictId]);
     expect(events.rows).toHaveLength(1);
     expect(JSON.stringify(events.rows[0]!.payload)).not.toContain(INTERNAL);
+  });
+
+  /*
+   * F3 nazad u CI: radnik dobija obavještenje o razrješenju, a `href` tog obavještenja mora biti
+   * ekran koji WEB ima. Prva verzija je pisala `/moj-dan` (mobilni ekran) → inbox je pravio 404
+   * i oborio WORKER smoke na oba projekta. Test gleda STVARNI red koji je transakcija upisala,
+   * a ne konstantu, pa hvata i upis van `notify()`.
+   */
+  it("razrješenje obavještava radnika, a href vodi na web ekran", async () => {
+    const conflictId = await seedConflict(admin, "ntf");
+    const result = await resolveWorkdayConflict(app, adminActor, {
+      conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-notify-${RUN}`,
+    });
+    expect(result.outcome).toBe("RESOLVED");
+
+    const rows = await admin.query<{ user_id: string; href: string; kind: string }>(
+      `SELECT user_id, href, kind FROM public.notifications
+        WHERE company_id = $1 AND source_type = 'sync_conflict' AND source_id = $2`,
+      [CO, conflictId],
+    );
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]!.user_id).toBe(`usr_rsv_worker_${RUN}`);
+    expect(rows.rows[0]!.kind).toBe("workday.conflict_resolved");
+    expect(rows.rows[0]!.href).toBe(NOTIFICATION_HREFS.workdayConflictResolved);
+    expect(rows.rows[0]!.href).not.toBe("/moj-dan");
   });
 
   it("kratak razlog odbija server (i baza), sukob ostaje OPEN", async () => {
