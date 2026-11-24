@@ -115,11 +115,33 @@ import {
 import { POST as tenderAttachmentConfirmPost } from "@/app/api/tenders/[id]/attachments/[attachmentId]/confirm/route";
 import { GET as tenderAttachmentUrlGet } from "@/app/api/tenders/[id]/attachments/[attachmentId]/url/route";
 import { POST as machineCostRatesPost } from "@/app/api/machine-cost-rates/route";
+import { GET as costCategoriesGet, POST as costCategoriesPost } from "@/app/api/cost-categories/route";
+import { GET as costsGet } from "@/app/api/costs/route";
+import {
+  GET as amendmentsGet,
+  POST as amendmentsPost,
+} from "@/app/api/projects/[id]/amendments/route";
+import { PATCH as amendmentPatch } from "@/app/api/projects/[id]/amendments/[amendmentId]/route";
+import { GET as boqGet, POST as boqPost } from "@/app/api/projects/[id]/boq/route";
+import { GET as budgetGet, POST as budgetPost } from "@/app/api/projects/[id]/budget/route";
+import { POST as projectClosePost } from "@/app/api/projects/[id]/close/route";
+import { GET as closeChecklistGet } from "@/app/api/projects/[id]/close-checklist/route";
+import { GET as projectCostsGet } from "@/app/api/projects/[id]/costs/route";
+import { POST as phaseDependenciesPost } from "@/app/api/projects/[id]/phase-dependencies/route";
+import {
+  GET as phasesGet,
+  PATCH as phasesPatch,
+  POST as phasesPost,
+} from "@/app/api/projects/[id]/phases/route";
+import { GET as profitabilityGet } from "@/app/api/projects/[id]/profitability/route";
+import { PUT as progressPut } from "@/app/api/projects/[id]/progress/route";
+import { PUT as progressSourcePut } from "@/app/api/projects/[id]/progress-source/route";
+import { POST as projectReopenPost } from "@/app/api/projects/[id]/reopen/route";
 import { POST as costManualPost } from "@/app/api/costs/manual/route";
 import { POST as costReversePost } from "@/app/api/costs/[id]/reverse/route";
-import { POST as taskPost } from "@/app/api/tasks/route";
+import { GET as tasksGet, POST as taskPost } from "@/app/api/tasks/route";
 import { PATCH as taskPatch } from "@/app/api/tasks/[id]/route";
-import { POST as taskCommentPost } from "@/app/api/tasks/[id]/comments/route";
+import { GET as taskCommentsGet, POST as taskCommentPost } from "@/app/api/tasks/[id]/comments/route";
 import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
 import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
@@ -336,11 +358,31 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
    * F5: `project-cost-entries/book` je ukinut (nema više ručnog knjiženja). NUL-guard pokriva
    * nove rute koje primaju tekst: ručni trošak, storno, zadatak i komentar.
    */
+  /*
+   * F5: projekat je dobio svoje rute (faze, napredak, budžet, predmjer, aneksi, zatvaranje,
+   * troškovi, profitabilnost) i kategorije troška su nova šifra. Sve primaju `{id}` ili tekst,
+   * pa idu kroz isti NUL sweep — inače bi „nova ruta“ značila i „nova rupa“.
+   */
+  "/api/cost-categories": { GET: costCategoriesGet, POST: costCategoriesPost },
+  "/api/costs": { GET: costsGet },
+  "/api/projects/{id}/amendments": { GET: amendmentsGet, POST: amendmentsPost },
+  "/api/projects/{id}/amendments/{amendmentId}": { PATCH: amendmentPatch },
+  "/api/projects/{id}/boq": { GET: boqGet, POST: boqPost },
+  "/api/projects/{id}/budget": { GET: budgetGet, POST: budgetPost },
+  "/api/projects/{id}/close": { POST: projectClosePost },
+  "/api/projects/{id}/close-checklist": { GET: closeChecklistGet },
+  "/api/projects/{id}/costs": { GET: projectCostsGet },
+  "/api/projects/{id}/phase-dependencies": { POST: phaseDependenciesPost },
+  "/api/projects/{id}/phases": { GET: phasesGet, POST: phasesPost, PATCH: phasesPatch },
+  "/api/projects/{id}/profitability": { GET: profitabilityGet },
+  "/api/projects/{id}/progress": { PUT: progressPut },
+  "/api/projects/{id}/progress-source": { PUT: progressSourcePut },
+  "/api/projects/{id}/reopen": { POST: projectReopenPost },
   "/api/costs/manual": { POST: costManualPost },
   "/api/costs/{id}/reverse": { POST: costReversePost },
-  "/api/tasks": { POST: taskPost },
+  "/api/tasks": { GET: tasksGet, POST: taskPost },
   "/api/tasks/{id}": { PATCH: taskPatch },
-  "/api/tasks/{id}/comments": { POST: taskCommentPost },
+  "/api/tasks/{id}/comments": { GET: taskCommentsGet, POST: taskCommentPost },
   "/api/workdays/hours-export": { GET: hoursExportGet },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },

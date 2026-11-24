@@ -235,8 +235,11 @@ try {
   for (const project of projects) {
     await withCompany(pool, companyId(project.companyId), async (client) => {
       const updated = await client.query(
+        /* `projects_closed_check` (F5) traži `closed_at` za svaki `FINISHED` — status bez datuma
+           zatvaranja je tvrdnja bez zapisa. Demo projekat je zatvoren na svoj `ends_on`. */
         `UPDATE projects SET code = $2, name = $3, status = $4, site_place = $5, site_address = $6,
-                             starts_on = $7, ends_on = $8
+                             starts_on = $7, ends_on = $8,
+                             closed_at = CASE WHEN $4 = 'FINISHED' THEN $8::date END
           WHERE id = $1`,
         [
           project.id,
@@ -251,8 +254,10 @@ try {
       );
       if (updated.rowCount === 0) {
         await client.query(
-          `INSERT INTO projects (id, company_id, code, name, status, site_place, site_address, starts_on, ends_on)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `INSERT INTO projects
+             (id, company_id, code, name, status, site_place, site_address, starts_on, ends_on, closed_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+                   CASE WHEN $5 = 'FINISHED' THEN $9::date END)`,
           [
             project.id,
             project.companyId,

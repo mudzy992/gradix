@@ -155,9 +155,12 @@ CREATE TABLE public.cost_categories (
   default_for_source_type TEXT,
   is_active               BOOLEAN NOT NULL DEFAULT true,
   created_at              TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-  created_by              TEXT NOT NULL,
+  /* `SET NULL`, a ne `RESTRICT`: kategorija je KONFIGURACIJA firme, ne dokaz o korisniku — za
+     razliku od ledgera i audita. Brisanje naloga ne smije ostaviti firmu koja ne može ništa
+     knjižiti; isti obrazac kao `companies.settings_updated_by`. */
+  created_by              TEXT,
   updated_at              TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
-  updated_by              TEXT NOT NULL,
+  updated_by              TEXT,
   CONSTRAINT cost_categories_code_check CHECK (length(btrim(code)) BETWEEN 1 AND 40),
   CONSTRAINT cost_categories_name_check CHECK (length(btrim(name)) BETWEEN 1 AND 120),
   CONSTRAINT cost_categories_source_check
@@ -166,12 +169,14 @@ CREATE TABLE public.cost_categories (
        'PURCHASE', 'SUBCONTRACTOR', 'MANUAL')),
   CONSTRAINT cost_categories_company_id_unique UNIQUE (company_id, id),
   CONSTRAINT cost_categories_company_code_unique UNIQUE (company_id, code),
+  /* `CASCADE` na firminoj strani: kategorije su KONFIGURACIJA te firme i bez nje ne znače ništa.
+     Ledger i audit ostaju `RESTRICT` — finansijski dokaz se ne briše kao posljedica. */
   CONSTRAINT cost_categories_company_fk
-    FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE RESTRICT,
+    FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE CASCADE,
   CONSTRAINT cost_categories_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL,
   CONSTRAINT cost_categories_updated_by_fk
-    FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE RESTRICT
+    FOREIGN KEY (updated_by) REFERENCES public.users(id) ON DELETE SET NULL
 );
 
 /* Djelimični unikat: samo JEDNA aktivna zadana kategorija po izvoru. Dvije bi značile da
@@ -194,6 +199,17 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, pg_temp
 AS $seed_cost_categories$
 BEGIN
+  /* `created_by`/`updated_by` su NOT NULL, a firma tijekom onboardinga ima vlasnika tek kad
+     prihvati pozivnicu. Zato se autor čita JEDNOM (CTE), pa se ili upiše cijeli set, ili nijedan
+     red — polovičan set sa izmišljenim nalogom nije opcija. Servis dopunjava set pri prvom
+     knjiženju kad vlasnik postoji. */
+  WITH first_member AS (
+    SELECT m.user_id
+      FROM public.memberships m
+     WHERE m.company_id = p_company_id
+     ORDER BY m.created_at, m.user_id
+     LIMIT 1
+  )
   INSERT INTO public.cost_categories
     (id, company_id, code, name, sort_order, default_for_source_type, created_by, updated_by)
   SELECT
@@ -203,13 +219,8 @@ BEGIN
     seed.name,
     seed.sort_order,
     seed.source_type,
-    -- `created_by` je NOT NULL: firma tijekom onboardinga ima vlasnika (ili pozivnicu). Kad
-    -- pozivnica još nije prihvaćena, koristi se korisnik koji JE pokrenuo onboarding — ali on
-    -- je platformski, ne tenant. Zato je ovdje `NULL` nemoguć, pa se uzima prvi član firme ako
-    -- postoji; inače se set puni iz servisa pri prvom knjiženju (vidi servis).
-    (SELECT m.user_id FROM public.memberships m
-      WHERE m.company_id = p_company_id
-      ORDER BY m.created_at LIMIT 1)
+    first_member.user_id,
+    first_member.user_id
   FROM (VALUES
     ('RAD', 'Rad', 10, 'WORKDAY'),
     ('MEHANIZACIJA', 'Mehanizacija', 20, 'MACHINE_WORK_LOG'),
@@ -219,9 +230,7 @@ BEGIN
     ('TRANSPORT', 'Transport', 60, 'HAUL'),
     ('OSTALO', 'Ostalo', 99, NULL)
   ) AS seed(code, name, sort_order, source_type)
-  WHERE (SELECT m.user_id FROM public.memberships m
-          WHERE m.company_id = p_company_id
-          ORDER BY m.created_at LIMIT 1) IS NOT NULL
+  CROSS JOIN first_member
   /* Dva unikata: `(company_id, code)` za red, i djelimični za mapiranje izvora. `DO NOTHING`
      bez odrednice hvata oba — pa ponovni poziv ne pada ni na jednom. */
   ON CONFLICT DO NOTHING;

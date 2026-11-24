@@ -236,9 +236,11 @@ describeDb("F0.2 jedinstveni /api/attachments", () => {
 
   it("nepoznat tip entiteta ne prolazi validaciju prije baze", async () => {
     actAs("OWNER", CO);
+    /* F5 je dodao `PROJECT` u zatvoren skup, pa ovdje mora stajati tip koji STVARNO ne postoji —
+       inače test prođe kao 404 iz baze i više ne provjerava granicu. */
     const response = await registerRoute(
       json("http://interni/api/attachments", {
-        entityType: "PROJECT",
+        entityType: "SPACESHIP",
         entityId: OBL,
         fileName: "x.pdf",
         sizeBytes: 10,

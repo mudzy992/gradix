@@ -116,8 +116,8 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ```
 migracije       46          tabele          83 (74 tenant)
 OpenAPI         169 putanja (222 metode)
-pnpm test       639 prošlo, 338 preskočeno
-                (web 277 + domain 226 + mobile 93 + contracts 21 + worker 22; preskočeno = DB integracija bez DATABASE_URL)
+pnpm test       639 prošlo, 338 preskočeno bez baze (web 277 + domain 226 + mobile 93 + contracts 21 + worker 22)
+                SA bazom (REQUIRE_DB_TESTS=1): web 615/615, 104/104 fajla — nula preskočenih
 pnpm lint       6/6 · pnpm typecheck 6/6 · next build ✓
 check-tenant-sql 769 upita ✓ · check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka
 a11y            axe (WCAG 2.1 AA) u svakom novom UI testu — bez serious/critical

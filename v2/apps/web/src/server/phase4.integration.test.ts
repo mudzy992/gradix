@@ -156,13 +156,17 @@ describeDb("F4 mehanizacija — baza", () => {
       await client.query("BEGIN");
       await client.query("SET LOCAL session_replication_role = replica");
       await client.query("DELETE FROM public.project_assignments WHERE company_id = $1", [COMPANY]);
+      /* F5: ledger je append-only, pa i on ide kroz isti prozor — inače teardown pada na
+         `COST_ENTRY_DELETE_FORBIDDEN` i prijava testa izgleda kao greška u kodu. */
+      await client.query("DELETE FROM public.cost_entries WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM public.cost_categories WHERE company_id = $1", [COMPANY]);
       await client.query("COMMIT");
     } finally {
       client.release();
     }
     await withCompany(admin, companyId(COMPANY), async (db) => {
       for (const table of [
-        "machine_meter_readings", "cost_entries", "machine_cost_rate_snapshots",
+        "machine_meter_readings", "machine_cost_rate_snapshots",
         "machine_cost_components", "machine_cost_rates", "machine_work_logs", "service_orders",
         "approval_requests", "machine_faults", "machine_daily_checks", "check_templates",
         "attachments", "usage_overrides",

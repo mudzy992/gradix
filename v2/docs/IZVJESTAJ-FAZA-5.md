@@ -120,6 +120,7 @@ seriju. Dedupe je troslojan (dogodek + `dedupe_key` + `UNIQUE`). Primaoci: PROJE
 ```
 pnpm test            639 prošlo, 338 preskočeno (web 277 + domain 226 + mobile 93 + contracts 21 + worker 22)
                      preskočeno = DB integracija (bez DATABASE_URL) — 55 suite-ova, 344 testa
+                     SA bazom (REQUIRE_DB_TESTS=1): web 615/615, 104/104 fajla
 pnpm typecheck       6/6
 pnpm lint            čist (uklonjen neiskorišten `fail` import)
 npx next build       prolazi (sve F5 rute u build izlazu)
@@ -147,8 +148,28 @@ a11y                 axe (WCAG 2.1 AA) u svakom novom UI testu — bez serious/c
 3. `estimateAtCompletion` tip: `amount: null` i `reason: string` su u testu bili zamijenjeni —
    `tsc` je uhvatio prije `vitest`-a.
 
-**Integracioni testovi protiv baze** (`REQUIRE_DB_TESTS=1`) u ovom okruženju nisu pokrenuti — nema
-`psql` ni PG servera. Oslanjaju se na CI; lokalno su prijavljeni kao preskočeni, ne kao prošli.
+**Integracioni testovi protiv baze** su naknadno pokrenuti na lokalnom PG 19 (port 5433) sa svježe
+primijenjenih 45 migracija: **615/615 testova, 104/104 fajla, nula preskočenih**. Ti testovi su našli
+**šest pravih grešaka** koje jedinični testovi ne mogu vidjeti — sve su popravljene u istom krugu:
+
+1. `seed_cost_categories` — `INSERT` sa 8 kolona i 7 vrijednosti (`updated_by` nedostaje) → svaka
+   nova firma je padala na `42601`. Popravljeno CTE-om koji autora čita jednom, pa se set ili upiše
+   cijeli ili nijedan red.
+2. `cost_categories` FK na `users` bio `RESTRICT` — brisanje naloga (i teardown 24 testa) je padalo.
+   Sada `SET NULL` (kategorija je konfiguracija, ne dokaz o korisniku), a `company_id` je `CASCADE`;
+   ledger i audit **ostaju** `RESTRICT`.
+3. `bookInCompany` je zvao `withCompany(..., { savepoint: true })` iako sam otvara transakciju →
+   `25P01`, a greška se gutala, pa je **svako programsko knjiženje (`book*InCompany`) tiho vraćalo
+   `skipped`**.
+4. `settlePendingCost` — `UPDATE` sa `$4`/`$5` a pet parametara (`$3` nigdje) → `42P18`; unos cijene
+   goriva je vraćao 500.
+5. `scripts/seed.ts` je upisivao `FINISHED` projekat bez `closed_at` → `projects_closed_check`;
+   demo podaci se nisu mogli napuniti.
+6. `nul-guard` i `attachment-api` — 15 novih F5 ruta nije bilo u NUL sweepu, a test nepoznatog tipa
+   priloga koristio `PROJECT`, koji je od F5 **poznat** tip (prolazio je kao 404 iz baze, ne 400 sa
+   granice). Rute dodate u `HANDLERS`, test koristi stvarno nepoznat tip.
+
+Pouka je ista kao u Fazi 1: jedinični testovi ne vide ni SQL, ni FK, ni transakciju — samo baza.
 
 ---
 

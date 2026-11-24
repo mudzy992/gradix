@@ -274,11 +274,13 @@ export async function settlePendingCost(
   const entry = row.rows[0];
   if (!entry) return null;
   if (entry.status !== "PENDING") return { id: entry.id, settled: false };
+  /* Numeracija parametara mora biti neprekinuta: `$3` se koristi u SET-u, a ne u WHERE-u, pa
+     niz od pet vrijednosti sa praznim `$3` daje 42P18 „could not determine data type“. */
   await client.query(
     `UPDATE public.cost_entries
-        SET status = 'POSTED', amount_cents = $4, currency_code = $5, version = version + 1
+        SET status = 'POSTED', amount_cents = $3, currency_code = $4, version = version + 1
       WHERE company_id = $1 AND id = $2 AND status = 'PENDING'`,
-    [params.companyId, entry.id, params.sourceType, params.amountCents.toString(), params.currency],
+    [params.companyId, entry.id, params.amountCents.toString(), params.currency],
   );
   await writeAudit(client, {
     companyId: params.companyId,
@@ -311,7 +313,10 @@ async function bookInCompany(
   fn: (client: PoolClient) => Promise<{ posted: number; pending: number; skipped: number }>,
 ): Promise<{ posted: number; pending: number; skipped: number }> {
   try {
-    return await withCompany(pool, toCompanyId(companyId), fn, { savepoint: true });
+    /* NE `savepoint`: ovdje smo vlasnik transakcije (`withCompany` je otvara), pa bi `SAVEPOINT`
+       pao sa 25P01 „SAVEPOINT can only be used in transaction blocks“ — i to tiho, jer poziv
+       hvata grešku. `savepoint` koriste samo pozivaoci koji VEĆ imaju transakciju. */
+    return await withCompany(pool, toCompanyId(companyId), fn);
   } catch {
     return { posted: 0, pending: 0, skipped: 1 };
   }
