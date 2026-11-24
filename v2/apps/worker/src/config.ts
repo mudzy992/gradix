@@ -20,8 +20,8 @@ export type WorkerConfig = {
   logLevel: "debug" | "info" | "warn" | "error";
 };
 
-function required(name: string): string {
-  const value = process.env[name];
+function required(name: string, env: NodeJS.ProcessEnv): string {
+  const value = env[name];
   if (!value || value.trim() === "") {
     throw new Error(
       `Nedostaje ${name}. Worker ne može raditi bez baze — postavi ${name} prije pokretanja.`,
@@ -32,9 +32,9 @@ function required(name: string): string {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
   return {
-    databaseUrl: required("DATABASE_ADMIN_URL"),
+    databaseUrl: required("DATABASE_ADMIN_URL", env),
     // pg-boss drži svoju šemu; koristi istu bazu da nema drugog sistema za red.
-    bossDatabaseUrl: env.BOSS_DATABASE_URL?.trim() || required("DATABASE_ADMIN_URL"),
+    bossDatabaseUrl: env.BOSS_DATABASE_URL?.trim() || required("DATABASE_ADMIN_URL", env),
     reminderIntervalMinutes: Number(env.REMINDER_INTERVAL_MINUTES ?? 15),
     jobExpireMinutes: Number(env.JOB_EXPIRE_MINUTES ?? 15),
     concurrency: Number(env.WORKER_CONCURRENCY ?? 4),

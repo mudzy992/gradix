@@ -164,7 +164,7 @@
           "title": "prilog bez skladišta ne upisuje red",
           "bodyIncludes": [
             "CONFLICT",
-            "tender_attachments"
+            "entity_type = 'TENDER'"
           ]
         }
       ]

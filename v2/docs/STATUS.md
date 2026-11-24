@@ -1,75 +1,64 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-19 · **Grana:** `v2-bootstrap` · Pregled (b0c419d) odobren.
+**Datum:** 2026-11-24 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena (checkpoint).**
 
-## Pilot: spremnost
+Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 1 — jezgro i pristup (Modul 1)**.
 
-Pilot = vlasnik testira **sve role** na Expo Go/emulatoru → `https://gradix.ba101.top` (**DA**).
-Telefon i rotacija tajni **nisu** uslov pilota (rotacija → COOLIFY §13).
+## Šta je gotovo
 
-| Uslov | Stanje (unos vlasnika) | Oznaka |
+| Korak | Sadržaj | Stanje |
 |---|---|---|
-| Pilot: sve role (Expo Go / emulator) | **DA** | spremno |
-| Sintetički seed `@demo.test` | seed + prijava **PROŠLO** | spremno |
-| Emulator 2c i A1 | **PRIHVAĆEN** | spremno |
-| Kontrolna lista prvog dana (PILOT.md tabela) | na snazi | spremno |
-| R4b API / migracije | **isporučeno** (`5ffa667`+) | spremno |
-| R4b UI potvrda / sedmica / zaključaj | **PRIHVAĆEN** | spremno |
-| R4b UI ispravka (revise) | **PRIHVAĆEN** | spremno |
-| R5.1 Sati mašine | **isporučeno** (`046404e`, CI) | spremno |
-| R5.2 Gorivo | **isporučeno** (`563c403`, CI 44573517449) | spremno |
-| R5.3 Ture | **isporučeno** (`9b6193e`, CI 44580192908) | spremno |
-| R5.4 Dnevni pregled | **isporučeno** (`ab0b81c`, CI 44592292030) | spremno |
-| R5.5 Kvarovi | **isporučeno** (`1b11b6e`, CI 44601944551) | spremno |
-| R6.0 Sidebar regroup | **isporučeno** (`06658f5`) | spremno |
-| R6.1 Trošak mašine / knjiženje | **isporučeno** (`4236619`, CI 44629910111) | spremno |
-| R6.2 Obračun sati CSV + dashboard | **isporučeno** (`9096017`, CI 44709218406) | spremno |
-| L0–L2 Shell layout + catalog-first | **isporučeno** (`ca306a3`, CI 44721018930) | spremno |
-| R7 Tenderi + Partneri UI | **isporučeno** (`8959598`, CI 44741905603) | spremno |
-| Dialog fokus-once + E2E A3/B2 | **isporučeno** (`3f45217`, CI 44850592055; `@smoke`/`@deep-*`; MinIO CI-SKIP) | spremno |
+| 0 | Monorepo, TS strict, dvije DB role (`gradix_app` / vlasnik), FORCE RLS + `app.company_id`, `withCompany`, preflight, CI | ✅ |
+| 0.1 | Prilozi objedinjeni u jednu `attachments` tabelu (entitet + vrsta), S3 potpisi, MIME provjera | ✅ |
+| 0.2 | Stare attachment tabele uklonjene; matrix parity pokazuje na novu tabelu | ✅ |
+| 0.3 | Matrica dozvola kao kod (`packages/domain`): akcija × rola × stanje reference; `SELF_APPROVAL_FORBIDDEN`; iznimke sa rokom i razlogom ≥10 znakova | ✅ |
+| 0.4 | `apps/worker` na pg-boss-u + obavještenja (`notifications`, inbox, zvonce, `/ured/obavjestenja`), `/api/health` (bez baze) i `/api/health/queue` | ✅ |
+| 0.5 | Higijena: OpenAPI iz `ROUTES` + CI provjera ažurnosti, preflight kao CI gate, `AGENTS.md` osvježen, `STATUS.md` | ✅ |
 
-**Provjera web kontejnera** (COOLIFY §12.1):
+## Brojevi (lokalna provjera, 2026-11-24)
 
-```sh
-env | grep -E '^(DATABASE_ADMIN_URL|DATABASE_BACKUP_URL|RESTORE_ADMIN_URL|BACKUP_|MINIO_ROOT_)' \
-  && echo 'FAIL: admin/backup varijable još na webu' \
-  || echo 'PASS: nema DATABASE_ADMIN_URL ni backup/root MinIO varijabli'
+```
+migracije       35          tabele          49
+OpenAPI         90 putanja
+pnpm test       729 testova  (web 472 + domain 90 + mobile 80 + db 67 + contracts 20 + worker 8)
+pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 425 upita ✓
+check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
 ```
 
-## Odluke / ops (vlasnik)
+Baza lokalno: embedded Postgres na portu 5433 (`v2/.pg/`, gitignorisano).
 
-| Stavka | Ishod |
-|---|---|
-| 2a; ADR 0014; 2c; emulator 2c+A1 | **PRIHVAĆEN** |
-| `@demo.test`; staging seed/prijava | **ODOBRENO** / **PROŠLO** |
-| Rotacija tajni | **URAĐENO** (vlasnik); COOLIFY §13 za produkciju |
-| R4b dizajn · prolaz UI · s3 Put/Get | **ODOBREN** / **PRIHVAĆEN** / **ODOBRENO** |
-| R4b revise UI | **DA** → **PRIHVAĆEN** (prolaz) |
-| R5 | R5.1–R5.5 kod isporučen |
-| R6 | R6.0–R6.2 kod isporučen |
+## Kako je Faza 0 provjerena
 
-## Radi (CI)
+- **Worker stvarno radi**, nije samo kompajliran: `ping.health` se izvršio dva puta sa
+  `REMINDER_INTERVAL_MINUTES=1`, proces se ugasio uredno, `queueHealth()` je nad tom bazom
+  vratio `available:true, completed:4, active:0, stuck:0, stale:false`.
+- **Obavještenja protiv žive baze** (`notification.integration.test.ts`, 6 testova): dedupe po
+  `dedupe_key`, validacija bez primaoca i bez `href`, tuđe se ne vidi ni ne označava, druga firma
+  ne vidi ništa, email bez SMTP-a je `BLOCKED_NO_PROVIDER` i poruka ostaje u inboxu, retencija
+  90 d / 1 g / 2 g.
+- **Testovi su hvatali prave greške**, ne samo prolazili: `SafeText` je uhvatio `z.string()` u
+  `NotificationReadInput` (NUL bi ušao u bazu), `tokens.test.ts` je uhvatio hardkodirani heks u
+  `shell.css`, a worker test je uhvatio da `loadConfig(env)` čita `process.env` umjesto `env`.
 
-- R1–R4a-2, Pregled, UI, C.2, 2c, seed `@demo.test`.
-- R4b: API + UI potvrda/sedmica/zaključaj/ispravka na `/ured/radni-dani`.
-- R5.1–R5.4: sati, gorivo, ture, dnevni pregled + sync + mobilni.
-- R5.5: `partners` + `machine_faults` + `approval_requests`; Money; prag → WAITING_APPROVAL;
-  `/ured/kvarovi`; sync `machine_fault`; mobil `/kvarovi`.
-- R6.0: sidebar Pregled / Evidencija / Mehanizacija / Rad·obračun / Administracija.
-- R6.1: `machine_cost_rates` + `project_cost_entries`; `/ured/trosak-masina`, `/ured/troskovi-projekta`.
-- R6.2: `GET /api/workdays/hours-export` CSV; `/ured/obracun-sati`; dashboard agregati na `/pregled`.
-- L0–L2 (prije R7): fiksni shell `100dvh`, interni skrol bez scrollbar-a (`.gx-page` / `.gx-nav`),
-  collapsible nav grupe (`sessionStorage` `gx.nav.groups`), catalog-first u DESIGN.md + AGENTS.md.
-- Shell×liste audit: `gx-table-scroll`, floating portal meni (RowActions/user), actionbar sticky u page;
-  Expo shell bez izmjene (Stack `headerShown: false` — namjerno, nije web parity).
-  Commit `55d111d`, CI 44730677663.
-- R7: `partners.CLIENT`; `/ured/partneri`; `tenders` + attachments + convert WON→project;
-  obligations `entity_kind=TENDER`; `/ured/tenderi` (+ detalj); matrica `.cursor/docs/matrices/tenders/`.
+## Odluke na snazi (iz modula 1–12)
 
-## Ne radi / namjerno još nema
+2FA TOTP za OWNER/ADMIN/ACCOUNTANT · pg-boss, **bez Redisa** · jedan `cost_entries` sa 8
+`source_type` · satnice samo OWNER/ADMIN/ACCOUNTANT · `SELF_APPROVAL_FORBIDDEN` · cisterna je
+skladište `TANK` · situacije prema naručiocu van MVP-a (B15) · dashboard po roli ·
+`notifications` sa obaveznim `href` i `dedupe_key` · audit retention 2/5/10 g · `Cmd/Ctrl+K` pod
+RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP-u.
 
-- Predmjer/garancije/checklista (van R7); R8+; Android store/dev build; puna plata.
+## Namjerno još nema
 
-## Dugovi / otvoreno
+- 4 od 6 worker poslova (`reminders.scan`, `budget.thresholds`, `attachments.purge`,
+  `sync.purge`) — dolaze sa svojim modulima, jer traže tabele koje još ne postoje.
+- Email/push provajder: isporuka je `BLOCKED_NO_PROVIDER`, in-app radi bez njega.
+- `report_jobs`, `daily_rollups`, `user_devices` — Faza 1.
 
-- `PLATFORM_ADMIN_EMAILS` ako treba katalog; MinIO konzola / retencija / B11 / email / ADR 0014 (COOLIFY §13).
+## Dugovi
+
+- CI job traje ~9 min; kandidat za keširanje `pnpm` store-a.
+- `check-matrix-parity` upozorava na jedan `NOT_IMPLEMENTED` (tenant lista do R2) — svjesno,
+  zatvara se kad Faza 1 doda tabele R3–R7.
+- Maestro tokovi pokrivaju samo R0 offline tokove; šire se kad mobilni dobije Fazu 1 ekrane.
