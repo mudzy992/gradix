@@ -7,10 +7,21 @@ import { formatDateTime, formatNumber } from "@/format";
 import { Alert, DataTable, EmptyState, FilterBar, Select, Skeleton, Stack } from "@/components/ui/index";
 import type { FuelEntryRow } from "@/server/fuel-entry-types";
 import { FuelEntryCreate } from "./fuel-entry-create";
+import { DeviationsPanel } from "./deviations-panel";
+import { FuelPricesPanel, FuelTanksPanel } from "./fuel-tanks-panel";
 import { FuelEntryPrice } from "./fuel-entry-price";
 import { FuelEntryRevise } from "./fuel-entry-revise";
 
-type Caps = { canCreate: boolean; canRevise: boolean; showPrice: boolean };
+type Caps = {
+  canCreate: boolean;
+  canRevise: boolean;
+  showPrice: boolean;
+  /** F4: upravljanje šifarnikom cijena i cisternama. */
+  canManageFuel: boolean;
+  /** F4: cisterna je uključena PO FIRMI — bez toga se stanje ne vodi. */
+  tankEnabled: boolean;
+  tanks: { id: string; name: string; current_l: number }[];
+};
 type MachineOption = { id: string; code: string; name: string };
 type WorkerOption = { id: string; firstName: string; lastName: string };
 
@@ -118,6 +129,7 @@ export function FuelEntriesClient({
           <FuelEntryCreate
             machines={machines.filter((m) => m.id)}
             workers={workers}
+            tanks={caps.tankEnabled ? caps.tanks : []}
             showPrice={caps.showPrice}
             busy={busy}
             onBusy={setBusy}
@@ -138,6 +150,13 @@ export function FuelEntriesClient({
           />
         ) : undefined}
       />
+      {/*
+        F4: odstupanja su OBAVEZAN status, ne obavještenje koje se skloni. Panel stoji ispod liste
+        jer se pojedinačno točenje gleda prvo, a upozorenje onda kad ga ima.
+      */}
+      <DeviationsPanel showPrice={caps.showPrice} />
+      <FuelPricesPanel canManage={caps.canManageFuel} />
+      {caps.tankEnabled ? <FuelTanksPanel canManage={caps.canManageFuel} /> : null}
     </Stack>
   );
 }

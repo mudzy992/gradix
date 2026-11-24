@@ -205,6 +205,18 @@ export const PERMISSIONS = {
     "OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT", "SITE_SUPERVISOR",
   ],
   "machines.cost_rate.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  /*
+   * F4 (Modul 5 §3): tri nove dozvole. Zašto odvojene od `.create`/`.view`:
+   *  - `machines.fuel.manage` mijenja ŠIFARNIK cijena i cisterne — to nije terenski unos nego
+   *    podatak po kojem se sva točenja obračunavaju, pa ga drži ured;
+   *  - `machines.check.manage` mijenja ŠABLON pregleda; rukovalac popunjava pregled, ali ne
+   *    odlučuje šta se provjerava (inače bi šablon mogao „proglasiti" kritičnu stavku nekritičnom);
+   *  - `machines.haul.manage` mijenja šifarnik dionica sa stacionažom; vozač unosi turu, ali ne
+   *    prepisuje kilometražu od koje zavisi izvedena količina.
+   */
+  "machines.fuel.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "machines.check.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "machines.haul.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "projects.costs.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "projects.costs.book": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   // R6.2: CSV obračun sati + dashboard agregati (G0: sati, ne puna plata).
@@ -449,7 +461,21 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   },
   "machines.cost_rate.manage": {
     label: "Upravljanje stopom troška mašine",
-    description: "Unos i izmjena stope (€/h ili BAM/h) s periodom važenja.",
+    description: "Komponente stope (depresijacija, servis, operater…) i ručna stopa s razlogom.",
+  },
+  "machines.fuel.manage": {
+    label: "Šifarnik cijena goriva i cisterne",
+    description:
+      "Cijena po litru po datumu i vrstama goriva, te cisterne. Po tome se predlaže cijena pri točenju.",
+  },
+  "machines.check.manage": {
+    label: "Šabloni dnevnog pregleda",
+    description:
+      "Stavke pregleda po kategoriji mašine i koje su kritične. Kritična stavka traži fotografiju i otvara kvar.",
+  },
+  "machines.haul.manage": {
+    label: "Šifarnik dionica",
+    description: "Dionice sa stacionažom (km + m). Zbir po dionici daje izvedene količine.",
   },
   "projects.costs.view": {
     label: "Pregled troškova projekta",

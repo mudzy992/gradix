@@ -41,6 +41,7 @@ export default async function TurePage() {
         caps={{
           canCreate: can(auth.ctx.roles, "machines.haul.create"),
           canRevise: can(auth.ctx.roles, "machines.haul.revise"),
+          canManageSegments: can(auth.ctx.roles, "machines.haul.manage"),
         }}
       />
     </main>

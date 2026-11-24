@@ -58,6 +58,10 @@ export const ERROR_CODES = [
   "WORKER_SENSITIVE_FORBIDDEN",
   "WORKER_HAS_ACTIVE_ISSUANCES",
   "RATE_OVERLAP",
+  // Faza 4 — mehanizacija (spec 05)
+  "MACHINE_DOUBLE_BOOKED",
+  "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+  "COST_RATE_MANUAL_OVERRIDE",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -112,6 +116,22 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   WORKER_SENSITIVE_FORBIDDEN: 403,
   WORKER_HAS_ACTIVE_ISSUANCES: 409,
   RATE_OVERLAP: 409,
+  /*
+   * 409, a ne 400: zahtjev je ispravan, ali mašina je već na drugom projektu u tom periodu.
+   * Klijent tada nudi iznimku (Modul 2), ne ispravku unosa — zato konflikt, ne validacija.
+   */
+  MACHINE_DOUBLE_BOOKED: 409,
+  /*
+   * 422: upozorenje o odstupanju goriva postoji i ne zatvara se bez razloga. Samo TOČENJE je
+   * uvijek dopušteno (spec 05 §1.3.15); ovaj kod se vraća kad se upozorenje pokuša zatvoriti
+   * bez razloga ili sa prekratkom napomenom.
+   */
+  FUEL_DEVIATION_EXPLANATION_REQUIRED: 422,
+  /*
+   * 422: ručna stopa bez razloga (≥10 znakova) nije dozvoljena. Zašto ne 400: polja su formalno
+   * ispravna, ali radnja nije dopuštena dok nedostaje obrazloženje koje ide u audit.
+   */
+  COST_RATE_MANUAL_OVERRIDE: 422,
 };
 
 /*

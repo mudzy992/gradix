@@ -6,6 +6,7 @@ import { apiCall } from "@/api-client";
 import { Alert, DataTable, EmptyState, FilterBar, Select, Skeleton, Stack } from "@/components/ui/index";
 import type { CostRateRow } from "@/server/machine-cost-rate-types";
 import { CostRateForm } from "./cost-rate-form";
+import { CostComponentsPanel } from "./cost-components-panel";
 
 type Caps = { canManage: boolean };
 type MachineOption = { id: string; code: string; name: string };
@@ -108,6 +109,28 @@ export function CostRatesClient({
           />
         ) : null}
       </FilterBar>
+      {/*
+        F4: komponente su sada IZVOR stope; ravna (ručna) stopa ostaje kao nadjačavanje.
+        Panel se prikazuje za izabranu mašinu — bez izbora bi lista komponenti svih mašina bila
+        nepregledna, a izračun se i računa po mašini.
+      */}
+      {machineFilter ? (
+        <CostComponentsPanel
+          machineId={machineFilter}
+          machineLabel={
+            machines.find((machine) => machine.id === machineFilter)
+              ? `${machines.find((machine) => machine.id === machineFilter)!.code} — ${machines.find((machine) => machine.id === machineFilter)!.name}`
+              : "Mašina"
+          }
+          caps={{ canManage: caps.canManage }}
+          onChanged={refresh}
+        />
+      ) : (
+        <Alert tone="info">
+          Izaberite mašinu da vidite razlaganje stope po komponentama i izračunatu stopu.
+        </Alert>
+      )}
+
       <DataTable
         caption="Stope troška mašina"
         rows={visible}

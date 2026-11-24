@@ -87,13 +87,19 @@ async function probaj(ime, prinudnoBezGist = false) {
        -- mehanizma. Bez ovoga bi druga tabela mogla tražiti btree_gist bez uslova i srušiti
        -- migraciju na serveru bez contrib-a — tačno pad koji je ovaj korak i otkrio.
        (SELECT count(*) FROM pg_constraint WHERE conrelid = 'worker_rates'::regclass AND contype = 'x') AS stope_iskljucujuci,
-       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'worker_rates'::regclass AND tgname = 'worker_rates_no_overlap' AND NOT tgisinternal) AS stope_trigera`,
+       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'worker_rates'::regclass AND tgname = 'worker_rates_no_overlap' AND NOT tgisinternal) AS stope_trigera,
+       -- F4: važenje komponenti troška mašine ima ISTO pravilo (dvije važeće komponente istog
+       -- tipa = dvostruko veći trošak u stopi) i isti izbor mehanizma.
+       (SELECT count(*) FROM pg_constraint WHERE conrelid = 'machine_cost_components'::regclass AND contype = 'x') AS komponente_iskljucujuci,
+       (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'machine_cost_components'::regclass AND tgname = 'machine_cost_components_no_overlap' AND NOT tgisinternal) AS komponente_trigera`,
     baza(ime),
   );
   const iskljucujuci = Number(stanje.rows[0].iskljucujuci);
   const trigera = Number(stanje.rows[0].trigera);
   const stopeIskljucujuci = Number(stanje.rows[0].stope_iskljucujuci);
   const stopeTrigera = Number(stanje.rows[0].stope_trigera);
+  const komponenteIskljucujuci = Number(stanje.rows[0].komponente_iskljucujuci);
+  const komponenteTrigera = Number(stanje.rows[0].komponente_trigera);
   const mehanizam = iskljucujuci === 2 && trigera === 0
     ? "EXCLUDE USING gist"
     : trigera === 1 && iskljucujuci === 0
@@ -120,14 +126,23 @@ async function probaj(ime, prinudnoBezGist = false) {
     },
   );
 
-  const saglasno = stopeMehanizam === mehanizam;
+  const komponenteMehanizam = komponenteIskljucujuci === 1 && komponenteTrigera === 0
+    ? "EXCLUDE USING gist"
+    : komponenteTrigera === 1 && komponenteIskljucujuci === 0
+      ? "triger + pg_advisory_xact_lock"
+      : `NEISPRAVNO (constraints=${komponenteIskljucujuci}, triggers=${komponenteTrigera})`;
+
+  const saglasno = stopeMehanizam === mehanizam && komponenteMehanizam === mehanizam;
   return {
     ok: test.code === 0 && !mehanizam.startsWith("NEISPRAVNO") && saglasno && !stopeMehanizam.startsWith("NEISPRAVNO"),
     mehanizam,
     stopeMehanizam,
+    komponenteMehanizam,
     razlog: test.code !== 0
       ? test.out.slice(-2500)
-      : saglasno ? null : `satnice: ${stopeMehanizam} (isto pravilo, drugi mehanizam nego dodjele)`,
+      : saglasno
+        ? null
+        : `satnice: ${stopeMehanizam}, komponente: ${komponenteMehanizam} (isto pravilo, drugi mehanizam nego dodjele)`,
   };
 }
 
@@ -156,7 +171,10 @@ for (const rezultat of rezultati) {
   const prolaz = rezultat.ok && saglasno && !rezultat.preskoceno;
   if (!prolaz) sveOk = false;
   const oznaka = rezultat.preskoceno ? "PRESKOČENO" : prolaz ? "OK" : "PAD";
-  console.log(`${oznaka}  ${rezultat.ime}: dodjele = ${rezultat.mehanizam}, satnice = ${rezultat.stopeMehanizam} (očekivano ${rezultat.ocekivano})`);
+  console.log(
+    `${oznaka}  ${rezultat.ime}: dodjele = ${rezultat.mehanizam}, satnice = ${rezultat.stopeMehanizam}, `
+      + `komponente = ${rezultat.komponenteMehanizam} (očekivano ${rezultat.ocekivano})`,
+  );
   if (rezultat.razlog) console.log(`      ${rezultat.razlog.split("\n").slice(-6).join("\n      ")}`);
 }
 

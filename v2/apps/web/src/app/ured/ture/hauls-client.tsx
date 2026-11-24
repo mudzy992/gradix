@@ -8,8 +8,14 @@ import { Alert, DataTable, EmptyState, FilterBar, Select, Skeleton, Stack } from
 import type { HaulRow } from "@/server/haul-types";
 import { HaulCreate } from "./haul-create";
 import { HaulRevise } from "./haul-revise";
+import { SegmentsPanel } from "./segments-panel";
 
-type Caps = { canCreate: boolean; canRevise: boolean };
+type Caps = {
+  canCreate: boolean;
+  canRevise: boolean;
+  /** F4: šifarnik dionica sa stacionažom. */
+  canManageSegments: boolean;
+};
 type MachineOption = { id: string; code: string; name: string };
 type WorkerOption = { id: string; firstName: string; lastName: string };
 
@@ -129,6 +135,11 @@ export function HaulsClient({
           />
         ) : undefined}
       />
+      {/*
+        F4: stacionaže su šifarnik ISPOD tura. Zbir količina po dionici se računa iz tura, pa
+        redoslijed na ekranu prati tok: prvo se gleda šta je prevezeno, pa po kojoj dionici.
+      */}
+      <SegmentsPanel canManage={caps.canManageSegments} />
     </Stack>
   );
 }

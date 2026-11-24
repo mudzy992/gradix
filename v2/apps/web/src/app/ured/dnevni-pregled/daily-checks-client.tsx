@@ -8,8 +8,12 @@ import { Alert, Button, DataTable, EmptyState, FilterBar, Select, Skeleton, Stac
 import type { DailyCheckAttachmentRow, DailyCheckRow } from "@/server/daily-check-types";
 import { DailyCheckCreate } from "./daily-check-create";
 import { DailyCheckRevise } from "./daily-check-revise";
+import { CheckTemplatesPanel } from "./check-templates-panel";
 
-type Caps = { canCreate: boolean; canRevise: boolean };
+type TemplateItem = { key: string; label: string; required: boolean; critical: boolean };
+type Template = { id: string; name: string; items: TemplateItem[] };
+
+type Caps = { canCreate: boolean; canRevise: boolean; canManageTemplates: boolean };
 type MachineOption = { id: string; code: string; name: string };
 type WorkerOption = { id: string; firstName: string; lastName: string };
 
@@ -29,6 +33,7 @@ export function DailyChecksClient({
   const router = useRouter();
   const [checks, setChecks] = useState(initialChecks);
   const [machines, setMachines] = useState<MachineOption[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [workers, setWorkers] = useState<WorkerOption[]>([]);
   const [machineFilter, setMachineFilter] = useState("");
   const [resultFilter, setResultFilter] = useState("");
@@ -42,6 +47,8 @@ export function DailyChecksClient({
     if (equipment.ok) {
       setMachines(equipment.data.machines.map((m) => ({ id: m.id, code: m.code, name: m.name })));
     }
+    const templateList = await apiCall<{ templates: Template[] }>("/api/check-templates");
+    if (templateList.ok) setTemplates(templateList.data.templates);
     if (!caps.canCreate) return;
     const roster = await apiCall<{ workers: WorkerOption[] }>("/api/workers");
     if (roster.ok) {
@@ -93,6 +100,41 @@ export function DailyChecksClient({
       { key: "worker", header: "Rukovalac", cell: (row) => row.worker_name },
       { key: "checked", header: "Vrijeme", cell: (row) => formatDateTime(row.checked_at) },
       { key: "result", header: "Ishod", cell: (row) => RESULT_LABEL[row.result] },
+      {
+        key: "photo",
+        header: "Fotografija",
+        cell: (row) => {
+          /*
+           * Potvrda fotografije je ZASEBNA radnja: prilog traži `check_id`, pa slika ne može
+           * stići u istom zahtjevu kao pregled. Dok potvrde nema, nalaz je otvoren.
+           */
+          if (!row.photo_required) return "—";
+          if (row.photo_confirmed_at) return "potvrđena";
+          return (
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const res = await apiCall<{ outcome: string; id: string }>(
+                  `/api/machine-daily-checks/${row.id}/photo`,
+                  { method: "POST" },
+                );
+                setBusy(false);
+                if (!res.ok) {
+                  setNotice({ tone: "error", text: res.message });
+                  return;
+                }
+                setNotice({ tone: "success", text: "Fotografija je potvrđena." });
+                refresh();
+              }}
+            >
+              Potvrdi fotografiju
+            </Button>
+          );
+        },
+      },
+      { key: "fault", header: "Kvar", cell: (row) => (row.fault_id ? "otvoren" : "—") },
       { key: "note", header: "Napomena", cell: (row) => row.note ?? "—" },
       {
         key: "photos",
@@ -141,6 +183,7 @@ export function DailyChecksClient({
           <DailyCheckCreate
             machines={machines.filter((m) => m.id)}
             workers={workers}
+            templates={templates}
             busy={busy}
             onBusy={setBusy}
             onCreated={() => { setNotice({ tone: "success", text: "Unos je sačuvan." }); refresh(); }}
@@ -160,6 +203,7 @@ export function DailyChecksClient({
           />
         ) : undefined}
       />
+      <CheckTemplatesPanel canManage={caps.canManageTemplates} />
       {selectedId ? (
         <Stack gap="var(--space-2)">
           <Alert tone="info" role="status">Prilozi pregleda — otvori link (API URL).</Alert>

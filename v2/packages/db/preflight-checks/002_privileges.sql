@@ -55,7 +55,14 @@ DECLARE
     'public.guard_sync_receipt_update()',
     'public.guard_sync_conflict_update()',
     'public.guard_machine_work_log_overlap()',
-    'public.guard_machine_meter_reading_insert()'
+    'public.guard_machine_meter_reading_insert()',
+    -- F4 (Modul 5): šablonski pregled, zamrznuti snapshot troška, globalna zabrana dvostruke
+    -- dodjele mašine. Bez ovoga bi app rola mogla direktno pozvati helper i preskočiti red-triger.
+    'public.project_cost_snapshot_immutable()',
+    'public.check_templates_items_guard()',
+    'public.machine_daily_checks_checklist_guard()',
+    'public.project_assignment_machine_global_guard()',
+    'public.machine_fault_open_service_order()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN
@@ -274,6 +281,16 @@ BEGIN
   v_function := to_regprocedure('public.project_assignment_no_overlap()');
   IF v_function IS NOT NULL AND has_function_privilege(current_user, v_function, 'EXECUTE') THEN
     RAISE EXCEPTION 'PREFLIGHT: aplikacijska rola ne smije direktno izvršiti R3 overlap trigger helper.';
+  END IF;
+
+  /*
+   * F4 komponente stope: helper postoji SAMO na fallback-u bez `btree_gist`. Provjera ide po
+   * `to_regprocedure` jer bi bezuslovna provjera pala na serveru sa contrib-om, gdje helpera
+   * nema — a to je upravo razlika koju ovaj preflight treba da preživi u oba slučaja.
+   */
+  v_function := to_regprocedure('public.machine_cost_component_no_overlap()');
+  IF v_function IS NOT NULL AND has_function_privilege(current_user, v_function, 'EXECUTE') THEN
+    RAISE EXCEPTION 'PREFLIGHT: aplikacijska rola ne smije direktno izvršiti F4 overlap trigger helper.';
   END IF;
 
   SELECT string_agg(p.oid::regprocedure::TEXT, ', ' ORDER BY p.oid::regprocedure::TEXT)

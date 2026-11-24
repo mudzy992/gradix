@@ -55,8 +55,10 @@ describeDb("journey C machine-hour booking", () => {
     );
     await dbAdmin.query(
       `INSERT INTO public.machine_cost_rates
-         (id, company_id, machine_id, amount_cents, currency_code, valid_from, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, 'BAM', '2026-01-01', $5, $5)`,
+         (id, company_id, machine_id, amount_cents, currency_code, valid_from,
+          is_manual, reason, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, 'BAM', '2026-01-01', true,
+               'Testna scena: ravna stopa jer mašina nema komponenti.', $5, $5)`,
       [`mcr_jc_${RUN}`, CO, machineId, RATE_CENTS.toString(), owner.userId],
     );
   }, 60_000);
@@ -64,6 +66,7 @@ describeDb("journey C machine-hour booking", () => {
   afterAll(async () => {
     for (const company of [CO, OTHER]) {
       await dbAdmin.query("DELETE FROM public.project_cost_entries WHERE company_id = $1", [company]);
+      await dbAdmin.query("DELETE FROM public.machine_cost_rate_snapshots WHERE company_id = $1", [company]);
       await dbAdmin.query("DELETE FROM public.machine_cost_rates WHERE company_id = $1", [company]);
       await dbAdmin.query("DELETE FROM public.machine_work_logs WHERE company_id = $1", [company]);
       await dbAdmin.query("DELETE FROM public.machines WHERE company_id = $1", [company]);

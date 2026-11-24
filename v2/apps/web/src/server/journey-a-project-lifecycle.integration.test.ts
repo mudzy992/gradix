@@ -80,8 +80,10 @@ describeDb("journey A project lifecycle", () => {
     );
     await dbAdmin.query(
       `INSERT INTO public.machine_cost_rates
-         (id, company_id, machine_id, amount_cents, currency_code, valid_from, created_by, updated_by)
-       VALUES ($1,$2,$3,$4,'BAM','2026-01-01',$5,$5)`,
+         (id, company_id, machine_id, amount_cents, currency_code, valid_from,
+          is_manual, reason, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,'BAM','2026-01-01',true,
+               'Testna scena: ravna stopa jer mašina nema komponenti.',$5,$5)`,
       [`mcr_ja_${RUN}`, CO, machineId, RATE.toString(), ownerId],
     );
     await dbAdmin.query(

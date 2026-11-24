@@ -1,17 +1,23 @@
 kind	object	needed	current_before	rlS_exception_reason	rationale
+sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.
 table	approval_requests	SELECT;INSERT;UPDATE	-		R5.5 fault cost approval status reuse; FORCE RLS; no DELETE.
 table	attachments	SELECT;INSERT;UPDATE	-		F0.2 jedinstveni attachment-service za sve module; upload-state updates i meko brisanje (status), bez DELETE granta.
 table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
+table	check_templates	SELECT;INSERT;UPDATE	-		F4 dnevni pregled po šablonu (spec 05 §1.5.20); deaktivacija je UPDATE, istorija se ne briše; FORCE RLS.
 table	companies	SELECT	SELECT;INSERT;UPDATE;DELETE		Global tenant registry; runtime reads are limited by RLS to the active tenant or exact login/invitation lookup. Seed and migrations use DATABASE_ADMIN_URL.
 table	company_holidays	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Tenant praznici i prenesene radne subote; FORCE RLS po company_id, DELETE dozvoljen jer je šifarnik (bez historije).
 table	daily_rollups	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Dnevni agregati; worker ih preračunava.
 table	equipment_categories	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Read and create category API; no update/delete endpoint.
 table	fuel_entries	SELECT;INSERT;UPDATE	-		R5.2 fuel CRUD path; Money centi+valuta; FORCE RLS; no DELETE.
 table	fuel_entry_revisions	SELECT;INSERT	-		R5.2 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
+table	fuel_prices	SELECT;INSERT;UPDATE	-		F4 šifarnik cijena goriva po datumu (spec 05 §1.3.10); nova cijena je novi red, bez DELETE; FORCE RLS.
+table	fuel_tanks	SELECT;INSERT;UPDATE	-		F4 cisterna (opciono po firmi); `current_l` se mijenja točenjem i popisom, deaktivacija je UPDATE; FORCE RLS.
 table	haul_revisions	SELECT;INSERT	-		R5.3 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	hauls	SELECT;INSERT;UPDATE	-		R5.3 ture CRUD path; FORCE RLS; no DELETE.
 table	invitations	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Invite management and exact-token preview/claim; use/revoke are updates; no hard-delete path.
 table	login_attempts	-	-		Only SECURITY DEFINER rate-limit functions access this table; the app and sequence have no direct table rights.
+table	machine_cost_components	SELECT;INSERT;UPDATE	-		F4 komponente troška mašine (spec 05 §1.1); istorija je novi red sa `valid_to`, nikad prepisivanje niti DELETE; FORCE RLS.
+table	machine_cost_rate_snapshots	SELECT;INSERT	-		F4 zamrznuta stopa pri knjiženju (spec 05 §1.1.5); append-only dokaz obračuna; FORCE RLS.
 table	machine_cost_rates	SELECT;INSERT;UPDATE	-		R6.1 €/h stope mašina; FORCE RLS; no DELETE.
 table	machine_daily_check_revisions	SELECT;INSERT	-		R5.4 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	machine_daily_checks	SELECT;INSERT;UPDATE	-		R5.4 dnevni pregled; FORCE RLS; no DELETE.
@@ -26,10 +32,10 @@ table	notification_deliveries	SELECT;INSERT;UPDATE	-		F0.4 trag slanja po kanalu
 table	notification_preferences	SELECT;INSERT;UPDATE	-		F0.4 izbor kanala po korisniku; in_app uvijek true (CHECK).
 table	notification_templates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Šabloni: firma vidi svoj i platformski default (company_id NULL), piše samo svoj.
 table	notifications	SELECT;INSERT;UPDATE	-		F0.4 in-app inbox (obavezan kanal); brisanje po retenciji radi worker, bez DELETE granta.
+table	obligation_notify_roles	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		F2 kome ide podsjetnik po tipu (npr. MEDICAL → šef + ured + radnik); čista veza tip↔rola; FORCE RLS.
+table	obligation_requirements	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F2 pravila „svaki X mora imati Y“; deaktivacija je UPDATE, brisanje samo za pogrešno uneseno pravilo; FORCE RLS.
 table	obligation_types	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Type listing/create/update; no hard-delete endpoint.
 table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
-table	obligation_requirements	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F2 pravila „svaki X mora imati Y“; deaktivacija je UPDATE, brisanje samo za pogrešno uneseno pravilo; FORCE RLS.
-table	obligation_notify_roles	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		F2 kome ide podsjetnik po tipu (npr. MEDICAL → šef + ured + radnik); čista veza tip↔rola; FORCE RLS.
 table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Obligation create/renew/correct/delete and read.
 table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
 table	password_history	SELECT;INSERT;DELETE	SELECT;INSERT;DELETE		Istorija hash-eva (max 3 po korisniku). DELETE je nužan za trim; servis je jedini put pisanja i bez DELETE-a bi trim tražio SECURITY DEFINER funkciju — dodatnu izvršivu površinu.
@@ -37,6 +43,7 @@ table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset is
 table	platform_sessions	-	SELECT;INSERT;UPDATE		Odvojena platform rola; gradix_app ne smije ni čitati sesije operatora (nema ni GRANT, ni politiku).
 table	platform_support_sessions	SELECT	SELECT;INSERT;UPDATE		Firma vidi SAMO svoje aktivne support pristupe (zaglavlje UI-a); upis radi platform rola.
 table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
+table	ppe_templates	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F3 OZO set po radnom mjestu; šablon se briše kad radno mjesto nestane — ne nosi historiju (zaduženja je nose).
 table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
 table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
 table	project_cost_entries	SELECT;INSERT	-		R6.1 knjiženje troška na projekat; append-only; FORCE RLS; no UPDATE/DELETE.
@@ -44,6 +51,7 @@ table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/
 table	report_jobs	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Red izvještaja; worker ih preuzima i dovršava.
 table	route_segments	SELECT;INSERT;UPDATE	-		R5.3 stacionaža / dionice; nullable FK from hauls; FORCE RLS; no DELETE.
 table	schema_migrations	-	SELECT;INSERT;UPDATE;DELETE	Only DATABASE_ADMIN_URL/db-apply.sh may use the migration ledger; runtime readiness never reads it.	Migration bookkeeping is administrator-only and has no app query path.
+table	service_orders	SELECT;INSERT;UPDATE	-		F4 servisni nalog iz odobrenog kvara (spec 05 §1.6.25); Modul 8 ga puni; bez DELETE; FORCE RLS.
 table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
 table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.
@@ -60,10 +68,8 @@ table	work_entries	SELECT;INSERT;UPDATE	-		Versioned WORK/BREAK segments; overla
 table	work_week_approvals	SELECT;INSERT;UPDATE	-		R4b week approve/reject/lock; FORCE RLS; no hard-delete path.
 table	workday_revisions	SELECT;INSERT	-		R4b office revisions after confirm; append-only; FORCE RLS; no UPDATE/DELETE.
 table	workdays	SELECT;INSERT;UPDATE	-		Canonical daily header; upsert/update lifecycle with immutable worker/date identity and no hard-delete path.
-table	worker_rates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 istorija satnica: nova stopa = novi red, stara dobija valid_to; iznos se ne prepisuje (trigger). Samo OWNER/ADMIN/ACCOUNTANT vide (workers.rates.*).
-table	worker_leave_entitlements	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 pravo na godišnji po godini; konzumacija se računa iz workdays.day_kind, ne upisuje se ovdje.
-table	worker_issuances	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 zaduženja OZO/alata; povrat je UPDATE (returned_at), zaduženje se ne briše.
-table	ppe_templates	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F3 OZO set po radnom mjestu; šablon se briše kad radno mjesto nestane — ne nosi historiju (zaduženja je nose).
 table	worker_history	SELECT;INSERT	SELECT;INSERT		F3 vremenska linija kartice; append-only i za vlasnika — ispravka se vidi kao nov red.
+table	worker_issuances	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 zaduženja OZO/alata; povrat je UPDATE (returned_at), zaduženje se ne briše.
+table	worker_leave_entitlements	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 pravo na godišnji po godini; konzumacija se računa iz workdays.day_kind, ne upisuje se ovdje.
+table	worker_rates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 istorija satnica: nova stopa = novi red, stara dobija valid_to; iznos se ne prepisuje (trigger). Samo OWNER/ADMIN/ACCOUNTANT vide (workers.rates.*).
 table	workers	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Worker CRUD uses soft deactivation; no hard-delete path.
-sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit function owns/invokes the sequence; the app needs no sequence rights.

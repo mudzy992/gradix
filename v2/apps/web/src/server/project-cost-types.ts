@@ -11,7 +11,11 @@ export type ProjectCostEntryRow = {
   project_id: string;
   project_code: string;
   project_name: string;
-  source_type: "MACHINE_WORK_LOG";
+  /**
+   * F4: izvor troška je širi od sati mašine. Zatvoren spisak isti kao CHECK u bazi — jedan
+   * događaj daje jedan trošak (unikatnost `(company_id, source_type, source_id)`).
+   */
+  source_type: "MACHINE_WORK_LOG" | "HAUL" | "FUEL_ENTRY" | "SERVICE_ORDER" | "MANUAL";
   source_id: string;
   machine_id: string;
   machine_code: string;

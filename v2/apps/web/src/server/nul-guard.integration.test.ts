@@ -83,6 +83,26 @@ import { POST as machineFaultsPost } from "@/app/api/machine-faults/route";
 import { POST as machineFaultReviseRoute } from "@/app/api/machine-faults/[id]/revise/route";
 import { POST as machineFaultApproveRoute } from "@/app/api/machine-faults/[id]/approve/route";
 import { POST as machineFaultRejectRoute } from "@/app/api/machine-faults/[id]/reject/route";
+import {
+  GET as f4ComponentsGet, POST as f4ComponentsPost, PATCH as f4ComponentsPatch,
+} from "@/app/api/machines/[id]/cost-components/route";
+import { GET as f4CostRateGet, POST as f4CostRatePost } from "@/app/api/machines/[id]/cost-rate/route";
+import { GET as f4UtilizationGet } from "@/app/api/machines/[id]/utilization/route";
+import { GET as f4AvailabilityGet } from "@/app/api/machines/[id]/availability/route";
+import { POST as f4RentalPost } from "@/app/api/machines/[id]/rental/route";
+import { GET as f4FuelPricesGet, POST as f4FuelPricesPost } from "@/app/api/fuel-prices/route";
+import { GET as f4FuelTanksGet, POST as f4FuelTanksPost } from "@/app/api/fuel-tanks/route";
+import { PATCH as f4TankCountPatch } from "@/app/api/fuel-tanks/[id]/count/route";
+import { GET as f4DeviationsGet } from "@/app/api/fuel-entries/deviations/route";
+import { PATCH as f4ExplainPatch } from "@/app/api/fuel-entries/[id]/explain/route";
+import { GET as f4CalendarGet } from "@/app/api/calendar/availability/route";
+import { POST as f4PhotoPost } from "@/app/api/machine-daily-checks/[id]/photo/route";
+import {
+  GET as f4SegmentsGet, POST as f4SegmentsPost, PATCH as f4SegmentsPatch,
+} from "@/app/api/route-segments/route";
+import {
+  GET as f4TemplatesGet, POST as f4TemplatesPost, PATCH as f4TemplatesPatch,
+} from "@/app/api/check-templates/route";
 import { POST as partnersPost } from "@/app/api/partners/route";
 import { PATCH as partnersPatch } from "@/app/api/partners/[id]/route";
 import { GET as tendersGet, POST as tendersPost } from "@/app/api/tenders/route";
@@ -370,6 +390,26 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/workers/{id}/history": { GET: f3HistoryGet },
   "/api/workers/{id}/offboard": { POST: f3OffboardPost },
   "/api/workers/bulk": { POST: f3WorkersBulkPost },
+
+  /* ---- F4 — mehanizacija: trošak, gorivo, dionice, šabloni pregleda ---- */
+  // Svaka prima tekst na granici (razlozi, napomene, oznake, mjeseci) — NUL mora stati ovdje,
+  // a ne u Postgresu (22021).
+  "/api/machines/{id}/cost-components": {
+    GET: f4ComponentsGet, POST: f4ComponentsPost, PATCH: f4ComponentsPatch,
+  },
+  "/api/machines/{id}/cost-rate": { GET: f4CostRateGet, POST: f4CostRatePost },
+  "/api/machines/{id}/utilization": { GET: f4UtilizationGet },
+  "/api/machines/{id}/availability": { GET: f4AvailabilityGet },
+  "/api/machines/{id}/rental": { POST: f4RentalPost },
+  "/api/fuel-prices": { GET: f4FuelPricesGet, POST: f4FuelPricesPost },
+  "/api/fuel-tanks": { GET: f4FuelTanksGet, POST: f4FuelTanksPost },
+  "/api/fuel-tanks/{id}/count": { PATCH: f4TankCountPatch },
+  "/api/fuel-entries/deviations": { GET: f4DeviationsGet },
+  "/api/fuel-entries/{id}/explain": { PATCH: f4ExplainPatch },
+  "/api/calendar/availability": { GET: f4CalendarGet },
+  "/api/machine-daily-checks/{id}/photo": { POST: f4PhotoPost },
+  "/api/route-segments": { GET: f4SegmentsGet, POST: f4SegmentsPost, PATCH: f4SegmentsPatch },
+  "/api/check-templates": { GET: f4TemplatesGet, POST: f4TemplatesPost, PATCH: f4TemplatesPatch },
 };
 
 

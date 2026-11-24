@@ -6,6 +6,7 @@ import { isCurrency } from "@gradix/domain";
 import { can } from "./permissions";
 import { resolveViewerWorkerId } from "./workday-review";
 import { initialFaultStatus, insertFaultApprovalRequest } from "./machine-fault-approval";
+import { faultApprovalThreshold } from "./machine-availability-service";
 import {
   companyCurrency,
   isFaultPriority,
@@ -164,7 +165,8 @@ export async function createMachineFault(
         return { outcome: "VALIDATION_FAILED", code: "AMOUNT", message: "Iznos nije validan." };
       }
     }
-    const status = initialFaultStatus(costCents);
+    // F4: prag je podatak firme, ne konstanta (spec 05 §1.6.24).
+    const status = initialFaultStatus(costCents, await faultApprovalThreshold(client, actor.companyId));
     const id = `mf_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
     await client.query(
       `INSERT INTO public.machine_faults

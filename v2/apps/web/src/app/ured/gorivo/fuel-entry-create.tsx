@@ -12,6 +12,7 @@ type Outcome = { outcome: string; message?: string; code?: string };
 export function FuelEntryCreate({
   machines,
   workers,
+  tanks = [],
   showPrice,
   busy,
   onBusy,
@@ -20,6 +21,8 @@ export function FuelEntryCreate({
 }: {
   machines: MachineOption[];
   workers: WorkerOption[];
+  /** F4: cisterne, samo kad je cisterna uključena PO FIRMI. */
+  tanks?: { id: string; name: string; current_l: number }[];
   showPrice: boolean;
   busy: boolean;
   onBusy: (value: boolean) => void;
@@ -35,14 +38,20 @@ export function FuelEntryCreate({
   const [totalAmount, setTotalAmount] = useState("");
   const [meterReading, setMeterReading] = useState("");
   const [note, setNote] = useState("");
+  const [tankId, setTankId] = useState("");
 
   const submit = async () => {
     if (!machineId || !liters.trim()) {
       onError("Mašina i litre su obavezni.");
       return;
     }
-    if (showPrice && !totalAmount.trim()) {
-      onError("Ukupan iznos je obavezan.");
+    /*
+     * F4: iznos VIŠE NIJE obavezan. Kad ga nema, servis predlaže cijenu iz šifarnika po datumu;
+     * ako ni šifarnik nema cijenu, iznos ostaje `NULL` (D1) — nikad nula. Zato se ovdje ne
+     * traži iznos, nego se samo provjerava oblik kad je upisan.
+     */
+    if (showPrice && totalAmount.trim() && !/^\d+(\.\d{1,2})?$/.test(totalAmount.trim())) {
+      onError("Iznos je decimalni broj (npr. 120.50) ili prazan.");
       return;
     }
     onBusy(true);
@@ -51,9 +60,10 @@ export function FuelEntryCreate({
       driverWorkerId: workers.length > 0 ? workerId : null,
       filledAt: filledAt.includes("T") ? `${filledAt}:00+01:00` : `${filledAt}T12:00:00+01:00`,
       liters: Number(liters),
-      ...(showPrice ? { totalAmount: totalAmount.trim() } : {}),
+      ...(showPrice && totalAmount.trim() ? { totalAmount: totalAmount.trim() } : {}),
       meterReading: meterReading.trim() ? Number(meterReading) : null,
       note: note.trim() || null,
+      tankId: tankId || null,
     };
     const res = await apiCall<Outcome>("/api/fuel-entries", jsonBody(body));
     onBusy(false);
@@ -101,8 +111,24 @@ export function FuelEntryCreate({
           ) : null}
           <Input label="Datum i vrijeme" type="datetime-local" value={filledAt} onChange={(e) => setFilledAt(e.target.value)} />
           <Input label="Litara" inputMode="decimal" value={liters} onChange={(e) => setLiters(e.target.value)} />
+          {tanks.length > 0 ? (
+            <Select label="Cisterna" value={tankId} onChange={(event) => setTankId(event.target.value)}>
+              <option value="">Pumpa (bez cisterne)</option>
+              {tanks.map((tank) => (
+                <option key={tank.id} value={tank.id}>
+                  {tank.name} — {tank.current_l.toFixed(0)} l
+                </option>
+              ))}
+            </Select>
+          ) : null}
           {showPrice ? (
-            <Input label="Ukupan iznos (BAM)" inputMode="decimal" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} />
+            <Input
+              label="Ukupan iznos (opciono)"
+              inputMode="decimal"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              hint="Ako je prazno, cijena se predlaže iz šifarnika po datumu. Nepoznat iznos ostaje prazan, ne nula."
+            />
           ) : null}
           <Input label="Brojilo (opcionalno)" inputMode="decimal" value={meterReading} onChange={(e) => setMeterReading(e.target.value)} />
           <Textarea label="Napomena" value={note} onChange={(e) => setNote(e.target.value)} />

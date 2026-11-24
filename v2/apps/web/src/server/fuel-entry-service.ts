@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
-import { isCurrency } from "@gradix/domain";
+import { isCurrency, type Currency } from "@gradix/domain";
 import { can } from "./permissions";
 import { resolveViewerWorkerId } from "./workday-review";
 import { canViewFuelPrice } from "./fuel-entry-price";
@@ -14,6 +14,7 @@ import {
   mapFuelRow,
   resolveFuelActorWorkerId,
 } from "./fuel-entry-db-helpers";
+import { assessFuelDeviation, suggestedFuelPrice } from "./fuel-price-service";
 import type {
   CreateInput,
   FuelEntryActor,
@@ -75,7 +76,8 @@ export async function listFuelEntries(
               fe.filled_at::text, fe.liters::text,
               fe.amount_cents::text, fe.currency_code,
               fe.unit_price_cents::text, fe.meter_reading::text,
-              fe.note, fe.version, fe.created_at::text
+              fe.note, fe.version, fe.created_at::text,
+              fe.price_source, fe.tank_id, fe.deviation_pct::text, fe.deviation_status
          FROM public.fuel_entries fe
          JOIN public.machines m ON m.company_id = fe.company_id AND m.id = fe.machine_id
          JOIN public.workers w ON w.company_id = fe.company_id AND w.id = fe.driver_worker_id
@@ -148,20 +150,104 @@ export async function createFuelEntry(
         message: isOffice ? "Izaberi vozača za unos." : "Nalog nije povezan s radnikom.",
       };
     }
+    /*
+     * F4 §1.3.10: cijena se PREDLAŽE iz šifarnika po datumu točenja. Predlog se koristi samo kad
+     * korisnik nije poslao iznos — ako je poslao, njegov iznos je istina i zapis nosi
+     * `price_source = MANUAL`. Predlog nikad ne prepisuje uneseni iznos: to bi bio sistem koji
+     * „zna bolje" od računa.
+     */
+    let finalCents = priced.cents;
+    let finalCurrency: Currency = priced.currency;
+    let finalUnitPrice = unitPriceCents;
+    let priceSource: "PRICE_LIST" | "MANUAL" = "MANUAL";
+    if (finalCents === null) {
+      const suggestion = await suggestedFuelPrice(
+        client,
+        actor.companyId,
+        "DIESEL",
+        input.filledAt.slice(0, 10),
+      );
+      if (suggestion) {
+        const suggestionCents = BigInt(suggestion.price_cents);
+        const suggestionCurrency = (isCurrency(suggestion.currency_code) ? suggestion.currency_code : "BAM") as Currency;
+        // Ukupan iznos = litre × cijena, zaokruženo preko Money (isti put kao ručni unos).
+        finalCents = BigInt(Math.round(input.liters * 100)) * suggestionCents / 100n;
+        finalCurrency = suggestionCurrency;
+        finalUnitPrice = suggestionCents;
+        priceSource = "PRICE_LIST";
+      }
+    }
+
+    /*
+     * F4 §1.3.14: cisterna i pumpa se NIKAD ne vode paralelno. Cisterna postoji samo ako je
+     * uključena PO FIRMI; bez nje točenje je na pumpi i stanja nema. Servis odbija `tankId` kad
+     * je cisterna isključena, a baza odbija stanje veće od kapaciteta.
+     */
+    let tankId: string | null = null;
+    if (input.tankId) {
+      const tanksEnabled = await client.query<{ fuel_tank_enabled: boolean }>(
+        "SELECT fuel_tank_enabled FROM public.companies WHERE id = $1",
+        [actor.companyId],
+      );
+      if (!tanksEnabled.rows[0]?.fuel_tank_enabled) {
+        return {
+          outcome: "VALIDATION_FAILED",
+          code: "TANK_DISABLED",
+          message: "Cisterna nije uključena u postavkama firme — točenje ide na pumpu.",
+        };
+      }
+      const tank = await client.query<{ capacity_l: string; current_l: string }>(
+        "SELECT capacity_l::text, current_l::text FROM public.fuel_tanks WHERE company_id = $1 AND id = $2 AND is_active FOR UPDATE",
+        [actor.companyId, input.tankId],
+      );
+      if (!tank.rows[0]) {
+        return { outcome: "VALIDATION_FAILED", code: "TANK", message: "Cisterna nije pronađena." };
+      }
+      const remaining = Number(tank.rows[0].current_l) - input.liters;
+      if (remaining < 0) {
+        return {
+          outcome: "VALIDATION_FAILED",
+          code: "TANK_LEVEL",
+          message: `U cisterni nema dovoljno goriva (stanje ${Number(tank.rows[0].current_l)} l). Popiši stanje ili unesi točenje na pumpi.`,
+        };
+      }
+      tankId = input.tankId;
+    }
+
+    // F4 §1.3.13: odstupanje potrošnje. Upozorenje, NIKAD blokada — unos je uvijek dopušten.
+    const deviation = await assessFuelDeviation(client, {
+      companyId: actor.companyId,
+      machineId: input.machineId,
+      filledAt: input.filledAt,
+      liters: input.liters,
+      meterReading: input.meterReading ?? null,
+    });
+
     const id = `fuel_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
     try {
       await client.query(
         `INSERT INTO public.fuel_entries
            (id, company_id, machine_id, driver_worker_id, project_id, filled_at,
             liters, amount_cents, currency_code, unit_price_cents, meter_reading, note,
-            created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7, $8, $9, $10, $11, $12, $13, $13)`,
+            created_by, updated_by, price_source, tank_id, deviation_pct, deviation_status)
+         VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17)`,
         [
           id, actor.companyId, input.machineId, driverId, input.projectId ?? null, input.filledAt,
-          input.liters, priced.cents?.toString() ?? null, priced.currency, unitPriceCents?.toString() ?? null,
+          input.liters, finalCents?.toString() ?? null, finalCurrency,
+          finalUnitPrice?.toString() ?? null,
           input.meterReading ?? null, input.note ?? null, actor.userId,
+          priceSource, tankId,
+          deviation.deviationPct === null ? null : deviation.deviationPct.toFixed(2),
+          deviation.status,
         ],
       );
+      if (tankId) {
+        await client.query(
+          `UPDATE public.fuel_tanks SET current_l = current_l - $3, updated_at = clock_timestamp()
+            WHERE company_id = $1 AND id = $2`,
+          [actor.companyId, tankId, input.liters],
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (message.includes("METER_READING_REGRESSION")) {

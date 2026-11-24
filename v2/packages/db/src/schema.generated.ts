@@ -95,6 +95,18 @@ export interface AuditEvents {
   retention_class: Generated<string>;
 }
 
+export interface CheckTemplates {
+  category_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  is_active: Generated<boolean>;
+  items: Json;
+  name: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Companies {
   address: string | null;
   approval_threshold_cents: Int8 | null;
@@ -108,10 +120,13 @@ export interface Companies {
   default_currency: string | null;
   default_locale: Locale | null;
   email: string | null;
+  fault_approval_threshold_cents: Generated<Int8>;
   /**
    * Poslije koliko sati otvoren segment postaje „zaboravljen dan" (spec 03 §1.2). Nigdje ne zatvara zapis automatski — samo pravi pitanje na telefonu i red „za provjeru" u uredu.
    */
   forgotten_day_hours: Generated<number>;
+  fuel_deviation_threshold_pct: Generated<number>;
+  fuel_tank_enabled: Generated<boolean>;
   holiday_paid: Generated<boolean>;
   iban: string | null;
   id: string;
@@ -126,6 +141,7 @@ export interface Companies {
   night_to: string | null;
   overtime_daily_threshold: Generated<Numeric>;
   phone: string | null;
+  planned_hours_per_month: Generated<number>;
   postal_code: string | null;
   /**
    * Zaokruživanje PO SEGMENTU, ne po danu (spec 03 §1.4). 0 = bez zaokruživanja (default).
@@ -188,6 +204,15 @@ export interface FuelEntries {
   created_at: Generated<Timestamp>;
   created_by: string;
   currency_code: string;
+  deviation_note: string | null;
+  deviation_pct: Numeric | null;
+  deviation_reason: string | null;
+  deviation_reviewed_at: Timestamp | null;
+  deviation_reviewed_by: string | null;
+  /**
+   * Odstupanje potrošnje (spec 05 §1.3.13) se ne zatvara tiho: OPEN → EXPLAINED (razlog + napomena ≥ 10 znakova) ili DISMISSED. Razlog je šifra, ne slobodan tekst.
+   */
+  deviation_status: string | null;
   driver_worker_id: string;
   filled_at: Timestamp;
   id: string;
@@ -195,7 +220,9 @@ export interface FuelEntries {
   machine_id: string;
   meter_reading: Numeric | null;
   note: string | null;
+  price_source: Generated<string>;
   project_id: string | null;
+  tank_id: string | null;
   unit_price_cents: Int8 | null;
   updated_at: Generated<Timestamp>;
   updated_by: string;
@@ -211,6 +238,31 @@ export interface FuelEntryRevisions {
   id: string;
   payload: Json;
   reason: string;
+}
+
+export interface FuelPrices {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  fuel_kind: string;
+  id: string;
+  note: string | null;
+  price_cents: Int8;
+  supplier_partner_id: string | null;
+  valid_from: string;
+}
+
+export interface FuelTanks {
+  capacity_l: Numeric;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  current_l: Generated<Numeric>;
+  id: string;
+  is_active: Generated<boolean>;
+  last_count_at: Timestamp | null;
+  name: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface HaulRevisions {
@@ -268,6 +320,21 @@ export interface LoginAttempts {
   ip_hash: string;
 }
 
+export interface MachineCostComponents {
+  amount_cents: Int8;
+  basis: string;
+  company_id: string;
+  component: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  machine_id: string;
+  note: string | null;
+  valid_from: string;
+  valid_to: string | null;
+}
+
 export interface MachineCostRates {
   amount_cents: Int8;
   company_id: string;
@@ -275,11 +342,29 @@ export interface MachineCostRates {
   created_by: string;
   currency_code: string;
   id: string;
+  /**
+   * Ručna stopa nadjačava izračunatu (spec 05 §1.1.4). Promjena ide u audit sa razlogom; ekran nudi „vrati na izračunato" (tada se red zatvara, ne briše).
+   */
+  is_manual: Generated<boolean>;
   machine_id: string;
+  reason: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string;
   valid_from: string;
   valid_to: string | null;
+}
+
+export interface MachineCostRateSnapshots {
+  company_id: string;
+  components: Json;
+  computed_at: Generated<Timestamp>;
+  created_by: string | null;
+  currency_code: string;
+  id: string;
+  machine_id: string;
+  planned_hours: number;
+  rate_cents: Int8;
+  source: string;
 }
 
 export interface MachineDailyCheckRevisions {
@@ -302,8 +387,15 @@ export interface MachineDailyChecks {
   id: string;
   machine_id: string;
   note: string | null;
+  photo_confirmed_at: Timestamp | null;
+  photo_confirmed_by: string | null;
+  /**
+   * Kritična FAIL stavka šablona (spec 05 §1.5.22) traži fotografiju prije potvrde pregleda. Rad NIJE automatski blokiran — odluka je čovjeka, ali dokaz mora postojati.
+   */
+  photo_required: Generated<boolean>;
   project_id: string | null;
   result: string;
+  template_id: string | null;
   updated_at: Generated<Timestamp>;
   updated_by: string;
   version: Generated<number>;
@@ -326,6 +418,10 @@ export interface MachineFaults {
   created_at: Generated<Timestamp>;
   created_by: string;
   currency_code: string | null;
+  /**
+   * Kvar otvoren iz kritične FAIL stavke dnevnog pregleda (spec 05 §1.5.22). Veza je obavezna u tom toku: bez nje se ne zna koji pregled je kvar otkrio, a odluka o radu ostaje bez dokaza.
+   */
+  daily_check_id: string | null;
   description: string | null;
   downtime_minutes: number | null;
   estimated_cost_cents: Int8 | null;
@@ -371,6 +467,11 @@ export interface Machines {
   name: string;
   ownership: Generated<string>;
   plate: string | null;
+  rental_basis: string | null;
+  rental_from: string | null;
+  rental_partner_id: string | null;
+  rental_rate_cents: Int8 | null;
+  rental_to: string | null;
   serial_no: string | null;
   updated_at: Generated<Timestamp>;
   year: number | null;
@@ -647,6 +748,7 @@ export interface ProjectAssignments {
   company_id: string;
   created_at: Generated<Timestamp>;
   created_by: string | null;
+  double_booking_override_id: string | null;
   from_date: string;
   id: string;
   machine_id: string | null;
@@ -664,6 +766,7 @@ export interface ProjectCostEntries {
   booked_at: Generated<Timestamp>;
   booked_by: string;
   company_id: string;
+  component_breakdown: Json | null;
   currency_code: string;
   hours: Numeric;
   id: string;
@@ -671,6 +774,8 @@ export interface ProjectCostEntries {
   note: string | null;
   project_id: string;
   rate_cents: Int8;
+  rate_snapshot: Json | null;
+  snapshot_id: string | null;
   source_id: string;
   source_type: string;
 }
@@ -712,13 +817,32 @@ export interface RouteSegments {
   code: string;
   company_id: string;
   created_at: Generated<Timestamp>;
+  from_km: number | null;
+  from_m: number | null;
   from_station: string;
   id: string;
   name: string;
   note: string | null;
   project_id: string | null;
+  to_km: number | null;
+  to_m: number | null;
   to_station: string;
   updated_at: Generated<Timestamp>;
+}
+
+export interface ServiceOrders {
+  amount_cents: Int8 | null;
+  closed_at: Timestamp | null;
+  company_id: string;
+  created_by: string | null;
+  currency_code: string | null;
+  description: string;
+  fault_id: string;
+  id: string;
+  machine_id: string;
+  opened_at: Generated<Timestamp>;
+  partner_id: string | null;
+  status: Generated<string>;
 }
 
 export interface Sessions {
@@ -1079,16 +1203,21 @@ export interface DB {
   approval_requests: ApprovalRequests;
   attachments: Attachments;
   audit_events: AuditEvents;
+  check_templates: CheckTemplates;
   companies: Companies;
   company_holidays: CompanyHolidays;
   daily_rollups: DailyRollups;
   equipment_categories: EquipmentCategories;
   fuel_entries: FuelEntries;
   fuel_entry_revisions: FuelEntryRevisions;
+  fuel_prices: FuelPrices;
+  fuel_tanks: FuelTanks;
   haul_revisions: HaulRevisions;
   hauls: Hauls;
   invitations: Invitations;
   login_attempts: LoginAttempts;
+  machine_cost_components: MachineCostComponents;
+  machine_cost_rate_snapshots: MachineCostRateSnapshots;
   machine_cost_rates: MachineCostRates;
   machine_daily_check_revisions: MachineDailyCheckRevisions;
   machine_daily_checks: MachineDailyChecks;
@@ -1121,6 +1250,7 @@ export interface DB {
   projects: Projects;
   report_jobs: ReportJobs;
   route_segments: RouteSegments;
+  service_orders: ServiceOrders;
   sessions: Sessions;
   sync_change_log: SyncChangeLog;
   sync_conflicts: SyncConflicts;

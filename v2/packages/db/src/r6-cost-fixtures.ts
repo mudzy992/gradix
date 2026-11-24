@@ -73,8 +73,10 @@ export async function seedTenantCost(admin: Pool, fixture: typeof A | typeof B):
     );
     await client.query(
       `INSERT INTO public.machine_cost_rates
-         (id, company_id, machine_id, amount_cents, currency_code, valid_from, created_by, updated_by)
-       VALUES ($1,$2,$3,10000,'BAM','2026-01-01'::date,$4,$4)`,
+         (id, company_id, machine_id, amount_cents, currency_code, valid_from,
+          is_manual, reason, created_by, updated_by)
+       VALUES ($1,$2,$3,10000,'BAM','2026-01-01'::date,true,
+               'R6.1 testna scena: ravna stopa bez komponenti.',$4,$4)`,
       [fixture.rate, fixture.company, fixture.machine, fixture.user],
     );
   });

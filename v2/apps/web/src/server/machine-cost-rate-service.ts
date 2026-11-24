@@ -127,13 +127,26 @@ export async function upsertMachineCostRate(
       [actor.companyId, input.machineId, input.validFrom, actor.userId],
     );
     const id = randomUUID();
+    /*
+     * F4: `machine_cost_rates` je od sada RUČNA stopa (`is_manual = true`) i baza traži razlog
+     * od ≥10 znakova. R6.1 obrazac nije slao razlog jer ga nije bilo gdje upisati; ovdje se
+     * upisuje eksplicitno, a ne podrazumijevano — inače bi CHECK tiho oborio unos na svakoj
+     * bazi koja ima F4, a poruka bi bila „check constraint violated" bez konteksta.
+     */
+    const reason = input.reason?.trim() ?? "";
+    if (reason.length > 0 && reason.length < 10) {
+      return { outcome: "VALIDATION_FAILED", code: "REASON", message: "Razlog ≥10 znakova." };
+    }
     await client.query(
       `INSERT INTO public.machine_cost_rates
-         (id, company_id, machine_id, amount_cents, currency_code, valid_from, valid_to, created_by, updated_by)
-       VALUES ($1,$2,$3,$4,$5,$6::date,$7::date,$8,$8)`,
+         (id, company_id, machine_id, amount_cents, currency_code, valid_from, valid_to,
+          is_manual, reason, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$5,$6::date,$7::date,true,$8,$9,$9)`,
       [
         id, actor.companyId, input.machineId, parsed.cents.toString(), currency,
-        input.validFrom, input.validTo ?? null, actor.userId,
+        input.validFrom, input.validTo ?? null,
+        reason.length >= 10 ? reason : `Ručna stopa unesena kroz ekran stope (${input.amount} ${currency}/h).`,
+        actor.userId,
       ],
     );
     return { outcome: "OK", id };

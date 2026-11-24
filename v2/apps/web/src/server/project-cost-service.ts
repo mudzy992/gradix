@@ -1,6 +1,6 @@
 /** R6.1: lista knjiženja i book period/workLogIds (idempotentno). */
 import { randomUUID } from "node:crypto";
-import type { Pool, PoolClient } from "pg";
+import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import {
   computeCostAmount,
@@ -10,6 +10,8 @@ import {
   type Currency,
 } from "@gradix/domain";
 import { can } from "./permissions";
+import { snapshotCostRate } from "./machine-cost-component-service";
+import { writeAudit } from "./audit";
 import type {
   BookInput,
   BookOutcome,
@@ -27,7 +29,7 @@ function mapEntry(row: DbEntryRow): ProjectCostEntryRow {
     project_id: row.project_id,
     project_code: row.project_code,
     project_name: row.project_name,
-    source_type: "MACHINE_WORK_LOG",
+    source_type: row.source_type as ProjectCostEntryRow["source_type"],
     source_id: row.source_id,
     machine_id: row.machine_id,
     machine_code: row.machine_code,
@@ -82,25 +84,6 @@ export async function listProjectCostEntries(
     );
     return result.rows.map(mapEntry);
   });
-}
-
-async function findRate(
-  client: PoolClient,
-  companyId: string,
-  machineId: string,
-  onDate: string,
-): Promise<{ amount_cents: string; currency_code: string } | null> {
-  const result = await client.query<{ amount_cents: string; currency_code: string }>(
-    `SELECT amount_cents::text, currency_code
-       FROM public.machine_cost_rates
-      WHERE company_id = $1 AND machine_id = $2
-        AND valid_from <= $3::date
-        AND (valid_to IS NULL OR valid_to >= $3::date)
-      ORDER BY valid_from DESC
-      LIMIT 1`,
-    [companyId, machineId, onDate],
-  );
-  return result.rows[0] ?? null;
 }
 
 export async function bookProjectCosts(
@@ -160,29 +143,64 @@ export async function bookProjectCosts(
     for (const log of logs.rows) {
       if (!log.project_id) continue;
       const onDate = log.started_at.slice(0, 10);
-      const rate = await findRate(client, actor.companyId, log.machine_id, onDate);
-      if (!rate) {
+      /*
+       * F4: stopa se ZAMRZAVA pri knjiženju (spec 05 §1.1.5). `snapshotCostRate` vraća `null`
+       * kad mašina nema ni komponenti ni ručnu stopu — tada trošak nije moguć i to je isti
+       * `NO_RATE` ishod kao u R6.1 (bolje preskočiti nego knjižiti nulu).
+       *
+       * Snapshot ide u `rate_snapshot` + `component_breakdown` + `snapshot_id`: baza brani
+       * kasniju izmjenu (`project_cost_snapshot_immutable`), pa stari trošak ostaje objašnjiv
+       * i poslije promjene komponente.
+       */
+      const snapshot = await snapshotCostRate(client, {
+        companyId: actor.companyId,
+        machineId: log.machine_id,
+        onDate,
+        createdBy: actor.userId,
+      });
+      if (!snapshot) {
         skippedNoRate += 1;
         continue;
       }
-      const currency = (isCurrency(rate.currency_code) ? rate.currency_code : "BAM") as Currency;
+      const currency: Currency = snapshot.currency;
       const hours = computeHoursFromInterval(new Date(log.started_at), new Date(log.ended_at));
-      const amount = computeCostAmount(hours, BigInt(rate.amount_cents), currency);
+      const amount = computeCostAmount(hours, snapshot.rateCents, currency);
       const inserted = await client.query<{ id: string }>(
         `INSERT INTO public.project_cost_entries
            (id, company_id, project_id, source_type, source_id, machine_id,
-            hours, rate_cents, amount_cents, currency_code, booked_by, note)
-         VALUES ($1,$2,$3,'MACHINE_WORK_LOG',$4,$5,$6,$7,$8,$9,$10,$11)
+            hours, rate_cents, amount_cents, currency_code, booked_by, note,
+            rate_snapshot, component_breakdown, snapshot_id)
+         VALUES ($1,$2,$3,'MACHINE_WORK_LOG',$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14)
          ON CONFLICT (company_id, source_type, source_id) DO NOTHING
          RETURNING id`,
         [
           randomUUID(), actor.companyId, log.project_id, log.id, log.machine_id,
-          hours.toFixed(3), rate.amount_cents, amount.cents.toString(), currency,
+          hours.toFixed(3), snapshot.rateCents.toString(), amount.cents.toString(), currency,
           actor.userId, input.note ?? null,
+          JSON.stringify({
+            snapshot_id: snapshot.snapshotId,
+            rate_cents: snapshot.rateCents.toString(),
+            currency_code: currency,
+            on_date: onDate,
+            components: snapshot.components,
+          }),
+          JSON.stringify(snapshot.components),
+          snapshot.snapshotId,
         ],
       );
-      if (inserted.rows[0]) booked += 1;
-      else skippedExisting += 1;
+      if (inserted.rows[0]) {
+        booked += 1;
+        await writeAudit(client, {
+          companyId: actor.companyId,
+          actorId: actor.userId,
+          actorEmail: null,
+          action: "machine.cost_rate_snapshotted",
+          entityType: "machine_cost_rate",
+          entityId: snapshot.snapshotId,
+          metadata: { machineId: log.machine_id, sourceId: log.id, onDate },
+          retentionClass: "FINANCIAL",
+        });
+      } else skippedExisting += 1;
     }
     if (booked === 0 && skippedNoRate > 0 && skippedExisting === 0) {
       return {

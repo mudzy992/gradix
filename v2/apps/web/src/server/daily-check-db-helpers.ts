@@ -18,6 +18,11 @@ export type DbDailyCheckRow = {
   note: string | null;
   version: number;
   created_at: string;
+  /** F4 kolone; stariji upiti ih ne selektuju i tada su `undefined`. */
+  template_id?: string | null;
+  photo_required?: boolean;
+  photo_confirmed_at?: string | null;
+  fault_id?: string | null;
 };
 
 export function mapDailyCheckRow(row: DbDailyCheckRow): DailyCheckRow {
@@ -40,6 +45,10 @@ export function mapDailyCheckRow(row: DbDailyCheckRow): DailyCheckRow {
     note: row.note,
     version: row.version,
     created_at: row.created_at,
+    template_id: row.template_id ?? null,
+    photo_required: Boolean(row.photo_required),
+    photo_confirmed_at: row.photo_confirmed_at ?? null,
+    fault_id: row.fault_id ?? null,
   };
 }
 

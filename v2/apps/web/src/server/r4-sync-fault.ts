@@ -9,6 +9,7 @@ import {
 import { encodeSyncCursor } from "./sync-cursor";
 import { companyCurrency } from "./machine-fault-db-helpers";
 import { initialFaultStatus, insertFaultApprovalRequest } from "./machine-fault-approval";
+import { faultApprovalThreshold } from "./machine-availability-service";
 import type { SyncFaultApplyDeps } from "./r4-sync-fault-types";
 
 export type { SyncFaultApplyDeps } from "./r4-sync-fault-types";
@@ -69,7 +70,7 @@ export async function applyFaultSyncItem(
     );
   }
 
-  const status = initialFaultStatus(costCents);
+  const status = initialFaultStatus(costCents, await faultApprovalThreshold(client, actor.companyId));
   const inserted = await client.query<{ id: string; version: number }>(
     `INSERT INTO public.machine_faults
        (id, company_id, machine_id, reporter_worker_id, project_id, partner_id, reported_at,

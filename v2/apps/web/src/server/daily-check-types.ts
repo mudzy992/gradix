@@ -24,6 +24,16 @@ export type DailyCheckRow = {
   note: string | null;
   version: number;
   created_at: string;
+  /**
+   * F4: šablon po kojem je pregled popunjen. `null` za preglede prije F4 — bez toga se ne bi
+   * znalo koje su stavke bile kritične u trenutku pregleda.
+   */
+  template_id: string | null;
+  /** `true` kad je kritična stavka pala: fotografija se traži prije potvrde. */
+  photo_required: boolean;
+  photo_confirmed_at: string | null;
+  /** Kvar otvoren iz kritične `FAIL` stavke, ako ga ima. */
+  fault_id: string | null;
 };
 
 export type ListFilters = {
@@ -41,6 +51,11 @@ export type CreateInput = {
   result: DailyCheckResult;
   checklistJson?: Record<string, unknown>;
   note?: string | null;
+  /**
+   * F4: šablon. Kad nije poslan, servis uzima aktivni šablon kategorije mašine. Kad šablona
+   * nema, pregled je slobodan (kao do F4) — ali tada nema ni kritičnih stavki, pa ni auto-kvara.
+   */
+  templateId?: string | null;
 };
 
 export type MutationOutcome =

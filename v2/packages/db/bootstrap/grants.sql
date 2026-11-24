@@ -114,6 +114,19 @@ GRANT SELECT, INSERT ON TABLE public.machine_fault_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.approval_requests TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_cost_rates TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.project_cost_entries TO gradix_app;
+-- F4 (Modul 5): razložen trošak mašine, gorivo, šabloni pregleda.
+-- Komponente se NIKAD ne brišu — nova vrijednost je novi red, stari dobija `valid_to`
+-- (spec 05 §1.1.3). Zato nema DELETE: brisanje bi tiho promijenilo već proknjižene troškove,
+-- koji su zaštićeni snapshotom u `project_cost_entries`.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_cost_components TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.machine_cost_rate_snapshots TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.fuel_prices TO gradix_app;
+-- Cisterna: `current_l` se mijenja pri svakom točenju i popisu; brisanje nije predviđeno
+-- (deaktivacija je UPDATE).
+GRANT SELECT, INSERT, UPDATE ON TABLE public.fuel_tanks TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.check_templates TO gradix_app;
+-- Modul 8 puni nalog; u F4 se otvara automatski iz kvara i nosi trošak na projekat.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.service_orders TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.tenders TO gradix_app;
 -- F1: jezgro firme i sigurnost pristupa (spec 01).
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.company_holidays TO gradix_app;
@@ -175,6 +188,30 @@ BEGIN
   IF to_regprocedure('public.project_assignment_no_overlap()') IS NOT NULL THEN
     EXECUTE 'REVOKE ALL ON FUNCTION public.project_assignment_no_overlap() FROM PUBLIC, gradix_app';
   END IF;
+END
+$$;
+
+-- F4 (Modul 5) trigger helperi. Istup isti kao gore: bez EXECUTE-a za app rolu, jer bi
+-- direktan poziv zaobišao red-triger (a time i tenant RLS put i poruku greške koju servis hvata).
+DO $$
+DECLARE
+  v_funkcija TEXT;
+BEGIN
+  FOREACH v_funkcija IN ARRAY ARRAY[
+    -- Postoji samo na fallback-u bez `btree_gist`: preklapanje komponenti stope.
+    'public.machine_cost_component_no_overlap()',
+    'public.project_cost_snapshot_immutable()',
+    'public.check_templates_items_guard()',
+    'public.machine_daily_checks_checklist_guard()',
+    -- Uvijek postoji: globalna zabrana dvostruke dodjele mašine.
+    'public.project_assignment_machine_global_guard()',
+    -- APPROVED kvar otvara servisni nalog; direktan poziv bi zaobišao tok.
+    'public.machine_fault_open_service_order()'
+  ] LOOP
+    IF to_regprocedure(v_funkcija) IS NOT NULL THEN
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, gradix_app', v_funkcija);
+    END IF;
+  END LOOP;
 END
 $$;
 

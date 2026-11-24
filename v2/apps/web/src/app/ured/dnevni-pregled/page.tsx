@@ -41,6 +41,7 @@ export default async function DnevniPregledPage() {
         caps={{
           canCreate: can(auth.ctx.roles, "machines.check.create"),
           canRevise: can(auth.ctx.roles, "machines.check.revise"),
+          canManageTemplates: can(auth.ctx.roles, "machines.check.manage"),
         }}
       />
     </main>

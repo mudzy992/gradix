@@ -1888,7 +1888,7 @@ export const ProjectCostEntryRow = z.object({
   project_id: z.string(),
   project_code: z.string(),
   project_name: z.string(),
-  source_type: z.literal("MACHINE_WORK_LOG"),
+  source_type: z.enum(["MACHINE_WORK_LOG", "HAUL", "FUEL_ENTRY", "SERVICE_ORDER", "MANUAL"]),
   source_id: z.string(),
   machine_id: z.string(),
   machine_code: z.string(),
@@ -2637,3 +2637,354 @@ export const MyDayResponse = z.object({
   roundingMinutes: z.number(),
   roundingMode: RoundingModeEnum,
 });
+
+/* ==========================================================================
+ * Faza 4 — Modul 5: mehanizacija (razložen trošak, gorivo, stacionaža, šabloni, najam)
+ * ==========================================================================
+ *
+ * Oblik odgovora je isti kao u servisu — polja su `snake_case` jer idu direktno iz baze i
+ * web ekran ih ne prepisuje. Novac je UVIJEK string (`"123.45"`), nikad `number`: centi u
+ * `number` su klasična greška zaokruživanja na 2^53.
+ */
+
+export const CostComponentEnum = z.enum([
+  "DEPRECIATION",
+  "FUEL",
+  "SERVICE",
+  "OPERATOR",
+  "INSURANCE",
+  "OTHER",
+  "RENTAL",
+]);
+export const CostBasisEnum = z.enum(["PER_HOUR", "PER_MONTH", "PER_KM"]);
+
+/** Money string: dvije decimale, bez razmaka i valute. */
+const MoneyText = z.string().regex(/^\d+\.\d{2}$/, "Iznos je decimalni broj sa dvije decimale.");
+
+export const MachineCostComponent = z.object({
+  id: z.string(),
+  machine_id: z.string(),
+  component: CostComponentEnum,
+  basis: CostBasisEnum,
+  amount: MoneyText,
+  currency_code: z.string().length(3),
+  valid_from: CalendarDateText,
+  valid_to: CalendarDateText.nullable(),
+  note: z.string().nullable(),
+  created_at: IsoDate,
+});
+export type MachineCostComponent = z.infer<typeof MachineCostComponent>;
+
+export const MachineCostComponentsResponse = z.object({
+  components: z.array(MachineCostComponent),
+});
+export type MachineCostComponentsResponse = z.infer<typeof MachineCostComponentsResponse>;
+
+export const MachineCostComponentInput = z
+  .object({
+    /** Kad je poslan, mijenja se POSTOJEĆI red — ali samo dok mu je `valid_to` NULL. */
+    id: SafeText.min(1).max(128).optional(),
+    machineId: SafeText.min(1).max(128),
+    component: CostComponentEnum,
+    basis: CostBasisEnum,
+    amount: MoneyText,
+    currencyCode: SafeText.length(3).optional(),
+    validFrom: CalendarDateText,
+    validTo: CalendarDateText.nullable().optional(),
+    note: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type MachineCostComponentInput = z.infer<typeof MachineCostComponentInput>;
+
+/**
+ * Izračunata stopa + razlaganje.
+ *
+ * `manualRate` je popunjen kad postoji ručna stopa — ekran tada pokazuje OBA broja i nudi
+ * „vrati na izračunato". Bez toga bi ručna stopa bila nevidljiva odluka u prošlosti.
+ */
+export const MachineCostRate = z.object({
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  calculated_rate: MoneyText,
+  manual_rate: MoneyText.nullable(),
+  manual_reason: z.string().nullable(),
+  effective_rate: MoneyText,
+  is_manual: z.boolean(),
+  currency_code: z.string().length(3),
+  planned_hours_per_month: z.number().int().positive(),
+  breakdown: z.array(
+    z.object({
+      component: CostComponentEnum,
+      basis: CostBasisEnum,
+      amount: MoneyText,
+      cents_per_hour: MoneyText,
+    }),
+  ),
+});
+export type MachineCostRate = z.infer<typeof MachineCostRate>;
+
+export const MachineCostRateResponse = z.object({ rate: MachineCostRate });
+
+export const MachineCostRateManualInput = z
+  .object({
+    machineId: SafeText.min(1).max(128),
+    /** `null` = vrati na izračunato (zatvara ručnu stopu, ne briše red). */
+    amount: MoneyText.nullable(),
+    reason: SafeText.max(500).nullable().optional(),
+    validFrom: CalendarDateText,
+  })
+  .strict();
+export type MachineCostRateManualInput = z.infer<typeof MachineCostRateManualInput>;
+
+export const UtilizationResponse = z.object({
+  machine_id: z.string(),
+  from: CalendarDateText,
+  to: CalendarDateText,
+  utilization_pct: z.number().nullable(),
+  calendar_utilization_pct: z.number().nullable(),
+  work_hours: z.number(),
+  idle_hours: z.number(),
+  breakdown_hours: z.number(),
+  calendar_hours: z.number(),
+  /** Kvarovi u periodu — ulaz u MTBF/MTTR (spec 05 §1.6.26). */
+  fault_count: z.number().int(),
+  downtime_minutes: z.number().int(),
+  mtbf_hours: z.number().nullable(),
+  mttr_hours: z.number().nullable(),
+});
+export type UtilizationResponse = z.infer<typeof UtilizationResponse>;
+
+/* ------------------------------------------------------------------ gorivo */
+
+export const FuelKindEnum = z.enum(["DIESEL", "PETROL", "ADBLUE", "LPG", "OTHER"]);
+
+export const FuelPrice = z.object({
+  id: z.string(),
+  fuel_kind: FuelKindEnum,
+  supplier_partner_id: z.string().nullable(),
+  supplier_name: z.string().nullable(),
+  price: MoneyText,
+  currency_code: z.string().length(3),
+  valid_from: CalendarDateText,
+  note: z.string().nullable(),
+  created_at: IsoDate,
+});
+export type FuelPrice = z.infer<typeof FuelPrice>;
+
+export const FuelPricesResponse = z.object({ prices: z.array(FuelPrice) });
+
+export const FuelPriceInput = z
+  .object({
+    fuelKind: FuelKindEnum,
+    supplierPartnerId: SafeText.min(1).max(128).nullable().optional(),
+    price: MoneyText,
+    currencyCode: SafeText.length(3).optional(),
+    validFrom: CalendarDateText,
+    note: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type FuelPriceInput = z.infer<typeof FuelPriceInput>;
+
+export const FuelTank = z.object({
+  id: z.string(),
+  name: z.string(),
+  capacity_l: z.number(),
+  current_l: z.number(),
+  last_count_at: IsoDate.nullable(),
+  is_active: z.boolean(),
+});
+export type FuelTank = z.infer<typeof FuelTank>;
+
+export const FuelTanksResponse = z.object({ tanks: z.array(FuelTank) });
+
+export const FuelTankInput = z
+  .object({
+    name: SafeText.min(1).max(120),
+    capacityL: z.number().positive().max(1_000_000),
+    currentL: z.number().min(0),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+export type FuelTankInput = z.infer<typeof FuelTankInput>;
+
+export const FuelTankCountInput = z
+  .object({
+    /** Očitano stanje na popisu; razlika prema izvedenom je ono što se vidi. */
+    currentL: z.number().min(0),
+    note: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type FuelTankCountInput = z.infer<typeof FuelTankCountInput>;
+
+/** Odstupanje potrošnje sa OBAVEZNIM statusom (spec 05 §1.3.13). */
+export const FuelDeviationRow = z.object({
+  id: z.string(),
+  entry_id: z.string(),
+  machine_id: z.string(),
+  machine_code: z.string(),
+  machine_name: z.string(),
+  filled_at: IsoDate,
+  liters: z.number(),
+  consumption: z.number().nullable(),
+  consumption_unit: z.enum(["l/h", "l/100km"]).nullable(),
+  baseline: z.number().nullable(),
+  deviation_pct: z.number().nullable(),
+  threshold_pct: z.number().int(),
+  status: z.enum(["OPEN", "EXPLAINED", "DISMISSED"]),
+  reason: z.enum(["BREAKDOWN", "THEFT", "MISREAD", "OTHER"]).nullable(),
+  note: z.string().nullable(),
+  reviewed_at: IsoDate.nullable(),
+});
+export type FuelDeviationRow = z.infer<typeof FuelDeviationRow>;
+
+export const FuelDeviationsResponse = z.object({
+  deviations: z.array(FuelDeviationRow),
+  open_count: z.number().int(),
+});
+export type FuelDeviationsResponse = z.infer<typeof FuelDeviationsResponse>;
+
+export const FuelDeviationExplainInput = z
+  .object({
+    status: z.enum(["EXPLAINED", "DISMISSED"]),
+    reason: z.enum(["BREAKDOWN", "THEFT", "MISREAD", "OTHER"]),
+    note: SafeText.min(10).max(500),
+  })
+  .strict();
+export type FuelDeviationExplainInput = z.infer<typeof FuelDeviationExplainInput>;
+
+/* ------------------------------------------------------------------ stacionaža */
+
+export const RouteSegment = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  from_station: z.string().nullable(),
+  to_station: z.string().nullable(),
+  from_km: z.number().int().nullable(),
+  from_m: z.number().int().nullable(),
+  to_km: z.number().int().nullable(),
+  to_m: z.number().int().nullable(),
+  /** Dužina u metrima — izvedena, nikad unesena; `null` kad stacionaža nije upisana. */
+  length_m: z.number().int().nullable(),
+  haul_count: z.number().int(),
+  quantity_sum: z.number().nullable(),
+  quantity_unit: z.string().nullable(),
+});
+export type RouteSegment = z.infer<typeof RouteSegment>;
+
+export const RouteSegmentsResponse = z.object({ segments: z.array(RouteSegment) });
+
+export const RouteSegmentInput = z
+  .object({
+    id: SafeText.min(1).max(128).optional(),
+    code: SafeText.min(1).max(20),
+    name: SafeText.min(1).max(120),
+    projectId: SafeText.min(1).max(128).nullable().optional(),
+    fromStation: SafeText.max(120).nullable().optional(),
+    toStation: SafeText.max(120).nullable().optional(),
+    /** Ili su oba para popunjena, ili nijedan: pola kilometraže je gore od nikakve. */
+    fromKm: z.number().int().min(0).nullable().optional(),
+    fromM: z.number().int().min(0).max(999).nullable().optional(),
+    toKm: z.number().int().min(0).nullable().optional(),
+    toM: z.number().int().min(0).max(999).nullable().optional(),
+  })
+  .strict();
+export type RouteSegmentInput = z.infer<typeof RouteSegmentInput>;
+
+/* ------------------------------------------------------------------ šabloni pregleda */
+
+export const CheckTemplateItem = z
+  .object({
+    key: SafeText.min(1).max(40),
+    label: SafeText.min(1).max(160),
+    required: z.boolean(),
+    critical: z.boolean(),
+  })
+  .strict();
+export type CheckTemplateItem = z.infer<typeof CheckTemplateItem>;
+
+export const CheckTemplate = z.object({
+  id: z.string(),
+  category_id: z.string().nullable(),
+  category_name: z.string().nullable(),
+  name: z.string(),
+  items: z.array(CheckTemplateItem),
+  is_active: z.boolean(),
+  created_at: IsoDate,
+});
+export type CheckTemplate = z.infer<typeof CheckTemplate>;
+
+export const CheckTemplatesResponse = z.object({ templates: z.array(CheckTemplate) });
+
+export const CheckTemplateInput = z
+  .object({
+    id: SafeText.min(1).max(128).optional(),
+    categoryId: SafeText.min(1).max(128).nullable().optional(),
+    name: SafeText.min(1).max(120),
+    items: z.array(CheckTemplateItem).min(1).max(60),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+export type CheckTemplateInput = z.infer<typeof CheckTemplateInput>;
+
+/* ------------------------------------------------------------------ zauzetost i najam */
+
+export const MachineAvailabilitySlot = z.object({
+  project_id: z.string().nullable(),
+  project_code: z.string().nullable(),
+  project_name: z.string().nullable(),
+  from_date: CalendarDateText,
+  to_date: CalendarDateText.nullable(),
+  /** `true` kad preklapanje pokriva odobrena iznimka (Modul 2) — kalendar to boji drugačije. */
+  override_id: z.string().nullable(),
+});
+export type MachineAvailabilitySlot = z.infer<typeof MachineAvailabilitySlot>;
+
+export const MachineAvailabilityResponse = z.object({
+  machine_id: z.string(),
+  from: CalendarDateText,
+  to: CalendarDateText,
+  slots: z.array(MachineAvailabilitySlot),
+});
+export type MachineAvailabilityResponse = z.infer<typeof MachineAvailabilityResponse>;
+
+export const MachineRentalInput = z
+  .object({
+    partnerId: SafeText.min(1).max(128),
+    rate: MoneyText,
+    basis: z.enum(["PER_HOUR", "PER_DAY", "PER_MONTH"]),
+    from: CalendarDateText,
+    to: CalendarDateText.nullable().optional(),
+    /** Kad je `true`, otvara se i komponenta `RENTAL` u stopi sa istim periodom. */
+    createCostComponent: z.boolean().optional(),
+  })
+  .strict();
+export type MachineRentalInput = z.infer<typeof MachineRentalInput>;
+
+export const RentalBasisEnum = z.enum(["PER_HOUR", "PER_DAY", "PER_MONTH"]);
+export const CompanyMachineSettings = z.object({
+  plannedHoursPerMonth: z.number().int().min(40).max(744),
+  fuelDeviationThresholdPct: z.number().int().min(1).max(200),
+  fuelTankEnabled: z.boolean(),
+  faultApprovalThreshold: MoneyText,
+});
+export type CompanyMachineSettings = z.infer<typeof CompanyMachineSettings>;
+
+/** Zauzetost svih mašina za kalendar (mjesec × mašina). */
+export const CalendarAvailabilityResponse = z.object({
+  machines: z.array(
+    z.object({
+      machine_id: z.string(),
+      machine_code: z.string(),
+      machine_name: z.string(),
+      slots: z.array(MachineAvailabilitySlot.extend({ machine_id: z.string() })),
+    }),
+  ),
+  from: CalendarDateText,
+  to: CalendarDateText,
+});
+export type CalendarAvailabilityResponse = z.infer<typeof CalendarAvailabilityResponse>;

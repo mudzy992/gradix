@@ -30,6 +30,31 @@ export {
   computeHoursFromInterval,
 } from "./machine-cost";
 
+/*
+ * Faza 4 (Modul 5): razložen trošak mašine, iskorištenost i odstupanje goriva. Izdvojeno iz
+ * `machine-cost` jer je R6.1 bio ravna stopa; ovo su komponente, snapshot i dvije kolone
+ * iskorištenosti sa definicijom u domeni (spec 05 §1.1–1.3).
+ */
+export {
+  COST_BASES,
+  COST_COMPONENTS,
+  DEFAULT_PLANNED_HOURS_PER_MONTH,
+  FUEL_DEVIATION_REASONS,
+  computedRatePerHour,
+  fuelConsumption,
+  fuelDeviation,
+  rateWithKm,
+  utilization,
+  type ComputedRate,
+  type CostBasis,
+  type CostComponent,
+  type CostComponentRow,
+  type FuelDeviation,
+  type FuelDeviationReason,
+  type UtilizationRow,
+  type WorkLogMode,
+} from "./machine-cost-components";
+
 export {
   ACCESS_TTL_SECONDS,
   REFRESH_TOKEN_BYTES,

@@ -1,9 +1,9 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **Faza 3: završena** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **Faza 3: završena** · **Faza 4: završena** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 4** po `docs/IMPLEMENTATION_PLAN.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 5** po `docs/IMPLEMENTATION_PLAN.md`.
 
 ## Šta je gotovo
 
@@ -29,6 +29,48 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 4** po `docs/IMPLEM
 | 3.3 | API: 23 rute — timer (start/pause/resume/finish, idempotentno po `localId`), `me/day`, zaboravljen dan, sedmica, grupna potvrda, vrsta dana; kartica radnika, cijene (istorija, ne prepisivanje), dopust, zaduženja, OZO šabloni, historija, „Radnik odlazi“, masovne izmjene | ✅ |
 | 3.4 | UI: web `/ured/radnici/[id]` (5 sekcija, dozvola po sekciji), `/ured/radni-dani/sedmica` (radnik × dan + CSV), mobilni „Moj dan“ timer-first (`≥ 56 dp`, ručni unos iza dugmeta) | ✅ |
 | 3.5 | Worker: `sync.purge` (retencija tijela razriješenih sukoba); obavještenje radniku pri razrješenju sukoba; filter sukoba po `entity_type` | ✅ |
+
+| 4.1 | Baza: `machine_cost_components` (važenje komponenti sa `EXCLUDE`/trigerom, isti izbor mehanizma kao dodjele i satnice), `machine_cost_rate_snapshots`, `fuel_prices`, `fuel_tanks`, `fuel_tank_movements`, `service_orders`, `check_templates`; `project_cost_entries` dobija `rate_snapshot`/`component_breakdown`/`snapshot_id` i `source_type` proširen na `SERVICE_ORDER`; `machine_cost_rates` postaje **ručna** stopa (`is_manual` + razlog ≥10 znakova); dvostruka dodjela mašine je **globalna** | ✅ |
+| 4.2 | Domena: razlaganje stope po komponentama (zaokruživanje po komponenti na cent pa zbir; `PER_MONTH` → stoti dio centa pa pola-naviše; `PER_KM` van satne stope), iskorištenost `WORK/(WORK+IDLE+BREAKDOWN)` + kalendarska kolona, MTBF/MTTR, odstupanje goriva, stacionaža `km+m`, kritične stavke šablona — **196 testa** | ✅ |
+| 4.3 | API: **24 nove rute** — komponente i ručna stopa, iskorištenost i zauzetost mašine, kalendar zauzetosti, najam, cijene goriva, cisterne i popis, odstupanja i objašnjenje, dionice, šabloni pregleda, foto potvrda; OpenAPI **150 putanja / 195 operacija** | ✅ |
+| 4.4 | UI: `/ured/trosak-masina` (komponente + stopa + snapshot), `/ured/gorivo` (odstupanja, cijene, cisterne, unos bez obaveznog iznosa), `/ured/ture` (stacionaže sa zbirom po dionici), `/ured/dnevni-pregled` (šabloni, kritični FAIL → foto + kvar), `/ured/masine/kalendar` (mjesec × mašina) | ✅ |
+| 4.5 | Provjere: `check-preklapanje.mjs` proširen na `machine_cost_components`, NUL-sweep pokriva sve F4 rute, integracioni test `phase4.integration.test.ts` (15 scenarija protiv prave baze) | ✅ |
+
+## Faza 4 — odluke koje se ne smiju izgubiti
+
+- **Stopa je zbir komponenti, ne jedan broj.** Zaokruživanje ide **po komponenti na cent**, pa se
+  sabira; `PER_MONTH` se dijeli sa `planned_hours_per_month` u dva koraka (stoti dio centa, pa
+  pola-naviše) jer bi jedno zaokruživanje na kraju pomjerilo mjesečni trošak. `PER_KM` **ne ulazi**
+  u satnu stopu (iznosio bi `0n`) — vraća se kao `rateWithKm` uz stopu.
+- **Snapshot troška je dokaz i ne mijenja se.** `project_cost_entries.rate_snapshot` se puni pri
+  knjiženju i triger odbija svaku kasniju izmjenu (`COST_SNAPSHOT_IMMUTABLE`); razlaganje po
+  komponentama ostaje uz njega i kad je stopa ručna, da se vidi kolika bi bila izračunata.
+- **Ručna stopa ne briše izračunatu.** Unos traži razlog ≥10 znakova (`COST_RATE_MANUAL_OVERRIDE`
+  je zaseban kod — ekran tada traži razlog, ne popravku iznosa), a „vrati na izračunato" **zatvara**
+  red (`valid_to`), ne briše ga. Historija je jedini način da se poslije objasni cijena sata.
+- **Dvostruka dodjela mašine je GLOBALNA, ne po firmi.** Mašina ne može biti na dva gradilišta u
+  istom periodu nigdje; iznimka ide kroz `usage_overrides.double_booking_override_id` i mora imati
+  razlog i rok. Ograničenje je triger sa `pg_advisory_xact_lock` (ili `EXCLUDE` kad je `btree_gist`
+  dostupan) — isto pravilo kao dodjele radnika i satnice.
+- **Iskorištenost ima DVIJE kolone i to je namjerno.** Primarna je `WORK/(WORK+IDLE+BREAKDOWN)` —
+  ne kažnjava mašinu za dane kad nije bila iznajmljena. Sekundarna je kalendarska (radni sati iz
+  `workday_hours` i `company_holidays`, gdje `is_working = true` znači prenesena radna subota).
+  Jedna kolona bi ili lagala o efikasnosti ili o trošku.
+- **Odstupanje goriva je upozorenje, nikad blokada.** Točenje prolazi; otvara se stavka koja traži
+  objašnjenje (`BREAKDOWN|THEFT|MISREAD|OTHER` + napomena ≥10 znakova). Cijena iz šifarnika je
+  **predlog** (`price_source = PRICE_LIST`) i nikad ne prepisuje uneseni iznos; kad iznosa nema,
+  `amount_cents` ostaje `NULL`, **ne nula** (nepoznato ≠ besplatno).
+- **Cisterna i pumpa se ne vode paralelno.** Uključena cisterna (`companies.fuel_tank_enabled`) znači
+  da točenje skida stanje; popis upisuje **razliku** u audit, jer bez nje se gubitak ne vidi.
+  Isključena cisterna odbija unos sa `tank_id` uz jasnu poruku, a ne tiho zanemaruje izbor.
+- **Kritična FAIL stavka otvara foto-obavezu i kvar, ali ne blokira rad.** Pregled se evidentira,
+  kvar se veže na pregled (`daily_check_id`), a foto potvrda traži stvarni prilog `status='ready'`
+  i idempotentna je. Odluka je čovjeka; dokaz mora postojati.
+- **Prag odobrenja kvara je podatak firme** (`companies.fault_approval_threshold_cents`, default 500
+  KM), ne konstanta. `APPROVED` otvara servisni nalog **trigerom** i tačno jednom
+  (`UNIQUE (company_id, fault_id)`), jer se status mijenja na više mjesta.
+- **Kalendar: „slobodno" je odsustvo reda.** Nema posebnog reda za slobodno; `to_date IS NULL` je
+  otvorena dodjela. Tako kalendar ne može tvrditi nešto što baza ne zna.
 
 ## Korak 0 — zašto je CI bio crven i šta je popravljeno
 
@@ -151,4 +193,13 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
   pravi „impersonation“ dolazi sa podrškom u Fazi 7.
 - „Moj dan“ postoji samo u mobilnoj aplikaciji; web obavještenje o razrješenju sukoba zato vodi na
   `/pregled` (`src/server/notification-hrefs.ts` + `notification-hrefs.test.ts`). Web ekran timera
-  dolazi u Fazi 4.
+  nije isporučen ni u Fazi 4 (F4 je donio kalendar zauzetosti, ne timer) — ostaje za modul koji ga
+  bude tražio.
+- **F4:** servisni nalog se otvara automatski, ali ga **Modul 8** puni (dobavljač, faktura,
+  zatvaranje). Do tada je `service_orders` vidljiv kroz bazu i `project_cost_entries`
+  `SERVICE_ORDER` put, ali nema ekrana.
+- **F4:** prosječna potrošnja goriva (baseline) traži bar dva očitanja brojila u 90 dana — prva
+  točenja nove mašine nemaju odstupanje i to je namjerno (inače bi svaki prvi unos tražio razlog).
+- **F4:** `check-preklapanje.mjs` traži `psql` (`infra/scripts/db-apply.sh`), pa se u ovom okruženju
+  ne može pokrenuti; mehanizam je zato provjeren direktnim upitom nad `gradix_fresh`
+  (dodjele: 2 × `EXCLUDE`, komponente: 1 × `EXCLUDE`, bez trigera) i istim testom trke.

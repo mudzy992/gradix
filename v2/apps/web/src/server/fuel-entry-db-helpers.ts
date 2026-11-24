@@ -23,6 +23,10 @@ export type DbFuelRow = {
   note: string | null;
   version: number;
   created_at: string;
+  price_source?: string | null;
+  tank_id?: string | null;
+  deviation_pct?: string | null;
+  deviation_status?: string | null;
 };
 
 export function mapFuelRow(row: DbFuelRow, showPrice: boolean): FuelEntryRow {
@@ -51,6 +55,18 @@ export function mapFuelRow(row: DbFuelRow, showPrice: boolean): FuelEntryRow {
     note: row.note,
     version: row.version,
     created_at: row.created_at,
+    /*
+     * F4 polja su opciona u DB tipu jer ih stari upiti (prije F4) ne selektuju; izostanak
+     * znači „nije primjenjivo", ne „MANUAL". Zato default `MANUAL` — stari zapisi su svi bili
+     * ručni, jer šifarnik cijena nije postojao.
+     */
+    price_source: row.price_source === "PRICE_LIST" ? "PRICE_LIST" : "MANUAL",
+    tank_id: row.tank_id ?? null,
+    deviation_pct: row.deviation_pct == null ? null : Number(row.deviation_pct),
+    deviation_status:
+      row.deviation_status === "OPEN" || row.deviation_status === "EXPLAINED" || row.deviation_status === "DISMISSED"
+        ? row.deviation_status
+        : null,
   };
 }
 

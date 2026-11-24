@@ -88,6 +88,7 @@ describeDb("R6.1 project cost web API", () => {
   afterAll(async () => {
     await withCompany(admin, companyId(COMPANY), async (client) => {
       await client.query("DELETE FROM project_cost_entries WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM machine_cost_rate_snapshots WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_cost_rates WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_work_logs WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machines WHERE company_id = $1", [COMPANY]);

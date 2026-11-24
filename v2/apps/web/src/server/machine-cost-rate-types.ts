@@ -25,6 +25,8 @@ export type UpsertRateInput = {
   currencyCode?: string;
   validFrom: string;
   validTo?: string | null;
+  /** F4: obavezan kad je stopa ručna (baza traži ≥10 znakova) — ide u audit kao obrazloženje. */
+  reason?: string | null;
 };
 
 export type MutationOutcome = {

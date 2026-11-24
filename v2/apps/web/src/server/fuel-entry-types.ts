@@ -24,6 +24,12 @@ export type FuelEntryRow = {
   note: string | null;
   version: number;
   created_at: string;
+  /** F4: `PRICE_LIST` kad je cijena došla iz šifarnika, `MANUAL` kad ju je ured prepisao. */
+  price_source: "PRICE_LIST" | "MANUAL";
+  tank_id: string | null;
+  /** Odstupanje potrošnje: `null` kad ga nema ili kad nema osnova za poređenje. */
+  deviation_pct: number | null;
+  deviation_status: "OPEN" | "EXPLAINED" | "DISMISSED" | null;
 };
 
 export type ListFilters = {
@@ -43,6 +49,8 @@ export type CreateInput = {
   unitPriceAmount?: string | null;
   meterReading?: number | null;
   note?: string | null;
+  /** F4: točenje iz cisterne; dozvoljeno samo kad je cisterna uključena u postavkama firme. */
+  tankId?: string | null;
 };
 
 export type MutationOutcome =

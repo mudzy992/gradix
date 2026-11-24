@@ -115,6 +115,23 @@ export const AUDIT_ACTIONS = [
   "worker.ppe_template_changed",
   "worker.offboarded",
   "worker.bulk_changed",
+  // Faza 4 — mehanizacija: trošak, gorivo, stacionaža, šabloni, najam
+  "machine.cost_component_opened",
+  "machine.cost_component_closed",
+  "machine.cost_rate_manual_set",
+  "machine.cost_rate_manual_cleared",
+  "machine.cost_rate_snapshotted",
+  "machine.rental_set",
+  "machine.fault.created_from_check",
+  "machine.check.photo_confirmed",
+  "fuel.price_created",
+  "fuel.tank_created",
+  "fuel.tank_counted",
+  "fuel.deviation_explained",
+  "route_segment.created",
+  "route_segment.updated",
+  "check_template.created",
+  "check_template.updated",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -143,6 +160,14 @@ export const AUDIT_ENTITY_TYPES = [
   "company_holiday",
   "platform_user",
   "support_session",
+  "machine_cost_component",
+  "machine_cost_rate",
+  "fuel_price",
+  "fuel_tank",
+  "fuel_deviation",
+  "route_segment",
+  "check_template",
+  "machine_daily_check",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -238,6 +263,22 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "worker.ppe_template_changed": "Izmjena šablona zaštitne opreme",
   "worker.offboarded": "Radnik odlazi — razdužen",
   "worker.bulk_changed": "Masovna izmjena radnika",
+  "machine.cost_component_opened": "Otvorena komponenta troška mašine",
+  "machine.cost_component_closed": "Zatvorena komponenta troška mašine",
+  "machine.cost_rate_manual_set": "Ručna stopa troška upisana",
+  "machine.cost_rate_manual_cleared": "Vraćeno na izračunatu stopu",
+  "machine.cost_rate_snapshotted": "Stopa zamrznuta pri knjiženju",
+  "machine.rental_set": "Najam mašine upisan",
+  "machine.fault.created_from_check": "Kvar otvoren iz dnevnog pregleda",
+  "machine.check.photo_confirmed": "Fotografija kritičnog nalaza potvrđena",
+  "fuel.price_created": "Cijena goriva u šifarnik",
+  "fuel.tank_created": "Cisterna upisana",
+  "fuel.tank_counted": "Popis cisterne",
+  "fuel.deviation_explained": "Odstupanje goriva objašnjeno",
+  "route_segment.created": "Dionica upisana",
+  "route_segment.updated": "Dionica izmijenjena",
+  "check_template.created": "Šablon pregleda upisan",
+  "check_template.updated": "Šablon pregleda izmijenjen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

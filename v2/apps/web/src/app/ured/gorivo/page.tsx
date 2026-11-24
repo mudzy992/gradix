@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { authenticate } from "@/server/tenant-context";
 import { getVerifiedPool } from "@/server/db";
 import { ACCESS_COOKIE } from "@/server/session";
-import { can } from "@/server/permissions";
+import { can, type Role } from "@/server/permissions";
 import { canViewFuelPrice } from "@/server/fuel-entry-price";
 import { PageHeader } from "@/components/ui/index";
 import { listFuelEntries } from "@/server/fuel-entry-service";
+import { listFuelTanks } from "@/server/fuel-price-service";
 import { FuelEntriesClient } from "./fuel-entries-client";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,27 @@ export default async function GorivoPage() {
     {},
   );
 
+  /*
+   * F4: cisterna je uključena PO FIRMI. Kad nije, točenja idu na pumpu i stanje se ne vodi —
+   * zato se lista cisterni i ne učitava, a ekran ne nudi izbor koji ne postoji.
+   */
+  const tankEnabled = can(auth.ctx.roles, "machines.fuel.view")
+    ? await (async () => {
+        const row = await pool.query<{ fuel_tank_enabled: boolean }>(
+          "SELECT fuel_tank_enabled FROM public.companies WHERE id = $1",
+          [auth.ctx.companyId],
+        );
+        return Boolean(row.rows[0]?.fuel_tank_enabled);
+      })()
+    : false;
+  const tanks = tankEnabled
+    ? (await listFuelTanks(pool, {
+        userId: auth.ctx.userId,
+        companyId: auth.ctx.companyId,
+        roles: auth.ctx.roles as Role[],
+      })).map((tank) => ({ id: tank.id, name: tank.name, current_l: tank.current_l }))
+    : [];
+
   return (
     <main className="mx-auto w-full max-w-6xl">
       <PageHeader
@@ -43,6 +65,9 @@ export default async function GorivoPage() {
           canCreate: can(auth.ctx.roles, "machines.fuel.create"),
           canRevise: can(auth.ctx.roles, "machines.fuel.revise"),
           showPrice: canViewFuelPrice(auth.ctx.roles),
+          canManageFuel: can(auth.ctx.roles, "machines.fuel.manage"),
+          tankEnabled,
+          tanks,
         }}
       />
     </main>

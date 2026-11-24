@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import { canProgressWithCost } from "./machine-fault-approval";
+import { faultApprovalThreshold } from "./machine-availability-service";
 import { isFaultStatus } from "./machine-fault-db-helpers";
 import type { FaultActor, FaultStatus, MutationOutcome } from "./machine-fault-types";
 
@@ -47,6 +48,7 @@ export async function reviseMachineFault(
         const cost = row.estimated_cost_cents === null ? null : BigInt(row.estimated_cost_cents);
         const allowed = await canProgressWithCost(
           client, actor.companyId, row.id, row.status as FaultStatus, cost,
+          await faultApprovalThreshold(client, actor.companyId),
         );
         if (!allowed) {
           return {
