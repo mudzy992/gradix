@@ -36,7 +36,8 @@ export const NAMED_CONSTRAINTS = [
    * koje više nema.
    */
   { table: "cost_entries", name: "cost_entries_source_check" },
-  { table: "cost_entries", name: "cost_entries_source_unique" },
+  /* `cost_entries_source_unique` je DJELIMIČNI UNIKATNI INDEKS, ne constraint — pa ga
+     `pg_constraint` ne vidi. Provjerava se posebno, indeksom, niže u testu. */
   { table: "cost_entries", name: "cost_entries_currency_check" },
   { table: "cost_entries", name: "cost_entries_pending_shape_check" },
 ] as const;
@@ -52,6 +53,27 @@ export async function seedCostCompanies(admin: Pool): Promise<void> {
      VALUES ($1, $3, 'test-hash', 'Cost', 'A', false), ($2, $4, 'test-hash', 'Cost', 'B', false)`,
     [A.user, B.user, `r61-a-${RUN}@test.example`, `r61-b-${RUN}@test.example`],
   );
+  /*
+   * F5: svako knjiženje traži kategoriju (`cost_entries.category_id` je NOT NULL), a zadani set
+   * se pravi tek kad firma ima ČLANA — u trenutku kreiranja firme vlasnika još nema. Zato test
+   * ovdje pravi članstvo i poziva set, umjesto da se pouzda u trigger koji legitimno preskače.
+   */
+  await withCompany(admin, companyId(A.company), async (client) => {
+    await client.query(
+      `INSERT INTO public.memberships (id, user_id, company_id, roles, scope)
+       VALUES ($1, $2, $3, ARRAY['OWNER']::"Role"[], 'COMPANY')`,
+      [`mem_r61_a_${RUN}`, A.user, A.company],
+    );
+  });
+  await withCompany(admin, companyId(B.company), async (client) => {
+    await client.query(
+      `INSERT INTO public.memberships (id, user_id, company_id, roles, scope)
+       VALUES ($1, $2, $3, ARRAY['OWNER']::"Role"[], 'COMPANY')`,
+      [`mem_r61_b_${RUN}`, B.user, B.company],
+    );
+    await client.query("SELECT public.seed_cost_categories($1)", [B.company]);
+  });
+  await admin.query("SELECT public.seed_cost_categories($1)", [A.company]);
 }
 
 export async function seedTenantCost(admin: Pool, fixture: typeof A | typeof B): Promise<void> {

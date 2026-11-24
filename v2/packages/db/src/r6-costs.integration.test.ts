@@ -40,6 +40,18 @@ describeDb("R6.1 machine cost rates tenant RLS (PostgreSQL)", () => {
     expect(found.rows).toHaveLength(NAMED_CONSTRAINTS.length);
   });
 
+  it("djelimični unikat po izvoru postoji kao INDEX (ne kao constraint)", async () => {
+    /* Zaštita od dvostrukog troška je indeks `WHERE status <> 'REVERSED'`, pa bi provjera samo
+       preko `pg_constraint` tvrdila da zaštita postoji i kad je nema. */
+    const index = await admin.query<{ indexdef: string }>(
+      `SELECT indexdef FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'cost_entries_source_unique'`,
+    );
+    expect(index.rows).toHaveLength(1);
+    expect(index.rows[0]!.indexdef).toContain("UNIQUE");
+    expect(index.rows[0]!.indexdef).toContain("REVERSED");
+  });
+
   it("RLS: firma B ne vidi machine_cost_rates firme A", async () => {
     const scopedB = await withCompany(app, companyId(B.company), async (client) => {
       const own = await client.query<{ n: string }>(
