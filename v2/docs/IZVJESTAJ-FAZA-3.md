@@ -80,14 +80,14 @@ OZO šabloni (`GET|POST /ppe-templates`, `PATCH|DELETE /{id}`), historija, odlaz
 ## 2. Kapije (lokalno, 2026-11-23)
 
 ```
-pnpm test            945 testa, sve prolazi
-                     web 562 · domain 178 · mobile 86 · db 67 · contracts 21 · worker 21 · mobile-ekran 10
-                     PostgreSQL integracijski: 324 (web) + 67 (db) izvršeno, 0 preskočeno
+pnpm test            962 testa, sve prolazi
+                     web 572 · domain 178 · mobile 86 · db 67 · contracts 21 · worker 21 · mobile-ekran 10
+                     PostgreSQL integracijski: 326 (web) + 67 (db) izvršeno, 0 preskočeno
 pnpm typecheck       6/6
 pnpm lint            6/6 (0 error, 0 warning)
 pnpm test:a11y       113 testa (axe, WCAG 2.1 AA, obje teme)
 pnpm check-tenant-sql  606 upita / 58 tabela ✓
-pnpm db:types:check  OK — 61 tabela, sinhrono
+pnpm db:types:check  OK — 66 tabela u tipovima, sinhrono (67 u bazi; `schema_migrations` se ne generiše)
 pnpm check-cycles    nema ciklusa
 pnpm check-contrast  ✓   pnpm check-ui ✓   pnpm check-privacy ✓
 pnpm check-expo      ✓   pnpm check-maestro ✓

@@ -65,7 +65,7 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ## Brojevi (lokalna provjera, 2026-11-23)
 
 ```
-migracije       41          tabele          61 (58 tenant)
+migracije       41          tabele          67 (58 tenant; 66 u generisanim tipovima — bez schema_migrations)
 OpenAPI         136 putanja (172 metode)
 pnpm test       962 testa   (web 572 + domain 178 + mobile 86 + db 67 + contracts 21 + worker 21 + mobile-ekran 10)
 pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 606 upita / 58 tabela ✓
