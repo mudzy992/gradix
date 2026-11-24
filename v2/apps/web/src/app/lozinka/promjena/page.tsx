@@ -41,8 +41,17 @@ export default function ChangePasswordPage() {
       return;
     }
     setState({ kind: "success", revoked: Number(result.data?.revokedSessions ?? 0) });
-    setTimeout(() => {
-      window.location.href = "/ured/korisnici";
+    /*
+     * Odredište zavisi od toga ŠTA nalog još mora.
+     *
+     * Ako je 2FA još neuparena, `/ured/korisnici` (ili bilo koji poslovni ekran) vraća 403
+     * `AUTH_2FA_ENROLLMENT_REQUIRED` — korisnik bi vidio prazan ekran poslije uspješne radnje.
+     * Zato prvo uparivanje, pa poslovni ekran. Ranije je ovdje uvijek bio `/ured/korisnici`.
+     */
+    setTimeout(async () => {
+      const status = await apiCall<{ enabled: boolean; required: boolean }>("/api/auth/2fa/status");
+      const moraUpariti = status.ok && status.data.required && !status.data.enabled;
+      window.location.href = moraUpariti ? "/ured/postavke?tab=sigurnost" : "/ured/korisnici";
     }, 1200);
   }
 

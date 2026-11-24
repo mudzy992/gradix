@@ -71,8 +71,21 @@ const TABS = [
 ];
 
 
-export default function PostavkeClient({ canManage }: { canManage: boolean }) {
-  const [tab, setTab] = useState("osnovno");
+export default function PostavkeClient({
+  canManage,
+  onlyTab,
+}: {
+  canManage: boolean;
+  /**
+   * Kada je postavljen, prikazuje se SAMO taj tab i nema trake tabova.
+   *
+   * Koristi se za sesiju izdatu radi uparivanja 2FA: takva sesija nije „prijava sa manje
+   * prava" nego priprema prijave, pa joj se ne smije pokazati ni identitet firme ni praznici.
+   * Bez ovoga bi `/ured/postavke` izlistao podatke firme prije nego je 2FA uopšte uparena.
+   */
+  onlyTab?: string;
+}) {
+  const [tab, setTab] = useState(onlyTab ?? "osnovno");
   const [company, setCompany] = useState<Company | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,10 +98,12 @@ export default function PostavkeClient({ canManage }: { canManage: boolean }) {
       setCompany(result.data.company);
       setError(null);
     } else {
-      setError(result.message);
+      // Sesija za uparivanje ne smije čitati podatke firme (`/api/company` joj vraća 403).
+      // To nije greška koju korisnik treba da vidi — ekran i dalje mora pokazati 2FA formu.
+      setError(onlyTab ? null : result.message);
     }
     setLoading(false);
-  }, []);
+  }, [onlyTab]);
 
   useEffect(() => {
     void load();
@@ -101,15 +116,24 @@ export default function PostavkeClient({ canManage }: { canManage: boolean }) {
        * Ranije ga nije bilo — ekran je počinjao tabovima, pa E2E provjera „naslov rute je
        * vidljiv" nije imala šta naći, a ni čitač ekrana nije imao naslov stranice.
        */}
-      <PageHeader title="Postavke firme" subtitle="Zaglavlje, radna sedmica, praznici i sigurnost naloga." />
-      <Tabs tabs={TABS} active={tab} onChange={setTab} label="Odjeljci postavki" />
+      <PageHeader
+        title={onlyTab === "sigurnost" ? "Sigurnost naloga" : "Postavke firme"}
+        subtitle={
+          onlyTab === "sigurnost"
+            ? "Uključite dvofaktorsku prijavu da biste nastavili."
+            : "Zaglavlje, radna sedmica, praznici i sigurnost naloga."
+        }
+      />
+      {onlyTab ? null : <Tabs tabs={TABS} active={tab} onChange={setTab} label="Odjeljci postavki" />}
 
       {error ? <Alert tone="error">
           <strong>Postavke nisu učitane.</strong> {error}</Alert> : null}
       {saved ? <Alert tone="success">
           <strong>Sačuvano.</strong> {saved}</Alert> : null}
 
-      {loading || !company ? (
+      {onlyTab ? (
+        <SigurnostTab />
+      ) : loading || !company ? (
         <Skeleton rows={6} />
       ) : tab === "osnovno" ? (
         <Osnovno company={company} canManage={canManage} onSaved={(message) => { setSaved(message); void load(); }} />

@@ -23,7 +23,7 @@ import {
   obligationState,
   parseThresholds,
   type ObligationState,
-} from "@gradix/domain";
+} from "@gradix/domain/worker";
 import type { JobLogger } from "./jobs";
 
 export type ReminderOutcome = {

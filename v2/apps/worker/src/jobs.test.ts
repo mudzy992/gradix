@@ -14,12 +14,42 @@ import { createObjectRemover } from "./object-storage";
 import { daysWord, localDate, localHour } from "./reminders-scan";
 
 describe("loadConfig", () => {
-  it("pada bez DATABASE_ADMIN_URL — worker koji tiho ne radi je gori od ugašenog", () => {
-    expect(() => loadConfig({})).toThrow(/DATABASE_ADMIN_URL/);
+  it("pada bez ijednog URL-a — worker koji tiho ne radi je gori od ugašenog", () => {
+    expect(() => loadConfig({})).toThrow(/DATABASE_URL/);
   });
 
   it("prazan string nije vrijednost", () => {
-    expect(() => loadConfig({ DATABASE_ADMIN_URL: "   " })).toThrow(/DATABASE_ADMIN_URL/);
+    expect(() => loadConfig({ DATABASE_URL: "   ", DATABASE_ADMIN_URL: "  " })).toThrow(
+      /DATABASE_URL/,
+    );
+  });
+
+  // Coolify deploy često ima SAMO `DATABASE_URL` (jedna varijabla za web i worker). Bez ovog
+  // fallbacka worker je padao na startu sa „nedostaje DATABASE_ADMIN_URL", iako ima bazu.
+  it("radi sa samo DATABASE_URL — posao i red idu u istu bazu", () => {
+    const config = loadConfig({ DATABASE_URL: "postgresql://app" });
+    expect(config.databaseUrl).toBe("postgresql://app");
+    expect(config.bossDatabaseUrl).toBe("postgresql://app");
+  });
+
+  // pg-boss pri prvom startu pravi šemu `pgboss`; aplikacijska rola to ne smije, pa red ide
+  // na vlasničku konekciju kad postoji. Bez ovoga produkcija pada na „permission denied for
+  // schema pgboss" — tačno na startu, prije prvog posla.
+  it("red ide na vlasničku rolu kad su oba URL-a postavljena", () => {
+    const config = loadConfig({
+      DATABASE_URL: "postgresql://app",
+      DATABASE_ADMIN_URL: "postgresql://admin",
+    });
+    expect(config.databaseUrl).toBe("postgresql://app");
+    expect(config.bossDatabaseUrl).toBe("postgresql://admin");
+  });
+
+  it("DATABASE_URL ima prednost pred DATABASE_ADMIN_URL (manje privilegije)", () => {
+    const config = loadConfig({
+      DATABASE_URL: "postgresql://app",
+      DATABASE_ADMIN_URL: "postgresql://admin",
+    });
+    expect(config.databaseUrl).toBe("postgresql://app");
   });
 
   it("defaulti su ono što piše u spec 12 §13", () => {

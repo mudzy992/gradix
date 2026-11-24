@@ -2,12 +2,21 @@
  * Konfiguracija workera — JEDNO mjesto gdje se čita okruženje.
  *
  * Worker radi poslove za SVE firme, pa mu trebaju dvije konekcije:
- *   - `DATABASE_ADMIN_URL` — poslovni upiti (vlasnik šeme; `FORCE RLS` se obilazi samo tako
- *     što svaki posao postavi `app.company_id` kroz `withCompany`, nikad „zaboravi WHERE“);
- *   - `DATABASE_URL` (ili ista admin) — pg-boss šema `pgboss`.
+ *   - poslovni upiti — `DATABASE_URL` (aplikacijska rola) ili `DATABASE_ADMIN_URL` (vlasnik
+ *     šeme). Poslovna rola je dovoljna: svaki posao postavi `app.company_id` kroz `withCompany`,
+ *     pa `FORCE RLS` propušta tačno jednu firmu;
+ *   - pg-boss šema `pgboss` — `BOSS_DATABASE_URL`, inače `DATABASE_ADMIN_URL` (vlasnička rola:
+ *     pg-boss PRI PRVOM STARTU pravi šemu i tabele, a aplikacijska rola to ne smije), inače
+ *     `DATABASE_URL` za baze gdje je rola već vlasnik `pgboss` šeme.
  *
- * Namjerno padamo JASNO kad URL nedostaje: worker koji tiho ne radi je gori od ugašenog,
- * jer niko ne primijeti da podsjetnici ne stižu.
+ * Fallback je namjeran: na Coolify deployu se često postavi samo `DATABASE_URL` (jedna
+ * varijabla za web i worker), a worker bi tada padao na startu sa „nedostaje
+ * DATABASE_ADMIN_URL". Redoslijed je zato: `DATABASE_URL` → `DATABASE_ADMIN_URL` za posao, i
+ * `BOSS_DATABASE_URL` → `DATABASE_ADMIN_URL` → `DATABASE_URL` za red. `BOSS_DATABASE_URL`
+ * postoji za slučaj odvojene baze reda, ne kao uslov za rad.
+ *
+ * Namjerno padamo JASNO kad nijedan URL ne postoji: worker koji tiho ne radi je gori od
+ * ugašenog, jer niko ne primijeti da podsjetnici ne stižu.
  */
 export type WorkerConfig = {
   databaseUrl: string;
@@ -20,21 +29,31 @@ export type WorkerConfig = {
   logLevel: "debug" | "info" | "warn" | "error";
 };
 
-function required(name: string, env: NodeJS.ProcessEnv): string {
-  const value = env[name];
-  if (!value || value.trim() === "") {
-    throw new Error(
-      `Nedostaje ${name}. Worker ne može raditi bez baze — postavi ${name} prije pokretanja.`,
-    );
+function prviPostavljen(env: NodeJS.ProcessEnv, ...imena: string[]): string | null {
+  for (const ime of imena) {
+    const vrijednost = env[ime]?.trim();
+    if (vrijednost) return vrijednost;
   }
-  return value;
+  return null;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
+  const databaseUrl = prviPostavljen(env, "DATABASE_URL", "DATABASE_ADMIN_URL");
+  if (!databaseUrl) {
+    throw new Error(
+      "Nedostaje DATABASE_URL (ili DATABASE_ADMIN_URL). Worker ne može raditi bez baze — " +
+        "postavi DATABASE_URL prije pokretanja.",
+    );
+  }
   return {
-    databaseUrl: required("DATABASE_ADMIN_URL", env),
-    // pg-boss drži svoju šemu; koristi istu bazu da nema drugog sistema za red.
-    bossDatabaseUrl: env.BOSS_DATABASE_URL?.trim() || required("DATABASE_ADMIN_URL", env),
+    databaseUrl,
+    // pg-boss drži svoju šemu i pravi je sam pri prvom startu → vlasnička rola ima prednost.
+    bossDatabaseUrl: prviPostavljen(
+      env,
+      "BOSS_DATABASE_URL",
+      "DATABASE_ADMIN_URL",
+      "DATABASE_URL",
+    )!,
     reminderIntervalMinutes: Number(env.REMINDER_INTERVAL_MINUTES ?? 15),
     jobExpireMinutes: Number(env.JOB_EXPIRE_MINUTES ?? 15),
     concurrency: Number(env.WORKER_CONCURRENCY ?? 4),

@@ -74,6 +74,26 @@ export function requiresEnrollment(
   return ENROLLMENT_ALLOWED.has(pathname) ? null : "AUTH_2FA_ENROLLMENT_REQUIRED";
 }
 
+/**
+ * Odredište za sesiju koja služi SAMO uparivanju 2FA.
+ *
+ * `null` = ruta je dozvoljena. Inače vraća putanju na koju server-render stranica treba
+ * preusmjeriti. `postavke?tab=sigurnost` je jedini ekran koji takva sesija smije vidjeti.
+ *
+ * Ovo postoji jer se dozvola za API rute (`requiresEnrollment`) i **stranica** ne smiju
+ * razići: ruta je puštala uparivanje, a stranica `/ured/postavke` preusmjeravala na
+ * `/pregled` — pa je nalog koji MORA upariti 2FA dobijao 403 na svakom ekranu i nije mogao
+ * ni doći do svog uparivanja. Tiket iz produkcije: „2FA ekran ne može da se učita".
+ */
+export const ENROLLMENT_SCREEN = "/ured/postavke?tab=sigurnost";
+
+export function enrollmentRedirect(ctx: AuthContext, pathname: string): string | null {
+  if (!ctx.enrollmentPending) return null;
+  // Samo ekran za uparivanje; svaki drugi ekran vraća korisnika tu.
+  if (pathname === "/ured/postavke") return null;
+  return ENROLLMENT_SCREEN;
+}
+
 export function requiresPasswordChange(
   ctx: AuthContext,
   pathname: string,

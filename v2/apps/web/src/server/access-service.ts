@@ -535,6 +535,18 @@ export async function changeOwnPassword(
       "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND id <> $3 AND revoked_at IS NULL RETURNING id",
       [ctx.userId, ctx.companyId, ctx.sessionId],
     );
+    /*
+     * Tekuća sesija prestaje biti „privremena".
+     *
+     * `sessions.pwd_change_required` je TREĆI sloj iste zabrane (uz `pwd` u tokenu i
+     * `users.must_change_password`), i `authenticate` ga poštuje. Ako se ovdje ne spusti, nalog
+     * dobije uspješnu promjenu lozinke i onda 403 `AUTH_PASSWORD_CHANGE_REQUIRED` na sljedećem
+     * zahtjevu — do isteka sesije. Zato se resetuje u ISTOJ transakciji kao i lozinka.
+     */
+    await client.query(
+      "UPDATE sessions SET pwd_change_required = false WHERE id = $1 AND user_id = $2 AND company_id = $3",
+      [ctx.sessionId, ctx.userId, ctx.companyId],
+    );
 
     await writeAudit(client, {
       companyId: ctx.companyId,

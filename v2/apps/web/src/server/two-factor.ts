@@ -133,8 +133,18 @@ export async function confirmEnrollment(
     await client.query("UPDATE users SET totp_enabled = true, must_enroll_2fa = false WHERE id = $1", [
       ctx.userId,
     ]);
-    // Stari kodovi (ako ih je bilo) ne važe: novi set zamjenjuje sve.
-    await client.query("DELETE FROM user_recovery_codes WHERE user_id = $1", [ctx.userId]);
+    /*
+     * Stari kodovi prestaju važiti, ali se NE brišu — označavaju se kao potrošeni.
+     *
+     * Matrica dozvola namjerno ne daje `gradix_app` pravo DELETE na ovoj tabeli („potrošen kod
+     * ostaje kao dokaz"). Ranije je kod ovdje radio DELETE, pa je uparivanje 2FA u produkciji
+     * padalo sa „permission denied for table user_recovery_codes" — a testovi su prolazili jer
+     * su radili pod vlasničkom rolom. Sada se pokorava matrici.
+     */
+    await client.query(
+      "UPDATE user_recovery_codes SET used_at = COALESCE(used_at, now()) WHERE user_id = $1",
+      [ctx.userId],
+    );
     for (const recoveryCode of codes) {
       await client.query(
         `INSERT INTO user_recovery_codes (id, user_id, code_hash)
@@ -308,8 +318,24 @@ export async function disableTwoFactor(
       return { code: "AUTH_2FA_INVALID", message: "Kod nije ispravan." } as TotpFailure;
     }
 
-    await client.query("DELETE FROM user_totp WHERE user_id = $1", [ctx.userId]);
-    await client.query("DELETE FROM user_recovery_codes WHERE user_id = $1", [ctx.userId]);
+    /*
+     * Tajna se NE briše nego neutrališe — `gradix_app` nema pravo DELETE na `user_totp`
+     * (matrica: „tajna ostaje kao dokaz, isključivanje je stanje"). Red bez `confirmed_at` i sa
+     * uništenim šifratom više ništa ne otvara, a `twoFactorStatus` ga ne broji kao aktivno.
+     *
+     * Prije ovoga je isključivanje 2FA u produkciji padalo na `permission denied`, i to tačno
+     * na ekranu gdje korisnik gasi 2FA — dakle nije se moglo ni ugasiti ni ponovo upariti.
+     */
+    await client.query(
+      `UPDATE user_totp
+          SET secret_enc = 'revoked', confirmed_at = NULL, last_used_step = NULL, updated_at = now()
+        WHERE user_id = $1`,
+      [ctx.userId],
+    );
+    await client.query(
+      "UPDATE user_recovery_codes SET used_at = COALESCE(used_at, now()) WHERE user_id = $1",
+      [ctx.userId],
+    );
     await client.query("UPDATE users SET totp_enabled = false, must_enroll_2fa = false WHERE id = $1", [
       ctx.userId,
     ]);
@@ -350,8 +376,17 @@ export async function resetTwoFactor(
     );
     if (!target.rows[0]) return { code: "FORBIDDEN", message: "Korisnik nije u vašoj firmi." } as TotpFailure;
 
-    await client.query("DELETE FROM user_totp WHERE user_id = $1", [targetUserId]);
-    await client.query("DELETE FROM user_recovery_codes WHERE user_id = $1", [targetUserId]);
+    // Isto pravilo kao pri isključivanju: neutralisati, ne brisati (nema DELETE granta).
+    await client.query(
+      `UPDATE user_totp
+          SET secret_enc = 'revoked', confirmed_at = NULL, last_used_step = NULL, updated_at = now()
+        WHERE user_id = $1`,
+      [targetUserId],
+    );
+    await client.query(
+      "UPDATE user_recovery_codes SET used_at = COALESCE(used_at, now()) WHERE user_id = $1",
+      [targetUserId],
+    );
     await client.query(
       "UPDATE users SET totp_enabled = false, must_enroll_2fa = true WHERE id = $1",
       [targetUserId],

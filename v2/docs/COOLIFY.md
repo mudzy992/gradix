@@ -49,6 +49,45 @@ build ponavlja sa starom greškom.
 | `AUTH_SECRET` | 48+ slučajnih bajtova, base64 | Generiši: `openssl rand -base64 48`. Min 32 znaka. Rotacija odjavljuje sve korisnike. |
 | `RUN_MIGRATIONS` | `true` | Prvi deploy `true`; poslije može ostati `true` (idempotentno). |
 
+### Worker kontejner (`Dockerfile.worker`) — minimalni spisak
+
+Worker je **odvojen** kontejner i ne nasljeđuje ENV weba. Ovo mu treba:
+
+| Varijabla | Obavezno | Napomena |
+|---|---|---|
+| `DATABASE_URL` | ✅ (ili `DATABASE_ADMIN_URL`) | Poslovni upiti. Aplikacijska rola je dovoljna — svaki posao postavi `app.company_id`, pa `FORCE RLS` propušta tačno jednu firmu. |
+| `DATABASE_ADMIN_URL` | ⚠️ jako preporučeno | **pg-boss pri prvom startu pravi šemu `pgboss`** i tabele. Aplikacijska rola to ne smije (`permission denied for schema pgboss`), pa red ide na vlasničku konekciju. Bez ovoga worker radi samo ako `pgboss` šema već postoji i `gradix_app` je njen vlasnik. |
+| `BOSS_DATABASE_URL` | ➖ | Samo ako je baza reda **odvojena** od poslovne. Inače se koristi `DATABASE_ADMIN_URL` (pa `DATABASE_URL`). |
+| `LOG_LEVEL` | ➖ | `info` po defaultu. |
+| `WORKER_CONCURRENCY` | ➖ | Default `4`. |
+| `REMINDER_INTERVAL_MINUTES` | ➖ | Default `15` (spec 02 §24). |
+
+Redoslijed fallbacka je u `apps/worker/src/config.ts` i pokriven testom: posao ide na
+`DATABASE_URL` → `DATABASE_ADMIN_URL`; red na `BOSS_DATABASE_URL` → `DATABASE_ADMIN_URL` →
+`DATABASE_URL`. Ranije je worker padao na startu ako je postavljen samo `DATABASE_URL`
+(„nedostaje DATABASE_ADMIN_URL"), iako baza radi.
+
+### 2FA (TOTP) — šta mora biti postavljeno
+
+2FA **nema svojih ENV varijabli**; sve ide kroz `AUTH_SECRET`:
+
+| Varijabla | Zašto je 2FA traži |
+|---|---|
+| `AUTH_SECRET` | Iz njega se izvodi **AES-256-GCM ključ** kojim se šifruje TOTP tajna u `user_totp.secret_enc`, i njime se potpisuju sesije. Bez njega aplikacija ne starta (`Neispravna konfiguracija: AUTH_SECRET …`). Min 32 znaka. **Rotacija obara sve 2FA tajne** — korisnici moraju ponovo upariti. |
+| `DATABASE_URL` | Tabele `user_totp`, `user_recovery_codes`; aplikacijska rola ih čita/piše kroz RLS. |
+| `DATABASE_ADMIN_URL` | Samo `RUN_MIGRATIONS=true` (migracije F1). |
+
+Nema `otplib`/`qrcode`/`crypto` zavisnosti: TOTP je vlastita implementacija u
+`packages/domain/src/totp.ts` (iz `node:crypto`), a QR se crta iz `otpauth://` URI-ja na klijentu.
+Zato nema „native modul se ne učitava u production buildu" klase greške.
+
+**Prava koja 2FA traži (matrica dozvola):** `user_totp` i `user_recovery_codes` treba
+`SELECT, INSERT, UPDATE` — **bez `DELETE`**. Tajna i potrošeni recovery kod ostaju kao dokaz;
+isključivanje i reset **neutrališu** tajnu (`secret_enc = 'revoked'`, `confirmed_at = NULL`),
+ne brišu red. Ako se u logu vidi `permission denied for table user_recovery_codes` ili
+`user_totp`, uzrok je grant koji je preširok ili tabela kojoj nedostaje grant iz
+`packages/db/bootstrap/grants.sql` — pokreni preflight.
+
 ## 2. Preporučeno i staging servisi
 
 | Varijabla | Vrijednost | Zašto |

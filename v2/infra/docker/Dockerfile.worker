@@ -18,17 +18,19 @@ COPY packages/db/package.json packages/db/
 COPY apps/worker/package.json apps/worker/
 RUN pnpm install --frozen-lockfile --filter @gradix/worker...
 
-# 2) Build: `tsc` u dist/. Bez bundlera — worker nema Next.js magije, a zavisnosti ostaju
-#    vanjske (pg je native-ish, pg-boss drži svoj pool).
+# 2) Build: esbuild bundle u `dist/main.js` (+ `.map`).
+#    Zašto NE goli `tsc`: emituje relativne uvoze bez `.js` (`./config`), što Node ESM ne
+#    razrješava — worker je u produkciji padao sa „Cannot find module '/app/apps/worker/dist/config'".
+#    Bundle ugrađuje naše module (@gradix/domain, @gradix/db i relativne), a npm paketi ostaju
+#    vanjski (pg, pg-boss, S3) i dolaze iz node_modules u runner sloju.
 FROM deps AS builder
 COPY packages/config packages/config
 COPY packages/domain packages/domain
 COPY packages/db packages/db
 COPY apps/worker apps/worker
-# `@gradix/domain` i `@gradix/db` NE grade se: njihov `exports` pokazuje na `src/*.ts`
-# (interni workspace paketi se kompajliraju zajedno sa workerom). Ranija verzija je zvala
-# `pnpm --filter @gradix/domain build`, a tog skripta nema — build bi stao na
-# „None of the selected packages has a build script".
+# `@gradix/domain` i `@gradix/db` NE grade se odvojeno: njihov `exports` pokazuje na `src/*.ts`,
+# a esbuild ih čita i ugrađuje u bundle (`build.mjs`, plugin za workspace pakete). Ranija
+# verzija je zvala `pnpm --filter @gradix/domain build`, a tog skripta nema.
 RUN pnpm --filter @gradix/worker build
 
 # 3) Runtime: produkcijske zavisnosti + dist. Nema pnpm-a, nema dev alata.
@@ -39,11 +41,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/domain/node_modules ./packages/domain/node_modules
 COPY --from=builder /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=builder /app/apps/worker/node_modules ./apps/worker/node_modules
-# Izvor workspace paketa ide u sliku (ne `dist` — paketi ga nemaju, vidi gore).
-COPY --from=builder /app/packages/domain/src ./packages/domain/src
-COPY --from=builder /app/packages/domain/package.json ./packages/domain/package.json
-COPY --from=builder /app/packages/db/src ./packages/db/src
-COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
+# Izvor workspace paketa NE ide u sliku: bundle ga je već ugradio. Ovo je i sigurnosno bolje —
+# u runtime sloju nema `.ts` izvora koji bi Node pokušao učitati i pasti na ekstenzijama.
 COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
 # Migracije ostaju u slici: worker ih NE primjenjuje (to radi web pri startu), ali operator
