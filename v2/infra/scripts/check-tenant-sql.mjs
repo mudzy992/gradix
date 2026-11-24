@@ -71,6 +71,8 @@ const TENANT_TABLES = [
   "obligation_types",
   "obligation_versions",
   "obligations",
+  "obligation_requirements",
+  "obligation_notify_roles",
   "password_resets",
   "project_assignment_overrides",
   "project_assignments",
