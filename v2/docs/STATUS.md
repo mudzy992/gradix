@@ -1,9 +1,9 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0: završena** · **Faza 1: završena (checkpoint)** · **Faza 2: završena** · **Faza 3: završena** · **Faza 4: završena** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 5** po `docs/IMPLEMENTATION_PLAN.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -35,6 +35,13 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 5** po `docs/IMPLEM
 | 4.3 | API: **24 nove rute** — komponente i ručna stopa, iskorištenost i zauzetost mašine, kalendar zauzetosti, najam, cijene goriva, cisterne i popis, odstupanja i objašnjenje, dionice, šabloni pregleda, foto potvrda; OpenAPI **150 putanja / 195 operacija** | ✅ |
 | 4.4 | UI: `/ured/trosak-masina` (komponente + stopa + snapshot), `/ured/gorivo` (odstupanja, cijene, cisterne, unos bez obaveznog iznosa), `/ured/ture` (stacionaže sa zbirom po dionici), `/ured/dnevni-pregled` (šabloni, kritični FAIL → foto + kvar), `/ured/masine/kalendar` (mjesec × mašina) | ✅ |
 | 4.5 | Provjere: `check-preklapanje.mjs` proširen na `machine_cost_components`, NUL-sweep pokriva sve F4 rute, integracioni test `phase4.integration.test.ts` (15 scenarija protiv prave baze) | ✅ |
+
+| 5.1 | Baza: `project_phases` (težine 1–1000), `project_phase_dependencies`, `cost_categories`, `project_budget_lines` (append-only), `project_amendments`, `project_boq_items`, `budget_alert_events` (dedupe), `project_tasks`; **`cost_entries` kao jedini ledger** sa `cost_entry_guard()`; `attachments.entity_type` + `'PROJECT'` — **46 migracija, 83 tabele (74 tenant)** | ✅ |
+| 5.2 | Domena: napredak po težinama, marža, EAC (**procjena**, pri 0 % nema broja), pragovi budžeta sa `dedupe_key`, zatvaranje projekta — **226 testova** u domeni | ✅ |
+| 5.3 | API: **19 ruta** — faze i zavisnosti, napredak, profitabilnost, ledger troška, budžet, predmjer, aneksi, zatvaranje, zadaci, kategorije, prilozi projekta; `+22` audit akcije; OpenAPI **169 putanja / 222 metode** | ✅ |
+| 5.4 | Knjiženje troška na **jednom mjestu** (`bookFuelEntryCost`, `bookMachineWorkLogCost`, `bookHaulCost`, `postCost`, `settlePendingCost`, `reverseCost`, `reverseSourceCost`); **R4 sync sada knjiži** (gorivo, sat, tura) — ranije je upisivao red bez troška | ✅ |
+| 5.5 | UI: `/ured/projekti` (marža, rizičnost) + `/ured/projekti/[id]` sa 8 tabova, `/ured/zadaci`, `/ured/postavke/kategorije-troska`, kartica „Rizični projekti“ na `/pregled`; mobilni `/moji-zadaci` i `/trosak` (foto + `sha256`) | ✅ |
+| 5.6 | Worker `budget.thresholds` (`*/15 * * * *`, 80/100 %, dedupe 3 sloja, PM + OWNER); provjere: `pnpm test` 639 prošlo, typecheck 6/6, lint čist, `next build`, OpenAPI ažuran, `check-tenant-sql` 769 upita ✓ | ✅ |
 
 ## Faza 4 — odluke koje se ne smiju izgubiti
 
@@ -107,12 +114,13 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 ## Brojevi (lokalna provjera, 2026-11-23)
 
 ```
-migracije       41          tabele          67 (58 tenant; 66 u generisanim tipovima — bez schema_migrations)
-OpenAPI         136 putanja (172 metode)
-pnpm test       962 testa   (web 572 + domain 178 + mobile 86 + db 67 + contracts 21 + worker 21 + mobile-ekran 10)
-pnpm lint       6/6 · pnpm typecheck 6/6 · check-tenant-sql 606 upita / 58 tabela ✓
-check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka · db:types:check ✓
-a11y            113 testa (axe, WCAG 2.1 AA, obje teme)
+migracije       46          tabele          83 (74 tenant)
+OpenAPI         169 putanja (222 metode)
+pnpm test       639 prošlo, 338 preskočeno
+                (web 277 + domain 226 + mobile 93 + contracts 21 + worker 22; preskočeno = DB integracija bez DATABASE_URL)
+pnpm lint       6/6 · pnpm typecheck 6/6 · next build ✓
+check-tenant-sql 769 upita ✓ · check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka
+a11y            axe (WCAG 2.1 AA) u svakom novom UI testu — bez serious/critical
 ```
 
 Baza lokalno: embedded Postgres na portu 5433 (`v2/.pg/`, gitignorisano).
@@ -174,10 +182,42 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 - **Mobilni ekran razlikuje blokadu od upozorenja i po boji.** Radnik na suncu ne čita tekst;
   `danger` postoji baš za isteklo/odbijeno.
 
+## Faza 5 — odluke koje se ne smiju izgubiti
+
+- **`cost_entries` je JEDINI ledger troška.** Nema druge tabele u koju se knjiži; svaki izvor
+  (radni dan, gorivo, sat mašine, tura, servisni nalog, ručni unos, storno) ide kroz
+  `cost-entry-service.ts`, i to uvijek sa istim `PoolClient`-om kao upis izvora — inače bi izvor i
+  trošak mogli završiti u različitim transakcijama.
+- **`PENDING` nije nula.** Red bez cijene ima `amount_cents NULL` i **količinu**; u UI-u piše
+  „bez cijene“ i broji se kao **broj zapisa**, nikad kao iznos. Svaka zamjena nulom bi tiho umanjila
+  trošak projekta.
+- **`POSTED` se ne prepisuje.** Ispravka je storno (novi red sa `reverses_id`) + novo knjiženje;
+  `cost_entry_guard()` odbija povratak `POSTED` → izmjena i svaki `REVERSED` dalje.
+- **EAC je procjena i pri 0 % napretka ne postoji.** `estimateAtCompletion` vraća `amount: null`,
+  `reason: "NO_PROGRESS"`; na ekranu piše „Procjena nije moguća pri 0 % napretka“. Nula bi bila
+  tvrdnja koju nemamo, a „ostatak budžeta“ je druga formula i ne zove se EAC.
+- **Storno iz revizije izvora nikad ne obara posao.** `reverseSourceCost` vraća
+  `{ reversed: boolean }` i ne baca; revizija goriva/sata/ture mora proći i kad storno nije moguć
+  (npr. projekat je `FINISHED`).
+- **Terenski (offline) unos knjiži isto kao uredski.** `r4-sync-*` handleri zovu iste `book*`
+  funkcije — ranije su upisivali red bez troška, što je bila tiha rupa između terena i knjige.
+- **Trošak bez projekta je `skipped`, ne greška.** Ledger prima i troškove bez `project_id`
+  (npr. mašina na održavanju); oni ne ulaze u maržu nijednog projekta.
+- **Napredak ima imenilac.** `projectProgress` sabira **težine** faza (`1–1000`), ne broj završenih
+  faza; projekat bez faza nema procenat i EAC se ne računa.
+- **Upozorenje na budžet je događaj, ne stanje.** `budget_alert_events` sa `dedupe_key`
+  `"prj:<revision>:<scope>:<pct>"` i `UNIQUE (company_id, dedupe_key)`: 100 % daje **jedno**
+  upozorenje, a nova revizija budžeta ga legitimno otvara ponovo.
+- **Ledger je tab u projektu, ne zaseban ekran.** `/ured/troskovi-projekta` je uklonjen: trošak se
+  čita u kontekstu jednog projekta, a `nav.ts` je jedina definicija menija (i to provjerava
+  `nav.test.ts`).
+- **Marža se ne prikazuje bez `projects.costs.view`.** Skrivanje na klijentu nije dovoljno — server
+  ne šalje novac onome ko ne smije da ga vidi, a test to provjerava na listi projekata.
+
 ## Namjerno još nema
 
-- 1 od 6 worker poslova (`budget.thresholds`) — dolazi sa svojim modulom, jer traži tabele koje
-  još ne postoje. (`sync.purge` je isporučen u Fazi 3.)
+- `budget.thresholds` je isporučen u Fazi 5; ostali worker poslovi dolaze sa modulima koji traže
+  svoje tabele. (`sync.purge` je isporučen u Fazi 3.)
 - Email/push provajder: isporuka je `BLOCKED_NO_PROVIDER`, in-app radi bez njega.
 - `report_jobs`, `daily_rollups` — tabele i kostur postoje, poslovi dolaze sa izvještajima (Faza 6).
 
@@ -203,3 +243,13 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 - **F4:** `check-preklapanje.mjs` traži `psql` (`infra/scripts/db-apply.sh`), pa se u ovom okruženju
   ne može pokrenuti; mehanizam je zato provjeren direktnim upitom nad `gradix_fresh`
   (dodjele: 2 × `EXCLUDE`, komponente: 1 × `EXCLUDE`, bez trigera) i istim testom trke.
+- **F5:** `workday-timer-service.ts` još ne knjiži trošak — sat mašine se knjiži iz
+  `machine_work_log`. Spajanje traži odluku koji je izvor mjerodavan kad postoje oba; do tada nema
+  tihog dvostrukog knjiženja.
+- **F5:** `PATCH /api/tasks/{id}` traži `projects.manage` [OWNER, ADMIN], pa šef gradilišta i radnik
+  na terenu ne mogu prebaciti status zadatka (mobilni ekran ih prikazuje). Otvorena odluka o
+  dozvoli po zadatku.
+- **F5:** storno na `FINISHED` projektu pada u `cost_entry_guard()`; greška se guta i vraća
+  `{reversed:false}`. Pravilo „storno je dozvoljen i poslije zatvaranja“ je odluka, ne bug.
+- **F5:** integracioni testovi protiv baze u ovom okruženju nisu pokrenuti (nema `psql`/PG);
+  oslanjaju se na CI i lokalno se prijavljuju kao **preskočeni**, ne kao prošli.

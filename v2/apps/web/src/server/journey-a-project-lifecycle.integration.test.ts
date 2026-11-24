@@ -6,7 +6,7 @@ import { companyId, withCompany } from "@gradix/db";
 import { computeCostAmount, computeHoursFromInterval, toAmountString } from "@gradix/domain";
 import { POST as createProjectRoute } from "@/app/api/projects/route";
 import { createMachineWorkLog } from "./machine-work-log-service";
-import { bookProjectCosts } from "./project-cost-service";
+import { createManualCost } from "./cost-entry-service";
 import { createAssignment, createProject, isServiceError } from "./project-service";
 import { buildPregled } from "./pregled-service";
 import { SyncPushAccessError, pushR4SyncItems } from "./r4-sync-service";
@@ -174,20 +174,29 @@ describeDb("journey A project lifecycle", () => {
     expect(await lockWeek(dbApp, ownerAct, WEEK)).toMatchObject({ outcome: "VALIDATION_FAILED", code: "NOT_APPROVED" });
     expect(await rows(CO, `SELECT status AS n FROM public.work_week_approvals WHERE company_id = $1 AND week_start = $2::date`, [CO, WEEK])).toBe("LOCKED");
 
-    expect(await bookProjectCosts(dbApp, accountant, { workLogIds: ["missing"] })).toMatchObject({ outcome: "FORBIDDEN" });
+    /*
+     * F5: računovođa ne knjiži trošak (nema `projects.costs.book`), a saldiranje više nije dugme —
+     * sat mašine u `WORK` režimu knjiži trošak sam, u transakciji u kojoj nastaje.
+     */
+    expect(
+      await createManualCost(dbApp, accountant, {
+        projectId: created.id,
+        categoryId: "nepostoji",
+        occurredOn: DATE,
+        amount: "10.00",
+      }),
+    ).toMatchObject({ outcome: "FORBIDDEN" });
     const log = await createMachineWorkLog(dbApp, ownerAct, { machineId, workerId, projectId: created.id, startedAt: STARTED, endedAt: ENDED, mode: "WORK" });
     expect(log.outcome).toBe("OK");
     if (log.outcome !== "OK") return;
     const hours = computeHoursFromInterval(new Date(STARTED), new Date(ENDED));
     const amount = computeCostAmount(hours, RATE, "BAM");
-    expect(await bookProjectCosts(dbApp, ownerAct, { workLogIds: [log.id] })).toMatchObject({ outcome: "OK", booked: 1 });
-    expect(await bookProjectCosts(dbApp, ownerAct, { workLogIds: [log.id] })).toMatchObject({ outcome: "OK", skippedExisting: 1 });
-    expect(await bookProjectCosts(dbApp, otherAct, { workLogIds: [log.id] })).toMatchObject({ outcome: "VALIDATION_FAILED", code: "EMPTY" });
-    expect(await rows(CO, `SELECT count(*)::text AS n FROM public.project_cost_entries
+    // Trošak postoji BEZ ijednog dodatnog poziva: knjiženje je posljedica upisa sata.
+    expect(await rows(CO, `SELECT count(*)::text AS n FROM public.cost_entries
       WHERE company_id = $1 AND source_type = 'MACHINE_WORK_LOG' AND source_id = $2 AND project_id = $3`, [CO, log.id, created.id])).toBe("1");
     expect(await rows(OTHER, `SELECT count(*)::text AS n FROM public.projects WHERE company_id = $1 AND id = $2`, [CO, created.id])).toBe("0");
     expect(await rows(OTHER, `SELECT count(*)::text AS n FROM public.workdays WHERE company_id = $1 AND id = $2`, [CO, workdayId])).toBe("0");
-    expect(await rows(OTHER, `SELECT count(*)::text AS n FROM public.project_cost_entries WHERE company_id = $1 AND source_id = $2`, [CO, log.id])).toBe("0");
+    expect(await rows(OTHER, `SELECT count(*)::text AS n FROM public.cost_entries WHERE company_id = $1 AND source_id = $2`, [CO, log.id])).toBe("0");
     expect(await buildPregled(dbApp, companyId(CO), { ...workerAct, scope: "SELF", projectIds: [] })).toBeNull();
     const overview = await buildPregled(dbApp, companyId(CO), { ...ownerAct, scope: "COMPANY", projectIds: [] });
     expect(overview?.dashboard).toMatchObject({

@@ -1,6 +1,17 @@
 "use client";
 
-/** Detalj projekta: tim i mašine (dodjele), rokovi na projektu, poništavanje dodjele. */
+/**
+ * Detalj projekta — osam tabova iz spec 06 §4: Pregled, Troškovi, Budžet, Predmjer, Aneksi,
+ * Zadaci, Dodjele, Obaveze.
+ *
+ * Zašto dijalog, a ne stranica `/ured/projekti/[id]`: projekat se otvara IZ liste i vraća u nju
+ * (fokus se vraća na red). Tabovi su stanje u komponenti, pa se prijelaz ne osjeća kao navigacija.
+ * Tabovi koji traže novac (Pregled, Troškovi, Budžet, Predmjer) traže `projects.costs.view` —
+ * bez te dozvole tab se ne prikazuje, a ne prikazuje se ni prazan.
+ *
+ * EAC je OVDJE označen kao procjena: `amount: null` uz `NO_PROGRESS` znači „ne znamo“, pa se
+ * broj ne ispisuje (spec 06 §1.8.30) — nula bi bila laž.
+ */
 import { useCallback, useEffect, useState } from "react";
 import type { Project, ProjectAssignment } from "@gradix/contracts";
 import { apiCall, patchBody } from "@/api-client";
@@ -10,12 +21,29 @@ import {
 } from "@/components/ui/index";
 import { AssignmentDialog } from "./assignment-dialog";
 import { ProjectObligations } from "./project-obligations";
+import { ProjectOverview } from "./project-tabs/project-overview";
+import { ProjectCosts } from "./project-tabs/project-costs";
+import { ProjectBudget } from "./project-tabs/project-budget";
+import { ProjectBoq } from "./project-tabs/project-boq";
+import { ProjectAmendments } from "./project-tabs/project-amendments";
+import { ProjectTasks } from "./project-tabs/project-tasks";
+
+type TabKey =
+  | "overview"
+  | "costs"
+  | "budget"
+  | "boq"
+  | "amendments"
+  | "tasks"
+  | "team"
+  | "obligations";
 
 export function ProjectDetail({
   project,
   canManage,
   canAssign,
   canOverride,
+  canSeeMoney,
   onClose,
   onChanged,
   onEdit,
@@ -24,12 +52,14 @@ export function ProjectDetail({
   canManage: boolean;
   canAssign: boolean;
   canOverride: boolean;
+  /** `projects.costs.view` — bez njega novčani tabovi ne postoje (ni prazni). */
+  canSeeMoney: boolean;
   onClose: () => void;
   onChanged: () => Promise<void>;
   /** Izmjena se otvara iz detalja — inače bi čovjek morao zatvoriti detalj i tražiti red u listi. */
   onEdit: (project: Project) => void;
 }) {
-  const [tab, setTab] = useState<"team" | "obligations">("team");
+  const [tab, setTab] = useState<TabKey>(canSeeMoney ? "overview" : "team");
   const [assignments, setAssignments] = useState<ProjectAssignment[] | null>(null);
   const [today, setToday] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -101,14 +131,36 @@ export function ProjectDetail({
       <Tabs
         label="Dijelovi projekta"
         active={tab}
-        onChange={(key) => setTab(key as "team" | "obligations")}
+        onChange={(key) => setTab(key as TabKey)}
         tabs={[
+          ...(canSeeMoney ? [{ key: "overview", label: "Pregled" }] : []),
+          ...(canSeeMoney ? [{ key: "costs", label: "Troškovi" }] : []),
+          ...(canSeeMoney ? [{ key: "budget", label: "Budžet" }] : []),
+          ...(canSeeMoney ? [{ key: "boq", label: "Predmjer" }] : []),
+          { key: "amendments", label: "Aneksi" },
+          { key: "tasks", label: "Zadaci" },
           { key: "team", label: "Tim i mašine" },
           { key: "obligations", label: "Rokovi na projektu" },
         ]}
       />
 
-      {tab === "team" ? (
+      {tab === "overview" ? (
+        <ProjectOverview
+          projectId={project.id}
+          canManage={canManage}
+          onOpenTab={(next) => setTab(next as TabKey)}
+        />
+      ) : tab === "costs" ? (
+        <ProjectCosts projectId={project.id} canManage={canManage} />
+      ) : tab === "budget" ? (
+        <ProjectBudget projectId={project.id} canManage={canManage} />
+      ) : tab === "boq" ? (
+        <ProjectBoq projectId={project.id} canManage={canManage} />
+      ) : tab === "amendments" ? (
+        <ProjectAmendments projectId={project.id} canManage={canManage} />
+      ) : tab === "tasks" ? (
+        <ProjectTasks projectId={project.id} canManage={canManage} />
+      ) : tab === "team" ? (
         <div>
           {canAssign ? (
             <div className="gx-mt-4">

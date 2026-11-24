@@ -664,7 +664,13 @@ export type AttachmentRegisterRequest = z.infer<typeof AttachmentRegisterRequest
  * F0.2 — jedan obrazac za priloge svih modula. `entityType` određuje koja dozvola treba
  * (vidi `attachment-access.ts` u webu), pa ugovor nosi tip, a ne četiri skoro iste rute.
  */
-export const AttachmentEntityType = z.enum(["OBLIGATION", "TENDER", "MACHINE_DAILY_CHECK"]);
+export const AttachmentEntityType = z.enum([
+  "OBLIGATION",
+  "TENDER",
+  "MACHINE_DAILY_CHECK",
+  /** F5: fotografija računa uz projekat (trošak nastaje poslije slike). */
+  "PROJECT",
+]);
 export type AttachmentEntityType = z.infer<typeof AttachmentEntityType>;
 
 export const Attachment = z.object({
@@ -1883,48 +1889,6 @@ export const MachineCostRateMutationOutcome = z.object({
 });
 export type MachineCostRateMutationOutcome = z.infer<typeof MachineCostRateMutationOutcome>;
 
-export const ProjectCostEntryRow = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  project_code: z.string(),
-  project_name: z.string(),
-  source_type: z.enum(["MACHINE_WORK_LOG", "HAUL", "FUEL_ENTRY", "SERVICE_ORDER", "MANUAL"]),
-  source_id: z.string(),
-  machine_id: z.string(),
-  machine_code: z.string(),
-  machine_name: z.string(),
-  hours: z.string(),
-  rate: z.string(),
-  amount: z.string(),
-  currency_code: z.string(),
-  booked_at: z.string(),
-  note: z.string().nullable(),
-});
-export type ProjectCostEntryRow = z.infer<typeof ProjectCostEntryRow>;
-
-export const ProjectCostEntriesResponse = z.object({
-  entries: z.array(ProjectCostEntryRow),
-});
-export type ProjectCostEntriesResponse = z.infer<typeof ProjectCostEntriesResponse>;
-
-export const ProjectCostBookInput = z.object({
-  from: SafeText.min(10).max(40).optional(),
-  to: SafeText.min(10).max(40).optional(),
-  workLogIds: z.array(SafeText.min(1).max(128)).max(500).optional(),
-  note: SafeText.max(2000).nullable().optional(),
-}).strict();
-export type ProjectCostBookInput = z.infer<typeof ProjectCostBookInput>;
-
-export const ProjectCostBookOutcome = z.object({
-  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
-  booked: z.number().int().nonnegative().optional(),
-  skippedExisting: z.number().int().nonnegative().optional(),
-  skippedNoRate: z.number().int().nonnegative().optional(),
-  code: z.string().optional(),
-  message: z.string().optional(),
-});
-export type ProjectCostBookOutcome = z.infer<typeof ProjectCostBookOutcome>;
-
 /* ============================================================ R6.2 — obračun sati CSV */
 
 export const HoursExportQuery = z.object({
@@ -2988,3 +2952,568 @@ export const CalendarAvailabilityResponse = z.object({
   to: CalendarDateText,
 });
 export type CalendarAvailabilityResponse = z.infer<typeof CalendarAvailabilityResponse>;
+
+/* ==========================================================================
+ * Faza 5 — Modul 6: faze, budžet, jedinstveni ledger, predmjer, aneksi, zadaci
+ * ========================================================================== */
+
+/** Faza projekta. `weight` je obavezan u praksi — `null` je samo za redove prije F5. */
+export const ProjectPhase = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  code: SafeText,
+  name: SafeText,
+  sort_order: z.number().int(),
+  weight: z.number().int(),
+  planned_start: CalendarDateText.nullable(),
+  planned_end: CalendarDateText.nullable(),
+  actual_start: CalendarDateText.nullable(),
+  actual_end: CalendarDateText.nullable(),
+  progress_pct: z.number(),
+  status: z.enum(["PLANNED", "ACTIVE", "DONE", "CANCELLED"]),
+  /** % cijelog projekta nakon što se ova faza uračuna (Σ×weight / Σweight). */
+  weighted_share: z.number(),
+  /** Zavisnosti koje još nijesu završene — upozorenje, ne blokada (§1.1.4). */
+  dependency_warnings: z.array(SafeText),
+});
+export type ProjectPhase = z.infer<typeof ProjectPhase>;
+
+export const ProjectPhasesResponse = z.object({
+  phases: z.array(ProjectPhase),
+  /** Ukupni napredak; `null` kad projekat nema nijednu fazu. */
+  progress_pct: z.number().nullable(),
+  progress_source: z.enum(["MANUAL", "BOQ"]),
+});
+export type ProjectPhasesResponse = z.infer<typeof ProjectPhasesResponse>;
+
+export const ProjectPhaseInput = z
+  .object({
+    id: SafeText.optional(),
+    code: SafeText.min(1).max(20),
+    name: SafeText.min(1).max(120),
+    sortOrder: z.number().int().min(0).max(10_000).optional(),
+    weight: z.number().int().min(1).max(1000),
+    plannedStart: CalendarDateText.nullable().optional(),
+    plannedEnd: CalendarDateText.nullable().optional(),
+    status: z.enum(["PLANNED", "ACTIVE", "DONE", "CANCELLED"]).optional(),
+    progressPct: z.number().min(0).max(100).optional(),
+  })
+  .strict();
+export type ProjectPhaseInput = z.infer<typeof ProjectPhaseInput>;
+
+export const ProjectPhasePatch = ProjectPhaseInput.partial().extend({ id: SafeText }).strict();
+export type ProjectPhasePatch = z.infer<typeof ProjectPhasePatch>;
+
+export const PhaseDependencyInput = z
+  .object({
+    phaseId: SafeText,
+    dependsOnPhaseId: SafeText,
+    kind: z.literal("START_AFTER_FINISH").optional(),
+  })
+  .strict();
+export type PhaseDependencyInput = z.infer<typeof PhaseDependencyInput>;
+
+export const PhaseProgressInput = z
+  .object({
+    phases: z
+      .array(z.object({ id: SafeText, progressPct: z.number().min(0).max(100) }).strict())
+      .min(1)
+      .max(200),
+  })
+  .strict();
+export type PhaseProgressInput = z.infer<typeof PhaseProgressInput>;
+
+/** Šifarnik kategorija troška firme. `default_for_source_type` je mapiranje izvora (§1.3.14). */
+export const CostCategory = z.object({
+  id: SafeText,
+  code: SafeText,
+  name: SafeText,
+  sort_order: z.number().int(),
+  default_for_source_type: z
+    .enum([
+      "WORKDAY", "MACHINE_WORK_LOG", "FUEL_ENTRY", "HAUL",
+      "SERVICE_ORDER", "PURCHASE", "SUBCONTRACTOR", "MANUAL",
+    ])
+    .nullable(),
+  is_active: z.boolean(),
+  /** Broj budžetskih linija koje koriste ovu kategoriju — brisanje nije dozvoljeno, deaktivacija jeste. */
+  usage_count: z.number().int(),
+});
+export type CostCategory = z.infer<typeof CostCategory>;
+
+export const CostCategoriesResponse = z.object({
+  categories: z.array(CostCategory),
+  /** Izvori bez mapiranja; njihov trošak ide na `OSTALO`. */
+  unmapped_sources: z.array(SafeText),
+});
+export type CostCategoriesResponse = z.infer<typeof CostCategoriesResponse>;
+
+export const CostCategoryInput = z
+  .object({
+    id: SafeText.optional(),
+    code: SafeText.min(1).max(30),
+    name: SafeText.min(1).max(80),
+    sortOrder: z.number().int().min(0).max(10_000).optional(),
+    defaultForSourceType: z
+      .enum([
+        "WORKDAY", "MACHINE_WORK_LOG", "FUEL_ENTRY", "HAUL",
+        "SERVICE_ORDER", "PURCHASE", "SUBCONTRACTOR", "MANUAL",
+      ])
+      .nullable()
+      .optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+export type CostCategoryInput = z.infer<typeof CostCategoryInput>;
+
+/** Budžetska linija jedne revizije (§1.2.7). Nikad se ne prepisuje — nova revizija je novi red. */
+export const ProjectBudgetLine = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  phase_id: SafeText.nullable(),
+  phase_name: SafeText.nullable(),
+  category_id: SafeText,
+  category_code: SafeText,
+  category_name: SafeText,
+  amount: MoneyText,
+  currency_code: SafeText,
+  revision: z.number().int(),
+  valid_from: CalendarDateText,
+  note: SafeText.nullable(),
+});
+export type ProjectBudgetLine = z.infer<typeof ProjectBudgetLine>;
+
+export const ProjectBudgetResponse = z.object({
+  /** Revizija koja je prikazana (zadata = aktivna na današnji dan). */
+  revision: z.number().int(),
+  revisions: z.array(z.object({ revision: z.number().int(), valid_from: CalendarDateText })),
+  lines: z.array(ProjectBudgetLine),
+  totals: z.object({
+    budget: MoneyText,
+    currency_code: SafeText,
+    /** `POSTED` trošak do danas. */
+    spent: MoneyText,
+    /** Broj i iznos zapisa bez cijene — odvojeno, jer nije nula (§1.3.15). */
+    pending_count: z.number().int(),
+    pending_amount: MoneyText.nullable(),
+    /** Po kategoriji: budžet i stvarno, za traku napretka. */
+    by_category: z.array(
+      z.object({
+        category_id: SafeText,
+        category_code: SafeText,
+        category_name: SafeText,
+        budget: MoneyText,
+        spent: MoneyText,
+        used_pct: z.number().nullable(),
+        threshold_crossed: z.enum(["80", "100"]).nullable(),
+      }),
+    ),
+  }),
+});
+export type ProjectBudgetResponse = z.infer<typeof ProjectBudgetResponse>;
+
+export const ProjectBudgetInput = z
+  .object({
+    /** Nova revizija; `null` = predlog iz aneksa (§1.5.22). */
+    revision: z.number().int().min(1).max(1000).optional(),
+    validFrom: CalendarDateText.optional(),
+    lines: z
+      .array(
+        z
+          .object({
+            phaseId: SafeText.nullable().optional(),
+            categoryId: SafeText,
+            amount: MoneyText,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(500),
+    note: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type ProjectBudgetInput = z.infer<typeof ProjectBudgetInput>;
+
+/** Red u jedinstvenom ledgeru (§1.3). `PENDING` nema iznos i ne ulazi u zbroj. */
+export const CostEntry = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  project_code: SafeText,
+  project_name: SafeText,
+  phase_id: SafeText.nullable(),
+  phase_name: SafeText.nullable(),
+  category_id: SafeText,
+  category_code: SafeText,
+  category_name: SafeText,
+  source_type: z.enum([
+    "WORKDAY", "MACHINE_WORK_LOG", "FUEL_ENTRY", "HAUL",
+    "SERVICE_ORDER", "PURCHASE", "SUBCONTRACTOR", "MANUAL",
+  ]),
+  source_id: SafeText,
+  /** Za drill-down do izvornog zapisa; `null` za ručni unos. */
+  source_href: SafeText.nullable(),
+  machine_id: SafeText.nullable(),
+  machine_code: SafeText.nullable(),
+  occurred_on: CalendarDateText,
+  /** `null` kad je `PENDING` (§1.3.15) — nikad 0. */
+  amount: MoneyText.nullable(),
+  currency_code: SafeText,
+  quantity: SafeText.nullable(),
+  unit: SafeText.nullable(),
+  status: z.enum(["POSTED", "PENDING", "REVERSED"]),
+  reversed_by: SafeText.nullable(),
+  reverses_id: SafeText.nullable(),
+  note: SafeText.nullable(),
+  booked_at: IsoDate,
+});
+export type CostEntry = z.infer<typeof CostEntry>;
+
+export const CostEntriesResponse = z.object({
+  entries: z.array(CostEntry),
+  totals: z.object({
+    posted: MoneyText,
+    currency_code: SafeText,
+    pending_count: z.number().int(),
+    pending_quantity_by_unit: z.array(z.object({ unit: SafeText, quantity: SafeText })),
+  }),
+});
+export type CostEntriesResponse = z.infer<typeof CostEntriesResponse>;
+
+export const CostEntryQuery = z.object({
+  projectId: SafeText.optional(),
+  from: CalendarDateText.optional(),
+  to: CalendarDateText.optional(),
+  categoryId: SafeText.optional(),
+  phaseId: SafeText.optional(),
+  status: z.enum(["POSTED", "PENDING", "REVERSED"]).optional(),
+});
+export type CostEntryQuery = z.infer<typeof CostEntryQuery>;
+
+export const ManualCostInput = z
+  .object({
+    projectId: SafeText,
+    phaseId: SafeText.nullable().optional(),
+    categoryId: SafeText,
+    occurredOn: CalendarDateText,
+    amount: MoneyText,
+    currencyCode: z.enum(["BAM", "EUR", "USD"]).optional(),
+    quantity: z.number().positive().max(1_000_000).optional(),
+    unit: SafeText.max(10).nullable().optional(),
+    note: SafeText.max(1000).nullable().optional(),
+    /** Fotografija računa sa gradilišta (mobilni brzi unos) — mora biti `ready`. */
+    attachmentId: SafeText.nullable().optional(),
+  })
+  .strict();
+export type ManualCostInput = z.infer<typeof ManualCostInput>;
+
+export const CostReversalInput = z
+  .object({
+    reason: SafeText.min(10).max(1000),
+    /** Novi iznos, ako se korekcija knjiži odmah (inace samo storno). */
+    replacement: z
+      .object({
+        amount: MoneyText.optional(),
+        occurredOn: CalendarDateText.optional(),
+        categoryId: SafeText.optional(),
+        phaseId: SafeText.nullable().optional(),
+        note: SafeText.max(1000).nullable().optional(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+  })
+  .strict();
+export type CostReversalInput = z.infer<typeof CostReversalInput>;
+
+export const CostMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
+  id: SafeText.optional(),
+  replaced_by: SafeText.optional(),
+  code: SafeText.optional(),
+  message: SafeText.optional(),
+});
+export type CostMutationOutcome = z.infer<typeof CostMutationOutcome>;
+
+/** Predmjer (§1.4.18). */
+export const BoqItem = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  phase_id: SafeText.nullable(),
+  phase_name: SafeText.nullable(),
+  code: SafeText,
+  description: SafeText,
+  unit: SafeText,
+  quantity_planned: z.number(),
+  quantity_executed: z.number(),
+  unit_price: MoneyText,
+  total_planned: MoneyText,
+  total_executed: MoneyText,
+  sort_order: z.number().int(),
+});
+export type BoqItem = z.infer<typeof BoqItem>;
+
+export const BoqResponse = z.object({
+  items: z.array(BoqItem),
+  progress_source: z.enum(["MANUAL", "BOQ"]),
+  /** % iz predmjera; `null` kad predmjer nema vrijednost. */
+  progress_pct: z.number().nullable(),
+  totals: z.object({ planned: MoneyText, executed: MoneyText, currency_code: SafeText }),
+});
+export type BoqResponse = z.infer<typeof BoqResponse>;
+
+export const BoqItemInput = z
+  .object({
+    id: SafeText.optional(),
+    phaseId: SafeText.nullable().optional(),
+    code: SafeText.min(1).max(30),
+    description: SafeText.min(1).max(500),
+    unit: SafeText.min(1).max(10),
+    quantityPlanned: z.number().min(0).max(1_000_000),
+    unitPrice: MoneyText,
+    quantityExecuted: z.number().min(0).max(1_000_000).optional(),
+    sortOrder: z.number().int().min(0).max(10_000).optional(),
+  })
+  .strict();
+export type BoqItemInput = z.infer<typeof BoqItemInput>;
+
+export const ProgressSourceInput = z
+  .object({ progressSource: z.enum(["MANUAL", "BOQ"]) })
+  .strict();
+export type ProgressSourceInput = z.infer<typeof ProgressSourceInput>;
+
+/** Aneks ugovora (§1.5). Samo `APPROVED` mijenja vrijednost i rok. */
+export const ProjectAmendment = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  code: SafeText,
+  title: SafeText,
+  kind: z.enum(["SCOPE", "TIME", "PRICE", "OTHER"]),
+  amount: MoneyText.nullable(),
+  currency_code: SafeText.nullable(),
+  extension_days: z.number().int().nullable(),
+  status: z.enum(["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"]),
+  approved_at: IsoDate.nullable(),
+  approved_by_name: SafeText.nullable(),
+  document_id: SafeText.nullable(),
+  note: SafeText.nullable(),
+});
+export type ProjectAmendment = z.infer<typeof ProjectAmendment>;
+
+export const ProjectAmendmentsResponse = z.object({
+  amendments: z.array(ProjectAmendment),
+  approved_amount: MoneyText,
+  approved_extension_days: z.number().int(),
+  currency_code: SafeText,
+});
+export type ProjectAmendmentsResponse = z.infer<typeof ProjectAmendmentsResponse>;
+
+export const ProjectAmendmentInput = z
+  .object({
+    id: SafeText.optional(),
+    code: SafeText.min(1).max(30),
+    title: SafeText.min(1).max(200),
+    kind: z.enum(["SCOPE", "TIME", "PRICE", "OTHER"]),
+    amount: MoneyText.nullable().optional(),
+    extensionDays: z.number().int().min(0).max(3650).nullable().optional(),
+    note: SafeText.max(2000).nullable().optional(),
+    documentId: SafeText.nullable().optional(),
+  })
+  .strict();
+export type ProjectAmendmentInput = z.infer<typeof ProjectAmendmentInput>;
+
+export const AmendmentDecisionInput = z
+  .object({
+    action: z.enum(["SUBMIT", "APPROVE", "REJECT"]),
+    reason: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type AmendmentDecisionInput = z.infer<typeof AmendmentDecisionInput>;
+
+/** Zadatak (§1.6). Jedan izvršilac — radnik ILI nalog, nikad tim. */
+export const ProjectTask = z.object({
+  id: SafeText,
+  project_id: SafeText.nullable(),
+  project_code: SafeText.nullable(),
+  project_name: SafeText.nullable(),
+  phase_id: SafeText.nullable(),
+  phase_name: SafeText.nullable(),
+  title: SafeText,
+  description: SafeText.nullable(),
+  assignee_worker_id: SafeText.nullable(),
+  assignee_worker_name: SafeText.nullable(),
+  assignee_user_id: SafeText.nullable(),
+  assignee_user_name: SafeText.nullable(),
+  due_on: CalendarDateText.nullable(),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]),
+  status: z.enum(["OPEN", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]),
+  completed_at: IsoDate.nullable(),
+  /** `true` kad je rok prošao i zadatak nije završen — računa server, ne ekran. */
+  overdue: z.boolean(),
+  comment_count: z.number().int(),
+});
+export type ProjectTask = z.infer<typeof ProjectTask>;
+
+export const TasksResponse = z.object({
+  tasks: z.array(ProjectTask),
+  counts: z.object({
+    mine_today: z.number().int(),
+    overdue: z.number().int(),
+    open: z.number().int(),
+  }),
+});
+export type TasksResponse = z.infer<typeof TasksResponse>;
+
+export const ProjectTaskInput = z
+  .object({
+    id: SafeText.optional(),
+    projectId: SafeText.nullable().optional(),
+    phaseId: SafeText.nullable().optional(),
+    title: SafeText.min(1).max(200),
+    description: SafeText.max(2000).nullable().optional(),
+    assigneeWorkerId: SafeText.nullable().optional(),
+    assigneeUserId: SafeText.nullable().optional(),
+    dueOn: CalendarDateText.nullable().optional(),
+    priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
+    status: z.enum(["OPEN", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]).optional(),
+  })
+  .strict();
+export type ProjectTaskInput = z.infer<typeof ProjectTaskInput>;
+
+/**
+ * Djelimična izmjena zadatka (`PATCH /api/tasks/{id}`).
+ *
+ * Zašto odvojeno od `ProjectTaskInput`: prelazak stanja je izmjena JEDNOG polja, a „označi
+ * završenim“ sa forme koja nosi cijeli zadatak traži da klijent pošalje i naslov — i da ga,
+ * ako ga je neko u međuvremenu promijenio, prepiše starim. `id` dolazi iz putanje, pa ga ovdje
+ * nema; `title`, ako je poslan, mora ostati neprazan.
+ */
+export const ProjectTaskPatch = ProjectTaskInput.partial()
+  .extend({ title: SafeText.min(1).max(200).optional() })
+  .strict();
+export type ProjectTaskPatch = z.infer<typeof ProjectTaskPatch>;
+
+export const TaskComment = z.object({
+  id: SafeText,
+  task_id: SafeText,
+  author_id: SafeText,
+  author_name: SafeText,
+  body: SafeText,
+  created_at: IsoDate,
+});
+export type TaskComment = z.infer<typeof TaskComment>;
+
+export const TaskCommentsResponse = z.object({ comments: z.array(TaskComment) });
+export type TaskCommentsResponse = z.infer<typeof TaskCommentsResponse>;
+
+export const TaskCommentInput = z
+  .object({ body: SafeText.min(1).max(2000), attachmentId: SafeText.nullable().optional() })
+  .strict();
+export type TaskCommentInput = z.infer<typeof TaskCommentInput>;
+
+export const TaskQuery = z.object({
+  projectId: SafeText.optional(),
+  status: z.enum(["OPEN", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]).optional(),
+  assignee: z.enum(["ME", "ALL"]).optional(),
+  due: z.enum(["TODAY", "OVERDUE"]).optional(),
+});
+export type TaskQuery = z.infer<typeof TaskQuery>;
+
+/** Profitabilnost: marža + EAC. EAC je UVIJEK označen kao procjena (§1.8.30). */
+export const ProjectProfitability = z.object({
+  project_id: SafeText,
+  currency_code: SafeText,
+  /** Ugovorena vrijednost; `null` = nije unesena (marža tada nije poznata). */
+  contract_value: MoneyText.nullable(),
+  approved_amendments: MoneyText,
+  contract_with_amendments: MoneyText.nullable(),
+  posted_cost: MoneyText,
+  margin: MoneyText.nullable(),
+  margin_pct: z.number().nullable(),
+  /** Rizik koji NIJE u marži — zapisi bez cijene. */
+  pending_cost_count: z.number().int(),
+  /** `kind` je dio ugovora: klijent ne smije prikazati EAC kao knjižen iznos. */
+  eac: z.object({
+    kind: z.literal("EAC_ESTIMATE"),
+    amount: MoneyText.nullable(),
+    progress_pct: z.number().nullable(),
+    reason: z.enum(["NO_PROGRESS"]).nullable(),
+  }),
+  by_category: z.array(
+    z.object({
+      category_id: SafeText,
+      category_code: SafeText,
+      category_name: SafeText,
+      budget: MoneyText.nullable(),
+      posted: MoneyText,
+    }),
+  ),
+});
+export type ProjectProfitability = z.infer<typeof ProjectProfitability>;
+
+export const ProjectCloseChecklist = z.object({
+  project_id: SafeText,
+  complete: z.boolean(),
+  items: z.array(
+    z.object({
+      key: z.enum(["ASSIGNMENTS", "FAULTS", "OBLIGATIONS", "PENDING_COSTS", "PHASES"]),
+      label: SafeText,
+      ok: z.boolean(),
+      count: z.number().int(),
+      acceptable: z.boolean().optional(),
+    }),
+  ),
+  blockers: z.array(SafeText),
+});
+export type ProjectCloseChecklist = z.infer<typeof ProjectCloseChecklist>;
+
+export const ProjectCloseInput = z
+  .object({
+    /** Obavezan kad ima `PENDING` troškova — svjesno prihvatanje (§1.8.31). */
+    pendingCostsReason: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type ProjectCloseInput = z.infer<typeof ProjectCloseInput>;
+
+export const ProjectReopenInput = z
+  .object({ reason: SafeText.min(10).max(500) })
+  .strict();
+export type ProjectReopenInput = z.infer<typeof ProjectReopenInput>;
+
+export const ProjectCloseSnapshot = z.object({
+  id: SafeText,
+  project_id: SafeText,
+  closed_at: IsoDate,
+  closed_by_name: SafeText.nullable(),
+  payload: z.object({
+    posted_cost: MoneyText,
+    budget: MoneyText.nullable(),
+    margin: MoneyText.nullable(),
+    progress_pct: z.number().nullable(),
+    by_category: z.array(
+      z.object({ category_code: SafeText, posted: MoneyText, budget: MoneyText.nullable() }),
+    ),
+    pending_cost_count: z.number().int(),
+  }),
+});
+export type ProjectCloseSnapshot = z.infer<typeof ProjectCloseSnapshot>;
+
+/** Top 5 rizičnih projekata za `/pregled` (§1.7.28). */
+export const RiskyProjectsResponse = z.object({
+  projects: z.array(
+    z.object({
+      id: SafeText,
+      code: SafeText,
+      name: SafeText,
+      status: ProjectStatus,
+      margin: MoneyText.nullable(),
+      margin_pct: z.number().nullable(),
+      budget_used_pct: z.number().nullable(),
+      progress_pct: z.number().nullable(),
+      /** Zbog čega je na listi — ekran ne izmišljava objašnjenje. */
+      risks: z.array(z.enum(["NEGATIVE_MARGIN", "OVER_BUDGET", "PENDING_COSTS"])),
+      pending_cost_count: z.number().int(),
+    }),
+  ),
+  pending_cost_count: z.number().int(),
+});
+export type RiskyProjectsResponse = z.infer<typeof RiskyProjectsResponse>;

@@ -6,6 +6,7 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can, type Role } from "./permissions";
 import { weekStartFromWorkDate } from "./workday-week";
 import { resolveViewerWorkerId } from "./workday-review";
+import { bookWorkdayCost } from "./cost-entry-service";
 
 export type ApprovalActor = {
   userId: string;
@@ -124,6 +125,16 @@ export async function confirmWorkday(
         [actor.companyId, weekStart],
       );
     }
+    /*
+     * F5 (§1.3.13): potvrda dana KNJIŽI trošak rada. Nema dugmeta — dan je potvrđen, pa sati
+     * postoje. `bookWorkdayCost` je idempotentan po danu i projektu, pa ponovna potvrda (poslije
+     * odbijene sedmice) ne pravi drugi trošak.
+     */
+    await bookWorkdayCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      workdayId: day.id,
+    });
     return { outcome: "OK", workdayId: day.id, status: "FOREMAN_CONFIRMED" };
   });
 }

@@ -18,6 +18,7 @@ import { deliverNotifications } from "./notifications-deliver";
 import { scanReminders } from "./reminders-scan";
 import { purgeAttachments } from "./attachments-purge";
 import { purgeSyncPayloads } from "./sync-purge";
+import { scanBudgetThresholds } from "./budget-thresholds";
 import { createObjectRemover } from "./object-storage";
 
 const config = loadConfig();
@@ -103,6 +104,17 @@ async function runSyncPurge(): Promise<void> {
   await purgeSyncPayloads(pool, { logger });
 }
 
+/**
+ * `budget.thresholds` — pragovi budžeta za sve firme u jednom prolazu.
+ *
+ * Posao ide često (svakih 15 minuta): prag treba da bude primijećen dok se još može reagovati, a ne
+ * sutra. Skup je posla mali jer se gledaju samo aktivni projekti sa budžetom, a deduplikacija je u
+ * bazi (`budget_alert_events`), pa čest prolaz ne pravi šum u obavještenjima.
+ */
+async function runBudgetThresholds(): Promise<void> {
+  await scanBudgetThresholds(pool, { logger });
+}
+
 async function main(): Promise<void> {
   boss.on("error", (error) => logger.error("pg-boss greška", { message: error.message }));
 
@@ -113,6 +125,7 @@ async function main(): Promise<void> {
   await boss.createQueue(JOB_NAMES.remindersScan);
   await boss.createQueue(JOB_NAMES.attachmentsPurge);
   await boss.createQueue(JOB_NAMES.syncPurge);
+  await boss.createQueue(JOB_NAMES.budgetThresholds);
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -125,6 +138,7 @@ async function main(): Promise<void> {
   await boss.work(JOB_NAMES.remindersScan, async () => runReminders());
   await boss.work(JOB_NAMES.attachmentsPurge, async () => runAttachmentsPurge());
   await boss.work(JOB_NAMES.syncPurge, async () => runSyncPurge());
+  await boss.work(JOB_NAMES.budgetThresholds, async () => runBudgetThresholds());
 
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
@@ -136,6 +150,10 @@ async function main(): Promise<void> {
   // Retencija sukoba: 03:30 UTC — pola sata poslije priloga, da se dva brisanja ne preklope
   // i da se u logu vidi koje je šta obrisalo.
   await boss.schedule(JOB_NAMES.syncPurge, "30 3 * * *");
+
+  // Pragovi budžeta: svakih 15 minuta. Za razliku od `reminders.scan`, ovdje NEMA filtera po zoni —
+  // prag ne zavisi od doba dana, a odgađanje do jutra bi značilo da se prekoračenje vidi tek sutra.
+  await boss.schedule(JOB_NAMES.budgetThresholds, "*/15 * * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),

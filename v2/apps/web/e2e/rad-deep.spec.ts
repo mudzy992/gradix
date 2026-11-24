@@ -11,19 +11,20 @@ test.beforeAll(() => {
 });
 
 test.describe("rad/obračun deep", { tag: ["@deep", "@deep-rad"] }, () => {
-  test("ured: Radni dani + Sukobi + Troškovi projekta", async ({ page }) => {
+  test("ured: Radni dani + Sukobi + Zadaci", async ({ page }) => {
     await loginUi(page, E2E_USERS.admin);
     await page.goto("/ured/radni-dani");
     await expectHeading(page, "Radni dani");
     await page.goto("/ured/sukobi");
     await expectHeading(page, /Sukobi/);
-    await page.goto("/ured/troskovi-projekta");
-    await expectHeading(page, "Troškovi projekta");
+    // F5: zadaci su samostalan ekran; troškovi su tab unutar projekta.
+    await page.goto("/ured/zadaci");
+    await expectHeading(page, "Zadaci");
   });
 
   test("radnik: rad/obračun rute zabranjene", async ({ page }) => {
     await loginUi(page, E2E_USERS.worker);
-    for (const href of ["/ured/radni-dani", "/ured/sukobi", "/ured/troskovi-projekta", "/ured/obracun-sati"]) {
+    for (const href of ["/ured/radni-dani", "/ured/sukobi", "/ured/obracun-sati"]) {
       await page.goto(href);
       await expectForbiddenPage(page);
     }

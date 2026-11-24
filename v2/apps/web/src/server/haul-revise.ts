@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { reverseSourceCost } from "./cost-entry-service";
 import type { HaulActor, MutationOutcome } from "./haul-types";
 
 export type ReviseInput = { reason: string; payload: Record<string, unknown> };
@@ -65,6 +66,14 @@ export async function reviseHaul(
         JSON.stringify({ original, ...input.payload }),
       ],
     );
+    // Tura se knjiži kao `PENDING` (cijena dolazi iz dionice), pa storno skida i taj red.
+    await reverseSourceCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      sourceType: "HAUL",
+      sourceId: row.id,
+      reason: input.reason,
+    });
     return { outcome: "OK", id: row.id };
   });
 }

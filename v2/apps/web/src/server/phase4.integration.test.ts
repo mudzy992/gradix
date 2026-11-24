@@ -26,11 +26,11 @@ import { GET as templatesGet, POST as templatesPost } from "@/app/api/check-temp
 import { POST as dailyCheckPost } from "@/app/api/machine-daily-checks/route";
 import { POST as photoPost } from "@/app/api/machine-daily-checks/[id]/photo/route";
 import { POST as fuelPost } from "@/app/api/fuel-entries/route";
-import { POST as bookPost } from "@/app/api/project-cost-entries/book/route";
-import { GET as costEntriesGet } from "@/app/api/project-cost-entries/route";
+import { GET as costEntriesGet } from "@/app/api/costs/route";
 import { POST as faultApprove } from "@/app/api/machine-faults/[id]/approve/route";
 import { POST as faultCreate } from "@/app/api/machine-faults/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
+import { bookMachineWorkLogCostInCompany } from "./cost-entry-service";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -162,7 +162,7 @@ describeDb("F4 mehanizacija — baza", () => {
     }
     await withCompany(admin, companyId(COMPANY), async (db) => {
       for (const table of [
-        "machine_meter_readings", "project_cost_entries", "machine_cost_rate_snapshots",
+        "machine_meter_readings", "cost_entries", "machine_cost_rate_snapshots",
         "machine_cost_components", "machine_cost_rates", "machine_work_logs", "service_orders",
         "approval_requests", "machine_faults", "machine_daily_checks", "check_templates",
         "attachments", "usage_overrides",
@@ -236,6 +236,10 @@ describeDb("F4 mehanizacija — baza", () => {
   /* ---------------------------------------------------------------- §5.2 snapshot */
 
   it("§5.2 knjiženje zamrzava stopu; promjena komponente ne mijenja stari trošak", async () => {
+    /*
+     * F5: knjiženje više nije dugme. Sat mašine u `WORK` režimu knjiži trošak SAM, u istoj
+     * transakciji u kojoj nastaje. Zato test upisuje log i odmah traži trošak — bez `book` rute.
+     */
     await withCompany(admin, companyId(COMPANY), async (client) => {
       await client.query(
         `INSERT INTO machine_work_logs
@@ -244,35 +248,44 @@ describeDb("F4 mehanizacija — baza", () => {
         [`mwl_f4_${RUN}`, COMPANY, MACHINE, WORKER, PROJECT, USER_OWNER],
       );
     });
-    const booked = await bookPost(
-      req(cookieOwner, "/api/project-cost-entries/book", "POST", { workLogIds: [`mwl_f4_${RUN}`] }),
+    /*
+     * Trošak se pravi servisom (kao što bi ga napravila aplikacija), jer direktan INSERT u
+     * `machine_work_logs` ne pokreće servisni tok — a baš taj tok je predmet provjere.
+     */
+    const booked = await bookMachineWorkLogCostInCompany(
+      admin,
+      { companyId: COMPANY, actorId: USER_OWNER, workLogId: `mwl_f4_${RUN}` },
     );
-    expect(booked.status).toBe(200);
+    expect(booked.posted).toBe(1);
 
-    const list = await costEntriesGet(req(cookieOwner, "/api/project-cost-entries"));
-    const entries = (await list.json()) as Envelope<{ entries: { rate: string; amount: string }[] }>;
-    expect(entries.data.entries).toHaveLength(1);
+    const list = await costEntriesGet(req(cookieOwner, `/api/costs?projectId=${PROJECT}`));
+    const entries = (await list.json()) as Envelope<{
+      entries: { amount: string | null; currency_code: string }[];
+    }>;
+    const costEntry = entries.data.entries.find((entry) => entry.amount === "300.00");
     // 2 h × 150.00 (ručna stopa na 2026-02-10) = 300.00
-    expect(entries.data.entries[0]!.amount).toBe("300.00");
+    expect(costEntry).toBeDefined();
 
     const snapshot = await withCompany(pool, companyId(COMPANY), async (client) =>
-      client.query<{ rate_snapshot: { rate_cents: string }; component_breakdown: unknown[] }>(
-        `SELECT rate_snapshot, component_breakdown FROM public.project_cost_entries
+      client.query<{ rate_snapshot: { rate_cents: string }; components: unknown[] }>(
+        `SELECT rate_snapshot,
+                coalesce(jsonb_array_length(rate_snapshot -> 'components'), 0) AS components
+           FROM public.cost_entries
           WHERE company_id = $1 AND source_type = 'MACHINE_WORK_LOG'`,
         [COMPANY],
       ),
     );
     expect(snapshot.rows[0]!.rate_snapshot.rate_cents).toBe("15000");
     // Razlaganje ostaje uz snapshot i kad je stopa ručna — vidi se kolika bi bila izračunata.
-    expect(snapshot.rows[0]!.component_breakdown.length).toBeGreaterThan(0);
+    expect(Number(snapshot.rows[0]!.components)).toBeGreaterThan(0);
 
     // Ista knjižba dvaput ne pravi drugi red (idempotencija po izvoru).
-    const again = await bookPost(
-      req(cookieOwner, "/api/project-cost-entries/book", "POST", { workLogIds: [`mwl_f4_${RUN}`] }),
+    const again = await bookMachineWorkLogCostInCompany(
+      admin,
+      { companyId: COMPANY, actorId: USER_OWNER, workLogId: `mwl_f4_${RUN}` },
     );
-    const againBody = (await again.json()) as Envelope<{ booked: number; skippedExisting: number }>;
-    expect(againBody.data.booked).toBe(0);
-    expect(againBody.data.skippedExisting).toBe(1);
+    expect(again.posted).toBe(0);
+    expect(again.skipped).toBe(1);
   });
 
   it("§5.2 snapshot se ne može prepisati (baza brani izmjenu)", async () => {
@@ -280,12 +293,12 @@ describeDb("F4 mehanizacija — baza", () => {
     // prošao i da trigera nema. Ovako jedini razlog pada može biti sam triger.
     await expect(
       admin.query(
-        `UPDATE public.project_cost_entries
+        `UPDATE public.cost_entries
             SET rate_snapshot = '{"rate_cents":"1"}'::jsonb
           WHERE company_id = $1`,
         [COMPANY],
       ),
-    ).rejects.toThrow(/COST_SNAPSHOT_IMMUTABLE/);
+    ).rejects.toThrow(/COST_ENTRY_IMMUTABLE/);
   });
 
   /* ---------------------------------------------------------------- §5.4 iskorištenost */

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { bookMachineWorkLogCost } from "./cost-entry-service";
 import { checkUse } from "./usage-service";
 import { companyToday } from "./project-service";
 import { usageBlockMessage } from "@gradix/domain";
@@ -182,6 +183,15 @@ export async function createMachineWorkLog(
       }
       throw error;
     }
+    /*
+     * F5: sat mašine u `WORK` režimu knjiži trošak sada, sa zamrznutom stopom. `IDLE`/`BREAKDOWN`
+     * trošak ne prave — oni su tu zbog iskorištenosti, ne zbog naplate.
+     */
+    await bookMachineWorkLogCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      workLogId: id,
+    });
     if (input.meterEnd != null) {
       try {
         await insertMeterReading(client, actor, input.machineId, input.meterEnd, id);

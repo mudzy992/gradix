@@ -253,3 +253,43 @@ export {
   sessionsToRevokeOthers,
   type DeviceSession,
 } from "./sessions";
+
+/*
+ * Faza 5 (Modul 6): projekat kao finansijski kontejner. Napredak, marža, EAC i pragovi budžeta
+ * su čiste funkcije — isti broj mora izaći na listi, u detalju, u workeru i u testu.
+ */
+export {
+  BUDGET_THRESHOLD_PCTS,
+  COST_ENTRY_STATUSES,
+  COST_ENTRY_STATUS_LABELS,
+  COST_SOURCE_LABELS,
+  COST_SOURCE_TYPES,
+  DEFAULT_COST_CATEGORIES,
+  FALLBACK_COST_CATEGORY_CODE,
+  PHASE_STATUSES,
+  PHASE_STATUS_LABELS,
+  PROGRESS_SOURCES,
+  boqProgress,
+  budgetAlertDedupeKey,
+  closeChecklist,
+  crossedBudgetThreshold,
+  estimateAtCompletion,
+  projectMargin,
+  projectProgress,
+  type BoqItemProgressInput,
+  type BudgetScopeTotals,
+  type BudgetThresholdCrossing,
+  type BudgetThresholdInput,
+  type BudgetThresholdPct,
+  type CloseChecklist,
+  type CloseChecklistItem,
+  type CostEntryStatus,
+  type CostSourceType,
+  type EacInput,
+  type EacResult,
+  type MarginInput,
+  type MarginResult,
+  type PhaseProgressInput,
+  type PhaseStatus,
+  type ProgressSource,
+} from "./projects";

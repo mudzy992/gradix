@@ -9,6 +9,7 @@ import {
   type ApprovalOutcome,
 } from "./workday-approval";
 import { resolveViewerWorkerId, workdayReviewScopeFor } from "./workday-review";
+import { bookWorkdayCost } from "./cost-entry-service";
 
 export async function decideWeek(
   pool: Pool,
@@ -113,6 +114,17 @@ export async function lockWeek(
     if (week.rows[0].status !== "WEEK_APPROVED") {
       return { outcome: "VALIDATION_FAILED", code: "NOT_APPROVED", message: "Prvo odobri sedmicu." };
     }
+    /*
+     * Prije zaključavanja se sakupe dani koji će ući u `LOCKED` — knjiženje troška rada ide POSLIJE
+     * izmjene statusa, jer `bookWorkdayCost` traži `FOREMAN_CONFIRMED|LOCKED`.
+     */
+    const toLock = await client.query<{ id: string }>(
+      `SELECT id FROM public.workdays
+        WHERE company_id = $1
+          AND work_date >= $2::date AND work_date < ($2::date + 7)
+          AND approval_status = 'FOREMAN_CONFIRMED'`,
+      [actor.companyId, weekStart],
+    );
     await client.query(
       `UPDATE public.work_week_approvals
           SET status = 'LOCKED', decided_by = $3, decided_at = clock_timestamp(),
@@ -128,6 +140,14 @@ export async function lockWeek(
           AND approval_status = 'FOREMAN_CONFIRMED'`,
       [actor.companyId, weekStart, actor.userId],
     );
+    // Dani koji su pali na zaključavanje bez prethodne potvrde takođe nose trošak — jednom.
+    for (const row of toLock.rows) {
+      await bookWorkdayCost(client, {
+        companyId: actor.companyId,
+        actorId: actor.userId,
+        workdayId: row.id,
+      });
+    }
     return { outcome: "OK", weekStart, status: "LOCKED" };
   });
 }

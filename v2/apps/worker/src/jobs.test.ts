@@ -12,6 +12,13 @@ import { JOB_NAMES, pingHealth, type JobLogger } from "./jobs";
 import { pushConfigured, smtpConfigured } from "./notifications-deliver";
 import { createObjectRemover } from "./object-storage";
 import { daysWord, localDate, localHour } from "./reminders-scan";
+import {
+  alertBody,
+  alertTitle,
+  centsToText,
+  evaluateThresholds,
+  type ThresholdCandidate,
+} from "./budget-thresholds";
 
 describe("loadConfig", () => {
   it("pada bez ijednog URL-a — worker koji tiho ne radi je gori od ugašenog", () => {
@@ -84,6 +91,8 @@ describe("JOB_NAMES", () => {
       attachmentsPurge: "attachments.purge",
       // F3: retencija tijela sukoba.
       syncPurge: "sync.purge",
+      // F5: pragovi budžeta; ime je isto kao `notifications.kind` koje posao pravi.
+      budgetThresholds: "budget.thresholds",
     });
   });
 });
@@ -168,5 +177,70 @@ describe("attachments.purge — konfiguracija bucketa", () => {
     });
     expect(storage.configured).toBe(false);
     if (!storage.configured) expect(storage.reason).toMatch(/URL/);
+  });
+});
+
+describe("budget.thresholds — pragovi 80 % i 100 %", () => {
+  const BUDGET = 100_0000n; // 10.000,00
+
+  it("80 % se prelazi na tačno 80 %, 100 % na pun budžet", () => {
+    const at80 = evaluateThresholds({
+      total: { budgetCents: BUDGET, spentCents: 8000_00n },
+      categories: [],
+    });
+    expect(at80).toHaveLength(1);
+    expect(at80[0]).toMatchObject({ scope: "TOTAL", thresholdPct: 80 });
+
+    const at100 = evaluateThresholds({
+      total: { budgetCents: BUDGET, spentCents: BUDGET },
+      categories: [],
+    });
+    // 100 % je JEDNO upozorenje, ne dva (80 i 100): prag se ne „preskače“ niz stepenice.
+    expect(at100).toHaveLength(1);
+    expect(at100[0]).toMatchObject({ thresholdPct: 100, usedPct: 100 });
+  });
+
+  it("ispod 80 % nema upozorenja; bez budžeta nema praga", () => {
+    expect(
+      evaluateThresholds({ total: { budgetCents: BUDGET, spentCents: 7999_99n }, categories: [] }),
+    ).toHaveLength(0);
+    expect(
+      evaluateThresholds({ total: { budgetCents: null, spentCents: 50_000_00n }, categories: [] }),
+    ).toHaveLength(0);
+    expect(
+      evaluateThresholds({
+        total: { budgetCents: null, spentCents: 0n },
+        categories: [{ code: "GORIVO", name: "Gorivo", budgetCents: null, spentCents: 900_00n }],
+      }),
+    ).toHaveLength(0);
+  });
+
+  it("prag se prati PO KATEGORIJI i UKUPNO — dvije stavke, dva opsega", () => {
+    const result = evaluateThresholds({
+      total: { budgetCents: BUDGET, spentCents: 8500_00n },
+      categories: [
+        { code: "GORIVO", name: "Gorivo", budgetCents: 1000_00n, spentCents: 1200_00n },
+        { code: "RAD", name: "Rad", budgetCents: 5000_00n, spentCents: 1000_00n },
+      ],
+    });
+    expect(result.map((row) => `${row.scope}:${row.thresholdPct}`)).toEqual(["TOTAL:80", "GORIVO:100"]);
+  });
+
+  it("novac u poruci je decimalni tekst, a naslov kaže ŠTA je pređeno", () => {
+    expect(centsToText(120_00n)).toBe("120.00");
+    expect(centsToText(0n)).toBe("0.00");
+    expect(centsToText(-5_50n)).toBe("-5.50");
+    const candidate: ThresholdCandidate = {
+      scope: "GORIVO",
+      scopeLabel: "Gorivo",
+      budgetCents: 1000_00n,
+      spentCents: 1200_00n,
+      revision: 1,
+      thresholdPct: 100,
+      usedPct: 120,
+    };
+    expect(alertTitle(candidate, "P-24/2026")).toBe("Budžet prekoračen: P-24/2026 · Gorivo");
+    expect(alertBody(candidate)).toContain("Potrošeno 1200.00 od 1000.00");
+    expect(alertBody(candidate)).toContain("120.0 %");
   });
 });

@@ -1,0 +1,41 @@
+/**
+ * GET /api/projects/{id}/profitability — marža + EAC.
+ *
+ * EAC je u odgovoru UVIJEK `kind: "EAC_ESTIMATE"` i, pri `progress_pct = 0`, `amount: null` sa
+ * `reason: "NO_PROGRESS"` — klijent tada ne smije prikazati broj (spec 06 §1.8.30).
+ */
+import type { NextRequest } from "next/server";
+import { fail, internal, ok } from "@/server/api";
+import { getVerifiedPool } from "@/server/db";
+import { guard } from "@/server/guard";
+import type { Role } from "@/server/permissions";
+import { getProfitability } from "@/server/project-finance-service";
+
+export const dynamic = "force-dynamic";
+
+type Params = { params: Promise<{ id: string }> };
+
+export async function GET(request: NextRequest, { params }: Params): Promise<Response> {
+  try {
+    const guardResult = await guard(request, "projects.costs.view");
+    if (!guardResult.ok) return guardResult.response;
+    const { id } = await params;
+    const result = await getProfitability(
+      await getVerifiedPool(),
+      {
+        userId: guardResult.ctx.userId,
+        companyId: guardResult.ctx.companyId,
+        roles: guardResult.ctx.roles as Role[],
+      },
+      id,
+    );
+    if ("code" in result) {
+      if (result.code === "FORBIDDEN") return fail("FORBIDDEN", result.message);
+      if (result.code === "NOT_FOUND") return fail("NOT_FOUND", result.message);
+      return fail("VALIDATION_FAILED", result.message);
+    }
+    return ok(result);
+  } catch (error) {
+    return internal(error, "project-profitability.get");
+  }
+}

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { reverseSourceCost } from "./cost-entry-service";
 import type { MachineWorkLogActor, MutationOutcome } from "./machine-work-log-types";
 
 export type ReviseInput = { reason: string; payload: Record<string, unknown> };
@@ -59,6 +60,13 @@ export async function reviseMachineWorkLog(
         ],
       );
     }
+    await reverseSourceCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      sourceType: "MACHINE_WORK_LOG",
+      sourceId: row.id,
+      reason: input.reason,
+    });
     return { outcome: "OK", id: row.id };
   });
 }

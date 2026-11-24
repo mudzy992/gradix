@@ -57,28 +57,70 @@ describeDb("R6.1 machine cost rates tenant RLS (PostgreSQL)", () => {
   });
 
   it("idempotentan unique source: drugi INSERT istog source_id pada", async () => {
+    /*
+     * F5: `cost_entries` je jedini ledger. Djelimični unikat
+     * `(company_id, source_type, source_id) WHERE status <> 'REVERSED'` je ono što brani dupli
+     * trošak — i mora važiti i za aplikacijsku i za admin rolu, jer RLS ne dira unikate.
+     */
+    const insert = `INSERT INTO public.cost_entries
+         (id, company_id, project_id, category_id, source_type, source_id,
+          occurred_on, amount_cents, currency_code, status, booked_by)
+       SELECT $1, $2, $3, cc.id, 'MACHINE_WORK_LOG', $4, '2026-11-19'::date, 20000, 'BAM',
+              'POSTED', $5
+         FROM public.cost_categories cc
+        WHERE cc.company_id = $2 AND cc.code = 'MEHANIZACIJA'`;
     await withCompany(app, companyId(A.company), async (client) => {
-      await client.query(
-        `INSERT INTO public.project_cost_entries
-           (id, company_id, project_id, source_type, source_id, machine_id,
-            hours, rate_cents, amount_cents, currency_code, booked_by)
-         VALUES ($1,$2,$3,'MACHINE_WORK_LOG',$4,$5,2,10000,20000,'BAM',$6)`,
-        [`pce_${RUN}`, A.company, A.project, A.workLog, A.machine, A.user],
-      );
+      await client.query(insert, [`ce_${RUN}`, A.company, A.project, A.workLog, A.user]);
     });
     await expectAdminFailure(
       admin,
       A.company,
-      `INSERT INTO public.project_cost_entries
-         (id, company_id, project_id, source_type, source_id, machine_id,
-          hours, rate_cents, amount_cents, currency_code, booked_by)
-       VALUES ($1,$2,$3,'MACHINE_WORK_LOG',$4,$5,2,10000,20000,'BAM',$6)`,
-      [`pce2_${RUN}`, A.company, A.project, A.workLog, A.machine, A.user],
-      /project_cost_entries_source_unique/,
+      insert,
+      [`ce2_${RUN}`, A.company, A.project, A.workLog, A.user],
+      /cost_entries_source_unique/,
     );
   });
 
-  it("gradix_app: rates SELECT/INSERT/UPDATE bez DELETE; entries SELECT/INSERT bez UPDATE/DELETE", async () => {
+  it("storno dozvoljava novi trošak istog izvora (djelimični unikat)", async () => {
+    /*
+     * Zašto ovo mora raditi: pogrešno knjiženje se ispravlja stornom, a zatim isti događaj dobija
+     * NOVI trošak. Puni unikat bi trajno blokirao taj izvor upravo kad je ispravka najpotrebnija.
+     */
+    await withCompany(admin, companyId(A.company), async (client) => {
+      await client.query(
+        `UPDATE public.cost_entries
+            SET status = 'REVERSED', note = 'Test: storno zbog pogrešne stope.'
+          WHERE company_id = $1 AND source_type = 'MACHINE_WORK_LOG' AND source_id = $2`,
+        [A.company, A.workLog],
+      );
+      await client.query(
+        `INSERT INTO public.cost_entries
+           (id, company_id, project_id, category_id, source_type, source_id,
+            occurred_on, amount_cents, currency_code, status, booked_by)
+         SELECT $1, $2, $3, cc.id, 'MACHINE_WORK_LOG', $4, '2026-11-19'::date, 22000, 'BAM',
+                'POSTED', $5
+           FROM public.cost_categories cc
+          WHERE cc.company_id = $2 AND cc.code = 'MEHANIZACIJA'`,
+        [`ce3_${RUN}`, A.company, A.project, A.workLog, A.user],
+      );
+      const rows = await client.query<{ status: string; n: string }>(
+        `SELECT status, count(*)::text AS n FROM public.cost_entries
+          WHERE company_id = $1 AND source_type = 'MACHINE_WORK_LOG' AND source_id = $2
+          GROUP BY status ORDER BY status`,
+        [A.company, A.workLog],
+      );
+      expect(rows.rows).toEqual([
+        { status: "POSTED", n: "1" },
+        { status: "REVERSED", n: "1" },
+      ]);
+    });
+  });
+
+  it("gradix_app: rates SELECT/INSERT/UPDATE bez DELETE; ledger SELECT/INSERT/UPDATE bez DELETE", async () => {
+    /*
+     * F5 mijenja prava na ledgeru: `UPDATE` SADA postoji (storno i PENDING→POSTED), ali `DELETE`
+     * ne — i to je poenta. Storno je promjena stanja, brisanje bi bilo nestanak troška iz knjige.
+     */
     const rights = await withCompany(app, companyId(A.company), (client) =>
       client.query<{
         rates_update: boolean;
@@ -86,19 +128,32 @@ describeDb("R6.1 machine cost rates tenant RLS (PostgreSQL)", () => {
         entries_insert: boolean;
         entries_update: boolean;
         entries_delete: boolean;
+        entries_select: boolean;
       }>(
         `SELECT
            has_table_privilege(current_user, 'public.machine_cost_rates', 'UPDATE') AS rates_update,
            has_table_privilege(current_user, 'public.machine_cost_rates', 'DELETE') AS rates_delete,
-           has_table_privilege(current_user, 'public.project_cost_entries', 'INSERT') AS entries_insert,
-           has_table_privilege(current_user, 'public.project_cost_entries', 'UPDATE') AS entries_update,
-           has_table_privilege(current_user, 'public.project_cost_entries', 'DELETE') AS entries_delete`,
+           has_table_privilege(current_user, 'public.cost_entries', 'SELECT') AS entries_select,
+           has_table_privilege(current_user, 'public.cost_entries', 'INSERT') AS entries_insert,
+           has_table_privilege(current_user, 'public.cost_entries', 'UPDATE') AS entries_update,
+           has_table_privilege(current_user, 'public.cost_entries', 'DELETE') AS entries_delete`,
       ),
     );
     expect(rights.rows[0]?.rates_update).toBe(true);
     expect(rights.rows[0]?.rates_delete).toBe(false);
+    expect(rights.rows[0]?.entries_select).toBe(true);
     expect(rights.rows[0]?.entries_insert).toBe(true);
-    expect(rights.rows[0]?.entries_update).toBe(false);
+    expect(rights.rows[0]?.entries_update).toBe(true);
     expect(rights.rows[0]?.entries_delete).toBe(false);
+  });
+
+  it("ledger ne dopušta brisanje ni kroz admina (triger, ne samo grant)", async () => {
+    await expectAdminFailure(
+      admin,
+      A.company,
+      "DELETE FROM public.cost_entries WHERE company_id = $1 AND source_id = $2",
+      [A.company, A.workLog],
+      /COST_ENTRY_DELETE_FORBIDDEN/,
+    );
   });
 });

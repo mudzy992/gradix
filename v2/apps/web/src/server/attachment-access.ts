@@ -44,6 +44,17 @@ export const ATTACHMENT_ACCESS: Record<AttachmentEntityType, AttachmentEntityAcc
     read: "machines.check.view",
     write: "machines.check.create",
   },
+  /*
+   * F5: račun sa gradilišta. Čita ga onaj ko vidi troškove, a prilaže onaj ko smije knjižiti —
+   * radnik na terenu prilaže kroz svoj nalog (mobile), pa je `projects.costs.book` prava granica:
+   * isti ljudi koji smiju unijeti iznos smiju i priložiti dokaz.
+   */
+  PROJECT: {
+    table: "projects",
+    label: "Projekat",
+    read: "projects.costs.view",
+    write: "projects.costs.book",
+  },
 };
 
 /** `true` ako entitet postoji u OVOJ firmi; RLS ne pušta tuđi red, pa je odgovor `false`. */

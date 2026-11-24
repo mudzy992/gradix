@@ -135,23 +135,29 @@ test.describe("auth/nav smoke", { tag: ["@smoke"] }, () => {
     await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
   });
 
-  test("vlasnik: stiže do Trošak mašina i Troškovi projekta iz menija", async ({ page }) => {
+  /*
+   * F5: „Troškovi projekta“ više nije samostalan ekran nego TAB unutar projekta — trošak se gleda
+   * uz svoj budžet i maržu. Zato se provjerava ono što je sada istina: vlasnik stiže do Trošak
+   * mašina iz menija i do Kategorija troška, a ledger otvara kroz projekat.
+   */
+  test("vlasnik: stiže do Trošak mašina i Kategorija troška iz menija", async ({ page }) => {
     await loginUi(page, E2E_USERS.owner);
     const labels = await navLabels(page);
     expect(labels).toContain("Trošak mašina");
-    expect(labels).toContain("Troškovi projekta");
+    expect(labels).toContain("Kategorije troška");
     await page.goto("/ured/trosak-masina");
     await expect(page.getByRole("heading", { name: "Trošak mašina" })).toBeVisible();
-    await page.goto("/ured/troskovi-projekta");
-    await expect(page.getByRole("heading", { name: "Troškovi projekta" })).toBeVisible();
+    await page.goto("/ured/postavke/kategorije-troska");
+    await expect(page.getByRole("heading", { name: "Kategorije troška" })).toBeVisible();
   });
 
-  test("računovođa: vidi Troškovi projekta, nema dugme Knjiži period", async ({ page }) => {
+  test("računovođa: vidi Kategorije troška, nema knjiženja ni storna", async ({ page }) => {
     await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Troškovi projekta");
-    await page.goto("/ured/troskovi-projekta");
-    await expect(page.getByRole("heading", { name: "Troškovi projekta" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Knjiži period" })).toHaveCount(0);
+    expect(await navLabels(page)).toContain("Kategorije troška");
+    await page.goto("/ured/postavke/kategorije-troska");
+    await expect(page.getByRole("heading", { name: "Kategorije troška" })).toBeVisible();
+    // Knjiženje i storno traže `projects.costs.book`, koje računovođa NEMA (§3).
+    await expect(page.getByRole("button", { name: "+ Nova kategorija" })).toHaveCount(0);
   });
 
   test("računovođa: stiže do Obračun sati i vidi Preuzmi CSV", async ({ page }) => {

@@ -15,6 +15,8 @@ import { listObligations } from "@/server/obligation-service";
 import { countOpenConflicts } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 import { PregledBoard } from "./pregled-board";
+import { RiskyProjectsCard } from "./risky-projects-card";
+import { listRiskyProjects } from "@/server/pregled-risky";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +89,22 @@ export default async function PregledPage() {
 
   const firstName = data.profile?.first_name ?? null;
 
+  /*
+   * F5: rizični projekti i broj troškova bez cijene. Traži `projects.costs.view` — bez te dozvole
+   * kartice NEMA (ni prazne), jer bi prazna kartica tvrdila da rizika nema.
+   *
+   * Upit se izvršava samo za one koji smiju vidjeti novac; `listRiskyProjects` i sam provjerava
+   * `dashboard.view`, ali poziv se ne pravi uzalud.
+   */
+  const risky = can(ctx.roles, "projects.costs.view")
+    ? await listRiskyProjects(await getVerifiedPool(), {
+        userId: ctx.userId,
+        companyId: ctx.companyId,
+        roles: ctx.roles,
+      })
+    : null;
+  const riskyData = risky && !("code" in risky) ? risky : null;
+
   // --- C.1 grana: „šta moram danas uraditi?“ (samo pregled.view). ---
   if (can(ctx.roles, "pregled.view")) {
     const pregled = await buildPregled(await getVerifiedPool(), ctx.companyId as CompanyId, {
@@ -108,6 +126,7 @@ export default async function PregledPage() {
         <div>
           <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
           <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
+          {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
         </div>
       );
     }
@@ -172,6 +191,8 @@ export default async function PregledPage() {
           </p>
         </Card>
       </div>
+
+      {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
 
       {obligationCounts ? <ObligationSummary counts={obligationCounts} /> : null}
 

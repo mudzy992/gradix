@@ -33,13 +33,37 @@ export async function setTenant(client: PoolClient, id: CompanyId): Promise<void
 /**
  * Izvršava `fn` u transakciji sa postavljenim tenantom.
  * `fn` dobija klijenta — svi upiti unutar njega su tenant-scope-ovani u bazi.
+ *
+ * `options.savepoint` (F5): kad se posao već izvršava unutar svoje transakcije (npr. sync push
+ * obrađuje stavke jednu po jednu), otvaranje nove transakcije bi commit-ovalo tuđe nepotvrđene
+ * izmjene. Sa `savepoint: true` se tenant postavlja u ISTOJ transakciji, a izlaz ide kroz
+ * `SAVEPOINT`/`RELEASE` — pa poziv može pasti bez rušenja cijele stavke, i bez lažnog commit-a.
  */
 export async function withCompany<T>(
   pool: Pool,
   id: CompanyId,
   fn: (client: PoolClient) => Promise<T>,
+  options: { savepoint?: boolean } = {},
 ): Promise<T> {
   const client = await pool.connect();
+  if (options.savepoint) {
+    try {
+      await client.query("SAVEPOINT with_company");
+      await setTenant(client, id);
+      const result = await fn(client);
+      await client.query("RELEASE SAVEPOINT with_company");
+      return result;
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK TO SAVEPOINT with_company");
+      } catch {
+        // Transakcija je već mrtva; ne maskiramo originalnu grešku.
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
   try {
     await client.query("BEGIN");
     await setTenant(client, id);

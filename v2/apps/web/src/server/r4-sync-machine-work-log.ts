@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { R4MachineWorkLogPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
+import { bookMachineWorkLogCost } from "./cost-entry-service";
 import type { SyncMachineWorkLogApplyDeps } from "./r4-sync-machine-work-log-types";
 
 export type { SyncMachineWorkLogApplyDeps } from "./r4-sync-machine-work-log-types";
@@ -71,6 +72,15 @@ export async function applyMachineWorkLogSyncItem(
         ],
       );
     }
+    /*
+     * F5: isti sat poslan sa terena knjiži trošak kao i unos kroz servis. `IDLE`/`BREAKDOWN` ne
+     * prave trošak — to pravilo živi u `bookMachineWorkLogCost`, ne ovdje: jedno mjesto odlučuje.
+     */
+    await bookMachineWorkLogCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      workLogId: row.id,
+    });
     const payload = {
       id: row.id,
       machineId: item.log.machineId,

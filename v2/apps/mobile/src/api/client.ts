@@ -13,6 +13,9 @@ import type {
   ObligationsResponse,
   ProjectsResponse,
   SessionsResponse,
+  CostCategory as CostCategoryDto,
+  ProjectTask,
+  TasksResponse,
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
@@ -275,6 +278,115 @@ export async function closeForgottenDay(input: {
     client.post("/api/workdays/close-forgotten", input, undefined, { accessToken }),
   );
   return data;
+}
+
+/* ------------------------------------------------------------------ F5: zadaci i trošak */
+
+/** Tipovi se uzimaju iz ugovora (jedan izvor), ne prepisuju u mobilnom. */
+export type TaskListResponse = TasksResponse;
+export type TaskRow = ProjectTask;
+export type TaskStatus = ProjectTask["status"];
+export type CostCategoriesResponse = { categories: CostCategoryDto[]; unmapped_sources: string[] };
+
+/**
+ * „Moji zadaci danas“ — jedan poziv, isti kao web `/ured/zadaci` sa filterom „moji + danas“.
+ *
+ * Zašto posebna funkcija, a ne opšti `tasks(query)`: terenski ekran postavlja ISTO pitanje svaki
+ * put (moji, danas), pa bi opšti potpis svaki ekran tjerao da pogodi parametre — a pogrešan
+ * parametar ovdje znači praznu listu koja izgleda kao „nemaš zadataka“.
+ */
+export async function myTasksToday(): Promise<TaskListResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/tasks", undefined, {
+      query: { assignee: "ME", due: "TODAY" },
+      accessToken,
+    }),
+  );
+  return data as TaskListResponse;
+}
+
+/**
+ * Djelimična izmjena zadatka — prelazak stanja šalje SAMO `status`.
+ *
+ * Putanja ide kroz parametre ugovora (`{id}`), ne kroz interpolaciju: klijent tada provjerava
+ * tijelo po istoj šemi koju server traži, pa nemoguće stanje pada na telefonu, ne na serveru.
+ */
+export async function updateTask(
+  id: string,
+  input: { status?: TaskStatus; title?: string; description?: string | null },
+): Promise<unknown> {
+  const { data } = await withToken((accessToken) =>
+    client.patch("/api/tasks/{id}", input, { id }, { accessToken }),
+  );
+  return data;
+}
+
+/**
+ * Brzi unos troška sa gradilišta (fotografija računa je dio unosa, ne dodatak).
+ *
+ * `attachmentId` je OBAVEZAN u ovom pozivu: to je ekran „uslikaj račun“, a ne opšti ručni unos —
+ * bez slike bi se na terenu knjižio iznos bez dokaza, što je upravo ono što spec 06 brani.
+ */
+export async function bookSiteCost(input: {
+  projectId: string;
+  categoryId: string;
+  occurredOn: string;
+  amount: string;
+  attachmentId: string;
+  phaseId?: string | null;
+  note?: string | null;
+}): Promise<unknown> {
+  const { data } = await withToken((accessToken) =>
+    client.post("/api/costs/manual", input, undefined, { accessToken }),
+  );
+  return data;
+}
+
+/**
+ * Registracija priloga uz PROJEKAT (fotografija računa), pa potpisani PUT na bucket.
+ *
+ * `headBase64` su prva bajta fajla — server iz SADRŽAJA zaključuje tip (preimenovan `.exe` u
+ * `.jpg` pada). Vraća se `attachmentId` koji ide u `bookSiteCost`, i `uploadUrl` na koji telefon
+ * šalje bajte. Potvrda (`ready`) se radi tek poslije uspješnog PUT-a — bez nje trošak ne prolazi.
+ */
+export async function registerProjectAttachment(input: {
+  projectId: string;
+  fileName: string;
+  sizeBytes: number;
+  sha256: string;
+  headBase64: string;
+}): Promise<{ attachment: { id: string }; uploadUrl: string }> {
+  const { data } = await withToken((accessToken) =>
+    client.post(
+      "/api/attachments",
+      {
+        entityType: "PROJECT" as const,
+        entityId: input.projectId,
+        fileName: input.fileName,
+        sizeBytes: input.sizeBytes,
+        sha256: input.sha256,
+        headBase64: input.headBase64,
+      },
+      undefined,
+      { accessToken },
+    ),
+  );
+  return data as { attachment: { id: string }; uploadUrl: string };
+}
+
+/** Potvrda uploada: prilog postaje `ready` tek kad objekat stvarno postoji i veličina se slaže. */
+export async function confirmAttachment(id: string): Promise<void> {
+  await withToken((accessToken) =>
+    client.post("/api/attachments/{id}/confirm", undefined, { id }, { accessToken }),
+  );
+}
+
+/** Kategorije troška firme — za izbor u brzom unosu. */
+export async function costCategories(): Promise<CostCategoriesResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/cost-categories", undefined, { accessToken }),
+  );
+  return data as CostCategoriesResponse;
 }
 
 export async function machines(): Promise<MachinesResponse> {

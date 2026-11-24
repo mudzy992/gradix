@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import { isCurrency, toAmountString, type R4FuelEntryPushItem, type R4SyncPushItemResult } from "@gradix/domain";
 import { assertUnitPriceConsistent, parseFuelMoney, resolveFuelAmount } from "./fuel-entry-money";
 import { canViewFuelPrice } from "./fuel-entry-price";
+import { bookFuelEntryCost } from "./cost-entry-service";
 import { encodeSyncCursor } from "./sync-cursor";
 import type { SyncFuelEntryApplyDeps } from "./r4-sync-fuel-entry-types";
 
@@ -97,6 +98,16 @@ export async function applyFuelEntrySyncItem(
         ],
       );
     }
+    /*
+     * F5 (§1.3.13): točenje poslano sa terena knjiži trošak ISTO kao unos kroz servis. Bez ovoga
+     * bi mobilni unos ostao izvan ledgera — a to je upravo put kojim najviše zapisa i nastaje.
+     * Knjiženje ne obara sync: `bookFuelEntryCost` grešku vraća kao `skipped`.
+     */
+    await bookFuelEntryCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      fuelEntryId: row.id,
+    });
     const showPrice = canViewFuelPrice(actor.roles);
     const payload = {
       id: row.id,

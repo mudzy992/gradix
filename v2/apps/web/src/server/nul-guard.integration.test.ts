@@ -115,7 +115,11 @@ import {
 import { POST as tenderAttachmentConfirmPost } from "@/app/api/tenders/[id]/attachments/[attachmentId]/confirm/route";
 import { GET as tenderAttachmentUrlGet } from "@/app/api/tenders/[id]/attachments/[attachmentId]/url/route";
 import { POST as machineCostRatesPost } from "@/app/api/machine-cost-rates/route";
-import { POST as projectCostBookPost } from "@/app/api/project-cost-entries/book/route";
+import { POST as costManualPost } from "@/app/api/costs/manual/route";
+import { POST as costReversePost } from "@/app/api/costs/[id]/reverse/route";
+import { POST as taskPost } from "@/app/api/tasks/route";
+import { PATCH as taskPatch } from "@/app/api/tasks/[id]/route";
+import { POST as taskCommentPost } from "@/app/api/tasks/[id]/comments/route";
 import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
 import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-checks/[id]/attachments/[attachmentId]/url/route";
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
@@ -328,7 +332,15 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/tenders/{id}/attachments/{attachmentId}/confirm": { POST: tenderAttachmentConfirmPost },
   "/api/tenders/{id}/attachments/{attachmentId}/url": { GET: tenderAttachmentUrlGet },
   "/api/machine-cost-rates": { POST: machineCostRatesPost },
-  "/api/project-cost-entries/book": { POST: projectCostBookPost },
+  /*
+   * F5: `project-cost-entries/book` je ukinut (nema više ručnog knjiženja). NUL-guard pokriva
+   * nove rute koje primaju tekst: ručni trošak, storno, zadatak i komentar.
+   */
+  "/api/costs/manual": { POST: costManualPost },
+  "/api/costs/{id}/reverse": { POST: costReversePost },
+  "/api/tasks": { POST: taskPost },
+  "/api/tasks/{id}": { PATCH: taskPatch },
+  "/api/tasks/{id}/comments": { POST: taskCommentPost },
   "/api/workdays/hours-export": { GET: hoursExportGet },
   "/api/work-weeks/decide": { POST: weekDecideRoute },
   "/api/work-weeks/lock": { POST: weekLockRoute },

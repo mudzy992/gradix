@@ -13,7 +13,7 @@
  *  - **Status je tekst + chip**, nikad samo boja.
  *  - Jedna primarna akcija po redu, ostalo u meniju „⋯".
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "@gradix/contracts";
 import { apiCall } from "@/api-client";
 import {
@@ -26,6 +26,7 @@ export {
 } from "./projects-shared";
 import { STATUS_LABEL } from "./projects-shared";
 import { ProjectDetail } from "./project-detail";
+import type { ProjectFinancialSummary } from "./projects-summary";
 
 
 const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
@@ -44,11 +45,22 @@ export default function ProjectsClient({
   canManage,
   canAssign,
   canOverride,
+  canSeeMoney = false,
+  financials = {},
+  initialOpenProjectId = null,
 }: {
   canManage: boolean;
   canAssign: boolean;
   /** `projects.override`: bez njega se iznimka može samo ZATRAŽITI, ne odobriti. */
   canOverride: boolean;
+  /** `projects.costs.view`: marža je novac, pa je vidi samo onaj ko smije vidjeti troškove. */
+  canSeeMoney?: boolean;
+  financials?: Record<string, ProjectFinancialSummary>;
+  /**
+   * Projekat koji se otvara odmah po učitavanju (dolazak sa `/pregled` linka „rizični projekat“).
+   * Bez ovoga bi link vodio na listu i čovjek bi opet tražio red.
+   */
+  initialOpenProjectId?: string | null;
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +68,12 @@ export default function ProjectsClient({
   const [statusFilter, setStatusFilter] = useState("");
   const [editing, setEditing] = useState<{ project: Project | null; returnTo: HTMLElement | null } | null>(null);
   const [open, setOpen] = useState<Project | null>(null);
+  /*
+   * Filter „rizični“ nije treći status: rizik je IMENOVAN (negativna marža, prekoračen budžet,
+   * trošak bez cijene) i dolazi sa servera. Ekran ga samo prikazuje — inače bi svaki ekran imao
+   * svoju definiciju rizika.
+   */
+  const [riskyOnly, setRiskyOnly] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -73,9 +91,26 @@ export default function ProjectsClient({
   }, [load]);
 
   const visible = useMemo(() => {
-    const list = projects ?? [];
-    return statusFilter ? list.filter((project) => project.status === statusFilter) : list;
-  }, [projects, statusFilter]);
+    let list = projects ?? [];
+    if (statusFilter) list = list.filter((project) => project.status === statusFilter);
+    if (riskyOnly) list = list.filter((project) => financials[project.id]?.risky === true);
+    return list;
+  }, [projects, statusFilter, riskyOnly, financials]);
+
+  const openedOnce = useRef(false);
+  useEffect(() => {
+    if (!initialOpenProjectId || openedOnce.current || !projects) return;
+    const match = projects.find((project) => project.id === initialOpenProjectId);
+    if (match) {
+      openedOnce.current = true;
+      setOpen(match);
+    }
+  }, [initialOpenProjectId, projects]);
+
+  const riskyCount = useMemo(
+    () => (projects ?? []).filter((project) => financials[project.id]?.risky === true).length,
+    [projects, financials],
+  );
 
   return (
     <div>
@@ -113,6 +148,17 @@ export default function ProjectsClient({
                 </option>
               ))}
             </Select>
+          {canSeeMoney ? (
+            <Select
+              label="Rizičnost"
+              id="project-risk"
+              value={riskyOnly ? "risky" : ""}
+              onChange={(event) => setRiskyOnly(event.target.value === "risky")}
+            >
+              <option value="">Svi projekti</option>
+              <option value="risky">Samo rizični ({riskyCount})</option>
+            </Select>
+          ) : null}
         </FilterBar>
 
         {projects === null ? <Skeleton rows={4} /> : null}
@@ -149,6 +195,47 @@ export default function ProjectsClient({
                 ),
               },
               { key: "status", header: "Stanje", cell: (project) => <Chip tone={STATUS_TONE[project.status] ?? "hollow"}>{STATUS_LABEL[project.status] ?? project.status}</Chip> },
+              {
+                key: "progress",
+                header: "Napredak",
+                cell: (project) => {
+                  const summary = financials[project.id];
+                  if (!summary || summary.progress_pct === null) {
+                    return <span className="gx-page-sub">bez faza</span>;
+                  }
+                  return (
+                    <span className="gx-stack gx-stack--2">
+                      <span>{summary.progress_pct.toFixed(0)} %</span>
+                      {summary.pending_cost_count > 0 ? (
+                        <Chip tone="hollow">{summary.pending_cost_count} bez cijene</Chip>
+                      ) : null}
+                    </span>
+                  );
+                },
+              },
+              ...(canSeeMoney
+                ? [{
+                    key: "margin",
+                    header: "Marža",
+                    numeric: true,
+                    cell: (project: Project) => {
+                      const summary = financials[project.id];
+                      if (!summary || summary.margin === null) {
+                        return <span className="gx-page-sub">bez vrijednosti</span>;
+                      }
+                      return (
+                        <span className="gx-stack gx-stack--2">
+                          <span>{summary.margin}</span>
+                          {summary.margin_pct === null ? null : (
+                            <Chip tone={summary.margin_pct < 0 ? "hot" : "hollow"}>
+                              {summary.margin_pct.toFixed(1)} %
+                            </Chip>
+                          )}
+                        </span>
+                      );
+                    },
+                  }]
+                : []),
               { key: "place", header: "Lokacija", cell: (project) => project.sitePlace ?? "—" },
               { key: "team", header: "Tim", cell: (project) => `${project.workerCount} · ${project.machineCount}` },
               {
@@ -194,6 +281,7 @@ export default function ProjectsClient({
           canManage={canManage}
           canAssign={canAssign}
           canOverride={canOverride}
+          canSeeMoney={canSeeMoney}
           onClose={() => setOpen(null)}
           onChanged={load}
           onEdit={(project) => {

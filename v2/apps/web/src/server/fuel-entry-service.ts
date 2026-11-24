@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { isCurrency, type Currency } from "@gradix/domain";
 import { can } from "./permissions";
+import { bookFuelEntryCost } from "./cost-entry-service";
 import { resolveViewerWorkerId } from "./workday-review";
 import { canViewFuelPrice } from "./fuel-entry-price";
 import { assertUnitPriceConsistent, parseFuelMoney, resolveFuelAmount } from "./fuel-entry-money";
@@ -255,6 +256,15 @@ export async function createFuelEntry(
       }
       throw error;
     }
+    /*
+     * F5 (§1.3.13): točenje knjiži trošak odmah — sa iznosom ako postoji, inače `PENDING` sa
+     * litrima. `setFuelAmount` kasnije prelazi `PENDING` → `POSTED` (jednom, kroz triger).
+     */
+    await bookFuelEntryCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      fuelEntryId: id,
+    });
     if (input.meterReading != null) {
       try {
         await insertMeterFromFuel(client, actor, input.machineId, input.meterReading, id);

@@ -132,6 +132,29 @@ export const AUDIT_ACTIONS = [
   "route_segment.updated",
   "check_template.created",
   "check_template.updated",
+  // Faza 5 — Modul 6: projekat kao finansijski kontejner
+  "project.phase_created",
+  "project.phase_updated",
+  "project.phase_dependency_added",
+  "project.phase_dependency_removed",
+  "project.progress_set",
+  "project.budget_revised",
+  "project.cost_posted",
+  "project.cost_pending",
+  "project.cost_reversed",
+  "project.cost_posted_manual",
+  "project.boq_item_saved",
+  "project.progress_source_changed",
+  "project.amendment_created",
+  "project.amendment_decided",
+  "project.task_created",
+  "project.task_updated",
+  "project.task_commented",
+  // Zatvaranje mijenja da li se u projekat smije knjižiti — trag je OBAVEZAN, ne „nice to have“.
+  "project.closed",
+  "project.reopened",
+  "cost_category.created",
+  "cost_category.updated",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -168,6 +191,17 @@ export const AUDIT_ENTITY_TYPES = [
   "route_segment",
   "check_template",
   "machine_daily_check",
+  // Faza 5
+  "project_phase",
+  "project_phase_dependency",
+  "project_budget",
+  "project_cost_entry",
+  "project_boq_item",
+  "project_amendment",
+  "project_task",
+  "project_task_comment",
+  "project_close",
+  "cost_category",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -279,6 +313,27 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "route_segment.updated": "Dionica izmijenjena",
   "check_template.created": "Šablon pregleda upisan",
   "check_template.updated": "Šablon pregleda izmijenjen",
+  "project.phase_created": "Faza dodana",
+  "project.phase_updated": "Faza izmijenjena",
+  "project.phase_dependency_added": "Zavisnost faze dodana",
+  "project.phase_dependency_removed": "Zavisnost faze uklonjena",
+  "project.progress_set": "Napredak faze postavljen",
+  "project.budget_revised": "Nova revizija budžeta",
+  "project.cost_posted": "Trošak proknjižen",
+  "project.cost_pending": "Trošak bez cijene (PENDING)",
+  "project.cost_reversed": "Trošak storniran",
+  "project.cost_posted_manual": "Ručni trošak proknjižen",
+  "project.boq_item_saved": "Stavka predmjera sačuvana",
+  "project.progress_source_changed": "Izvor napretka promijenjen",
+  "project.amendment_created": "Aneks upisan",
+  "project.amendment_decided": "Aneks odlučen",
+  "project.task_created": "Zadatak dodan",
+  "project.task_updated": "Zadatak izmijenjen",
+  "project.task_commented": "Komentar na zadatku",
+  "project.closed": "Projekat zatvoren",
+  "project.reopened": "Projekat ponovno otvoren",
+  "cost_category.created": "Kategorija troška dodana",
+  "cost_category.updated": "Kategorija troška izmijenjena",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

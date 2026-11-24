@@ -12,8 +12,14 @@ export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 /** Najviše priloga po jednom entitetu (obaveza, tender, pregled mašine). */
 export const MAX_ATTACHMENTS_PER_ENTITY = 5;
 
-/** Na šta prilog može biti zakačen. Vrijednosti su iste kao CHECK u bazi. */
-export const ATTACHMENT_ENTITY_TYPES = ["OBLIGATION", "TENDER", "MACHINE_DAILY_CHECK"] as const;
+/**
+ * Na šta prilog može biti zakačen. Vrijednosti su iste kao CHECK u bazi.
+ *
+ * `PROJECT` (F5): fotografija računa sa gradilišta postoji PRIJE troška — prvo se slika, pa se
+ * unosi iznos. Prilog zato visi o projektu, a trošak pokazuje na njega kroz
+ * `rate_snapshot->>'attachment_id'`.
+ */
+export const ATTACHMENT_ENTITY_TYPES = ["OBLIGATION", "TENDER", "MACHINE_DAILY_CHECK", "PROJECT"] as const;
 export type AttachmentEntityType = (typeof ATTACHMENT_ENTITY_TYPES)[number];
 
 export const ATTACHMENT_STATUSES = ["pending", "ready", "deleted"] as const;

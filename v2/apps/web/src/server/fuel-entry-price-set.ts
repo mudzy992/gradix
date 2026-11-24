@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { isCurrency, type Currency } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { settlePendingCost } from "./cost-entry-service";
 import { canViewFuelPrice } from "./fuel-entry-price";
 import { resolveFuelAmount } from "./fuel-entry-money";
 import type { FuelEntryActor, MutationOutcome } from "./fuel-entry-types";
@@ -47,6 +48,18 @@ export async function setFuelAmount(
     if (updated.rowCount !== 1) {
       return { outcome: "CONFLICT", code: "AMOUNT_SET", message: "Iznos je već unesen." };
     }
+    /*
+     * F5 (§1.3.15): kad cijena stigne, `PENDING` trošak prelazi u `POSTED` — JEDNOM. Triger
+     * dozvoljava samo taj prelaz, pa dvostruki poziv ne može prepisati već proknjižen iznos.
+     */
+    await settlePendingCost(client, {
+      companyId: actor.companyId,
+      sourceType: "FUEL_ENTRY",
+      sourceId: fuelEntryId,
+      amountCents: priced.cents,
+      currency,
+      actorId: actor.userId,
+    });
     await writeAudit(client, {
       companyId: actor.companyId,
       actorId: actor.userId,

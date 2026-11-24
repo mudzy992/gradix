@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { bookHaulCost } from "./cost-entry-service";
 import { checkUse } from "./usage-service";
 import { companyToday } from "./project-service";
 import { usageBlockMessage } from "@gradix/domain";
@@ -156,6 +157,12 @@ export async function createHaul(
         tripCount, input.note ?? null, actor.userId,
       ],
     );
+    // F5 (§1.3.13): tura je trošak sa količinom; cijena dolazi iz dionice, inače `PENDING`.
+    await bookHaulCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      haulId: id,
+    });
     return { outcome: "OK", id };
   });
 }

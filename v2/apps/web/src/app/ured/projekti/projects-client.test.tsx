@@ -385,3 +385,63 @@ describe("projekti", () => {
     });
   });
 });
+
+/**
+ * F5: marža, % napretka i filter „rizični“ (spec 06 §4).
+ *
+ * Marža se računa na SERVERU i dolazi kao `financials` — ekran je ne izmišlja. Zato test daje
+ * pripremljen sažetak i provjerava da se prikazuje tačno on, te da filter rizičnih koristi
+ * IMENOVAN uzrok (`risky`), ne svoju računicu.
+ */
+describe("projekti — marža, procenat i rizični (F5)", () => {
+  const financials = {
+    prj_1: {
+      project_id: "prj_1",
+      margin: "-1200.00",
+      margin_pct: -3.4,
+      progress_pct: 62,
+      budget_used_pct: 104.2,
+      pending_cost_count: 2,
+      risky: true,
+    },
+    prj_2: {
+      project_id: "prj_2",
+      margin: "8000.00",
+      margin_pct: 12.5,
+      progress_pct: 30,
+      budget_used_pct: 40,
+      pending_cost_count: 0,
+      risky: false,
+    },
+  };
+
+  it("marža i procenat stoje u listi; bez dozvole za novac marže NEMA", async () => {
+    mockApi();
+    const { unmount } = render(
+      <ProjectsClient canManage canAssign canOverride canSeeMoney financials={financials} />,
+    );
+
+    const row = (await screen.findByText("Dionica Visoko–Kiseljak")).closest("tr")!;
+    expect(within(row).getByText("-1200.00")).toBeInTheDocument();
+    expect(within(row).getByText("62 %")).toBeInTheDocument();
+    expect(within(row).getByText("2 bez cijene")).toBeInTheDocument();
+    unmount();
+
+    // Računovođa vidi troškove, ali radnik ne — bez `projects.costs.view` nema kolone Marža.
+    render(<ProjectsClient canManage canAssign canOverride canSeeMoney={false} financials={financials} />);
+    await screen.findByText("Dionica Visoko–Kiseljak");
+    expect(screen.queryByText("-1200.00")).not.toBeInTheDocument();
+  });
+
+  it("filter „samo rizični“ ostavlja projekat sa imenovanim uzrokom", async () => {
+    mockApi();
+    const user = userEvent.setup();
+    render(<ProjectsClient canManage canAssign canOverride canSeeMoney financials={financials} />);
+
+    await screen.findByText("Dionica Visoko–Kiseljak");
+    await user.selectOptions(screen.getByLabelText("Rizičnost"), "risky");
+
+    expect(screen.getByText("Dionica Visoko–Kiseljak")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Most preko Bosne")).not.toBeInTheDocument());
+  });
+});

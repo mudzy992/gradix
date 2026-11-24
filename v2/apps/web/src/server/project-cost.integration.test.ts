@@ -1,13 +1,18 @@
 /**
- * R6.1 web: book twice → one row; no rate → VALIDATION; ACCOUNTANT cannot book.
+ * F5 web: trošak se knjiži DOGAĐAJEM, ne dugmetom; bez cijene je `PENDING`, a ne nula.
+ *
+ * Zašto ovaj test više ne zove `book` rutu: ruta je ukinuta (`project-cost-entries/book`). Ono
+ * što se provjerava je bitnije — da upis sata goriva bez iznosa ostavi `PENDING` red koji NE
+ * ulazi u zbroj, i da unos cijene taj red prevede u `POSTED` tačno jednom.
  */
 import { NextRequest } from "next/server";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withCompany, companyId } from "@gradix/db";
-import { GET as listRoute } from "@/app/api/project-cost-entries/route";
-import { POST as bookRoute } from "@/app/api/project-cost-entries/book/route";
+import { GET as listRoute } from "@/app/api/costs/route";
 import { POST as rateRoute } from "@/app/api/machine-cost-rates/route";
+import { POST as priceRoute } from "@/app/api/fuel-entries/[id]/price/route";
+import { bookMachineWorkLogCostInCompany } from "./cost-entry-service";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -22,6 +27,7 @@ const MACHINE_NO = `mch_r61w_n_${RUN}`;
 const PROJECT = `prj_r61w_${RUN}`;
 const LOG = `mwl_r61w_${RUN}`;
 const LOG_NO = `mwl_r61w_n_${RUN}`;
+const FUEL = `fuel_r61w_${RUN}`;
 
 async function signIn(userId: string): Promise<string> {
   const sessionId = `ses_${userId}`;
@@ -80,6 +86,17 @@ describeDb("R6.1 project cost web API", () => {
                 ($7,$2,$8,$4,$5,'2026-11-19T11:00:00Z','2026-11-19T12:00:00Z','WORK',$6,$6)`,
         [LOG, COMPANY, MACHINE, WORKER, PROJECT, USER_OWNER, LOG_NO, MACHINE_NO],
       );
+      /*
+       * Točenje BEZ iznosa — to je D1 slučaj iz Modula 5: trošak postoji (gorivo je u rezervoaru),
+       * ali cijena još nije poznata. Takav red ide u `PENDING`.
+       */
+      await client.query(
+        `INSERT INTO public.fuel_entries
+           (id, company_id, machine_id, driver_worker_id, project_id, filled_at, liters,
+            amount_cents, currency_code, created_by, updated_by)
+         VALUES ($1,$2,$3,$4,$5,'2026-11-19T13:00:00Z',50,NULL,'BAM',$6,$6)`,
+        [FUEL, COMPANY, MACHINE, WORKER, PROJECT, USER_OWNER],
+      );
     });
     cookieOwner = await signIn(USER_OWNER);
     cookieAcct = await signIn(USER_ACCT);
@@ -87,7 +104,10 @@ describeDb("R6.1 project cost web API", () => {
 
   afterAll(async () => {
     await withCompany(admin, companyId(COMPANY), async (client) => {
-      await client.query("DELETE FROM project_cost_entries WHERE company_id = $1", [COMPANY]);
+      // Ledger je append-only: teardown isključuje korisničke trigere za svoju transakciju.
+      await client.query("SET LOCAL session_replication_role = replica");
+      await client.query("DELETE FROM cost_entries WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM fuel_entries WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_cost_rate_snapshots WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_cost_rates WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_work_logs WHERE company_id = $1", [COMPANY]);
@@ -102,63 +122,137 @@ describeDb("R6.1 project cost web API", () => {
     await admin.end();
   });
 
-  it("ACCOUNTANT ne smije knjižiti", async () => {
-    const res = await bookRoute(new NextRequest("http://t/api/project-cost-entries/book", {
-      method: "POST",
-      headers: { cookie: cookieAcct, "content-type": "application/json" },
-      body: JSON.stringify({ workLogIds: [LOG] }),
+  it("gorivo bez iznosa ostaje PENDING i NE ulazi u zbroj", async () => {
+    /*
+     * Točenje je upisano u fixture-u direktno u tabelu (bez servisa), pa se trošak knjiži ovdje
+     * kroz istu funkciju koju servis zove — bitno je da iznos NIJE poznat.
+     */
+    await withCompany(admin, companyId(COMPANY), async (client) => {
+      const { bookFuelEntryCost } = await import("./cost-entry-service");
+      const booked = await bookFuelEntryCost(client, {
+        companyId: COMPANY,
+        actorId: USER_OWNER,
+        fuelEntryId: FUEL,
+      });
+      expect(booked.pending).toBe(1);
+    });
+
+    const list = await listRoute(new NextRequest(`http://t/api/costs?projectId=${PROJECT}`, {
+      headers: { cookie: cookieOwner },
     }));
-    expect(res.status).toBe(403);
+    expect(list.status).toBe(200);
+    const body = (await list.json()) as {
+      data: {
+        entries: Array<{ source_id: string; amount: string | null; status: string }>;
+        totals: { posted: string; pending_count: number };
+      };
+    };
+    const pending = body.data.entries.find((entry) => entry.source_id === FUEL);
+    expect(pending).toMatchObject({ amount: null, status: "PENDING" });
+    // Zbroj `POSTED` troška ne sadrži `PENDING`: „nepoznato“ nije nula, ali nije ni iznos.
+    expect(body.data.totals.posted).toBe("0.00");
+    expect(body.data.totals.pending_count).toBe(1);
   });
 
-  it("bez stope → VALIDATION; s stopom knjiži jednom (idempotent)", async () => {
-    const noRate = await bookRoute(new NextRequest("http://t/api/project-cost-entries/book", {
-      method: "POST",
-      headers: { cookie: cookieOwner, "content-type": "application/json" },
-      body: JSON.stringify({ workLogIds: [LOG_NO] }),
-    }));
-    expect(noRate.status).toBe(400);
-    const noRateBody = await noRate.json() as { error?: { code?: string }; code?: string };
-    const code = noRateBody.error?.code ?? noRateBody.code;
-    expect(code).toBe("VALIDATION_FAILED");
+  it("unos cijene prevodi PENDING u POSTED tačno jednom", async () => {
+    const priced = await priceRoute(
+      new NextRequest(`http://t/api/fuel-entries/${FUEL}/price`, {
+        method: "POST",
+        headers: { cookie: cookieOwner, "content-type": "application/json" },
+        body: JSON.stringify({ totalAmount: "120.00" }),
+      }),
+      { params: Promise.resolve({ id: FUEL }) },
+    );
+    expect(priced.status).toBe(200);
 
+    const list = await listRoute(new NextRequest(`http://t/api/costs?projectId=${PROJECT}`, {
+      headers: { cookie: cookieOwner },
+    }));
+    const body = (await list.json()) as {
+      data: {
+        entries: Array<{ source_id: string; amount: string | null; status: string }>;
+        totals: { posted: string; pending_count: number };
+      };
+    };
+    const posted = body.data.entries.find((entry) => entry.source_id === FUEL);
+    expect(posted).toMatchObject({ amount: "120.00", status: "POSTED" });
+    expect(body.data.totals.posted).toBe("120.00");
+    expect(body.data.totals.pending_count).toBe(0);
+
+    // Drugi pokušaj ne dira iznos (cijena se ne prepisuje; ispravka je storno).
+    const again = await priceRoute(
+      new NextRequest(`http://t/api/fuel-entries/${FUEL}/price`, {
+        method: "POST",
+        headers: { cookie: cookieOwner, "content-type": "application/json" },
+        body: JSON.stringify({ totalAmount: "999.00" }),
+      }),
+      { params: Promise.resolve({ id: FUEL }) },
+    );
+    expect(again.status).toBe(409);
+  });
+
+  it("sat mašine BEZ stope ostaje PENDING (trošak postoji, cijena ne)", async () => {
+    const booked = await bookMachineWorkLogCostInCompany(admin, {
+      companyId: COMPANY,
+      actorId: USER_OWNER,
+      workLogId: LOG_NO,
+    });
+    expect(booked.pending).toBe(1);
+  });
+
+  it("sa stopom knjiži jednom (idempotentno po izvoru)", async () => {
     const rate = await rateRoute(new NextRequest("http://t/api/machine-cost-rates", {
       method: "POST",
       headers: { cookie: cookieOwner, "content-type": "application/json" },
-      body: JSON.stringify({
-        machineId: MACHINE,
-        amount: "100.00",
-        validFrom: "2026-01-01",
-      }),
+      body: JSON.stringify({ machineId: MACHINE, amount: "100.00", validFrom: "2026-01-01" }),
     }));
     expect(rate.status).toBe(200);
 
-    const first = await bookRoute(new NextRequest("http://t/api/project-cost-entries/book", {
-      method: "POST",
-      headers: { cookie: cookieOwner, "content-type": "application/json" },
-      body: JSON.stringify({ workLogIds: [LOG] }),
-    }));
-    expect(first.status).toBe(200);
-    const firstBody = await first.json() as { data: { outcome: string; booked: number } };
-    expect(firstBody.data.outcome).toBe("OK");
-    expect(firstBody.data.booked).toBe(1);
+    const first = await bookMachineWorkLogCostInCompany(admin, {
+      companyId: COMPANY,
+      actorId: USER_OWNER,
+      workLogId: LOG,
+    });
+    expect(first).toMatchObject({ posted: 1, pending: 0 });
 
-    const second = await bookRoute(new NextRequest("http://t/api/project-cost-entries/book", {
-      method: "POST",
-      headers: { cookie: cookieOwner, "content-type": "application/json" },
-      body: JSON.stringify({ workLogIds: [LOG] }),
-    }));
-    expect(second.status).toBe(200);
-    const secondBody = await second.json() as {
-      data: { outcome: string; booked: number; skippedExisting: number };
-    };
-    expect(secondBody.data.booked).toBe(0);
-    expect(secondBody.data.skippedExisting).toBe(1);
+    const second = await bookMachineWorkLogCostInCompany(admin, {
+      companyId: COMPANY,
+      actorId: USER_OWNER,
+      workLogId: LOG,
+    });
+    expect(second).toMatchObject({ posted: 0, skipped: 1 });
 
-    const list = await listRoute(new NextRequest("http://t/api/project-cost-entries", {
+    const list = await listRoute(new NextRequest(`http://t/api/costs?projectId=${PROJECT}`, {
       headers: { cookie: cookieOwner },
     }));
-    const listBody = await list.json() as { data: { entries: Array<{ source_id: string }> } };
-    expect(listBody.data.entries.filter((e) => e.source_id === LOG)).toHaveLength(1);
+    const body = (await list.json()) as {
+      data: { entries: Array<{ source_id: string; amount: string | null; status: string }> };
+    };
+    const rows = body.data.entries.filter((entry) => entry.source_id === LOG);
+    expect(rows).toHaveLength(1);
+    // 2 h × 100.00 = 200.00
+    expect(rows[0]).toMatchObject({ amount: "200.00", status: "POSTED" });
+  });
+
+  it("ACCOUNTANT vidi troškove, ali ne smije knjižiti ručni trošak", async () => {
+    const list = await listRoute(new NextRequest("http://t/api/costs", {
+      headers: { cookie: cookieAcct },
+    }));
+    expect(list.status).toBe(200);
+    const manual = await bookRouteManual(cookieAcct);
+    expect(manual).toBe(403);
   });
 });
+
+/** Ručni trošak kroz rutu — dozvola `projects.costs.book` je ono što se provjerava. */
+async function bookRouteManual(cookie: string): Promise<number> {
+  const { POST } = await import("@/app/api/costs/manual/route");
+  const response = await POST(
+    new NextRequest("http://t/api/costs/manual", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ projectId: PROJECT, categoryId: "nepostoji", occurredOn: "2026-11-19", amount: "10.00" }),
+    }),
+  );
+  return response.status;
+}

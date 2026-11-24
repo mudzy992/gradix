@@ -1,11 +1,17 @@
-/** Journey C: one machine-hour log books one project cost, and a second book does not. */
+/**
+ * Journey C: jedan sat mašine = jedan trošak na projektu, i to BEZ ručnog dugmeta.
+ *
+ * F5 je promijenio mehanizam: `bookProjectCosts()` više ne postoji, a trošak nastaje u
+ * transakciji koja upisuje sat. Test zato provjerava ono što je važnije od poziva: da ponovni
+ * prolaz ne pravi drugi red i da tuđa firma ne vidi ni sat ni trošak.
+ */
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
 import { computeCostAmount, computeHoursFromInterval } from "@gradix/domain";
 import { createMachineWorkLog } from "./machine-work-log-service";
-import { bookProjectCosts } from "./project-cost-service";
+import { bookMachineWorkLogCostInCompany } from "./cost-entry-service";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -65,7 +71,20 @@ describeDb("journey C machine-hour booking", () => {
 
   afterAll(async () => {
     for (const company of [CO, OTHER]) {
-      await dbAdmin.query("DELETE FROM public.project_cost_entries WHERE company_id = $1", [company]);
+      /*
+       * Trošak se ne briše (ledger je append-only i triger brani DELETE). Za čišćenje testa
+       * koristi se `session_replication_role = replica`: isključuje KORISNIČKE trigere, pa
+       * teardown ne mora da stornira red po red.
+       */
+      const client = await dbAdmin.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM public.cost_entries WHERE company_id = $1", [company]);
+        await client.query("COMMIT");
+      } finally {
+        client.release();
+      }
       await dbAdmin.query("DELETE FROM public.machine_cost_rate_snapshots WHERE company_id = $1", [company]);
       await dbAdmin.query("DELETE FROM public.machine_cost_rates WHERE company_id = $1", [company]);
       await dbAdmin.query("DELETE FROM public.machine_work_logs WHERE company_id = $1", [company]);
@@ -79,7 +98,7 @@ describeDb("journey C machine-hour booking", () => {
     await dbApp.end();
   }, 60_000);
 
-  it("knjiženje istog MACHINE_WORK_LOG ostavlja jedan project_cost_entries red", async () => {
+  it("isti MACHINE_WORK_LOG ostavlja jedan red u ledgeru, i poslije ponovnog prolaza", async () => {
     const created = await createMachineWorkLog(dbApp, owner, {
       machineId,
       workerId,
@@ -93,23 +112,32 @@ describeDb("journey C machine-hour booking", () => {
     logId = created.id;
     const hours = computeHoursFromInterval(new Date(STARTED), new Date(ENDED));
     const amount = computeCostAmount(hours, RATE_CENTS, "BAM");
-    const first = await bookProjectCosts(dbApp, owner, { workLogIds: [logId] });
-    expect(first).toMatchObject({ outcome: "OK", booked: 1, skippedExisting: 0 });
-    const second = await bookProjectCosts(dbApp, owner, { workLogIds: [logId] });
-    expect(second).toMatchObject({ outcome: "OK", booked: 0, skippedExisting: 1 });
+
+    /*
+     * Trošak je već tu — servis ga je knjižio u istoj transakciji. Ponovni prolaz (posao, retry,
+     * dvostruki klik) mora ostati `skipped`: djelimični unikat po izvoru je jedina odbrana od
+     * duplog troška i ona je u bazi, ne u kodu.
+     */
+    const again = await bookMachineWorkLogCostInCompany(dbApp, {
+      companyId: CO,
+      actorId: owner.userId,
+      workLogId: logId,
+    });
+    expect(again).toMatchObject({ posted: 0, skipped: 1 });
+
     const stored = await withCompany(dbApp, companyId(CO), (client) => client.query<{
       n: string;
       source_id: string;
       project_id: string;
       company_id: string;
-      hours: string;
+      quantity: string;
       amount_cents: string;
-      rate_cents: string;
       source_type: string;
+      status: string;
     }>(
       `SELECT count(*) OVER ()::text AS n, source_id, project_id, company_id,
-              hours::text, amount_cents::text, rate_cents::text, source_type
-         FROM public.project_cost_entries
+              quantity::text, amount_cents::text, source_type, status
+         FROM public.cost_entries
         WHERE company_id = $1 AND source_type = 'MACHINE_WORK_LOG' AND source_id = $2`,
       [CO, logId],
     ));
@@ -119,37 +147,48 @@ describeDb("journey C machine-hour booking", () => {
       source_id: logId,
       project_id: projectId,
       company_id: CO,
-      hours: hours.toFixed(3),
+      quantity: hours.toFixed(3),
       amount_cents: amount.cents.toString(),
-      rate_cents: RATE_CENTS.toString(),
       source_type: "MACHINE_WORK_LOG",
+      status: "POSTED",
     });
+
     const logs = await withCompany(dbApp, companyId(CO), (client) => client.query<{ n: string }>(
       `SELECT count(*)::text AS n FROM public.machine_work_logs WHERE company_id = $1 AND id = $2`,
       [CO, logId],
     ));
     expect(logs.rows[0]?.n).toBe("1");
+
+    // Trošak pripada SAMO projektu na kojem je sat odrađen.
     const unrelated = await withCompany(dbApp, companyId(CO), (client) => client.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM public.project_cost_entries WHERE company_id = $1 AND project_id = $2`,
+      `SELECT count(*)::text AS n FROM public.cost_entries WHERE company_id = $1 AND project_id = $2`,
       [CO, otherProjectId],
     ));
     expect(unrelated.rows[0]?.n).toBe("0");
+
+    // Tuđa firma ne vidi ni sat ni trošak: RLS + izričit `company_id` u svakom upitu.
     const foreignLogs = await withCompany(dbApp, companyId(OTHER), (client) => client.query<{ n: string }>(
       `SELECT count(*)::text AS n FROM public.machine_work_logs
         WHERE company_id = $1 AND id = $2`,
       [CO, logId],
     ));
     const foreignCosts = await withCompany(dbApp, companyId(OTHER), (client) => client.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM public.project_cost_entries
+      `SELECT count(*)::text AS n FROM public.cost_entries
         WHERE company_id = $1 AND source_id = $2`,
       [CO, logId],
     ));
     expect(foreignLogs.rows[0]?.n).toBe("0");
     expect(foreignCosts.rows[0]?.n).toBe("0");
-    const foreignBook = await bookProjectCosts(dbApp, other, { workLogIds: [logId] });
-    expect(foreignBook).toMatchObject({ outcome: "VALIDATION_FAILED", code: "EMPTY" });
+
+    const foreignBook = await bookMachineWorkLogCostInCompany(dbApp, {
+      companyId: OTHER,
+      actorId: other.userId,
+      workLogId: logId,
+    });
+    expect(foreignBook).toMatchObject({ posted: 0, skipped: 1 });
+
     const stillOne = await withCompany(dbApp, companyId(CO), (client) => client.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM public.project_cost_entries
+      `SELECT count(*)::text AS n FROM public.cost_entries
         WHERE company_id = $1 AND source_id = $2`,
       [CO, logId],
     ));

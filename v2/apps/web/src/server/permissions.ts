@@ -219,6 +219,16 @@ export const PERMISSIONS = {
   "machines.haul.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "projects.costs.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "projects.costs.book": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  /*
+   * F5 (spec 06 §3): dvije nove dozvole, namjerno odvojene od `.book`.
+   *  - `projects.costs.manage` mijenja ŠIFARNIK kategorija i mapiranje izvor → kategorija. To
+   *    nije unos troška, nego pravilo po kojem se svi budući troškovi razvrstavaju — mijenja ga
+   *    ured (PM), a računovođa ga samo čita;
+   *  - `projects.budget.manage` piše NOVU reviziju budžeta. Budžet je odluka (spec 06 §1.5.22),
+   *    pa ga ne mijenja svako ko smije knjižiti trošak — inače bi prag 80 % bio podesiv unazad.
+   */
+  "projects.costs.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "projects.budget.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   // R6.2: CSV obračun sati + dashboard agregati (G0: sati, ne puna plata).
   "payroll.hours.export": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "dashboard.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
@@ -483,7 +493,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   },
   "projects.costs.book": {
     label: "Knjiženje troška na projekat",
-    description: "Knjiži sati mašine × stopa na projekat (idempotentno po izvoru).",
+    description:
+      "Ručni trošak sa gradilišta i storno. Ostali izvori (dan rada, sati mašine, gorivo, tura, servis) knjiže se automatski na promjenu statusa izvora, bez dugmeta.",
+  },
+  "projects.costs.manage": {
+    label: "Šifarnik kategorija troška",
+    description:
+      "Kategorije troška firme i mapiranje izvora na kategoriju. Izvor bez mapiranja ide na „Ostalo“.",
+  },
+  "projects.budget.manage": {
+    label: "Budžet projekta",
+    description:
+      "Nova revizija budžeta po kategoriji i fazi. Budžet se nikad ne prepisuje — stara revizija ostaje čitljiva, a pragovi se prate po reviziji.",
   },
   "payroll.hours.export": {
     label: "Izvoz sati za obračun",

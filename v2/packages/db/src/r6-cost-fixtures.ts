@@ -30,9 +30,15 @@ export const NAMED_CONSTRAINTS = [
   { table: "machine_cost_rates", name: "machine_cost_rates_currency_check" },
   { table: "machine_cost_rates", name: "machine_cost_rates_valid_range_check" },
   { table: "machine_cost_rates", name: "machine_cost_rates_company_id_unique" },
-  { table: "project_cost_entries", name: "project_cost_entries_source_type_check" },
-  { table: "project_cost_entries", name: "project_cost_entries_source_unique" },
-  { table: "project_cost_entries", name: "project_cost_entries_currency_check" },
+  /*
+   * F5: `project_cost_entries` je zamenjen jednim ledgerom `cost_entries`. Imena provjera se
+   * promijenila, pa test imenovanih constrainta prati NOVU šemu — inače bi prolazio na tabeli
+   * koje više nema.
+   */
+  { table: "cost_entries", name: "cost_entries_source_check" },
+  { table: "cost_entries", name: "cost_entries_source_unique" },
+  { table: "cost_entries", name: "cost_entries_currency_check" },
+  { table: "cost_entries", name: "cost_entries_pending_shape_check" },
 ] as const;
 
 export async function seedCostCompanies(admin: Pool): Promise<void> {
@@ -97,7 +103,12 @@ export async function expectAdminFailure(
 export async function teardownCosts(admin: Pool): Promise<void> {
   for (const fixture of [A, B]) {
     await withCompany(admin, companyId(fixture.company), async (client: PoolClient) => {
-      await client.query("DELETE FROM public.project_cost_entries WHERE company_id = $1", [fixture.company]);
+      /*
+       * Ledger je append-only (triger brani DELETE). Teardown zato isključuje KORISNIČKE trigere
+       * za svoju transakciju — ne mijenja šemu, samo pušta čišćenje testnih redova.
+       */
+      await client.query("SET LOCAL session_replication_role = replica");
+      await client.query("DELETE FROM public.cost_entries WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_cost_rates WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_work_log_revisions WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_work_logs WHERE company_id = $1", [fixture.company]);

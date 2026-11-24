@@ -37,8 +37,10 @@ describe("attachmentObjectKey", () => {
 });
 
 describe("isAttachmentEntityType", () => {
-  it("priznaje samo tri tipa iz baze", () => {
+  it("priznaje samo tipove iz baze", () => {
     for (const value of ATTACHMENT_ENTITY_TYPES) expect(isAttachmentEntityType(value)).toBe(true);
-    for (const value of ["project", "OBLIGATIONS", "", null, 7]) expect(isAttachmentEntityType(value)).toBe(false);
+    for (const value of ["OBLIGATIONS", "", null, 7]) expect(isAttachmentEntityType(value)).toBe(false);
+    // Vrijednost je VELIKIM slovima; malo slovo ne smije proći (CHECK u bazi je strog).
+    expect(isAttachmentEntityType("project")).toBe(false);
   });
 });

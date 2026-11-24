@@ -41,9 +41,19 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: "/ured/radni-dani", label: "Radni dani", icon: "calendar", description: "Potvrda dana, sedmica, zaključavanje", group: "Rad / obračun", permission: "workdays.view" },
   { href: "/ured/sukobi", label: "Sukobi", icon: "list", description: "Razrješenje sukoba radnih dana", group: "Rad / obračun", permission: "workdays.resolve" },
   { href: "/ured/trosak-masina", label: "Trošak mašina", icon: "list", description: "Stope troška po satu rada mašine", group: "Rad / obračun", permission: "machines.cost_rate.view" },
-  { href: "/ured/troskovi-projekta", label: "Troškovi projekta", icon: "list", description: "Knjiženje troška sati mašine na projekat", group: "Rad / obračun", permission: "projects.costs.view" },
+  /*
+   * F5: troškovi projekta više NISU poseban ekran — ledger je tab unutar projekta (`Pregled` →
+   * `Troškovi`), jer se trošak gleda uz svoj budžet i maržu. Stavka zato nestaje iz menija, a
+   * dozvola `projects.costs.view` ostaje granica za tabove.
+   */
+  { href: "/ured/zadaci", label: "Zadaci", icon: "list", description: "Moji zadaci, kasne, po projektu", group: "Rad / obračun", permission: "projects.view" },
   { href: "/ured/obracun-sati", label: "Obračun sati", icon: "list", description: "CSV izvoz potvrđenih i zaključenih sati", group: "Rad / obračun", permission: "payroll.hours.export" },
   { href: "/ured/postavke", label: "Postavke firme", icon: "pin", description: "Zaglavlje, rad, praznici, 2FA", group: "Administracija", permission: "company.settings.view" },
+  /*
+   * Kategorije troška su ŠIFARNIK KNJIGE, ne postavka firme: zato su ispod `projects.costs.view`
+   * (vidi ih onaj ko vidi troškove), a ne `company.settings.view`.
+   */
+  { href: "/ured/postavke/kategorije-troska", label: "Kategorije troška", icon: "folder", description: "Šifarnik kategorija i mapiranje izvora", group: "Administracija", permission: "projects.costs.view" },
   { href: "/ured/obavjestenja", label: "Obavještenja", icon: "bell", description: "Inbox: rok, budžet, izvještaj", group: "Administracija", permission: "authenticated" },
   { href: "/ured/korisnici", label: "Korisnici", icon: "users", description: "Ljudi, role, pristup", group: "Administracija", permission: "users.manage" },
   { href: "/ured/role", label: "Pristup i role", icon: "shield", description: "Ko šta smije", group: "Administracija", permission: "roles.view" },

@@ -2,6 +2,7 @@
 import type { PoolClient } from "pg";
 import type { R4HaulPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
+import { bookHaulCost } from "./cost-entry-service";
 import type { SyncHaulApplyDeps } from "./r4-sync-haul-types";
 
 export type { SyncHaulApplyDeps } from "./r4-sync-haul-types";
@@ -64,6 +65,12 @@ export async function applyHaulSyncItem(
   );
   const row = inserted.rows[0];
   if (!row) return reject();
+  // F5: tura je trošak sa količinom (cijena iz dionice, inače `PENDING`) — isto kao kroz servis.
+  await bookHaulCost(client, {
+    companyId: actor.companyId,
+    actorId: actor.userId,
+    haulId: row.id,
+  });
   const payload = {
     id: row.id,
     machineId: item.haul.machineId,

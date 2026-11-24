@@ -62,6 +62,15 @@ export const ERROR_CODES = [
   "MACHINE_DOUBLE_BOOKED",
   "FUEL_DEVIATION_EXPLANATION_REQUIRED",
   "COST_RATE_MANUAL_OVERRIDE",
+  /* Faza 5 — Modul 6: projekti, budžet, knjiženje troška, zatvaranje. */
+  "BUDGET_REVISION_CONFLICT",
+  "PROJECT_CLOSED",
+  "COST_ALREADY_POSTED",
+  "COST_REVERSAL_REASON_REQUIRED",
+  "PHASE_WEIGHT_REQUIRED",
+  "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+  "COST_ENTRY_IMMUTABLE",
+  "COST_ENTRY_DELETE_FORBIDDEN",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -132,6 +141,27 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
    * ispravna, ali radnja nije dopuštena dok nedostaje obrazloženje koje ide u audit.
    */
   COST_RATE_MANUAL_OVERRIDE: 422,
+  /*
+   * F5. `BUDGET_REVISION_CONFLICT` je 409: dvije osobe su uzele isti broj revizije — to je
+   * istinska trka, a ne loš unos. `PROJECT_CLOSED` je 422: zahtjev je ispravan, ali projekat je
+   * zatvoren i knjiženje traži eksplicitno ponovno otvaranje (odluka, ne ispravka).
+   */
+  BUDGET_REVISION_CONFLICT: 409,
+  PROJECT_CLOSED: 422,
+  /* Storno već storniranog / već knjiženog zapisa — stanje, ne unos. */
+  COST_ALREADY_POSTED: 409,
+  /*
+   * 422: storno bez razloga nije dozvoljen. Ista logika kao kod ručne stope — polja su
+   * formalno ispravna, ali radnja mijenja knjigu i traži obrazloženje koje ide u audit.
+   */
+  COST_REVERSAL_REASON_REQUIRED: 422,
+  /* Faza bez težine ne može ući u ukupni napredak (§1.1.2) — traži se podatak, ne ispravka. */
+  PHASE_WEIGHT_REQUIRED: 422,
+  /* Kontrolna lista pri zatvaranju nije kompletna; `message` nosi koje stavke blokiraju. */
+  PROJECT_CLOSE_CHECKLIST_INCOMPLETE: 422,
+  /* Ledger je append-only: iznos/izvor/projekat se ne prepisuju (triger u bazi). */
+  COST_ENTRY_IMMUTABLE: 422,
+  COST_ENTRY_DELETE_FORBIDDEN: 403,
 };
 
 /*

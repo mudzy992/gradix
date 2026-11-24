@@ -84,12 +84,17 @@ async function buildDashboard(
     scoped ? [actor.companyId, projectIds] : [actor.companyId],
   );
   const costs = await client.query<{ cents: string }>(
+    /*
+     * F5: jedan ledger (`cost_entries`). Period ide po `occurred_on` (dan događaja), a ne po
+     * `booked_at`: izvještaj mjeseca govori o poslu koji se tada radio, ne o trenutku kad je
+     * neko stisnuo „potvrdi“.
+     */
     `SELECT coalesce(sum(e.amount_cents), 0)::text AS cents
-       FROM public.project_cost_entries e
+       FROM public.cost_entries e
       WHERE e.company_id = $1
+        AND e.status = 'POSTED'
         ${scopePred}
-        AND (e.booked_at AT TIME ZONE (SELECT timezone FROM public.companies WHERE id = $1))::date
-            BETWEEN ${fromIdx}::date AND ${toIdx}::date`,
+        AND e.occurred_on BETWEEN ${fromIdx}::date AND ${toIdx}::date`,
     params,
   );
   const hours = await client.query<{ hours: number }>(

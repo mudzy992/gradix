@@ -66,9 +66,17 @@ CREATE TABLE public.cost_entries (
   CONSTRAINT cost_entries_quantity_check CHECK (quantity IS NULL OR quantity >= 0),
   CONSTRAINT cost_entries_unit_check
     CHECK (unit IS NULL OR char_length(btrim(unit)) BETWEEN 1 AND 16),
-  /* Storno je OBAVEZNO potpun: ako je red poništen, mora se znati kojim redom. */
+  /*
+   * Storno mora reći ZAŠTO je red poništen: ili pokazuje na red koji ga zamjenjuje
+   * (`reversed_by`), ili nosi razlog u `note`. Treće stanje — `REVERSED` bez ijednog traga —
+   * ne postoji, jer bi tada iz ledžera nestao trošak bez objašnjenja.
+   *
+   * Zašto ne „uvijek `reversed_by`“: čisto poništenje (pogrešan unos, bez zamjenskog iznosa)
+   * nema red koji ga zamjenjuje, pa bi se morao izmišljati red sa nultim iznosom — a nula u
+   * ledžeru nije poništenje nego trošak od nula maraka.
+   */
   CONSTRAINT cost_entries_reversed_check
-    CHECK ((status = 'REVERSED') = (reversed_by IS NOT NULL)),
+    CHECK (status <> 'REVERSED' OR reversed_by IS NOT NULL OR note IS NOT NULL),
   CONSTRAINT cost_entries_no_self_reverse_check
     CHECK (reverses_id IS NULL OR reverses_id <> id),
   CONSTRAINT cost_entries_note_check CHECK (note IS NULL OR length(btrim(note)) BETWEEN 1 AND 1000),

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { reverseSourceCost } from "./cost-entry-service";
 import type { FuelEntryActor, MutationOutcome } from "./fuel-entry-types";
 
 export type ReviseInput = { reason: string; payload: Record<string, unknown> };
@@ -59,6 +60,18 @@ export async function reviseFuelEntry(
         ],
       );
     }
+    /*
+     * Ispravka izvornog zapisa gasi trošak koji je od njega nastao (§1.3.16). Bez ovoga bi ledger
+     * i dalje nosio stari iznos i marža projekta bi bila pogrešna — i to bez traga da je izvor
+     * promijenjen.
+     */
+    await reverseSourceCost(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      sourceType: "FUEL_ENTRY",
+      sourceId: row.id,
+      reason: input.reason,
+    });
     return { outcome: "OK", id: row.id };
   });
 }
