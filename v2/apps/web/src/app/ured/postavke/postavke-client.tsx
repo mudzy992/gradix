@@ -21,6 +21,7 @@ import {
   FormGrid,
   FormSection,
   Input,
+  PageHeader,
   Select,
   Skeleton,
   Stack,
@@ -95,7 +96,13 @@ export default function PostavkeClient({ canManage }: { canManage: boolean }) {
 
   return (
     <Stack>
-      <Tabs tabs={TABS} active={tab} onChange={setTab} label="Postavke firme" />
+      {/*
+       * Naslov ekrana je `h1` (kroz `PageHeader`), kao na svim ostalim uredskim stranicama.
+       * Ranije ga nije bilo — ekran je počinjao tabovima, pa E2E provjera „naslov rute je
+       * vidljiv" nije imala šta naći, a ni čitač ekrana nije imao naslov stranice.
+       */}
+      <PageHeader title="Postavke firme" subtitle="Zaglavlje, radna sedmica, praznici i sigurnost naloga." />
+      <Tabs tabs={TABS} active={tab} onChange={setTab} label="Odjeljci postavki" />
 
       {error ? <Alert tone="error">
           <strong>Postavke nisu učitane.</strong> {error}</Alert> : null}

@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
 import { authenticate } from "@/server/tenant-context";
 import { ACCESS_COOKIE } from "@/server/session";
-import { Card, SectionTitle, Stack } from "@/components/ui/index";
+import { Card, PageHeader, SectionTitle, Stack } from "@/components/ui/index";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,10 @@ export default async function ProfilePage() {
   return (
     <main className="mx-auto w-full max-w-3xl">
       <Stack>
+        {/* Naslov stranice je `h1`; `SectionTitle` je `h2` i ne smije nositi naslov ekrana. */}
+        <PageHeader title="Moj profil" subtitle="Uređaji na kojima ste prijavljeni i sigurnost naloga." />
         <Card>
-          <SectionTitle hint="Uređaji na kojima ste prijavljeni i sigurnost naloga.">Moj profil</SectionTitle>
+          <SectionTitle>Prečice</SectionTitle>
           <Stack>
             <p>
               <Link className="gx-link" href="/ured/profil/sesije">
