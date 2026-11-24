@@ -99,3 +99,10 @@ name: offline-unos
     text: "Nema veze. Prikazujem zadnje preuzeto."
 - takeScreenshot: offline-projekti-iz-kesa
 - back
+# Tok 04 nastavlja BEZ restarta (mreža se vraća, ali hladan start nije potreban) i očekuje
+# home ekran zbog navigacije. Zato se ovdje vraćamo na home, a ne ostavljamo listu projekata
+# otvorenu (isti uzrok kao padovi toka 03: polazna pozicija ekrana nije bila ta koju tok traži).
+- back
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 20000

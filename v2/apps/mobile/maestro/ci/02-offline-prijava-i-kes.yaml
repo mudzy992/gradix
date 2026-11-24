@@ -66,3 +66,17 @@ name: offline-prijava-i-kes
       text: "Sačuvaj na telefon"
     timeout: 20000
 - takeScreenshot: 02-moj-dan-spreman
+# VAŽNO za tok 03: vrati se NA HOME, ne ostaj formu otvorenu.
+#
+# Forma „Moj dan" je duža od ekrana i ovdje je skrolovana do dna (do dugmadi). Ako tok 03
+# nastavi s te pozicije, naslov „Moj dan" je izvan vidika — a tok 03 čeka upravo njega
+# (padovi 3/3 u runovima 45386796819, 45390927195, iako je aplikacija radila ispravno).
+# Navigacija u app-u ide SAMO sa home ekrana (nema tab-trake: `_layout.tsx` skriva header,
+# a stavke su `Link` dugmad na home-u), pa se tok 03 ne može „vratiti" sam.
+# Zato tok 02 završava na home-u — u istom procesu, bez restarta (mreža je već isključena
+# u toku 03, a hladan start bez mreže vodi na prijavu).
+- back
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 20000
+- takeScreenshot: 02-home-spreman
