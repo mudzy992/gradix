@@ -2,7 +2,7 @@
  * Deep Rad/obračun — dopuna postojećih approval/revise/resolve:
  * troškovi projekta + obračun CSV dostupnost (self-owned nije potreban za read).
  */
-import { test } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import { E2E_USERS, loginUi, requireE2ePassword } from "./helpers/auth";
 import { expectForbiddenPage, expectHeading } from "./helpers/assert";
 

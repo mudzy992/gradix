@@ -2,7 +2,8 @@
  * Deep Evidencija — self-owned partner/tender/project/worker/machine + UI assert.
  * Prilozi MinIO: CI-SKIP (vidi e2e-coverage MATRIX).
  */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import {
   apiPatch,
   convertTender,

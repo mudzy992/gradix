@@ -229,15 +229,30 @@ jobs:
             local grep="$1"
             local project="${2:-}"
             echo "::group::E2E shard $grep ${project:-all-projects}"
+            local pocetak; pocetak=$(date +%s)
             if [ -n "$project" ]; then
               E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test --workers=1 --project="$project" \
-                || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+                || {
+                  echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log
+                  # LOGOVI SU NEDOSTUPNI preko API-ja (blob host vraća EOF), a anotacije prolaze.
+                  # Zato se ime sharda i posljednje linije objavljuju kao anotacija — bez toga
+                  # pad E2E-a izgleda kao „job je potrošio budžet", bez ijednog traga o testu.
+                  echo "::error title=E2E pad ($grep ${project:-all})::$(grep -E '✘|Error:|expect|Timeout' /tmp/e2e-server.log 2>/dev/null | head -3 | tr '\n' '|' | cut -c1-380)"
+                  exit 1
+                }
             else
               E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test --workers=1 \
-                || { echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log; exit 1; }
+                || {
+                  echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log
+                  echo "::error title=E2E pad ($grep all)::$(grep -E '✘|Error:|expect|Timeout' /tmp/e2e-server.log 2>/dev/null | head -3 | tr '\n' '|' | cut -c1-380)"
+                  exit 1
+                }
             fi
+            echo "::notice title=E2E shard ($grep ${project:-all})::prošao za $(( $(date +%s) - pocetak )) s"
             echo "::endgroup::"
           }
+          # @smoke prvi i ODVOJENO: ako osnovna prijava ne radi, padne za ~1 min i vidi se
+          # odmah, umjesto da šest @deep shardova troši budžet joba redom.
           run_shard "@smoke"
           run_shard "@deep-auth"
           run_shard "@deep-evidencija"

@@ -1,7 +1,8 @@
 /**
  * Deep Admin — korisnici / role / audit + forbidden za radnika.
  */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import { E2E_USERS, loginUi, requireE2ePassword } from "./helpers/auth";
 import { expectForbiddenPage, expectHeading } from "./helpers/assert";
 

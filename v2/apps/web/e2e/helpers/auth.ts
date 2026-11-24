@@ -154,12 +154,35 @@ export async function loginUi(page: Page, email: string): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Lozinka").fill(E2E_PASSWORD);
+  // Uhvati odgovor servera PRIJE klika: bez toga pad prijave izgleda kao „waitForURL je
+  // istekao", a stvarni status (401/423/429/500) ostaje skriven — to je tačno ono što je
+  // E2E prijavljivao u CI-ju.
+  const loginResponse = page.waitForResponse((response) => response.url().includes("/api/auth/login"), {
+    timeout: 20_000,
+  });
   await page.getByRole("button", { name: "Prijavi se" }).click();
 
   // Drugi korak: polje za kod. `isVisible` odmah poslije prikaza lozinke; bez čekanja bi
   // test prošao i kad 2FA nije ni tražena (lažno zeleno).
   const codeField = page.getByLabel("Kod iz autentikatora ili recovery kod");
-  const needsCode = await codeField.isVisible({ timeout: 3_000 }).catch(() => false);
+  let needsCode = false;
+  try {
+    const response = await loginResponse;
+    if (response.status() !== 200) {
+      throw new Error(`POST /api/auth/login → ${response.status()} ${(await response.text()).slice(0, 200)}`);
+    }
+    needsCode = await codeField.isVisible({ timeout: 3_000 }).catch(() => false);
+  } catch (error) {
+    // Dijagnostika: URL i vidljivi tekst. Anotacije prolaze tamo gdje logovi ne prolaze.
+    const text = await page
+      .locator("body")
+      .innerText()
+      .then((value) => value.replace(/\s+/g, " ").slice(0, 300))
+      .catch(() => "?");
+    throw new Error(
+      `${error instanceof Error ? error.message : String(error)} | url=${page.url()} | ekran=${text}`,
+    );
+  }
   if (needsCode) {
     // Svjež brojač prije svake prijave: isti demo nalog ulazi više puta u istom periodu.
     await resetTotpReplayGuard(email).catch(() => false);

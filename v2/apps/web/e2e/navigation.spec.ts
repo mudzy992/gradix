@@ -2,7 +2,8 @@
  * E2E: prijava po rolama, meni, odjava, sesija (A4c) + C.1 pregled.
  * Tagovi: @smoke (meni/role), @deep-auth (sesija), @deep-admin (C.1 pregled).
  */
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import { E2E_USERS, loginUi, logoutUi, requireE2ePassword } from "./helpers/auth";
 import { navLabels } from "./helpers/nav";
 

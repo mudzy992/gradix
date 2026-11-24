@@ -2,7 +2,8 @@
  * Deep Mehanizacija — API create sati/gorivo/ture + UI page assert.
  * Liste mogu filtrirati po datumu/strani; assert = API OK + heading (ne ovisi o list view).
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import {
   apiPost,
   createMachine,

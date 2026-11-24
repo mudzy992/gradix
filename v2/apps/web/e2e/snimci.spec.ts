@@ -5,7 +5,8 @@
  */
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 
 const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const OUT = path.join(process.cwd(), "snimci");

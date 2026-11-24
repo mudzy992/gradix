@@ -2,7 +2,8 @@
  * E2E 2c: uvoz projekata — sretan prolaz i miješane greške (ništa se ne upisuje).
  * Fixturei sintetički; domene .test nisu potrebne (šifre E2E-*).
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import ExcelJS from "exceljs";
 
 const PASSWORD = process.env.E2E_PASSWORD ?? "";

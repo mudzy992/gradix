@@ -3,7 +3,8 @@
  * PM / računovođa / šef nemaju dugme.
  * Sidro ok2 (druga sedmica od approval.spec) — vidi demo-r4b-approval.ts.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 
 const PASSWORD = process.env.E2E_PASSWORD ?? "";
 const ADMIN = process.env.DATABASE_ADMIN_URL ?? "";

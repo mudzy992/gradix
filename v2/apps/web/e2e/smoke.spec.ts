@@ -3,7 +3,8 @@
  * Dozvoljena ruta mora pokazati svoj naslov. Zabranjena mora ostati na stranici
  * zabrane, a njen API mora vratiti 403. HTTP 200 sam nije dokaz dozvole.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import { NAV_ENTRIES, navEntriesForRoles } from "../src/components/nav";
 import { attachConsoleGuard, expectForbiddenPage, expectNoServerError } from "./helpers/assert";
 import { E2E_USERS, loginUi, requireE2ePassword } from "./helpers/auth";

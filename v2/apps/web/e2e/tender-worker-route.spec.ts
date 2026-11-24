@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./helpers/annotate";
 import { E2E_USERS, loginUi, requireE2ePassword } from "./helpers/auth";
 
 /** Isti cookie jar kao stranica. page.request ne šalje Secure gx_at na http://127.0.0.1. */
