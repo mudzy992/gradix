@@ -130,7 +130,11 @@ adb_login() {  # adb_login <email> — priprema prijave bez Maestro inputText
   sleep 1
 }
 
-run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz retryja)
+run_flow() {  # run_flow <ime> <fajl> <email|->|= > — 0 = prošao (eventualno iz retryja)
+  #   <email> = pm clear + start + adb priprema prijave (01/02/05)
+  #   "-"     = force-stop + start (hladan start, npr. poslije promjene mreže)
+  #   "="     = BEZ restarta: app ostaje u stanju u kojem ju je prethodni tok ostavio
+  #             (03/04 u avionskom režimu — vidi objašnjenje ispod)
   # Arhitektura (dokazano runom 43708006955 — prijava prošla egzaktnim unosom):
   # - orkestrator u potpunosti posjeduje lifecycle: <email> = pm clear + start
   #   + adb_login priprema prijave (tokovi 01/02/05); „-" = force-stop + start
@@ -147,12 +151,18 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
   local name="$1" flow="$2" who="${3:--}" attempt start trajanje fokus i tap_i
   for attempt in $(seq 1 "$max_attempts"); do
     echo "::group::Maestro: $name (pokušaj $attempt/$max_attempts)"
-    if [ "$who" != "-" ]; then
+    if [ "$who" != "-" ] && [ "$who" != "=" ]; then
       adb shell pm clear ba.gradix.teren >/dev/null 2>&1 || true
-    else
+    elif [ "$who" = "-" ]; then
       adb shell am force-stop ba.gradix.teren >/dev/null 2>&1 || true
     fi
-    adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+    # `=` NE restartuje proces. Razlog je stvaran, ne kozmetički: bootstrap u
+    # `src/app/index.tsx` traži `/api/me` pri svakom hladnom startu, a bez mreže to padne i
+    # app ode na PRIJAVU — dakle na ekran bez „Moj dan". Tok 03 zato mora nastaviti s forme
+    # koju je tok 02 ostavio otvorenu (tako i piše u zaglavlju toka), a ne hladno startovati.
+    if [ "$who" != "=" ]; then
+      adb shell am start -n ba.gradix.teren/.MainActivity >/dev/null 2>&1 || true
+    fi
     fokus=""
     for i in $(seq 1 20); do
       fokus="$(adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
@@ -172,7 +182,7 @@ run_flow() {  # run_flow <ime> <fajl> <email|-> — 0 = prošao (eventualno iz r
         if echo "$fokus" | grep -q "ba.gradix.teren"; then break; fi
       done
     fi
-    if [ "$who" != "-" ]; then
+    if [ "$who" != "-" ] && [ "$who" != "=" ]; then
       # RN mount mora završiti prije fokusiranja polja (v5: sleep 5 = radilo;
       # bez njega run 43710204835: polja prazna pri submitu)
       sleep 5
@@ -265,7 +275,7 @@ offline_block() {
     rc=1
   else
     announce notice "mreža" "isključena (avionski režim) — offline unos"
-    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" -; then
+    if run_flow "offline-unos" "$flows_dir/03-offline-unos.yaml" =; then
       passed+=("offline-unos")
     else
       failed+=("offline-unos")
@@ -273,7 +283,7 @@ offline_block() {
   fi
   bash scripts/emulator-net.sh on || true
   announce notice "mreža" "uključena nakon offline unosa"
-  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml" -; then
+  if run_flow "povratak-mreze" "$flows_dir/04-povratak-mreze.yaml" =; then
     passed+=("povratak-mreze")
   else
     failed+=("povratak-mreze")
