@@ -22,14 +22,15 @@ name: Mobilni E2E (Maestro)
 # OEM optimizacije) — to ostaje telefonski prolaz vlasnika (docs/MOBILNI-CHECKLISTA.md).
 
 on:
-  # PRIVREMENO (validacija na radnoj grani): push okidač samo za arena grane i samo
-  # kad se mijenja mobilni dio/workflow. Skida se nakon provjere — noćni + ručni
-  # okidači su trajni; ručni postaje dostupan i s radne grane kad fajl stigne na main.
-  push:
-    branches: ["arena/**"]
-    paths:
-      - "v2/apps/mobile/**"
-      - ".github/workflows/mobilni-e2e.yml"
+  # NEMA push/PR okidača — namjerno.
+  #
+  # `IMPLEMENTATION_PLAN.md` traži da emulator NE blokira PR/push: APK gradnja
+  # (assembleRelease) + hladan boot emulatora + Maestro tokovi traju 30–40 min i
+  # padaju zbog okruženja (KVM, launcher fokus, mreža emulatora), a ne zbog koda.
+  # Zato je puni run samo ručno (`workflow_dispatch`) ili noću (`schedule`).
+  #
+  # Brza provjera koja IDE na svaki push je u `ci-v2.yml`: `pnpm check-maestro`
+  # validira YAML tokova, imena tokova i reference na fajlove (sekunde, bez emulatora).
   schedule:
     - cron: "0 2 * * *" # 02:00 UTC = 03:00 po lokalnom vremenu (CET) — unutar 00–06
   workflow_dispatch:

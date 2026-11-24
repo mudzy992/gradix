@@ -130,6 +130,14 @@ jobs:
         # Hvata slučaj react-native !== ono što SDK traži — `expo export -p web` to propusti.
         run: pnpm check-expo
 
+      # Maestro tokovi: samo YAML i reference (sekunde, bez emulatora).
+      # Puni emulator run je odvojen workflow i ide SAMO na workflow_dispatch/noćni —
+      # `IMPLEMENTATION_PLAN.md` traži da emulator ne blokira PR/push (30–40 min po runu,
+      # padovi zbog KVM-a i launcher fokusa, a ne zbog koda).
+      - name: Maestro tokovi (YAML, bez emulatora)
+        working-directory: v2
+        run: pnpm check-maestro
+
       # Pravi Android bundle: jedini dokaz da Metro ne povuče test/dev kod u aplikaciju.
       # (Regresija 2026-11-07: render test u src/app/ je kao ruta povukao vitest->vite
       # i `expo start` za Android je padao na `import(filepath)` u vite modulu.)

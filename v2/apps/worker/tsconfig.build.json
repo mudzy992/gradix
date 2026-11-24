@@ -3,7 +3,12 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "dist",
+    // `declaration: false` bez ovoga pada na TS5069: osnovni tsconfig ima
+    // `declarationMap: true`, a mapa bez deklaracija nema smisla. Docker build
+    // (`Dockerfile.worker` → `tsc -p tsconfig.build.json`) je zato padao, a lokalni
+    // `tsc --noEmit` ga NIJE vidio — `noEmit` zaobilazi tu provjeru.
     "declaration": false,
+    "declarationMap": false,
     "sourceMap": true
   }
 }

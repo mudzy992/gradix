@@ -16,6 +16,7 @@
     "db:seed": "pnpm --filter @gradix/db seed",
     "db:reset": "pnpm --filter @gradix/db reset",
     "check-expo": "pnpm --filter @gradix/mobile check-expo",
+    "check-maestro": "node infra/scripts/check-maestro.mjs .",
     "check-privacy": "node infra/scripts/check-privacy.mjs .",
     "check-contrast": "node infra/scripts/check-contrast.mjs",
     "check-ui": "node infra/scripts/check-ui-hardcode.mjs",
