@@ -85,7 +85,7 @@ describeDb("R5.4 daily check web API", () => {
 
   afterAll(async () => {
     await withCompany(admin, companyId(COMPANY), async (client) => {
-      await client.query("DELETE FROM machine_daily_check_attachments WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM attachments WHERE entity_type = 'MACHINE_DAILY_CHECK' AND company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_daily_check_revisions WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_daily_checks WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY]);

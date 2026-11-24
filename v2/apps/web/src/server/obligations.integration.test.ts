@@ -83,6 +83,7 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
   let machineId = "";
 
   beforeAll(async () => {
+    await admin.query("DELETE FROM attachments WHERE company_id = ANY($1)", [[COMPANY, OTHER]]);
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER]]);
     await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER, USER_OTHER, RADNIK_A, RADNIK_B]]);
     await admin.query(
@@ -650,10 +651,11 @@ describeDb("R2b (integracija na pravoj bazi)", () => {
 
     // Prilog upisuje ured (u bazi, jer storage u testu nije podešen).
     await admin.query(
-      `INSERT INTO obligation_attachments (id, company_id, obligation_id, file_name, content_type,
-                                           size_bytes, status, object_key, sha256)
-       VALUES ('att_r2b_nalaz', $1, $2, 'ljekarski.pdf', 'application/pdf', 1234, 'ready',
-               'gx2/' || $1 || '/obligations/' || $2 || '/att_r2b_nalaz', repeat('a', 64))`,
+      `INSERT INTO attachments (id, company_id, entity_type, entity_id, file_name, content_type,
+                                size_bytes, status, uploaded_at, object_key, sha256)
+       VALUES ('att_r2b_nalaz', $1, 'OBLIGATION', $2, 'ljekarski.pdf', 'application/pdf', 1234,
+               'ready', clock_timestamp(),
+               'gx2/' || $1 || '/obligation/' || $2 || '/att_r2b_nalaz', repeat('a', 64))`,
       [COMPANY, obligationId],
     );
 

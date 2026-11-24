@@ -57,7 +57,7 @@ const skipped = assertions.filter((test) => ["skipped", "pending", "todo"].inclu
 const executed = passed + failed;
 
 // Padajući testovi idu i kao anotacije: logovi runa nisu uvijek dostupni svim klijentima,
-// a bez imena testa CI crvenilo ne govori ništa (isti razlog kao prisma korak u workflowu).
+// a bez imena testa CI crvenilo ne govori ništa (isti razlog kao korak generisanih tipova u workflowu).
 for (const suite of report.testResults ?? []) {
   // Pad u beforeAll/afterAll ne pripada ni jednom testu — bez ovoga anotacija ne postoji
   // i CI kaže samo "test je pao", bez ijednog imena ili poruke.

@@ -97,6 +97,10 @@ import { GET as assignmentsGet } from "@/app/api/projects/[id]/assignments/route
 import { GET as overrideListGet } from "@/app/api/projects/[id]/override-requests/route";
 import { GET as obligationGet, DELETE as obligationsDelete } from "@/app/api/obligations/[id]/route";
 import { GET as attachmentUrlGet } from "@/app/api/obligations/[id]/attachments/[attachmentId]/url/route";
+import { GET as attachmentRootGet, POST as attachmentRootPost } from "@/app/api/attachments/route";
+import { POST as attachmentConfirmNewPost } from "@/app/api/attachments/[id]/confirm/route";
+import { GET as attachmentUrlNewGet } from "@/app/api/attachments/[id]/url/route";
+import { DELETE as attachmentDelete } from "@/app/api/attachments/[id]/route";
 import { POST as attachmentConfirmPost } from "@/app/api/obligations/[id]/attachments/[attachmentId]/confirm/route";
 import { GET as invitationGet } from "@/app/api/invitations/[token]/route";
 import { GET as conflictsGet } from "@/app/api/workday-conflicts/route";
@@ -242,6 +246,10 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/obligations/{id}/attachments/{attachmentId}/confirm": { POST: attachmentConfirmPost },
   "/api/obligations/{id}/attachments/{attachmentId}/url": { GET: attachmentUrlGet },
   "/api/users/{id}/reset-password": { POST: resetPasswordPost },
+  "/api/attachments": { GET: attachmentRootGet, POST: attachmentRootPost },
+  "/api/attachments/{id}": { DELETE: attachmentDelete },
+  "/api/attachments/{id}/confirm": { POST: attachmentConfirmNewPost },
+  "/api/attachments/{id}/url": { GET: attachmentUrlNewGet },
 };
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */

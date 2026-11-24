@@ -91,18 +91,18 @@ describeDb("R5.4 machine_daily_checks tenant RLS (PostgreSQL)", () => {
     });
   });
 
-  it("odbija attachment size > MAX (machine_daily_check_attachments_size_check)", async () => {
+  it("odbija attachment size > MAX (attachments_size_bytes_check)", async () => {
     await expectAdminFailure(
       admin,
       A.company,
-      `INSERT INTO public.machine_daily_check_attachments
-         (id, company_id, check_id, object_key, file_name, content_type, size_bytes, sha256, status)
-       VALUES ($1,$2,$3,'gx2/x','foto.jpg','image/jpeg',$4,$5,'pending')`,
+      `INSERT INTO public.attachments
+         (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256, status)
+       VALUES ($1,$2,'MACHINE_DAILY_CHECK',$3,'gx2/x','foto.jpg','image/jpeg',$4,$5,'pending')`,
       [
         `mdca_big_${RUN}`, A.company, A.check, 10485761,
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       ],
-      /machine_daily_check_attachments_size_check/,
+      /attachments_size_bytes_check/,
     );
   });
 
@@ -117,7 +117,7 @@ describeDb("R5.4 machine_daily_checks tenant RLS (PostgreSQL)", () => {
         `SELECT
            has_table_privilege(current_user, 'public.machine_daily_checks', 'SELECT') AS checks_select,
            has_table_privilege(current_user, 'public.machine_daily_checks', 'DELETE') AS checks_delete,
-           has_table_privilege(current_user, 'public.machine_daily_check_attachments', 'DELETE') AS attachments_delete,
+           has_table_privilege(current_user, 'public.attachments', 'DELETE') AS attachments_delete,
            has_table_privilege(current_user, 'public.machine_daily_check_revisions', 'INSERT') AS revisions_insert`,
       ),
     );

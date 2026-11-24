@@ -20,7 +20,7 @@ pnpm typecheck                # tsc --noEmit u svim paketima
 pnpm build                    # turbo build
 ```
 
-Baza: `infra/scripts/db-apply.sh` primjenjuje migracije iz `packages/db/prisma/migrations/` i
+Baza: `infra/scripts/db-apply.sh` primjenjuje migracije iz `packages/db/migrations/` i
 bootstrap rola. Aplikacija se konektuje kao `gradix_app`, **nikad** kao vlasnik šeme ni superuser
 (ADR 0003). Demo tok i prijavne podatke vidi `docs/DEMO-G1.md`, pokretanje mobilnog u Expo Go
 `docs/MOBILE-EXPO-GO.md`.
@@ -78,7 +78,7 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, PLAN.md
 
 ## Dublje
 
-`docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (0001 G0 odluke, 0002 Prisma blokada,
+`docs/STATUS.md` (trenutno stanje) · `docs/DECISIONS/` (0001 G0 odluke, 0002 Prisma blokada → zamijenjen ADR 0015,
 0003 tenant/RLS, 0004 novac, 0005 sesije, 0006 MinIO bucket) · `docs/DEMO-G1.md` (kako pokazati)
 · `docs/design/DESIGN.md` + `reference.html` (dizajn) · `docs/DEMO-DIZAJN.md` (snimci i
 odobrena odstupanja od reference) · `docs/GH-SECRETS.md` (koje varijable trebaju) ·

@@ -58,7 +58,10 @@ export function createTenderWorld(): TenderWorld {
       }
     },
     async teardown(admin) {
-      await admin.query(`DELETE FROM public.tender_attachments WHERE company_id = ANY($1)`, [companies]);
+      await admin.query(
+        `DELETE FROM public.attachments WHERE entity_type = 'TENDER' AND company_id = ANY($1)`,
+        [companies],
+      );
       await admin.query(`DELETE FROM public.obligations WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.tenders WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.projects WHERE company_id = ANY($1)`, [companies]);

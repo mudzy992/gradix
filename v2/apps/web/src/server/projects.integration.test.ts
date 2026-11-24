@@ -771,11 +771,19 @@ describeDb("R3 (integracija na pravoj bazi)", () => {
     expect(scope.rows[0]!.scope).toBe("SELF");
 
     // I trag u auditu, sa razlogom — bez toga bi promjena opsega bila neobjašnjena.
-    const audit = await admin.query(
-      "SELECT metadata FROM audit_events WHERE entity_id = $1 AND action = 'user.membership_changed'",
+    /*
+     * Filter po razlogu, ne po „zadnjem redu": u ovom testu postoje DVA traga promjene opsega
+     * (prvo ručni `UPDATE` na `PROJECTS`, pa poništavanje). Bez `ORDER BY` redoslijed nije
+     * garantovan, pa je `.at(-1)` povremeno vraćao prvi trag — test je bio nestabilan, ne
+     * pogrešan. Traži se TAČNO trag koji objašnjava promjenu.
+     */
+    const audit = await admin.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM audit_events
+        WHERE entity_id = $1 AND action = 'user.membership_changed'
+          AND metadata->>'reason' = 'last_project_assignment_voided'`,
       [WORKER_USER],
     );
-    expect(audit.rows.at(-1)!.metadata).toMatchObject({ reason: "last_project_assignment_voided" });
+    expect(audit.rows[0]?.n).toBe(1);
 
     // Osoba i dalje vidi svoje rokove — nije ostala bez ičega.
     // Bez dodjele opseg `SELF` više nema ni jedan projekat — i vraća PRAZNO, ne grešku. To je

@@ -94,7 +94,7 @@ RUN mkdir -p apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 # Migracije i bootstrap idu u sliku: entrypoint ih primjenjuje prije starta.
 # `db-apply.sh` sam prepoznaje ovaj raspored (migrations/ + bootstrap/ pored skripte).
-COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma/migrations ./db/migrations
+COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/bootstrap ./db/bootstrap
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db/preflight-checks
 # Dijagnostika je JEDAN bundlovani fajl: u runtime slici nema @aws-sdk u node_modules stazi

@@ -107,7 +107,7 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
     });
     expect(registered).toMatchObject({ code: "CONFLICT" });
     const rows = await admin.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM public.tender_attachments WHERE tender_id = $1`,
+      `SELECT count(*)::int AS n FROM public.attachments WHERE entity_type = 'TENDER' AND entity_id = $1`,
       [id],
     );
     expect(rows.rows[0]?.n).toBe(0);
@@ -116,17 +116,17 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
   it("convert ne prebacuje prilog na projekat", async () => {
     const id = await wonTender(`Ostaje ${RUN}`);
     await admin.query(
-      `INSERT INTO public.tender_attachments
-         (id, company_id, tender_id, object_key, file_name, content_type, size_bytes, sha256, status)
-       VALUES ($1, $2, $3, $4, 'dok.pdf', 'application/pdf', 10, $5, 'pending')`,
+      `INSERT INTO public.attachments
+         (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256, status)
+       VALUES ($1, $2, 'TENDER', $3, $4, 'dok.pdf', 'application/pdf', 10, $5, 'pending')`,
       [`tat_${RUN}`, companyA, id, `key/${RUN}`, "b".repeat(64)],
     );
     expect((await convertTenderToProject(app, owner, id)).outcome).toBe("OK");
-    const still = await admin.query<{ tender_id: string }>(
-      `SELECT tender_id FROM public.tender_attachments WHERE id = $1`,
+    const still = await admin.query<{ entity_id: string }>(
+      `SELECT entity_id FROM public.attachments WHERE id = $1`,
       [`tat_${RUN}`],
     );
-    expect(still.rows[0]?.tender_id).toBe(id);
+    expect(still.rows[0]?.entity_id).toBe(id);
   });
 
   it("obaveza na tenderu ima jedan opseg; dva opsega padaju", async () => {

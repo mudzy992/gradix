@@ -67,6 +67,8 @@ export const AUDIT_ACTIONS = [
   "tender.updated",
   "tender.converted",
   "tender.attachment.registered",
+  "attachment.deleted",
+  "attachment.confirmed",
   "fuel.priced",
 ] as const;
 
@@ -138,6 +140,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "tender.updated": "Tender izmijenjen",
   "tender.converted": "Tender pretvoren u projekat",
   "tender.attachment.registered": "Prilog tendera registriran",
+  "attachment.deleted": "Prilog obrisan",
+  "attachment.confirmed": "Prilog potvrđen",
   "fuel.priced": "Cijena goriva unesena",
 };
 

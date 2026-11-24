@@ -1,15 +1,43 @@
-/** R5.4: confirm + download URL for daily-check attachments. */
+/** R5.4 → F0.2: confirm + download URL kroz zajednički `attachment-service`. */
 import type { Pool } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { can } from "./permissions";
 import type { DailyCheckActor, DailyCheckAttachmentRow } from "./daily-check-types";
+import type { AttachmentServiceError } from "./daily-check-attachment-helpers";
 import {
-  ATTACHMENT_COLUMNS,
-  toAttachmentRow,
-  type AllowedContentType,
-  type AttachmentServiceError,
-} from "./daily-check-attachment-helpers";
-import { presignDownload, statObject, storageConfig } from "./storage";
+  attachmentDownloadUrl,
+  confirmAttachment,
+  isAttachmentServiceError,
+} from "./attachment-service";
+
+function toRow(row: {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: string;
+  createdAt: string;
+}): DailyCheckAttachmentRow {
+  return {
+    id: row.id,
+    fileName: row.fileName,
+    contentType: row.contentType,
+    sizeBytes: row.sizeBytes,
+    status: row.status === "ready" ? "confirmed" : (row.status as "pending" | "confirmed"),
+    createdAt: row.createdAt,
+  };
+}
+
+async function belongs(pool: Pool, companyId: string, checkId: string, attachmentId: string): Promise<boolean> {
+  return withCompany(pool, companyId as CompanyId, async (client) => {
+    const found = await client.query(
+      `SELECT 1 FROM public.attachments
+        WHERE id = $1 AND company_id = $2 AND entity_type = 'MACHINE_DAILY_CHECK' AND entity_id = $3`,
+      [attachmentId, companyId, checkId],
+    );
+    return found.rowCount !== 0;
+  });
+}
 
 export async function confirmDailyCheckAttachment(
   pool: Pool,
@@ -21,41 +49,18 @@ export async function confirmDailyCheckAttachment(
   if (!can(actor.roles, "machines.check.create")) {
     return { code: "FORBIDDEN", message: "Nemate pravo potvrde priloga." };
   }
-  const config = storageConfig();
-  if (!config.configured) return { code: "CONFLICT", message: config.reason };
-  const row = await withCompany(pool, companyIdValue, async (client) => {
-    const found = await client.query<{ object_key: string; size_bytes: string; status: string }>(
-      `SELECT object_key, size_bytes, status FROM public.machine_daily_check_attachments
-        WHERE id = $1 AND check_id = $2 AND company_id = $3`,
-      [attachmentId, checkId, actor.companyId],
-    );
-    return found.rows[0] ?? null;
-  });
-  if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
-  if (row.status === "confirmed") return { code: "CONFLICT", message: "Prilog je već potvrđen." };
-  const facts = await statObject({ config, key: row.object_key });
-  if (!facts.exists) {
-    return { code: "VALIDATION_FAILED", message: "Datoteka nije stigla na server." };
+  if (!(await belongs(pool, companyIdValue, checkId, attachmentId))) {
+    return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
   }
-  if (facts.sizeBytes !== Number(row.size_bytes)) {
-    return {
-      code: "VALIDATION_FAILED",
-      message: `Veličina na serveru (${facts.sizeBytes} B) ne odgovara prijavljenoj.`,
-    };
-  }
-  return withCompany(pool, companyIdValue, async (client) => {
-    await client.query(
-      `UPDATE public.machine_daily_check_attachments
-          SET status = 'confirmed', uploaded_at = now()
-        WHERE id = $1 AND company_id = $2`,
-      [attachmentId, actor.companyId],
-    );
-    const updated = await client.query(
-      `SELECT ${ATTACHMENT_COLUMNS} FROM public.machine_daily_check_attachments WHERE id = $1 AND company_id = $2`,
-      [attachmentId, actor.companyId],
-    );
-    return { attachment: toAttachmentRow(updated.rows[0]! as Record<string, unknown>) };
-  });
+  const result = await confirmAttachment(
+    pool,
+    companyIdValue,
+    { userId: actor.userId },
+    attachmentId,
+    { action: "attachment.confirmed", entityType: "machine_daily_check", entityId: checkId },
+  );
+  if (isAttachmentServiceError(result)) return result;
+  return { attachment: toRow(result.attachment) };
 }
 
 export async function dailyCheckAttachmentDownloadUrl(
@@ -68,27 +73,10 @@ export async function dailyCheckAttachmentDownloadUrl(
   if (!can(actor.roles, "machines.check.view")) {
     return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   }
-  const config = storageConfig();
-  if (!config.configured) return { code: "CONFLICT", message: config.reason };
-  const row = await withCompany(pool, companyIdValue, async (client) => {
-    const found = await client.query<{
-      object_key: string;
-      file_name: string;
-      content_type: AllowedContentType;
-      status: string;
-    }>(
-      `SELECT object_key, file_name, content_type, status FROM public.machine_daily_check_attachments
-        WHERE id = $1 AND check_id = $2 AND company_id = $3`,
-      [attachmentId, checkId, actor.companyId],
-    );
-    return found.rows[0] ?? null;
-  });
-  if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
-  if (row.status !== "confirmed") return { code: "NOT_FOUND", message: "Prilog još nije uploadovan." };
-  return presignDownload({
-    config,
-    key: row.object_key,
-    fileName: row.file_name,
-    contentType: row.content_type,
-  });
+  if (!(await belongs(pool, companyIdValue, checkId, attachmentId))) {
+    return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
+  }
+  const result = await attachmentDownloadUrl(pool, companyIdValue, attachmentId);
+  if (isAttachmentServiceError(result)) return result;
+  return result;
 }

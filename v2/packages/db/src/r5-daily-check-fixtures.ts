@@ -27,8 +27,9 @@ export const NAMED_CONSTRAINTS = [
   { table: "machine_daily_checks", name: "machine_daily_checks_result_check" },
   { table: "machine_daily_checks", name: "machine_daily_checks_company_id_unique" },
   { table: "machine_daily_check_revisions", name: "machine_daily_check_revisions_check_fk" },
-  { table: "machine_daily_check_attachments", name: "machine_daily_check_attachments_size_check" },
-  { table: "machine_daily_check_attachments", name: "machine_daily_check_attachments_status_check" },
+  // F0.2: prilozi pregleda žive u zajedničkoj tabeli `attachments`.
+  { table: "attachments", name: "attachments_entity_type_check" },
+  { table: "attachments", name: "attachments_entity_sha_unique" },
 ] as const;
 
 export async function seedDailyCheckCompanies(admin: Pool): Promise<void> {
@@ -89,7 +90,7 @@ export async function expectAdminFailure(
 export async function teardownDailyChecks(admin: Pool): Promise<void> {
   for (const fixture of [A, B]) {
     await withCompany(admin, companyId(fixture.company), async (client: PoolClient) => {
-      await client.query("DELETE FROM public.machine_daily_check_attachments WHERE company_id = $1", [fixture.company]);
+      await client.query("DELETE FROM public.attachments WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_daily_check_revisions WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_daily_checks WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machines WHERE company_id = $1", [fixture.company]);

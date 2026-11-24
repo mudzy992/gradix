@@ -13,7 +13,6 @@
     "test": "turbo run test",
     "test:a11y": "pnpm --filter @gradix/web test:a11y",
     "db:migrate": "pnpm --filter @gradix/db migrate",
-    "db:generate": "pnpm --filter @gradix/db generate",
     "db:seed": "pnpm --filter @gradix/db seed",
     "db:reset": "pnpm --filter @gradix/db reset",
     "check-expo": "pnpm --filter @gradix/mobile check-expo",
@@ -23,7 +22,9 @@
     "check-cycles": "node infra/scripts/check-cycles.mjs",
     "check-tenant-sql": "node infra/scripts/check-tenant-sql.mjs",
     "check-matrix-parity": "node quality/check-matrix-parity.mjs",
-    "check-application-coverage": "node quality/check-application-coverage.mjs"
+    "check-application-coverage": "node quality/check-application-coverage.mjs",
+    "db:types": "pnpm --filter @gradix/db generate",
+    "db:types:check": "pnpm --filter @gradix/db types:check"
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",

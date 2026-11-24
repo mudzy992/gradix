@@ -85,7 +85,7 @@ recreate_database gradix_ci_prior_cut
 psql "$cut_admin_url" -X -v ON_ERROR_STOP=1 -q -f packages/db/bootstrap/roles.sql
 history_migration=20261110130000_r3_assignment_history_guard
 found_history_migration=false
-for migration_dir in packages/db/prisma/migrations/*/; do
+for migration_dir in packages/db/migrations/*/; do
   migration=$(basename "$migration_dir")
   if [ "$migration" = "$history_migration" ]; then
     found_history_migration=true

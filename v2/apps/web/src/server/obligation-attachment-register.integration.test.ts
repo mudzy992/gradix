@@ -125,7 +125,7 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
   }, 60_000);
 
   afterAll(async () => {
-    await admin.query("DELETE FROM public.obligation_attachments WHERE company_id = $1", [CO]);
+    await admin.query("DELETE FROM public.attachments WHERE company_id = $1", [CO]);
     await admin.query("DELETE FROM public.obligations WHERE company_id = $1", [CO]);
     await admin.query("DELETE FROM public.obligation_types WHERE company_id = $1", [CO]);
     await admin.query("DELETE FROM public.workers WHERE company_id = $1", [CO]);
@@ -150,13 +150,13 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
     expect(registered.attachment.status).toBe("pending");
     attachmentId = registered.attachment.id;
     const keyRow = await admin.query<{ object_key: string }>(
-      "SELECT object_key FROM public.obligation_attachments WHERE id = $1 AND company_id = $2",
+      "SELECT object_key FROM public.attachments WHERE id = $1 AND company_id = $2",
       [attachmentId, CO],
     );
     objectKey = keyRow.rows[0]!.object_key;
     expect(objectKey.length).toBeGreaterThan(8);
     const createdBy = await admin.query<{ created_by: string }>(
-      "SELECT created_by FROM public.obligation_attachments WHERE id = $1 AND company_id = $2",
+      "SELECT created_by FROM public.attachments WHERE id = $1 AND company_id = $2",
       [attachmentId, CO],
     );
     expect(createdBy.rows[0]?.created_by).toBe(USER);

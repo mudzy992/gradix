@@ -77,6 +77,19 @@ export {
   validFaultPayload,
 } from "./r4-sync";
 
+export {
+  ATTACHMENT_ENTITY_TYPES,
+  ATTACHMENT_STATUSES,
+  MAX_ATTACHMENTS_PER_ENTITY,
+  MAX_ATTACHMENT_BYTES,
+  attachmentObjectKey,
+  isAttachmentEntityType,
+  validateAttachmentInput,
+  type AttachmentEntityType,
+  type AttachmentInputError,
+  type AttachmentStatus,
+} from "./attachments";
+
 export { DEFAULT_TIMEZONE, businessDate, calendarDateFromLocalDate, formatPgDate, isCalendarDate, isValidTimezone, safeTimezone } from "./dates";
 
 export {

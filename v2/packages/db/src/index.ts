@@ -1,10 +1,9 @@
 /**
  * Javni izlaz paketa `@gradix/db`.
  *
- * U Fazi 1 postoji samo tenant scope i pool. Prisma klijent se NE izvozi dok se ne
- * riješi blokada iz ADR 0002: generator Prisma 7 skida `schema-engine` sa
- * binaries.prisma.sh, a taj host nije dostupan u ovom okruženju. Do tada svi upiti
- * idu kroz `withCompany` + parametrizovani SQL, što je isti mehanizam koji bi
- * Prisma koristila (`SET LOCAL app.company_id` u transakciji).
+ * Tenant scope (`withCompany`) je JEDINO mjesto gdje upit dobija firmu (ADR 0003).
+ * Tipovi tabela se NE pišu ručno: generiše ih `kysely-codegen` iz žive baze
+ * (`pnpm db:types`, ADR 0015), pa se ne mogu razići sa stvarnom šemom.
  */
 export { companyId, setTenant, withCompany, type CompanyId } from "./tenant";
+export type { DB, Companies, Workers, Machines, Projects } from "./schema.generated";

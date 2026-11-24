@@ -32,10 +32,10 @@ echo "→ baza: $db_host, rola: $db_role"
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 # Dva rasporeda, ista skripta:
-#   * u repou:           v2/infra/scripts/db-apply.sh  → ../packages/db/{prisma/migrations,bootstrap}
+#   * u repou:           v2/infra/scripts/db-apply.sh  → ../packages/db/{migrations,bootstrap}
 #   * u runtime slici:   /app/db/apply.sh              → ./migrations, ./bootstrap
-if [ -d "$script_dir/../../packages/db/prisma/migrations" ]; then     # v2/infra/scripts/
-  mig_dir=$(CDPATH= cd -- "$script_dir/../../packages/db/prisma/migrations" && pwd)
+if [ -d "$script_dir/../../packages/db/migrations" ]; then     # v2/infra/scripts/
+  mig_dir=$(CDPATH= cd -- "$script_dir/../../packages/db/migrations" && pwd)
   boot_dir=$(CDPATH= cd -- "$script_dir/../../packages/db/bootstrap" && pwd)
 elif [ -d "$script_dir/migrations" ]; then                          # /app/db/
   mig_dir=$(CDPATH= cd -- "$script_dir/migrations" && pwd)

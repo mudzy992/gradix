@@ -13,7 +13,7 @@ import { afterAll, describe, expect, it } from "vitest";
 const databaseUrl = process.env.DATABASE_URL;
 const describeDb = databaseUrl ? describe : describe.skip;
 const migrationSql = readFileSync(
-  fileURLToPath(new URL("../prisma/migrations/20261109180000_r3_scope_default_self/migration.sql", import.meta.url)),
+  fileURLToPath(new URL("../migrations/20261109180000_r3_scope_default_self/migration.sql", import.meta.url)),
   "utf8",
 );
 

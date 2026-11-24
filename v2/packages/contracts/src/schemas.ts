@@ -518,6 +518,49 @@ export const AttachmentRegisterRequest = z.object({
 });
 export type AttachmentRegisterRequest = z.infer<typeof AttachmentRegisterRequest>;
 
+/**
+ * F0.2 — jedan obrazac za priloge svih modula. `entityType` određuje koja dozvola treba
+ * (vidi `attachment-access.ts` u webu), pa ugovor nosi tip, a ne četiri skoro iste rute.
+ */
+export const AttachmentEntityType = z.enum(["OBLIGATION", "TENDER", "MACHINE_DAILY_CHECK"]);
+export type AttachmentEntityType = z.infer<typeof AttachmentEntityType>;
+
+export const Attachment = z.object({
+  id: z.string(),
+  entityType: AttachmentEntityType,
+  entityId: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  sizeBytes: z.number(),
+  status: z.enum(["pending", "ready", "deleted"]),
+  createdAt: IsoDate,
+});
+export type Attachment = z.infer<typeof Attachment>;
+
+export const AttachmentListResponse = z.object({ attachments: z.array(Attachment) });
+export type AttachmentListResponse = z.infer<typeof AttachmentListResponse>;
+
+export const AttachmentRegisterBody = AttachmentRegisterRequest.extend({
+  entityType: AttachmentEntityType,
+  // Id je tekst na granici API-ja, pa ide kroz `SafeText` kao i ime fajla: NUL u id-u
+  // ne smije stići do baze.
+  entityId: SafeText.refine((value) => value.length > 0, { message: "Id entiteta je obavezan." }),
+});
+export type AttachmentRegisterBody = z.infer<typeof AttachmentRegisterBody>;
+
+export const AttachmentRegisterResponse = z.object({
+  attachment: Attachment,
+  uploadUrl: z.string(),
+  uploadExpiresAt: IsoDate,
+});
+export type AttachmentRegisterResponse = z.infer<typeof AttachmentRegisterResponse>;
+
+export const AttachmentConfirmResponse = z.object({ attachment: Attachment });
+export type AttachmentConfirmResponse = z.infer<typeof AttachmentConfirmResponse>;
+
+export const AttachmentUrlResponse = z.object({ url: z.string(), expiresAt: IsoDate });
+export type AttachmentUrlResponse = z.infer<typeof AttachmentUrlResponse>;
+
 export const Obligation = z.object({
   id: z.string(),
   typeId: z.string(),

@@ -82,7 +82,7 @@ describeDb("R4 cursor alokacija i change log (PostgreSQL)", () => {
     // iz sync_cursor_allocators sudara se s OUT parametrom i svaki pull pada sa
     // "column reference cursor_floor is ambiguous". Svježa baza to ne može uhvatiti
     // (fajl je u međuvremenu ispravljen), pa se ovdje bolest rekonstruiše, pa liječi.
-    const migrationsDir = fileURLToPath(new URL("../prisma/migrations", import.meta.url));
+    const migrationsDir = fileURLToPath(new URL("../migrations", import.meta.url));
     const original = readFileSync(`${migrationsDir}/20261110140000_r4_sync_cursor/migration.sql`, "utf8");
     const fnStart = original.indexOf("CREATE OR REPLACE FUNCTION public.sync_cursor_pull(");
     const fnEnd = original.indexOf("$pull$;", fnStart) + "$pull$;".length;

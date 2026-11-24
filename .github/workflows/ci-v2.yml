@@ -298,23 +298,13 @@ jobs:
         working-directory: v2
         run: pnpm test:a11y
 
-      - name: Prisma generator (dokaz da radi u CI-ju)
-        working-directory: v2/packages/db
-        # ADR 0002: lokalno je generator blokiran (nema pristupa binaries.prisma.sh), u CI-ju
-        # mora raditi. Greška se namjerno podiže i kao ANOTACIJA: logovi runa nisu dostupni
-        # svim klijentima, a anotacije jesu — bez toga ovaj korak ne daje upotrebljiv signal.
-        run: |
-          set +e
-          pnpm exec prisma generate 2>&1 | tee /tmp/prisma.log
-          code=${PIPESTATUS[0]}
-          if [ "$code" -ne 0 ]; then
-            echo "::error::prisma generate pao (exit $code)"
-            tail -n 12 /tmp/prisma.log | sed 's/%/%25/g; s/\r//g' | while IFS= read -r line; do
-              [ -n "$line" ] && echo "::error title=prisma generate::$line"
-            done
-          fi
-          exit "$code"
-        shell: bash
+      # ADR 0015: baza je izvor istine. Generisani tipovi MORAJU biti sinhroni sa
+      # migracijama; razlika znači da je migracija dodata bez `pnpm db:types`.
+      - name: Generisani tipovi sinhroni sa bazom
+        working-directory: v2
+        env:
+          DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+        run: pnpm --filter @gradix/db types:check
 
       - name: Migracije na praznoj i popunjenoj prethodnoj bazi
         working-directory: v2

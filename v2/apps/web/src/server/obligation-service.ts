@@ -30,17 +30,12 @@ import {
 import { writeAudit } from "./audit";
 import type { Actor } from "./rbac-service";
 import {
-  MAX_ATTACHMENT_BYTES,
-  MAX_ATTACHMENTS_PER_OBLIGATION,
-  detectContentType,
-  type AllowedContentType,
-  objectKey,
-  presignDownload,
-  presignUpload,
-  sanitiseFileName,
-  statObject,
-  storageConfig,
-} from "./storage";
+  attachmentDownloadUrl as attachmentDownloadUrlShared,
+  confirmAttachment as confirmAttachmentShared,
+  isAttachmentServiceError,
+  registerAttachment as registerAttachmentShared,
+  toAttachmentRow,
+} from "./attachment-service";
 
 export type ServiceError =
   | { code: "FORBIDDEN"; message: string }
@@ -305,9 +300,9 @@ const OBLIGATION_SELECT = `
 `;
 
 const ATTACHMENTS_SELECT = `
-  SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
-    FROM obligation_attachments
-   WHERE company_id = $1
+  SELECT id, entity_id AS obligation_id, file_name, content_type, size_bytes, status, created_at
+    FROM attachments
+   WHERE company_id = $1 AND entity_type = 'OBLIGATION' AND status <> 'deleted'
    ORDER BY created_at DESC
 `;
 
@@ -566,8 +561,10 @@ export async function getObligation(
     const attachments = options.includeAttachments === false
       ? { rows: [] as Array<Record<string, unknown>> }
       : await client.query(
-      `SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
-         FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 ORDER BY created_at DESC`,
+      `SELECT id, entity_id AS obligation_id, file_name, content_type, size_bytes, status, created_at
+         FROM attachments
+        WHERE entity_id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND status <> 'deleted'
+        ORDER BY created_at DESC`,
       [obligationId, companyId],
     );
     const versions = await client.query(
@@ -800,8 +797,10 @@ async function getObligationWithClient(
   if (row.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
 
   const attachments = await client.query(
-    `SELECT id, obligation_id, file_name, content_type, size_bytes, status, created_at
-       FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 ORDER BY created_at DESC`,
+    `SELECT id, entity_id AS obligation_id, file_name, content_type, size_bytes, status, created_at
+       FROM attachments
+      WHERE entity_id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND status <> 'deleted'
+      ORDER BY created_at DESC`,
     [obligationId, companyId],
   );
   const versions = await client.query(
@@ -1135,16 +1134,6 @@ export type AttachmentRow = {
   createdAt: string;
 };
 
-const ATTACHMENT_COLUMNS = `id, obligation_id, object_key, file_name, content_type, size_bytes, sha256, status, created_at`;
-
-const toAttachment = (row: Record<string, unknown>): AttachmentRow => ({
-  id: String(row.id),
-  fileName: String(row.file_name),
-  contentType: String(row.content_type),
-  sizeBytes: Number(row.size_bytes),
-  status: String(row.status),
-  createdAt: (row.created_at as Date).toISOString(),
-});
 
 export type AttachmentRequest = {
   fileName: string;
@@ -1155,11 +1144,10 @@ export type AttachmentRequest = {
 };
 
 /**
- * Korak 1: registracija priloga i potpisan PUT.
+ * F0.2: registracija priloga ide kroz zajednički `attachment-service`.
  *
- * Zašto se tip određuje već ovdje, a ne tek na potvrdi: potpisani PUT nosi `Content-Type`, pa
- * bucket odbija pogrešan tip odmah. Na potvrdi se provjerava još jednom (iz veličine i tipa koji
- * je stvarno stigao), jer klijent može ignorisati zaglavlje.
+ * Ovaj omotač zadržava ime i potpis (rute i testovi ga zovu), ali sva pravila o tipu,
+ * veličini, duplikatu i presigned PUT-u žive na jednom mjestu.
  */
 export async function registerAttachment(
   pool: Pool,
@@ -1171,77 +1159,32 @@ export async function registerAttachment(
   | { attachment: AttachmentRow; uploadUrl: string; uploadExpiresAt: string }
   | ServiceError
 > {
-  return withCompany(pool, companyId, async (client) => {
+  const exists = await withCompany(pool, companyId, async (client) => {
     const obligation = await client.query<{ id: string }>(
       "SELECT id FROM obligations WHERE id = $1 AND company_id = $2",
       [obligationId, companyId],
     );
-    if (obligation.rowCount === 0) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
-
-    if (input.sizeBytes <= 0 || input.sizeBytes > MAX_ATTACHMENT_BYTES) {
-      return { code: "VALIDATION_FAILED", message: "Prilog može imati najviše 10 MB." } as ServiceError;
-    }
-    if (!/^[0-9a-f]{64}$/.test(input.sha256)) {
-      return { code: "VALIDATION_FAILED", message: "Kontrolni zbir priloga nije ispravan." } as ServiceError;
-    }
-
-    const count = await client.query<{ n: number }>(
-      "SELECT count(*)::int AS n FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 AND status = 'ready'",
-      [obligationId, companyId],
-    );
-    if (Number(count.rows[0]!.n) >= MAX_ATTACHMENTS_PER_OBLIGATION) {
-      return {
-        code: "CONFLICT",
-        message: `Obaveza može imati najviše ${MAX_ATTACHMENTS_PER_OBLIGATION} priloga.`,
-      } as ServiceError;
-    }
-
-    // Tip iz sadržaja, ne iz imena: `.exe` preimenovan u `.pdf` pada ovdje.
-    const contentType = detectContentType(input.head);
-    if (!contentType) {
-      return {
-        code: "VALIDATION_FAILED",
-        message: "Datoteka nije PDF ni slika (JPG, PNG, WebP, HEIC) — provjerite sadržaj, ne samo ime.",
-      } as ServiceError;
-    }
-
-    const duplicate = await client.query(
-      "SELECT id FROM obligation_attachments WHERE obligation_id = $1 AND company_id = $2 AND sha256 = $3",
-      [obligationId, companyId, input.sha256],
-    );
-    if (duplicate.rowCount !== 0) {
-      return { code: "CONFLICT", message: "Taj prilog je već dodan na ovu obavezu." } as ServiceError;
-    }
-
-    const config = storageConfig();
-    if (!config.configured) {
-      return { code: "CONFLICT", message: config.reason } as ServiceError;
-    }
-
-    const id = `att_${crypto.randomUUID()}`;
-    const key = objectKey(companyId, obligationId, id);
-    const upload = await presignUpload({ config, key, contentType });
-
-    await client.query(
-      `INSERT INTO obligation_attachments (id, company_id, obligation_id, object_key, file_name, content_type,
-                                           size_bytes, sha256, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)`,
-      [id, companyId, obligationId, key, sanitiseFileName(input.fileName), contentType, input.sizeBytes, input.sha256, actor.userId],
-    );
-
-    const created = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1 AND company_id = $2`, [id, companyId]);
-    return {
-      attachment: toAttachment(created.rows[0]!),
-      uploadUrl: upload.url,
-      uploadExpiresAt: upload.expiresAt,
-    };
+    return obligation.rowCount !== 0;
   });
+  if (!exists) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
+
+  const result = await registerAttachmentShared(
+    pool,
+    companyId,
+    { userId: actor.userId },
+    "OBLIGATION",
+    obligationId,
+    input,
+  );
+  if (isAttachmentServiceError(result)) return result as ServiceError;
+  return {
+    attachment: toAttachmentRow(result.attachment as unknown as Record<string, unknown>),
+    uploadUrl: result.uploadUrl,
+    uploadExpiresAt: result.uploadExpiresAt,
+  };
 }
 
-/**
- * Korak 2: potvrda. Prilog postaje `ready` tek kad objekat STVARNO postoji i kad se veličina
- * poklapa sa prijavljenom. Bez ovoga bi u bazi stajao prilog koji se ne može otvoriti.
- */
+/** Korak 2: potvrda kroz zajednički servis (veličina i postojanje objekta). */
 export async function confirmAttachment(
   pool: Pool,
   companyId: CompanyId,
@@ -1249,51 +1192,24 @@ export async function confirmAttachment(
   obligationId: string,
   attachmentId: string,
 ): Promise<{ attachment: AttachmentRow } | ServiceError> {
-  const config = storageConfig();
-  if (!config.configured) return { code: "CONFLICT", message: config.reason };
-
-  const row = await withCompany(pool, companyId, async (client) => {
-    const found = await client.query<{ object_key: string; size_bytes: string; status: string; file_name: string }>(
-      "SELECT object_key, size_bytes, status, file_name FROM obligation_attachments WHERE id = $1 AND obligation_id = $2 AND company_id = $3",
-      [attachmentId, obligationId, companyId],
+  const belongs = await withCompany(pool, companyId, async (client) => {
+    const found = await client.query<{ id: string }>(
+      "SELECT id FROM attachments WHERE id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND entity_id = $3",
+      [attachmentId, companyId, obligationId],
     );
-    return found.rows[0] ?? null;
+    return found.rowCount !== 0;
   });
-  if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
-  if (row.status === "ready") return { code: "CONFLICT", message: "Prilog je već potvrđen." };
+  if (!belongs) return { code: "NOT_FOUND", message: "Prilog nije pronađen." } as ServiceError;
 
-  const facts = await statObject({ config, key: row.object_key });
-  if (!facts.exists) {
-    return { code: "VALIDATION_FAILED", message: "Datoteka nije stigla na server. Pokušajte upload ponovo." };
-  }
-  if (facts.sizeBytes !== Number(row.size_bytes)) {
-    return {
-      code: "VALIDATION_FAILED",
-      message: `Veličina na serveru (${facts.sizeBytes} B) ne odgovara prijavljenoj (${Number(row.size_bytes)} B).`,
-    };
-  }
-
-  return withCompany(pool, companyId, async (client) => {
-    await client.query(
-      "UPDATE obligation_attachments SET status = 'ready', uploaded_at = now() WHERE id = $1 AND company_id = $2",
-      [attachmentId, companyId],
-    );
-    await writeAudit(client, {
-      companyId,
-      actorId: actor.userId,
-      actorEmail: null,
-      action: "obligation.attachment_added",
-      entityType: "obligation_attachment",
-      entityId: attachmentId,
-      // Bez imena fajla: ime često sadrži ime osobe („ljekarski Amina.pdf“).
-      metadata: { obligationId },
-    });
-    const updated = await client.query(`SELECT ${ATTACHMENT_COLUMNS} FROM obligation_attachments WHERE id = $1 AND company_id = $2`, [
-      attachmentId,
-      companyId,
-    ]);
-    return { attachment: toAttachment(updated.rows[0]!) };
-  });
+  const result = await confirmAttachmentShared(
+    pool,
+    companyId,
+    { userId: actor.userId },
+    attachmentId,
+    { action: "obligation.attachment_added", entityType: "obligation_attachment", entityId: attachmentId },
+  );
+  if (isAttachmentServiceError(result)) return result as ServiceError;
+  return { attachment: toAttachmentRow(result.attachment as unknown as Record<string, unknown>) };
 }
 
 /** Potpisan link za preuzimanje, 60 s; samo za prilog svoje firme (RLS + provjera veze). */
@@ -1303,36 +1219,34 @@ export async function attachmentDownloadUrl(
   obligationId: string,
   attachmentId: string,
 ): Promise<{ url: string; expiresAt: string } | ServiceError> {
-  const config = storageConfig();
-  if (!config.configured) return { code: "CONFLICT", message: config.reason };
-
-  const row = await withCompany(pool, companyId, async (client) => {
-    const found = await client.query<{ object_key: string; file_name: string; content_type: AllowedContentType; status: string }>(
-      "SELECT object_key, file_name, content_type, status FROM obligation_attachments WHERE id = $1 AND obligation_id = $2 AND company_id = $3",
-      [attachmentId, obligationId, companyId],
+  const belongs = await withCompany(pool, companyId, async (client) => {
+    const found = await client.query<{ id: string }>(
+      "SELECT id FROM attachments WHERE id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND entity_id = $3",
+      [attachmentId, companyId, obligationId],
     );
-    return found.rows[0] ?? null;
+    return found.rowCount !== 0;
   });
-  if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
-  if (row.status !== "ready") return { code: "NOT_FOUND", message: "Prilog još nije uploadovan." };
-
-  return presignDownload({ config, key: row.object_key, fileName: row.file_name, contentType: row.content_type });
+  if (!belongs) return { code: "NOT_FOUND", message: "Prilog nije pronađen." } as ServiceError;
+  const result = await attachmentDownloadUrlShared(pool, companyId, attachmentId);
+  if (isAttachmentServiceError(result)) return result as ServiceError;
+  return result;
 }
 
 /**
- * Čišćenje napuštenih uploada: `pending` stariji od 1 h brišu se pri sljedećem uploadu
- * (bez workera, kako i piše u §5.2). Ograničeno na 20 redova da jedan zahtjev ne radi previše.
+ * Čišćenje napuštenih uploada: `pending` stariji od 1 h označavaju se `deleted` pri sljedećem
+ * uploadu. Objekat u bucketu briše worker (F0.4), ne ovaj upit.
  */
 export async function cleanStaleAttachments(
   pool: Pool,
   companyId: CompanyId,
 ): Promise<number> {
   return withCompany(pool, companyId, async (client) => {
-    const stale = await client.query<{ id: string }>(
-      `DELETE FROM obligation_attachments
+    const stale = await client.query(
+      `UPDATE attachments SET status = 'deleted', deleted_at = clock_timestamp()
         WHERE company_id = $1 AND id IN (
-          SELECT id FROM obligation_attachments
-           WHERE company_id = $1 AND status = 'pending' AND created_at < now() - interval '1 hour'
+          SELECT id FROM attachments
+           WHERE company_id = $1 AND status = 'pending'
+             AND created_at < clock_timestamp() - interval '1 hour'
            LIMIT 20
         )
         RETURNING id`,

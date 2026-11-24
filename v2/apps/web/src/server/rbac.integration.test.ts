@@ -46,7 +46,7 @@ const TENANT_TABLES = [
   "obligation_types",
   "obligations",
   "obligation_versions",
-  "obligation_attachments",
+  "attachments",
   "audit_events",
   "invitations",
   "password_resets",
@@ -95,6 +95,7 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
     await admin.query("DELETE FROM memberships WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM machines WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM users WHERE email LIKE '%@r1b.test'");
+    await admin.query("DELETE FROM attachments WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
 
     await admin.query(
@@ -165,10 +166,10 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
           [`obv_r1b_${suffix}`, companyId, `obl_r1b_${suffix}`],
         );
         await client.query(
-          `INSERT INTO obligation_attachments (id, company_id, obligation_id, object_key, file_name,
-                                               content_type, size_bytes, sha256, status)
-           VALUES ($1, $2, $3, 'gx2/' || $2 || '/obligations/' || $3 || '/' || $1, 'rjesenje.pdf',
-                   'application/pdf', 1024, repeat('a', 64), 'ready')`,
+          `INSERT INTO attachments (id, company_id, entity_type, entity_id, object_key, file_name,
+                                    content_type, size_bytes, sha256, status, uploaded_at)
+           VALUES ($1, $2, 'OBLIGATION', $3, 'gx2/' || $2 || '/obligation/' || $3 || '/' || $1,
+                   'rjesenje.pdf', 'application/pdf', 1024, repeat('a', 64), 'ready', clock_timestamp())`,
           [`att_r1b_${suffix}`, companyId, `obl_r1b_${suffix}`],
         );
         await client.query(

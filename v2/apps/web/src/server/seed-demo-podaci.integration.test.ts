@@ -29,7 +29,7 @@ async function resetDemoZaPonovniUvoz(admin: Pool, companyIdValue: string): Prom
   await admin.query("DELETE FROM work_entries WHERE company_id = $1", [companyIdValue]);
   await admin.query("DELETE FROM workdays WHERE company_id = $1", [companyIdValue]);
   await admin.query("DELETE FROM project_assignment_overrides WHERE company_id = $1", [companyIdValue]);
-  await admin.query("DELETE FROM obligation_attachments WHERE company_id = $1", [companyIdValue]);
+  await admin.query("DELETE FROM attachments WHERE company_id = $1", [companyIdValue]);
   // Jedan statement: verzije idu kaskadno, a superseded lance NO ACTION provjerava tek na kraju.
   await admin.query("DELETE FROM obligations WHERE company_id = $1", [companyIdValue]);
   await admin.query(

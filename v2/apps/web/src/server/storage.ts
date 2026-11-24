@@ -13,11 +13,13 @@
  *     sa jasnom porukom koja kaže šta treba.
  */
 import { createHash } from "node:crypto";
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_ENTITY } from "@gradix/domain";
 import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-export const MAX_ATTACHMENTS_PER_OBLIGATION = 5;
+// F0.2: limiti priloga žive u `@gradix/domain` — jedno mjesto za sve module.
+export { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_ENTITY };
+export const MAX_ATTACHMENTS_PER_OBLIGATION = MAX_ATTACHMENTS_PER_ENTITY;
 /** Bucket i prefiks su odluka iz ADR 0006 — ne mijenjaju se po okruženju. */
 export const ATTACHMENT_BUCKET = "gradix-v2";
 export const ATTACHMENT_PREFIX = "gx2/";

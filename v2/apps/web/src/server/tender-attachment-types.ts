@@ -24,15 +24,16 @@ export type TenderAttachmentError = {
 export const TENDER_ATTACHMENT_COLS =
   "id, tender_id, file_name, content_type, size_bytes, status, created_at";
 
+/** Mapira red zajedničkog `attachments` servisa na tender-specifičan oblik. */
 export function toTenderAttachmentRow(row: Record<string, unknown>): TenderAttachmentRow {
   return {
     id: String(row.id),
-    tenderId: String(row.tender_id),
-    fileName: String(row.file_name),
-    contentType: String(row.content_type),
-    sizeBytes: Number(row.size_bytes),
+    tenderId: String(row.entityId ?? row.entity_id ?? row.tender_id),
+    fileName: String(row.fileName ?? row.file_name),
+    contentType: String(row.contentType ?? row.content_type),
+    sizeBytes: Number(row.sizeBytes ?? row.size_bytes),
     status: String(row.status),
-    createdAt: new Date(String(row.created_at)).toISOString(),
+    createdAt: new Date(String(row.createdAt ?? row.created_at)).toISOString(),
   };
 }
 

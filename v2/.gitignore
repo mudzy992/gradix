@@ -35,3 +35,10 @@ packages/**/src/generated/
 
 # mobilni web izvoz i Turborepo keš
 apps/mobile/dist-web/
+
+# Lokalni alati za razvoj (PG server, pomoćne skripte) — nikad u repo
+.local-tools/
+.local-pg/
+
+# lokalni alat za podizanje embedded Postgresa (nije dio repoa)
+.pg/
