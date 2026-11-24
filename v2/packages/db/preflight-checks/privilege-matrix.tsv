@@ -3,9 +3,12 @@ sequence	login_attempts_id_seq	-	USAGE;SELECT		The SECURITY DEFINER rate-limit f
 table	approval_requests	SELECT;INSERT;UPDATE	-		R5.5 fault cost approval status reuse; FORCE RLS; no DELETE.
 table	attachments	SELECT;INSERT;UPDATE	-		F0.2 jedinstveni attachment-service za sve module; upload-state updates i meko brisanje (status), bez DELETE granta.
 table	audit_events	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Audit writes are append-only; office views read them.
+table	budget_alert_events	SELECT;INSERT;UPDATE	-		F5 pragovi budžeta (80%/100%) po kategoriji i ukupno; `resolution` se upisuje UPDATE-om, obavještenje ide iz worker posla `budget.thresholds`; bez DELETE (istorija pragova se ne briše).
 table	check_templates	SELECT;INSERT;UPDATE	-		F4 dnevni pregled po šablonu (spec 05 §1.5.20); deaktivacija je UPDATE, istorija se ne briše; FORCE RLS.
 table	companies	SELECT	SELECT;INSERT;UPDATE;DELETE		Global tenant registry; runtime reads are limited by RLS to the active tenant or exact login/invitation lookup. Seed and migrations use DATABASE_ADMIN_URL.
 table	company_holidays	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Tenant praznici i prenesene radne subote; FORCE RLS po company_id, DELETE dozvoljen jer je šifarnik (bez historije).
+table	cost_categories	SELECT;INSERT;UPDATE	-		F5 šifarnik kategorija troška po firmi; zadana kategorija po `source_type` je djelimični unikat; deaktivacija je UPDATE (`is_active`), bez DELETE.
+table	cost_entries	SELECT;INSERT;UPDATE	-		F5 jedinstveni ledger troškova (zamjena `project_cost_entries`). UPDATE postoji SAMO za storno (`REVERSED`) i PENDING→POSTED; triger `cost_entry_guard()` brani prepisivanje iznosa/izvora i svaki DELETE. FORCE RLS.
 table	daily_rollups	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Dnevni agregati; worker ih preračunava.
 table	equipment_categories	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Read and create category API; no update/delete endpoint.
 table	fuel_entries	SELECT;INSERT;UPDATE	-		R5.2 fuel CRUD path; Money centi+valuta; FORCE RLS; no DELETE.
@@ -40,13 +43,19 @@ table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Oblig
 table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
 table	password_history	SELECT;INSERT;DELETE	SELECT;INSERT;DELETE		Istorija hash-eva (max 3 po korisniku). DELETE je nužan za trim; servis je jedini put pisanja i bez DELETE-a bi trim tražio SECURITY DEFINER funkciju — dodatnu izvršivu površinu.
 table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset issue/lookup/claim/revoke; no hard-delete path.
+table	phase_dependencies	SELECT;INSERT;DELETE	-		F5 zavisnosti faza; pogrešno unesena zavisnost se briše (nije istorijski podatak), a `CHECK phase_id <> depends_on_phase_id` brani samoreferencu.
 table	platform_sessions	-	SELECT;INSERT;UPDATE		Odvojena platform rola; gradix_app ne smije ni čitati sesije operatora (nema ni GRANT, ni politiku).
 table	platform_support_sessions	SELECT	SELECT;INSERT;UPDATE		Firma vidi SAMO svoje aktivne support pristupe (zaglavlje UI-a); upis radi platform rola.
 table	platform_users	-	SELECT;INSERT;UPDATE;DELETE	Separate platform-principal store; no current web-app path uses it.	Future platform access requires a separate role or a narrowly scoped, reviewed function.
 table	ppe_templates	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		F3 OZO set po radnom mjestu; šablon se briše kad radno mjesto nestane — ne nosi historiju (zaduženja je nose).
+table	project_amendments	SELECT;INSERT;UPDATE	-		F5 aneksi ugovora; odobrenje je UPDATE (`status`/`approved_at`), `CHECK (status='APPROVED') = (approved_at IS NOT NULL)`; bez DELETE.
 table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.
 table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
-table	project_cost_entries	SELECT;INSERT	-		R6.1 knjiženje troška na projekat; append-only; FORCE RLS; no UPDATE/DELETE.
+table	project_boq_items	SELECT;INSERT;UPDATE	-		F5 predmjer (BOQ) za `progress_source='BOQ'`; izmjena stavke je UPDATE, brisanje nije predviđeno.
+table	project_budget_lines	SELECT;INSERT	-		F5 budžet po revizijama; append-only — nova revizija je novi red (`budget_line_immutable()`), zato bez UPDATE i bez DELETE.
+table	project_close_snapshots	SELECT;INSERT	-		F5 zamrznuti presjek pri zatvaranju projekta; append-only dokaz stanja u trenutku zatvaranja, bez UPDATE/DELETE.
+table	project_phases	SELECT;INSERT;UPDATE	-		F5 faze projekta (`weight`, `progress_pct`, `status`); napredak je UPDATE, faza se ne briše (deaktivira se statusom).
+table	project_tasks	SELECT;INSERT;UPDATE	-		F5 zadaci na projektu; status/rok/izvršilac su UPDATE, zadatak se ne briše (arhivira se statusom).
 table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/update and read; no hard-delete path.
 table	report_jobs	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Red izvještaja; worker ih preuzima i dovršava.
 table	route_segments	SELECT;INSERT;UPDATE	-		R5.3 stacionaža / dionice; nullable FK from hauls; FORCE RLS; no DELETE.
@@ -58,6 +67,7 @@ table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; on
 table	sync_cursor_allocators	-	-		Internal cursor allocator; only tenant-checking SECURITY DEFINER reserve/pull functions may access it.
 table	sync_cursor_slots	-	-		Internal PENDING/COMMITTED/SKIPPED cursor slots; only tenant-checking SECURITY DEFINER cursor functions may access them.
 table	sync_receipts	SELECT;INSERT	-		Idempotency receipts are append-only; server-side retention may purge result details but preserves the compact key/hash.
+table	task_comments	SELECT;INSERT	-		F5 komentari na zadatku; append-only, ispravka je novi komentar.
 table	tenders	SELECT;INSERT;UPDATE	-		R7 tenders; Money; FORCE RLS; no DELETE.
 table	usage_overrides	SELECT;INSERT;UPDATE	-		F0.3 iznimke od blokade (radnik/mašina/tender × radnja); istekla iznimka ne pušta; FORCE RLS.
 table	user_devices	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Push tokeni po uređaju; opoziv je UPDATE (revoked_at), ne DELETE.

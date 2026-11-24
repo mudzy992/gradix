@@ -95,6 +95,19 @@ export interface AuditEvents {
   retention_class: Generated<string>;
 }
 
+export interface BudgetAlertEvents {
+  company_id: string;
+  dedupe_key: string;
+  fired_at: Generated<Timestamp>;
+  id: string;
+  project_id: string;
+  resolved_at: Timestamp | null;
+  resolved_by: string | null;
+  revision: number;
+  scope: string;
+  threshold_pct: number;
+}
+
 export interface CheckTemplates {
   category_id: string | null;
   company_id: string;
@@ -172,6 +185,44 @@ export interface CompanyHolidays {
   is_working: Generated<boolean>;
   name: string;
   updated_at: Generated<Timestamp>;
+}
+
+export interface CostCategories {
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  default_for_source_type: string | null;
+  id: string;
+  is_active: Generated<boolean>;
+  name: string;
+  sort_order: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface CostEntries {
+  amount_cents: Int8 | null;
+  booked_at: Generated<Timestamp>;
+  booked_by: string;
+  category_id: string;
+  company_id: string;
+  currency_code: string | null;
+  id: string;
+  machine_id: string | null;
+  note: string | null;
+  occurred_on: string;
+  phase_id: string | null;
+  project_id: string;
+  quantity: Numeric | null;
+  rate_snapshot: Json | null;
+  reversed_by: string | null;
+  reverses_id: string | null;
+  source_id: string;
+  source_type: string;
+  status: Generated<string>;
+  unit: string | null;
+  version: Generated<number>;
 }
 
 export interface DailyRollups {
@@ -288,6 +339,7 @@ export interface Hauls {
   material_text: string;
   note: string | null;
   origin_text: string;
+  phase_id: string | null;
   project_id: string | null;
   quantity: Numeric;
   quantity_unit: string;
@@ -498,6 +550,7 @@ export interface MachineWorkLogs {
   meter_end: Numeric | null;
   mode: string;
   note: string | null;
+  phase_id: string | null;
   project_id: string | null;
   started_at: Timestamp;
   updated_at: Generated<Timestamp>;
@@ -685,6 +738,16 @@ export interface PasswordResets {
   user_id: string;
 }
 
+export interface PhaseDependencies {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  depends_on_phase_id: string;
+  id: string;
+  kind: Generated<string>;
+  phase_id: string;
+}
+
 export interface PlatformSessions {
   created_at: Generated<Timestamp>;
   expires_at: Timestamp;
@@ -727,6 +790,27 @@ export interface PpeTemplates {
   updated_at: Generated<Timestamp>;
 }
 
+export interface ProjectAmendments {
+  amount_cents: Int8 | null;
+  approved_at: Timestamp | null;
+  approved_by: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string | null;
+  document_id: string | null;
+  extension_days: number | null;
+  id: string;
+  kind: string;
+  note: string | null;
+  project_id: string;
+  status: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
 export interface ProjectAssignmentOverrides {
   approved_at: Timestamp | null;
   approved_by: string | null;
@@ -761,41 +845,110 @@ export interface ProjectAssignments {
   worker_id: string | null;
 }
 
-export interface ProjectCostEntries {
-  amount_cents: Int8;
-  booked_at: Generated<Timestamp>;
-  booked_by: string;
-  company_id: string;
-  component_breakdown: Json | null;
-  currency_code: string;
-  hours: Numeric;
-  id: string;
-  machine_id: string;
-  note: string | null;
-  project_id: string;
-  rate_cents: Int8;
-  rate_snapshot: Json | null;
-  snapshot_id: string | null;
-  source_id: string;
-  source_type: string;
-}
-
-export interface Projects {
+export interface ProjectBoqItems {
   code: string;
   company_id: string;
   created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string;
+  id: string;
+  phase_id: string | null;
+  project_id: string;
+  quantity_executed: Generated<Numeric>;
+  quantity_planned: Numeric;
+  sort_order: Generated<number>;
+  unit: string;
+  unit_price_cents: Int8;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface ProjectBudgetLines {
+  amount_cents: Int8;
+  category_id: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  note: string | null;
+  phase_id: string | null;
+  project_id: string;
+  revision: Generated<number>;
+  valid_from: string;
+}
+
+export interface ProjectCloseSnapshots {
+  closed_at: Generated<Timestamp>;
+  closed_by: string;
+  company_id: string;
+  id: string;
+  payload: Json;
+  project_id: string;
+}
+
+export interface ProjectPhases {
+  actual_end: string | null;
+  actual_start: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  name: string;
+  planned_end: string | null;
+  planned_start: string | null;
+  progress_pct: Generated<number>;
+  project_id: string;
+  sort_order: Generated<number>;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+  weight: Generated<number>;
+}
+
+export interface Projects {
+  closed_at: Timestamp | null;
+  closed_by: string | null;
+  code: string;
+  company_id: string;
+  contract_value_cents: Int8 | null;
+  created_at: Generated<Timestamp>;
   created_by: string | null;
+  currency_code: string | null;
   ends_on: string | null;
   id: string;
   is_active: Generated<boolean>;
   manager_worker_id: string | null;
   name: string;
   note: string | null;
+  progress_source: Generated<string>;
+  reopen_reason: string | null;
+  reopened_at: Timestamp | null;
   site_address: string | null;
   site_place: string | null;
   starts_on: string | null;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface ProjectTasks {
+  assignee_user_id: string | null;
+  assignee_worker_id: string | null;
+  company_id: string;
+  completed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string | null;
+  due_on: string | null;
+  id: string;
+  phase_id: string | null;
+  priority: Generated<string>;
+  project_id: string;
+  status: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
 }
 
 export interface ReportJobs {
@@ -935,6 +1088,15 @@ export interface SyncReceipts {
   result_purged_at: Timestamp | null;
 }
 
+export interface TaskComments {
+  author_id: string;
+  body: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  task_id: string;
+}
+
 export interface Tenders {
   company_id: string;
   converted_project_id: string | null;
@@ -1045,6 +1207,7 @@ export interface Workdays {
   day_kind: Generated<string>;
   header_version: Generated<number>;
   id: string;
+  phase_id: string | null;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
   updated_by: string;
@@ -1203,9 +1366,12 @@ export interface DB {
   approval_requests: ApprovalRequests;
   attachments: Attachments;
   audit_events: AuditEvents;
+  budget_alert_events: BudgetAlertEvents;
   check_templates: CheckTemplates;
   companies: Companies;
   company_holidays: CompanyHolidays;
+  cost_categories: CostCategories;
+  cost_entries: CostEntries;
   daily_rollups: DailyRollups;
   equipment_categories: EquipmentCategories;
   fuel_entries: FuelEntries;
@@ -1240,13 +1406,19 @@ export interface DB {
   partners: Partners;
   password_history: PasswordHistory;
   password_resets: PasswordResets;
+  phase_dependencies: PhaseDependencies;
   platform_sessions: PlatformSessions;
   platform_support_sessions: PlatformSupportSessions;
   platform_users: PlatformUsers;
   ppe_templates: PpeTemplates;
+  project_amendments: ProjectAmendments;
   project_assignment_overrides: ProjectAssignmentOverrides;
   project_assignments: ProjectAssignments;
-  project_cost_entries: ProjectCostEntries;
+  project_boq_items: ProjectBoqItems;
+  project_budget_lines: ProjectBudgetLines;
+  project_close_snapshots: ProjectCloseSnapshots;
+  project_phases: ProjectPhases;
+  project_tasks: ProjectTasks;
   projects: Projects;
   report_jobs: ReportJobs;
   route_segments: RouteSegments;
@@ -1257,6 +1429,7 @@ export interface DB {
   sync_cursor_allocators: SyncCursorAllocators;
   sync_cursor_slots: SyncCursorSlots;
   sync_receipts: SyncReceipts;
+  task_comments: TaskComments;
   tenders: Tenders;
   usage_overrides: UsageOverrides;
   user_devices: UserDevices;

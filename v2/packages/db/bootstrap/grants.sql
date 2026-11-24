@@ -113,7 +113,23 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_faults TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.machine_fault_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.approval_requests TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_cost_rates TO gradix_app;
-GRANT SELECT, INSERT ON TABLE public.project_cost_entries TO gradix_app;
+-- F5 (Modul 6): jedinstveni ledger troškova zamjenjuje `project_cost_entries`.
+-- `cost_entries` NEMA DELETE: storno je UPDATE na `REVERSED` + novi `POSTED` red, a triger
+-- `cost_entry_guard()` brani prepisivanje iznosa i brisanje. Zato `SELECT;INSERT;UPDATE`.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.cost_entries TO gradix_app;
+-- Šifarnik kategorija: OWNER mijenja naziv/redoslijed; zadana kategorija po tipu izvora je
+-- djelimični unikat, pa izmjena `default_for_source_type` ide kroz UPDATE.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.cost_categories TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.project_phases TO gradix_app;
+-- Zavisnosti faza se brišu (pogrešno unesena zavisnost nije istorijski podatak).
+GRANT SELECT, INSERT, DELETE ON TABLE public.phase_dependencies TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.project_budget_lines TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.project_boq_items TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.project_amendments TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.project_tasks TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.task_comments TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.budget_alert_events TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.project_close_snapshots TO gradix_app;
 -- F4 (Modul 5): razložen trošak mašine, gorivo, šabloni pregleda.
 -- Komponente se NIKAD ne brišu — nova vrijednost je novi red, stari dobija `valid_to`
 -- (spec 05 §1.1.3). Zato nema DELETE: brisanje bi tiho promijenilo već proknjižene troškove,
@@ -206,7 +222,12 @@ BEGIN
     -- Uvijek postoji: globalna zabrana dvostruke dodjele mašine.
     'public.project_assignment_machine_global_guard()',
     -- APPROVED kvar otvara servisni nalog; direktan poziv bi zaobišao tok.
-    'public.machine_fault_open_service_order()'
+    'public.machine_fault_open_service_order()',
+    -- F5: ledger i revizije budžeta su append-only; direktan poziv bi zaobišao te provjere.
+    'public.cost_entry_guard()',
+    'public.budget_line_immutable()',
+    'public.seed_cost_categories(TEXT)',
+    'public.companies_seed_cost_categories()'
   ] LOOP
     IF to_regprocedure(v_funkcija) IS NOT NULL THEN
       EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, gradix_app', v_funkcija);
