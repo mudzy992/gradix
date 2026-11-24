@@ -20,6 +20,9 @@ table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Oblig
 table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
 table	attachments	SELECT;INSERT;UPDATE	-		F0.2 jedinstveni attachment-service za sve module; upload-state updates i meko brisanje (status), bez DELETE granta.
 table	usage_overrides	SELECT;INSERT;UPDATE	-		F0.3 iznimke od blokade (radnik/mašina/tender × radnja); istekla iznimka ne pušta; FORCE RLS.
+table	notifications	SELECT;INSERT;UPDATE	-		F0.4 in-app inbox (obavezan kanal); brisanje po retenciji radi worker, bez DELETE granta.
+table	notification_preferences	SELECT;INSERT;UPDATE	-		F0.4 izbor kanala po korisniku; in_app uvijek true (CHECK).
+table	notification_deliveries	SELECT;INSERT;UPDATE	-		F0.4 trag slanja po kanalu; BLOCKED_NO_PROVIDER kad SMTP nema.
 table	projects	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Project create/update and read; no hard-delete path.
 table	project_assignments	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Assignment creation and auditable end/one-time void; history trigger blocks DELETE, TRUNCATE, identity edits and backwards shortening.
 table	project_assignment_overrides	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Override request/approval update lifecycle; no delete path.

@@ -13,6 +13,7 @@ import { ROLE_BS, initialsOf } from "./shell-user";
 import { CommandPalette } from "./shell-palette";
 import { ShellNav } from "./shell-nav";
 import { ShellUserMenu } from "./shell-user-menu";
+import { ShellBell } from "./shell-bell";
 import type { NavItem } from "./shell-types";
 
 export { initialsOf };
@@ -132,6 +133,7 @@ export default function Shell({
           >
             <Icon name={resolved === "dark" ? "sun" : "moon"} />
           </button>
+          <ShellBell />
           <ShellUserMenu
             displayName={user.displayName}
             email={user.email}

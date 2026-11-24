@@ -301,6 +301,33 @@
   color: var(--text);
 }
 
+/*
+ * F0.4: zvonce inboxa. Broj je TEKST pored ikone (u uglu), nikad samo boja — i to je jedino
+ * mjesto gdje se „ima nešto novo" vidi bez otvaranja ekrana.
+ */
+.gx-bell {
+  position: relative;
+  text-decoration: none;
+}
+
+.gx-bell__count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--danger);
+  /* Tekst na crvenom je površina, ne bijela: u tamnoj temi crvena je svjetlija i bijelo
+     slovo na njoj nije čitljivo (isti razlog zbog kojeg `--palette-surface` postoji). */
+  color: var(--palette-surface);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
+}
+
 .gx-avatar {
   width: 30px;
   height: 30px;

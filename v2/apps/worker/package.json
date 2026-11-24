@@ -1,0 +1,27 @@
+{
+  "name": "@gradix/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@gradix/db": "workspace:*",
+    "@gradix/domain": "workspace:*",
+    "pg": "8.16.3",
+    "pg-boss": "^10.1.6"
+  },
+  "devDependencies": {
+    "@gradix/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

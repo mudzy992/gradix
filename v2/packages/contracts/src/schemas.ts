@@ -93,6 +93,50 @@ export const MeResponse = z.object({
 export type MeResponse = z.infer<typeof MeResponse>;
 
 /**
+ * F0.4 — inbox obavještenja. In-app je OBAVEZAN kanal (radi bez SMTP-a), pa ugovor nosi
+ * samo ono što inbox treba: naslov, tekst, link i stanje čitanja.
+ */
+export const Notification = z.object({
+  id: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  body: z.string(),
+  /** Putanja u aplikaciji; obavezna (`LIKE '/%'`) — obavještenje bez linka je slijepa ulica. */
+  href: z.string(),
+  severity: z.enum(["INFO", "WARN", "CRITICAL"]),
+  createdAt: IsoDate,
+  readAt: IsoDate.nullable(),
+});
+export type Notification = z.infer<typeof Notification>;
+
+export const NotificationsResponse = z.object({
+  notifications: z.array(Notification),
+  unreadCount: z.number(),
+});
+export type NotificationsResponse = z.infer<typeof NotificationsResponse>;
+
+export const NotificationReadInput = z.object({
+  /** Bez `id` i uz `all: true` — „označi sve kao pročitano“. Id je `SafeText`: NUL ne ide u bazu. */
+  id: SafeText.optional(),
+  all: z.boolean().optional(),
+});
+export type NotificationReadInput = z.infer<typeof NotificationReadInput>;
+
+/** F0.4 — stanje reda poslova; `available: false` znači „worker nikad nije pokrenut“. */
+export const QueueHealthResponse = z.object({
+  available: z.boolean(),
+  active: z.number(),
+  created: z.number(),
+  retry: z.number(),
+  failed: z.number(),
+  completed: z.number(),
+  stuck: z.number(),
+  lastPingAt: IsoDate.nullable(),
+  stale: z.boolean(),
+});
+export type QueueHealthResponse = z.infer<typeof QueueHealthResponse>;
+
+/**
  * F0.3 — `GET /api/me/blockers`: šta blokira MENE i mašine koje smijem koristiti.
  *
  * Mobilni dobija ODLUKU servera i ne može je zaobići; UI samo prikazuje. Zato odgovor nosi

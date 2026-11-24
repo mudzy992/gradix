@@ -100,6 +100,8 @@ export interface Companies {
   id: string;
   is_active: Generated<boolean>;
   locale: Generated<Locale>;
+  monthly_report_enabled: Generated<boolean>;
+  monthly_report_recipients: string[] | null;
   name: string;
   slug: string;
   sync_conflict_retention_days: Generated<number>;
@@ -351,6 +353,48 @@ export interface Memberships {
   scope: Generated<string>;
   updated_at: Generated<Timestamp>;
   user_id: string;
+}
+
+export interface NotificationDeliveries {
+  attempts: Generated<number>;
+  channel: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  last_error: string | null;
+  notification_id: string;
+  sent_at: Timestamp | null;
+  status: Generated<string>;
+}
+
+export interface NotificationPreferences {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  email: Generated<boolean>;
+  id: string;
+  in_app: Generated<boolean>;
+  kind: string;
+  push: Generated<boolean>;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
+export interface Notifications {
+  actioned_at: Timestamp | null;
+  body: Generated<string>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  dedupe_key: string;
+  href: string;
+  id: string;
+  kind: string;
+  read_at: Timestamp | null;
+  role_target: string | null;
+  severity: Generated<string>;
+  source_id: string | null;
+  source_type: string | null;
+  title: string;
+  user_id: string | null;
 }
 
 export interface Obligations {
@@ -745,6 +789,9 @@ export interface DB {
   machine_work_logs: MachineWorkLogs;
   machines: Machines;
   memberships: Memberships;
+  notification_deliveries: NotificationDeliveries;
+  notification_preferences: NotificationPreferences;
+  notifications: Notifications;
   obligation_types: ObligationTypes;
   obligation_versions: ObligationVersions;
   obligations: Obligations;
