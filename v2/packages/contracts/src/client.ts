@@ -225,6 +225,15 @@ export function createClient(options: ClientOptions = {}) {
       params?: Record<string, string>,
       requestOptions?: RequestOptions,
     ) => send("PATCH", path, body, params, requestOptions),
+    /**
+     * `DELETE` nosi putanju i parametre, bez tijela — tako su definisane i rute u ugovoru
+     * (`request: null`). Postoji jer brisanje/opoziv nije „POST na isto“: metoda je dio ugovora.
+     */
+    delete: <P extends string>(
+      path: P,
+      params?: Record<string, string>,
+      requestOptions?: RequestOptions,
+    ) => call("DELETE", path, undefined, params, requestOptions),
   };
 }
 

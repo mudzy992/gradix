@@ -22,6 +22,8 @@ import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
 import { ROUTES } from "@gradix/contracts";
 import { POST as loginRoute } from "@/app/api/auth/login/route";
+import { completeLogin } from "@/test/two-step-login";
+import { resetLoginAttempts, seedTotp } from "@/test/totp-fixture";
 import { POST as refreshRoute } from "@/app/api/auth/refresh/route";
 import { POST as changePasswordRoute } from "@/app/api/auth/change-password/route";
 import { POST as inviteRoute } from "@/app/api/users/invitations/route";
@@ -86,6 +88,27 @@ import { GET as dailyCheckAttachmentUrlGet } from "@/app/api/machine-daily-check
 import { POST as weekDecideRoute } from "@/app/api/work-weeks/decide/route";
 import { POST as weekLockRoute } from "@/app/api/work-weeks/lock/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
+/* ------------------------------------------------ F1: postavke, sesije, 2FA */
+import { GET as companyGet, PATCH as companyPatch } from "@/app/api/company/route";
+import { GET as holidaysGet, POST as holidaysPost } from "@/app/api/company/holidays/route";
+import { PATCH as holidayPatch, DELETE as holidayDelete } from "@/app/api/company/holidays/[id]/route";
+import { GET as meSessionsGet } from "@/app/api/me/sessions/route";
+import { DELETE as meSessionDelete } from "@/app/api/me/sessions/[id]/route";
+import { POST as meSessionsRevokeOthers } from "@/app/api/me/sessions/revoke-others/route";
+import { GET as userSessionsGet } from "@/app/api/users/[id]/sessions/route";
+import { POST as userSessionsRevoke } from "@/app/api/users/[id]/sessions/revoke/route";
+import { POST as user2faReset } from "@/app/api/users/[id]/2fa/reset/route";
+import { GET as twoFactorStatusGet } from "@/app/api/auth/2fa/status/route";
+import { POST as twoFactorEnrollPost } from "@/app/api/auth/2fa/enroll/route";
+import { POST as twoFactorVerifyPost } from "@/app/api/auth/2fa/verify/route";
+import { POST as twoFactorDisablePost } from "@/app/api/auth/2fa/disable/route";
+import { POST as twoFactorLoginPost } from "@/app/api/auth/2fa/login/route";
+import { POST as platformLoginPost } from "@/app/api/platform/login/route";
+import { GET as platformCompaniesGet, POST as platformCompaniesPost } from "@/app/api/platform/companies/route";
+import { POST as platformSuspend } from "@/app/api/platform/companies/[id]/suspend/route";
+import { POST as platformActivate } from "@/app/api/platform/companies/[id]/activate/route";
+import { POST as platformSupportAccess } from "@/app/api/platform/companies/[id]/support-access/route";
+
 import { GET as obligationsGet } from "@/app/api/obligations/route";
 import { POST as importsPreviewRoute } from "@/app/api/imports/preview/route";
 import { GET as auditGet } from "@/app/api/audit/route";
@@ -258,11 +281,33 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/notifications": { GET: notificationsGet },
   "/api/notifications/read": { POST: notificationReadPost },
   "/api/health/queue": { GET: queueHealthGet },
+  /* ---- F1 ---- */
+  "/api/company": { GET: companyGet, PATCH: companyPatch },
+  "/api/company/holidays": { GET: holidaysGet, POST: holidaysPost },
+  "/api/company/holidays/{id}": { PATCH: holidayPatch, DELETE: holidayDelete },
+  "/api/me/sessions": { GET: meSessionsGet },
+  "/api/me/sessions/{id}": { DELETE: meSessionDelete },
+  "/api/me/sessions/revoke-others": { POST: meSessionsRevokeOthers },
+  "/api/users/{id}/sessions": { GET: userSessionsGet },
+  "/api/users/{id}/sessions/revoke": { POST: userSessionsRevoke },
+  "/api/users/{id}/2fa/reset": { POST: user2faReset },
+  "/api/auth/2fa/status": { GET: twoFactorStatusGet },
+  "/api/auth/2fa/enroll": { POST: twoFactorEnrollPost },
+  "/api/auth/2fa/verify": { POST: twoFactorVerifyPost },
+  "/api/auth/2fa/disable": { POST: twoFactorDisablePost },
+  "/api/auth/2fa/login": { POST: twoFactorLoginPost },
+  "/api/platform/login": { POST: platformLoginPost },
+  "/api/platform/companies": { GET: platformCompaniesGet, POST: platformCompaniesPost },
+  "/api/platform/companies/{id}/suspend": { POST: platformSuspend },
+  "/api/platform/companies/{id}/activate": { POST: platformActivate },
+  "/api/platform/companies/{id}/support-access": { POST: platformSupportAccess },
 };
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */
 const PUBLIC_PATHS = new Set([
   "/api/auth/login",
+  "/api/auth/2fa/login",
+  "/api/platform/login",
   "/api/auth/refresh",
   "/api/invitations/{token}",
   "/api/password-resets/{token}",
@@ -324,6 +369,7 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
   let workerCookie: string;
 
   async function cleanFixtures() {
+    await resetLoginAttempts(admin);
     await admin.query("DELETE FROM public.sync_receipts WHERE company_id = $1", [COMPANY]);
     await admin.query("DELETE FROM public.work_entries WHERE company_id = $1", [COMPANY]);
     await admin.query("DELETE FROM public.workdays WHERE company_id = $1", [COMPANY]);
@@ -368,7 +414,14 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
       [PROJECT, COMPANY],
     );
 
-    const ownerLogin = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "nul-owner@test.example", password: PASSWORD }, "POST"));
+    // ADMIN rola od F1 traži obaveznu 2FA: tajna u fiksturi + drugi korak prijave.
+    const totpOwner = await seedTotp(admin, USER_OWNER);
+    const ownerLogin = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "nul-owner@test.example", password: PASSWORD }, "POST")),
+      totpOwner.secret,
+    );
+    expect(ownerLogin.status, "prijava vlasnika fiksture mora proći oba koraka").toBe(200);
     ownerCookie = cookieFrom(ownerLogin, "gx_at");
     const workerLogin = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "nul-worker@test.example", password: PASSWORD }, "POST"));
     workerCookie = cookieFrom(workerLogin, "gx_at");

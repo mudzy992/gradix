@@ -23,6 +23,8 @@ import { PATCH as membershipRoute } from "@/app/api/users/[id]/membership/route"
 import { GET as usersRoute } from "@/app/api/users/route";
 import { PERMISSIONS, PERMISSION_KEYS, ROLE_LABELS, ROLES, permissionsFor } from "./permissions";
 import { roleMatrix } from "./rbac-service";
+import { completeLogin } from "@/test/two-step-login";
+import { resetLoginAttempts, seedTotp } from "@/test/totp-fixture";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -70,13 +72,20 @@ type Envelope<T> = { success: true; data: T } | { success: false; error: { code:
 const bodyOf = async <T>(response: Response) => (await response.json()) as T;
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
+/** 2FA obavezna za OWNER/ADMIN: fikstura upisuje tajnu, prijava prolazi oba koraka. */
+const totpByEmail = new Map<string, string>();
+
 const cookieFor = async (email: string) => {
-  const response = await loginRoute(
+  const response = await completeLogin(
+    BASE,
+    await loginRoute(
     new NextRequest(`${BASE}/api/auth/login`, {
       method: "POST",
       body: JSON.stringify({ email, password: PASSWORD }),
       headers: { "content-type": "application/json" },
     }),
+    ),
+    totpByEmail.get(email) ?? "",
   );
   expect(response.status).toBe(200);
   return cookieOf(response, "gx_at");
@@ -94,6 +103,7 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
     await admin.query("DELETE FROM sessions WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM memberships WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM machines WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
+    await resetLoginAttempts(admin);
     await admin.query("DELETE FROM users WHERE email LIKE '%@r1b.test'");
     await admin.query("DELETE FROM attachments WHERE company_id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[COMPANY, OTHER_COMPANY]]);
@@ -131,6 +141,10 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
            VALUES ($1, $2, $3, $4::"Role"[], 'COMPANY', true)`,
           [`mem_${id}_${companyId}`, id, companyId, [role]],
         );
+      }
+      if (role === "OWNER" || role === "ADMIN") {
+        const seeded = await seedTotp(admin, id);
+        totpByEmail.set(email, seeded.secret);
       }
     }
 

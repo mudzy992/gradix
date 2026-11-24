@@ -5,6 +5,8 @@
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
 import { rotateRefresh } from "@/server/auth-service";
+import { getVerifiedPool } from "@/server/db";
+import { enrollmentPendingFor } from "@/server/two-factor";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -39,10 +41,21 @@ export async function POST(request: NextRequest): Promise<Response> {
       return response;
     }
 
+    /*
+     * Osvježeni token NIJE automatski puna sesija: ako osoba još mora upariti 2FA,
+     * `enr` mora ostati. Bez ovoga bi jedan `POST /api/auth/refresh` pretvorio sesiju za
+     * uparivanje u punu i obavezna 2FA bi se zaobišla bez ijednog koda.
+     */
+    const enrollmentPending = await enrollmentPendingFor(
+      await getVerifiedPool(),
+      result.userId,
+      result.companyId,
+    );
     const accessToken = issueAccessToken({
       sub: result.userId,
       sid: result.sessionId,
       companyId: result.companyId,
+      ...(enrollmentPending ? { enr: true } : {}),
     });
     const response = ok({ accessToken, refreshToken: result.refreshToken });
     response.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions);

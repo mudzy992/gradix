@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 import { hasControlChars } from "@gradix/contracts";
 import { fail } from "./api";
 import { can, type Permission } from "./permissions";
-import { authenticate, requiresPasswordChange, type AuthContext } from "./tenant-context";
+import { authenticate, requiresEnrollment, requiresPasswordChange, type AuthContext } from "./tenant-context";
 
 export type GuardResult = { ok: true; ctx: AuthContext } | { ok: false; response: Response };
 
@@ -30,6 +30,19 @@ export async function guard(request: NextRequest, permission?: Permission): Prom
     if (hasControlChars(value)) {
       return { ok: false, response: fail("VALIDATION_FAILED", "Filter sadrži nedozvoljene kontrolne znakove.") };
     }
+  }
+
+  /*
+   * Redoslijed: 2FA uparivanje → promjena lozinke → dozvola.
+   *
+   * Uparivanje ide PRVO i to je namjerno: nalog koji mora i jedno i drugo (nova rola +
+   * privremena lozinka) inače bi bio zaglavljen — promjena lozinke ne pušta na
+   * `/auth/2fa/enroll`, a uparivanje ne pušta dalje dok se ne završi. Sesija za uparivanje
+   * ne vidi nijedan poslovni ekran, pa ovaj redoslijed ne otvara rupu.
+   */
+  const needsEnrollment = requiresEnrollment(auth.ctx, request.nextUrl.pathname);
+  if (needsEnrollment) {
+    return { ok: false, response: fail(needsEnrollment, "Prvo uključite dvofaktorsku prijavu.") };
   }
 
   const blocked = requiresPasswordChange(auth.ctx, request.nextUrl.pathname);

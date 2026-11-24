@@ -14,6 +14,7 @@ import { checkPasswordPolicy, verifyPassword } from "@/server/password";
 import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, issueAccessToken, refreshCookieOptions } from "@/server/session";
 import { getVerifiedPool } from "@/server/db";
 import { clearAttempts, rateLimitWait, recordAttempt } from "@/server/rate-limit";
+import { issuePreAuthToken } from "@/server/pre-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -57,18 +58,50 @@ export async function POST(request: NextRequest): Promise<Response> {
       return response;
     }
 
-    const result = await login(email, parsed.data.password, verifyPassword);
+    const result = await login(email, parsed.data.password, verifyPassword, new Date(), {
+      userAgent: request.headers.get("user-agent"),
+      ip,
+    });
     if ("code" in result) {
-      await recordAttempt(pool, email, ip);
+      // Samo POGREŠNA lozinka puni brojač. Zaključan nalog, neaktivna firma i 2FA vrata
+      // nisu promašaji: lozinka je u tim slučajevima tačna, a brojanje bi produžilo kaznu.
+      if (result.code === "AUTH_INVALID_CREDENTIALS") await recordAttempt(pool, email, ip);
       if (result.code === "AUTH_COMPANY_INACTIVE") {
         return fail("AUTH_COMPANY_INACTIVE", "Firma je deaktivirana. Obratite se administratoru.");
       }
       if (result.code === "FORBIDDEN") return fail("FORBIDDEN", result.message);
+      // 2FA vrata: lozinka je tačna, ali sesija još NE postoji.
+      if (result.code === "AUTH_2FA_REQUIRED") {
+        // Lozinka je TAČNA — ovo nije promašaj. Brojanje bi poslije pet prijava sa
+        // ispravnom lozinkom zaključalo nalog (i to onaj koji 2FA najviše čuva).
+        await clearAttempts(pool, email);
+        return ok({
+          twoFactor: { required: true, gate: result.gate },
+          preAuthToken: issuePreAuthToken({
+            sub: result.userId,
+            companyId: result.companyId,
+            gate: result.gate,
+          }),
+          user: { id: result.userId },
+        });
+      }
+      // Zaključan nalog NIJE promašaj lozinke: lozinka je tačna, a brojač je već pun.
+      // Brojanje bi produžilo kaznu svakim pokušajem (i pretvorilo je u trajnu).
+      if (result.code === "AUTH_ACCOUNT_LOCKED") {
+        const response = fail(
+          "AUTH_ACCOUNT_LOCKED",
+          `Nalog je zaključan zbog ponovljenih promašaja. Pokušajte za ${result.retryAfterSeconds} s ili zatražite reset od administratora.`,
+        );
+        response.headers.set("Retry-After", String(result.retryAfterSeconds));
+        return response;
+      }
       // Ista poruka za nepostojeći nalog, pogrešnu lozinku i deaktiviran nalog.
       return fail("AUTH_INVALID_CREDENTIALS", "Email ili lozinka nisu ispravni.");
     }
 
     await clearAttempts(pool, email);
+
+    // 2FA je već obrađena iznad (vraća prije ovoga); ovdje je sigurno potpuna prijava.
     const accessToken = issueAccessToken({
       sub: result.userId,
       sid: result.sessionId,

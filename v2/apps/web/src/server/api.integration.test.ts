@@ -16,6 +16,8 @@ import { POST as refreshRoute } from "@/app/api/auth/refresh/route";
 import { GET as meRoute } from "@/app/api/me/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
 import { GET as pullRoute } from "@/app/api/sync/pull/route";
+import { completeLogin } from "@/test/two-step-login";
+import { resetLoginAttempts, seedTotp, type TotpFixture } from "@/test/totp-fixture";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -89,8 +91,11 @@ function workdaySubmitItem(localId: string, workdayId: string, baseVersion: numb
 
 describeDb("API (integracija na pravoj bazi)", () => {
   const admin = new Pool({ connectionString: adminUrl });
+  let TOTP_A: TotpFixture;
+  let TOTP_B: TotpFixture;
 
   async function cleanFixtures() {
+    await resetLoginAttempts(admin, [USER_A, USER_B, USER_WORKER_A, USER_WORKER_B]);
     await admin.query("DELETE FROM public.sync_conflicts WHERE company_id = ANY($1)", [[COMPANY_A, COMPANY_B]]);
     await admin.query("DELETE FROM public.sync_receipts WHERE company_id = ANY($1)", [[COMPANY_A, COMPANY_B]]);
     await admin.query("DELETE FROM public.work_entries WHERE company_id = ANY($1)", [[COMPANY_A, COMPANY_B]]);
@@ -130,6 +135,13 @@ describeDb("API (integracija na pravoj bazi)", () => {
        ('mem_it_worker_b', $6, $3, ARRAY['WORKER']::"Role"[], 'SELF')`,
       [USER_A, USER_B, COMPANY_A, COMPANY_B, USER_WORKER_A, USER_WORKER_B],
     );
+    /*
+     * F1: ADMIN u firmi A i OWNER u firmi B traže obaveznu 2FA. Bez potvrđene tajne
+     * prijava staje na pre-auth tokenu i test dalje ne bi imao sesiju. Tajna se upisuje
+     * ISTO kao kroz aplikaciju (AES-GCM sa ključem iz `AUTH_SECRET`), ne kroz zaobilaz.
+     */
+    TOTP_A = await seedTotp(admin, USER_A);
+    TOTP_B = await seedTotp(admin, USER_B);
     await admin.query(
       `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id) VALUES
        ($1, $3, 'Worker', 'A', '2025-01-01', $4),
@@ -156,7 +168,11 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("prijava vraća sesiju i cookie", async () => {
-    const response = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
+    const response = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD })),
+      TOTP_A.secret,
+    );
     expect(response.status).toBe(200);
     const body = await bodyOf<{ success: boolean; data: { companyId: string } }>(response);
     expect(body.data.companyId).toBe(COMPANY_A);
@@ -182,7 +198,11 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("/api/me vraća samo mašine svoje firme", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
+    const login = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD })),
+      TOTP_A.secret,
+    );
     const cookie = cookieFrom(login, "gx_at");
     const me = await meRoute(getRequest("http://localhost/api/me", cookie));
     expect(me.status).toBe(200);
@@ -192,7 +212,11 @@ describeDb("API (integracija na pravoj bazi)", () => {
   });
 
   it("refresh rotira token, ponovna upotreba gasi sesije", async () => {
-    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD }));
+    const login = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD })),
+      TOTP_B.secret,
+    );
     const refreshToken = (await bodyOf<{ data: { refreshToken: string } }>(login)).data.refreshToken;
 
     const first = await refreshRoute(jsonRequest("http://localhost/api/auth/refresh", { refreshToken }));
@@ -285,8 +309,15 @@ describeDb("API (integracija na pravoj bazi)", () => {
     expect(ownBody.data.events.every((event) => !JSON.stringify(event.payload).match(/phone|email/i))).toBe(true);
     expect(ownBody.data.cursor).toBeTruthy();
 
-    const loginAdmin = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD }));
+    const loginAdmin = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-a@test.example", password: PASSWORD })),
+      TOTP_A.secret,
+    );
     const officePull = await pullRoute(getRequest("http://localhost/api/sync/pull", cookieFrom(loginAdmin, "gx_at")));
+    // Ako drugi korak prijave nije prošao, `data` nema `events` i pad bi izgledao kao greška
+    // u pull-u. Provjera statusa pomjera dijagnozu na pravo mjesto (prijava, ne sync).
+    expect(officePull.status, `pull kao ured: ${JSON.stringify(await officePull.clone().json())}`).toBe(200);
     const officeBody = await bodyOf<{ data: { events: { entityId: string; entityType: string }[] } }>(officePull);
     expect(officeBody.data.events.map((event) => `${event.entityType}:${event.entityId}`).sort()).toEqual([
       `workday:${WORKDAY_A}`,
@@ -298,7 +329,11 @@ describeDb("API (integracija na pravoj bazi)", () => {
       `sync_conflict:${overlapBody.data.results[0]?.conflictId}`,
     ].sort());
 
-    const loginCompanyB = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD }));
+    const loginCompanyB = await completeLogin(
+      "http://localhost",
+      await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-b@test.example", password: PASSWORD })),
+      TOTP_B.secret,
+    );
     const cookieCompanyB = cookieFrom(loginCompanyB, "gx_at");
     const companyBPullLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const companyBPull = await pullRoute(getRequest("http://localhost/api/sync/pull", cookieCompanyB));

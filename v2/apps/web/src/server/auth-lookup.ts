@@ -46,6 +46,12 @@ export type LoginUserRow = {
   must_change_password: boolean;
   first_name: string;
   last_name: string;
+  /** Zaključavanje naloga poslije 10 promašaja (spec 01 §1.4.19). */
+  locked_until: Date | null;
+  failed_login_count: number;
+  totp_enabled: boolean;
+  must_enroll_2fa: boolean;
+  password_expires_at: Date | null;
 };
 
 /**
@@ -57,7 +63,8 @@ export async function lookupUserByEmail(pool: Pool, email: string): Promise<Logi
   const normalizedEmail = email.trim().toLowerCase();
   return inLookupTransaction(pool, "app.auth_lookup_email", normalizedEmail, async (client) => {
     const result = await client.query<LoginUserRow>(
-      `SELECT id, password_hash, is_active, must_change_password, first_name, last_name
+      `SELECT id, password_hash, is_active, must_change_password, first_name, last_name,
+              locked_until, failed_login_count, totp_enabled, must_enroll_2fa, password_expires_at
          FROM users
         WHERE lower(email) = $1`,
       [normalizedEmail],

@@ -13,7 +13,17 @@ import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { writeAudit, ipHash } from "./audit";
-import { hashPassword, checkPasswordPolicy, verifyPassword } from "./password";
+import {
+  hashPassword,
+  isPasswordReused,
+  rememberPassword,
+  verifyPassword,
+} from "./password";
+import { checkPasswordPolicy as checkDomainPolicy, requiresPasswordRotation } from "@gradix/domain";
+
+/** Jedna poruka za jedno pravilo: „zadnje 3 lozinke“ (spec 01 §1.4.18). */
+export const PASSWORD_REUSED_MESSAGE =
+  "Lozinka je već korištena. Odaberite lozinku koju niste koristili u zadnje tri promjene.";
 import { generateToken, hashToken, tokenExpiry, TOKEN_TTL_HOURS } from "./tokens";
 import { isScope } from "@gradix/domain";
 
@@ -234,11 +244,15 @@ export async function acceptInvitation(
   token: string,
   input: { firstName: string; lastName: string; password: string; ip?: string },
 ): Promise<{ userId: string; companyId: string; email: string } | ServiceError> {
-  const policyError = checkPasswordPolicy(input.password);
-  if (policyError) return { code: "VALIDATION_FAILED", message: policyError };
   if (!input.firstName.trim() || !input.lastName.trim()) {
     return { code: "VALIDATION_FAILED", message: "Ime i prezime su obavezni." };
   }
+  const policyError = checkDomainPolicy({
+    password: input.password,
+    firstName: input.firstName,
+    lastName: input.lastName,
+  });
+  if (policyError) return { code: "VALIDATION_FAILED", message: policyError };
 
   const passwordHash = await hashPassword(input.password);
   const client = await pool.connect();
@@ -369,12 +383,8 @@ export async function setPasswordWithToken(
   newPassword: string,
   input: { ip?: string } = {},
 ): Promise<{ userId: string; companyId: string } | ServiceError> {
-  const policyError = checkPasswordPolicy(newPassword);
-  if (policyError) return { code: "VALIDATION_FAILED", message: policyError };
-
   const setting = kind === "reset" ? "app.reset_lookup_token" : "app.invite_lookup_token";
   const table = kind === "reset" ? "password_resets" : "invitations";
-  const passwordHash = await hashPassword(newPassword);
 
   const client = await pool.connect();
   try {
@@ -397,10 +407,53 @@ export async function setPasswordWithToken(
     // Ista pravilo kao kod pozivnice: tenant dolazi iz zapisa, ne iz zahtjeva.
     await client.query("SELECT set_config('app.company_id', $1, true)", [row.company_id]);
 
-    await client.query("UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2", [
-      passwordHash,
-      row.user_id,
-    ]);
+    // Politika se provjerava POSLIJE claim-a, jer email i ime dolaze iz baze (a ne od
+    // klijenta — inače bi korisnik mogao zaobići zabranu identiteta u lozinci time što
+    // pošalje prazno ime). Neuspjeh vraća token: ROLLBACK vraća `used_at` na NULL.
+    const owner = await client.query<{
+      email: string;
+      first_name: string;
+      last_name: string;
+      password_hash: string;
+      roles: string[];
+    }>(
+      // `company_id` je i u WHERE, ne samo u JOIN ON: statička provjera (B1) traži
+      // tenant predikat u WHERE klauzi, a ne „negdje u upitu".
+      `SELECT u.email, u.first_name, u.last_name, u.password_hash, m.roles::text[] AS roles
+         FROM users u
+         JOIN memberships m ON m.user_id = u.id AND m.company_id = $2
+        WHERE u.id = $1 AND m.company_id = $2`,
+      [row.user_id, row.company_id],
+    );
+    const account = owner.rows[0];
+    if (account) {
+      const policyError = checkDomainPolicy({
+        password: newPassword,
+        email: account.email,
+        firstName: account.first_name,
+        lastName: account.last_name,
+      });
+      if (policyError) {
+        await client.query("ROLLBACK");
+        return { code: "VALIDATION_FAILED", message: policyError };
+      }
+      if (await isPasswordReused(client, row.user_id, newPassword, account.password_hash)) {
+        await client.query("ROLLBACK");
+        return { code: "VALIDATION_FAILED", message: PASSWORD_REUSED_MESSAGE };
+      }
+      await rememberPassword(client, row.user_id, account.password_hash);
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await client.query(
+      `UPDATE users
+          SET password_hash = $1, must_change_password = false,
+              password_changed_at = now(),
+              -- Rotacija poslije 180 dana važi SAMO za uredske role (spec 01 §1.4.20).
+              password_expires_at = CASE WHEN $3::boolean THEN now() + INTERVAL '180 days' ELSE NULL END
+        WHERE id = $2`,
+      [passwordHash, row.user_id, requiresPasswordRotation(account?.roles ?? [])],
+    );
 
     const sessions = await client.query(
       "UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND company_id = $2 AND revoked_at IS NULL RETURNING id",
@@ -438,12 +491,9 @@ export async function changeOwnPassword(
   | { ok: true; revokedSessions: number }
   | { code: "VALIDATION_FAILED" | "FORBIDDEN"; message: string }
 > {
-  const policyError = checkPasswordPolicy(input.newPassword);
-  if (policyError) return { code: "VALIDATION_FAILED", message: policyError };
-
   return withCompany(pool, ctx.companyId, async (client) => {
-    const found = await client.query<{ password_hash: string; email: string }>(
-      "SELECT password_hash, email FROM users WHERE id = $1",
+    const found = await client.query<{ password_hash: string; email: string; first_name: string; last_name: string }>(
+      "SELECT password_hash, email, first_name, last_name FROM users WHERE id = $1",
       [ctx.userId],
     );
     const current = found.rows[0];
@@ -452,13 +502,33 @@ export async function changeOwnPassword(
     if (!(await verifyPassword(current.password_hash, input.currentPassword))) {
       return { code: "VALIDATION_FAILED", message: "Trenutna lozinka nije ispravna." };
     }
-    if (await verifyPassword(current.password_hash, input.newPassword)) {
-      return { code: "VALIDATION_FAILED", message: "Nova lozinka ne smije biti ista kao trenutna." };
-    }
 
+    // Politika NAKON provjere tekuće lozinke: korisnik prvo dokaže da je on, pa tek onda
+    // dobija savjete o novoj. Suprotno bi dalo napadaču besplatan oracle o pravilima.
+    const policyError = checkDomainPolicy({
+      password: input.newPassword,
+      email: current.email,
+      firstName: current.first_name,
+      lastName: current.last_name,
+    });
+    if (policyError) return { code: "VALIDATION_FAILED", message: policyError };
+
+    if (await isPasswordReused(client, ctx.userId, input.newPassword, current.password_hash)) {
+      return { code: "VALIDATION_FAILED", message: PASSWORD_REUSED_MESSAGE };
+    }
+    await rememberPassword(client, ctx.userId, current.password_hash);
+
+    const roles = await client.query<{ roles: string[] }>(
+      "SELECT roles::text[] AS roles FROM memberships WHERE user_id = $1 AND company_id = $2",
+      [ctx.userId, ctx.companyId],
+    );
     await client.query(
-      "UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2",
-      [await hashPassword(input.newPassword), ctx.userId],
+      `UPDATE users
+          SET password_hash = $1, must_change_password = false,
+              password_changed_at = now(),
+              password_expires_at = CASE WHEN $3::boolean THEN now() + INTERVAL '180 days' ELSE NULL END
+        WHERE id = $2`,
+      [await hashPassword(input.newPassword), ctx.userId, requiresPasswordRotation(roles.rows[0]?.roles ?? [])],
     );
     // Tekuća sesija ostaje, sve ostale se gase.
     const revoked = await client.query(

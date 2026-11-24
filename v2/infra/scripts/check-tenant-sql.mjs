@@ -35,6 +35,16 @@ const serverDir = join(v2Root, "apps", "web", "src", "server");
 // MORA odgovarati katalogu baze (tabele sa kolonom company_id, šema public).
 // Skripta to provjerava automatski kad je baza dostupna — vidi provjeraKataloga().
 const TENANT_TABLES = [
+  "company_holidays",
+  "daily_rollups",
+  "notification_deliveries",
+  "notification_preferences",
+  "notification_templates",
+  "notifications",
+  "platform_support_sessions",
+  "report_jobs",
+  "usage_overrides",
+  "user_devices",
   "audit_events",
   "equipment_categories",
   "invitations",

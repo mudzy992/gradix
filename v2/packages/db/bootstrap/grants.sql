@@ -101,6 +101,16 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.approval_requests TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_cost_rates TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.project_cost_entries TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.tenders TO gradix_app;
+-- F1: jezgro firme i sigurnost pristupa (spec 01).
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.company_holidays TO gradix_app;
+GRANT SELECT, INSERT, DELETE ON TABLE public.password_history TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.user_totp TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.user_recovery_codes TO gradix_app;
+GRANT SELECT ON TABLE public.platform_support_sessions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.notification_templates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.report_jobs TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.daily_rollups TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.user_devices TO gradix_app;
 -- No direct sequence rights; login_attempts_id_seq is used only by its definer function.
 
 -- App-callable lookup and rate-limit functions. Revoke default PUBLIC EXECUTE first; these

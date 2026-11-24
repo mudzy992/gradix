@@ -1874,3 +1874,227 @@ export type HoursExportQuery = z.infer<typeof HoursExportQuery>;
 /** Odgovor je text/csv (raw), ne JSON envelope. */
 export const HoursExportCsv = z.string();
 export type HoursExportCsv = z.infer<typeof HoursExportCsv>;
+
+/* ==========================================================================
+ * Faza 1 — Modul 1: firma, postavke, praznici, sesije, 2FA, platforma
+ * ========================================================================== */
+
+/** Datum bez vremena (`YYYY-MM-DD`). Praznik je kalendarski datum, ne trenutak. */
+export const CalendarDateText = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Datum mora biti u obliku GGGG-MM-DD.");
+
+/** Vrijeme `HH:MM` — noćni prozor. Sekunde nemaju smisla za prag u obračunu. */
+export const ClockText = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Vrijeme mora biti HH:MM.");
+
+export const CompanySettings = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  legalName: z.string().nullable(),
+  taxId: z.string().nullable(),
+  vatId: z.string().nullable(),
+  vatRegistered: z.boolean(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  country: z.string(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  web: z.string().nullable(),
+  iban: z.string().nullable(),
+  bankName: z.string().nullable(),
+  logoObjectKey: z.string().nullable(),
+  currency: z.string(),
+  locale: z.string(),
+  timezone: z.string(),
+  weekStart: z.enum(["MON", "SUN"]),
+  workdayHours: z.number(),
+  overtimeDailyThreshold: z.number(),
+  nightFrom: z.string().nullable(),
+  nightTo: z.string().nullable(),
+  holidayPaid: z.boolean(),
+  approvalThreshold: z.string().nullable(),
+  approvalThresholdCurrency: z.string().nullable(),
+  isActive: z.boolean(),
+  settingsUpdatedAt: IsoDate.nullable(),
+});
+export type CompanySettings = z.infer<typeof CompanySettings>;
+
+export const CompanySettingsResponse = z.object({ company: CompanySettings });
+
+/**
+ * Izmjena postavki. Sva polja su opcionalna (PATCH), ali `null` je EKSPLICITNO brisanje:
+ * razlika „nije poslano“ i „obrisano“ mora postojati, inače korisnik ne može ukloniti IBAN.
+ */
+export const CompanySettingsPatch = z.object({
+  name: SafeText.min(1).max(200).optional(),
+  legalName: SafeText.max(200).nullable().optional(),
+  taxId: SafeText.max(30).nullable().optional(),
+  vatId: SafeText.max(30).nullable().optional(),
+  vatRegistered: z.boolean().optional(),
+  address: SafeText.max(200).nullable().optional(),
+  city: SafeText.max(100).nullable().optional(),
+  postalCode: SafeText.max(20).nullable().optional(),
+  country: SafeText.regex(/^[A-Z]{2}$/, "Država je dvoslovna oznaka (BA, HR, RS…).").optional(),
+  phone: SafeText.max(40).nullable().optional(),
+  email: z
+    .union([z.literal(""), z.string().email("Email nije ispravan.")])
+    .nullable()
+    .optional(),
+  web: SafeText.max(200).nullable().optional(),
+  iban: SafeText.max(34).nullable().optional(),
+  bankName: SafeText.max(120).nullable().optional(),
+  logoObjectKey: SafeText.max(300).nullable().optional(),
+  weekStart: z.enum(["MON", "SUN"]).optional(),
+  workdayHours: z.number().gt(0).max(24).optional(),
+  overtimeDailyThreshold: z.number().min(0).max(24).optional(),
+  nightFrom: ClockText.nullable().optional(),
+  nightTo: ClockText.nullable().optional(),
+  holidayPaid: z.boolean().optional(),
+  approvalThreshold: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, "Iznos je decimalni broj, npr. 500.00")
+    .nullable()
+    .optional(),
+  approvalThresholdCurrency: z.string().length(3).nullable().optional(),
+});
+export type CompanySettingsPatch = z.infer<typeof CompanySettingsPatch>;
+
+export const CompanyHoliday = z.object({
+  id: z.string(),
+  date: CalendarDateText,
+  name: z.string(),
+  isPaid: z.boolean(),
+  isWorking: z.boolean(),
+});
+export type CompanyHoliday = z.infer<typeof CompanyHoliday>;
+
+export const CompanyHolidaysResponse = z.object({
+  holidays: z.array(CompanyHoliday),
+  /** Godina na koju se lista odnosi; UI mijenja godinu bez novog oblika odgovora. */
+  year: z.number(),
+});
+
+export const CompanyHolidayInput = z.object({
+  date: CalendarDateText,
+  name: SafeText.min(1).max(120),
+  isPaid: z.boolean().default(true),
+  /** `true` = prenesena radna subota (radi se iako je neradni dan). */
+  isWorking: z.boolean().default(false),
+});
+export type CompanyHolidayInput = z.infer<typeof CompanyHolidayInput>;
+
+export const CompanyHolidayResponse = z.object({ holiday: CompanyHoliday });
+export const OkDeletedResponse = z.object({ deleted: z.boolean() });
+
+/* ------------------------------------------------------------------ sesije */
+
+export const SessionEntry = z.object({
+  id: z.string(),
+  deviceLabel: z.string(),
+  lastSeenAt: IsoDate,
+  createdAt: IsoDate,
+  expiresAt: IsoDate,
+  isCurrent: z.boolean(),
+});
+export type SessionEntry = z.infer<typeof SessionEntry>;
+
+export const SessionsResponse = z.object({ sessions: z.array(SessionEntry) });
+export type SessionsResponse = z.infer<typeof SessionsResponse>;
+export const SessionsRevokedResponse = z.object({ revoked: z.number() });
+export type SessionsRevokedResponse = z.infer<typeof SessionsRevokedResponse>;
+
+/* --------------------------------------------------------------------- 2FA */
+
+export const TwoFactorStatusResponse = z.object({
+  enabled: z.boolean(),
+  /** Postoji tajna, ali nije potvrđena prvim kodom. */
+  pendingEnrollment: z.boolean(),
+  recoveryCodesLeft: z.number(),
+  /** Rola zahtijeva 2FA — isključivanje nije dozvoljeno (spec 01 §1.5.21). */
+  required: z.boolean(),
+  /** Sesija je izdata samo radi uparivanja: poslovni ekrani su zaključani dok se ne potvrdi. */
+  enrollmentPending: z.boolean(),
+});
+
+export const TwoFactorEnrollResponse = z.object({
+  /** `otpauth://` URI za QR; postoji samo u ovom odgovoru. */
+  uri: z.string(),
+  secret: z.string(),
+});
+
+export const TwoFactorCodeInput = z.object({
+  code: z.string().regex(/^\d{6}$/, "Kod ima 6 cifara."),
+});
+export type TwoFactorCodeInput = z.infer<typeof TwoFactorCodeInput>;
+
+export const TwoFactorConfirmResponse = z.object({
+  /** Recovery kodovi se prikazuju TAČNO JEDNOM (spec 01 §1.5.22). */
+  recoveryCodes: z.array(z.string()),
+});
+
+export const TwoFactorDisableInput = z.object({
+  password: SafeText.min(1),
+  code: z.string().regex(/^\d{6}$/, "Kod ima 6 cifara."),
+});
+export type TwoFactorDisableInput = z.infer<typeof TwoFactorDisableInput>;
+
+export const TwoFactorResetInput = z.object({
+  reason: SafeText.min(10).max(500),
+});
+export type TwoFactorResetInput = z.infer<typeof TwoFactorResetInput>;
+
+/** Drugi korak prijave: pre-auth token ide u zaglavlju, ovdje je samo kod. */
+export const TwoFactorVerifyInput = z.object({
+  code: SafeText.min(6).max(12),
+});
+export type TwoFactorVerifyInput = z.infer<typeof TwoFactorVerifyInput>;
+
+/* -------------------------------------------------------------- platforma */
+
+export const PlatformCompanyRow = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  isActive: z.boolean(),
+  userCount: z.number(),
+  lastActivityAt: IsoDate.nullable(),
+  createdAt: IsoDate,
+});
+export type PlatformCompanyRow = z.infer<typeof PlatformCompanyRow>;
+
+export const PlatformCompaniesResponse = z.object({ companies: z.array(PlatformCompanyRow) });
+
+export const PlatformCompanyCreateInput = z.object({
+  name: SafeText.min(2).max(200),
+  /** Bez sluga se izvodi iz naziva; provjera zauzetosti je na serveru. */
+  slug: SafeText.regex(/^[a-z0-9][a-z0-9-]{1,62}$/, "Slug: mala slova, brojevi i crtice.").optional(),
+  taxId: SafeText.max(30).nullable().optional(),
+  city: SafeText.max(100).nullable().optional(),
+  address: SafeText.max(200).nullable().optional(),
+  currency: z.string().length(3).default("BAM"),
+  timezone: SafeText.max(64).default("Europe/Sarajevo"),
+  weekStart: z.enum(["MON", "SUN"]).default("MON"),
+  /** Email vlasnika: ako korisnik postoji, dobija članstvo; ako ne, dobija pozivnicu. */
+  ownerEmail: z.string().email("Email vlasnika nije ispravan."),
+  ownerFirstName: SafeText.min(1).max(100),
+  ownerLastName: SafeText.min(1).max(100),
+});
+export type PlatformCompanyCreateInput = z.infer<typeof PlatformCompanyCreateInput>;
+
+export const PlatformCompanyCreateResponse = z.object({
+  company: PlatformCompanyRow,
+  /** Sirovi link pozivnice, ako je vlasnik nov — postoji samo u ovom odgovoru. */
+  invitationLink: z.string().nullable(),
+});
+
+export const PlatformSupportAccessInput = z.object({
+  reason: SafeText.min(10).max(500),
+  minutes: z.number().int().min(5).max(60),
+});
+export type PlatformSupportAccessInput = z.infer<typeof PlatformSupportAccessInput>;
+
+export const PlatformSupportAccessResponse = z.object({
+  expiresAt: IsoDate,
+});

@@ -30,6 +30,8 @@ export type AuthContext = {
    * (bez filtera), za `SELF` prazan niz. Namjerno `null`, a ne prazan niz: vidi `visibleProjectIds`.
    */
   projectIds: string[] | null;
+  /** Sesija čiji je JEDINI posao da upari 2FA (vidi `ENROLLMENT_ALLOWED`). */
+  enrollmentPending: boolean;
 };
 
 export type AuthResult = { ok: true; ctx: AuthContext } | { ok: false; code: "UNAUTHENTICATED" | "FORBIDDEN" };
@@ -46,6 +48,31 @@ export function readAccessToken(request: NextRequest): string | null {
  * privremenom lozinkom mogao raditi sve osim što mu UI to ne pokazuje.
  */
 const PASSWORD_CHANGE_ALLOWED = new Set(["/api/auth/change-password", "/api/auth/logout-all", "/api/me"]);
+
+/**
+ * Rute koje smije koristiti sesija izdata radi UPARIVANJA 2FA.
+ *
+ * Popis je namjerno kratak i bez ijedne poslovne rute: takva sesija nije „prijava sa
+ * manje prava", nego priprema prijave. `change-password` je tu jer nalog sa privremenom
+ * lozinkom mora moći prvo nju promijeniti, pa onda upariti 2FA.
+ */
+const ENROLLMENT_ALLOWED = new Set([
+  "/api/auth/2fa/enroll",
+  "/api/auth/2fa/verify",
+  "/api/auth/2fa/status",
+  "/api/auth/change-password",
+  "/api/auth/logout",
+  "/api/auth/logout-all",
+  "/api/me",
+]);
+
+export function requiresEnrollment(
+  ctx: AuthContext,
+  pathname: string,
+): "AUTH_2FA_ENROLLMENT_REQUIRED" | null {
+  if (!ctx.enrollmentPending) return null;
+  return ENROLLMENT_ALLOWED.has(pathname) ? null : "AUTH_2FA_ENROLLMENT_REQUIRED";
+}
 
 export function requiresPasswordChange(
   ctx: AuthContext,
@@ -141,6 +168,7 @@ export async function authenticate(request: NextRequest, now = new Date()): Prom
       // vrijednost (npr. iz ručnog upisa u bazu) pada na najuži opseg.
       scope: scope,
       projectIds: scope === "COMPANY" ? null : scope === "PROJECTS" ? rows.projectIds : [],
+      enrollmentPending: claims.enr === true,
     },
   };
 }

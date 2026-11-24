@@ -20,6 +20,8 @@ import { POST as changePasswordRoute } from "@/app/api/auth/change-password/rout
 import { GET as invitePreviewRoute, POST as inviteAcceptRoute } from "@/app/api/invitations/[token]/route";
 import { POST as resetApplyRoute } from "@/app/api/password-resets/[token]/route";
 import { hashToken, isValidTokenFormat } from "./tokens";
+import { completeLogin } from "@/test/two-step-login";
+import { resetLoginAttempts, seedTotp, type TotpFixture } from "@/test/totp-fixture";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -54,9 +56,13 @@ describeDb("R1a — pristup (integracija na pravoj bazi)", () => {
   const admin = new Pool({ connectionString: adminUrl });
   const app = new Pool({ connectionString: process.env.DATABASE_URL });
   let adminCookie = "";
+  let TOTP_ADMIN: TotpFixture;
   let workerId = "";
 
   beforeAll(async () => {
+    // Brojač pokušaja je u bazi sa prozorom od 60 s: bez ovoga drugi prolaz u istoj minuti
+    // pada na `RATE_LIMITED` i izgleda kao greška u kodu (a test rate limita ga i puni).
+    await resetLoginAttempts(admin);
     // Korisnici nisu tenant-vlasništvo: brišu se eksplicitno, inače drugi prolaz pada na PK
     // ili na `users_email_key` (emailovi koje su napravile pozivnice iz prethodnog prolaza).
     await admin.query("DELETE FROM password_resets WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@r1a.test')");
@@ -86,9 +92,15 @@ describeDb("R1a — pristup (integracija na pravoj bazi)", () => {
         `INSERT INTO memberships (id, user_id, company_id, roles, scope) VALUES ($1, $2, $3, $4::"Role"[], 'COMPANY')`,
         [`mem_${id}`, id, COMPANY, [role]],
       );
+      // OWNER/ADMIN od F1 imaju obaveznu 2FA — bez potvrđene tajne prijava staje na prvom koraku.
+      if (role === "ADMIN") TOTP_ADMIN = await seedTotp(admin, id);
     }
 
-    const login = await loginRoute(json(`${BASE}/api/auth/login`, { email: "admin@r1a.test", password: PASSWORD }));
+    const login = await completeLogin(
+      BASE,
+      await loginRoute(json(`${BASE}/api/auth/login`, { email: "admin@r1a.test", password: PASSWORD })),
+      TOTP_ADMIN.secret,
+    );
     adminCookie = cookieOf(login, "gx_at");
     expect(adminCookie).not.toBe("");
   }, 60_000);

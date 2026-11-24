@@ -12,6 +12,7 @@ import type {
   MeResponse,
   ObligationsResponse,
   ProjectsResponse,
+  SessionsResponse,
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
@@ -179,6 +180,30 @@ export async function pullForemanWorkers(projectId: string, workDate: string): P
 
 /** Rokovi na telefonu: samo čitanje (R2). Filter `mine=1` daje obaveze gdje sam odgovoran
  * ili je radnik vezan za moj nalog — a to je jedino što terenski čovjek traži. */
+/**
+ * Moji uređaji (F1, spec 01 §1.6.28). Isti endpoint kao web — telefon ne dobija poseban
+ * spisak, samo svoj. Opoziv tuđeg uređaja ne dira tekući token.
+ */
+export async function mySessions(): Promise<SessionsResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/me/sessions", undefined, { accessToken }),
+  );
+  return data;
+}
+
+/** Opoziv jednog uređaja; tekući uređaj server odbija (`SESSION_CURRENT`). */
+export async function revokeMySession(id: string): Promise<void> {
+  await withToken((accessToken) => client.delete("/api/me/sessions/{id}", { id }, { accessToken }));
+}
+
+/** „Odjavi sve ostale“ — tekuća sesija ostaje, ostali moraju ponovo da se prijave. */
+export async function revokeOtherSessions(): Promise<number> {
+  const { data } = await withToken((accessToken) =>
+    client.post("/api/me/sessions/revoke-others", undefined, undefined, { accessToken }),
+  );
+  return data.revoked;
+}
+
 export async function myObligations(): Promise<ObligationsResponse> {
   const { data } = await withToken((accessToken) =>
     client.get("/api/obligations", undefined, { query: { mine: "1" }, accessToken }),

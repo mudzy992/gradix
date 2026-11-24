@@ -70,6 +70,26 @@ export const AUDIT_ACTIONS = [
   "attachment.deleted",
   "attachment.confirmed",
   "fuel.priced",
+  // Faza 1 — firma, pristup, platforma
+  "company.settings_updated",
+  "company.holiday_created",
+  "company.holiday_updated",
+  "company.holiday_deleted",
+  "user.2fa_enabled",
+  "user.2fa_disabled",
+  "user.2fa_reset",
+  "user.2fa_recovery_used",
+  "session.revoked_admin",
+  "session.revoked_self",
+  "platform.company_created",
+  "platform.company_suspended",
+  "platform.company_activated",
+  "platform.support_access_granted",
+  "platform.support_access_revoked",
+  "audit.retention_purged",
+  // Trag PRISTUPA osjetljivim podacima (spec 01 §1.9.42) — `retention_class = ACCESS`.
+  "payroll.viewed",
+  "attachment.sensitive_viewed",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -89,6 +109,10 @@ export const AUDIT_ENTITY_TYPES = [
   "sync_conflict",
   "tender",
   "fuel_entry",
+  "company",
+  "company_holiday",
+  "platform_user",
+  "support_session",
 ] as const;
 
 /** Radnje prikazane bosanski — jedan izvor za ekran i za detalj zapisa. */
@@ -143,6 +167,24 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "attachment.deleted": "Prilog obrisan",
   "attachment.confirmed": "Prilog potvrđen",
   "fuel.priced": "Cijena goriva unesena",
+  "company.settings_updated": "Postavke firme izmijenjene",
+  "company.holiday_created": "Praznik dodan",
+  "company.holiday_updated": "Praznik izmijenjen",
+  "company.holiday_deleted": "Praznik uklonjen",
+  "user.2fa_enabled": "Dvofaktorska prijava uključena",
+  "user.2fa_disabled": "Dvofaktorska prijava isključena",
+  "user.2fa_reset": "Dvofaktorska prijava resetovana",
+  "user.2fa_recovery_used": "Iskorišten recovery kod",
+  "session.revoked_admin": "Sesija opozvana (administrator)",
+  "session.revoked_self": "Sesija opozvana",
+  "platform.company_created": "Firma kreirana (platforma)",
+  "platform.company_suspended": "Firma suspendovana",
+  "platform.company_activated": "Firma aktivirana",
+  "platform.support_access_granted": "Platforma dobila podršku pristupa",
+  "platform.support_access_revoked": "Podrška pristupa završena",
+  "audit.retention_purged": "Stari audit zapisi uklonjeni po retenciji",
+  "payroll.viewed": "Pregled obračuna",
+  "attachment.sensitive_viewed": "Pregled osjetljivog priloga",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */
@@ -150,6 +192,14 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /** Polja koja se NIKAD ne upisuju u audit — provjerava se prije upisa, ne poslije. */
 const FORBIDDEN_METADATA_KEYS = /token|password|hash|secret/i;
+
+/**
+ * Klasa retencije (spec 01 §1.9.41): koliko dugo zapis mora ostati.
+ *   STANDARD  2 g.  — obične izmjene
+ *   ACCESS    5 g.  — pristup osjetljivim podacima, 2FA, support pristup
+ *   FINANCIAL 10 g. — novac, obračuni, plate
+ */
+export type AuditRetentionClass = "STANDARD" | "ACCESS" | "FINANCIAL";
 
 export type AuditEntry = {
   companyId: string;
@@ -160,6 +210,9 @@ export type AuditEntry = {
   entityId: string;
   metadata?: Record<string, unknown>;
   ipHash?: string | null;
+  /** Rola u trenutku radnje — role se mijenjaju, trag mora ostati tačan. */
+  actorRole?: string | null;
+  retentionClass?: AuditRetentionClass;
 };
 
 export function ipHash(ip: string): string {
@@ -183,17 +236,21 @@ export async function writeAudit(client: PoolClient, entry: AuditEntry): Promise
   const metadata = entry.metadata ?? {};
   assertNoSecrets(metadata);
   await client.query(
-    `INSERT INTO audit_events (id, company_id, actor_id, actor_email, action, entity_type, entity_id, metadata, ip_hash)
-     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+    `INSERT INTO audit_events
+       (id, company_id, actor_id, actor_email, actor_role, action, entity_type, entity_id,
+        metadata, ip_hash, retention_class)
+     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10)`,
     [
       entry.companyId,
       entry.actorId,
       entry.actorEmail,
+      entry.actorRole ?? null,
       entry.action,
       entry.entityType,
       entry.entityId,
       JSON.stringify(metadata),
       entry.ipHash ?? null,
+      entry.retentionClass ?? "STANDARD",
     ],
   );
 }

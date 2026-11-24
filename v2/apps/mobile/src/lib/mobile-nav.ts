@@ -14,7 +14,18 @@ export type MobileNavProfile = {
 };
 
 export type MobileNavEntry = {
-  href: "/moj-dan" | "/grupa" | "/sati-masine" | "/gorivo" | "/ture" | "/dnevni-pregled" | "/kvarovi" | "/rokovi" | "/projekti";
+  href:
+    | "/moj-dan"
+    | "/grupa"
+    | "/sati-masine"
+    | "/gorivo"
+    | "/ture"
+    | "/dnevni-pregled"
+    | "/kvarovi"
+    | "/rokovi"
+    | "/projekti"
+    /* F1: bez veze sa radnikom — svaki nalog ima svoje uređaje i može ih odjaviti. */
+    | "/uredjaji";
   label: string;
   visible: (profile: MobileNavProfile) => boolean;
 };
@@ -57,6 +68,7 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
   },
   { href: "/rokovi", label: "Moji rokovi", visible: () => true },
   { href: "/projekti", label: "Moji projekti", visible: () => true },
+  { href: "/uredjaji", label: "Moji uređaji", visible: () => true },
 ];
 
 export function mobileNavForProfile(profile: MobileNavProfile): MobileNavEntry[] {

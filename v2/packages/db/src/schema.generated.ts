@@ -84,6 +84,7 @@ export interface AuditEvents {
   action: string;
   actor_email: string | null;
   actor_id: string | null;
+  actor_role: string | null;
   company_id: string;
   created_at: Generated<Timestamp>;
   entity_id: string;
@@ -91,22 +92,73 @@ export interface AuditEvents {
   id: string;
   ip_hash: string | null;
   metadata: Generated<Json>;
+  retention_class: Generated<string>;
 }
 
 export interface Companies {
+  address: string | null;
+  approval_threshold_cents: Int8 | null;
+  approval_threshold_currency: string | null;
+  bank_name: string | null;
+  city: string | null;
   conflict_reminder_days: Generated<number>;
+  country: Generated<string>;
   created_at: Generated<Timestamp>;
   currency: Generated<string>;
+  default_currency: string | null;
+  default_locale: Locale | null;
+  email: string | null;
+  holiday_paid: Generated<boolean>;
+  iban: string | null;
   id: string;
   is_active: Generated<boolean>;
+  legal_name: string | null;
   locale: Generated<Locale>;
+  logo_object_key: string | null;
   monthly_report_enabled: Generated<boolean>;
   monthly_report_recipients: string[] | null;
   name: string;
+  night_from: string | null;
+  night_to: string | null;
+  overtime_daily_threshold: Generated<Numeric>;
+  phone: string | null;
+  postal_code: string | null;
+  seeded_at: Timestamp | null;
+  settings_updated_at: Timestamp | null;
+  settings_updated_by: string | null;
   slug: string;
   sync_conflict_retention_days: Generated<number>;
+  tax_id: string | null;
   timezone: Generated<string>;
   updated_at: Generated<Timestamp>;
+  vat_id: string | null;
+  vat_registered: Generated<boolean>;
+  web: string | null;
+  week_start: Generated<string>;
+  workday_hours: Generated<Numeric>;
+}
+
+export interface CompanyHolidays {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  holiday_date: string;
+  id: string;
+  is_paid: Generated<boolean>;
+  is_working: Generated<boolean>;
+  name: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface DailyRollups {
+  company_id: string;
+  computed_at: Generated<Timestamp>;
+  cost_cents: Generated<Int8>;
+  fuel_liters: Generated<Numeric>;
+  hours_total: Generated<Numeric>;
+  id: string;
+  machine_hours: Generated<Numeric>;
+  rollup_date: string;
+  workday_count: Generated<number>;
 }
 
 export interface EquipmentCategories {
@@ -397,6 +449,18 @@ export interface Notifications {
   user_id: string | null;
 }
 
+export interface NotificationTemplates {
+  body: string;
+  code: string;
+  company_id: string | null;
+  created_at: Generated<Timestamp>;
+  id: string;
+  locale: Generated<Locale>;
+  subject: string;
+  updated_at: Generated<Timestamp>;
+  variables: Generated<string[]>;
+}
+
 export interface Obligations {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -461,6 +525,13 @@ export interface Partners {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PasswordHistory {
+  created_at: Generated<Timestamp>;
+  id: string;
+  password_hash: string;
+  user_id: string;
+}
+
 export interface PasswordResets {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -473,11 +544,36 @@ export interface PasswordResets {
   user_id: string;
 }
 
+export interface PlatformSessions {
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: string;
+  ip_hash: string | null;
+  platform_user_id: string;
+  revoked_at: Timestamp | null;
+  token_hash: string;
+  user_agent: string | null;
+}
+
+export interface PlatformSupportSessions {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: string;
+  platform_user_id: string;
+  reason: string;
+  revoked_at: Timestamp | null;
+}
+
 export interface PlatformUsers {
   created_at: Generated<Timestamp>;
+  display_name: string | null;
   email: string;
   id: string;
+  is_active: Generated<boolean>;
+  last_login_at: Timestamp | null;
   password_hash: string;
+  totp_enabled: Generated<boolean>;
 }
 
 export interface ProjectAssignmentOverrides {
@@ -547,6 +643,21 @@ export interface Projects {
   updated_at: Generated<Timestamp>;
 }
 
+export interface ReportJobs {
+  attempts: Generated<number>;
+  company_id: string;
+  completed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  id: string;
+  kind: string;
+  last_error: string | null;
+  object_key: string | null;
+  period_from: string;
+  period_to: string;
+  requested_by: string | null;
+  status: Generated<string>;
+}
+
 export interface RouteSegments {
   code: string;
   company_id: string;
@@ -563,11 +674,16 @@ export interface RouteSegments {
 export interface Sessions {
   company_id: string;
   created_at: Generated<Timestamp>;
+  device_hash: string | null;
+  device_label: string | null;
   expires_at: Timestamp;
   id: string;
+  ip_hash: string | null;
+  last_seen_at: Generated<Timestamp>;
   pwd_change_required: Generated<boolean>;
   revoked_at: Timestamp | null;
   token_hash: string;
+  user_agent: string | null;
   user_id: string;
 }
 
@@ -673,17 +789,54 @@ export interface UsageOverrides {
   valid_to: string | null;
 }
 
+export interface UserDevices {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  expo_push_token: string;
+  id: string;
+  last_seen_at: Generated<Timestamp>;
+  platform: string;
+  revoked_at: Timestamp | null;
+  user_id: string;
+}
+
+export interface UserRecoveryCodes {
+  code_hash: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  used_at: Timestamp | null;
+  user_id: string;
+}
+
 export interface Users {
   created_at: Generated<Timestamp>;
   email: string;
+  failed_login_count: Generated<number>;
   first_name: string;
   id: string;
   is_active: Generated<boolean>;
+  last_login_at: Timestamp | null;
   last_name: string;
   locale: Generated<Locale>;
+  locked_until: Timestamp | null;
   must_change_password: Generated<boolean>;
+  must_enroll_2fa: Generated<boolean>;
+  password_changed_at: Timestamp | null;
+  password_expires_at: Timestamp | null;
   password_hash: string;
+  timezone: Generated<string>;
+  totp_enabled: Generated<boolean>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface UserTotp {
+  confirmed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  id: string;
+  last_used_step: Int8 | null;
+  secret_enc: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
 }
 
 export interface WorkdayRevisions {
@@ -772,6 +925,8 @@ export interface DB {
   attachments: Attachments;
   audit_events: AuditEvents;
   companies: Companies;
+  company_holidays: CompanyHolidays;
+  daily_rollups: DailyRollups;
   equipment_categories: EquipmentCategories;
   fuel_entries: FuelEntries;
   fuel_entry_revisions: FuelEntryRevisions;
@@ -791,17 +946,22 @@ export interface DB {
   memberships: Memberships;
   notification_deliveries: NotificationDeliveries;
   notification_preferences: NotificationPreferences;
+  notification_templates: NotificationTemplates;
   notifications: Notifications;
   obligation_types: ObligationTypes;
   obligation_versions: ObligationVersions;
   obligations: Obligations;
   partners: Partners;
+  password_history: PasswordHistory;
   password_resets: PasswordResets;
+  platform_sessions: PlatformSessions;
+  platform_support_sessions: PlatformSupportSessions;
   platform_users: PlatformUsers;
   project_assignment_overrides: ProjectAssignmentOverrides;
   project_assignments: ProjectAssignments;
   project_cost_entries: ProjectCostEntries;
   projects: Projects;
+  report_jobs: ReportJobs;
   route_segments: RouteSegments;
   sessions: Sessions;
   sync_change_log: SyncChangeLog;
@@ -811,6 +971,9 @@ export interface DB {
   sync_receipts: SyncReceipts;
   tenders: Tenders;
   usage_overrides: UsageOverrides;
+  user_devices: UserDevices;
+  user_recovery_codes: UserRecoveryCodes;
+  user_totp: UserTotp;
   users: Users;
   work_entries: WorkEntries;
   work_week_approvals: WorkWeekApprovals;

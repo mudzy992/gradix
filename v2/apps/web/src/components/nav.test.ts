@@ -29,6 +29,12 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/lozinka/postavi": "dolazi se isključivo token-linkom iz pozivnice/reseta",
   "/lozinka/promjena": "korisnički meni u okviru + prisilna promjena poslije prijave",
   "/katalog": "U5 katalog UI komponenti — razvojni alat, otvara se direktnim URL-om",
+  "/ured/profil": "lični profil: ulaz iz korisničkog menija u okviru, nema dozvolu",
+  "/ured/profil/sesije": "„Moje sesije“ — lično, ulaz sa profila i iz korisničkog menija",
+  "/platform": "korijen platforme preusmjerava na /platform/firme",
+  "/platform/login": "prijava operatora prije platform sesije (odvojen cookie)",
+  "/platform/firme": "platforma nije dio tenant navigacije — operator nije član firme",
+  "/platform/firme/nova": "onboarding čarobnjak, ulaz sa liste firmi",
 };
 
 describe("dosegljivost stranica (A4a)", () => {

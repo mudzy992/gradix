@@ -176,6 +176,18 @@ export const PERMISSIONS = {
   // R6.2: CSV obračun sati + dashboard agregati (G0: sati, ne puna plata).
   "payroll.hours.export": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "dashboard.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  /*
+   * F1 (spec 01 §3): postavke firme.
+   *
+   * `view` je širi od `manage` jer radno vrijeme i praznike moraju VIDJETI svi koji planiraju
+   * — PM i računovođa rade obračun i raspored. Mijenja ih samo vlasnik/admin: prag prekovremenog
+   * i noćni prozor mijenjaju zaradu, pa to nije stvar koja se „usput“ prepravlja.
+   */
+  "company.settings.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "company.settings.manage": ["OWNER", "ADMIN"],
+  "company.holidays.manage": ["OWNER", "ADMIN"],
+  // Red obavještenja (neuspjeli email/push, „ponovi“) — ured, ne svaki korisnik.
+  "notifications.manage": ["OWNER", "ADMIN"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -377,6 +389,25 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "dashboard.view": {
     label: "Dashboard agregati",
     description: "Na pregledu: aktivni projekti, zbir knjiženih troškova i sati u tekućem mjesecu.",
+  },
+  "company.settings.view": {
+    label: "Pregled postavki firme",
+    description:
+      "Podaci firme, radno vrijeme, praznici, pragovi i pravila. Radno vrijeme i praznici su vidljivi svima koji planiraju ili računaju.",
+  },
+  "company.settings.manage": {
+    label: "Upravljanje postavkama firme",
+    description:
+      "Izmjena podataka firme, radnog vremena, noćnog prozora, pragova odobrenja i pravila. Svaka izmjena ide u audit.",
+  },
+  "company.holidays.manage": {
+    label: "Upravljanje praznicima",
+    description:
+      "Praznici i prenesene radne subote. Bez ovoga obračun sati ne zna da je subota bila radna.",
+  },
+  "notifications.manage": {
+    label: "Upravljanje redom obavještenja",
+    description: "Pregled neuspjelih email/push isporuka i ponovni pokušaj slanja.",
   },
 };
 

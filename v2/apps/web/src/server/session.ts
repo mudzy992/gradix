@@ -32,6 +32,12 @@ export type AccessClaims = {
    * pa promjena djeluje odmah, a ne tek kad istekne token.
    */
   pwd?: boolean;
+  /**
+   * Sesija izdata da bi se 2FA UPARILA (spec 01 §1.5.24). Takva sesija ne vidi ni jedan
+   * ekran osim uparivanja — bez toga bi „obavezna 2FA" bila kružni argument: da bi upario
+   * 2FA trebaš sesiju, a da bi dobio sesiju trebaš 2FA.
+   */
+  enr?: boolean;
   exp: number;
   iat: number;
 };
@@ -70,6 +76,7 @@ export function verifyAccessToken(token: string, now = new Date()): AccessClaims
     if (claims.exp <= claims.iat || claims.exp - claims.iat > ACCESS_TTL_SECONDS) return null;
     if (claims.iat > Math.floor(now.getTime() / 1000) + 60 || claims.exp * 1000 <= now.getTime()) return null;
     if (claims.pwd !== undefined && typeof claims.pwd !== "boolean") return null;
+    if (claims.enr !== undefined && typeof claims.enr !== "boolean") return null;
     return claims;
   } catch {
     return null;

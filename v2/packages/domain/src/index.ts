@@ -140,3 +140,59 @@ export {
   type ScopeActor,
   type ScopedAction,
 } from "./scope";
+
+export {
+  ACCOUNT_LOCK_ATTEMPTS,
+  ACCOUNT_LOCK_MINUTES,
+  OFFICE_ROLES_REQUIRING_PASSWORD_ROTATION,
+  PASSWORD_FORCED_RESET_DAYS,
+  PASSWORD_HISTORY_DEPTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PRE_AUTH_TTL_SECONDS,
+  ROLES_REQUIRING_2FA,
+  checkPasswordPolicy,
+  containsIdentity,
+  historyWindow,
+  isBlacklistedPassword,
+  isPasswordExpired,
+  normalizeForBlacklist,
+  requires2fa,
+  requiresPasswordRotation,
+  twoFactorGate,
+  type PasswordPolicyInput,
+  type TwoFactorGate,
+} from "./password-policy";
+
+export {
+  PASSWORD_BLACKLIST,
+  PASSWORD_BLACKLIST_SET,
+} from "./password-blacklist.data";
+
+export {
+  RECOVERY_CODE_COUNT,
+  TOTP_DIGITS,
+  TOTP_PERIOD_SECONDS,
+  TOTP_WINDOW_STEPS,
+  base32Decode,
+  base32Encode,
+  decryptTotpSecret,
+  encryptTotpSecret,
+  generateRecoveryCodes,
+  generateTotpSecret,
+  normalizeRecoveryCode,
+  totpCode,
+  totpStep,
+  totpUri,
+  verifyTotp,
+  type TotpVerifyResult,
+} from "./totp";
+
+export {
+  describeDevice,
+  deviceFingerprint,
+  isCurrentDevice,
+  isSessionActive,
+  sessionsToRevokeOthers,
+  type DeviceSession,
+} from "./sessions";
