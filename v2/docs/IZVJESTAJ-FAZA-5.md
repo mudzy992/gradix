@@ -1,6 +1,6 @@
 # Izvještaj — Faza 5: Projekti, budžet i troškovi
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-5` ·
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-5` → `a67c6d5` · **CI: zelen** ·
 **Spec:** `06-projekti-budzet-troskovi.md` (zaključano)
 
 Faza 5 je isporučena kao **vertikala do kraja**: baza → domena → ugovor → API → web → mobilni →
@@ -168,6 +168,25 @@ primijenjenih 45 migracija: **615/615 testova, 104/104 fajla, nula preskočenih*
 6. `nul-guard` i `attachment-api` — 15 novih F5 ruta nije bilo u NUL sweepu, a test nepoznatog tipa
    priloga koristio `PROJECT`, koji je od F5 **poznat** tip (prolazio je kao 404 iz baze, ne 400 sa
    granice). Rute dodate u `HANDLERS`, test koristi stvarno nepoznat tip.
+
+Nakon toga je CI našao još tri stvari koje lokalna baza nije mogla pokazati:
+
+7. **`/api/tasks` je vraćao 500 na svakom pozivu bez `due` filtera** — `listTasks` je uvijek
+   vezivao poslovni datum kao `$2`, a `$2::date` postoji samo u `TODAY`/`OVERDUE` grani. Postgres
+   odbija višak parametara („bind message supplies 2 parameters, but prepared statement requires
+   1“). Uhvatio ga je E2E (500 u konzoli na svakoj roli), ne unit test — pa je uz popravku dodat
+   `task-service.test.ts` sa lažnim klijentom koji baca istu grešku kad se broj parametara ne
+   poklopi.
+8. **Preflight je tražio ukinutu tabelu** — `001_security.sql` je provjeravao FORCE RLS na
+   `project_cost_entries`, koju je F5 zamijenio sa `cost_entries`. Sada provjerava 11 F5 tabela.
+9. **Parity registri su pokazivali na stare testove** — `R6.cost.book-once`,
+   `R6.cost.accountant-denied` i `app.journey.c-machine-hour-booking` tražili su dokaze u ukinutoj
+   tabeli i u prepisanim naslovima testova; sada pokazuju na stvarne ishode
+   (`{posted:1}` / `{posted:0, skipped:1}` / `toHaveLength(1)`).
+
+**CI (run `45556919968`, commit `a67c6d5`): zelen** — uključujući integracione testove na pravoj
+bazi, E2E (`@smoke` + `@deep`), a11y, preflight na praznoj i popunjenoj bazi, Docker image i
+dijagnostiku unutar slike.
 
 Pouka je ista kao u Fazi 1: jedinični testovi ne vide ni SQL, ni FK, ni transakciju — samo baza.
 
