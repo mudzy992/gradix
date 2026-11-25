@@ -1,6 +1,6 @@
 # Izvještaj — Faza 5: Projekti, budžet i troškovi
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-5` → `a67c6d5` · **CI: zelen** ·
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-5` → `0b60c2a` · **CI: zelen** ·
 **Spec:** `06-projekti-budzet-troskovi.md` (zaključano)
 
 Faza 5 je isporučena kao **vertikala do kraja**: baza → domena → ugovor → API → web → mobilni →
@@ -184,7 +184,7 @@ Nakon toga je CI našao još tri stvari koje lokalna baza nije mogla pokazati:
    tabeli i u prepisanim naslovima testova; sada pokazuju na stvarne ishode
    (`{posted:1}` / `{posted:0, skipped:1}` / `toHaveLength(1)`).
 
-**CI (run `45556919968`, commit `a67c6d5`): zelen** — uključujući integracione testove na pravoj
+**CI (run `45556919968`, commit `a67c6d5`; docs commit `0b60c2a`): zelen** — uključujući integracione testove na pravoj
 bazi, E2E (`@smoke` + `@deep`), a11y, preflight na praznoj i popunjenoj bazi, Docker image i
 dijagnostiku unutar slike.
 
