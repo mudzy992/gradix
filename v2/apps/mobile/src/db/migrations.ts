@@ -1,7 +1,11 @@
 import type * as SQLite from "expo-sqlite";
 
 export const DB_NAME = "gradix.db";
-export const LOCAL_SCHEMA_VERSION = 1;
+/**
+ * Verzija lokalne šeme. Podignuta na 2 u F8: `outbox`/`sync_events` su dobili šire skupove
+ * `entity_type` (radioničke radnje i kvarovi), pa stara baza mora proći kroz `__v2` korak.
+ */
+export const LOCAL_SCHEMA_VERSION = 2;
 
 export type LocalSqlite = Pick<
   SQLite.SQLiteDatabase,
@@ -73,7 +77,7 @@ const R4_SCHEMA = `
     user_id       TEXT NOT NULL,
     local_id      TEXT NOT NULL,
     worker_id     TEXT,
-    entity_type   TEXT NOT NULL CHECK (entity_type IN ('workday', 'work_entry')),
+    entity_type   TEXT NOT NULL,
     payload_json  TEXT NOT NULL,
     status        TEXT NOT NULL DEFAULT 'pending'
                   CHECK (status IN ('pending', 'failed', 'sent', 'conflict', 'rejected')),
@@ -100,7 +104,7 @@ const R4_SCHEMA = `
     user_id       TEXT NOT NULL,
     event_id      TEXT NOT NULL,
     cursor_seq    TEXT NOT NULL,
-    entity_type   TEXT NOT NULL CHECK (entity_type IN ('workday', 'work_entry', 'sync_conflict')),
+    entity_type   TEXT NOT NULL,
     entity_id     TEXT NOT NULL,
     entity_version INTEGER NOT NULL CHECK (entity_version > 0),
     payload_json  TEXT,
@@ -191,6 +195,80 @@ async function verifyR4Schema(db: LocalSqlite): Promise<void> {
   }
 }
 
+/**
+ * F8 (`user_version` 2): proširenje `outbox` i `sync_events` na sve sync entitete.
+ *
+ * SQLite ne mijenja `CHECK` ograničenje nadogradnjom — mora se obnoviti tabela. Radnja je
+ * namjerno u JEDNOJ transakciji sa prenosom redova: `outbox` nosi neslane zapise, pa bi prekid
+ * između „drop“ i „insert“ bio gubitak rada sa terena.
+ *
+ * `sync_events` je izvedena iz servera (kursor se obnavlja), ali se i ona prenosi — sukobi se
+ * prikazuju iz nje, a stari kursor bi ih inače izgubio.
+ */
+async function upgradeToV2(db: LocalSqlite): Promise<void> {
+  const outboxSql = await db.getFirstAsync<{ sql: string }>(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'",
+  );
+  if (outboxSql?.sql?.includes("'service_order_action'")) return;
+
+  await db.execAsync(`
+    CREATE TABLE outbox__v2 (
+      company_id    TEXT NOT NULL,
+      user_id       TEXT NOT NULL,
+      local_id      TEXT NOT NULL,
+      worker_id     TEXT,
+      entity_type   TEXT NOT NULL CHECK (entity_type IN (
+        'workday', 'work_entry', 'machine_work_log', 'fuel_entry', 'haul',
+        'machine_daily_check', 'machine_fault', 'service_order_action'
+      )),
+      payload_json  TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'failed', 'sent', 'conflict', 'rejected')),
+      attempts      INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+      last_error    TEXT,
+      server_id     TEXT,
+      server_version INTEGER,
+      created_at    TEXT NOT NULL,
+      updated_at    TEXT NOT NULL,
+      PRIMARY KEY (company_id, user_id, local_id)
+    );
+    INSERT INTO outbox__v2
+      (company_id, user_id, local_id, worker_id, entity_type, payload_json, status, attempts,
+       last_error, server_id, server_version, created_at, updated_at)
+      SELECT company_id, user_id, local_id, worker_id, entity_type, payload_json, status, attempts,
+             last_error, server_id, server_version, created_at, updated_at
+        FROM outbox;
+    DROP TABLE outbox;
+    ALTER TABLE outbox__v2 RENAME TO outbox;
+    CREATE INDEX IF NOT EXISTS outbox_pending_scope_idx
+      ON outbox (company_id, user_id, status, created_at);
+
+    CREATE TABLE sync_events__v2 (
+      company_id    TEXT NOT NULL,
+      user_id       TEXT NOT NULL,
+      event_id      TEXT NOT NULL,
+      cursor_seq    TEXT NOT NULL,
+      entity_type   TEXT NOT NULL,
+      entity_id     TEXT NOT NULL,
+      entity_version INTEGER NOT NULL CHECK (entity_version > 0),
+      payload_json  TEXT,
+      tombstone     INTEGER NOT NULL CHECK (tombstone IN (0, 1)),
+      created_at    TEXT NOT NULL,
+      PRIMARY KEY (company_id, user_id, event_id)
+    );
+    INSERT INTO sync_events__v2
+      (company_id, user_id, event_id, cursor_seq, entity_type, entity_id, entity_version,
+       payload_json, tombstone, created_at)
+      SELECT company_id, user_id, event_id, cursor_seq, entity_type, entity_id, entity_version,
+             payload_json, tombstone, created_at
+        FROM sync_events;
+    DROP TABLE sync_events;
+    ALTER TABLE sync_events__v2 RENAME TO sync_events;
+    CREATE INDEX IF NOT EXISTS sync_events_scope_cursor_idx
+      ON sync_events (company_id, user_id, cursor_seq);
+  `);
+}
+
 async function createExpoBackup(database: LocalSqlite): Promise<LocalDatabaseBackup> {
   const SQLiteRuntime = await import("expo-sqlite");
   const source = database as SQLite.SQLiteDatabase;
@@ -264,6 +342,7 @@ export async function migrateLocalDatabase(
     await db.withTransactionAsync(async () => {
       await ensureLegacySchema(db);
       await db.execAsync(R4_SCHEMA);
+      await upgradeToV2(db);
       await verifyR4Schema(db);
       await db.execAsync(`PRAGMA user_version = ${LOCAL_SCHEMA_VERSION}`);
     });

@@ -931,6 +931,27 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       downtimeMinutes: z.number().int().min(0).nullable(),
     }).strict(),
   }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("service_order_action"),
+    /** Ključ idempotencije radnje — isti ID dvaput ne skida dio dvaput. */
+    actionId: z.string().min(1).max(128),
+    serviceOrderId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    action: z.object({
+      kind: z.enum(["START", "WAIT_PARTS", "FINISH", "PART"]),
+      laborHours: z.string().regex(/^\d{1,3}(?:\.\d{1,2})?$/).nullable(),
+      externalCostAmount: z.string().min(1).nullable(),
+      warrantyUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+      note: SafeText.max(1000).nullable(),
+      part: z.object({
+        itemId: z.string().min(1).max(128),
+        quantity: z.string().regex(/^\d{1,9}(?:\.\d{1,3})?$/),
+        unitCostAmount: z.string().min(1).nullable(),
+        note: SafeText.max(1000).nullable(),
+      }).strict().nullable(),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -958,7 +979,7 @@ export const SyncPullEvent = z.object({
   cursorSeq: z.string(),
   entityType: z.enum([
     "workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul",
-    "machine_daily_check", "machine_fault",
+    "machine_daily_check", "machine_fault", "service_order_action",
   ]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
@@ -4151,3 +4172,366 @@ export const MyPayrollResponse = z.object({
   lines_available_reason: SafeText.nullable(),
 });
 export type MyPayrollResponse = z.infer<typeof MyPayrollResponse>;
+
+/* ============================================================== F8: servis i održavanje */
+
+/**
+ * Polja koja se mijenjaju kroz akcije (`start`, `finish`, `wait-parts`) nijesu u `Patch` unosu:
+ * status se NE postavlja ručno. Kad bi `status` bio obično polje, ekran bi mogao poslati
+ * `DONE` bez `finished_at`, pa bi MTTR i naplata zavisili od toga ko je šta poslao.
+ */
+export const ServiceOrderStatus = z.enum([
+  "PLANNED",
+  "APPROVED",
+  "IN_PROGRESS",
+  "WAITING_PARTS",
+  "DONE",
+  "CANCELLED",
+]);
+export type ServiceOrderStatus = z.infer<typeof ServiceOrderStatus>;
+
+export const ServiceOrderOrigin = z.enum(["FAULT", "PREVENTIVE", "MANUAL", "INSPECTION"]);
+export const ServiceOrderKind = z.enum(["INTERNAL", "EXTERNAL"]);
+export const ServiceOrderPriority = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+
+export const ServiceOrderRow = z.object({
+  id: z.string(),
+  machineId: z.string(),
+  machineCode: z.string(),
+  machineName: z.string(),
+  faultId: z.string().nullable(),
+  faultTitle: z.string().nullable(),
+  projectId: z.string().nullable(),
+  projectCode: z.string().nullable(),
+  partnerId: z.string().nullable(),
+  partnerName: z.string().nullable(),
+  origin: ServiceOrderOrigin,
+  kind: ServiceOrderKind,
+  priority: ServiceOrderPriority,
+  status: ServiceOrderStatus,
+  description: SafeText.nullable(),
+  plannedFor: z.string().nullable(),
+  openedAt: IsoDate,
+  startedAt: IsoDate.nullable(),
+  finishedAt: IsoDate.nullable(),
+  /** `finished_at − started_at`; `null` dok rad nije završen. */
+  downtimeMinutes: z.number().int().nullable(),
+  assignedMechanicWorkerId: z.string().nullable(),
+  assignedMechanicName: z.string().nullable(),
+  laborHours: z.string(),
+  laborCostAmount: z.string(),
+  partsCostAmount: z.string(),
+  externalCostAmount: z.string(),
+  totalCostAmount: z.string(),
+  currencyCode: z.string().length(3),
+  plannedCostAmount: z.string().nullable(),
+  externalQuoteAmount: z.string().nullable(),
+  externalInvoiceRef: z.string().nullable(),
+  maintenancePlanId: z.string().nullable(),
+  warrantyUntil: z.string().nullable(),
+  warrantyClaim: z.boolean(),
+  warrantySourceOrderId: z.string().nullable(),
+  cancelReason: z.string().nullable(),
+  /** Red čekanja: koliko dana nalog stoji otvoren (0 za završene). */
+  openDays: z.number().int(),
+  approvalStatus: z.enum(["OPEN", "APPROVED", "REJECTED"]).nullable(),
+  approvalRequestId: z.string().nullable(),
+  version: z.number().int(),
+});
+export type ServiceOrderRow = z.infer<typeof ServiceOrderRow>;
+
+export const ServiceOrdersResponse = z.object({ orders: z.array(ServiceOrderRow) });
+export type ServiceOrdersResponse = z.infer<typeof ServiceOrdersResponse>;
+
+export const ServiceOrderEvent = z.object({
+  id: z.string(),
+  kind: z.enum([
+    "OPENED",
+    "APPROVED",
+    "STARTED",
+    "PARTS_REQUESTED",
+    "WAITING",
+    "FINISHED",
+    "REOPENED",
+    "CANCELLED",
+  ]),
+  at: IsoDate,
+  actorName: z.string().nullable(),
+  note: z.string().nullable(),
+});
+export type ServiceOrderEvent = z.infer<typeof ServiceOrderEvent>;
+
+export const ServiceOrderPartRow = z.object({
+  id: z.string(),
+  itemId: z.string(),
+  itemCode: z.string(),
+  itemName: z.string(),
+  unit: z.string(),
+  quantity: z.string(),
+  unitCostAmount: z.string(),
+  totalCostAmount: z.string(),
+  stockMovementId: z.string().nullable(),
+  note: z.string().nullable(),
+});
+export type ServiceOrderPartRow = z.infer<typeof ServiceOrderPartRow>;
+
+export const ServiceOrderDetail = z.object({
+  order: ServiceOrderRow,
+  events: z.array(ServiceOrderEvent),
+  parts: z.array(ServiceOrderPartRow),
+  /** Trošak iz ledžera, kad je proknjižen — `null` dok nije. */
+  costEntry: z
+    .object({
+      id: z.string(),
+      amountAmount: z.string().nullable(),
+      status: z.enum(["POSTED", "PENDING", "REVERSED"]),
+      projectId: z.string().nullable(),
+    })
+    .nullable(),
+  nextStatuses: z.array(ServiceOrderStatus),
+});
+export type ServiceOrderDetail = z.infer<typeof ServiceOrderDetail>;
+
+export const ServiceOrderCreateInput = z
+  .object({
+    machineId: z.string().min(1),
+    faultId: z.string().min(1).nullable().optional(),
+    projectId: z.string().min(1).nullable().optional(),
+    partnerId: z.string().min(1).nullable().optional(),
+    maintenancePlanId: z.string().min(1).nullable().optional(),
+    origin: ServiceOrderOrigin,
+    kind: ServiceOrderKind,
+    priority: ServiceOrderPriority,
+    description: SafeText.min(3).max(2000),
+    plannedFor: IsoDate.nullable().optional(),
+    assignedMechanicWorkerId: z.string().min(1).nullable().optional(),
+    plannedCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    externalQuoteAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+  })
+  .strict();
+export type ServiceOrderCreateInput = z.infer<typeof ServiceOrderCreateInput>;
+
+export const ServiceOrderPatchInput = z
+  .object({
+    priority: ServiceOrderPriority.optional(),
+    description: SafeText.min(3).max(2000).optional(),
+    plannedFor: IsoDate.nullable().optional(),
+    assignedMechanicWorkerId: z.string().min(1).nullable().optional(),
+    projectId: z.string().min(1).nullable().optional(),
+    partnerId: z.string().min(1).nullable().optional(),
+    plannedCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    externalQuoteAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    externalInvoiceRef: SafeText.max(120).nullable().optional(),
+  })
+  .strict();
+export type ServiceOrderPatchInput = z.infer<typeof ServiceOrderPatchInput>;
+
+export const ServiceOrderServiceInput = z
+  .object({
+    /** Sati mehaničara; satnica se čita iz `worker_rates` na dan rada. */
+    laborHours: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    externalCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    externalInvoiceRef: SafeText.max(120).nullable().optional(),
+    /** Garancija na izvedeni rad (datum do kojeg važi). */
+    warrantyUntil: IsoDate.nullable().optional(),
+    /** Ručna ispravka zastoja — traži razlog i ide u audit. */
+    downtimeMinutes: z.number().int().nonnegative().nullable().optional(),
+    downtimeReason: SafeText.min(10).max(500).nullable().optional(),
+  })
+  .strict();
+export type ServiceOrderServiceInput = z.infer<typeof ServiceOrderServiceInput>;
+
+export const ServiceOrderRejectInput = z
+  .object({ reason: SafeText.min(10).max(500) })
+  .strict();
+export type ServiceOrderRejectInput = z.infer<typeof ServiceOrderRejectInput>;
+
+export const ServiceOrderPartInput = z
+  .object({
+    itemId: z.string().min(1),
+    quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
+    /** Kad nije unesen, koristi se zadnja nabavna cijena iz kretnji (`IN`). */
+    unitCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    note: SafeText.max(500).nullable().optional(),
+  })
+  .strict();
+export type ServiceOrderPartInput = z.infer<typeof ServiceOrderPartInput>;
+
+export const ServiceMutationOutcome = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT", "NOT_FOUND"]),
+  id: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+  /** Nakon `finish`: proknjižen trošak (ili `skipped` kad knjiženje nije prošlo). */
+  cost: z
+    .object({ posted: z.number(), pending: z.number(), skipped: z.number() })
+    .optional(),
+});
+export type ServiceMutationOutcome = z.infer<typeof ServiceMutationOutcome>;
+
+/* --- preventivno održavanje --- */
+
+export const MaintenanceBasis = z.enum(["HOURS", "KM", "DAYS"]);
+export const MaintenanceStatus = z.enum(["OK", "DUE_SOON", "OVERDUE", "NO_DATA"]);
+
+export const MaintenanceTemplateRow = z.object({
+  id: z.string(),
+  categoryId: z.string().nullable(),
+  categoryName: z.string().nullable(),
+  code: z.string(),
+  name: z.string(),
+  basis: MaintenanceBasis,
+  intervalValue: z.string(),
+  tolerancePct: z.string(),
+  items: z.array(z.string()),
+  sortOrder: z.number().int(),
+  isActive: z.boolean(),
+});
+export type MaintenanceTemplateRow = z.infer<typeof MaintenanceTemplateRow>;
+
+export const MaintenanceTemplatesResponse = z.object({
+  templates: z.array(MaintenanceTemplateRow),
+});
+export type MaintenanceTemplatesResponse = z.infer<typeof MaintenanceTemplatesResponse>;
+
+export const MaintenanceTemplateInput = z
+  .object({
+    categoryId: z.string().min(1).nullable().optional(),
+    code: SafeText.min(2).max(40),
+    name: SafeText.min(3).max(200),
+    basis: MaintenanceBasis,
+    intervalValue: z.string().regex(/^\d+(\.\d{1,2})?$/),
+    tolerancePct: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    items: z.array(SafeText.min(1).max(200)).max(50).optional(),
+    sortOrder: z.number().int().min(0).max(10_000).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+export type MaintenanceTemplateInput = z.infer<typeof MaintenanceTemplateInput>;
+
+export const MaintenancePlanRow = z.object({
+  id: z.string(),
+  machineId: z.string(),
+  templateId: z.string().nullable(),
+  name: z.string(),
+  basis: MaintenanceBasis,
+  intervalValue: z.string(),
+  tolerancePct: z.string(),
+  lastDoneAt: z.string().nullable(),
+  lastDoneMeter: z.string().nullable(),
+  nextDueAt: z.string().nullable(),
+  nextDueMeter: z.string().nullable(),
+  isActive: z.boolean(),
+  status: MaintenanceStatus,
+  currentMeter: z.string().nullable(),
+  dueSoonAt: z.string().nullable(),
+  remaining: z.string().nullable(),
+  /** Nalog koji je okidač već otvorio za ovaj ciklus, ako postoji. */
+  openOrderId: z.string().nullable(),
+});
+export type MaintenancePlanRow = z.infer<typeof MaintenancePlanRow>;
+
+export const MaintenancePlansResponse = z.object({ plans: z.array(MaintenancePlanRow) });
+export type MaintenancePlansResponse = z.infer<typeof MaintenancePlansResponse>;
+
+export const MaintenancePlanInput = z
+  .object({
+    templateId: z.string().min(1).nullable().optional(),
+    name: SafeText.min(3).max(200),
+    basis: MaintenanceBasis,
+    intervalValue: z.string().regex(/^\d+(\.\d{1,2})?$/),
+    tolerancePct: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
+    lastDoneAt: IsoDate.nullable().optional(),
+    lastDoneMeter: z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
+    nextDueAt: IsoDate.nullable().optional(),
+    nextDueMeter: z.string().regex(/^\d+(\.\d{1,2})?$/).nullable().optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+export type MaintenancePlanInput = z.infer<typeof MaintenancePlanInput>;
+
+export const MachineMaintenanceResponse = z.object({
+  plans: z.array(MaintenancePlanRow),
+  reliability: z.object({
+    from: z.string(),
+    to: z.string(),
+    faultCount: z.number().int(),
+    finishedCount: z.number().int(),
+    mttrMinutes: z.number().int().nullable(),
+    mtbfHours: z.string().nullable(),
+    workHours: z.string(),
+    maintenanceCostAmount: z.string(),
+    maintenanceCostPerHourAmount: z.string().nullable(),
+    currencyCode: z.string().length(3),
+  }),
+  orders: z.array(ServiceOrderRow),
+});
+export type MachineMaintenanceResponse = z.infer<typeof MachineMaintenanceResponse>;
+
+export const MachineReliabilityResponse = MachineMaintenanceResponse.pick({ reliability: true });
+export type MachineReliabilityResponse = z.infer<typeof MachineReliabilityResponse>;
+
+/* --- zalihe --- */
+
+export const StockItemRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  unit: z.string(),
+  categoryId: z.string().nullable(),
+  minQuantity: z.string(),
+  /** Isključivo `SUM(stock_movements)` — nigdje se ne čuva na artiklu. */
+  onHand: z.string(),
+  belowMinimum: z.boolean(),
+  lastUnitCostAmount: z.string().nullable(),
+  isActive: z.boolean(),
+  note: z.string().nullable(),
+});
+export type StockItemRow = z.infer<typeof StockItemRow>;
+
+export const StockItemsResponse = z.object({ items: z.array(StockItemRow) });
+export type StockItemsResponse = z.infer<typeof StockItemsResponse>;
+
+export const StockItemInput = z
+  .object({
+    code: SafeText.min(1).max(64),
+    name: SafeText.min(2).max(200),
+    unit: SafeText.min(1).max(16),
+    categoryId: z.string().min(1).nullable().optional(),
+    minQuantity: z.string().regex(/^\d+(\.\d{1,3})?$/).optional(),
+    isActive: z.boolean().optional(),
+    note: SafeText.max(1000).nullable().optional(),
+  })
+  .strict();
+export type StockItemInput = z.infer<typeof StockItemInput>;
+
+export const StockMovementRow = z.object({
+  id: z.string(),
+  itemId: z.string(),
+  itemCode: z.string(),
+  itemName: z.string(),
+  kind: z.enum(["IN", "OUT", "TRANSFER", "COUNT"]),
+  quantity: z.string(),
+  unitCostAmount: z.string().nullable(),
+  occurredOn: z.string(),
+  sourceType: z.string().nullable(),
+  sourceId: z.string().nullable(),
+  note: z.string().nullable(),
+  createdByName: z.string().nullable(),
+});
+export type StockMovementRow = z.infer<typeof StockMovementRow>;
+
+export const StockMovementsResponse = z.object({ movements: z.array(StockMovementRow) });
+export type StockMovementsResponse = z.infer<typeof StockMovementsResponse>;
+
+export const StockMovementInput = z
+  .object({
+    itemId: z.string().min(1),
+    kind: z.enum(["IN", "OUT", "COUNT"]),
+    quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
+    unitCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+    occurredOn: IsoDate,
+    note: SafeText.max(1000).nullable().optional(),
+  })
+  .strict();
+export type StockMovementInput = z.infer<typeof StockMovementInput>;

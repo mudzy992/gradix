@@ -11,7 +11,7 @@ import {
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
-import { pushR4SyncItems, SyncPushAccessError } from "@/server/r4-sync-service";
+import { bookSyncFinishedOrders, pushR4SyncItems, SyncPushAccessError } from "@/server/r4-sync-service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,11 +52,17 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const auth = await guard(request);
     if (!auth.ok) return auth.response;
+    /* F8: mehaničar šalje radioničke radnje istim kanalom — zato je i on ovdje. */
     const mayPush = auth.ctx.roles.some((role) =>
-      role === "WORKER" || role === "SITE_SUPERVISOR" || role === "MACHINE_OPERATOR",
+      role === "WORKER"
+      || role === "SITE_SUPERVISOR"
+      || role === "MACHINE_OPERATOR"
+      || role === "MECHANIC"
+      || role === "OWNER"
+      || role === "ADMIN",
     );
     if (!mayPush) {
-      return fail("FORBIDDEN", "Samo radnik, rukovalac mašine ili šef gradilišta može slati terenske zapise.");
+      return fail("FORBIDDEN", "Samo radnik, rukovalac mašine, mehaničar ili šef gradilišta može slati terenske zapise.");
     }
 
     const body = await readBoundedJson(request);
@@ -96,11 +102,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       return fail(validation.code, messages[validation.code] ?? "Neispravan sync zahtjev.");
     }
 
-    const results = await pushR4SyncItems(await getVerifiedPool(), {
+    const pool = await getVerifiedPool();
+    const actor = {
       userId: auth.ctx.userId,
       companyId: auth.ctx.companyId,
       roles: auth.ctx.roles,
-    }, items);
+    };
+    const results = await pushR4SyncItems(pool, actor, items);
+    /* Trošak se knjiži poslije commit-a radnje — vidi `bookSyncFinishedOrders`. */
+    await bookSyncFinishedOrders(pool, actor, items, results);
     return ok({ results });
   } catch (error) {
     if (error instanceof SyncPushAccessError) {

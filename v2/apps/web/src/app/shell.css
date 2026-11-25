@@ -757,6 +757,34 @@
   color: var(--muted);
 }
 
+/* F8 — link u redu sažetka: cijeli red je meta, broj ostaje istaknut. */
+.gx-summary-link {
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+
+.gx-summary-link:hover .gx-summary-value {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.gx-summary-value--danger {
+  color: var(--danger);
+}
+
+/* Primjeri ispod redova: najviše tri, tiha lista bez tačaka. */
+.gx-summary-hints {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+
 /* ------------------------------------------------------------------ dugmad */
 
 .gx-btn {

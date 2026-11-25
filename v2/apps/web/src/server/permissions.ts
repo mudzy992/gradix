@@ -202,6 +202,31 @@ export const PERMISSIONS = {
     "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
   ],
   "machines.fault.approve": ["OWNER", "ADMIN"],
+  /*
+   * F8 (Modul 6/9): servis i održavanje (spec 09 §3).
+   *
+   * `service.view` je široko: šef gradilišta mora znati zbog čega mašina stoji, a mehaničar bez
+   * njega ne vidi ni svoj red čekanja. `service.manage` je rad u radionici — mehaničar mijenja
+   * stanje naloga, upisuje sate i dijelove; ured ga dobija jer izdaje naloge i zove vanjski servis.
+   * `service.approve` je DRUGI par očiju za trošak iznad praga firme — nikad mehaničar koji je
+   * taj trošak i napravio.
+   */
+  "service.view": [
+    "OWNER",
+    "ADMIN",
+    "PROJECT_MANAGER",
+    "SITE_SUPERVISOR",
+    "MECHANIC",
+    "ACCOUNTANT",
+  ],
+  "service.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC"],
+  "service.approve": ["OWNER", "ADMIN"],
+  /*
+   * Zalihe dijelova (F8 §1.3). Računovođa vidi stanje i vrijednost zaliha (to ulazi u trošak),
+   * ali ne izdaje dijelove; mehaničar izdaje i prima, jer on jedini zna šta je utrošeno.
+   */
+  "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC", "ACCOUNTANT"],
+  "stock.manage": ["OWNER", "ADMIN", "MECHANIC"],
   "partners.view": [
     "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
   ],
@@ -502,6 +527,29 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "machines.fault.approve": {
     label: "Odobrenje troška kvara",
     description: "Vlasnik/admin odobrava ili odbija trošak iznad praga.",
+  },
+  "service.view": {
+    label: "Pregled servisa i održavanja",
+    description:
+      "Red čekanja radionice, naloge, planove preventivnog održavanja, zalihe dijelova i pouzdanost mašine (MTBF/MTTR).",
+  },
+  "service.manage": {
+    label: "Rad na servisnom nalogu",
+    description:
+      "Izdaje naloge, mijenja stanje (u radu, čeka dijelove, završeno), upisuje sate mehaničara, dijelove i vanjski trošak.",
+  },
+  "service.approve": {
+    label: "Odobrenje servisnog naloga",
+    description:
+      "Odobrava ili odbija nalog čiji je predračun iznad praga firme; vanjski servis iznad praga traži i ponudu.",
+  },
+  "stock.view": {
+    label: "Pregled zaliha dijelova",
+    description: "Artikli, stanje iz kretnji i upozorenje na minimum — bez izdavanja i primanja.",
+  },
+  "stock.manage": {
+    label: "Kretanje zaliha",
+    description: "Unos artikala, primanje i izdavanje dijelova te popis. Stanje je uvijek zbir kretnji.",
   },
   "partners.view": {
     label: "Pregled partnera",

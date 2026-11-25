@@ -23,6 +23,10 @@ import {
   validFaultPayload,
   type R4FaultPushItem,
 } from "./r5-fault-sync";
+import {
+  validServiceOrderPushItem,
+  type R4ServiceOrderActionPushItem,
+} from "./r5-service-order-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -48,6 +52,17 @@ export {
   needsFaultCostApproval,
   validFaultPayload,
 } from "./r5-fault-sync";
+export type {
+  R4ServiceOrderActionPushItem,
+  ServiceOrderActionKind,
+  ServiceOrderActionPayload,
+  ServiceOrderPartAction,
+} from "./r5-service-order-sync";
+export {
+  serviceActionOutcomeLabel,
+  validServiceOrderActionPayload,
+  validServiceOrderPushItem,
+} from "./r5-service-order-sync";
 
 export const R4_SYNC_PUSH_MAX_ITEMS = 100;
 export const R4_SYNC_PUSH_MAX_BODY_BYTES = 1024 * 1024;
@@ -101,7 +116,9 @@ export type R4SyncPushItem =
   | R4FuelEntryPushItem
   | R4HaulPushItem
   | R4DailyCheckPushItem
-  | R4FaultPushItem;
+  | R4FaultPushItem
+  /* F8: radionica sa telefona — jedna stavka, radnja je `action.kind`. */
+  | R4ServiceOrderActionPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -119,7 +136,16 @@ export type R4SyncPushResponse = { results: R4SyncPushItemResult[] };
 export type R4SyncEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check" | "machine_fault";
+  entityType:
+    | "workday"
+    | "work_entry"
+    | "sync_conflict"
+    | "machine_work_log"
+    | "fuel_entry"
+    | "haul"
+    | "machine_daily_check"
+    | "machine_fault"
+    | "service_order_action";
   entityId: string;
   entityVersion: number;
   payload: Record<string, unknown> | null;
@@ -216,6 +242,10 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
         return { ok: false, code: "SYNC_ITEM_INVALID" };
       }
       if (!validFaultPayload(item.fault)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "service_order_action") {
+      if (!validServiceOrderPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

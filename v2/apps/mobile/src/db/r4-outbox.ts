@@ -10,6 +10,8 @@ import {
   type R4SyncPushItem,
   type R4SyncPushItemResult,
   type R4WorkEntryPayload,
+  type R4ServiceOrderActionPushItem,
+  type ServiceOrderActionPayload,
 } from "@gradix/domain";
 import type { LocalSqlite } from "./migrations";
 import { resolutionsByLocalId, type ResolutionDisplay } from "../sync/r4-resolution";
@@ -231,6 +233,30 @@ export async function readForemanWorkerRoster(
   };
 }
 
+/** Tipovi koje lokalna baza prima iz pull-a (ista lista kao `outbox` CHECK u v2). */
+type SyncEntityType =
+  | "workday"
+  | "work_entry"
+  | "sync_conflict"
+  | "machine_work_log"
+  | "fuel_entry"
+  | "haul"
+  | "machine_daily_check"
+  | "machine_fault"
+  | "service_order_action";
+
+const SYNC_ENTITY_TYPES: readonly SyncEntityType[] = [
+  "workday",
+  "work_entry",
+  "sync_conflict",
+  "machine_work_log",
+  "fuel_entry",
+  "haul",
+  "machine_daily_check",
+  "machine_fault",
+  "service_order_action",
+];
+
 function uuid(): string {
   const cryptoObject = globalThis.crypto as (Crypto & { randomUUID?: () => string }) | undefined;
   if (cryptoObject?.randomUUID) return cryptoObject.randomUUID();
@@ -337,6 +363,14 @@ export function createSqliteR4SyncStore(db: LocalSqlite, account: LocalAccount) 
       return row?.cursor ?? "";
     },
     applyPullPage: async (page: R4SyncPullPage): Promise<void> => {
+      /* Nepoznat `entityType` se odbija PRIJE transakcije. Baza ga nekad odbija `CHECK`-om, ali
+         `sync_events` u v2 više nema `CHECK` (proširen u F8) — bez ove provjere bi događaj ušao u
+         keš i kursor bi otišao dalje, a sukob se ne bi mogao prikazati. */
+      for (const event of page.events) {
+        if (!SYNC_ENTITY_TYPES.includes(event.entityType as SyncEntityType)) {
+          throw new LocalOutboxError("SYNC_PULL_ENTITY_UNSUPPORTED", "Događaj sa nepoznatim tipom nije primljen.");
+        }
+      }
       await db.withTransactionAsync(async () => {
         await assertActiveAccount(db, account);
         const fetchedAt = new Date().toISOString();
@@ -523,6 +557,35 @@ export async function queueOwnWorkEntry(
     workEntryId: makeId(),
     deviceSentAt,
     entry,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/**
+ * F8 — radionička radnja u offline red.
+ *
+ * `actionId` je ključ idempotencije i mora biti JEDINSTVEN po radnji, ne po nalogu: dva utroška
+ * istog dijela na istom nalogu su dvije radnje. Zato ga pozivalac pravi sa `uuid()` (a ne iz
+ * `orderId`), a server ga koristi kao `source_id` kretnje zaliha.
+ */
+export async function queueServiceOrderAction(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: {
+    orderId: string;
+    action: ServiceOrderActionPayload;
+  },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4ServiceOrderActionPushItem = {
+    localId: makeId(),
+    entityType: "service_order_action",
+    actionId: makeId(),
+    serviceOrderId: input.orderId,
+    deviceSentAt,
+    action: input.action,
   };
   await enqueueR4Items(db, account, [item], deviceSentAt);
   return item;

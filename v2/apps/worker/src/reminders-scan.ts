@@ -19,9 +19,13 @@
  */
 import type { Pool, PoolClient } from "pg";
 import {
+  addDays,
+  evaluateMaintenance,
   effectiveThresholds,
   obligationState,
   parseThresholds,
+  type MaintenanceBasis,
+  type MaintenanceStatus,
   type ObligationState,
 } from "@gradix/domain/worker";
 import type { JobLogger } from "./jobs";
@@ -33,6 +37,10 @@ export type ReminderOutcome = {
   escalations: number;
   /** Obaveze koje su preskočene jer već imaju obavještenje za taj prag. */
   deduped: number;
+  /** F8: preventivni servisi koji su prešli prag (upozorenje, ne blokada). */
+  maintenanceDue: number;
+  /** F8: preventivni nalozi koje je ovaj prolaz otvorio. */
+  maintenanceOrdersOpened: number;
 };
 
 type CompanyRow = { id: string; timezone: string | null; name: string };
@@ -219,6 +227,8 @@ export async function scanReminders(
     notificationsCreated: 0,
     escalations: 0,
     deduped: 0,
+    maintenanceDue: 0,
+    maintenanceOrdersOpened: 0,
   };
 
   const companies = await pool.query<CompanyRow>(
@@ -346,6 +356,13 @@ export async function scanReminders(
         }
       }
 
+      /* F8: preventivno održavanje ide u ISTU transakciju firme. Nalog se otvara i obavještenje
+         nastaje; ako drugo padne, ne ostaje nalog bez obavještenja. */
+      const maintenance = await scanMaintenance(client, company.id, today);
+      outcome.maintenanceDue += maintenance.due;
+      outcome.maintenanceOrdersOpened += maintenance.opened;
+      outcome.notificationsCreated += maintenance.notifications;
+
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
@@ -394,3 +411,154 @@ export function daysWord(days: number): string {
   if (absolute % 10 === 1 && absolute % 100 !== 11) return "dan";
   return "dana";
 }
+
+/* ====================================================== F8: preventivno održavanje */
+
+type MaintenancePlanScanRow = {
+  id: string;
+  machine_id: string;
+  machine_code: string;
+  machine_name: string;
+  name: string;
+  basis: MaintenanceBasis;
+  interval_value: string;
+  tolerance_pct: string;
+  next_due_at: string | null;
+  next_due_meter: string | null;
+  meter: string | null;
+  open_order_id: string | null;
+};
+
+/**
+ * Dospjeli planovi se računaju u SQL-u, a ocjenjuju u domeni (`evaluateMaintenance`) — ista
+ * funkcija koju koristi ekran `/ured/servis/planovi`. Da worker ima svoju formulu, prag bi se
+ * razišao od onoga što mehaničar vidi na ekranu.
+ */
+async function maintenancePlans(
+  client: PoolClient,
+  companyId: string,
+): Promise<MaintenancePlanScanRow[]> {
+  const result = await client.query<MaintenancePlanScanRow>(
+    `SELECT p.id, p.machine_id, m.code AS machine_code, m.name AS machine_name, p.name, p.basis,
+            p.interval_value::text, p.tolerance_pct::text, p.next_due_at::text,
+            p.next_due_meter::text,
+            GREATEST(
+              COALESCE((SELECT mr.reading_value::numeric FROM machine_meter_readings mr
+                         WHERE mr.company_id = p.company_id AND mr.machine_id = p.machine_id
+                         ORDER BY mr.recorded_at DESC LIMIT 1), 0),
+              COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (l.ended_at - l.started_at)) / 3600.0)
+                          FROM machine_work_logs l
+                         WHERE l.company_id = p.company_id AND l.machine_id = p.machine_id
+                           AND l.mode = 'WORK' AND l.ended_at IS NOT NULL), 0)
+            )::text AS meter,
+            (SELECT so.id FROM service_orders so
+              WHERE so.company_id = p.company_id AND so.maintenance_plan_id = p.id
+                AND so.status NOT IN ('DONE', 'CANCELLED')
+              ORDER BY so.opened_at DESC LIMIT 1) AS open_order_id
+       FROM maintenance_plans p
+       JOIN machines m ON m.company_id = p.company_id AND m.id = p.machine_id
+      WHERE p.company_id = $1 AND p.is_active`,
+    [companyId],
+  );
+  return result.rows;
+}
+
+/**
+ * Preventivni servis: prag je UPOZORENJE (spec 09 §1.2/10), a nalog se otvara automatski.
+ *
+ * Zašto nalog odmah: preventivni servis koji niko ne otvori ne postoji u redu čekanja, a red
+ * čekanja je jedino mjesto gdje mehaničar gleda. Zašto upozorenje, a ne blokada: mašina koja
+ * stoji zbog servisa je gubitak za firmu, a mašina koja stoji jer je propušten servis je veći —
+ * blokadu gasi firma svjesno (`block_on_overdue_maintenance`), u `canUseEntity`.
+ */
+async function scanMaintenance(
+  client: PoolClient,
+  companyId: string,
+  today: string,
+): Promise<{ due: number; opened: number; notifications: number }> {
+  const plans = await maintenancePlans(client, companyId);
+  let due = 0;
+  let opened = 0;
+  let notifications = 0;
+
+  for (const plan of plans) {
+    const evaluation = evaluateMaintenance(
+      {
+        basis: plan.basis,
+        intervalValue: plan.interval_value,
+        tolerancePct: plan.tolerance_pct,
+        nextDueAt: plan.next_due_at,
+        nextDueMeter: plan.next_due_meter,
+        isActive: true,
+      },
+      { meter: plan.meter, onDate: today },
+    );
+    if (evaluation.status !== "DUE_SOON" && evaluation.status !== "OVERDUE") continue;
+    due += 1;
+
+    /* Otvaranje naloga: dedupe je (plan, `planned_for`) — djelimični unikat u bazi. Worker smije
+       da se vrti svakih 15 minuta, drugi prolaz ne pravi drugi nalog. */
+    let orderId = plan.open_order_id;
+    if (!orderId) {
+      const inserted = await client.query<{ id: string }>(
+        `INSERT INTO service_orders
+           (id, company_id, machine_id, description, currency_code, created_by, updated_by,
+            origin, kind, priority, planned_for, maintenance_plan_id, status, amount_cents)
+         SELECT $1, $2, $3, $4, c.currency, NULL, NULL, 'PREVENTIVE', 'INTERNAL', 'MEDIUM',
+                $5::date, $6, 'PLANNED', 0
+           FROM companies c WHERE c.id = $2
+         ON CONFLICT (company_id, maintenance_plan_id, planned_for)
+           WHERE maintenance_plan_id IS NOT NULL AND status <> 'CANCELLED' DO NOTHING
+         RETURNING id`,
+        [
+          `svo_${Math.random().toString(36).slice(2, 18)}`,
+          companyId,
+          plan.machine_id,
+          `Preventivni servis: ${plan.name}`.slice(0, 2000),
+          plan.next_due_at ?? today,
+          plan.id,
+        ],
+      );
+      orderId = inserted.rows[0]?.id ?? null;
+      if (orderId) opened += 1;
+    }
+
+    const created = await insertNotification(client, {
+      companyId,
+      userId: null,
+      roleTarget: "MECHANIC",
+      kind: "MAINTENANCE_DUE",
+      title:
+        evaluation.status === "OVERDUE"
+          ? `Preventivni servis pređen: ${plan.machine_code}`
+          : `Preventivni servis blizu: ${plan.machine_code}`,
+      body: `${plan.machine_name} · ${plan.name} · ${
+        evaluation.remaining !== null
+          ? evaluation.remaining.startsWith("-")
+            ? `pređeno ${evaluation.remaining.slice(1)}`
+            : `ostalo ${evaluation.remaining}`
+          : "bez podatka o brojilu"
+      }`,
+      href: orderId ? `/ured/servis/${orderId}` : `/ured/masine/${plan.machine_id}`,
+      severity: evaluation.status === "OVERDUE" ? "CRITICAL" : "WARN",
+      sourceType: "maintenance_plan",
+      sourceId: plan.id,
+      /* Ključ nosi CILJNI rok, ne današnji datum: isti ciklus se obavještava jednom, a sljedeći
+         servis (novi rok) dobija novo obavještenje. */
+      dedupeKey: `${plan.id}:${plan.next_due_at ?? plan.next_due_meter ?? today}:${evaluation.status}`,
+    });
+    if (created) notifications += 1;
+  }
+
+  return { due, opened, notifications };
+}
+
+/**
+ * Prag za prikaz u poruci (npr. „za 12 dana“) — jedina upotreba `addDays` u ovom fajlu: pomak
+ * datuma za tekst, ne za račun roka (račun je u `evaluateMaintenance`).
+ */
+export function dueHintDate(today: string, remainingDays: number): string {
+  return addDays(today, remainingDays);
+}
+
+export type { MaintenanceStatus };

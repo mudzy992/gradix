@@ -407,6 +407,36 @@ export async function costCategories(): Promise<CostCategoriesResponse> {
   return data as CostCategoriesResponse;
 }
 
+/**
+ * F8 — servisni nalozi za mehaničara.
+ *
+ * Namjerno NIJE dio R4 sync pull-a: naloge mijenja radionica, a ne telefon. Telefon ih čita
+ * online (kad ima veze) i drži zadnju listu u memoriji ekrana; offline radnje idu kroz outbox.
+ */
+export type MechanicOrdersResponse = {
+  orders: {
+    id: string;
+    machine_id: string;
+    machine_code: string;
+    machine_name: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    assigned_mechanic_worker_id: string | null;
+    planned_for: string | null;
+    opened_at: string;
+    total_cost_amount: string;
+    currency_code: string;
+  }[];
+};
+
+export async function mechanicOrders(): Promise<MechanicOrdersResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/service-orders?mine=1", undefined, { accessToken }),
+  );
+  return data as MechanicOrdersResponse;
+}
+
 export async function machines(): Promise<MachinesResponse> {
   const { data } = await withToken((accessToken) => client.get("/api/equipment", undefined, { accessToken }));
   return data;

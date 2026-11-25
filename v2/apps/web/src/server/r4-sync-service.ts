@@ -1,6 +1,7 @@
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
 import { withCompany, type CompanyId } from "@gradix/db";
+import type { SyncEntityType } from "./r4-sync-fault-types";
 import { hasControlChars } from "@gradix/contracts";
 import {
   R4_SYNC_CLOCK_SKEW_SECONDS,
@@ -15,6 +16,7 @@ import { applyFuelEntrySyncItem } from "./r4-sync-fuel-entry";
 import { applyHaulSyncItem } from "./r4-sync-haul";
 import { applyDailyCheckSyncItem } from "./r4-sync-daily-check";
 import { applyFaultSyncItem } from "./r4-sync-fault";
+import { applyServiceOrderAction, bookFinishedOrderCost } from "./r4-sync-service-order";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -40,7 +42,7 @@ export class SyncPushAccessError extends Error {
   }
 }
 
-type Reservation = { cursor_seq: string; reservation_token: string; already_committed: boolean };
+export type Reservation = { cursor_seq: string; reservation_token: string; already_committed: boolean };
 type WorkdayRow = { id: string; worker_id: string; status: "DRAFT" | "SUBMITTED"; header_version: number; work_date: string };
 type CanonicalWorkday = { day: WorkdayRow; created: boolean };
 type WorkEntryRow = {
@@ -380,7 +382,7 @@ async function publishEvent(
   actor: SyncPushActor,
   reservation: Reservation,
   requestHash: string,
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_work_log" | "fuel_entry" | "haul" | "machine_daily_check" | "machine_fault",
+  entityType: SyncEntityType,
   entityId: string,
   version: number,
   payload: Record<string, unknown>,
@@ -497,6 +499,7 @@ function eventEntry(
 }
 
 async function applyItem(
+  pool: Pool,
   client: PoolClient,
   actor: SyncPushActor,
   worker: Worker,
@@ -566,6 +569,19 @@ async function applyItem(
         invalidItem,
         rejectInTransaction,
         createConflict,
+        publishEvent,
+        saveReceipt,
+      },
+    }, item);
+  }
+  if (item.entityType === "service_order_action") {
+    return applyServiceOrderAction(pool, client, {
+      actor,
+      requestHash,
+      reservation,
+      helpers: {
+        invalidItem,
+        rejectInTransaction,
         publishEvent,
         saveReceipt,
       },
@@ -865,7 +881,7 @@ async function applyReservedItem(
       if (workdayReservation) await skipReservationInTransaction(client, actor, workdayReservation);
       return invalidItem(item, "SYNC_ITEM_REJECTED");
     }
-    return applyItem(client, actor, worker, foremanWorkerId, item, requestHash, reservation, new Date(), workdayReservation);
+    return applyItem(pool, client, actor, worker, foremanWorkerId, item, requestHash, reservation, new Date(), workdayReservation);
   });
 }
 
@@ -928,6 +944,13 @@ export async function pushR4SyncItems(
         continue;
       }
       worker = actorWorker;
+    } else if (item.entityType === "service_order_action") {
+      /* Radionica je mehaničareva; `service.manage` provjerava i handler (batch je mješovit). */
+      if (!isMechanic && !actor.roles.includes("ADMIN") && !actor.roles.includes("OWNER")) {
+        results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
+        continue;
+      }
+      worker = actorWorker;
     } else if (item.workerId !== undefined) {
       if (!isForeman) {
         results.push(invalidItem(item, "WORKER_TARGET_FORBIDDEN"));
@@ -967,6 +990,31 @@ export async function pushR4SyncItems(
     ));
   }
   return results;
+}
+
+/**
+ * Knjiženje troška za naloge završene u OVOM batchu.
+ *
+ * Zove se iz rute POSLIJE `pushR4SyncItems`: radnja je tada commitovana, pa knjiženje otvara svoju
+ * transakciju (ledger i nalog ne dijele vlasnika). Neuspjeh knjiženja ne obara push — odgovor
+ * stavke ostaje `APPLIED`, a zaostatak hvata noćni prolaz (`budget.thresholds`).
+ */
+export async function bookSyncFinishedOrders(
+  pool: Pool,
+  actor: SyncPushActor,
+  items: readonly R4SyncPushItem[],
+  results: readonly R4SyncPushItemResult[],
+): Promise<void> {
+  const applied = new Set(results.filter((result) => result.status === "APPLIED").map((result) => result.localId));
+  for (const item of items) {
+    if (item.entityType !== "service_order_action" || item.action.kind !== "FINISH") continue;
+    if (!applied.has(item.localId)) continue;
+    await bookFinishedOrderCost(pool, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      serviceOrderId: item.serviceOrderId,
+    });
+  }
 }
 
 /** Runtime guard in addition to the domain validator; prevents accidentally bypassing it. */

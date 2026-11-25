@@ -1,12 +1,14 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–7: završene** · **Tag `phase-7`** · **CI: zelen (run `45655523847`)**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–8: završene** · **Tag `phase-8`** · **CI: vidi zadnji `ci-v2` run**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Faza 7 (Modul 8 — tenderi) je isporučena: devet
-statusa sa kapijama, kalkulacija ponude sa revizijama i pragom odobrenja, kontrolna lista i
-garancije, ishod/uspješnost i atomska konverzija `WON` → projekat. Sljedeća je Faza 8 po
-`docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Faza 8 (Modul 9 — servis i održavanje mašina) je
+isporučena: puni životni ciklus naloga, preventivno održavanje po brojilu/datumu, zalihe kao
+append-only ledger (`SUM` kretnji, nikad `UPDATE`), garancija bez drugog troška, MTBF/MTTR i
+trošak održavanja po satu rada, odobrenje iznad praga firme, web radionica i offline mobilni
+ekran za mehaničara. Sljedeća je Faza 9 po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama:
+`docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -60,6 +62,46 @@ garancije, ishod/uspješnost i atomska konverzija `WON` → projekat. Sljedeća 
 | 7.4 | Servisi: `tender-service` (kapije u `changeStatus`), `tender-pricing` (revizije append-only, odobrenje), `tender-checklist-service` (šifarnik, garancije), `tender-outcome-service` (ishod + `tenderPerformance`), `tender-copy`, `tender-convert` (atomska konverzija sa claim-om) | ✅ |
 | 7.5 | UI: `/ured/tenderi` (tabela + kanban, filteri, novi tender sa kopiranjem predmjera), `/ured/tenderi/[id]` sa 7 tabova (pregled/odluka, kalkulacija, dokumenti, prilozi, ishod, tim, konverzija), `/ured/tenderi/uspjesnost`, `/ured/tenderi/kalendar`; worker podsjetnici vode tenderske rokove na tender | ✅ |
 | 7.6 | Provjere: `tender-lifecycle`/`convert`/`convert-race`/`pricing` integracioni testovi (27 protiv prave baze), `tender-status.test.ts` parity nad `.cursor/docs/matrices/tenders/MATRIX.md` (76 prelaza), NUL-sweep pokriva svih 20 novih ruta, `pnpm test` **1 178 prošlo u 6 paketa**, typecheck 6/6, lint čist, matrix parity 0 grešaka, preflight iz nule 0 problema, OpenAPI **202 putanje** | ✅ |
+
+| 8.1 | Baza: `service_orders` puni životni ciklus (`PLANNED → APPROVED → IN_PROGRESS → WAITING_PARTS → DONE/CANCELLED`) + `version`, `maintenance_templates`/`maintenance_plans` (osnov `HOURS`/`KM`/`DAYS`, `tolerance_pct`), `stock_items`/`stock_movements` (append-only, `warehouse_id` nullable za F10), `service_order_events`, `service_order_parts`; `companies.block_on_overdue_maintenance` i `service_approval_threshold_cents` (default 500 KM); `approval_requests.subject_type` proširen na `service_order`; sve nove tabele u `TENANT_TABLES` sa FORCE RLS + grantovima u `bootstrap/grants.sql` — **49 migracija, 105 tabela (96 tenant)** | ✅ |
+| 8.2 | Domena (`service-maintenance.ts`): statusi i prelazi, `serviceCost` (sati × satnica, pola-naviše, `total = labor + parts + external`), `machineReliability` (MTTR u minutama, MTBF = radni sati / **kvarovi** — `isFault` čuva preventivne naloge van brojača), `evaluateMaintenance` (prag = `nextDue − interval × tolerance%`), `stockOnHand` (Σ IN − Σ OUT), `serviceApprovalCheck` (strogo `>`) — **20 testova** | ✅ |
+| 8.3 | API: **23 rute** — nalozi (lista/detalj/unos/izmjena/start/wait-parts/finish/odobri/odbij/parts), planovi i šabloni, zalihe (artikli, kretnje), MTBF/MTTR; OpenAPI **219 putanja**, `check-openapi` ažuran | ✅ |
+| 8.4 | Knjiženje: trošak naloga ide **ili na projekat ili samo na mašinu — nikad oboje** (`source_type = SERVICE_ORDER`, jedan red po izvoru); garancija upisuje red sa iznosom **0** (posao je vidljiv, drugi trošak ne nastaje); bez iznosa `PENDING`; knjiženje **poslije** commit-a naloga; ustaljeni trošak ulazi u komponentu `SERVICE` stope mašine preko prosjeka, uz čuvanje starih snapshotova | ✅ |
+| 8.5 | Worker `reminders.scan` proširen na preventivu (datum **i** sati rada), idempotentno po `(maintenance_plan_id, planned_for)`; `SERVICE_ORDER` seed u `ensureCostCategories` (dopuna, ne samo prazan šifarnik) | ✅ |
+| 8.6 | UI: `/ured/servis` (red čekanja po prioritetu, filter „čekaju dijelove“, radnje stanja u listi), `/ured/servis/[id]` (sati, dijelovi, tok, trošak — `total_cost` je prikaz, nikad unos), `/ured/servis/planovi`, `/ured/dijelovi` (stanje bez polja za unos), tab „Održavanje“ na `/ured/masine/[id]`, kartica „Servis“ na `/pregled` (isti `dueMaintenancePlans` kao worker) | ✅ |
+| 8.7 | Mobilno: `/servisni-nalozi` za mehaničara — offline-first kroz R4 outbox (`service_order_action`), jedna glavna radnja iz stanja naloga, sati/dio u redu čekanja; `outbox`/`sync_events` podignuti na `user_version = 2` sa prenosom redova bez gubitka; mete ≥ 56 dp | ✅ |
+| 8.8 | Provjere: `f8-service-orders` (12) + `f8-service-sync` (6) + `f8-isolation` (3) protiv prave baze, `service-order-sync` (8) i `servis-model` (13) domenski, `migrations` (5) za v2 prenos; `pnpm test` **1 221 prošao** (web 691, domain 296, mobile 118), typecheck 6/6, lint čist, `db:types:check` sinhron, `check-tenant-sql` 96/96, matrix parity 0 grešaka, preflight SQL 001/002 prolazi | ✅ |
+
+## Faza 8 — odluke koje se ne smiju izgubiti
+
+- **Stanje zaliha je zbir kretnji, nikad kolona.** Nema `UPDATE quantity`; i popis (`COUNT`) ulazi
+  kao kretnja razlike. Zato `stockOnHand` = Σ IN − Σ OUT, a `TRANSFER`/`COUNT` su neutralni u tom
+  zbiru. Dupli izvor (`source_type`, `source_id`, `item_id`) je unikat — `STOCK_ALREADY_POSTED`.
+- **Trošak servisa ide ili na projekat ili na mašinu.** Nalog sa projektom knjiži `project_id`;
+  nalog bez projekta knjiži `project_id = NULL` uz `machine_id`. Jedan izvor = jedan red, pa isti
+  rad ne može biti u projektu i u trošku mašine istovremeno.
+- **Garancija ne briše trag.** Popravka u garantnom roku upisuje red sa iznosom `0` i napomenom —
+  posao je vidljiv u historiji, a firma ne plaća drugi put. Preskakanje reda bi značilo da
+  garancijska popravka ne postoji, pa bi trošak po satu rada bio lažno manji.
+- **Istek preventive je upozorenje, ne blokada.** `block_on_overdue_maintenance` (default `false`)
+  uključuje strogu blokadu dodjele i radnih sati; **gorivo se ne blokira** nikad — mašina koja
+  stoji zbog papira ne smije ostati bez goriva na gradilištu.
+- **Odobrenje je drugi par očiju, ne mehaničarev.** Prag je `service_approval_threshold_cents`
+  (default 500 KM, **odvojen** od praga kvara) i poređenje je **strogo `>`**. Vanjski servis iznad
+  praga traži ponudu prije odobrenja — odobrava se iznos koji je neko ponudio.
+- **MTBF broji KVAROVE, ne naloge.** Preventivni nalog nije kvar; `ReliabilityOrder.isFault`
+  filtrira u domeni (ne u SQL-u), jer bi preventiva inače oborila MTBF i pokvarila odluku o
+  zamjeni mašine. MTTR je u minutama, MTBF u satima — jedinice su u natpisu, ne u glavi čitaoca.
+- **Tolerancija pomjera prag, ne rok.** Sa 10 % tolerancije na interval 250 h upozorenje počinje
+  oko 225 h; stanje je tada `DUE_SOON`, a `OVERDUE` nastupa tek prelaskom roka.
+- **Telefon ne računa trošak.** Sync stavka nosi namjeru (sati, dio), a `labor_cost`, `total_cost`
+  i zaliha nastaju na serveru — istim funkcijama kao web. Dva uređaja tako ne mogu dati dva troška
+  za isti rad; `actionId` je ključ idempotencije.
+- **`NULLS LAST` u izboru kategorije troška.** `OSTALO` ima `default_for_source_type = NULL`, a
+  Postgres u `DESC` poretku stavlja NULL prve — bez `NULLS LAST` bi svaki trošak (i servis) tiho
+  završio u „Ostalo“. Nađeno testom `f8-service-sync`, ne u produkciji.
+- **`ensureCostCategories` dopunjava, ne samo puni prazno.** Firma sa šifarnikom iz F5 nema
+  `SERVIS`; rano vraćanje na „ima ijednu kategoriju“ bi ostavilo servis bez svoje kategorije.
 
 ## Faza 7 — odluke koje se ne smiju izgubiti
 

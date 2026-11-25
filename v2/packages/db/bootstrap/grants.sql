@@ -168,6 +168,17 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.tender_checklist_items TO gradix_ap
 GRANT SELECT, INSERT ON TABLE public.tender_outcomes TO gradix_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tender_phases TO gradix_app;
 GRANT SELECT, INSERT, DELETE ON TABLE public.tender_team TO gradix_app;
+-- F8 (Modul 9): servis i održavanje. Grantovi SU OVDJE, a ne u migraciji: ovaj fajl počinje
+-- sa `REVOKE ALL ... FROM gradix_app`, pa bi grant iz migracije bio poništen pri svakom
+-- bootstrapu — a to je greška koja se vidi tek u produkciji.
+-- Nema DELETE nigdje: istorija naloga, događaja i kretnji je dokaz; otkazivanje je status.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.service_orders TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.service_order_events TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.service_order_parts TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.maintenance_templates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.maintenance_plans TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_items TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.stock_movements TO gradix_app;
 -- F1: jezgro firme i sigurnost pristupa (spec 01).
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.company_holidays TO gradix_app;
 GRANT SELECT, INSERT, DELETE ON TABLE public.password_history TO gradix_app;
@@ -251,7 +262,11 @@ BEGIN
     'public.cost_entry_guard()',
     'public.budget_line_immutable()',
     'public.seed_cost_categories(TEXT)',
-    'public.companies_seed_cost_categories()'
+    'public.companies_seed_cost_categories()',
+    -- F8: događaj naloga i otkazivanje iz kvara su tok, ne pomoćna funkcija; direktan poziv
+    -- bi zaobišao RLS put i redoslijed zapisa.
+    'public.service_order_event_on_status()',
+    'public.machine_fault_cancel_service_order()'
   ] LOOP
     IF to_regprocedure(v_funkcija) IS NOT NULL THEN
       EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, gradix_app', v_funkcija);

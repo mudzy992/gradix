@@ -41,6 +41,10 @@ const NAV_EXCEPTIONS: Record<string, string> = {
     "izvještaj uspješnosti je dio modula Tenderi — ulaz je link na vrhu liste tendera, ista dozvola (tenders.view), pa ne dobija svoju stavku u meniju",
   "/ured/tenderi/kalendar":
     "kalendar rokova je drugi pogled na iste rokove — ulaz je link na vrhu liste tendera, ista dozvola (tenders.view), pa ne dobija svoju stavku u meniju",
+  "/ured/servis/planovi":
+    "planovi su dio modula Servis — ulaz je link na vrhu liste naloga i tab na kartici mašine, ista dozvola (service.view), pa ne dobijaju svoju stavku u meniju",
+  "/ured/dijelovi":
+    "zalihe dijelova su dio modula Servis (ista dozvola `stock.view` ulazi iz radionice), pa ne dobijaju svoju stavku — ulaz je link na vrhu Servisa i iz naloga",
   "/ured/radni-dani/sedmica":
     "pogled „radnik × dan“ je dio ekrana Radni dani — ulaz je link na vrhu tog ekrana, i važi ista dozvola (workdays.view), pa ne dobija svoju stavku u meniju",
 };

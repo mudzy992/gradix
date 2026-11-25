@@ -22,6 +22,8 @@ export type MobileNavEntry = {
     | "/ture"
     | "/dnevni-pregled"
     | "/kvarovi"
+    /* F8: radionica — mehaničar mijenja stanje naloga i bilježi dijelove sa telefona. */
+    | "/servisni-nalozi"
     | "/rokovi"
     | "/projekti"
     | "/moji-zadaci"
@@ -62,6 +64,11 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
     visible: (p) =>
       p.workerId !== null
       && (p.roles.includes("MACHINE_OPERATOR") || p.roles.includes("MECHANIC")),
+  },
+  {
+    href: "/servisni-nalozi",
+    label: "Servisni nalozi",
+    visible: (p) => p.workerId !== null && p.roles.includes("MECHANIC"),
   },
   {
     href: "/kvarovi",

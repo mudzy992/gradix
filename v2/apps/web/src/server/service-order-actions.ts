@@ -1,0 +1,590 @@
+/**
+ * F8 — akcije na servisnom nalogu: početak, čekanje dijelova, završetak, utrošak, odobrenje.
+ *
+ * Sve ide kroz akciju, nikad kroz `PATCH { status }`. Razlog je što status nosi POSLJEDICE koje
+ * moraju nastati u istoj transakciji:
+ *   - `start` postavlja `started_at` (stvarni zastoj je razlika, §1.6/29);
+ *   - `finish` računa trajanje, trošak, satnicu, garanciju i knjiži ledger (§1.4);
+ *   - `parts` skida zalihu kretnjom i uvećava `parts_cost` (§1.3).
+ * Da je `PATCH` smio pisati `DONE`, ekran bi mogao završiti nalog bez troška i bez zastoja.
+ */
+import type { Pool, PoolClient } from "pg";
+import { companyId as toCompanyId, withCompany } from "@gradix/db";
+import {
+  ServiceError,
+  assertServiceTransition,
+  isServiceOrderStatus,
+  serviceApprovalCheck,
+  formatHundredths,
+  toHundredths,
+  toThousandths,
+  type ServiceOrderStatus,
+} from "@gradix/domain";
+import { can } from "./permissions";
+import { writeAudit } from "./audit";
+import { bookServiceOrderCostInCompany } from "./cost-entry-service";
+import { companyToday } from "./project-service";
+import { loadServiceOrder } from "./service-order-read";
+import type { ServiceActor, ServiceOutcome } from "./service-order-types";
+
+const NO_ROLE = { outcome: "FORBIDDEN" as const, code: "ROLE", message: "Nemate pravo na ovu radnju." };
+
+export async function orderStatus(
+  client: PoolClient,
+  companyId: string,
+  orderId: string,
+): Promise<
+  | { ok: true; status: ServiceOrderStatus }
+  | { ok: false; result: ServiceOutcome }
+> {
+  const row = await client.query<{ status: string }>(
+    "SELECT status FROM public.service_orders WHERE company_id = $1 AND id = $2 FOR UPDATE",
+    [companyId, orderId],
+  );
+  const found = row.rows[0];
+  if (!found) {
+    return {
+      ok: false,
+      result: { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." },
+    };
+  }
+  if (!isServiceOrderStatus(found.status)) {
+    return {
+      ok: false,
+      result: { outcome: "CONFLICT", code: "SERVICE_INVALID_STATUS", message: "Nepoznato stanje naloga." },
+    };
+  }
+  return { ok: true, status: found.status };
+}
+
+export async function setStatus(
+  client: PoolClient,
+  params: {
+    companyId: string;
+    orderId: string;
+    actorId: string;
+    status: ServiceOrderStatus;
+    extra?: { startedAt?: boolean; finishedAt?: boolean };
+  },
+): Promise<void> {
+  /* Događaj (`service_order_events`) piše TRIGER, ne ovaj upit: prelaz se mijenja na više mjesta
+     (sync, ručna ispravka), pa bi jedno od njih zaboravilo događaj. */
+  const sets = ["status = $3", "updated_by = $4", "updated_at = clock_timestamp()", "version = version + 1"];
+  if (params.extra?.startedAt) sets.push("started_at = COALESCE(started_at, clock_timestamp())");
+  if (params.extra?.finishedAt) sets.push("finished_at = COALESCE(finished_at, clock_timestamp())");
+  if (params.status === "DONE" || params.status === "CANCELLED") {
+    sets.push("closed_at = COALESCE(closed_at, clock_timestamp())");
+  }
+  if (params.status === "IN_PROGRESS") sets.push("closed_at = NULL, finished_at = NULL");
+  await client.query(
+    `UPDATE public.service_orders SET ${sets.join(", ")}
+      WHERE company_id = $1 AND id = $2`,
+    [params.companyId, params.orderId, params.status, params.actorId],
+  );
+}
+
+/* ------------------------------------------------------------------ start */
+
+export async function startServiceOrder(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.manage")) return NO_ROLE;
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const current = await orderStatus(client, actor.companyId, orderId);
+    if (!current.ok) return current.result;
+    try {
+      assertServiceTransition(current.status, "IN_PROGRESS");
+    } catch (error) {
+      return transitionFailed(error);
+    }
+    const blocked = await approvalBlock(client, actor.companyId, orderId);
+    if (blocked) return blocked;
+    await setStatus(client, {
+      companyId: actor.companyId,
+      orderId,
+      actorId: actor.userId,
+      status: "IN_PROGRESS",
+      extra: { startedAt: true },
+    });
+    await writeAudit(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      actorEmail: null,
+      action: "service.order_started",
+      entityType: "service_order",
+      entityId: orderId,
+      metadata: { from: current.status },
+      retentionClass: "STANDARD",
+    });
+    return { outcome: "OK" as const, id: orderId };
+  });
+}
+
+/**
+ * Odobrenje PRIJE rada (§1.5/25): iznad praga firme nalog ne prelazi u `IN_PROGRESS` dok
+ * zahtjev nije odobren. Vanjski servis iznad praga traži i ponudu — bez nje odobrenje nema
+ * osnova, jer se odobrava iznos koji nije ponuđen.
+ */
+export async function approvalBlock(
+  client: PoolClient,
+  companyId: string,
+  orderId: string,
+): Promise<ServiceOutcome | null> {
+  const order = await client.query<{
+    kind: string;
+    status: string;
+    amount_cents: string | null;
+    external_quote_cents: string | null;
+    threshold_cents: string;
+  }>(
+    `SELECT so.kind, so.status, so.amount_cents::text, so.external_quote_cents::text,
+            c.service_approval_threshold_cents::text AS threshold_cents
+       FROM public.service_orders so
+       JOIN public.companies c ON c.id = so.company_id
+      WHERE so.company_id = $1 AND so.id = $2`,
+    [companyId, orderId],
+  );
+  const row = order.rows[0];
+  if (!row) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
+  const planned = row.amount_cents === null ? 0n : BigInt(row.amount_cents);
+  const check = serviceApprovalCheck({
+    kind: row.kind === "EXTERNAL" ? "EXTERNAL" : "INTERNAL",
+    plannedCostCents: planned,
+    thresholdCents: BigInt(row.threshold_cents),
+    externalQuoteCents: row.external_quote_cents === null ? null : BigInt(row.external_quote_cents),
+  });
+  if (!check.needsApproval) return null;
+  if (check.needsQuote) {
+    return {
+      outcome: "CONFLICT",
+      code: "EXTERNAL_QUOTE_REQUIRED",
+      message: "Vanjski servis iznad praga traži ponudu prije odobrenja i početka rada.",
+    };
+  }
+  const approval = await client.query<{ status: string }>(
+    `SELECT status FROM public.approval_requests
+      WHERE company_id = $1 AND subject_type = 'service_order' AND subject_id = $2
+      ORDER BY created_at DESC LIMIT 1`,
+    [companyId, orderId],
+  );
+  if (approval.rows[0]?.status !== "APPROVED") {
+    return {
+      outcome: "CONFLICT",
+      code: "SERVICE_APPROVAL_REQUIRED",
+      message: "Predračun je iznad praga firme — nalog treba odobrenje prije početka rada.",
+    };
+  }
+  return null;
+}
+
+export function transitionFailed(error: unknown): ServiceOutcome {
+  if (error instanceof ServiceError) {
+    const conflict = error.code === "SERVICE_ALREADY_DONE" || error.code === "SERVICE_INVALID_STATUS";
+    return {
+      outcome: conflict ? "CONFLICT" : "VALIDATION_FAILED",
+      code: error.code,
+      message: error.message,
+    };
+  }
+  throw error;
+}
+
+/* ------------------------------------------------------- čekanje dijelova */
+
+export async function waitServiceOrderParts(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+  note?: string | null,
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.manage")) return NO_ROLE;
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const current = await orderStatus(client, actor.companyId, orderId);
+    if (!current.ok) return current.result;
+    try {
+      assertServiceTransition(current.status, "WAITING_PARTS");
+    } catch (error) {
+      return transitionFailed(error);
+    }
+    await setStatus(client, {
+      companyId: actor.companyId,
+      orderId,
+      actorId: actor.userId,
+      status: "WAITING_PARTS",
+    });
+    if (note?.trim()) {
+      /* Razlog čekanja je važan za radionicu (koji dio i od koga), pa ide kao događaj sa
+         napomenom — ne u `description`, koji opisuje kvar, a ne trenutno stanje. */
+      await client.query(
+        `INSERT INTO public.service_order_events
+           (id, company_id, service_order_id, kind, actor_id, note)
+         VALUES ($1,$2,$3,'PARTS_REQUESTED',$4,$5)`,
+        [
+          `soe_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
+          actor.companyId,
+          orderId,
+          actor.userId,
+          note.trim().slice(0, 1000),
+        ],
+      );
+    }
+    return { outcome: "OK" as const, id: orderId };
+  });
+}
+
+/* ----------------------------------------------------------------- finish */
+
+/**
+ * Vanjski trošak kao centi ili `null`. Zajednički za web i sync, da oba ulaza odbiju isti tekst
+ * istom greškom — inače bi telefon mogao poslati iznos koji web odbija.
+ */
+export function parseExternalCost(value: string | null | undefined): bigint | null | "INVALID" {
+  if (!value) return null;
+  try {
+    return toHundredths(value);
+  } catch {
+    return "INVALID";
+  }
+}
+
+export type FinishInput = {
+  laborHours?: string;
+  externalCostAmount?: string | null;
+  externalInvoiceRef?: string | null;
+  warrantyUntil?: string | null;
+  downtimeMinutes?: number | null;
+  downtimeReason?: string | null;
+};
+
+import { finishOrderInTransaction } from "./service-order-transaction";
+
+export { finishOrderInTransaction };
+
+export async function finishServiceOrder(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+  input: FinishInput,
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.manage")) return NO_ROLE;
+  let laborHours = "0";
+  if (input.laborHours !== undefined) {
+    try {
+      toHundredths(input.laborHours);
+      laborHours = input.laborHours;
+    } catch {
+      return {
+        outcome: "VALIDATION_FAILED",
+        code: "LABOR_HOURS_INVALID",
+        message: "Sati mehaničara moraju biti broj sa najviše dvije decimale.",
+      };
+    }
+  }
+  const externalCents = parseExternalCost(input.externalCostAmount);
+  if (externalCents === "INVALID") {
+    return {
+      outcome: "VALIDATION_FAILED",
+      code: "EXTERNAL_COST_INVALID",
+      message: "Vanjski trošak mora biti iznos sa dvije decimale.",
+    };
+  }
+
+  const outcome = await withCompany(pool, toCompanyId(actor.companyId), async (client) =>
+    finishOrderInTransaction(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      orderId,
+      laborHours,
+      externalCostCents: externalCents,
+      externalInvoiceRef: input.externalInvoiceRef ?? null,
+      warrantyUntil: input.warrantyUntil ?? null,
+      downtimeMinutes: input.downtimeMinutes ?? null,
+      downtimeReason: input.downtimeReason ?? null,
+    }),
+  );
+
+  if (outcome.outcome !== "OK") return outcome as ServiceOutcome;
+  /* Knjiženje NAKON commit-a naloga: `bookServiceOrderCostInCompany` otvara svoju transakciju, pa
+     bi unutar iste transakcije bila dva vlasnika. Ako knjiženje padne, nalog ostaje završen sa
+     `skipped` u odgovoru — a worker `budget.thresholds` i noćni prolaz hvataju zaostatke. */
+  const posted = await bookServiceOrderCostInCompany(pool, {
+    companyId: actor.companyId,
+    actorId: actor.userId,
+    serviceOrderId: orderId,
+  });
+  return { outcome: "OK", id: orderId, cost: posted };
+}
+
+/* ------------------------------------------------------------------ parts */
+
+/**
+ * Utrošak dijela: kretnja `OUT` (idempotentna po izvoru) + red u `service_order_parts` +
+ * uvećan `parts_cost_cents`. Stanje se NIKAD ne piše direktno — ono je zbir kretnji.
+ */
+export async function addServiceOrderPart(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+  input: { itemId: string; quantity: string; unitCostAmount?: string | null; note?: string | null },
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.manage")) return NO_ROLE;
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const current = await orderStatus(client, actor.companyId, orderId);
+    if (!current.ok) return current.result;
+    if (current.status === "DONE" || current.status === "CANCELLED") {
+      return {
+        outcome: "CONFLICT" as const,
+        code: "SERVICE_ALREADY_DONE",
+        message: "Na završen ili otkazan nalog se dijelovi ne dodaju.",
+      };
+    }
+    const partId = `sop_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+    const result = await recordPartUsage(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      orderId,
+      itemId: input.itemId,
+      quantity: input.quantity,
+      unitCostAmount: input.unitCostAmount ?? null,
+      note: input.note ?? null,
+      partId,
+    });
+    if (result.outcome !== "OK") return result;
+    return { outcome: "OK" as const, id: partId };
+  });
+}
+
+/** Izdvojeno da mobilni sync može ponoviti istu operaciju sa istim `partId` (idempotencija). */
+export async function recordPartUsage(
+  client: PoolClient,
+  params: {
+    companyId: string;
+    actorId: string;
+    orderId: string;
+    itemId: string;
+    quantity: string;
+    unitCostAmount: string | null;
+    note: string | null;
+    partId: string;
+  },
+): Promise<ServiceOutcome> {
+  try {
+    toThousandths(params.quantity);
+  } catch {
+    return { outcome: "VALIDATION_FAILED", code: "QUANTITY_INVALID", message: "Količina mora biti broj sa do tri decimale." };
+  }
+  const item = await client.query<{ unit: string }>(
+    "SELECT unit FROM public.stock_items WHERE company_id = $1 AND id = $2 AND is_active",
+    [params.companyId, params.itemId],
+  );
+  if (!item.rows[0]) {
+    return { outcome: "NOT_FOUND", code: "ITEM_NOT_FOUND", message: "Artikal ne postoji ili nije aktivan." };
+  }
+  let unitCostCents: bigint;
+  if (params.unitCostAmount) {
+    try {
+      unitCostCents = toHundredths(params.unitCostAmount);
+    } catch {
+      return {
+        outcome: "VALIDATION_FAILED",
+        code: "UNIT_COST_INVALID",
+        message: "Cijena dijela mora biti iznos sa dvije decimale.",
+      };
+    }
+  } else {
+    /* Bez unesene cijene koristi se ZADNJA nabavna cijena iz kretnji `IN`. Bez nje trošak je
+       nula, ne izmišljena vrijednost — i to se vidi kao `0,00` u nalogu. */
+    const last = await client.query<{ unit_cost_cents: string | null }>(
+      `SELECT unit_cost_cents::text FROM public.stock_movements
+        WHERE company_id = $1 AND item_id = $2 AND unit_cost_cents IS NOT NULL
+        ORDER BY occurred_on DESC, created_at DESC LIMIT 1`,
+      [params.companyId, params.itemId],
+    );
+    unitCostCents = last.rows[0]?.unit_cost_cents ? BigInt(last.rows[0].unit_cost_cents) : 0n;
+  }
+
+  const today = await companyToday(client, toCompanyId(params.companyId));
+  const movementId = `stm_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+  const inserted = await client.query<{ id: string }>(
+    `INSERT INTO public.stock_movements
+       (id, company_id, item_id, kind, quantity, unit_cost_cents, occurred_on, source_type,
+        source_id, note, created_by)
+     VALUES ($1,$2,$3,'OUT',$4,$5,$6::date,'SERVICE_ORDER',$7,$8,$9)
+     ON CONFLICT (company_id, source_type, source_id, item_id) WHERE source_id IS NOT NULL DO NOTHING
+     RETURNING id`,
+    [
+      movementId,
+      params.companyId,
+      params.itemId,
+      params.quantity,
+      unitCostCents.toString(),
+      today,
+      `${params.orderId}:${params.partId}`,
+      params.note ?? null,
+      params.actorId,
+    ],
+  );
+  const movement = inserted.rows[0];
+  if (!movement) {
+    return {
+      outcome: "CONFLICT",
+      code: "STOCK_ALREADY_POSTED",
+      message: "Taj dio je već proknjižen na nalog — zaliha nije skinuta dvaput.",
+    };
+  }
+
+  await client.query(
+    `INSERT INTO public.service_order_parts
+       (id, company_id, service_order_id, item_id, quantity, unit_cost_cents, currency_code,
+        stock_movement_id, note, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,(SELECT currency FROM public.companies WHERE id = $2),$7,$8,$9)`,
+    [
+      params.partId,
+      params.companyId,
+      params.orderId,
+      params.itemId,
+      params.quantity,
+      unitCostCents.toString(),
+      movement.id,
+      params.note ?? null,
+      params.actorId,
+    ],
+  );
+
+  /* `parts_cost` je zbir stavki — izveden iz redova, pa ga poslije svakog utroška izračunamo
+     iznova. Sabiranje „trenutno + novo“ bi poslije storno-a ostavilo pogrešan zbir. */
+  await client.query(
+    `UPDATE public.service_orders so
+        SET parts_cost_cents = src.total,
+            total_cost_cents = so.labor_cost_cents + src.total + so.external_cost_cents,
+            updated_at = clock_timestamp(),
+            version = version + 1
+       FROM (
+         SELECT COALESCE(SUM(round(quantity * unit_cost_cents)), 0)::bigint AS total
+           FROM public.service_order_parts
+          WHERE company_id = $1 AND service_order_id = $2
+       ) src
+      WHERE so.company_id = $1 AND so.id = $2`,
+    [params.companyId, params.orderId],
+  );
+
+  return { outcome: "OK", id: params.partId };
+}
+
+/* ------------------------------------------------------------- odobrenje */
+
+export async function approveServiceOrder(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.approve")) return NO_ROLE;
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const current = await orderStatus(client, actor.companyId, orderId);
+    if (!current.ok) return current.result;
+    const open = await client.query<{ id: string }>(
+      `SELECT id FROM public.approval_requests
+        WHERE company_id = $1 AND subject_type = 'service_order' AND subject_id = $2
+          AND status = 'OPEN' LIMIT 1`,
+      [actor.companyId, orderId],
+    );
+    if (!open.rows[0]) {
+      return {
+        outcome: "CONFLICT" as const,
+        code: "NO_OPEN_REQUEST",
+        message: "Nema otvorenog zahtjeva za odobrenje.",
+      };
+    }
+    await client.query(
+      `UPDATE public.approval_requests
+          SET status = 'APPROVED', decided_by = $3, decided_at = clock_timestamp(),
+              updated_at = clock_timestamp()
+        WHERE company_id = $1 AND id = $2`,
+      [actor.companyId, open.rows[0].id, actor.userId],
+    );
+    if (current.status === "PLANNED") {
+      await setStatus(client, {
+        companyId: actor.companyId,
+        orderId,
+        actorId: actor.userId,
+        status: "APPROVED",
+      });
+    }
+    await writeAudit(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      actorEmail: null,
+      action: "service.order_approved",
+      entityType: "service_order",
+      entityId: orderId,
+      metadata: { requestId: open.rows[0].id },
+      retentionClass: "FINANCIAL",
+    });
+    return { outcome: "OK" as const, id: orderId };
+  });
+}
+
+export async function rejectServiceOrder(
+  pool: Pool,
+  actor: ServiceActor,
+  orderId: string,
+  reason: string,
+): Promise<ServiceOutcome> {
+  if (!can(actor.roles, "service.approve")) return NO_ROLE;
+  const trimmed = reason.trim();
+  if (trimmed.length < 10) {
+    return {
+      outcome: "VALIDATION_FAILED",
+      code: "REASON_TOO_SHORT",
+      message: "Razlog odbijanja mora imati najmanje 10 znakova.",
+    };
+  }
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const current = await orderStatus(client, actor.companyId, orderId);
+    if (!current.ok) return current.result;
+    if (current.status === "DONE") {
+      return {
+        outcome: "CONFLICT" as const,
+        code: "SERVICE_ALREADY_DONE",
+        message: "Završen nalog se ne odbija.",
+      };
+    }
+    const open = await client.query<{ id: string }>(
+      `SELECT id FROM public.approval_requests
+        WHERE company_id = $1 AND subject_type = 'service_order' AND subject_id = $2
+          AND status = 'OPEN' LIMIT 1`,
+      [actor.companyId, orderId],
+    );
+    if (open.rows[0]) {
+      await client.query(
+        `UPDATE public.approval_requests
+            SET status = 'REJECTED', decided_by = $3, decided_at = clock_timestamp(),
+                reason = $4, updated_at = clock_timestamp()
+          WHERE company_id = $1 AND id = $2`,
+        [actor.companyId, open.rows[0].id, actor.userId, trimmed],
+      );
+    }
+    await client.query(
+      `UPDATE public.service_orders
+          SET status = 'CANCELLED', cancel_reason = $3, closed_at = clock_timestamp(),
+              updated_by = $4, updated_at = clock_timestamp(), version = version + 1
+        WHERE company_id = $1 AND id = $2`,
+      [actor.companyId, orderId, trimmed, actor.userId],
+    );
+    await writeAudit(client, {
+      companyId: actor.companyId,
+      actorId: actor.userId,
+      actorEmail: null,
+      action: "service.order_rejected",
+      entityType: "service_order",
+      entityId: orderId,
+      metadata: { reason: trimmed },
+      retentionClass: "FINANCIAL",
+    });
+    return { outcome: "OK" as const, id: orderId };
+  });
+}
+
+export { loadServiceOrder, formatHundredths };

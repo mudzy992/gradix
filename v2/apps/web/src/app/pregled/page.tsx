@@ -5,7 +5,7 @@ import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { authenticate } from "@/server/tenant-context";
 import { ACCESS_COOKIE } from "@/server/session";
-import { can } from "@/server/permissions";
+import { can, type Role } from "@/server/permissions";
 import { buildPregled } from "@/server/pregled-service";
 import { Card, Chip, EmptyState, Icon, Inline, PageHeader, Stack, Stat } from "@/components/ui/index";
 import { MachinesTable } from "./machines-table";
@@ -19,6 +19,8 @@ import { RiskyProjectsCard } from "./risky-projects-card";
 import { listRiskyProjects } from "@/server/pregled-risky";
 import { payrollReminder } from "@/server/payroll-reminder";
 import { PayrollReminderCard } from "./payroll-reminder-card";
+import { serviceAttention } from "@/server/service-attention";
+import { ServiceAttentionCard } from "@/components/service-attention-card";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +109,17 @@ export default async function PregledPage() {
     : null;
   const riskyData = risky && !("code" in risky) ? risky : null;
 
+  /*
+   * F8: preventiva i nalozi koji čekaju. Isti `dueMaintenancePlans` koji zove worker — pa
+   * podsjetnik i ekran ne mogu reći različito „dospjelo“. Bez `service.view` kartice NEMA
+   * (ni prazne), jer bi prazna kartica tvrdila da servisa nema.
+   */
+  const service = can(ctx.roles, "service.view")
+    ? await withCompany(await getVerifiedPool(), ctx.companyId as CompanyId, (client) =>
+        serviceAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] }),
+      )
+    : null;
+
   /* F6: podsjetnik „period nije zaključan“ — samo za one koji vide obračun i samo poslije 5. */
   const reminder = await payrollReminder(await getVerifiedPool(), {
     userId: ctx.userId,
@@ -137,6 +150,7 @@ export default async function PregledPage() {
           {reminder ? <PayrollReminderCard reminder={reminder} /> : null}
           <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
           {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
+          {service ? <ServiceAttentionCard data={service} /> : null}
         </div>
       );
     }
@@ -203,6 +217,8 @@ export default async function PregledPage() {
       </div>
 
       {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
+
+      {service ? <ServiceAttentionCard data={service} /> : null}
 
       {obligationCounts ? <ObligationSummary counts={obligationCounts} /> : null}
 

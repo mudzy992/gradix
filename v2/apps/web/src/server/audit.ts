@@ -177,6 +177,16 @@ export const AUDIT_ACTIONS = [
   "payroll.advance_created",
   "payroll.correction_applied",
   "payroll.exported",
+  /* F8: servis i održavanje. Radnje su odvojene po događaju koji mijenja stanje (početak, kraj,
+     odobrenje, ispravka zastoja), jer se u auditu traži TAČNO jedna od njih — „servis izmijenjen“
+     ne odgovara na pitanje „ko je odobrio trosak“. */
+  "service.order_created",
+  "service.order_updated",
+  "service.order_started",
+  "service.order_finished",
+  "service.order_approved",
+  "service.order_rejected",
+  "service.downtime_corrected",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -375,6 +385,13 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payroll.advance_created": "Akontacija/pozajmica izdata",
   "payroll.correction_applied": "Korekcija obračuna primijenjena",
   "payroll.exported": "Obračun izvezen",
+  "service.order_created": "Servisni nalog otvoren",
+  "service.order_updated": "Servisni nalog izmijenjen",
+  "service.order_started": "Rad na nalogu počeo",
+  "service.order_finished": "Servisni nalog završen",
+  "service.order_approved": "Servisni nalog odobren",
+  "service.order_rejected": "Servisni nalog odbijen",
+  "service.downtime_corrected": "Zastoj ručno ispravljen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

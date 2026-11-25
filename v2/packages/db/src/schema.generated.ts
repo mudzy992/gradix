@@ -125,6 +125,10 @@ export interface Companies {
   approval_threshold_cents: Int8 | null;
   approval_threshold_currency: string | null;
   bank_name: string | null;
+  /**
+   * Stroga blokada dodjele/radnih sati zbog isteklog preventivnog servisa (spec 09 §1.2/10). Default false: istek je UPOZORENJE; gorivo nije blokirano ni kad je blokada uključena.
+   */
+  block_on_overdue_maintenance: Generated<boolean>;
   city: string | null;
   conflict_reminder_days: Generated<number>;
   country: Generated<string>;
@@ -165,6 +169,10 @@ export interface Companies {
   rounding_minutes: Generated<number>;
   rounding_mode: Generated<string>;
   seeded_at: Timestamp | null;
+  /**
+   * Prag odobrenja servisnog naloga (spec 09 §1.5/24), default 500 KM. ZASEBAN od praga kvara: mijenjaju se nezavisno i ne smiju se vezivati jedan na drugi.
+   */
+  service_approval_threshold_cents: Generated<Int8>;
   settings_updated_at: Timestamp | null;
   settings_updated_by: string | null;
   slug: string;
@@ -216,7 +224,10 @@ export interface CostEntries {
   note: string | null;
   occurred_on: string;
   phase_id: string | null;
-  project_id: string;
+  /**
+   * Projekat nosilac troška; NULL znači trošak SAMO na mašini (servis van projekta, spec 09 §1.4/20). Nikad oboje: jedan (source_type, source_id) = jedan red, pa nema duplog troška.
+   */
+  project_id: string | null;
   quantity: Numeric | null;
   rate_snapshot: Json | null;
   reversed_by: string | null;
@@ -487,6 +498,7 @@ export interface MachineFaults {
   project_id: string | null;
   reported_at: Timestamp;
   reporter_worker_id: string | null;
+  service_order_id: string | null;
   status: string;
   title: string;
   updated_at: Generated<Timestamp>;
@@ -560,6 +572,44 @@ export interface MachineWorkLogs {
   updated_by: string;
   version: Generated<number>;
   worker_id: string;
+}
+
+export interface MaintenancePlans {
+  basis: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  interval_value: Numeric;
+  is_active: Generated<boolean>;
+  last_done_at: string | null;
+  last_done_meter: Numeric | null;
+  machine_id: string;
+  name: string;
+  next_due_at: string | null;
+  next_due_meter: Numeric | null;
+  template_id: string | null;
+  tolerance_pct: Generated<Numeric>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface MaintenanceTemplates {
+  basis: string;
+  category_id: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  interval_value: Numeric;
+  is_active: Generated<boolean>;
+  items: Generated<Json>;
+  name: string;
+  sort_order: Generated<number>;
+  tolerance_pct: Generated<Numeric>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
 }
 
 export interface Memberships {
@@ -1096,19 +1146,68 @@ export interface RouteSegments {
   updated_at: Generated<Timestamp>;
 }
 
+export interface ServiceOrderEvents {
+  actor_id: string | null;
+  at: Generated<Timestamp>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  kind: string;
+  note: string | null;
+  payload: Json | null;
+  service_order_id: string;
+}
+
+export interface ServiceOrderParts {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  item_id: string;
+  note: string | null;
+  quantity: Numeric;
+  service_order_id: string;
+  stock_movement_id: string | null;
+  unit_cost_cents: Int8;
+}
+
 export interface ServiceOrders {
   amount_cents: Int8 | null;
+  assigned_mechanic_worker_id: string | null;
+  cancel_reason: string | null;
   closed_at: Timestamp | null;
   company_id: string;
   created_by: string | null;
   currency_code: string | null;
   description: string;
-  fault_id: string;
+  external_cost_cents: Generated<Int8>;
+  external_invoice_ref: string | null;
+  external_quote_cents: Int8 | null;
+  fault_id: string | null;
+  finished_at: Timestamp | null;
   id: string;
+  kind: Generated<string>;
+  labor_cost_cents: Generated<Int8>;
+  labor_hours: Generated<Numeric>;
   machine_id: string;
+  maintenance_plan_id: string | null;
   opened_at: Generated<Timestamp>;
+  origin: Generated<string>;
   partner_id: string | null;
+  parts_cost_cents: Generated<Int8>;
+  planned_for: string | null;
+  priority: Generated<string>;
+  project_id: string | null;
+  started_at: Timestamp | null;
   status: Generated<string>;
+  total_cost_cents: Generated<Int8>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  version: Generated<number>;
+  warranty_claim: Generated<boolean>;
+  warranty_source_order_id: string | null;
+  warranty_until: string | null;
 }
 
 export interface Sessions {
@@ -1125,6 +1224,38 @@ export interface Sessions {
   token_hash: string;
   user_agent: string | null;
   user_id: string;
+}
+
+export interface StockItems {
+  category_id: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  is_active: Generated<boolean>;
+  min_quantity: Generated<Numeric>;
+  name: string;
+  note: string | null;
+  unit: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface StockMovements {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  item_id: string;
+  kind: string;
+  note: string | null;
+  occurred_on: string;
+  quantity: Numeric;
+  source_id: string | null;
+  source_type: string | null;
+  unit_cost_cents: Int8 | null;
+  warehouse_id: string | null;
 }
 
 export interface SyncChangeLog {
@@ -1668,6 +1799,8 @@ export interface DB {
   machine_work_log_revisions: MachineWorkLogRevisions;
   machine_work_logs: MachineWorkLogs;
   machines: Machines;
+  maintenance_plans: MaintenancePlans;
+  maintenance_templates: MaintenanceTemplates;
   memberships: Memberships;
   notification_deliveries: NotificationDeliveries;
   notification_preferences: NotificationPreferences;
@@ -1704,8 +1837,12 @@ export interface DB {
   projects: Projects;
   report_jobs: ReportJobs;
   route_segments: RouteSegments;
+  service_order_events: ServiceOrderEvents;
+  service_order_parts: ServiceOrderParts;
   service_orders: ServiceOrders;
   sessions: Sessions;
+  stock_items: StockItems;
+  stock_movements: StockMovements;
   sync_change_log: SyncChangeLog;
   sync_conflicts: SyncConflicts;
   sync_cursor_allocators: SyncCursorAllocators;

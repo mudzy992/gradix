@@ -165,6 +165,10 @@ describeDb("F4 mehanizacija — baza", () => {
       client.release();
     }
     await withCompany(admin, companyId(COMPANY), async (db) => {
+      /* F8: `machine_faults.service_order_id` je RESTRICT veza na nalog, pa se veza nulira prije
+         brisanja naloga; bez toga F4 cleanup pada na tuđem ograničenju. */
+      await db.query("UPDATE machine_faults SET service_order_id = NULL WHERE company_id = $1", [COMPANY]);
+      await db.query("DELETE FROM service_order_events WHERE company_id = $1", [COMPANY]);
       for (const table of [
         "machine_meter_readings", "machine_cost_rate_snapshots",
         "machine_cost_components", "machine_cost_rates", "machine_work_logs", "service_orders",

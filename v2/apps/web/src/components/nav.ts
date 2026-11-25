@@ -38,6 +38,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { href: "/ured/ture", label: "Ture", icon: "truck", description: "Ture i stacionaža po mašini", group: "Mehanizacija", permission: "machines.haul.view" },
   { href: "/ured/dnevni-pregled", label: "Dnevni pregled", icon: "shield", description: "Dnevni pregled mašine prije rada", group: "Mehanizacija", permission: "machines.check.view" },
   { href: "/ured/kvarovi", label: "Kvarovi", icon: "shield", description: "Prijave kvarova i odobrenje troška", group: "Mehanizacija", permission: "machines.fault.view" },
+  { href: "/ured/servis", label: "Servis", icon: "shield", description: "Radionica: red čekanja, naloge, planove održavanja i dijelove", group: "Mehanizacija", permission: "service.view" },
   { href: "/ured/radni-dani", label: "Radni dani", icon: "calendar", description: "Potvrda dana, sedmica, zaključavanje", group: "Rad / obračun", permission: "workdays.view" },
   { href: "/ured/sukobi", label: "Sukobi", icon: "list", description: "Razrješenje sukoba radnih dana", group: "Rad / obračun", permission: "workdays.resolve" },
   { href: "/ured/trosak-masina", label: "Trošak mašina", icon: "list", description: "Stope troška po satu rada mašine", group: "Rad / obračun", permission: "machines.cost_rate.view" },

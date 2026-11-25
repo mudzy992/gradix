@@ -110,6 +110,13 @@ export {
   FAULT_COST_APPROVAL_THRESHOLD_CENTS,
   needsFaultCostApproval,
   validFaultPayload,
+  type R4ServiceOrderActionPushItem,
+  type ServiceOrderActionKind,
+  type ServiceOrderActionPayload,
+  type ServiceOrderPartAction,
+  serviceActionOutcomeLabel,
+  validServiceOrderActionPayload,
+  validServiceOrderPushItem,
 } from "./r4-sync";
 
 export {
@@ -336,3 +343,45 @@ export {
   type TenderCalculationInput,
   type TenderCostLine,
 } from "./tender-calculation";
+
+/*
+ * F8 (Modul 6/9): servis i održavanje mašina. Cijena naloga, životni ciklus, MTBF/MTTR,
+ * preventivni planovi, garancija i stanje dijelova. Modul nema uvoza (`node:*` ni relativnih),
+ * pa smije u glavni barrel — iste formule tako koristi i mobilni bundle.
+ *
+ * `daysBetween` se izvozi pod drugim imenom jer isto ime već daje `obligations` (F3); dvije
+ * verzije istog imena u barrelu su greška, a tiho biranje jedne od njih je gora greška.
+ */
+export {
+  SERVICE_ORDER_STATUSES,
+  ServiceError,
+  addDays,
+  assertServiceTransition,
+  daysBetween as maintenanceDaysBetween,
+  downtimeMinutes,
+  evaluateMaintenance,
+  formatHundredths,
+  formatThousandths,
+  isBelowMinimum,
+  isServiceOrderStatus,
+  isServiceTerminal,
+  isWarrantyClaim,
+  machineReliability,
+  nextMaintenanceDue,
+  nextServiceStatuses,
+  serviceApprovalCheck,
+  serviceCost,
+  stockOnHand,
+  toHundredths,
+  toThousandths,
+  type MaintenanceBasis,
+  type MaintenanceEvaluation,
+  type MaintenancePlanState,
+  type MaintenanceStatus,
+  type Reliability,
+  type ReliabilityOrder,
+  type ServiceCost,
+  type ServiceCostInput,
+  type ServiceOrderStatus,
+  type StockMovementRow,
+} from "./service-maintenance";

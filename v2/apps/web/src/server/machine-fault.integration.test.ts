@@ -79,7 +79,10 @@ describeDb("R5.5 machine fault web API", () => {
     await withCompany(admin, companyId(COMPANY), async (client) => {
       await client.query("DELETE FROM approval_requests WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_fault_revisions WHERE company_id = $1", [COMPANY]);
-      // Servisni nalog je FK na kvar (F4 §1.6.25) — bez ovoga kvar ne može iz testa.
+      /* F8: kvar pokazuje na nalog (`service_orders` → RESTRICT), pa nalog ne može otići dok
+         veza stoji. Redoslijed: prvo veza na NULL, pa nalog, pa kvar. */
+      await client.query("UPDATE machine_faults SET service_order_id = NULL WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM service_order_events WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM service_orders WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_faults WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY]);

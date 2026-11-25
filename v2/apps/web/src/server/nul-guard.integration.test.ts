@@ -20,6 +20,23 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import argon2 from "argon2";
+import { GET as serviceOrdersGet, POST as serviceOrdersPost } from "@/app/api/service-orders/route";
+import { GET as serviceOrderGet, PATCH as serviceOrderPatch } from "@/app/api/service-orders/[id]/route";
+import { POST as serviceOrderStartPost } from "@/app/api/service-orders/[id]/start/route";
+import { POST as serviceOrderFinishPost } from "@/app/api/service-orders/[id]/finish/route";
+import { POST as serviceOrderWaitPost } from "@/app/api/service-orders/[id]/wait-parts/route";
+import { POST as serviceOrderPartsPost } from "@/app/api/service-orders/[id]/parts/route";
+import { POST as serviceOrderApprovePost } from "@/app/api/service-orders/[id]/approve/route";
+import { POST as serviceOrderRejectPost } from "@/app/api/service-orders/[id]/reject/route";
+import { GET as maintenanceTemplatesGet, POST as maintenanceTemplatesPost } from "@/app/api/maintenance-templates/route";
+import { PATCH as maintenanceTemplatePatch } from "@/app/api/maintenance-templates/[id]/route";
+import { GET as maintenancePlansGet, POST as maintenancePlansPost } from "@/app/api/machines/[id]/maintenance-plans/route";
+import { PATCH as maintenancePlanPatch } from "@/app/api/machines/[id]/maintenance-plans/[planId]/route";
+import { GET as stockItemsGet, POST as stockItemsPost } from "@/app/api/stock-items/route";
+import { PATCH as stockItemPatch } from "@/app/api/stock-items/[id]/route";
+import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/stock-movements/route";
+import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenance/route";
+import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
 import { POST as loginRoute } from "@/app/api/auth/login/route";
 import { completeLogin } from "@/test/two-step-login";
@@ -412,6 +429,23 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/tenders/{id}/team/{workerId}": { DELETE: tenderTeamDelete },
   "/api/tenders/performance": { GET: tendersPerformanceGet },
   "/api/tender-checklist-templates": { GET: checklistTemplatesGet, POST: checklistTemplatesPost },
+  "/api/service-orders": { GET: serviceOrdersGet, POST: serviceOrdersPost },
+  "/api/service-orders/{id}": { GET: serviceOrderGet, PATCH: serviceOrderPatch },
+  "/api/service-orders/{id}/start": { POST: serviceOrderStartPost },
+  "/api/service-orders/{id}/finish": { POST: serviceOrderFinishPost },
+  "/api/service-orders/{id}/wait-parts": { POST: serviceOrderWaitPost },
+  "/api/service-orders/{id}/parts": { POST: serviceOrderPartsPost },
+  "/api/service-orders/{id}/approve": { POST: serviceOrderApprovePost },
+  "/api/service-orders/{id}/reject": { POST: serviceOrderRejectPost },
+  "/api/maintenance-templates": { GET: maintenanceTemplatesGet, POST: maintenanceTemplatesPost },
+  "/api/maintenance-templates/{id}": { PATCH: maintenanceTemplatePatch },
+  "/api/machines/{id}/maintenance-plans": { GET: maintenancePlansGet, POST: maintenancePlansPost },
+  "/api/machines/{id}/maintenance-plans/{planId}": { PATCH: maintenancePlanPatch },
+  "/api/machines/{id}/maintenance": { GET: machineMaintenanceGet },
+  "/api/machines/{id}/reliability": { GET: machineReliabilityGet },
+  "/api/stock-items": { GET: stockItemsGet, POST: stockItemsPost },
+  "/api/stock-items/{id}": { PATCH: stockItemPatch },
+  "/api/stock-movements": { GET: stockMovementsGet, POST: stockMovementsPost },
   "/api/machine-cost-rates": { POST: machineCostRatesPost },
   /*
    * F5: `project-cost-entries/book` je ukinut (nema više ručnog knjiženja). NUL-guard pokriva

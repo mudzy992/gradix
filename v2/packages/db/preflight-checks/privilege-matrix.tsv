@@ -61,6 +61,12 @@ table	report_jobs	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		Red izvještaja; wo
 table	route_segments	SELECT;INSERT;UPDATE	-		R5.3 stacionaža / dionice; nullable FK from hauls; FORCE RLS; no DELETE.
 table	schema_migrations	-	SELECT;INSERT;UPDATE;DELETE	Only DATABASE_ADMIN_URL/db-apply.sh may use the migration ledger; runtime readiness never reads it.	Migration bookkeeping is administrator-only and has no app query path.
 table	service_orders	SELECT;INSERT;UPDATE	-		F4 servisni nalog iz odobrenog kvara (spec 05 §1.6.25); Modul 8 ga puni; bez DELETE; FORCE RLS.
+table	service_order_events	SELECT;INSERT	-		F8 zapis promjena naloga i zastoja (spec 09 §2); append-only, bez UPDATE/DELETE; FORCE RLS.
+table	service_order_parts	SELECT;INSERT;UPDATE	-		F8 utrošeni dijelovi naloga; izmjena moguća samo dok nalog nije DONE (servis); bez DELETE; FORCE RLS.
+table	maintenance_templates	SELECT;INSERT;UPDATE	-		F8 šabloni preventivnog održavanja po kategoriji mašine; FORCE RLS.
+table	maintenance_plans	SELECT;INSERT;UPDATE	-		F8 plan po mašini sa rokom i tolerancijom; FORCE RLS.
+table	stock_items	SELECT;INSERT;UPDATE	-		F8 katalog dijelova; NEMA kolone stanja — stanje je SUM kretnji; FORCE RLS.
+table	stock_movements	SELECT;INSERT	-		F8 append-only ledger zaliha; stanje je isključivo zbir, zato bez UPDATE/DELETE; FORCE RLS.
 table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
 table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.

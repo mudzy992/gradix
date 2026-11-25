@@ -26,3 +26,17 @@ export {
   parseThresholds,
   type ObligationState,
 } from "./obligations";
+/*
+ * F8: pragovi preventivnog održavanja u `reminders.scan`. Modul je bez uvoza, pa prolazi kroz
+ * esbuild bundle kao i `dates`/`obligations`.
+ */
+export {
+  addDays,
+  evaluateMaintenance,
+  formatHundredths,
+  nextMaintenanceDue,
+  type MaintenanceBasis,
+  type MaintenanceEvaluation,
+  type MaintenancePlanState,
+  type MaintenanceStatus,
+} from "./service-maintenance";

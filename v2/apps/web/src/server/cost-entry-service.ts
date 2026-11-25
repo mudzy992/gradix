@@ -83,11 +83,16 @@ export async function resolveCostCategory(
     );
     if (explicit.rows[0]) return explicit.rows[0].id;
   }
+  /*
+   * `NULLS LAST` je OBAVEZAN: `OSTALO` ima `default_for_source_type = NULL`, pa poređenje daje
+   * NULL, a Postgres u `DESC` poretku stavlja NULL PRVE — bez ovoga bi SVAKI trošak završio u
+   * „Ostalo“, i kad mapiranje za izvor postoji (nađeno testom `f8-service-sync`).
+   */
   const mapped = await client.query<{ id: string }>(
     `SELECT id FROM public.cost_categories
       WHERE company_id = $1 AND is_active
         AND (default_for_source_type = $2 OR code = $3)
-      ORDER BY (default_for_source_type = $2) DESC, sort_order, code
+      ORDER BY (default_for_source_type = $2) DESC NULLS LAST, sort_order, code
       LIMIT 1`,
     [companyId, sourceType, FALLBACK_COST_CATEGORY_CODE],
   );
@@ -104,17 +109,17 @@ export async function resolveCostCategory(
  * Šifarnik može biti prazan ako je firma nastala dok još nije imala nijednog člana (`created_by`
  * je NOT NULL, pa ga seed ne izmišlja). Ovdje se dopunjava u trenutku kad korisnik STVARNO
  * postoji — dakle pri prvom knjiženju, ne pri onboarding-u.
+ *
+ * DOPUNA, ne „samo ako je prazno“: firma koja je šifarnik dobila prije F8 nema kategoriju za
+ * `SERVIS`, pa bi prvi završeni servis pao u `OSTALO` — ili bi, uz staro rano vraćanje, ostao
+ * neknjižen. Postojeće kategorije se ne diraju (`ON CONFLICT DO NOTHING`); dodaje se samo ono
+ * što nedostaje.
  */
 async function ensureCostCategories(
   client: PoolClient,
   companyId: string,
   actorId: string,
 ): Promise<void> {
-  const existing = await client.query<{ n: string }>(
-    "SELECT count(*)::text AS n FROM public.cost_categories WHERE company_id = $1",
-    [companyId],
-  );
-  if (Number(existing.rows[0]?.n ?? "0") > 0) return;
   const seeds: Array<{ code: string; name: string; sortOrder: number; source: CostSourceType | null }> = [
     { code: "RAD", name: "Rad", sortOrder: 10, source: "WORKDAY" },
     { code: "MEHANIZACIJA", name: "Mehanizacija", sortOrder: 20, source: "MACHINE_WORK_LOG" },
@@ -122,6 +127,9 @@ async function ensureCostCategories(
     { code: "MATERIJAL", name: "Materijal", sortOrder: 40, source: "PURCHASE" },
     { code: "PODIZVOĐAČI", name: "Podizvođači", sortOrder: 50, source: "SUBCONTRACTOR" },
     { code: "TRANSPORT", name: "Transport", sortOrder: 60, source: "HAUL" },
+    /* F8: servis mašina. Kategorija postoji UVIJEK, i kad firma još nema ni jedan nalog — inače bi
+       prvi završeni nalog pao na „nema kategorije za SERVICE_ORDER“ i trošak bi ostao neknjižen. */
+    { code: "SERVIS", name: "Servis mašina", sortOrder: 70, source: "SERVICE_ORDER" },
     { code: "OSTALO", name: "Ostalo", sortOrder: 99, source: null },
   ];
   for (const seed of seeds) {
@@ -145,7 +153,11 @@ async function ensureCostCategories(
 
 export type CostPostDraft = {
   companyId: string;
-  projectId: string;
+  /**
+   * `null` = trošak SAMO na mašini (spec 09 §1.4/20): servis mašine koja nije bila na projektu.
+   * Red tada mora nositi `machineId` — baza to provjerava `cost_entries_subject_check`-om.
+   */
+  projectId: string | null;
   phaseId?: string | null;
   categoryId?: string | null;
   sourceType: CostSourceType;
@@ -636,32 +648,62 @@ async function bookServiceOrderCostWithClient(
     id: string;
     machine_id: string;
     amount_cents: string | null;
+    total_cost_cents: string;
     currency_code: string | null;
     closed_at: string | null;
     opened_at: string;
     project_id: string | null;
+    warranty_claim: boolean;
   }>(
-    `SELECT so.id, so.machine_id, so.amount_cents::text, so.currency_code,
-            so.closed_at::text, so.opened_at::text, mwl.project_id
+    /* `project_id` je SADA na nalogu (F8 §1.4/20): puni se iz kvara kad je kvar nastao u radu na
+       projektu. Ranije se tražio kroz `machine_work_logs` sa ISTIM id-jem kao nalog — veza koja
+       gotovo nikad ne postoji, pa trošak servisa skoro nikad nije ni knjižen. */
+    `SELECT so.id, so.machine_id, so.amount_cents::text, so.total_cost_cents::text,
+            so.currency_code, so.closed_at::text, so.opened_at::text, so.project_id,
+            so.warranty_claim
        FROM public.service_orders so
-       LEFT JOIN LATERAL (
-         SELECT l.project_id FROM public.machine_work_logs l
-          WHERE l.company_id = so.company_id AND l.id = so.id LIMIT 1
-       ) mwl ON true
       WHERE so.company_id = $1 AND so.id = $2`,
     [params.companyId, params.serviceOrderId],
   );
   const order = row.rows[0];
   if (!order) return { posted: 0, pending: 0, skipped: 1 };
+
   /*
-   * Servisni nalog NEMA `project_id` u svojoj tabeli — trošak servisa pripada projektu na kojem
-   * je mašina bila kad je kvar nastao, ali ta veza nije u šemi. Zato servis ulazi u ledger tek
-   * kad nalog dobije projekat kroz `machine_work_log` (Modul 8 ga puni). Bez projekta trošak ne
-   * visi „na firminom trošku“ — takav trošak bi bio nevidljiv u marži svakog projekta.
+   * Garancija na izvedeni rad (spec 09 §1.7/32): popravka u garanciji NE stvara novi trošak.
+   * Knjiži se red sa iznosom 0 i napomenom „garancija“ — tako je u ledgeru VIDLJIVO da je posao
+   * obavljen, a da firma nije platila drugi put. Preskakanje bi značilo da garancijska popravka
+   * ne postoji u trošku održavanja, pa bi trošak po satu rada bio lažno manji.
    */
-  if (!order.project_id) return { posted: 0, pending: 0, skipped: 1 };
   const onDate = (order.closed_at ?? order.opened_at).slice(0, 10);
   const currency = isCurrency(order.currency_code) ? order.currency_code : "BAM";
+  if (order.warranty_claim) {
+    await ensureCostCategories(client, params.companyId, params.actorId);
+    const result = await postCost(client, {
+      companyId: params.companyId,
+      projectId: order.project_id,
+      sourceType: "SERVICE_ORDER",
+      sourceId: order.id,
+      machineId: order.machine_id,
+      occurredOn: onDate,
+      amountCents: 0n,
+      currency,
+      unit: null,
+      note: "Garancija — popravka bez novog troška.",
+      actorId: params.actorId,
+    });
+    if (!result.created) return { posted: 0, pending: 0, skipped: 1 };
+    return { posted: 1, pending: 0, skipped: 0 };
+  }
+
+  /*
+   * Iznos: `total_cost_cents` (labor + dijelovi + vanjski) je izveden i tačan. `amount_cents` je
+   * stari procjenski iznos kvarda i koristi se samo za redove koji još nemaju razrađen trošak.
+   *
+   * Trošak BEZ iznosa je `PENDING`, ne preskočen red (D1 iz Modula 5): „nepoznato“ ne smije
+   * izgledati kao besplatno, a ne smije ni nestati iz ledžera.
+   */
+  const total = BigInt(order.total_cost_cents);
+  const amountCents = total > 0n ? total : order.amount_cents === null ? null : BigInt(order.amount_cents);
   const result = await postCost(client, {
     companyId: params.companyId,
     projectId: order.project_id,
@@ -669,10 +711,10 @@ async function bookServiceOrderCostWithClient(
     sourceId: order.id,
     machineId: order.machine_id,
     occurredOn: onDate,
-    amountCents: order.amount_cents === null ? null : BigInt(order.amount_cents),
+    amountCents,
     currency,
     unit: null,
-    note: order.amount_cents === null ? "Servisni nalog još nema iznos." : null,
+    note: amountCents === null ? "Servisni nalog još nema iznos." : null,
     actorId: params.actorId,
   });
   if (!result.created) return { posted: 0, pending: 0, skipped: 1 };
@@ -753,6 +795,15 @@ export function bookWorkdayCostInCompany(
   params: { companyId: string; actorId: string; workdayId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
   return bookInCompany(pool, params.companyId, (client) => bookWorkdayCostWithClient(client, params));
+}
+
+export function bookServiceOrderCostInCompany(
+  pool: Pool,
+  params: { companyId: string; actorId: string; serviceOrderId: string },
+): Promise<{ posted: number; pending: number; skipped: number }> {
+  return bookInCompany(pool, params.companyId, (client) =>
+    bookServiceOrderCostWithClient(client, params),
+  );
 }
 
 export function bookMachineWorkLogCostInCompany(
@@ -1144,7 +1195,9 @@ function sourceHref(sourceType: string, sourceId: string): string | null {
     case "HAUL":
       return `/ured/ture?haulId=${encodeURIComponent(base)}`;
     case "SERVICE_ORDER":
-      return `/ured/kvarovi?orderId=${encodeURIComponent(base)}`;
+      /* F8: trošak servisa vodi na NALOG (rad), a ne na kvar (događaj) — nalog je mjesto gdje
+         se vidi sat, dijelovi i ko je radio. */
+      return `/ured/servis/${encodeURIComponent(base)}`;
     default:
       return null;
   }

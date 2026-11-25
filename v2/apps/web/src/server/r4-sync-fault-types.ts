@@ -15,7 +15,9 @@ export type SyncEntityType =
   | "fuel_entry"
   | "haul"
   | "machine_daily_check"
-  | "machine_fault";
+  | "machine_fault"
+  /* F8: radionica sa telefona (jedna stavka, radnja je `action.kind`). */
+  | "service_order_action";
 
 export type SyncFaultApplyDeps = {
   actor: SyncPushActor;
