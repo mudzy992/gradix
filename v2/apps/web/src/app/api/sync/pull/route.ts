@@ -78,7 +78,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const officeRead = ctx.roles.includes("OWNER") || ctx.roles.includes("ADMIN");
-    const isWorker = ctx.roles.includes("WORKER");
+    // Terenske role koriste isti ograničeni feed vlastitog radnika; nisu šefov opseg.
+    const isWorker = ctx.roles.some((role) => ["WORKER", "DRIVER", "MACHINE_OPERATOR", "MECHANIC"].includes(role));
     const isForeman = ctx.roles.includes("SITE_SUPERVISOR");
     if (!officeRead && !isWorker && !isForeman) {
       return fail("FORBIDDEN", "Ovaj nalog nema pristup radnom sync toku.");

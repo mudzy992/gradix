@@ -19,6 +19,7 @@ import { applyFaultSyncItem } from "./r4-sync-fault";
 import { applyServiceOrderAction, bookFinishedOrderCost } from "./r4-sync-service-order";
 import { applySiteDiaryItemSyncItem, applySiteDiarySyncItem } from "./r6-sync-diary";
 import { applyHseActionSyncItem, applyHseIncidentSyncItem, applyHseTrainingSyncItem } from "./r6-sync-hse";
+import { can, type Permission } from "./permissions";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -1016,11 +1017,18 @@ export async function pushR4SyncItems(
       item.entityType === "hse_action" ||
       item.entityType === "hse_training"
     ) {
-      /*
-       * F9 — dnevnik i HSE ne traže `worker` zapis: šef gradilišta i radnik prijavljuju sa svog
-       * naloga, a ne u ime radnika iz kataloga. Dozvola se provjerava u handleru (`can`), jer
-       * `hse.report` ima SVAKA rola — prijava opasnosti nije privilegija.
-       */
+      // Sync je alternativni put do istih podataka: provjeri iste dozvole kao na HTTP rutama.
+      const permission: Permission = item.entityType === "site_diary" || item.entityType === "site_diary_item"
+        ? "diary.manage"
+        : item.entityType === "hse_incident"
+          ? "hse.report"
+          : item.entityType === "hse_action"
+            ? "hse.investigate"
+            : "hse.training.manage";
+      if (!can(actor.roles, permission)) {
+        results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
+        continue;
+      }
       worker = actorWorker;
     } else if (item.workerId !== undefined) {
       if (!isForeman) {

@@ -27,14 +27,17 @@ const CO = `cmp_f9s_${RUN}`;
 const CO_B = `cmp_f9sb_${RUN}`;
 const USER_SUP = `usr_f9s_sup_${RUN}`;
 const USER_WORKER = `usr_f9s_wrk_${RUN}`;
+const USER_DRIVER = `usr_f9s_driver_${RUN}`;
 const USER_B = `usr_f9s_b_${RUN}`;
 const WORKER_SUP = `wrk_f9s_sup_${RUN}`;
+const WORKER_REPORTER = `wrk_f9s_reporter_${RUN}`;
+const WORKER_DRIVER = `wrk_f9s_driver_${RUN}`;
 const WORKER_INJURED = `wrk_f9s_inj_${RUN}`;
 const PROJECT = `prj_f9s_${RUN}`;
 const BOQ_ITEM = `boq_f9s_${RUN}`;
 const DAY = "2026-10-05";
 
-const COOKIES = { sup: "", worker: "", b: "" };
+const COOKIES = { sup: "", worker: "", driver: "", b: "" };
 type CookieKey = keyof typeof COOKIES;
 
 /** `localId` mora biti uuid; brojač drži jedinstvenost — isti ID uz drugi sadržaj se odbija. */
@@ -140,24 +143,28 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     ]);
     await admin.query(
       `INSERT INTO users (id, email, first_name, last_name, password_hash, must_change_password)
-       VALUES ($1,$2,'S','Šef','x',false), ($3,$4,'R','Radnik','x',false), ($5,$6,'B','Firma','x',false)`,
+       VALUES ($1,$2,'S','Šef','x',false), ($3,$4,'R','Radnik','x',false), ($5,$6,'B','Firma','x',false),
+              ($7,$8,'V','Vozač','x',false)`,
       [
         USER_SUP, `sef-f9s-${RUN}@test.example`,
         USER_WORKER, `radnik-f9s-${RUN}@test.example`,
         USER_B, `b-f9s-${RUN}@test.example`,
+        USER_DRIVER, `vozac-f9s-${RUN}@test.example`,
       ],
     );
     await withCompany(admin, companyId(CO), async (client) => {
       await client.query(
         `INSERT INTO memberships (id, user_id, company_id, roles, scope)
          VALUES ($1,$2,$3,ARRAY['SITE_SUPERVISOR']::"Role"[],'COMPANY'),
-                ($4,$5,$3,ARRAY['WORKER']::"Role"[],'SELF')`,
-        [`mem_f9s_sup_${RUN}`, USER_SUP, CO, `mem_f9s_wrk_${RUN}`, USER_WORKER],
+                ($4,$5,$3,ARRAY['WORKER']::"Role"[],'SELF'),
+                ($6,$7,$3,ARRAY['DRIVER']::"Role"[],'SELF')`,
+        [`mem_f9s_sup_${RUN}`, USER_SUP, CO, `mem_f9s_wrk_${RUN}`, USER_WORKER, `mem_f9s_drv_${RUN}`, USER_DRIVER],
       );
       await client.query(
         `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id)
-         VALUES ($1,$2,'S','Šef','2024-01-01'::date,$3), ($4,$2,'P','Povrijeđeni','2024-01-01'::date,NULL)`,
-        [WORKER_SUP, CO, USER_SUP, WORKER_INJURED],
+         VALUES ($1,$2,'S','Šef','2024-01-01'::date,$3), ($4,$2,'P','Povrijeđeni','2024-01-01'::date,NULL),
+                ($5,$2,'R','Radnik','2024-01-01'::date,$6), ($7,$2,'V','Vozač','2024-01-01'::date,$8)`,
+        [WORKER_SUP, CO, USER_SUP, WORKER_INJURED, WORKER_REPORTER, USER_WORKER, WORKER_DRIVER, USER_DRIVER],
       );
       await client.query(
         "INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'F9S-1','F9 sync gradilište')",
@@ -180,6 +187,7 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     });
     await signIn(admin, USER_SUP, CO, "sup");
     await signIn(admin, USER_WORKER, CO, "worker");
+    await signIn(admin, USER_DRIVER, CO, "driver");
     await signIn(admin, USER_B, CO_B, "b");
   }, 60_000);
 
@@ -216,7 +224,7 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       });
     }
     await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[CO, CO_B]]);
-    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER_SUP, USER_WORKER, USER_B]]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER_SUP, USER_WORKER, USER_DRIVER, USER_B]]);
     await admin.end();
   }, 60_000);
 
@@ -400,6 +408,65 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect(types.has("site_diary")).toBe(true);
     expect(types.has("hse_incident")).toBe(true);
     expect(body.data.cursor).not.toBe("");
+  });
+
+  it("radnik smije prijaviti incident, ali ne pisati dnevnik, mjere ili obuke kroz sync", async () => {
+    const incidentId = `hsi_worker_${RUN}`;
+    expect((await pushOne(COOKIES.worker, incidentItem({ incidentId }))).status).toBe("APPLIED");
+    const diary = await pushOne(COOKIES.worker, diaryItem({ diaryId: `sdr_worker_${RUN}` }));
+    const item = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_worker_${RUN}`,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    const action = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "hse_action", actionId: `hsa_worker_${RUN}`,
+      deviceSentAt: `${DAY}T12:00:00+02:00`,
+      action: { incidentId, inspectionId: null, description: "Provjeriti štitnik", responsibleWorkerId: WORKER_REPORTER, dueOn: DAY },
+    });
+    const training = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "hse_training", trainingId: `hst_worker_${RUN}`,
+      deviceSentAt: `${DAY}T12:00:00+02:00`,
+      training: { kind: "TOOLBOX", title: "Sigurnost", topic: "Zaštita", heldAt: `${DAY}T12:00:00+02:00`,
+        projectId: PROJECT, location: null, durationMinutes: 15,
+        attendees: [{ workerId: WORKER_REPORTER, signatureName: "R. Radnik", signedAt: `${DAY}T12:15:00+02:00` }] },
+    });
+    for (const denied of [diary, item, action, training]) {
+      expect(denied.status).toBe("REJECTED");
+      expect(denied.code).toBe("SYNC_ITEM_REJECTED");
+    }
+    const counts = await withCompany(admin, companyId(CO), (client) => client.query<{ actions: string; trainings: string }>(
+      `SELECT (SELECT count(*) FROM hse_actions WHERE id = $1)::text AS actions,
+              (SELECT count(*) FROM hse_trainings WHERE id = $2)::text AS trainings`,
+      [`hsa_worker_${RUN}`, `hst_worker_${RUN}`],
+    ));
+    expect(counts.rows[0]).toEqual({ actions: "0", trainings: "0" });
+  });
+
+  it("vozač može prijaviti opasnost i čita samo svoj sync opseg", async () => {
+    expect((await pushOne(COOKIES.driver, incidentItem({ incidentId: `hsi_driver_${RUN}` }))).status).toBe("APPLIED");
+    const response = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.driver } }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: { events: { entityType: string }[] } };
+    expect(body.data.events.some((event) => event.entityType === "site_diary")).toBe(false);
+    expect(body.data.events.some((event) => event.entityType === "hse_incident")).toBe(false);
+  });
+
+  it("potpisan dnevnik ne prima sync dopune ni BOQ stavke bez revizije", async () => {
+    await withCompany(admin, companyId(CO), (client) => client.query(
+      `UPDATE site_diaries SET status = 'SIGNED', signed_name = 'Šef', signed_at = now()
+       WHERE company_id = $1 AND id = $2`, [CO, `sdr_f9s_${RUN}`],
+    ));
+    const diary = await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}` }));
+    const item = await pushOne(COOKIES.sup, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_signed_${RUN}`,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    expect(diary.status).toBe("REJECTED");
+    expect(diary.code).toBe("DIARY_ALREADY_LOCKED");
+    expect(item.status).toBe("REJECTED");
+    expect(item.code).toBe("DIARY_ALREADY_LOCKED");
   });
 
   it("tuđa firma ne može pisati dnevnik ni incident u ovu firmu", async () => {

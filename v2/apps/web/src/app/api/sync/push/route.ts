@@ -57,6 +57,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       role === "WORKER"
       || role === "SITE_SUPERVISOR"
       || role === "MACHINE_OPERATOR"
+      || role === "DRIVER"
       || role === "MECHANIC"
       || role === "OWNER"
       || role === "ADMIN",

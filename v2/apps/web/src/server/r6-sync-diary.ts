@@ -72,7 +72,7 @@ export async function applySiteDiarySyncItem(
     [actor.companyId, item.diary.projectId, item.diary.diaryDate],
   );
   const current = existing.rows[0];
-  if (current?.status === "LOCKED") {
+  if (current && current.status !== "DRAFT") {
     return reject({ ...helpers.invalidItem(item, "DIARY_ALREADY_LOCKED"), entityId: current.id, version: current.version });
   }
 
@@ -272,7 +272,7 @@ export async function applySiteDiaryItemSyncItem(
   );
   const header = diary.rows[0];
   if (!header) return reject(helpers.invalidItem(item, "DIARY_NOT_FOUND"));
-  if (header.status === "LOCKED") {
+  if (header.status !== "DRAFT") {
     return reject({ ...helpers.invalidItem(item, "DIARY_ALREADY_LOCKED"), entityId: header.id, version: header.version });
   }
 

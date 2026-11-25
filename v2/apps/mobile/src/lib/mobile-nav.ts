@@ -24,6 +24,7 @@ export type MobileNavEntry = {
     | "/kvarovi"
     /* F8: radionica — mehaničar mijenja stanje naloga i bilježi dijelove sa telefona. */
     | "/servisni-nalozi"
+    | "/hse/prijava"
     | "/rokovi"
     | "/projekti"
     | "/moji-zadaci"
@@ -76,6 +77,13 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
     visible: (p) =>
       p.workerId !== null
       && (p.roles.includes("MACHINE_OPERATOR") || p.roles.includes("MECHANIC")),
+  },
+  {
+    href: "/hse/prijava",
+    label: "Prijava opasnosti",
+    // Sync zahtijeva aktivnu vezu s radnikom i odgovarajuću terensku rolu.
+    visible: (p) => p.workerId !== null && p.roles.some((role) =>
+      ["WORKER", "DRIVER", "MACHINE_OPERATOR", "MECHANIC", "SITE_SUPERVISOR"].includes(role)),
   },
   /*
    * F5: zadaci i trošak sa gradilišta.

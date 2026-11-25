@@ -1,16 +1,19 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–9: završene** · **Tag `phase-9`** · **CI: zelen (run `45671009367` za F8)**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faze 0–8: završene; F9: preostaju mobilni ekrani** · **Tag `phase-9`** · **CI: zelen (run `45694333436` za F9)**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Faza 9 (Modul 10 — dnevnik građenja i zaštita na radu) je
-isporučena: jedan dnevnik po `(projekt, dan)` sa automatskim sekcijama iz Modula 3/5, količine kao
+Moduli 1–12 zaključani u `docs/specs/`. U Fazi 9 (Modul 10 — dnevnik i zaštita na radu) isporučeni
+su backend, web i offline sync infrastruktura; mobilni ekrani iz plana još nisu isporučeni. Jedan
+je dnevnik po `(projekt, dan)` sa automatskim sekcijama iz Modula 3/5, količine kao
 jedini izvor završenosti (BOQ uvećava `quantity_executed` u istoj transakciji), potpis pa
 zaključavanje pa revizija sa razlogom, PDF bez biblioteke uz `DRAFT_FORMAT` do potvrde obrasca;
 incidenti sa nepromjenjivim činjenicama i dopunama, istraga sa jednim uzrokom, mjere sa odgovornim
 i rokom, `PROHIBITION` zabrana rada sa obaveznim razlogom podizanja, obuke gdje je prisustvo
-POTPIS, i LTIFR iz stvarnih sati. Sljedeća je Faza 10 po `docs/IMPLEMENTATION_PLAN.md`.
-Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
+POTPIS, i LTIFR iz stvarnih sati. Mobilni `/hse/prijava` je započet (lokalni unos i slanje, uz
+ograničenja opisana u izvještaju); preostaju `/dnevnik`, `/hse/toolbox` i mobilni E2E testovi.
+Red/sync sami ne ispunjavaju mobilnu isporuku. Faza 10 je sljedeća po
+`docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -81,6 +84,31 @@ Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 | 9.5 | UI: `/ured/dnevnik` (lista + traka nepotpisanih), `/ured/dnevnik/[id]` (auto sekcije read-only, ručni unos, količine, zastoji, potpis/zaključavanje/revizija, PDF sa `DRAFT_FORMAT`), `/ured/hse` (zabrana rada prva, mjere koje kasne, statistika), `/ured/hse/[id]` (činjenice bez forme za izmjenu, dopune, istraga, mjere, zatvaranje sa objašnjenjem šta nedostaje), `/ured/hse/inspekcije` (lift zabrane), `/ured/hse/obuke` (prisustvo kao potpis); kartica „Zaštita na radu“ na `/pregled`; navigacija: „Dnevnik građenja“ i „Zaštita na radu“ u grupi Evidencija | ✅ |
 | 9.6 | Mobilno: `LOCAL_SCHEMA_VERSION = 3` — `outbox`/`sync_events` primaju pet F9 tipova (`site_diary`, `site_diary_item`, `hse_incident`, `hse_action`, `hse_training`) uz prenos redova u JEDNOJ transakciji; `queueSiteDiary`/`queueSiteDiaryItem`/`queueHseIncident`/`queueHseAction`/`queueHseTraining` sa validacijom PRIJE upisa; `baseVersion` je obavezan (bez njega nema smislenog sukoba) | ✅ |
 | 9.7 | Provjere: `f9-diary-hse` (13) + `f9-sync` (8) protiv prave baze, `safe-text` sweep proširen na F9 šeme, `nul-guard` HANDLERS pokriva svih 30 ruta, `migrations` (6) za v3, `r4-outbox` (7) za pet tipova i odbijanje prije upisa, `rbac` tačna lista radnikovih dozvola; `pnpm test` **1 265 prošlo** (web 712, domain 316, mobile 111, db 70, contracts 21, worker 25), typecheck 6/6, lint čist, `check-cycles` 0, OpenAPI ažuran, `check-tenant-sql` 110/110 | ✅ |
+
+## Faza 9 — naknadne popravke i mobilna prijava
+
+- Sync sada provjerava `diary.manage`, `hse.report`, `hse.investigate` i `hse.training.manage`
+  po tipu zapisa; ranije su obrađivači mogli zaobići dozvole ruta. Potpisani dnevnik odbija i sync
+  zaglavlje i BOQ stavku prije promjene. Integracioni testovi provjeravaju radničku prijavu,
+  zabranjene radnje, potpis i vozački sync sa ograničenim pull opsegom.
+- `/hse/prijava`: lokalni unos i slanje kroz outbox; stanje odbijenih zapisa je vidljivo. Ekran
+  ne šalje fotografije niti veže projekat, a povrijeđenog je moguće navesti samo ID-em. Ekranski
+  testovi koriste mockove; potpuni mobilni E2E na uređaju nije pokrenut.
+- Naknadna provjera: `REQUIRE_DB_TESTS=1 pnpm test` **1 278 prošlo** (web 715, domain 323,
+  mobile 112 + 12, db 70, contracts 21, worker 25); typecheck 6/6, lint čist, bez ciklusa.
+  Run `45694333436` odnosi se na raniji tag, ne na ove naknadne izmjene.
+
+## Faza 10 — početak (nije isporučena)
+
+- `warehouse-purchase.ts`: samostalne formule za stanje po skladištu, potpisanu popisnu razliku,
+  prosječnu vrijednost izlaza, prag nabavke i situacije podizvođača; sedam domenskih testova.
+  Formule još nisu povezane sa bazom ili API-jem.
+- Migracija, cisterna, transakcije, dozvole, servisi, interfejs i integracioni testovi tek slijede.
+  Posebno treba uskladiti F8 `stockOnHand` (koji ignoriše `COUNT`) s potpisanim razlikama F10,
+  bez promjene postojećeg ponašanja prije migracije i zamjene svih čitalaca.
+- Specifikacija predviđa knjiženje i odobrenog računa i izlaza materijala: prije integracije treba
+  dokazati da isti materijal ne uvećava projektni trošak dvaput, uključujući slučaj kada račun već
+  ima `project_id`. Nije riješeno samim domenskim formulama.
 
 ## Faza 9 — odluke koje se ne smiju izgubiti
 
