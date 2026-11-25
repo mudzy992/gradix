@@ -10,8 +10,8 @@ jedini izvor završenosti (BOQ uvećava `quantity_executed` u istoj transakciji)
 zaključavanje pa revizija sa razlogom, PDF bez biblioteke uz `DRAFT_FORMAT` do potvrde obrasca;
 incidenti sa nepromjenjivim činjenicama i dopunama, istraga sa jednim uzrokom, mjere sa odgovornim
 i rokom, `PROHIBITION` zabrana rada sa obaveznim razlogom podizanja, obuke gdje je prisustvo
-POTPIS, i LTIFR iz stvarnih sati. Mobilni `/hse/prijava` je započet (lokalni unos i slanje, uz
-ograničenja opisana u izvještaju); preostaju `/dnevnik`, `/hse/toolbox` i mobilni E2E testovi.
+POTPIS, i LTIFR iz stvarnih sati. Mobilni `/hse/prijava` i `/hse/toolbox` su započeti uz
+ograničenja opisana u izvještaju; preostaju `/dnevnik`, fotografije i mobilni E2E testovi.
 Red/sync sami ne ispunjavaju mobilnu isporuku. Faza 10 je sljedeća po
 `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 
@@ -85,18 +85,44 @@ Red/sync sami ne ispunjavaju mobilnu isporuku. Faza 10 je sljedeća po
 | 9.6 | Mobilno: `LOCAL_SCHEMA_VERSION = 3` — `outbox`/`sync_events` primaju pet F9 tipova (`site_diary`, `site_diary_item`, `hse_incident`, `hse_action`, `hse_training`) uz prenos redova u JEDNOJ transakciji; `queueSiteDiary`/`queueSiteDiaryItem`/`queueHseIncident`/`queueHseAction`/`queueHseTraining` sa validacijom PRIJE upisa; `baseVersion` je obavezan (bez njega nema smislenog sukoba) | ✅ |
 | 9.7 | Provjere: `f9-diary-hse` (13) + `f9-sync` (8) protiv prave baze, `safe-text` sweep proširen na F9 šeme, `nul-guard` HANDLERS pokriva svih 30 ruta, `migrations` (6) za v3, `r4-outbox` (7) za pet tipova i odbijanje prije upisa, `rbac` tačna lista radnikovih dozvola; `pnpm test` **1 265 prošlo** (web 712, domain 316, mobile 111, db 70, contracts 21, worker 25), typecheck 6/6, lint čist, `check-cycles` 0, OpenAPI ažuran, `check-tenant-sql` 110/110 | ✅ |
 
+## Korak 0 — S3 bundler (naknadna popravka)
+
+- `serverExternalPackages` ostavlja AWS SDK i presigner Node-u; ESM esbuild dijagnostika dobija
+  `createRequire` banner za CJS `node:https`. Stari bundle je reprodukovao Coolify grešku;
+  novi je prošao S3 zahtjeve na lokalnom lažnom serveru. Next produkcijski build, standalone
+  server `/api/health` i standalone SDK HEAD/PUT/GET/presigned GET prošli su lokalno.
+- CI `45703972559` na `e5b0a7f` je zelen i izgradio Docker image te izvršio obje S3 provjere
+  unutar slike. Korisnik je naknadno potvrdio Coolify produkciju: `s3.bucket_object` i
+  `s3.browser_cors` su `PASS`.
+
 ## Faza 9 — naknadne popravke i mobilna prijava
 
 - Sync sada provjerava `diary.manage`, `hse.report`, `hse.investigate` i `hse.training.manage`
   po tipu zapisa; ranije su obrađivači mogli zaobići dozvole ruta. Potpisani dnevnik odbija i sync
   zaglavlje i BOQ stavku prije promjene. Integracioni testovi provjeravaju radničku prijavu,
   zabranjene radnje, potpis i vozački sync sa ograničenim pull opsegom.
-- `/hse/prijava`: lokalni unos i slanje kroz outbox; stanje odbijenih zapisa je vidljivo. Ekran
-  ne šalje fotografije niti veže projekat, a povrijeđenog je moguće navesti samo ID-em. Ekranski
-  testovi koriste mockove; potpuni mobilni E2E na uređaju nije pokrenut.
+- `/hse/prijava`: lokalni unos i slanje kroz outbox; stanje odbijenih zapisa je vidljivo. Izbor
+  projekta koristi lokalni spisak, a izbor povrijeđenog šefov lokalni roster za projekat i datum;
+  ostali bez tog rostera moraju unijeti ID. Fotografije i više uključenih radnika još nisu rađeni.
+- `/hse/toolbox`: projekat i ekipa iz keša, pojedinačni dodir za svakog potpisnika, tema i
+  trajanje ulaze u offline red; server bilježi identitete i vremena u auditu. Ekranski testovi
+  koriste mockove; potpuni mobilni E2E na uređaju nije pokrenut.
+- Sync sada **odbija** `signedName`: prethodno ga je tiho ignorisao. Ispravan offline potpis tek
+  treba vezati za konkretan snapshot automatskih sekcija koje je šef vidio, tako da ga promjene
+  nastale dok je telefon bio offline ne mogu neprimjetno izmijeniti.
+- Količine sync nose projekat i datum dnevnika, ne dan slanja; ručne i BOQ stavke se podržavaju,
+  HAUL se ne unosi duplo, a stari red bez datuma odbija se (`DIARY_REFERENCE_REQUIRED`) i zahtijeva
+  intervenciju. Različite vrijednosti iste sekcije više se ne odbacuju tiho. Pri istoj fotografiji
+  u dva incidenta više nema sudara ID-a; sam upload i dalje nije implementiran.
 - Naknadna provjera: `REQUIRE_DB_TESTS=1 pnpm test` **1 278 prošlo** (web 715, domain 323,
   mobile 112 + 12, db 70, contracts 21, worker 25); typecheck 6/6, lint čist, bez ciklusa.
   Run `45694333436` odnosi se na raniji tag, ne na ove naknadne izmjene.
+- Lokalni puni test nakon naknadnih F9 izmjena: **1 287 prošlo** (web 720, domain 323,
+  mobile 113 + 15, db 70, contracts 21, worker 25). Lint, typecheck, check-cycles,
+  db:types:check, check-tenant-sql i matrix parity prolaze (parity upozorava na raniji R1 gap).
+  `run.sh` se lokalno ne može izvršiti jer nema `psql`; iste SQL provjere 001/002 izvršene su
+  kroz `pg` kao gradix_app i prošle. Ekranski testovi koriste mockove; ove naknadne F9 izmjene
+  nisu u CI-ju i mobilni emulator nije pokrenut.
 
 ## Faza 10 — početak (nije isporučena)
 

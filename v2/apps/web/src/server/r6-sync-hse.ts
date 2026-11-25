@@ -10,6 +10,7 @@
  * Mjera i obuka konflikt imaju: ista mjera sa drugim rokom ili ista obuka sa drugim prisutnima je
  * stvarno neslaganje dva telefona i mora se vidjeti u uredu.
  */
+import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import type {
   R4HseActionPushItem,
@@ -104,8 +105,8 @@ export async function applyHseIncidentSyncItem(
        VALUES ($1,$2,'INCIDENT',$3,$4,$5,$6,$7,$8,'pending',$9)
        ON CONFLICT (entity_type, entity_id, sha256) DO NOTHING`,
       [
-        `hsa_${photo.sha256.slice(0, 20)}`, actor.companyId, created.id,
-        `gx2/${actor.companyId}/hse-incident/${created.id}/${photo.sha256.slice(0, 20)}`,
+        `hsa_${randomUUID()}`, actor.companyId, created.id,
+        `gx2/${actor.companyId}/hse-incident/${created.id}/${photo.sha256}`,
         photo.fileName, photo.contentType, photo.sizeBytes, photo.sha256, actor.userId,
       ],
     );

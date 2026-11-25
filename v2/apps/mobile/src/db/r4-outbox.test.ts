@@ -286,7 +286,7 @@ describe("R4 SQLite outbox and account privacy", () => {
       },
     }, `${WORK_DATE}T17:00:00.000Z`, () => localUuid(101));
     await queueSiteDiaryItem(db, ACCOUNT_A, {
-      diaryItemId: "diary-item-1",
+      diaryItemId: "diary-item-1", diaryProjectId: PROJECT, diaryDate: WORK_DATE,
       item: { boqItemId: null, description: "Beton C25/30", unit: "m3", quantity: "12.500", source: "MANUAL" },
     }, `${WORK_DATE}T17:01:00.000Z`, () => localUuid(102));
     await queueHseIncident(db, ACCOUNT_A, { incidentId: "incident-local-1", incident },

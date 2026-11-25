@@ -634,11 +634,11 @@ export async function queueSiteDiary(
   return item;
 }
 
-/** Količina izvedenih radova; dan se nalazi na serveru iz BOQ stavke ili `diaryId`. */
+/** Količina je vezana za projekat i datum dnevnika, nikad za datum slanja. */
 export async function queueSiteDiaryItem(
   db: LocalSqlite,
   account: LocalAccount,
-  input: { diaryItemId: string; item: R4SiteDiaryItemPayload },
+  input: { diaryItemId: string; diaryProjectId: string; diaryDate: string; item: R4SiteDiaryItemPayload },
   deviceSentAt: string = new Date().toISOString(),
   makeId: () => string = uuid,
 ): Promise<R4SyncPushItem> {
@@ -646,6 +646,8 @@ export async function queueSiteDiaryItem(
     localId: makeId(),
     entityType: "site_diary_item",
     diaryItemId: input.diaryItemId,
+    diaryProjectId: input.diaryProjectId,
+    diaryDate: input.diaryDate,
     deviceSentAt,
     item: input.item,
   };

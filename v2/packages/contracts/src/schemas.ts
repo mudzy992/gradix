@@ -982,6 +982,8 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
     localId: z.string().uuid(),
     entityType: z.literal("site_diary_item"),
     diaryItemId: z.string().min(1).max(128),
+    diaryProjectId: z.string().min(1).max(128).optional(),
+    diaryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     deviceSentAt: OffsetDateTime,
     item: z.object({
       boqItemId: z.string().min(1).max(128).nullable(),

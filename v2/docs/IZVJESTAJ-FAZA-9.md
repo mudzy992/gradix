@@ -4,9 +4,9 @@
 **CI:** `45694333436`, `verify` uspješan · **Spec:** `10-dnevnik-hse.md`
 
 F9 isporučuje bazu, domenska pravila, API i web za dnevnik i HSE, te infrastrukturu za offline
-red i sinkronizaciju. Poslije taga dodat je početni mobilni ekran `/hse/prijava`; mobilni dnevnik
-i toolbox još nisu isporučeni. Red i server nisu isto što i mogućnost da korisnik na telefonu
-unese podatke, pa se potpuna isporuka F9 prema planu ne može smatrati završenom.
+red i sinkronizaciju. Poslije taga dodati su početni mobilni ekrani `/hse/prijava` i `/hse/toolbox`;
+mobilni dnevnik i fotografije još nisu isporučeni. Red i server nisu isto što i mogućnost da
+korisnik na telefonu unese podatke, pa se potpuna isporuka F9 prema planu ne može smatrati završenom.
 
 ## 1. Isporučeno
 
@@ -53,11 +53,16 @@ nepostojećih mobilnih ekrana.
 
 ## 4. Preostalo prema planu F9
 
-- Mobilni `/dnevnik` i `/hse/toolbox`, njihova navigacija i povezivanje na offline red, uključujući
-  korisnički prikaz rezultata i konflikata.
-- Početni ekran `/hse/prijava` čuva i šalje lokalni zapis; ne veže projekat, ne šalje fotografije,
-  a povrijeđenog navodi samo ID-em. Status odbijenog zapisa je vidljiv. Za dovršenje treba
-  prikladan izbor projekta i radnika te fotografije prema specifikaciji.
+- Mobilni `/dnevnik`, njegova navigacija i povezivanje na offline red, uključujući automatske
+  sekcije, zastoj, količine i siguran potpis vezan za snapshot koji je korisnik vidio. Trenutni
+  sync odbija `signedName`, jer ga je ranije tiho ignorisao i nije provjeravao vidljivi snapshot.
+  Sync količina sada nosi projekat i datum dnevnika, obrađuje ručne i BOQ stavke i odbija stare
+  redove bez poslovnog ključa umjesto pogrešnog knjiženja na dan slanja.
+- Početni ekran `/hse/prijava` čuva i šalje lokalni zapis, bira projekat iz lokalnog spiska i
+  povrijeđenog iz keširanog šefovog rostera (ili ID-em kada roster nije dostupan). Status
+  odbijenog zapisa je vidljiv. Fotografije i izbor ostalih uključenih radnika još nisu dovršeni.
+- `/hse/toolbox` koristi lokalni roster sa pojedinačnim potpisima; treba dokazati puni tok na
+  uređaju, kao i stanje korisnika koji nije prethodno preuzeo projekat i ekipu.
 - Odgovarajući offline/E2E testovi na uređaju koji dokazuju unos, ponovno slanje i obradu.
   Ekranski test prijave koristi mockove; testovi reda i servera ga ne zamjenjuju.
 - Poslije taga ispravljena je provjera dozvola za F9 sync i odbijanje izmjena potpisanog dnevnika;

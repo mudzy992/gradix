@@ -200,6 +200,7 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         await client.query("DELETE FROM hse_actions WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_investigations WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incident_updates WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_attachments WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incidents WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_revisions WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_delays WHERE company_id = $1", [company]);
@@ -251,9 +252,8 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         hours: "3.00",
         note: "Pljusak",
       }],
-      overrides: { description: "Iskop, betoniranje i kiša poslije podne." },
     }));
-    expect(["APPLIED", "DUPLICATE", "CONFLICT"]).toContain(second.status);
+    expect(second.status).toBe("APPLIED");
 
     const delays = await withCompany(admin, companyId(CO), async (client) =>
       client.query<{ count: string }>(
@@ -270,10 +270,8 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       baseVersion: 1,
       overrides: { description: "Telefon sa starim ekranom." },
     }));
-    expect(["CONFLICT", "APPLIED"]).toContain(stale.status);
-    if (stale.status === "CONFLICT") {
-      expect(stale.code).toBe("DIARY_VERSION_CONFLICT");
-    }
+    expect(stale.status).toBe("CONFLICT");
+    expect(stale.code).toBe("DIARY_VERSION_CONFLICT");
 
     const row = await withCompany(admin, companyId(CO), async (client) =>
       client.query<{ description: string | null; version: number }>(
@@ -284,12 +282,22 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect(row.rows[0]?.description).toBeTruthy();
   });
 
+  it("različita ista sekcija ne biva odbačena ni kada je verzija aktuelna", async () => {
+    const current = await withCompany(admin, companyId(CO), (client) => client.query<{ version: number }>(
+      "SELECT version FROM site_diaries WHERE company_id = $1 AND project_id = $2 AND diary_date = $3", [CO, PROJECT, DAY],
+    ));
+    const result = await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}`,
+      baseVersion: current.rows[0]!.version, overrides: { description: "Promjena koja ne smije nestati." } }));
+    expect(result.status).toBe("CONFLICT");
+    expect(result.code).toBe("DIARY_VERSION_CONFLICT");
+  });
+
   it("količina sa BOQ stavkom uvećava quantity_executed u istoj transakciji", async () => {
     const result = await pushOne(COOKIES.sup, {
       localId: localId(),
       entityType: "site_diary_item",
-      diaryItemId: `sdi_f9s_${RUN}`,
-      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      diaryItemId: `sdi_f9s_${RUN}`, diaryProjectId: PROJECT, diaryDate: DAY,
+      deviceSentAt: `2026-10-08T17:00:00+02:00`,
       item: {
         boqItemId: BOQ_ITEM,
         description: "Beton C25/30",
@@ -306,6 +314,47 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         [CO, BOQ_ITEM],
       ));
     expect(Number(boq.rows[0]?.quantity_executed)).toBe(24.5);
+  });
+
+  it("ručna količina čuva se na odabrani dan i pri kasnijem slanju", async () => {
+    const item: R4SyncPushItem = {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_manual_${RUN}`,
+      diaryProjectId: PROJECT, diaryDate: DAY, deviceSentAt: "2026-11-01T10:00:00Z",
+      item: { boqItemId: null, description: "Ručni rad", unit: "m", quantity: "3", source: "MANUAL" },
+    };
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("APPLIED");
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("DUPLICATE");
+    const rows = await withCompany(admin, companyId(CO), (client) => client.query<{ diary_date: string; count: string }>(
+      `SELECT d.diary_date::text, count(*)::text FROM site_diary_items i JOIN site_diaries d
+         ON d.company_id = i.company_id AND d.id = i.diary_id
+        WHERE i.company_id = $1 AND i.id = $2 GROUP BY d.diary_date`, [CO, `sdi_manual_${RUN}`],
+    ));
+    expect(rows.rows).toEqual([{ diary_date: DAY, count: "1" }]);
+  });
+
+  it("stari red bez dana ne pogađa datum slanja", async () => {
+    const result = await pushOne(COOKIES.sup, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_legacy_${RUN}`,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    expect(result.status).toBe("REJECTED");
+    expect(result.code).toBe("DIARY_REFERENCE_REQUIRED");
+  });
+
+  it("ista fotografija na dva incidenta ne uzrokuje sudar ID-a", async () => {
+    const photo = { fileName: "gradiliste.jpg", contentType: "image/jpeg" as const, sizeBytes: 123, sha256: "a".repeat(64) };
+    for (const suffix of ["a", "b"]) {
+      const incident = incidentItem({ incidentId: `hsi_photo_${suffix}_${RUN}` });
+      if (incident.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+      expect((await pushOne(COOKIES.sup, { ...incident, incident: { ...incident.incident, photos: [photo] } })).status).toBe("APPLIED");
+    }
+    const found = await withCompany(admin, companyId(CO), (client) => client.query<{ count: string; ids: string }>(
+      `SELECT count(*)::text AS count, count(DISTINCT id)::text AS ids FROM hse_attachments
+        WHERE company_id = $1 AND entity_id = ANY($2)`,
+      [CO, [`hsi_photo_a_${RUN}`, `hsi_photo_b_${RUN}`]],
+    ));
+    expect(found.rows[0]).toEqual({ count: "2", ids: "2" });
   });
 
   it("NEAR_MISS sa izgubljenim danima se odbija prije baze", async () => {
@@ -394,6 +443,14 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         [CO],
       ));
     expect(attendees.rows[0]?.count).toBe("2");
+    const audit = await withCompany(admin, companyId(CO), (client) => client.query<{ metadata: { signatures: { workerId: string; signedAt: string }[] } }>(
+      "SELECT metadata FROM audit_events WHERE company_id = $1 AND entity_id = $2 AND action = 'hse.training_created'",
+      [CO, `hst_f9s_${RUN}`],
+    ));
+    expect(audit.rows[0]?.metadata.signatures).toEqual([
+      { workerId: WORKER_SUP, signedAt: `${DAY}T07:15:00+02:00` },
+      { workerId: WORKER_INJURED, signedAt: `${DAY}T07:16:00+02:00` },
+    ]);
   });
 
   it("pull vraća F9 događaje (site_diary, hse_incident) u isti feed", async () => {
@@ -408,6 +465,19 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect(types.has("site_diary")).toBe(true);
     expect(types.has("hse_incident")).toBe(true);
     expect(body.data.cursor).not.toBe("");
+  });
+
+  it("sync potpis bez potvrde prikazanog snapshot-a odbija se bez upisa", async () => {
+    const base = diaryItem({ diaryId: `sdr_signed_new_${RUN}` });
+    if (base.entityType !== "site_diary") throw new Error("Pogrešan testni payload");
+    const signed: R4SyncPushItem = { ...base, diary: { ...base.diary, diaryDate: "2026-10-06", signedName: "Šef Gradilišta" } };
+    const result = await pushOne(COOKIES.sup, signed);
+    expect(result.status).toBe("REJECTED");
+    expect(result.code).toBe("SYNC_ITEM_REJECTED");
+    const row = await withCompany(admin, companyId(CO), (client) => client.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM site_diaries WHERE company_id = $1 AND id = $2", [CO, `sdr_signed_new_${RUN}`],
+    ));
+    expect(row.rows[0]?.count).toBe("0");
   });
 
   it("radnik smije prijaviti incident, ali ne pisati dnevnik, mjere ili obuke kroz sync", async () => {
@@ -459,7 +529,7 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     ));
     const diary = await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}` }));
     const item = await pushOne(COOKIES.sup, {
-      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_signed_${RUN}`,
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_signed_${RUN}`, diaryProjectId: PROJECT, diaryDate: DAY,
       deviceSentAt: `${DAY}T17:00:00+02:00`,
       item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
     });

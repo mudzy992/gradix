@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   entries: [] as { localId: string; workerId: null; status: string; lastError: string | null; createdAt: string }[],
   saved: [] as unknown[],
+  projects: [] as { id: string; code: string; name: string; status: string }[],
+  workers: [] as { id: string; name: string }[],
 }));
 vi.mock("expo-crypto", () => ({ randomUUID: () => "11111111-1111-4111-8111-111111111111" }));
 vi.mock("expo-router", async () => {
@@ -17,10 +19,13 @@ vi.mock("../api/session-lifecycle", () => ({
   getLogoutSummary: async () => ({ pendingCount: 0, legacyR0Count: 0 }),
   logoutMobile: async () => ({ serverRevoked: true }),
 }));
-vi.mock("../db/sqlite", () => ({ openDb: async () => ({}) }));
+vi.mock("../api/client", () => ({ myProjects: async () => ({ projects: state.projects }), pullForemanWorkers: async () => { throw new Error("offline"); } }));
+vi.mock("../db/sqlite", () => ({ openDb: async () => ({}), readProjects: async () => ({ rows: state.projects, fetchedAt: null }), saveProjects: async () => undefined }));
 vi.mock("../db/r4-outbox", () => ({
   getActiveLocalAccount: async () => ({ companyId: "c1", userId: "u1" }),
   readOutboxEntries: async () => state.entries,
+  saveForemanWorkerRoster: async () => undefined,
+  readForemanWorkerRoster: async () => ({ workers: state.workers, fetchedAt: null }),
   queueHseIncident: async (_db: unknown, _account: unknown, payload: unknown) => {
     state.saved.push(payload);
     state.entries = [{ localId: "one", workerId: null, status: "pending", lastError: null, createdAt: "2026-11-23" }];
@@ -31,7 +36,7 @@ vi.mock("../sync/r4-sqlite", () => ({
 }));
 import HsePrijavaScreen from "../app/hse/prijava";
 
-beforeEach(() => { state.entries = []; state.saved = []; });
+beforeEach(() => { state.entries = []; state.saved = []; state.projects = []; state.workers = []; });
 afterEach(cleanup);
 
 describe("HSE prijava na telefonu", () => {
@@ -44,10 +49,24 @@ describe("HSE prijava na telefonu", () => {
     expect(state.saved).toHaveLength(1);
     expect(state.saved[0]).toMatchObject({ incidentId: "hsi_11111111-1111-4111-8111-111111111111",
       incident: { kind: "NEAR_MISS", description: "Neosigurana ivica iskopa", injuredWorkerId: null, lostDays: 0 } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pošalji sada" }).getAttribute("aria-disabled")).not.toBe("true"));
     fireEvent.click(screen.getByText("Pošalji sada"));
-    await screen.findByText(/Nema veze sa serverom/);
+    await screen.findByText(/Nema veze sa serverom/, {}, { timeout: 5000 });
     expect(screen.getByText("Čeka slanje")).toBeTruthy();
     expect(state.saved).toHaveLength(1);
+  });
+
+  it("nudi izbor projekta i povrijeđenog iz lokalne ekipe bez mreže", async () => {
+    state.projects = [{ id: "p1", code: "P1", name: "Gradilište", status: "ACTIVE" }];
+    state.workers = [{ id: "w1", name: "Ana Anić" }];
+    render(<HsePrijavaScreen />);
+    fireEvent.click(await screen.findByText("Nesreća"));
+    fireEvent.click(screen.getByText("P1 · Gradilište"));
+    fireEvent.click(await screen.findByText("Ana Anić"));
+    fireEvent.change(screen.getByLabelText("Šta se dogodilo?"), { target: { value: "Povreda na gradilištu" } });
+    fireEvent.click(screen.getByText("Sačuvaj na telefon"));
+    await screen.findByText("Prijava je sačuvana na telefonu, još nije poslana.");
+    expect(state.saved[0]).toMatchObject({ incident: { projectId: "p1", injuredWorkerId: "w1", kind: "ACCIDENT" } });
   });
 
   it("ne sprema prazan opis i ne predstavlja odbijeni zapis kao poslan", async () => {

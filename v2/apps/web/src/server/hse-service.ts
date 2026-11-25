@@ -767,7 +767,8 @@ export async function createTrainingTx(
       action: "hse.training_created",
       entityType: "hse_training",
       entityId: trainingId,
-      metadata: { kind: input.kind, attendees: input.attendees.length, renewed },
+      metadata: { kind: input.kind, attendees: input.attendees.length, renewed,
+        signatures: input.attendees.map(({ workerId, signedAt }) => ({ workerId, signedAt })) },
       retentionClass: "ACCESS",
     });
     return { outcome: "OK", id: trainingId };

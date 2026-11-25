@@ -127,6 +127,9 @@ export type R4SiteDiaryItemPushItem = {
   localId: string;
   entityType: "site_diary_item";
   diaryItemId: string;
+  /** Poslovni ključ dnevnika, ne vrijeme slanja; opcionalno samo zbog starih redova. */
+  diaryProjectId?: string;
+  diaryDate?: string;
   deviceSentAt: string;
   item: R4SiteDiaryItemPayload;
 };
@@ -148,6 +151,11 @@ export function validSiteDiaryItemPushItem(item: R4SiteDiaryItemPushItem): boole
   if (!item || typeof item !== "object") return false;
   if (item.entityType !== "site_diary_item") return false;
   if (!isBounded(item.diaryItemId, 1, 128)) return false;
+  if ((item.diaryProjectId === undefined) !== (item.diaryDate === undefined)) return false;
+  if (item.diaryProjectId !== undefined && !isBounded(item.diaryProjectId, 1, 128)) return false;
+  if (item.diaryDate !== undefined && (!isDateOnly(item.diaryDate) || item.diaryDate.startsWith("0000-") ||
+      Number.isNaN(Date.parse(`${item.diaryDate}T00:00:00Z`)) ||
+      new Date(`${item.diaryDate}T00:00:00Z`).toISOString().slice(0, 10) !== item.diaryDate)) return false;
   if (!isOffsetDateTime(item.deviceSentAt)) return false;
   return validSiteDiaryItemPayload(item.item);
 }

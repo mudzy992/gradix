@@ -81,6 +81,12 @@ describe("mobilni meni (A2): veza korisnik-radnik, ne samo rola", () => {
     expect(hrefs(profile({ roles: ["ACCOUNTANT"], workerId: "w1" }))).not.toContain("/hse/prijava");
   });
 
+  it("Toolbox je dostupan šefu sa povezanim radnikom", () => {
+    expect(hrefs(profile({ roles: ["SITE_SUPERVISOR"], workerId: "w1" }))).toContain("/hse/toolbox");
+    expect(hrefs(profile({ roles: ["SITE_SUPERVISOR"], workerId: null }))).not.toContain("/hse/toolbox");
+    expect(hrefs(profile({ roles: ["WORKER"], workerId: "w1" }))).not.toContain("/hse/toolbox");
+  });
+
   it("Rokovi i Projekti su uvijek tu za prijavljen nalog", () => {
     for (const p of [profile({}), profile({ roles: ["OWNER"] })]) {
       expect(hrefs(p)).toEqual(expect.arrayContaining(["/rokovi", "/projekti"]));

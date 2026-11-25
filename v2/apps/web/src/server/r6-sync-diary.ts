@@ -24,7 +24,6 @@ import type {
 import { encodeSyncCursor } from "./sync-cursor";
 import { collectDiaryAutoData } from "./diary-service";
 import { ensureDefaultDiaryTemplate } from "./diary-template-service";
-import { notify } from "./notification-service";
 import type { SyncDiaryHseApplyDeps } from "./r6-sync-diary-hse-types";
 
 export type { SyncDiaryHseApplyDeps } from "./r6-sync-diary-hse-types";
@@ -55,6 +54,11 @@ export async function applySiteDiarySyncItem(
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
+  // Potpis ne smije biti tiho ignorisan, niti se smije potpisati snapshot koji korisnik nije vidio.
+  // Do vezivanja prikazanog snapshot-a na sync potpis odbija se cijeli zahtjev.
+  if (item.diary.signedName !== null) {
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
+  }
 
   const project = await client.query<{ id: string }>(
     "SELECT id FROM public.projects WHERE company_id = $1 AND id = $2",
@@ -124,14 +128,13 @@ export async function applySiteDiarySyncItem(
     return finish(client, deps, item, diaryId, 1, item.diary.diaryDate, incoming);
   }
 
-  /* Starija baza od one koju je šef vidio: ekran je bio zastario, pa se odlučuje kroz sukob. */
-  const stale = item.baseVersion < current.version;
+  /* Različit sadržaj iste sekcije nikada se ne smije tiho odbaciti. */
   const conflicts = MERGE_FIELDS.filter((field) => {
     const serverValue = serverValueOf(current, field);
     const incomingValue = incoming[field as keyof typeof incoming];
     return incomingValue !== null && serverValue !== null && String(serverValue) !== String(incomingValue);
   });
-  if (stale && conflicts.length > 0) {
+  if (conflicts.length > 0) {
     return helpers.createConflict(
       client, actor, worker, item, item.diary.diaryDate, requestHash, reservation,
       null, current.version, "DIARY_VERSION_CONFLICT",
@@ -170,20 +173,6 @@ export async function applySiteDiarySyncItem(
        VALUES ($1,$2,$3,$4,$5::timestamptz,$6::timestamptz,$7,$8,$9)`,
       [newId("sdd"), actor.companyId, current.id, delay.kind, delay.fromAt, delay.toAt, delay.hours, delay.note, actor.userId],
     );
-  }
-  if (conflicts.length > 0) {
-    /* Sukob je zabilježen, ali podaci su spojeni — oba šefa moraju znati da je neko drugi pisao. */
-    await notify(client, actor.companyId, {
-      kind: "system",
-      title: "Dnevnik: dvije verzije istog dana",
-      body: `Dan ${item.diary.diaryDate}: spojene sekcije (${conflicts.join(", ")}). Provjerite dnevnik.`,
-      href: `/ured/dnevnik/${current.id}`,
-      severity: "WARN",
-      roleTarget: "SITE_SUPERVISOR",
-      sourceType: "site_diary",
-      sourceId: current.id,
-      dedupeKey: `diary.merge:${current.id}:${current.version}`,
-    });
   }
   return finish(client, deps, item, current.id, current.version + 1, item.diary.diaryDate, merged);
 }
@@ -232,14 +221,7 @@ async function finish(
   return result;
 }
 
-/**
- * Količina izvedenih radova sa telefona.
- *
- * Ugovor nosi `diaryItemId` (id stavke) i stavku, ali NE i `diaryId`: dan se nalazi iz stavke
- * predmjera (`project_id`) i radnog dana (`deviceSentAt`) — to je isti `(projekt, dan)` ključ po
- * kojem dnevnik i nastaje. Ako dana nema, stavka se odbija: količina bez dnevnika ne dokazuje
- * KADA je izvedena, pa ne smije ući u napredak projekta.
- */
+/** Količina se veže na poslovni ključ dnevnika, ne na datum kada se telefon spojio. */
 export async function applySiteDiaryItemSyncItem(
   client: PoolClient,
   deps: SyncDiaryHseApplyDeps,
@@ -249,26 +231,16 @@ export async function applySiteDiaryItemSyncItem(
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
 
-  const workDate = await helpers.businessDate(client, item.deviceSentAt);
-  if (!workDate) return reject();
+  // Stari redovi nemaju ključ dana. Ne nagađaj ga iz vremena slanja: korisnik mora popraviti red.
+  if (!item.diaryProjectId || !item.diaryDate) return reject(helpers.invalidItem(item, "DIARY_REFERENCE_REQUIRED"));
+  // Ture su automatske činjenice, ne smiju se duplirati kao ručne stavke.
+  if (item.item.source === "HAUL") return reject(helpers.invalidItem(item, "SYNC_ITEM_INVALID"));
 
-  let boq: { id: string; project_id: string; description: string; unit: string } | null = null;
-  if (item.item.boqItemId) {
-    const boqRow = await client.query<{ id: string; project_id: string; description: string; unit: string }>(
-      "SELECT id, project_id, description, unit FROM public.project_boq_items WHERE company_id = $1 AND id = $2",
-      [actor.companyId, item.item.boqItemId],
-    );
-    boq = boqRow.rows[0] ?? null;
-    if (!boq) return reject();
-  }
-  /* Stavka bez predmjera nema iz kog projekta je — telefon je morao poslati `BOQ` stavku. */
-  if (!boq) return reject(helpers.invalidItem(item, "SYNC_ITEM_INVALID"));
-
-  const diary = await client.query<{ id: string; status: string; version: number }>(
-    `SELECT id, status, version FROM public.site_diaries
+  const diary = await client.query<{ id: string; status: string; version: number; diary_date: string }>(
+    `SELECT id, status, version, diary_date::text FROM public.site_diaries
       WHERE company_id = $1 AND project_id = $2 AND diary_date = $3::date
       FOR UPDATE`,
-    [actor.companyId, boq.project_id, workDate],
+    [actor.companyId, item.diaryProjectId, item.diaryDate],
   );
   const header = diary.rows[0];
   if (!header) return reject(helpers.invalidItem(item, "DIARY_NOT_FOUND"));
@@ -276,16 +248,21 @@ export async function applySiteDiaryItemSyncItem(
     return reject({ ...helpers.invalidItem(item, "DIARY_ALREADY_LOCKED"), entityId: header.id, version: header.version });
   }
 
-  /* Ista BOQ stavka dva puta u istom danu je greška unosa, ne dvije količine (§1.2/10). */
-  const duplicate = await client.query<{ id: string }>(
-    "SELECT id FROM public.site_diary_items WHERE company_id = $1 AND diary_id = $2 AND boq_item_id = $3",
-    [actor.companyId, header.id, boq.id],
-  );
-  if (duplicate.rows[0]) {
-    return reject({
-      ...helpers.invalidItem(item, "DIARY_ITEM_EXISTS"),
-      entityId: duplicate.rows[0].id,
-    });
+  let boq: { id: string; project_id: string } | null = null;
+  if (item.item.boqItemId) {
+    const boqRow = await client.query<{ id: string; project_id: string }>(
+      "SELECT id, project_id FROM public.project_boq_items WHERE company_id = $1 AND id = $2",
+      [actor.companyId, item.item.boqItemId],
+    );
+    boq = boqRow.rows[0] ?? null;
+    if (!boq || boq.project_id !== item.diaryProjectId) return reject();
+    const duplicate = await client.query<{ id: string }>(
+      "SELECT id FROM public.site_diary_items WHERE company_id = $1 AND diary_id = $2 AND boq_item_id = $3",
+      [actor.companyId, header.id, boq.id],
+    );
+    if (duplicate.rows[0]) {
+      return reject({ ...helpers.invalidItem(item, "DIARY_ITEM_EXISTS"), entityId: duplicate.rows[0].id });
+    }
   }
 
   const existingItem = await client.query<{ id: string }>(
@@ -301,12 +278,12 @@ export async function applySiteDiaryItemSyncItem(
        (id, company_id, diary_id, boq_item_id, description, unit, quantity, source, created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
     [
-      item.diaryItemId, actor.companyId, header.id, boq.id,
-      item.item.description.trim() || boq.description, item.item.unit.trim() || boq.unit,
-      item.item.quantity, "BOQ", actor.userId,
+      item.diaryItemId, actor.companyId, header.id, boq?.id ?? null,
+      item.item.description.trim(), item.item.unit.trim(),
+      item.item.quantity, item.item.source, actor.userId,
     ],
   );
-  await client.query(
+  if (boq) await client.query(
     `UPDATE public.project_boq_items
         SET quantity_executed = quantity_executed + $3::numeric,
             updated_at = clock_timestamp(), updated_by = $4
@@ -322,9 +299,9 @@ export async function applySiteDiaryItemSyncItem(
   const version = header.version + 1;
   await helpers.publishEvent(client, actor, reservation, requestHash, "site_diary", header.id, version, {
     id: header.id,
-    workDate,
+    workDate: header.diary_date,
     itemId: item.diaryItemId,
-    boqItemId: boq.id,
+    boqItemId: boq?.id ?? null,
     quantity: item.item.quantity,
     version,
     clientLocalId: item.localId,
