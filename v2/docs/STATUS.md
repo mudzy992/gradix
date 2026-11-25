@@ -1,6 +1,6 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **Tag `phase-5` → `0b60c2a`** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **Tag `phase-5`** · **CI: zelen.**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
 Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
