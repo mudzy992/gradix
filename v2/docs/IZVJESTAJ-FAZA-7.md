@@ -1,6 +1,6 @@
 # Izvještaj — Faza 7: Tenderi (Modul 8)
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-7` ·
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-7` · **CI: zelen (run `45655523847`)** ·
 **Spec:** `08-tenderi.md` (zaključano)
 
 Faza 7 je isporučena kao **vertikala do kraja**: baza → domena → ugovor → API → servis → web →
@@ -61,8 +61,11 @@ Sve nove tenant tabele: `FORCE RLS` + politika + `privilege-matrix.tsv` + grant 
 | `POST .../guarantees`, `POST .../guarantees/:itemId/return` | garancije i povrat |
 | `GET/PUT .../outcome` | ishod |
 | `GET /api/tenders/performance` | uspješnost (win rate po broju i vrijednosti, marže, po naručiocu, „u toku“) |
-| `GET/POST .../team`, `DELETE .../team/:workerId`, `POST .../phases` | predloženi tim i faze |
+| `GET/POST .../team`, `DELETE .../team/:workerId`, `POST .../phases` | predloženi tim i faze (imaju ulaz u `ROUTES`, pa ih OpenAPI vidi) |
 | `GET/POST /api/tender-checklist-templates` | šifarnik kontrolne liste |
+
+Sve ID polja u zahtjevima su `SafeText` (NUL i kontrolni znakovi se odbijaju na granici
+ugovora, ne u servisu): `TenderCopyInput.copyFromTenderId`, `TenderTeamInput.workerId`.
 
 3 nove dozvole: `tenders.price.manage` (OWNER/ADMIN/PM), `tenders.price.approve` (OWNER/ADMIN),
 `tenders.outcome.manage` (OWNER/ADMIN/PM). 6 novih kodova grešaka + `ALREADY_CONVERTED`:
@@ -103,14 +106,16 @@ vodi na `/ured/tenderi/{id}` (ne na F2 ekran `/rokovi/:id`, koji tender ne pozna
 
 | Provjera | Rezultat |
 |---|---|
-| `apps/web` vitest (sa `REQUIRE_DB_TESTS=1`) | **111 fajlova / 670 testova ✓** |
+| `pnpm test` (sa `REQUIRE_DB_TESTS=1`, kao u CI-ju) | **6/6 paketa, 1 178 testova ✓** — web 111 fajlova / 670, domain 268, mobile 104, db 70, worker 25, contracts 21 |
 | `packages/domain` vitest | 18 fajlova / 268 testova ✓ |
 | `apps/worker` vitest | 22 prošlo, 3 preskočeno ✓ |
 | `pnpm typecheck` | 6/6 paketa ✓ |
 | `pnpm lint` | čist ✓ |
-| `pnpm check-tenant-sql` | 915 upita, svi nose `company_id` ✓ |
+| `pnpm check-tenant-sql` sa katalogom baze | 924 upita, lista = katalog (90 tenant tabela), svi nose `company_id` ✓ |
 | matrix parity (`node quality/check-matrix-parity.mjs`) | **0 grešaka**, 1 poznato upozorenje (`R1.tenant.tables-through-r2`) |
-| OpenAPI | 199 putanja, „ažuran“ ✓ |
+| preflight na svježoj bazi (48 migracija iz nule) | 99 tabela, 262 granta, **0 problema** ✓ |
+| `next build` | prolazi; `/ured/tenderi`, `/[id]`, `/uspjesnost`, `/kalendar` se grade ✓ |
+| OpenAPI | **202 putanje**, „ažuran“ ✓ |
 | NUL-sweep | pokriva svih 20 novih ruta + postojeće |
 | `nav.test.ts` / `server-boundary.test.ts` | dvije nove stranice imaju razlog u listi izuzetaka; klijentski wrapperi za tabele ✓ |
 

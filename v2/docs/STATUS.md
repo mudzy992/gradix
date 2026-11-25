@@ -1,6 +1,6 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–7: završene** · **Tag `phase-7`**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–7: završene** · **Tag `phase-7`** · **CI: zelen (run `45655523847`)**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
 Moduli 1–12 zaključani u `docs/specs/`. Faza 7 (Modul 8 — tenderi) je isporučena: devet
@@ -59,7 +59,7 @@ garancije, ishod/uspješnost i atomska konverzija `WON` → projekat. Sljedeća 
 | 7.3 | API: **24 nove rute** — tenderi (lista/unos/izmjena/odluka/kopija/konverzija), predmjer, resursi i predlog cijene, obračun, revizije i odobrenje, kontrolna lista, garancije i povrat, ishod, uspješnost, šabloni liste; 3 nove dozvole, 6 novih kodova + `ALREADY_CONVERTED`; OpenAPI **199 putanja** | ✅ |
 | 7.4 | Servisi: `tender-service` (kapije u `changeStatus`), `tender-pricing` (revizije append-only, odobrenje), `tender-checklist-service` (šifarnik, garancije), `tender-outcome-service` (ishod + `tenderPerformance`), `tender-copy`, `tender-convert` (atomska konverzija sa claim-om) | ✅ |
 | 7.5 | UI: `/ured/tenderi` (tabela + kanban, filteri, novi tender sa kopiranjem predmjera), `/ured/tenderi/[id]` sa 7 tabova (pregled/odluka, kalkulacija, dokumenti, prilozi, ishod, tim, konverzija), `/ured/tenderi/uspjesnost`, `/ured/tenderi/kalendar`; worker podsjetnici vode tenderske rokove na tender | ✅ |
-| 7.6 | Provjere: `tender-lifecycle`/`convert`/`convert-race`/`pricing` integracioni testovi (27 protiv prave baze), `tender-status.test.ts` parity nad `.cursor/docs/matrices/tenders/MATRIX.md` (76 prelaza), NUL-sweep pokriva svih 20 novih ruta, `pnpm test` **670 prošlo**, typecheck 6/6, lint čist, matrix parity 0 grešaka | ✅ |
+| 7.6 | Provjere: `tender-lifecycle`/`convert`/`convert-race`/`pricing` integracioni testovi (27 protiv prave baze), `tender-status.test.ts` parity nad `.cursor/docs/matrices/tenders/MATRIX.md` (76 prelaza), NUL-sweep pokriva svih 20 novih ruta, `pnpm test` **1 178 prošlo u 6 paketa**, typecheck 6/6, lint čist, matrix parity 0 grešaka, preflight iz nule 0 problema, OpenAPI **202 putanje** | ✅ |
 
 ## Faza 7 — odluke koje se ne smiju izgubiti
 
