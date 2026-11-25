@@ -444,3 +444,14 @@ export {
   type HseSeverity,
   type HseTrainingKind,
 } from "./site-diary-hse";
+
+/* F10: formule skladišta, nabavke i podizvođača; knjiženje ostaje u servisima. */
+export {
+  averageIssueCostCents,
+  purchaseNeedsApproval,
+  stockCountDifference,
+  subcontractorContractExceeded,
+  subcontractorStatementAmounts,
+  warehouseBalance,
+  type WarehouseMovement,
+} from "./warehouse-purchase";
