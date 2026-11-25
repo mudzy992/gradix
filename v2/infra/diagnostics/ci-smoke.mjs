@@ -170,6 +170,22 @@ async function main() {
   assert.ok(!missingCa.output.includes("ci-ca-test-secret"), "Redis secret leaked while reporting a missing CA");
 
   const minioSecret = "ci-minio-secret-must-not-appear";
+  // Povezan, ali nijedna S3 operacija ne odgovara: timeout mora imati vidljiv FAIL log.
+  const hangingS3 = createHttpServer((request) => { request.resume(); });
+  const hangingPort = await listen(hangingS3);
+  try {
+    const hanging = await runDiagnostic(cleanEnv({
+      MINIO_ENDPOINT: `http://127.0.0.1:${hangingPort}`, MINIO_ACCESS_KEY: "ci-access-key",
+      MINIO_SECRET_KEY: minioSecret, MINIO_BUCKET: "gradix-stg", MINIO_REGION: "us-east-1",
+    }));
+    assert.equal(hanging.code, 0, hanging.output);
+    assert.match(hanging.output, /phase=s3\.bucket_object status=FAIL cause=phase_timeout/);
+    assert.ok(!hanging.output.includes(minioSecret));
+  } finally {
+    hangingS3.closeAllConnections();
+    await close(hangingS3);
+  }
+
   const missingBucket = createHttpServer((request, response) => {
     response.writeHead(404, { "content-type": "application/xml", "x-amz-bucket-region": "us-east-1" });
     response.end(request.method === "HEAD" ? undefined : "<Error><Code>NoSuchBucket</Code></Error>");
@@ -298,7 +314,7 @@ async function main() {
   assert.match(nonexistent.output, /phase=s3\.connection status=FAIL cause=(s3_dns_not_found_same_stack_network|s3_dns_unavailable|phase_timeout)/);
   assert.ok(!nonexistent.output.includes("ci-host-test-secret"), "MinIO secret leaked during DNS failure");
 
-  console.log("Diagnostics CI fault injection passed: missing Redis password skips commands, ping-only ACL needs no write, bad Redis auth, missing CA, missing bucket, path-style addressing with real S3 error details, absent DNS host; no test secrets were printed.");
+  console.log("Diagnostics CI fault injection passed: missing Redis password skips commands, ping-only ACL needs no write, bad Redis auth, missing CA, stalled S3, missing bucket, path-style addressing with real S3 error details, absent DNS host; no test secrets were printed.");
 }
 
 await main();
