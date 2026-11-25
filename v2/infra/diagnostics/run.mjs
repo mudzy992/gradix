@@ -202,11 +202,9 @@ async function runPhase(phase, budgetMs, task) {
   }
   const budget = Math.max(1, Math.min(budgetMs, remainingMs));
   const controller = new AbortController();
-  let timedOut = false;
   let timeout;
   const timeoutPromise = new Promise((resolve) => {
     timeout = setTimeout(() => {
-      timedOut = true;
       controller.abort();
       resolve({ status: "FAIL", cause: "phase_timeout", action: "Check that the endpoint is reachable on the configured port; this probe timed out." });
     }, budget);
@@ -214,7 +212,8 @@ async function runPhase(phase, budgetMs, task) {
   });
   try {
     const result = await Promise.race([Promise.resolve().then(() => task(controller.signal)), timeoutPromise]);
-    if (!timedOut) emit(phase, result ?? { status: "SKIP", cause: "no_result", action: "Review this diagnostic phase." });
+    // Promise.race vraća i rezultat timeout-a; potiskivanje te poruke ostavljalo je fazu bez loga.
+    emit(phase, result ?? { status: "SKIP", cause: "no_result", action: "Review this diagnostic phase." });
   } catch (error) {
     const cause = error?.diagnosticCause ?? errorCode(error);
     emit(phase, {
@@ -885,3 +884,6 @@ try {
   state.s3.client?.destroy?.();
   state.s3.presignClient?.destroy?.();
 }
+// getaddrinfo može nastaviti raditi u libuv threadpoolu nakon timeouta; ovaj samostalni proces
+// je best-effort i više nema posla nakon cleanup-a. Logovi su već sinhrono zapisani kroz writeSync.
+process.exit(0);

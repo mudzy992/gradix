@@ -367,6 +367,14 @@ jobs:
           ! grep -q "ERR_MODULE_NOT_FOUND" /tmp/diag-image.log
           grep -q "phase=s3.connection status=FAIL" /tmp/diag-image.log
           grep -q "phase=redis.config" /tmp/diag-image.log
+          # Dostupni lokalni lažni S3 natjera SDK da stvarno izvede HEAD i PUT iz image-a.
+          # DNS greška sama po sebi ne izvršava bundlovani SDK i nije dovoljna regresija.
+          docker run --rm --entrypoint node \
+            -v "$PWD/infra/diagnostics/ci-smoke.mjs:/tmp/ci-smoke.mjs:ro" \
+            gradix-web:ci /tmp/ci-smoke.mjs /app/diagnostics/run.mjs
+          docker run --rm --entrypoint node \
+            -v "$PWD/infra/diagnostics/standalone-s3-smoke.mjs:/tmp/standalone-s3-smoke.mjs:ro" \
+            gradix-web:ci /tmp/standalone-s3-smoke.mjs /app/apps/web/server.js
 
       - name: Matrix parity (required gaps and false coverage fail)
         if: always() && !cancelled()

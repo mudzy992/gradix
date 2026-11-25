@@ -9,8 +9,8 @@ const config: NextConfig = {
   outputFileTracingRoot: path.join(import.meta.dirname, "../../"),
   reactStrictMode: true,
   poweredByHeader: false,
-  // Native/Node moduli se ne bundluju na serveru.
-  serverExternalPackages: ["pg", "argon2"],
+  // Node SDK ostaje pravi paket: Smithy učitava Node builtine kroz CommonJS require.
+  serverExternalPackages: ["pg", "argon2", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
   async headers() {
     return [
       {

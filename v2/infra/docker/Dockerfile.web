@@ -45,6 +45,7 @@ ENV AUTH_SECRET=build-time-placeholder-secret-min-32-chars
 RUN pnpm --filter @gradix/web build \
  && pnpm --filter @gradix/web exec esbuild ../../infra/diagnostics/run.mjs \
       --bundle --platform=node --format=esm --target=node22 \
+      --banner:js='import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' \
       --outfile=/app/diagnostics.bundle.mjs \
  && cd apps/web \
  && for s in seed demo-sukobi demo-pregled demo-r4b-approval; do \
@@ -97,8 +98,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/migrations ./db/migrations
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/bootstrap ./db/bootstrap
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db/preflight-checks
-# Dijagnostika je JEDAN bundlovani fajl: u runtime slici nema @aws-sdk u node_modules stazi
-# koju bi `import("@aws-sdk/...")` iz /app/diagnostics našao (ERR_MODULE_NOT_FOUND na stagingu).
+# Dijagnostika je jedan bundlovani fajl; esbuild banner daje Node createRequire za CJS Smithy
+# zavisnosti unutar ESM-a (bez njega stvarni S3 zahtjev puca na node:https).
 COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
 # seed-demo-podaci je CJS: exceljs radi dynamic require("crypto") koji ESM bundle ne podržava.
