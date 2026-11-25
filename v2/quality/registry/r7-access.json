@@ -75,7 +75,7 @@
       "evidence": [
         {
           "file": "apps/web/src/server/tender-convert.integration.test.ts",
-          "title": "convert iz DRAFT je TENDER_INVALID_STATUS",
+          "title": "convert iz OPPORTUNITY je TENDER_INVALID_STATUS",
           "bodyIncludes": [
             "TENDER_INVALID_STATUS",
             "converted_project_id"
@@ -99,7 +99,7 @@
           "title": "ACCOUNTANT i WORKER ne smiju manage",
           "bodyIncludes": [
             "FORBIDDEN",
-            "ROLE"
+            "tenders.manage"
           ]
         }
       ]
@@ -181,8 +181,8 @@
           "file": "apps/web/src/server/tender-convert.integration.test.ts",
           "title": "deaktiviran partner ne može na novi tender",
           "bodyIncludes": [
-            "VALIDATION_FAILED",
-            "active"
+            "active",
+            "toBeNull"
           ]
         }
       ]

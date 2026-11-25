@@ -1,8 +1,7 @@
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { convertTenderToProject } from "./tender-convert";
-import { createTender, patchTender } from "./tender-service";
-import { createTenderWorld } from "./tender-lifecycle-fixtures";
+import { createTenderWorld, newTenderId, walkToWon } from "./tender-lifecycle-fixtures";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -23,12 +22,8 @@ describeDb("R7 tender convert atomicity (PostgreSQL)", () => {
   });
 
   async function wonTender(title: string): Promise<string> {
-    const created = await createTender(app, owner, {
-      title, partnerId: partnerA, submittedValueAmount: "20.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
-    expect((await patchTender(app, owner, id, { status: "SUBMITTED" })).outcome).toBe("OK");
-    expect((await patchTender(app, owner, id, { status: "WON" })).outcome).toBe("OK");
+    const id = await newTenderId(app, owner, partnerA, title);
+    expect(await walkToWon(app, owner, id)).toMatchObject({ ok: true });
     return id;
   }
 
@@ -94,15 +89,12 @@ describeDb("R7 tender convert atomicity (PostgreSQL)", () => {
   });
 
   it("neuspjela konverzija ne blokira kasniji uspjeh", async () => {
-    const created = await createTender(app, owner, {
-      title: `Ponovo ${RUN}`, partnerId: partnerA, submittedValueAmount: "3.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
+    const id = await newTenderId(app, owner, partnerA, `Ponovo ${RUN}`);
     const before = await projectCount();
+    // Prvi pokušaj pada jer tender nije WON — i ne smije ostaviti nikakav trag.
     expect((await convertTenderToProject(app, owner, id)).outcome).toBe("CONFLICT");
     expect(await projectCount()).toBe(before);
-    expect((await patchTender(app, owner, id, { status: "SUBMITTED" })).outcome).toBe("OK");
-    expect((await patchTender(app, owner, id, { status: "WON" })).outcome).toBe("OK");
+    expect(await walkToWon(app, owner, id)).toMatchObject({ ok: true });
     expect((await convertTenderToProject(app, owner, id)).outcome).toBe("OK");
     expect(await projectCount()).toBe(before + 1);
   });

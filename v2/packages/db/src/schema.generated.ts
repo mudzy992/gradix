@@ -147,6 +147,7 @@ export interface Companies {
   legal_name: string | null;
   locale: Generated<Locale>;
   logo_object_key: string | null;
+  min_markup_pct: Generated<Numeric>;
   monthly_report_enabled: Generated<boolean>;
   monthly_report_recipients: string[] | null;
   name: string;
@@ -1209,21 +1210,167 @@ export interface TaskComments {
   task_id: string;
 }
 
+export interface TenderBoqItems {
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string;
+  id: string;
+  quantity: Numeric;
+  sort_order: Generated<number>;
+  tender_id: string;
+  unit: string;
+  unit_cost_cents: Generated<Int8>;
+  unit_price_cents: Generated<Int8>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface TenderChecklistItems {
+  amount_cents: Int8 | null;
+  attachment_id: string | null;
+  bank: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  guarantee_type: string | null;
+  id: string;
+  label: string;
+  note: string | null;
+  required: Generated<boolean>;
+  returned_at: Timestamp | null;
+  sort_order: Generated<number>;
+  status: Generated<string>;
+  tender_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+  valid_until: string | null;
+}
+
+export interface TenderChecklistTemplates {
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  is_active: Generated<boolean>;
+  label: string;
+  required: Generated<boolean>;
+  sort_order: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface TenderOutcomes {
+  bidders_count: number | null;
+  company_id: string;
+  id: string;
+  lost_reason: string | null;
+  note: string | null;
+  our_rank: number | null;
+  recorded_at: Generated<Timestamp>;
+  recorded_by: string;
+  result: string;
+  tender_id: string;
+  winner_partner_id: string | null;
+  winner_value_cents: Int8 | null;
+}
+
+export interface TenderPhases {
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  name: string;
+  planned_end: string | null;
+  planned_start: string | null;
+  sort_order: Generated<number>;
+  tender_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+  weight: Generated<number>;
+}
+
+export interface TenderPriceRevisions {
+  approved_at: Timestamp | null;
+  approved_by: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  direct_cost_cents: Int8;
+  discount_pct: Generated<Numeric>;
+  id: string;
+  markup_pct: Numeric;
+  offered_value_cents: Int8;
+  reason: string | null;
+  revision: number;
+  risk_reserve_pct: Generated<Numeric>;
+  tender_id: string;
+}
+
+export interface TenderResources {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  description: string;
+  id: string;
+  kind: string;
+  machine_id: string | null;
+  quantity: Numeric;
+  sort_order: Generated<number>;
+  tender_id: string;
+  unit: string;
+  unit_cost_cents: Int8;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+  worker_rate_ref: string | null;
+}
+
 export interface Tenders {
   company_id: string;
   converted_project_id: string | null;
   created_at: Generated<Timestamp>;
   created_by: string;
   currency_code: string;
+  current_revision: Generated<number>;
+  deadline_at: Timestamp | null;
+  decided_at: Timestamp | null;
+  decided_by: string | null;
+  decision_reason: string | null;
+  estimated_value_cents: Int8 | null;
+  external_ref: string | null;
   id: string;
+  markup_pct: Numeric | null;
   note: string | null;
+  opened_at: Timestamp | null;
+  participate: boolean | null;
   partner_id: string;
+  portal_name: string | null;
+  price_source: Generated<string>;
+  questions_deadline_at: Timestamp | null;
+  site_visit_at: Timestamp | null;
+  source: string | null;
   status: string;
   submitted_at: Timestamp | null;
   submitted_value_cents: Int8;
   title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string;
+}
+
+export interface TenderTeam {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  role: string;
+  tender_id: string;
+  worker_id: string;
 }
 
 export interface UsageOverrides {
@@ -1565,6 +1712,14 @@ export interface DB {
   sync_cursor_slots: SyncCursorSlots;
   sync_receipts: SyncReceipts;
   task_comments: TaskComments;
+  tender_boq_items: TenderBoqItems;
+  tender_checklist_items: TenderChecklistItems;
+  tender_checklist_templates: TenderChecklistTemplates;
+  tender_outcomes: TenderOutcomes;
+  tender_phases: TenderPhases;
+  tender_price_revisions: TenderPriceRevisions;
+  tender_resources: TenderResources;
+  tender_team: TenderTeam;
   tenders: Tenders;
   usage_overrides: UsageOverrides;
   user_devices: UserDevices;

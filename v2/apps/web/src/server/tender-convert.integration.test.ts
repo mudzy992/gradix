@@ -3,14 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { updatePartner } from "./partner-service";
 import { registerTenderAttachment } from "./tender-attachment-service";
 import { convertTenderToProject } from "./tender-convert";
-import { createTender, patchTender } from "./tender-service";
-import { createTenderWorld } from "./tender-lifecycle-fixtures";
+import { createTenderWorld, newTenderId, walkToWon } from "./tender-lifecycle-fixtures";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = appUrl && adminUrl ? describe : describe.skip;
 
-describeDb("R7 tender convert (PostgreSQL)", () => {
+describeDb("F7 tender convert (PostgreSQL)", () => {
   const world = createTenderWorld();
   const { owner, accountant, partnerA, companyA } = world;
   const RUN = world.run;
@@ -25,12 +24,9 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
   });
 
   async function wonTender(title: string): Promise<string> {
-    const created = await createTender(app, owner, {
-      title, partnerId: partnerA, submittedValueAmount: "20.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
-    expect((await patchTender(app, owner, id, { status: "SUBMITTED" })).outcome).toBe("OK");
-    expect((await patchTender(app, owner, id, { status: "WON" })).outcome).toBe("OK");
+    const id = await newTenderId(app, owner, partnerA, title);
+    const walk = await walkToWon(app, owner, id);
+    expect(walk).toMatchObject({ ok: true });
     return id;
   }
 
@@ -73,11 +69,8 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
     expect(after.rows[0]?.n).toBe(before.rows[0]?.n);
   });
 
-  it("convert iz DRAFT je TENDER_INVALID_STATUS", async () => {
-    const created = await createTender(app, owner, {
-      title: `Rano ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
+  it("convert iz OPPORTUNITY je TENDER_INVALID_STATUS", async () => {
+    const id = await newTenderId(app, owner, partnerA, `Rano ${RUN}`);
     expect(await convertTenderToProject(app, owner, id)).toMatchObject({
       outcome: "CONFLICT",
       code: "TENDER_INVALID_STATUS",
@@ -87,18 +80,12 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
   });
 
   it("ACCOUNTANT ne smije convert", async () => {
-    const created = await createTender(app, owner, {
-      title: `Čita ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
+    const id = await newTenderId(app, owner, partnerA, `Čita ${RUN}`);
     expect((await convertTenderToProject(app, accountant, id)).outcome).toBe("FORBIDDEN");
   });
 
   it("prilog bez skladišta ne upisuje red", async () => {
-    const created = await createTender(app, owner, {
-      title: `Prilog ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
+    const id = await newTenderId(app, owner, partnerA, `Prilog ${RUN}`);
     const registered = await registerTenderAttachment(app, owner, id, {
       fileName: "dok.pdf",
       sizeBytes: 100,
@@ -117,8 +104,9 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
     const id = await wonTender(`Ostaje ${RUN}`);
     await admin.query(
       `INSERT INTO public.attachments
-         (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256, status)
-       VALUES ($1, $2, 'TENDER', $3, $4, 'dok.pdf', 'application/pdf', 10, $5, 'pending')`,
+         (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256,
+          status, uploaded_at)
+       VALUES ($1, $2, 'TENDER', $3, $4, 'dok.pdf', 'application/pdf', 10, $5, 'ready', clock_timestamp())`,
       [`tat_${RUN}`, companyA, id, `key/${RUN}`, "b".repeat(64)],
     );
     expect((await convertTenderToProject(app, owner, id)).outcome).toBe("OK");
@@ -126,7 +114,14 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
       `SELECT entity_id FROM public.attachments WHERE id = $1`,
       [`tat_${RUN}`],
     );
+    // Prilog ostaje na tenderu; na projektu nastaje NOVA veza na isti `object_key` (§1.6/22.5).
     expect(still.rows[0]?.entity_id).toBe(id);
+    const linked = await admin.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM public.attachments
+        WHERE entity_type = 'PROJECT' AND company_id = $1 AND object_key = $2`,
+      [companyA, `key/${RUN}`],
+    );
+    expect(linked.rows[0]?.n).toBe(1);
   });
 
   it("obaveza na tenderu ima jedan opseg; dva opsega padaju", async () => {
@@ -156,10 +151,14 @@ describeDb("R7 tender convert (PostgreSQL)", () => {
 
   it("deaktiviran partner ne može na novi tender", async () => {
     expect((await updatePartner(app, owner, partnerA, { active: false })).outcome).toBe("OK");
-    const denied = await createTender(app, owner, {
-      title: `Mrtav ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    expect(denied.outcome).toBe("VALIDATION_FAILED");
+    const denied = await (async () => {
+      try {
+        return await newTenderId(app, owner, partnerA, `Mrtav ${RUN}`);
+      } catch {
+        return null;
+      }
+    })();
+    expect(denied).toBeNull();
     const active = await admin.query<{ active: boolean }>(
       `SELECT active FROM public.partners WHERE id = $1`,
       [partnerA],

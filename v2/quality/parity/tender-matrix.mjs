@@ -1,6 +1,16 @@
 /** Parse the active tender status table. Source: .cursor/docs/matrices/tenders/MATRIX.md */
 
-const STATUSES = ["DRAFT", "SUBMITTED", "WON", "LOST", "WITHDRAWN"];
+const STATUSES = [
+  "OPPORTUNITY",
+  "GO_NO_GO",
+  "PREPARATION",
+  "SUBMITTED",
+  "EVALUATION",
+  "WON",
+  "LOST",
+  "WITHDRAWN",
+  "CANCELLED",
+];
 
 export function parseTenderMatrix(markdown) {
   const statusBlock = sectionBody(markdown, "Statusi");
@@ -39,7 +49,9 @@ export function parseTenderMatrix(markdown) {
       "Prilozi",
       "Obligations × TENDER",
       "Convert WON",
+      "Kalkulacija × revizije",
       "Dozvole",
+      "Ishod i uspješnost",
       "Partneri (R7.1)",
     ],
   };

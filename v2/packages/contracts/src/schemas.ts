@@ -1778,10 +1778,16 @@ export const PartnerMutationOutcome = z.object({
 });
 export type PartnerMutationOutcome = z.infer<typeof PartnerMutationOutcome>;
 
-/* ------------------------------------------------------------------ R7 tenderi */
+/* ------------------------------------------------------------------ R7/F7 tenderi */
 
-export const TenderStatus = z.enum(["DRAFT", "SUBMITTED", "WON", "LOST", "WITHDRAWN"]);
+export const TenderStatus = z.enum([
+  "OPPORTUNITY", "GO_NO_GO", "PREPARATION", "SUBMITTED", "EVALUATION",
+  "WON", "LOST", "WITHDRAWN", "CANCELLED",
+]);
 export type TenderStatus = z.infer<typeof TenderStatus>;
+
+export const TenderSource = z.enum(["PORTAL", "INVITATION", "DIRECT", "OTHER"]);
+export type TenderSource = z.infer<typeof TenderSource>;
 
 export const TenderRow = z.object({
   id: z.string(),
@@ -1794,6 +1800,23 @@ export const TenderRow = z.object({
   status: TenderStatus,
   note: z.string().nullable(),
   convertedProjectId: z.string().nullable(),
+  deadlineAt: z.string().nullable(),
+  questionsDeadlineAt: z.string().nullable(),
+  siteVisitAt: z.string().nullable(),
+  openedAt: z.string().nullable(),
+  source: z.string().nullable(),
+  portalName: z.string().nullable(),
+  externalRef: z.string().nullable(),
+  estimatedValueAmount: z.string().nullable(),
+  priceSource: z.enum(["CALCULATED", "MANUAL"]),
+  /** `null` = nema podatka ILI rola ne smije vidjeti maržu (ACCOUNTANT). */
+  markupPct: z.string().nullable(),
+  currentRevision: z.number().int().nonnegative(),
+  participate: z.boolean().nullable(),
+  decisionReason: z.string().nullable(),
+  decidedByName: z.string().nullable(),
+  decidedAt: z.string().nullable(),
+  daysToDeadline: z.number().int().nullable(),
 });
 export type TenderRow = z.infer<typeof TenderRow>;
 
@@ -1806,6 +1829,14 @@ export const TenderCreateInput = z.object({
   submittedValueAmount: z.string().regex(/^\d+\.\d{2}$/),
   currencyCode: z.string().length(3),
   note: SafeText.max(4000).nullable().optional(),
+  deadlineAt: IsoDate.nullable().optional(),
+  questionsDeadlineAt: IsoDate.nullable().optional(),
+  siteVisitAt: IsoDate.nullable().optional(),
+  openedAt: IsoDate.nullable().optional(),
+  source: TenderSource.nullable().optional(),
+  portalName: SafeText.max(120).nullable().optional(),
+  externalRef: SafeText.max(60).nullable().optional(),
+  estimatedValueAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
 }).strict();
 export type TenderCreateInput = z.infer<typeof TenderCreateInput>;
 
@@ -1816,6 +1847,15 @@ export const TenderPatchInput = z.object({
   currencyCode: z.string().length(3).optional(),
   status: TenderStatus.optional(),
   note: SafeText.max(4000).nullable().optional(),
+  deadlineAt: IsoDate.nullable().optional(),
+  questionsDeadlineAt: IsoDate.nullable().optional(),
+  siteVisitAt: IsoDate.nullable().optional(),
+  openedAt: IsoDate.nullable().optional(),
+  source: TenderSource.nullable().optional(),
+  portalName: SafeText.max(120).nullable().optional(),
+  externalRef: SafeText.max(60).nullable().optional(),
+  estimatedValueAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+  priceReason: SafeText.max(1000).nullable().optional(),
 }).strict();
 export type TenderPatchInput = z.infer<typeof TenderPatchInput>;
 
@@ -1827,6 +1867,274 @@ export const TenderMutationOutcome = z.object({
   message: z.string().optional(),
 });
 export type TenderMutationOutcome = z.infer<typeof TenderMutationOutcome>;
+
+export const TenderDecisionInput = z.object({
+  participate: z.boolean(),
+  reason: SafeText.min(3).max(1000),
+}).strict();
+export type TenderDecisionInput = z.infer<typeof TenderDecisionInput>;
+
+/* --- predmjer i resursi --- */
+
+export const TenderBoqItemRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  description: z.string(),
+  unit: z.string(),
+  quantity: z.string(),
+  unitCostAmount: z.string(),
+  unitPriceAmount: z.string(),
+  totalCostAmount: z.string(),
+  sortOrder: z.number().int(),
+});
+export type TenderBoqItemRow = z.infer<typeof TenderBoqItemRow>;
+
+export const TenderBoqResponse = z.object({ items: z.array(TenderBoqItemRow) });
+export type TenderBoqResponse = z.infer<typeof TenderBoqResponse>;
+
+export const TenderBoqInput = z.object({
+  code: SafeText.min(1).max(40),
+  description: SafeText.min(1).max(500),
+  unit: SafeText.min(1).max(16),
+  quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
+  unitCostAmount: z.string().regex(/^\d+\.\d{2}$/),
+  unitPriceAmount: z.string().regex(/^\d+\.\d{2}$/).optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+}).strict();
+export type TenderBoqInput = z.infer<typeof TenderBoqInput>;
+
+export const TenderResourceKind = z.enum(["LABOR", "MACHINE", "MATERIAL", "SUBCONTRACTOR", "OTHER"]);
+export type TenderResourceKind = z.infer<typeof TenderResourceKind>;
+
+export const TenderResourceRow = z.object({
+  id: z.string(),
+  kind: TenderResourceKind,
+  description: z.string(),
+  quantity: z.string(),
+  unit: z.string(),
+  unitCostAmount: z.string(),
+  currencyCode: z.string().length(3),
+  machineId: z.string().nullable(),
+  workerRateRef: z.string().nullable(),
+});
+export type TenderResourceRow = z.infer<typeof TenderResourceRow>;
+
+export const TenderResourcesResponse = z.object({ resources: z.array(TenderResourceRow) });
+export type TenderResourcesResponse = z.infer<typeof TenderResourcesResponse>;
+
+export const TenderResourceInput = z.object({
+  kind: TenderResourceKind,
+  description: SafeText.min(1).max(300),
+  quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
+  unit: SafeText.min(1).max(16),
+  unitCostAmount: z.string().regex(/^\d+\.\d{2}$/),
+  machineId: z.string().nullable().optional(),
+  workerRateRef: z.string().nullable().optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+}).strict();
+export type TenderResourceInput = z.infer<typeof TenderResourceInput>;
+
+/* --- kalkulacija i revizije --- */
+
+export const TenderCalculation = z.object({
+  directCostAmount: z.string(),
+  boqCostAmount: z.string(),
+  resourcesCostAmount: z.string(),
+  baseAmount: z.string(),
+  offeredValueAmount: z.string(),
+  marginAmount: z.string(),
+  marginPct: z.string().nullable(),
+  markupPct: z.string(),
+  riskReservePct: z.string(),
+  discountPct: z.string(),
+  currencyCode: z.string().length(3),
+  needsApproval: z.boolean(),
+  changePct: z.string().nullable(),
+  approvalReasons: z.array(z.enum(["ABOVE_CHANGE_THRESHOLD", "BELOW_MIN_MARKUP"])),
+  minMarkupPct: z.string(),
+});
+export type TenderCalculation = z.infer<typeof TenderCalculation>;
+
+export const TenderCalculationResponse = z.object({ calculation: TenderCalculation });
+export type TenderCalculationResponse = z.infer<typeof TenderCalculationResponse>;
+
+export const TenderPriceRevisionRow = z.object({
+  id: z.string(),
+  revision: z.number().int().positive(),
+  offeredValueAmount: z.string(),
+  directCostAmount: z.string(),
+  markupPct: z.string(),
+  riskReservePct: z.string(),
+  discountPct: z.string(),
+  currencyCode: z.string().length(3),
+  reason: z.string().nullable(),
+  approvedAt: z.string().nullable(),
+  approvedByName: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type TenderPriceRevisionRow = z.infer<typeof TenderPriceRevisionRow>;
+
+export const TenderPriceRevisionsResponse = z.object({
+  revisions: z.array(TenderPriceRevisionRow),
+});
+export type TenderPriceRevisionsResponse = z.infer<typeof TenderPriceRevisionsResponse>;
+
+export const TenderPriceRevisionInput = z.object({
+  markupPct: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+  riskReservePct: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  discountPct: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  reason: SafeText.max(1000).nullable().optional(),
+}).strict();
+export type TenderPriceRevisionInput = z.infer<typeof TenderPriceRevisionInput>;
+
+export const TenderPriceRevisionResult = z.object({
+  outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT", "NOT_FOUND"]),
+  revision: z.number().int().positive().optional(),
+  needsApproval: z.boolean().optional(),
+  offeredValueAmount: z.string().optional(),
+  code: z.string().optional(),
+  message: z.string().optional(),
+});
+export type TenderPriceRevisionResult = z.infer<typeof TenderPriceRevisionResult>;
+
+/* --- checklista i garancije --- */
+
+export const TenderChecklistItemRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  label: z.string(),
+  required: z.boolean(),
+  status: z.enum(["MISSING", "ATTACHED", "NOT_APPLICABLE"]),
+  attachmentId: z.string().nullable(),
+  validUntil: z.string().nullable(),
+  note: z.string().nullable(),
+  guaranteeType: z.enum(["BID", "PERFORMANCE", "ADVANCE", "WARRANTY"]).nullable(),
+  bank: z.string().nullable(),
+  amount: z.string().nullable(),
+  returnedAt: z.string().nullable(),
+  sortOrder: z.number().int(),
+});
+export type TenderChecklistItemRow = z.infer<typeof TenderChecklistItemRow>;
+
+export const TenderChecklistResponse = z.object({
+  items: z.array(TenderChecklistItemRow),
+  /** Blokirajuće stavke — imena, ne broj: poruka mora reći ŠTA nedostaje. */
+  blocking: z.array(z.string()),
+});
+export type TenderChecklistResponse = z.infer<typeof TenderChecklistResponse>;
+
+export const TenderChecklistPatchInput = z.object({
+  status: z.enum(["MISSING", "ATTACHED", "NOT_APPLICABLE"]).optional(),
+  attachmentId: z.string().nullable().optional(),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  note: SafeText.max(1000).nullable().optional(),
+  guaranteeType: z.enum(["BID", "PERFORMANCE", "ADVANCE", "WARRANTY"]).nullable().optional(),
+  bank: SafeText.max(120).nullable().optional(),
+  amount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+}).strict();
+export type TenderChecklistPatchInput = z.infer<typeof TenderChecklistPatchInput>;
+
+export const TenderGuaranteeInput = z.object({
+  code: SafeText.min(1).max(40),
+  label: SafeText.min(1).max(200),
+  guaranteeType: z.enum(["BID", "PERFORMANCE", "ADVANCE", "WARRANTY"]),
+  bank: SafeText.max(120).nullable().optional(),
+  amount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  note: SafeText.max(1000).nullable().optional(),
+}).strict();
+export type TenderGuaranteeInput = z.infer<typeof TenderGuaranteeInput>;
+
+export const TenderChecklistTemplateRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  label: z.string(),
+  required: z.boolean(),
+  sortOrder: z.number().int(),
+  isActive: z.boolean(),
+});
+export type TenderChecklistTemplateRow = z.infer<typeof TenderChecklistTemplateRow>;
+
+export const TenderChecklistTemplatesResponse = z.object({
+  templates: z.array(TenderChecklistTemplateRow),
+});
+export type TenderChecklistTemplatesResponse = z.infer<typeof TenderChecklistTemplatesResponse>;
+
+export const TenderChecklistTemplateInput = z.object({
+  code: SafeText.min(1).max(40),
+  label: SafeText.min(1).max(200),
+  required: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  isActive: z.boolean().optional(),
+}).strict();
+export type TenderChecklistTemplateInput = z.infer<typeof TenderChecklistTemplateInput>;
+
+/* --- ishod i uspješnost --- */
+
+export const TenderOutcomeResult = z.enum(["WON", "LOST", "WITHDRAWN", "CANCELLED"]);
+export type TenderOutcomeResult = z.infer<typeof TenderOutcomeResult>;
+
+export const TenderLostReason = z.enum([
+  "PRICE", "TECHNICAL", "DOCUMENTATION", "RELATIONSHIP", "SCOPE", "OTHER",
+]);
+export type TenderLostReason = z.infer<typeof TenderLostReason>;
+
+export const TenderOutcomeInput = z.object({
+  result: TenderOutcomeResult,
+  lostReason: TenderLostReason.nullable().optional(),
+  winnerPartnerId: z.string().nullable().optional(),
+  winnerValueAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
+  biddersCount: z.number().int().min(1).max(1000).nullable().optional(),
+  ourRank: z.number().int().min(1).max(1000).nullable().optional(),
+  note: SafeText.max(2000).nullable().optional(),
+}).strict();
+export type TenderOutcomeInput = z.infer<typeof TenderOutcomeInput>;
+
+export const TenderOutcomeRow = z.object({
+  tenderId: z.string(),
+  result: TenderOutcomeResult,
+  lostReason: TenderLostReason.nullable(),
+  winnerPartnerId: z.string().nullable(),
+  winnerPartnerName: z.string().nullable(),
+  winnerValueAmount: z.string().nullable(),
+  biddersCount: z.number().int().nullable(),
+  ourRank: z.number().int().nullable(),
+  note: z.string().nullable(),
+  recordedAt: z.string(),
+});
+export type TenderOutcomeRow = z.infer<typeof TenderOutcomeRow>;
+
+export const TenderPerformance = z.object({
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+  totalCount: z.number().int(),
+  wonCount: z.number().int(),
+  lostCount: z.number().int(),
+  winRateByCount: z.string().nullable(),
+  wonValueAmount: z.string(),
+  totalValueAmount: z.string(),
+  winRateByValue: z.string().nullable(),
+  /** Prosječna marža dobijenih vs izgubljenih, u procentima (null kad podatka nema). */
+  avgMarginWonPct: z.string().nullable(),
+  avgMarginLostPct: z.string().nullable(),
+  currencyCode: z.string().length(3),
+  /** „Vrijednost u toku“ = suma ponuda u statusima prije ishoda. */
+  inProgressValueAmount: z.string(),
+  inProgressCount: z.number().int(),
+  byPartner: z.array(z.object({
+    partnerId: z.string(),
+    partnerName: z.string(),
+    totalCount: z.number().int(),
+    wonCount: z.number().int(),
+    wonValueAmount: z.string(),
+  })),
+});
+export type TenderPerformance = z.infer<typeof TenderPerformance>;
+
+export const TenderCopyInput = z.object({
+  copyFromTenderId: z.string().min(1),
+}).strict();
+export type TenderCopyInput = z.infer<typeof TenderCopyInput>;
 
 export const TenderAttachment = z.object({
   id: z.string(),

@@ -5,14 +5,16 @@ const MATRIX = `
 
 | From | To |
 |---|---|
-| DRAFT | SUBMITTED, WITHDRAWN |
+| OPPORTUNITY | GO_NO_GO, CANCELLED |
 | WON | (terminal) |
 
 ## Polja
 ## Prilozi
 ## Obligations × TENDER
 ## Convert WON
+## Kalkulacija × revizije
 ## Dozvole
+## Ishod i uspješnost
 ## Partneri (R7.1)
 `;
 
@@ -33,8 +35,8 @@ export function runSelfTest(parseTenderMatrix) {
   const failures = [];
   const matrix = shrink(parseTenderMatrix(MATRIX));
   const good = base(matrix);
-  good.outcomes.push(covered("R7.tender.edge.DRAFT.SUBMITTED", "DRAFT>SUBMITTED", "allow"));
-  good.outcomes.push(covered("R7.tender.edge.DRAFT.WITHDRAWN", "DRAFT>WITHDRAWN", "allow"));
+  good.outcomes.push(covered("F7.tender.edge.OPPORTUNITY.GO_NO_GO", "OPPORTUNITY>GO_NO_GO", "allow"));
+  good.outcomes.push(covered("F7.tender.edge.OPPORTUNITY.CANCELLED", "OPPORTUNITY>CANCELLED", "allow"));
   good.outcomes.push(terminal("WON>terminal"));
   good.files.set("unit.test.ts", unit);
   fillSections(good);
@@ -88,7 +90,7 @@ export function runSelfTest(parseTenderMatrix) {
 function shrink(matrix) {
   return {
     ...matrix,
-    edges: ["DRAFT>SUBMITTED", "DRAFT>WITHDRAWN", "WON>terminal"],
+    edges: ["OPPORTUNITY>GO_NO_GO", "OPPORTUNITY>CANCELLED", "WON>terminal"],
     sections: matrix.sections,
   };
 }

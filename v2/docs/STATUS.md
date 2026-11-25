@@ -1,11 +1,12 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–6: završene** · **Tag `phase-6`** · **CI: zelen (run `45635787570`)**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–7: završene** · **Tag `phase-7`**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Faza 6 (Modul 7 — obračun sati i troška rada) je
-isporučena; sljedeća je Faza 7 po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama:
-`docs/IZVJESTAJ-FAZA-*.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Faza 7 (Modul 8 — tenderi) je isporučena: devet
+statusa sa kapijama, kalkulacija ponude sa revizijama i pragom odobrenja, kontrolna lista i
+garancije, ishod/uspješnost i atomska konverzija `WON` → projekat. Sljedeća je Faza 8 po
+`docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -52,6 +53,41 @@ isporučena; sljedeća je Faza 7 po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji p
 | 6.4 | Servis obračuna: satnica **na dan rada**, koeficijent, `RATE_MISSING`/`PARAMETER_MISSING` (linija bez iznosa, nikad nula), odbici do nule sa ostatkom, `SELF_APPROVAL_FORBIDDEN`, korekcije u naredni period, **trošak rada u `cost_entries`** (jednom po danu, idempotentno) | ✅ |
 | 6.5 | UI: `/ured/obracun-sati` (periodi + spremnost), `/ured/obracun-sati/[period]` (radnik × komponente, blokade, Izračunaj/Odobri/Zaključaj, XLSX/CSV, **raspis**), `/ured/obracun-sati/postavke` (komponente + važenja parametara), `/ured/obracun-sati/sati` (izvoz sirovih sati), tab „Obračun“ na kartici radnika, mobilni `/moj-obracun`, podsjetnik na `/pregled` poslije 5. | ✅ |
 | 6.6 | Provjere: `payroll-period.integration.test.ts` — **17 zlatnih testova novca protiv prave baze** (svi iz §5 specifikacije), `payroll-ui.test.ts` (11), `payroll-reminder.test.ts` (2), NUL-sweep pokriva sve F6 rute; `pnpm test` **658 prošlo**, typecheck 6/6, OpenAPI ažuran | ✅ |
+
+| 7.1 | Baza: 9 novih tabela (`tenders` dobija 9-statusni tok i `converted_project_id`; `tender_boq_items`, `tender_resources`, `tender_calculation_items`, `tender_price_revisions` + `tender_price_approvals`, `tender_checklist_templates`/`items`, `tender_phases`, `tender_team`, `tender_outcomes`), `obligations.tender_id` u `obligations_one_scope`, `TENDER_DEADLINE`/`TENDER_QUESTIONS` tipovi obaveza, triger imutabilnosti revizije — **48 migracija, 98 tabela** | ✅ |
+| 7.2 | Domena (`packages/domain/tender-calculation.ts`): direktni trošak, marža/rezerva/popust, marža u procentu ponuđenog, prag odobrenja (`>5 %` ili marža `< min_markup_pct`), kompletnost kontrolne liste i blokirajuće stavke — 17 zlatnih testova | ✅ |
+| 7.3 | API: **24 nove rute** — tenderi (lista/unos/izmjena/odluka/kopija/konverzija), predmjer, resursi i predlog cijene, obračun, revizije i odobrenje, kontrolna lista, garancije i povrat, ishod, uspješnost, šabloni liste; 3 nove dozvole, 6 novih kodova + `ALREADY_CONVERTED`; OpenAPI **199 putanja** | ✅ |
+| 7.4 | Servisi: `tender-service` (kapije u `changeStatus`), `tender-pricing` (revizije append-only, odobrenje), `tender-checklist-service` (šifarnik, garancije), `tender-outcome-service` (ishod + `tenderPerformance`), `tender-copy`, `tender-convert` (atomska konverzija sa claim-om) | ✅ |
+| 7.5 | UI: `/ured/tenderi` (tabela + kanban, filteri, novi tender sa kopiranjem predmjera), `/ured/tenderi/[id]` sa 7 tabova (pregled/odluka, kalkulacija, dokumenti, prilozi, ishod, tim, konverzija), `/ured/tenderi/uspjesnost`, `/ured/tenderi/kalendar`; worker podsjetnici vode tenderske rokove na tender | ✅ |
+| 7.6 | Provjere: `tender-lifecycle`/`convert`/`convert-race`/`pricing` integracioni testovi (27 protiv prave baze), `tender-status.test.ts` parity nad `.cursor/docs/matrices/tenders/MATRIX.md` (76 prelaza), NUL-sweep pokriva svih 20 novih ruta, `pnpm test` **670 prošlo**, typecheck 6/6, lint čist, matrix parity 0 grešaka | ✅ |
+
+## Faza 7 — odluke koje se ne smiju izgubiti
+
+- **Devet statusa, nikad `DRAFT`.** Novi tender je `OPPORTUNITY`; `DRAFT` je ukinut i u matrici,
+  registru i UI-u. Prelazi su **jedan izvor** (`tender-status.ts`) i parity test ih poredi sa
+  `.cursor/docs/matrices/tenders/MATRIX.md` — dodat status u matricu bez koda pada CI.
+- **Kapije su uslov prelaza, ne savjet na ekranu.** `PREPARATION` traži `participate = true`,
+  `SUBMITTED` traži rok dostave **i** kompletnu kontrolnu listu, a izlazni statusi (`WON`/`LOST`/
+  `WITHDRAWN`/`CANCELLED`) traže zapisan ishod koji se **poklapa** sa statusom. Sve četiri
+  provjere su u `changeStatus` i testirane protiv prave baze.
+- **Revizija cijene je append-only i odobrenje je odvojeno pravo.** Triger u bazi odbija UPDATE
+  (`TENDER_PRICE_REVISION_IMMUTABLE`); prag odobrenja je `|promjena| > 5 %` ili marža ispod
+  `companies.min_markup_pct`. Prva revizija nema prethodnu vrijednost, pa prag promjene nema od
+  čega da se mjeri — odobrenje tada traži samo marža.
+- **Popust je u stotinkama procenta, ne u procentima.** `discountPct: "10"` je 10 %;
+  `paidValue` formula `base × (1 − discount)` radi u `bigint` centima, bez `float`.
+- **ACCOUNTANT ne dobija kalkulaciju ni u podacima ni u UI-u.** `markupPct` je `null` u odgovoru,
+  a `GET …/calculation` vraća `FORBIDDEN`; tab „Kalkulacija“ se ne prikazuje. Sakriti broj u
+  ekranu, a poslati ga u JSON-u, nije skrivanje.
+- **Konverzija je „sve ili ništa“ i ide tačno jednom.** Claim je `UPDATE … WHERE converted_project_id
+  IS NULL` uz `ConvertClaimLost`; dva istovremena zahtjeva ostavljaju **jedan** projekat, a drugi
+  dobija `ALREADY_CONVERTED`. Prilozi se **ne premještaju**: nastaju nove veze na isti `object_key`.
+- **Kontrolna lista se puni iz šifarnika lenjo, ne u migraciji.** `ensureChecklistTemplates` je
+  idempotentan; `ATTACHED` bez priloga i `NOT_APPLICABLE` bez razloga ne prolaze, jer bi inače
+  „kompletno“ značilo samo „neko je kliknuo“.
+- **Tenderski rok vodi na tender, ne na `/rokovi/:id`.** Worker podsjetnik za `TENDER_*` obavezu
+  nosi `href = /ured/tenderi/{id}` i labelu „Tender — naslov“; bez toga bi podsjetnik glasio
+  „firma“ i vodio na ekran koji tender ne poznaje.
 
 ## Faza 4 — odluke koje se ne smiju izgubiti
 

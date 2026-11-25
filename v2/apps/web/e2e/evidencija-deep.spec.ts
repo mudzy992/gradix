@@ -6,14 +6,18 @@ import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
 import {
   apiPatch,
+  completeTenderChecklist,
   convertTender,
   createMachine,
   createPartner,
   createProject,
   createTender,
   createWorker,
+  decideTender,
   listEquipmentCategories,
   patchTenderStatus,
+  putTenderOutcome,
+  walkTenderToWon,
 } from "./helpers/api";
 import { E2E_USERS, loginApi, loginUi, requireE2ePassword } from "./helpers/auth";
 import { expectHeading } from "./helpers/assert";
@@ -23,12 +27,11 @@ test.beforeAll(() => {
 });
 
 test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
-  test("partner + tender DRAFT→SUBMITTED→WON→convert; UI vidi tender", async ({ page }) => {
+  test("partner + tender OPPORTUNITY→…→WON→convert; UI vidi tender", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
     const partner = await createPartner(page);
     const tender = await createTender(page, partner.id);
-    await patchTenderStatus(page, tender.id, "SUBMITTED");
-    await patchTenderStatus(page, tender.id, "WON");
+    await walkTenderToWon(page, tender.id);
     const { projectId } = await convertTender(page, tender.id);
     expect(projectId).toBeTruthy();
 
@@ -78,13 +81,21 @@ test.describe("evidencija deep", { tag: ["@deep", "@deep-evidencija"] }, () => {
     await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
   });
 
-  test("tender LOST terminal; invalid skip DRAFT→WON odbijen", async ({ page }) => {
+  test("tender LOST terminal; preskakanje OPPORTUNITY→WON odbijeno", async ({ page }) => {
     await loginApi(page, E2E_USERS.admin);
     const partner = await createPartner(page);
     const tender = await createTender(page, partner.id);
     const bad = await apiPatch(page, `/api/tenders/${tender.id}`, { status: "WON" });
     expect(bad.status >= 400).toBeTruthy();
+    await patchTenderStatus(page, tender.id, "GO_NO_GO");
+    await decideTender(page, tender.id, true);
+    await patchTenderStatus(page, tender.id, "PREPARATION", {
+      deadlineAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    });
+    await completeTenderChecklist(page, tender.id);
     await patchTenderStatus(page, tender.id, "SUBMITTED");
+    /* `LOST` je izlaz iz evaluacije, ne iz pripreme — matrica ne dopušta preskakanje. */
+    await putTenderOutcome(page, tender.id, "LOST");
     await patchTenderStatus(page, tender.id, "LOST");
     await page.goto(`/ured/tenderi`);
     await expect(page.getByText(tender.title, { exact: false }).first()).toBeVisible({ timeout: 15_000 });

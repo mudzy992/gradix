@@ -53,6 +53,8 @@ type ObligationRow = {
   machine_name: string | null;
   project_code: string | null;
   project_name: string | null;
+  tender_id: string | null;
+  tender_title: string | null;
   expires_at: string | null;
   review_at: string | null;
   review_state: string;
@@ -106,6 +108,7 @@ async function pendingReminders(
             w.first_name AS worker_first, w.last_name AS worker_last, w.user_id AS worker_user_id,
             m.code AS machine_code, m.name AS machine_name,
             p.code AS project_code, p.name AS project_name,
+            o.tender_id, tn.title AS tender_title,
             to_char(o.expires_at, 'YYYY-MM-DD') AS expires_at,
             to_char(o.review_at, 'YYYY-MM-DD') AS review_at,
             o.review_state, o.responsible_user_id,
@@ -116,6 +119,7 @@ async function pendingReminders(
        LEFT JOIN workers w ON w.company_id = o.company_id AND w.id = o.worker_id
        LEFT JOIN machines m ON m.company_id = o.company_id AND m.id = o.machine_id
        LEFT JOIN projects p ON p.company_id = o.company_id AND p.id = o.project_id
+       LEFT JOIN tenders tn ON tn.company_id = o.company_id AND tn.id = o.tender_id
       WHERE o.company_id = $1
         AND o.superseded_by IS NULL
         AND t.is_active
@@ -152,6 +156,8 @@ function entityLabel(row: ObligationRow): string {
   }
   if (row.machine_code) return `${row.machine_code} — ${row.machine_name ?? ""}`.trim();
   if (row.project_code) return `${row.project_code} — ${row.project_name ?? ""}`.trim();
+  // Tenderski rok bez ovog reda bi glasio „firma“ — a takav podsjetnik ne kaže ništa.
+  if (row.tender_title) return `Tender — ${row.tender_title}`.trim();
   return "firma";
 }
 
@@ -282,7 +288,7 @@ export async function scanReminders(
             ? `Provjera dospjela: ${row.type_label}`
             : `${row.type_label} istječe za ${daysLeft} ${daysWord(daysLeft)}`;
         const body = `${label} · rok ${reference}`;
-        const href = `/rokovi/${row.id}`;
+        const href = row.tender_id ? `/ured/tenderi/${row.tender_id}` : `/rokovi/${row.id}`;
         const severity = daysLeft <= 3 ? "CRITICAL" : daysLeft <= 15 ? "WARN" : "INFO";
 
         // Nosilac obaveze (radnik s nalogom) dobija SVOJE obavještenje: §24 traži da radnik
@@ -373,7 +379,7 @@ async function notifyExpired(
     kind: "OBLIGATION_EXPIRED",
     title: `Isteklo: ${row.type_label}`,
     body: `${label} · rok ${row.expires_at ?? row.review_at}`,
-    href: `/rokovi/${row.id}`,
+    href: row.tender_id ? `/ured/tenderi/${row.tender_id}` : `/rokovi/${row.id}`,
     severity: "CRITICAL",
     sourceType: "obligation",
     sourceId: row.id,

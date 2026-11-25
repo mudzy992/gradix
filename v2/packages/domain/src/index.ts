@@ -312,3 +312,27 @@ export {
   type PayrollCategory,
   type PayrollRules,
 } from "./payroll-hours";
+
+/*
+ * F7 (Modul 8): kalkulacija ponude tendera. Trošak, marža, prag odobrenja i kompletnost
+ * checkliste — sve u domeni, jer ista formula mora važiti u servisu, u testu i u prikazu.
+ * Modul ne uvozi ništa sa `node:*`, pa smije u glavni barrel (i mobilni bundle).
+ */
+export {
+  blockingChecklistItems,
+  calculateTender,
+  directCostFromBoq,
+  directCostFromResources,
+  formatPercent,
+  lineTotalCents,
+  marginPct,
+  parsePercent,
+  parseQuantity,
+  priceChangeCheck,
+  type ApprovalThresholds,
+  type ChecklistItemState,
+  type PriceChangeCheck,
+  type TenderCalculation,
+  type TenderCalculationInput,
+  type TenderCostLine,
+} from "./tender-calculation";

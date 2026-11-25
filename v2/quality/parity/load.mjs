@@ -15,8 +15,8 @@ export function loadOutcomes(registryDir) {
 function expandEdge(edge) {
   const covered = edge.status === "COVERED";
   return {
-    id: `R7.tender.edge.${edge.edge.replaceAll(">", ".")}`,
-    slice: "R7",
+    id: `F7.tender.edge.${edge.edge.replaceAll(">", ".")}`,
+    slice: "F7",
     source: ".cursor/docs/matrices/tenders/MATRIX.md#Statusi",
     summary: edge.edge,
     group: edge.group ?? "tender-edge-open",

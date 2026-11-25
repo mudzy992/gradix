@@ -83,9 +83,75 @@ export async function createTender(
 export async function patchTenderStatus(
   page: Page,
   tenderId: string,
-  status: "SUBMITTED" | "WON" | "LOST" | "WITHDRAWN",
+  status: "GO_NO_GO" | "PREPARATION" | "SUBMITTED" | "EVALUATION" | "WON" | "LOST" | "WITHDRAWN" | "CANCELLED",
+  body: Record<string, unknown> = {},
 ): Promise<void> {
-  await readData(page, "PATCH", `/api/tenders/${tenderId}`, { status }, `tenders.patch ${status}`);
+  await readData(page, "PATCH", `/api/tenders/${tenderId}`, { status, ...body }, `tenders.patch ${status}`);
+}
+
+export async function decideTender(
+  page: Page,
+  tenderId: string,
+  participate = true,
+): Promise<void> {
+  await readData(
+    page,
+    "POST",
+    `/api/tenders/${tenderId}/decision`,
+    { participate, reason: "E2E odluka o učešću" },
+    "tenders.decision",
+  );
+}
+
+/**
+ * Rješava kontrolnu listu: sve stavke koje nijesu garancije idu u „nije primjenjivo“ sa
+ * razlogom. Bez toga predaja pada na `TENDER_CHECKLIST_INCOMPLETE` — i to je namjerno.
+ */
+export async function completeTenderChecklist(page: Page, tenderId: string): Promise<void> {
+  const data = await readData(page, "GET", `/api/tenders/${tenderId}/checklist`, undefined, "tenders.checklist");
+  const items = (data.items ?? []) as Array<{ id: string; guaranteeType: string | null }>;
+  for (const item of items) {
+    if (item.guaranteeType) continue;
+    await readData(
+      page,
+      "PATCH",
+      `/api/tenders/${tenderId}/checklist/${item.id}`,
+      { status: "NOT_APPLICABLE", note: "E2E: nije primjenjivo" },
+      `tenders.checklist ${item.id}`,
+    );
+  }
+}
+
+export async function putTenderOutcome(
+  page: Page,
+  tenderId: string,
+  result: "WON" | "LOST" | "WITHDRAWN" | "CANCELLED",
+): Promise<void> {
+  await readData(
+    page,
+    "PUT",
+    `/api/tenders/${tenderId}/outcome`,
+    { result, lostReason: result === "WON" ? null : "PRICE" },
+    "tenders.outcome",
+  );
+}
+
+/**
+ * Prolazak kroz sve kapije do `WON`: odluka → priprema → kontrolna lista → predaja →
+ * evaluacija → ishod → dobijeno. Jedan pomoćnik, jer bi pet testova ponavljalo isti niz.
+ */
+export async function walkTenderToWon(page: Page, tenderId: string): Promise<void> {
+  await patchTenderStatus(page, tenderId, "GO_NO_GO");
+  await decideTender(page, tenderId, true);
+  await patchTenderStatus(page, tenderId, "PREPARATION", {
+    deadlineAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    questionsDeadlineAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+  });
+  await completeTenderChecklist(page, tenderId);
+  await patchTenderStatus(page, tenderId, "SUBMITTED");
+  await patchTenderStatus(page, tenderId, "EVALUATION");
+  await putTenderOutcome(page, tenderId, "WON");
+  await patchTenderStatus(page, tenderId, "WON");
 }
 
 export async function convertTender(

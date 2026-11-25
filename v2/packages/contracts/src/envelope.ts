@@ -80,6 +80,16 @@ export const ERROR_CODES = [
   "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
   "COST_ENTRY_IMMUTABLE",
   "COST_ENTRY_DELETE_FORBIDDEN",
+  /* F7 (Modul 8): tenderi. Svaki kod imenuje RAZLOG zašto tok ne ide dalje, jer poruka
+     „nije moguće“ ne kaže čovjeku šta da donese, odobri ili upiše. */
+  "TENDER_CHECKLIST_INCOMPLETE",
+  "TENDER_DEADLINE_REQUIRED",
+  "TENDER_DECISION_REQUIRED",
+  "TENDER_OUTCOME_REASON_REQUIRED",
+  "TENDER_PRICE_APPROVAL_REQUIRED",
+  "TENDER_REFERENCE_TAKEN",
+  "TENDER_INVALID_STATUS",
+  "ALREADY_CONVERTED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -188,6 +198,23 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   /* Ledger je append-only: iznos/izvor/projekat se ne prepisuju (triger u bazi). */
   COST_ENTRY_IMMUTABLE: 422,
   COST_ENTRY_DELETE_FORBIDDEN: 403,
+  /*
+   * F7: svi tenderski kodovi su 422 osim dva konflikta.
+   *  - 422 `TENDER_CHECKLIST_INCOMPLETE`/`DEADLINE_REQUIRED`/`DECISION_REQUIRED`/
+   *    `OUTCOME_REASON_REQUIRED`/`PRICE_APPROVAL_REQUIRED`: zahtjev je formalno ispravan, ali
+   *    nedostaje PODATAK ili ODOBRENJE — to se rješava dopunom, ne ispravkom unosa.
+   *  - 409 `TENDER_REFERENCE_TAKEN`: referentni broj je zauzet — ista trka kao duplikat šifre.
+   *  - 409 `TENDER_INVALID_STATUS`: tok ne dozvoljava taj prelaz — stanje, ne unos.
+   *  - 409 `ALREADY_CONVERTED`: konverzija je već obavljena (postojeće ponašanje R7).
+   */
+  TENDER_CHECKLIST_INCOMPLETE: 422,
+  TENDER_DEADLINE_REQUIRED: 422,
+  TENDER_DECISION_REQUIRED: 422,
+  TENDER_OUTCOME_REASON_REQUIRED: 422,
+  TENDER_PRICE_APPROVAL_REQUIRED: 422,
+  TENDER_REFERENCE_TAKEN: 409,
+  TENDER_INVALID_STATUS: 409,
+  ALREADY_CONVERTED: 409,
 };
 
 /*

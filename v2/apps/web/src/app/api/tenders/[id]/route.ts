@@ -6,6 +6,7 @@ import { guard } from "@/server/guard";
 import type { Role } from "@/server/permissions";
 import { getTender, patchTender } from "@/server/tender-service";
 import type { TenderPatchInput } from "@gradix/contracts";
+import { failFromOutcome } from "../route-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +52,7 @@ export async function PATCH(request: NextRequest, context: Ctx): Promise<Respons
       id,
       body,
     );
-    if (outcome.outcome === "FORBIDDEN") return fail("FORBIDDEN", outcome.message ?? "Nemate pravo.");
-    if (outcome.outcome === "NOT_FOUND") return fail("NOT_FOUND", outcome.message ?? "Nije pronađeno.");
-    if (outcome.outcome === "VALIDATION_FAILED") {
-      return fail("VALIDATION_FAILED", outcome.message ?? "Unos nije validan.");
-    }
-    if (outcome.outcome === "CONFLICT") return fail("CONFLICT", outcome.message ?? "Konflikt.");
+    if (outcome.outcome !== "OK") return failFromOutcome(outcome);
     return ok(outcome);
   } catch (error) {
     return internal(error, "tenders.patch");

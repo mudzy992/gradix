@@ -157,6 +157,17 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.check_templates TO gradix_app;
 -- Modul 8 puni nalog; u F4 se otvara automatski iz kvara i nosi trošak na projekat.
 GRANT SELECT, INSERT, UPDATE ON TABLE public.service_orders TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.tenders TO gradix_app;
+-- F7 (Modul 8): tenderi — predmjer i resursi se mijenjaju (stavka se briše dok je tender otvoren);
+-- revizije cijene su append-only (UPDATE samo za odobrenje, brani triger); ishod se NE mijenja
+-- (jedan po tenderu, zapis odluke); checklista se ažurira (status, prilog, povrat garancije).
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tender_boq_items TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tender_resources TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.tender_price_revisions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.tender_checklist_templates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.tender_checklist_items TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.tender_outcomes TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tender_phases TO gradix_app;
+GRANT SELECT, INSERT, DELETE ON TABLE public.tender_team TO gradix_app;
 -- F1: jezgro firme i sigurnost pristupa (spec 01).
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.company_holidays TO gradix_app;
 GRANT SELECT, INSERT, DELETE ON TABLE public.password_history TO gradix_app;

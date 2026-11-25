@@ -106,6 +106,26 @@ import {
 import { POST as partnersPost } from "@/app/api/partners/route";
 import { PATCH as partnersPatch } from "@/app/api/partners/[id]/route";
 import { GET as tendersGet, POST as tendersPost } from "@/app/api/tenders/route";
+import { GET as tenderBoqGet, POST as tenderBoqPost } from "@/app/api/tenders/[id]/boq/route";
+import { PATCH as tenderBoqPatch, DELETE as tenderBoqDelete } from "@/app/api/tenders/[id]/boq/[itemId]/route";
+import { GET as tenderCalculationGet } from "@/app/api/tenders/[id]/calculation/route";
+import { GET as tenderChecklistGet } from "@/app/api/tenders/[id]/checklist/route";
+import { PATCH as tenderChecklistItemPatch } from "@/app/api/tenders/[id]/checklist/[itemId]/route";
+import { POST as tenderDecisionPost } from "@/app/api/tenders/[id]/decision/route";
+import { POST as tenderGuaranteesPost } from "@/app/api/tenders/[id]/guarantees/route";
+import { POST as tenderGuaranteeReturnPost } from "@/app/api/tenders/[id]/guarantees/[itemId]/return/route";
+import { POST as tenderCopyPost } from "@/app/api/tenders/[id]/copy/route";
+import { GET as tenderOutcomeGet, PUT as tenderOutcomePut } from "@/app/api/tenders/[id]/outcome/route";
+import { POST as tenderPhasesPost } from "@/app/api/tenders/[id]/phases/route";
+import { GET as tenderRevisionsGet, POST as tenderRevisionsPost } from "@/app/api/tenders/[id]/price-revisions/route";
+import { POST as tenderRevisionApprovePost } from "@/app/api/tenders/[id]/price-revisions/[revision]/approve/route";
+import { GET as tenderResourcesGet, POST as tenderResourcesPost } from "@/app/api/tenders/[id]/resources/route";
+import { DELETE as tenderResourceDelete } from "@/app/api/tenders/[id]/resources/[resourceId]/route";
+import { GET as tenderResourceSuggestionGet } from "@/app/api/tenders/[id]/resources/suggestion/route";
+import { GET as tenderTeamGet, POST as tenderTeamPost } from "@/app/api/tenders/[id]/team/route";
+import { DELETE as tenderTeamDelete } from "@/app/api/tenders/[id]/team/[workerId]/route";
+import { GET as tendersPerformanceGet } from "@/app/api/tenders/performance/route";
+import { GET as checklistTemplatesGet, POST as checklistTemplatesPost } from "@/app/api/tender-checklist-templates/route";
 import { GET as tenderGet, PATCH as tendersPatch } from "@/app/api/tenders/[id]/route";
 import { POST as tendersConvertPost } from "@/app/api/tenders/[id]/convert/route";
 import {
@@ -367,6 +387,31 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/tenders/{id}/attachments": { GET: tenderAttachmentsGet, POST: tenderAttachmentsPost },
   "/api/tenders/{id}/attachments/{attachmentId}/confirm": { POST: tenderAttachmentConfirmPost },
   "/api/tenders/{id}/attachments/{attachmentId}/url": { GET: tenderAttachmentUrlGet },
+  /*
+   * F7: cijeli modul Tenderi prima tekst (naslove, razloge, oznake, napomene, datume) i
+   * `{id}` putanje. Svaka ruta ide kroz isti NUL sweep — inače bi „nova ruta“ bila i „nova
+   * rupa“ na granici API-ja.
+   */
+  "/api/tenders/{id}/boq": { GET: tenderBoqGet, POST: tenderBoqPost },
+  "/api/tenders/{id}/boq/{itemId}": { PATCH: tenderBoqPatch, DELETE: tenderBoqDelete },
+  "/api/tenders/{id}/calculation": { GET: tenderCalculationGet },
+  "/api/tenders/{id}/checklist": { GET: tenderChecklistGet },
+  "/api/tenders/{id}/checklist/{itemId}": { PATCH: tenderChecklistItemPatch },
+  "/api/tenders/{id}/decision": { POST: tenderDecisionPost },
+  "/api/tenders/{id}/guarantees": { POST: tenderGuaranteesPost },
+  "/api/tenders/{id}/guarantees/{itemId}/return": { POST: tenderGuaranteeReturnPost },
+  "/api/tenders/{id}/copy": { POST: tenderCopyPost },
+  "/api/tenders/{id}/outcome": { GET: tenderOutcomeGet, PUT: tenderOutcomePut },
+  "/api/tenders/{id}/phases": { POST: tenderPhasesPost },
+  "/api/tenders/{id}/price-revisions": { GET: tenderRevisionsGet, POST: tenderRevisionsPost },
+  "/api/tenders/{id}/price-revisions/{revision}/approve": { POST: tenderRevisionApprovePost },
+  "/api/tenders/{id}/resources": { GET: tenderResourcesGet, POST: tenderResourcesPost },
+  "/api/tenders/{id}/resources/{resourceId}": { DELETE: tenderResourceDelete },
+  "/api/tenders/{id}/resources/suggestion": { GET: tenderResourceSuggestionGet },
+  "/api/tenders/{id}/team": { GET: tenderTeamGet, POST: tenderTeamPost },
+  "/api/tenders/{id}/team/{workerId}": { DELETE: tenderTeamDelete },
+  "/api/tenders/performance": { GET: tendersPerformanceGet },
+  "/api/tender-checklist-templates": { GET: checklistTemplatesGet, POST: checklistTemplatesPost },
   "/api/machine-cost-rates": { POST: machineCostRatesPost },
   /*
    * F5: `project-cost-entries/book` je ukinut (nema više ručnog knjiženja). NUL-guard pokriva

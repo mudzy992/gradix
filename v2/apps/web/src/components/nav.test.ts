@@ -37,6 +37,10 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/platform/firme/nova": "onboarding čarobnjak, ulaz sa liste firmi",
   "/ured/obracun-sati/sati":
     "izvoz sirovih sati za PM/šefa: ista dozvola kao stavka „Obračun“ ali BEZ iznosa, pa ne dobija svoju stavku u meniju — ulaz je link na vrhu ekrana Obračun i na periodu",
+  "/ured/tenderi/uspjesnost":
+    "izvještaj uspješnosti je dio modula Tenderi — ulaz je link na vrhu liste tendera, ista dozvola (tenders.view), pa ne dobija svoju stavku u meniju",
+  "/ured/tenderi/kalendar":
+    "kalendar rokova je drugi pogled na iste rokove — ulaz je link na vrhu liste tendera, ista dozvola (tenders.view), pa ne dobija svoju stavku u meniju",
   "/ured/radni-dani/sedmica":
     "pogled „radnik × dan“ je dio ekrana Radni dani — ulaz je link na vrhu tog ekrana, i važi ista dozvola (workdays.view), pa ne dobija svoju stavku u meniju",
 };

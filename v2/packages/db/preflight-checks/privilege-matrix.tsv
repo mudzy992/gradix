@@ -91,3 +91,11 @@ table	payroll_run_lines	SELECT;INSERT	-		F6 linije obračuna su zamrznute: nema 
 table	payroll_line_sources	SELECT;INSERT	-		F6 raspis linije (dani, sati, primijenjeni parametri) — append-only dokaz iznosa.
 table	worker_advances	SELECT;INSERT;UPDATE	-		F6 akontacije i pozajmice; UPDATE samo za `remaining_cents` (odbijanje rate), nikad iznos izdanog.
 table	pay_corrections	SELECT;INSERT;UPDATE	-		F6 korekcije poslije `LOCKED`; UPDATE samo `OPEN → APPLIED` u narednom periodu, uz obavezan razlog ≥10 znakova.
+table	tender_boq_items	SELECT;INSERT;UPDATE;DELETE	-		F7 stavke predmjera tendera; stavka se mijenja i briše dok je tender otvoren, cijena stavke je ulaz u kalkulaciju.
+table	tender_resources	SELECT;INSERT;UPDATE;DELETE	-		F7 resursi kalkulacije (rad, mašina, materijal, podizvođač) sa predloženom cijenom iz šifarnika.
+table	tender_price_revisions	SELECT;INSERT;UPDATE	-		F7 revizije ponude su append-only; UPDATE postoji samo za odobrenje (`approved_at`/`approved_by`), sve drugo brani triger `tender_price_revision_immutable()`.
+table	tender_checklist_templates	SELECT;INSERT;UPDATE	-		F7 šifarnik stavki kontrolne liste po firmi; deaktivacija je UPDATE, nema DELETE.
+table	tender_checklist_items	SELECT;INSERT;UPDATE	-		F7 stavke checkliste tendera (dokumenti i bankarske garancije); povrat garancije je UPDATE `returned_at`.
+table	tender_outcomes	SELECT;INSERT	-		F7 ishod tendera je zapis odluke: jedan po tenderu, bez UPDATE i DELETE.
+table	tender_phases	SELECT;INSERT;UPDATE;DELETE	-		F7 faze tendera se prenose u `project_phases` pri konverziji; mijenjaju se dok tender nije predan.
+table	tender_team	SELECT;INSERT;DELETE	-		F7 predloženi tim tendera; član se dodaje i uklanja, izmjena role je novi red.

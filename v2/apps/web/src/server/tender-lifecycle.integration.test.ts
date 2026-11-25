@@ -1,17 +1,22 @@
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { companyId, withCompany } from "@gradix/db";
-import { convertTenderToProject } from "./tender-convert";
-import { createTender, patchTender } from "./tender-service";
-import { createTenderWorld } from "./tender-lifecycle-fixtures";
+import { createTender, getTender, patchTender } from "./tender-service";
+import { createTenderWorld, newTenderId } from "./tender-lifecycle-fixtures";
 
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = appUrl && adminUrl ? describe : describe.skip;
 
-describeDb("R7 tender rules (PostgreSQL)", () => {
+/**
+ * Pravila tendera na nivou baze (F7, spec 08 §1.1/7 i §1.2/6).
+ *
+ * F2 je imao jedno stanje `DRAFT`; zaključani tok ima devet statusa i kapije između njih, pa
+ * testovi provjeravaju KAPIJE, a ne pojedinačne prelaske: bez odluke nema pripreme, bez roka i
+ * kontrolne liste nema predaje.
+ */
+describeDb("F7 tender rules (PostgreSQL)", () => {
   const world = createTenderWorld();
-  const { owner, accountant, worker, otherCompany, partnerA, companyA, companyB } = world;
+  const { owner, accountant, partnerA, companyA, companyB, otherCompany } = world;
   const RUN = world.run;
   const app = new Pool({ connectionString: appUrl, max: 4 });
   const admin = new Pool({ connectionString: adminUrl, max: 2 });
@@ -23,37 +28,44 @@ describeDb("R7 tender rules (PostgreSQL)", () => {
     await admin.end();
   });
 
-  it("submitted_at se postavlja samo na DRAFT→SUBMITTED", async () => {
-    const created = await createTender(app, owner, {
-      title: `Most ${RUN}`, partnerId: partnerA, submittedValueAmount: "10.00", currencyCode: "BAM",
-    });
-    expect(created.outcome).toBe("OK");
-    const id = created.outcome === "OK" ? created.id : "";
-    const draft = await admin.query<{ submitted_at: string | null }>(
-      `SELECT submitted_at::text FROM public.tenders WHERE id = $1`,
-      [id],
-    );
-    expect(draft.rows[0]?.submitted_at).toBeNull();
-    expect((await patchTender(app, owner, id!, { status: "SUBMITTED" })).outcome).toBe("OK");
-    const submitted = await admin.query<{ status: string; submitted_at: string | null }>(
+  it("novi tender je OPPORTUNITY, a ne DRAFT", async () => {
+    const id = await newTenderId(app, owner, partnerA, `Novi ${RUN}`);
+    const row = await admin.query<{ status: string; submitted_at: string | null }>(
       `SELECT status, submitted_at::text FROM public.tenders WHERE id = $1`,
       [id],
     );
-    expect(submitted.rows[0]?.status).toBe("SUBMITTED");
-    expect(submitted.rows[0]?.submitted_at).toBeTruthy();
+    expect(row.rows[0]?.status).toBe("OPPORTUNITY");
+    expect(row.rows[0]?.submitted_at).toBeNull();
+  });
+
+  it("submitted_at se postavlja tek na prelasku u SUBMITTED", async () => {
+    const id = await newTenderId(app, owner, partnerA, `Most ${RUN}`);
+    expect((await patchTender(app, owner, id, { status: "GO_NO_GO" })).outcome).toBe("OK");
+    expect((await patchTender(app, owner, id, { status: "PREPARATION" })).outcome).toBe("CONFLICT");
+    expect((await patchTender(app, owner, id, { status: "WON" })).outcome).toBe("CONFLICT");
+    const row = await admin.query<{ status: string; submitted_at: string | null }>(
+      `SELECT status, submitted_at::text FROM public.tenders WHERE id = $1`,
+      [id],
+    );
+    expect(row.rows[0]?.status).toBe("GO_NO_GO");
+    expect(row.rows[0]?.submitted_at).toBeNull();
   });
 
   it("nedozvoljen prelaz ne mijenja status", async () => {
-    const created = await createTender(app, owner, {
-      title: `Skok ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    const id = created.outcome === "OK" ? created.id! : "";
+    const id = await newTenderId(app, owner, partnerA, `Skok ${RUN}`);
     expect(await patchTender(app, owner, id, { status: "WON" })).toMatchObject({
       outcome: "CONFLICT",
       code: "TENDER_INVALID_STATUS",
     });
     const row = await admin.query<{ status: string }>(`SELECT status FROM public.tenders WHERE id = $1`, [id]);
-    expect(row.rows[0]?.status).toBe("DRAFT");
+    expect(row.rows[0]?.status).toBe("OPPORTUNITY");
+  });
+
+  it("priprema bez odluke o učešću je TENDER_DECISION_REQUIRED", async () => {
+    const id = await newTenderId(app, owner, partnerA, `Bez odluke ${RUN}`);
+    await patchTender(app, owner, id, { status: "GO_NO_GO" });
+    expect(await patchTender(app, owner, id, { status: "PREPARATION", deadlineAt: "2027-01-15T12:00:00.000Z" }))
+      .toMatchObject({ outcome: "CONFLICT", code: "TENDER_DECISION_REQUIRED" });
   });
 
   it("negativan iznos ne pravi tender", async () => {
@@ -62,7 +74,7 @@ describeDb("R7 tender rules (PostgreSQL)", () => {
       [companyA],
     );
     const denied = await createTender(app, owner, {
-      title: `Minus ${RUN}`, partnerId: partnerA, submittedValueAmount: "-1.00", currencyCode: "BAM",
+      title: `Negativan ${RUN}`, partnerId: partnerA, submittedValueAmount: "-5.00", currencyCode: "BAM",
     });
     expect(denied.outcome).toBe("VALIDATION_FAILED");
     const after = await admin.query<{ n: number }>(
@@ -74,37 +86,27 @@ describeDb("R7 tender rules (PostgreSQL)", () => {
 
   it("nepoznat partner se odbija", async () => {
     const denied = await createTender(app, owner, {
-      title: `Nema ${RUN}`, partnerId: `ptr_missing_${RUN}`, submittedValueAmount: "1.00", currencyCode: "BAM",
+      title: `Tuđi ${RUN}`, partnerId: "ptr_nepostoji", submittedValueAmount: "1.00", currencyCode: "BAM",
     });
     expect(denied.outcome).toBe("VALIDATION_FAILED");
   });
 
   it("ACCOUNTANT i WORKER ne smiju manage", async () => {
-    expect(await createTender(app, accountant, {
-      title: `Zabrana ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    })).toMatchObject({ outcome: "FORBIDDEN", code: "ROLE" });
-    const draft = await createTender(app, owner, {
-      title: `Tuđi ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    const id = draft.outcome === "OK" ? draft.id! : "";
-    expect((await patchTender(app, worker, id, { status: "SUBMITTED" })).outcome).toBe("FORBIDDEN");
-    expect((await convertTenderToProject(app, accountant, id)).outcome).toBe("FORBIDDEN");
-    const status = await admin.query<{ status: string }>(`SELECT status FROM public.tenders WHERE id = $1`, [id]);
-    expect(status.rows[0]?.status).toBe("DRAFT");
+    const id = await newTenderId(app, owner, partnerA, `Prava ${RUN}`);
+    // Obje role bez `tenders.manage` dobijaju istu grešku — nema djelimičnog prava.
+    expect((await patchTender(app, accountant, id, { title: "Prepisano" })).outcome).toBe("FORBIDDEN");
+    expect((await patchTender(app, world.worker, id, { title: "Prepisano" })).outcome).toBe("FORBIDDEN");
+    const tender = await getTender(app, owner, id);
+    expect(tender?.title).toBe(`Prava ${RUN}`);
   });
 
   it("firma B ne vidi tender firme A", async () => {
-    const foreign = await withCompany(app, companyId(companyB), async (client) => {
-      const seen = await client.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM public.tenders WHERE company_id = $1`,
-        [companyA],
-      );
-      return seen.rows[0]?.n;
-    });
-    expect(foreign).toBe(0);
-    const created = await createTender(app, otherCompany, {
-      title: `B ${RUN}`, partnerId: partnerA, submittedValueAmount: "1.00", currencyCode: "BAM",
-    });
-    expect(created.outcome).toBe("VALIDATION_FAILED");
+    const id = await newTenderId(app, owner, partnerA, `Tajna ${RUN}`);
+    expect(await getTender(app, otherCompany, id)).toBeNull();
+    const rows = await admin.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM public.tenders WHERE id = $1 AND company_id = $2`,
+      [id, companyB],
+    );
+    expect(rows.rows[0]?.n).toBe(0);
   });
 });

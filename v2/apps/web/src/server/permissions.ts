@@ -210,6 +210,19 @@ export const PERMISSIONS = {
   "tenders.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "tenders.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "tenders.convert": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  /*
+   * F7 (spec 08 §1.7): tri nove dozvole, namjerno odvojene od `.manage`.
+   *  - `tenders.price.manage` vidi i mijenja KALKULACIJU (trošak, marža, revizije). ACCOUNTANT
+   *    vidi ponuđenu vrijednost i ishod, ali ne trošak i maržu — isto pravilo kao satnice u
+   *    Modulu 4. Zato ovo nije `tenders.view`.
+   *  - `tenders.price.approve` je DRUGI par očiju: cijena iznad praga (5 %) ili ispod minimalne
+   *    marže traži vlasnika/administratora. PM predlaže, ali ne odobrava sam sebi.
+   *  - `tenders.outcome.manage` piše ishod (razlog gubitka, pobjednika, rang) — to je podatak
+   *    po kojem se odlučuje o budućim ponudama, pa ga ne mijenja svako ko mijenja tender.
+   */
+  "tenders.price.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "tenders.price.approve": ["OWNER", "ADMIN"],
+  "tenders.outcome.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   // R6.1: stope €/h i knjiženje na projekat — ACCOUNTANT/SS view; book/manage bez ACCOUNTANT.
   "machines.cost_rate.view": [
     "OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT", "SITE_SUPERVISOR",
@@ -509,6 +522,20 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "tenders.convert": {
     label: "Konverzija tendera u projekat",
     description: "Jednim klikom pretvara dobijeni tender u projekat (atomski).",
+  },
+  "tenders.price.manage": {
+    label: "Kalkulacija ponude tendera",
+    description:
+      "Predmjer, resursi, marža i revizije cijene. Računovođa vidi vrijednost ponude, ali ne trošak i maržu.",
+  },
+  "tenders.price.approve": {
+    label: "Odobrenje cijene ponude",
+    description:
+      "Odobrava reviziju cijene iznad 5 % promjene ili ispod minimalne marže firme — drugi par očiju.",
+  },
+  "tenders.outcome.manage": {
+    label: "Ishod tendera",
+    description: "Upis ishoda: rezultat, razlog gubitka, pobjednik, rang i broj ponuda.",
   },
   "machines.cost_rate.view": {
     label: "Pregled stope troška mašine",
