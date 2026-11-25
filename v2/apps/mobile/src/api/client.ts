@@ -10,6 +10,7 @@ import type {
   LoginResponse,
   MachinesResponse,
   MeResponse,
+  MyPayrollResponse,
   ObligationsResponse,
   ProjectsResponse,
   SessionsResponse,
@@ -239,6 +240,23 @@ export async function myProjects(): Promise<ProjectsResponse> {
     client.get("/api/projects", undefined, { query: { mine: "1" }, accessToken }),
   );
   return data;
+}
+
+/**
+ * „Moj obračun“ (F6, spec 07 §4) — svoji sati za mjesec; iznosi tek kad je period odobren.
+ *
+ * `year`/`month` su OBAVEZNI, a ne „tekući mjesec po defaultu“: radnik koji u januaru provjerava
+ * decembar mora dobiti decembar. Server bez parametara ne bi znao čiji mjesec, pa bi ekran tiho
+ * pokazao pogrešan period.
+ */
+export async function myPayroll(input: { year: number; month: number }): Promise<MyPayrollResponse> {
+  const { data } = await withToken((accessToken) =>
+    client.get("/api/me/payroll", undefined, {
+      query: { year: String(input.year), month: String(input.month) },
+      accessToken,
+    }),
+  );
+  return data as MyPayrollResponse;
 }
 
 /**

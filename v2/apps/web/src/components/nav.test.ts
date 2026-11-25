@@ -35,6 +35,8 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/platform/login": "prijava operatora prije platform sesije (odvojen cookie)",
   "/platform/firme": "platforma nije dio tenant navigacije — operator nije član firme",
   "/platform/firme/nova": "onboarding čarobnjak, ulaz sa liste firmi",
+  "/ured/obracun-sati/sati":
+    "izvoz sirovih sati za PM/šefa: ista dozvola kao stavka „Obračun“ ali BEZ iznosa, pa ne dobija svoju stavku u meniju — ulaz je link na vrhu ekrana Obračun i na periodu",
   "/ured/radni-dani/sedmica":
     "pogled „radnik × dan“ je dio ekrana Radni dani — ulaz je link na vrhu tog ekrana, i važi ista dozvola (workdays.view), pa ne dobija svoju stavku u meniju",
 };
@@ -102,13 +104,29 @@ describe("meni po roli == matrica dozvola (A4b, web)", () => {
     expect(byHref["/ured/sati-masine"]).toBe("Mehanizacija");
     expect(byHref["/ured/radni-dani"]).toBe("Rad / obračun");
     expect(byHref["/ured/obracun-sati"]).toBe("Rad / obračun");
+    expect(byHref["/ured/obracun-sati/postavke"]).toBe("Rad / obračun");
     expect(byHref["/ured/korisnici"]).toBe("Administracija");
   });
 
-  it("R6.2: Obračun sati vide OWNER/ADMIN/PM/ACCOUNTANT", () => {
-    const allowed = ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"];
+  /*
+   * F6:„Obračun“ nosi IZNOSE, pa ga vide samo OWNER/ADMIN/ACCOUNTANT (`payroll.view`).
+   * PM i šef više nisu na ovoj listi — oni sate dobijaju kroz izvoz sati
+   * (`/ured/obracun-sati/sati`, dozvola `payroll.hours.export`), nikad kroz obračun s iznosima.
+   */
+  it("F6: obračun sa iznosima vide OWNER/ADMIN/ACCOUNTANT, ne PM ni šef", () => {
+    const allowed = ["OWNER", "ADMIN", "ACCOUNTANT"];
     for (const role of ROLES) {
       const visible = navEntriesForRoles([role]).some((entry) => entry.href === "/ured/obracun-sati");
+      expect(visible).toBe(allowed.includes(role));
+    }
+  });
+
+  it("F6: postavke obračuna (komponente, parametri) su u meniju za one koji vide obračun", () => {
+    const allowed = ["OWNER", "ADMIN", "ACCOUNTANT"];
+    for (const role of ROLES) {
+      const visible = navEntriesForRoles([role]).some(
+        (entry) => entry.href === "/ured/obracun-sati/postavke",
+      );
       expect(visible).toBe(allowed.includes(role));
     }
   });

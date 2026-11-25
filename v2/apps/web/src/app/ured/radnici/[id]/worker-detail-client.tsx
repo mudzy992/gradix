@@ -27,10 +27,14 @@ import {
 } from "./worker-dialogs";
 import type { WorkerProfileView } from "@/server/worker-service";
 import { RATE_KIND } from "./worker-labels";
+import { WorkerPayrollPanel } from "./worker-payroll-panel";
 import { formatDate } from "@/format";
 
 type Caps = {
   canManage: boolean;
+  /** F6: `payroll.view` — bez nje tab „Obračun“ se ne renderuje (nikad prazna sekcija). */
+  canSeePayroll: boolean;
+  canManagePayroll: boolean;
   canSeeSensitive: boolean;
   canSeeRates: boolean;
   canManageRates: boolean;
@@ -275,6 +279,12 @@ export function WorkerDetailClient({
             <EmptyState title="Nema zaduženja" description="Radnik trenutno nema opremu kod sebe." />
           )}
         </Card>
+      ) : null}
+
+      {/* F6: obračun živi na kartici radnika, jer se pitanje „koliko mu je ostatak duga“ postavlja
+          tu, a ne u mjesečnom periodu. Tab se ne renderuje bez `payroll.view`. */}
+      {caps.canSeePayroll ? (
+        <WorkerPayrollPanel workerId={worker.id} canManage={caps.canManagePayroll} />
       ) : null}
 
       <Card>

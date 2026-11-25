@@ -65,6 +65,15 @@ export const ERROR_CODES = [
   /* Faza 5 — Modul 6: projekti, budžet, knjiženje troška, zatvaranje. */
   "BUDGET_REVISION_CONFLICT",
   "PROJECT_CLOSED",
+  /* F6 (Modul 7): nedostatak podatka je IMENOVANA blokada, ne prazna linija i ne nula. */
+  "RATE_MISSING",
+  "PARAMETER_MISSING",
+  "PERIOD_NOT_READY",
+  "SELF_APPROVAL_FORBIDDEN",
+  "PERIOD_LOCKED_CORRECTION",
+  "NEGATIVE_NET_FORBIDDEN",
+  "PAYROLL_ALREADY_LOCKED",
+  "PAYMENT_FORMAT_UNSUPPORTED",
   "COST_ALREADY_POSTED",
   "COST_REVERSAL_REASON_REQUIRED",
   "PHASE_WEIGHT_REQUIRED",
@@ -148,6 +157,23 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
    */
   BUDGET_REVISION_CONFLICT: 409,
   PROJECT_CLOSED: 422,
+  /*
+   * F6: `RATE_MISSING` i `PARAMETER_MISSING` su 422 — zahtjev je ispravan, ali obračun ne može
+   * izdati iznos bez podatka. 400 bi rekao „loš unos“, a ovdje unos nije problem: nedostaje
+   * PODATAK u šifarniku, i to se rješava dodavanjem satnice/parametra.
+   *
+   * `PERIOD_NOT_READY` je 409: period postoji, ali nije u stanju za radnju (npr. odobrenje bez
+   * izračuna) — stanje, ne unos. `SELF_APPROVAL_FORBIDDEN` je 403: dozvola postoji, ali je radnja
+   * zabranjena radi kontrole. `PAYROLL_ALREADY_LOCKED` je 409.
+   */
+  RATE_MISSING: 422,
+  PARAMETER_MISSING: 422,
+  PERIOD_NOT_READY: 409,
+  SELF_APPROVAL_FORBIDDEN: 403,
+  PERIOD_LOCKED_CORRECTION: 409,
+  NEGATIVE_NET_FORBIDDEN: 422,
+  PAYROLL_ALREADY_LOCKED: 409,
+  PAYMENT_FORMAT_UNSUPPORTED: 400,
   /* Storno već storniranog / već knjiženog zapisa — stanje, ne unos. */
   COST_ALREADY_POSTED: 409,
   /*

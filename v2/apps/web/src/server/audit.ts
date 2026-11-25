@@ -155,6 +155,18 @@ export const AUDIT_ACTIONS = [
   "project.reopened",
   "cost_category.created",
   "cost_category.updated",
+  /* F6 (Modul 7) — obračun. Svaki prelaz perioda ima svoj trag: ko je izračunao, ko odobrio, ko
+     zaključao i ko je promijenio parametar od kojeg iznos zavisi. */
+  "payroll.period_opened",
+  "payroll.calculated",
+  "payroll.approved",
+  "payroll.locked",
+  "payroll.component_created",
+  "payroll.component_updated",
+  "payroll.parameter_created",
+  "payroll.advance_created",
+  "payroll.correction_applied",
+  "payroll.exported",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -334,6 +346,16 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "project.reopened": "Projekat ponovno otvoren",
   "cost_category.created": "Kategorija troška dodana",
   "cost_category.updated": "Kategorija troška izmijenjena",
+  "payroll.period_opened": "Period obračuna otvoren",
+  "payroll.calculated": "Obračun izračunat",
+  "payroll.approved": "Obračun odobren",
+  "payroll.locked": "Obračun zaključan",
+  "payroll.component_created": "Komponenta obračuna dodana",
+  "payroll.component_updated": "Komponenta obračuna izmijenjena",
+  "payroll.parameter_created": "Parametar obračuna dodan",
+  "payroll.advance_created": "Akontacija/pozajmica izdata",
+  "payroll.correction_applied": "Korekcija obračuna primijenjena",
+  "payroll.exported": "Obračun izvezen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

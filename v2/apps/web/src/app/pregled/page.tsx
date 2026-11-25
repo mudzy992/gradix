@@ -17,6 +17,8 @@ import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-
 import { PregledBoard } from "./pregled-board";
 import { RiskyProjectsCard } from "./risky-projects-card";
 import { listRiskyProjects } from "@/server/pregled-risky";
+import { payrollReminder } from "@/server/payroll-reminder";
+import { PayrollReminderCard } from "./payroll-reminder-card";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -105,6 +107,13 @@ export default async function PregledPage() {
     : null;
   const riskyData = risky && !("code" in risky) ? risky : null;
 
+  /* F6: podsjetnik „period nije zaključan“ — samo za one koji vide obračun i samo poslije 5. */
+  const reminder = await payrollReminder(await getVerifiedPool(), {
+    userId: ctx.userId,
+    companyId: ctx.companyId,
+    roles: ctx.roles,
+  });
+
   // --- C.1 grana: „šta moram danas uraditi?“ (samo pregled.view). ---
   if (can(ctx.roles, "pregled.view")) {
     const pregled = await buildPregled(await getVerifiedPool(), ctx.companyId as CompanyId, {
@@ -125,6 +134,7 @@ export default async function PregledPage() {
       return (
         <div>
           <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
+          {reminder ? <PayrollReminderCard reminder={reminder} /> : null}
           <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
           {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
         </div>

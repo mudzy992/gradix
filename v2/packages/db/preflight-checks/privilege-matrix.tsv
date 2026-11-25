@@ -83,3 +83,11 @@ table	worker_issuances	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 zaduženja 
 table	worker_leave_entitlements	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 pravo na godišnji po godini; konzumacija se računa iz workdays.day_kind, ne upisuje se ovdje.
 table	worker_rates	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE		F3 istorija satnica: nova stopa = novi red, stara dobija valid_to; iznos se ne prepisuje (trigger). Samo OWNER/ADMIN/ACCOUNTANT vide (workers.rates.*).
 table	workers	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Worker CRUD uses soft deactivation; no hard-delete path.
+table	pay_periods	SELECT;INSERT;UPDATE	-		F6 period obračuna: `OPEN→CALCULATED→APPROVED→LOCKED`; triger brani preskakanje i vraćanje. Bez DELETE — period je trag.
+table	payroll_components	SELECT;INSERT;UPDATE	-		F6 šifarnik komponenti po firmi; `is_active` gasi komponentu umjesto brisanja (istorija obračuna je pokazuje).
+table	payroll_parameters	SELECT;INSERT;UPDATE	-		F6 parametri sa datumom važenja; `EXCLUDE`/triger brani preklapanje. Bez DELETE — stari iznos mora ostati objašnjiv.
+table	payroll_runs	SELECT;INSERT;UPDATE	-		F6 revizije obračuna; UPDATE samo za `CALCULATED → APPROVED`; DELETE brani `payroll_freeze_guard()`.
+table	payroll_run_lines	SELECT;INSERT	-		F6 linije obračuna su zamrznute: nema UPDATE ni DELETE (`payroll_freeze_guard()`), ispravka je nova revizija.
+table	payroll_line_sources	SELECT;INSERT	-		F6 raspis linije (dani, sati, primijenjeni parametri) — append-only dokaz iznosa.
+table	worker_advances	SELECT;INSERT;UPDATE	-		F6 akontacije i pozajmice; UPDATE samo za `remaining_cents` (odbijanje rate), nikad iznos izdanog.
+table	pay_corrections	SELECT;INSERT;UPDATE	-		F6 korekcije poslije `LOCKED`; UPDATE samo `OPEN → APPLIED` u narednom periodu, uz obavezan razlog ≥10 znakova.

@@ -130,6 +130,19 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.project_tasks TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.task_comments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.budget_alert_events TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.project_close_snapshots TO gradix_app;
+-- F6 (Modul 7): obračun. Nijedan DELETE — period, obračun, linija i raspis su DOKAZ iznosa.
+-- Ispravka je nova revizija (`payroll_runs.revision`), ne prepisivanje starih linija; triger
+-- `payroll_freeze_guard()` brani UPDATE/DELETE linija i izvora čak i kad grant postoji.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.pay_periods TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.payroll_components TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.payroll_parameters TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.payroll_runs TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.payroll_run_lines TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.payroll_line_sources TO gradix_app;
+-- Akontacija se smanjuje (`remaining_cents`), ne briše; zato UPDATE, bez DELETE.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.worker_advances TO gradix_app;
+-- Korekcija prelazi `OPEN → APPLIED`; zatvorena korekcija se ne briše.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.pay_corrections TO gradix_app;
 -- F4 (Modul 5): razložen trošak mašine, gorivo, šabloni pregleda.
 -- Komponente se NIKAD ne brišu — nova vrijednost je novi red, stari dobija `valid_to`
 -- (spec 05 §1.1.3). Zato nema DELETE: brisanje bi tiho promijenilo već proknjižene troškove,

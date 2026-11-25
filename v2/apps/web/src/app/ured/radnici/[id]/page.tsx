@@ -62,6 +62,8 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
           canManageRates: can(auth.ctx.roles, "workers.rates.manage"),
           canManageLeave: can(auth.ctx.roles, "workers.leave.manage"),
           canManageIssuances: can(auth.ctx.roles, "workers.issuances.manage"),
+          canSeePayroll: can(auth.ctx.roles, "payroll.view"),
+          canManagePayroll: can(auth.ctx.roles, "payroll.manage"),
         }}
         rates={rates && rates.ok ? { rates: rates.rates, current: rates.current } : null}
         leave={leave && leave.ok ? leave.years : null}

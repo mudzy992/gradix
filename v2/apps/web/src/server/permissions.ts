@@ -241,6 +241,36 @@ export const PERMISSIONS = {
   "projects.budget.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   // R6.2: CSV obračun sati + dashboard agregati (G0: sati, ne puna plata).
   "payroll.hours.export": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  /*
+   * F6 (Modul 7): obračun kao mjesečna cjelina.
+   *
+   * `view`/`manage`/`approve` su SAMO ured i računovodstvo — PM i šef vide sate (`payroll.hours.
+   * export`), ali nikad iznose (§1.8/29). Zato plata nije „još jedna dozvola projekta“: projekat
+   * vidi mnogo ljudi, a iznos zarade samo onaj koji za nju odgovara.
+   *
+   * `approve` je odvojen od `manage` jer izračun i odobrenje nisu isti čin: izračun je obrada,
+   * odobrenje je potpis. `SELF_APPROVAL_FORBIDDEN` (u servisu) dodatno brani da potpisnik bude
+   * osoba iz obračuna — dozvola ne smije značiti „pa ti si vlasnik, možeš i svoj“.
+   */
+  "payroll.view": ["OWNER", "ADMIN", "ACCOUNTANT"],
+  "payroll.manage": ["OWNER", "ADMIN", "ACCOUNTANT"],
+  "payroll.approve": ["OWNER", "ADMIN", "ACCOUNTANT"],
+  /*
+   * Vlastiti obračun: svako vidi SVOJE sate. Dozvola je namjerno data svim rolama jer radnik bez
+   * nje ne bi mogao provjeriti svoj mjesec — a upravo ta provjera je smisao `Moj obračun`.
+   * Servis uz nju uvijek veže radnika na nalog (`workers.user_id`); tuđi ID se ne prima.
+   */
+  "payroll.own.view": [
+    "OWNER",
+    "ADMIN",
+    "PROJECT_MANAGER",
+    "SITE_SUPERVISOR",
+    "WORKER",
+    "DRIVER",
+    "MACHINE_OPERATOR",
+    "MECHANIC",
+    "ACCOUNTANT",
+  ],
   "dashboard.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   /*
    * F1 (spec 01 §3): postavke firme.
@@ -524,6 +554,26 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "payroll.hours.export": {
     label: "Izvoz sati za obračun",
     description: "CSV izvoz zaključenih i potvrđenih radničkih sati (LOCKED/CONFIRMED) za period.",
+  },
+  "payroll.view": {
+    label: "Pregled obračuna",
+    description:
+      "Mjesečni periodi obračuna, linije po radniku i raspis (koji su dani i parametri ušli u iznos). Sadrži iznose zarada.",
+  },
+  "payroll.manage": {
+    label: "Obračun i šifarnik",
+    description:
+      "Izračun perioda, komponente i parametri sa datumom važenja, akontacije i pozajmice. Ne odobrava i ne zaključava.",
+  },
+  "payroll.approve": {
+    label: "Odobrenje i zaključavanje obračuna",
+    description:
+      "Odobrenje izračunatog perioda i zaključavanje poslije isplate. Niko ne odobrava obračun u kojem je sam.",
+  },
+  "payroll.own.view": {
+    label: "Moj obračun",
+    description:
+      "Vlastiti sati po danu i vlastite linije obračuna kad je period odobren ili zaključan. Tuđe se ne vidi nikad.",
   },
   "dashboard.view": {
     label: "Dashboard agregati",

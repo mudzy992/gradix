@@ -3517,3 +3517,289 @@ export const RiskyProjectsResponse = z.object({
   pending_cost_count: z.number().int(),
 });
 export type RiskyProjectsResponse = z.infer<typeof RiskyProjectsResponse>;
+
+/* ============================================================ F6 — obračun (Modul 7) */
+
+/**
+ * Dozvoljene komponente su ŠIFARNIK firme, ali ključ je stroga oznaka — servis provjerava da
+ * komponenta postoji i da je aktivna. Ugovor ne nabraja kodove, jer bi dodavanje komponente
+ * tražilo izdanje klijenta.
+ */
+export const PayrollCode = z
+  .string()
+  .regex(/^[A-Z][A-Z0-9_]{1,39}$/, "Šifra je velika slova, cifre i donja crta.")
+  .describe("Šifra komponente ili parametra (velika slova).");
+
+export const PayPeriodStatus = z.enum(["OPEN", "CALCULATED", "APPROVED", "LOCKED"]);
+export type PayPeriodStatus = z.infer<typeof PayPeriodStatus>;
+
+export const PayrollLineStatus = z.enum(["OK", "RATE_MISSING", "PARAMETER_MISSING"]);
+export type PayrollLineStatus = z.infer<typeof PayrollLineStatus>;
+
+export const PayPeriod = z.object({
+  id: SafeText,
+  year: z.number().int(),
+  month: z.number().int(),
+  status: PayPeriodStatus,
+  calculated_at: IsoDate.nullable(),
+  approved_at: IsoDate.nullable(),
+  locked_at: IsoDate.nullable(),
+  /** Koliko radnika ima liniju u posljednoj reviziji — period bez obračuna ima 0. */
+  worker_count: z.number().int(),
+  /** Bruto osnova posljednje revizije; `null` dok period nije izračunat (nije nula). */
+  gross_total: MoneyText.nullable(),
+  revision: z.number().int().nullable(),
+  /** Zašto period NIJE spreman za odobrenje (§1.8/30). Prazno = spreman. */
+  blockers: z.array(
+    z.object({
+      code: z.enum([
+        "RATE_MISSING",
+        "PARAMETER_MISSING",
+        "OPEN_CONFLICT",
+        "SUBMITTED_DAY",
+        "NO_RUN",
+      ]),
+      count: z.number().int(),
+      message: SafeText,
+    }),
+  ),
+});
+export type PayPeriod = z.infer<typeof PayPeriod>;
+
+export const PayPeriodsResponse = z.object({
+  periods: z.array(PayPeriod),
+  /** Periodi se ne prave sami: računovodstvo bira mjesec koji obračunava. */
+  can_create: z.boolean(),
+});
+export type PayPeriodsResponse = z.infer<typeof PayPeriodsResponse>;
+
+export const PayPeriodInput = z
+  .object({
+    year: z.number().int().min(2000).max(2100),
+    month: z.number().int().min(1).max(12),
+  })
+  .strict();
+export type PayPeriodInput = z.infer<typeof PayPeriodInput>;
+
+export const PayrollLineSource = z.object({
+  id: SafeText,
+  source_type: z.enum(["WORK_ENTRY", "WORKDAY", "ADJUSTMENT", "ADVANCE", "CORRECTION"]),
+  source_id: SafeText,
+  work_date: SafeText.nullable().describe("YYYY-MM-DD, poslovni dan"),
+  hours: z.number(),
+  days: z.number(),
+  amount_cents: z.number().int().nullable(),
+  /** Parametri koji su ušli u ovaj dio iznosa — sa VRIJEDNOŠĆU I DATUMOM važenja. */
+  applied_parameters: z.record(z.string(), z.unknown()),
+  note: SafeText.nullable(),
+});
+export type PayrollLineSource = z.infer<typeof PayrollLineSource>;
+
+export const PayrollLine = z.object({
+  id: SafeText,
+  run_id: SafeText,
+  worker_id: SafeText,
+  worker_name: SafeText,
+  component_code: SafeText,
+  component_name: SafeText,
+  /** `EARNING` uvećava, `DEDUCTION` umanjuje — ekran ne određuje predznak sam. */
+  kind: z.enum(["EARNING", "DEDUCTION"]),
+  hours: z.number(),
+  days: z.number(),
+  rate_cents: z.number().int().nullable(),
+  amount_cents: z.number().int().nullable(),
+  currency_code: SafeText.nullable(),
+  status: PayrollLineStatus,
+  calc_note: SafeText.nullable(),
+});
+export type PayrollLine = z.infer<typeof PayrollLine>;
+
+export const PayrollLinesResponse = z.object({
+  run_id: SafeText.nullable(),
+  revision: z.number().int().nullable(),
+  lines: z.array(PayrollLine),
+  totals: z.object({
+    /** Zarade bez odbitaka — bruto osnova za budući bruto→neto (Faza 2). */
+    earnings_cents: z.number().int().nullable(),
+    deductions_cents: z.number().int().nullable(),
+    /** Bruto OSIČNICA je `null` kad nedostaje satnica ili parametar — nikad djelimičan zbir. */
+    missing_workers: z.number().int(),
+    currency_code: SafeText.nullable(),
+  }),
+});
+export type PayrollLinesResponse = z.infer<typeof PayrollLinesResponse>;
+
+export const PayrollLineSourcesResponse = z.object({
+  line: PayrollLine,
+  sources: z.array(PayrollLineSource),
+  /** Zbir sati iz raspisa mora biti jednak satima linije — servis to i provjerava. */
+  source_hours: z.number(),
+});
+export type PayrollLineSourcesResponse = z.infer<typeof PayrollLineSourcesResponse>;
+
+export const PayrollComponent = z.object({
+  id: SafeText,
+  code: SafeText,
+  name: SafeText,
+  kind: z.enum(["EARNING", "DEDUCTION"]),
+  basis: z.enum(["HOURS", "DAYS", "FIXED", "PERCENT_OF_EARNINGS"]),
+  category: z.enum([
+    "REGULAR",
+    "OVERTIME",
+    "NIGHT",
+    "SUNDAY",
+    "HOLIDAY",
+    "ABSENCE",
+    "FIELD_ALLOWANCE",
+    "ADVANCE",
+    "LOAN",
+    "OTHER",
+  ]),
+  is_taxable: z.boolean(),
+  sort_order: z.number().int(),
+  is_active: z.boolean(),
+});
+export type PayrollComponent = z.infer<typeof PayrollComponent>;
+
+export const PayrollComponentsResponse = z.object({
+  components: z.array(PayrollComponent),
+});
+export type PayrollComponentsResponse = z.infer<typeof PayrollComponentsResponse>;
+
+export const PayrollComponentInput = z
+  .object({
+    code: PayrollCode,
+    name: SafeText.min(1).max(80),
+    kind: z.enum(["EARNING", "DEDUCTION"]),
+    basis: z.enum(["HOURS", "DAYS", "FIXED", "PERCENT_OF_EARNINGS"]),
+    category: PayrollComponent.shape.category,
+    is_taxable: z.boolean().optional(),
+    sort_order: z.number().int().min(0).max(999).optional(),
+    is_active: z.boolean().optional(),
+  })
+  .strict();
+export type PayrollComponentInput = z.infer<typeof PayrollComponentInput>;
+
+export const PayrollComponentPatch = PayrollComponentInput.partial().strict();
+export type PayrollComponentPatch = z.infer<typeof PayrollComponentPatch>;
+
+export const PayrollParameter = z.object({
+  id: SafeText,
+  code: SafeText,
+  value: z.string().describe("Decimalni string; `unit` kaže kako se tumači"),
+  unit: z.enum(["MULTIPLIER", "PERCENT", "CENTS"]),
+  valid_from: SafeText,
+  valid_to: SafeText.nullable(),
+  confirmed_by_name: SafeText.nullable(),
+  confirmed_at: IsoDate,
+  note: SafeText.nullable(),
+});
+export type PayrollParameter = z.infer<typeof PayrollParameter>;
+
+export const PayrollParametersResponse = z.object({
+  parameters: z.array(PayrollParameter),
+  /** Koji kodovi su POTREBNI za obračun — ekran upozorava prije izračuna, ne poslije. */
+  required_codes: z.array(SafeText),
+});
+export type PayrollParametersResponse = z.infer<typeof PayrollParametersResponse>;
+
+export const PayrollParameterInput = z
+  .object({
+    code: PayrollCode,
+    value: z.string().regex(/^\d{1,8}(\.\d{1,4})?$/, "Vrijednost je nenegativan decimalni broj."),
+    unit: z.enum(["MULTIPLIER", "PERCENT", "CENTS"]),
+    valid_from: SafeText.describe("YYYY-MM-DD"),
+    valid_to: SafeText.nullable().optional(),
+    note: SafeText.max(500).optional(),
+  })
+  .strict();
+export type PayrollParameterInput = z.infer<typeof PayrollParameterInput>;
+
+export const WorkerAdvance = z.object({
+  id: SafeText,
+  worker_id: SafeText,
+  kind: z.enum(["ADVANCE", "LOAN"]),
+  amount_cents: z.number().int(),
+  currency_code: SafeText,
+  issued_on: SafeText,
+  installment_cents: z.number().int().nullable(),
+  remaining_cents: z.number().int(),
+  note: SafeText.nullable(),
+});
+export type WorkerAdvance = z.infer<typeof WorkerAdvance>;
+
+export const WorkerAdvancesResponse = z.object({
+  advances: z.array(WorkerAdvance),
+});
+export type WorkerAdvancesResponse = z.infer<typeof WorkerAdvancesResponse>;
+
+export const WorkerAdvanceInput = z
+  .object({
+    worker_id: SafeText,
+    kind: z.enum(["ADVANCE", "LOAN"]),
+    amount: MoneyText,
+    issued_on: SafeText.describe("YYYY-MM-DD"),
+    installment: MoneyText.nullable().optional(),
+    note: SafeText.max(500).optional(),
+  })
+  .strict();
+export type WorkerAdvanceInput = z.infer<typeof WorkerAdvanceInput>;
+
+export const PayCorrection = z.object({
+  id: SafeText,
+  period_id: SafeText,
+  target_period_id: SafeText,
+  workday_id: SafeText.nullable(),
+  payroll_line_id: SafeText.nullable(),
+  delta_hours: z.number(),
+  delta_amount_cents: z.number().int().nullable(),
+  reason: SafeText,
+  status: z.enum(["OPEN", "APPLIED"]),
+  created_at: IsoDate,
+});
+export type PayCorrection = z.infer<typeof PayCorrection>;
+
+export const PayCorrectionsResponse = z.object({
+  corrections: z.array(PayCorrection),
+});
+export type PayCorrectionsResponse = z.infer<typeof PayCorrectionsResponse>;
+
+/** `Moj obračun` (mobilno, `payroll.own.view`). */
+export const MyPayrollResponse = z.object({
+  period: z.object({
+    year: z.number().int(),
+    month: z.number().int(),
+    status: PayPeriodStatus,
+  }),
+  worker: z.object({ id: SafeText, name: SafeText }),
+  /** Dani mjeseca: sati po kategoriji + vrsta dana. Radnik ne vidi iznose. */
+  days: z.array(
+    z.object({
+      work_date: SafeText,
+      day_kind: SafeText,
+      status: z.enum(["DRAFT", "SUBMITTED", "FOREMAN_CONFIRMED", "LOCKED"]),
+      total_hours: z.number(),
+      categories: z.object({
+        REGULAR: z.number(),
+        OVERTIME: z.number(),
+        NIGHT: z.number(),
+        SUNDAY: z.number(),
+        HOLIDAY: z.number(),
+      }),
+    }),
+  ),
+  totals: z.object({
+    total_hours: z.number(),
+    categories: z.object({
+      REGULAR: z.number(),
+      OVERTIME: z.number(),
+      NIGHT: z.number(),
+      SUNDAY: z.number(),
+      HOLIDAY: z.number(),
+    }),
+  }),
+  /** Linije obračuna se prikazuju SAMO kad je period `APPROVED`/`LOCKED` (§1.8/28). */
+  lines: z.array(PayrollLine).nullable(),
+  lines_available_reason: SafeText.nullable(),
+});
+export type MyPayrollResponse = z.infer<typeof MyPayrollResponse>;

@@ -1,9 +1,11 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **Tag `phase-5`** · **CI: zelen.**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **Faza 6 (Modul 7 — obračun): isporučena** · **Tag `phase-5`**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Faza 6 (Modul 7 — obračun sati i troška rada) je
+isporučena; sljedeća je Faza 7 po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama:
+`docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -43,6 +45,13 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEM
 | 5.5 | UI: `/ured/projekti` (marža, rizičnost) + `/ured/projekti/[id]` sa 8 tabova, `/ured/zadaci`, `/ured/postavke/kategorije-troska`, kartica „Rizični projekti“ na `/pregled`; mobilni `/moji-zadaci` i `/trosak` (foto + `sha256`) | ✅ |
 | K0 | Šef gradilišta: dozvola **`tasks.update_status`** (status samo na svojim projektima, komentari bez `projects.manage`); **timer → `FOREMAN_CONFIRMED` sada knjiži trošak rada** i u grupnoj potvrdi; `PROJECT_CLOSED` na stornu je 422, ne 500; `FINISHED` guard ostaje uz `reopen_reason` | ✅ |
 | 5.6 | Worker `budget.thresholds` (`*/15 * * * *`, 80/100 %, dedupe 3 sloja, PM + OWNER); provjere: `pnpm test` 639 prošlo, typecheck 6/6, lint čist, `next build`, OpenAPI ažuran, `check-tenant-sql` 769 upita ✓ | ✅ |
+
+| 6.1 | Baza: `pay_periods` (`OPEN→CALCULATED→APPROVED→LOCKED` uz `pay_period_transition_guard`), `payroll_components`, `payroll_parameters` (bez preklapanja važenja), `payroll_runs`/`payroll_run_lines`/`payroll_line_sources` (zamrznuti `payroll_freeze_guard`), `worker_advances`, `pay_corrections` + `workdays_open_correction` triger; `companies.overtime_basis`/`overtime_weekly_threshold` | ✅ |
+| 6.2 | Domena: klasifikacija sati **bez dvostrukog plaćanja** (`PRAZNIK > NEDJELJA > NOĆNI > PREKOVREMENI > REDOVNI`), noćni prozor preko ponoći bez gubitka minute, dnevni/sedmični osnov prekovremenog, izostanci kao dani — **25 zlatnih testova** | ✅ |
+| 6.3 | API: **16 ruta** — periodi (lista/otvaranje/izračun/odobrenje/zaključavanje/linije/raspis/izvoz XLSX+CSV), komponente i parametri, akontacije i pozajmice, korekcije, `me/payroll`; 4 nove dozvole, 8 novih kodova grešaka; OpenAPI **182 putanje** | ✅ |
+| 6.4 | Servis obračuna: satnica **na dan rada**, koeficijent, `RATE_MISSING`/`PARAMETER_MISSING` (linija bez iznosa, nikad nula), odbici do nule sa ostatkom, `SELF_APPROVAL_FORBIDDEN`, korekcije u naredni period, **trošak rada u `cost_entries`** (jednom po danu, idempotentno) | ✅ |
+| 6.5 | UI: `/ured/obracun-sati` (periodi + spremnost), `/ured/obracun-sati/[period]` (radnik × komponente, blokade, Izračunaj/Odobri/Zaključaj, XLSX/CSV, **raspis**), `/ured/obracun-sati/postavke` (komponente + važenja parametara), `/ured/obracun-sati/sati` (izvoz sirovih sati), tab „Obračun“ na kartici radnika, mobilni `/moj-obracun`, podsjetnik na `/pregled` poslije 5. | ✅ |
+| 6.6 | Provjere: `payroll-period.integration.test.ts` — **17 zlatnih testova novca protiv prave baze** (svi iz §5 specifikacije), `payroll-ui.test.ts` (11), `payroll-reminder.test.ts` (2), NUL-sweep pokriva sve F6 rute; `pnpm test` **658 prošlo**, typecheck 6/6, OpenAPI ažuran | ✅ |
 
 ## Faza 4 — odluke koje se ne smiju izgubiti
 
@@ -232,12 +241,53 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 - **Marža se ne prikazuje bez `projects.costs.view`.** Skrivanje na klijentu nije dovoljno — server
   ne šalje novac onome ko ne smije da ga vidi, a test to provjerava na listi projekata.
 
+## Faza 6 — odluke koje se ne smiju izgubiti
+
+- **Sat se nikad ne plaća dvaput.** Kategorija je JEDNA po minuti, po prioritetu
+  `PRAZNIK > NEDJELJA > NOĆNI > PREKOVREMENI > REDOVNI`. Noćni sat preko praga ostaje `NOCNI`, a
+  zbir kategorija je uvijek jednak ukupnim satima — to i testira `payroll-hours.test.ts`.
+- **Nema izmišljenog noćnog prozora.** Firma bez `night_from`/`night_to` nema noćnih sati; ne
+  postoji „default 22:00–06:00“. Isto važi za svaku stopu: **nijedan zakonski procenat nije u
+  kodu**, sve su `payroll_parameters` sa datumom važenja.
+- **`OVERTIME_MULTIPLIER = 1.0` je neutralni množilac, ne stopa.** Dolazi s firmom (u
+  `ensureComponents()`), jer bi bez njega svaki prekovremeni sat bio `PARAMETER_MISSING` — a to
+  nije nedostatak podatka, nego odsustvo uvećanja. Uvećanje unosi računovodstvo.
+- **Nedostajuća satnica ili parametar daje liniju BEZ iznosa, nikad nulu.** `RATE_MISSING` /
+  `PARAMETER_MISSING` blokiraju odobrenje, a ekran prikazuje crticu i razlog; djelimičan zbir se
+  ne prikazuje (`null`, ne zbir „ostalih“).
+- **Satnica se čita NA DAN RADA**, iz `worker_rates` po važenju — ne trenutna. Promjena satnice
+  zato ne prepisuje stari obračun.
+- **Izračun je nova revizija, ne prepisivanje.** `payroll_runs`/`payroll_run_lines` su zamrznuti
+  `payroll_freeze_guard`-om; stara revizija ostaje čitljiva sa istim iznosima.
+- **Zaključan period se NE preračunava.** Izmjena dana u `LOCKED` periodu otvara `pay_corrections`
+  red (triger `workdays_open_correction`) koji se primjenjuje u NAREDNOM periodu.
+- **Odbici ne stvaraju negativan obračun.** Naplaćuje se do nule, ostatak ostaje u
+  `worker_advances.remaining_cents`. Granica se mjeri prema zaradi TOG radnika — ne prema zbiru
+  firme, jer tuđa zarada nije njegov dug.
+- **Trošak rada nastaje jednom po danu i projektu.** Knjiži se kroz postojeći `bookWorkdayCost`
+  (izvor `WORKDAY` + `workday_id:project`), pa ponovni izračun samo preskače postojeći red.
+  Greška u knjiženju ne obara obračun — novac radnika je važniji od šifarnika kategorija.
+- **Samoodobravanje je zabranjeno** (`SELF_APPROVAL_FORBIDDEN`) — računovođa koji je i radnik u
+  obračunu ne odobrava svoj period.
+- **Radnik vidi svoje, tuđe nikad.** `payroll.own.view` daje sate po danu uvijek, a iznose tek kad
+  je period `APPROVED`/`LOCKED`; tuđi ID perioda vraća **prazan skup**, a ne `NOT_FOUND` (razlika
+  bi odala da period postoji u drugoj firmi).
+- **Šifarnik komponenti nastaje LENJO** (`ensureComponents`), ne u migraciji: `created_by` je
+  NOT NULL i pokazuje na stvarnog korisnika, pa bi popunjavanje unaprijed držalo RESTRICT veze ka
+  `users`/`companies` za firme koje obračun nikad nisu otvorile.
+- **Izvoz je default samo `LOCKED`.** XLSX nosi dva lista (`OBRAČUN` + `RASPIS`) i
+  `export_format_version = OBRACUN-1`; „provizorno“ (uključi `FOREMAN_CONFIRMED`) je eksplicitno i
+  označeno u zaglavlju, da se isti dan ne izveze dvaput kroz dva statusa.
+
 ## Namjerno još nema
 
 - `budget.thresholds` je isporučen u Fazi 5; ostali worker poslovi dolaze sa modulima koji traže
   svoje tabele. (`sync.purge` je isporučen u Fazi 3.)
 - Email/push provajder: isporuka je `BLOCKED_NO_PROVIDER`, in-app radi bez njega.
-- `report_jobs`, `daily_rollups` — tabele i kostur postoje, poslovi dolaze sa izvještajima (Faza 6).
+- `report_jobs`, `daily_rollups` — tabele i kostur postoje, poslovi dolaze sa izvještajima (Faza 7).
+- **Bruto→neto** (doprinosi, porez, olakšice, platni listić PDF, uplatni nalozi, bankovni izvoz) je
+  **van opsega F6** po spec 07 §5 — traži pisanu potvrdu računovođe i paralelni probni obračun.
+  `payroll_run_lines.gross_cents`/`net_cents`/`contributions` ostaju prazni u MVP-u.
 
 ## Dugovi
 

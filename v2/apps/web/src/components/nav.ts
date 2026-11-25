@@ -47,7 +47,13 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
    * dozvola `projects.costs.view` ostaje granica za tabove.
    */
   { href: "/ured/zadaci", label: "Zadaci", icon: "list", description: "Moji zadaci, kasne, po projektu", group: "Rad / obračun", permission: "projects.view" },
-  { href: "/ured/obracun-sati", label: "Obračun sati", icon: "list", description: "CSV izvoz potvrđenih i zaključenih sati", group: "Rad / obračun", permission: "payroll.hours.export" },
+  /*
+   * F6: „Obračun sati“ postaje „Obračun“ — mjesečni obračun sa iznosima (`payroll.view`).
+   * Izvoz sirovih sati za PM/šefa ostaje na `/ured/obracun-sati/sati` i vide ga kroz
+   * `payroll.hours.export` iz perioda; stavka u meniju ide onome ko vidi IZNOSE.
+   */
+  { href: "/ured/obracun-sati", label: "Obračun", icon: "list", description: "Mjesečni obračun: sati po vrsti, iznosi, odobrenje", group: "Rad / obračun", permission: "payroll.view" },
+  { href: "/ured/obracun-sati/postavke", label: "Komponente obračuna", icon: "list", description: "Šifarnik komponenti i stope sa datumom važenja", group: "Rad / obračun", permission: "payroll.view" },
   { href: "/ured/postavke", label: "Postavke firme", icon: "pin", description: "Zaglavlje, rad, praznici, 2FA", group: "Administracija", permission: "company.settings.view" },
   /*
    * Kategorije troška su ŠIFARNIK KNJIGE, ne postavka firme: zato su ispod `projects.costs.view`

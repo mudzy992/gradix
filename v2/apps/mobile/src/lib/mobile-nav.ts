@@ -26,6 +26,8 @@ export type MobileNavEntry = {
     | "/projekti"
     | "/moji-zadaci"
     | "/trosak"
+    /* F6: svoji sati po danu; iznosi tek kad period odobri računovodstvo. */
+    | "/moj-obracun"
     /* F1: bez veze sa radnikom — svaki nalog ima svoje uređaje i može ih odjaviti. */
     | "/uredjaji";
   label: string;
@@ -75,6 +77,12 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
    * „Moj dan“). Trošak traži vezu isto: knjiži se u ime osobe koja je na gradilištu.
    */
   { href: "/moji-zadaci", label: "Moji zadaci danas", visible: (p) => p.workerId !== null },
+  /*
+   * F6: „Moj obračun“ traži VEZU sa radnikom — obračun je po radniku, pa nalog bez te veze nema
+   * čiji obračun da gleda (isti uslov kao „Moj dan“ i „Moji zadaci“). Ne traži rolu: svaki
+   * radnik ima pravo na svoje sate (`payroll.own.view`).
+   */
+  { href: "/moj-obracun", label: "Moj obračun", visible: (p) => p.workerId !== null },
   { href: "/trosak", label: "Trošak sa gradilišta", visible: (p) => p.workerId !== null },
   { href: "/rokovi", label: "Moji rokovi", visible: () => true },
   { href: "/projekti", label: "Moji projekti", visible: () => true },

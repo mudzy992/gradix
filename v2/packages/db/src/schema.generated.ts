@@ -152,7 +152,9 @@ export interface Companies {
   name: string;
   night_from: string | null;
   night_to: string | null;
+  overtime_basis: Generated<string>;
   overtime_daily_threshold: Generated<Numeric>;
+  overtime_weekly_threshold: Numeric | null;
   phone: string | null;
   planned_hours_per_month: Generated<number>;
   postal_code: string | null;
@@ -738,6 +740,116 @@ export interface PasswordResets {
   user_id: string;
 }
 
+export interface PayCorrections {
+  applied_at: Timestamp | null;
+  applied_run_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  delta_amount_cents: Int8 | null;
+  delta_hours: Generated<Numeric>;
+  id: string;
+  payroll_line_id: string | null;
+  period_id: string;
+  reason: string;
+  status: Generated<string>;
+  target_period_id: string;
+  workday_id: string | null;
+}
+
+export interface PayPeriods {
+  approved_at: Timestamp | null;
+  approved_by: string | null;
+  calculated_at: Timestamp | null;
+  calculated_by: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  locked_at: Timestamp | null;
+  locked_by: string | null;
+  month: number;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  year: number;
+}
+
+export interface PayrollComponents {
+  basis: string;
+  category: string;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  is_active: Generated<boolean>;
+  is_taxable: Generated<boolean>;
+  kind: string;
+  name: string;
+  sort_order: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
+export interface PayrollLineSources {
+  amount_cents: Int8 | null;
+  applied_parameters: Generated<Json>;
+  company_id: string;
+  days: Generated<Numeric>;
+  hours: Generated<Numeric>;
+  id: string;
+  line_id: string;
+  note: string | null;
+  source_id: string;
+  source_type: string;
+  work_date: string | null;
+}
+
+export interface PayrollParameters {
+  code: string;
+  company_id: string;
+  confirmed_at: Generated<Timestamp>;
+  confirmed_by: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  note: string | null;
+  unit: string;
+  valid_from: string;
+  valid_to: string | null;
+  value: Numeric;
+}
+
+export interface PayrollRunLines {
+  amount_cents: Int8 | null;
+  calc_note: string | null;
+  company_id: string;
+  component_code: string;
+  contributions: Json | null;
+  currency_code: string | null;
+  days: Generated<Numeric>;
+  gross_cents: Int8 | null;
+  hours: Generated<Numeric>;
+  id: string;
+  net_cents: Int8 | null;
+  ordinal: Generated<number>;
+  rate_cents: Int8 | null;
+  run_id: string;
+  source_hash: string | null;
+  status: Generated<string>;
+  worker_id: string;
+}
+
+export interface PayrollRuns {
+  company_id: string;
+  computed_at: Generated<Timestamp>;
+  computed_by: string;
+  id: string;
+  payload: Generated<Json>;
+  period_id: string;
+  revision: number;
+  status: Generated<string>;
+}
+
 export interface PhaseDependencies {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -1248,6 +1360,22 @@ export interface WorkEntries {
   worker_id: string;
 }
 
+export interface WorkerAdvances {
+  amount_cents: Int8;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: Generated<string>;
+  id: string;
+  installment_cents: Int8 | null;
+  issued_on: string;
+  kind: string;
+  note: string | null;
+  remaining_cents: Int8;
+  updated_at: Generated<Timestamp>;
+  worker_id: string;
+}
+
 export interface WorkerHistory {
   changed_at: Generated<Timestamp>;
   changed_by: string;
@@ -1406,6 +1534,13 @@ export interface DB {
   partners: Partners;
   password_history: PasswordHistory;
   password_resets: PasswordResets;
+  pay_corrections: PayCorrections;
+  pay_periods: PayPeriods;
+  payroll_components: PayrollComponents;
+  payroll_line_sources: PayrollLineSources;
+  payroll_parameters: PayrollParameters;
+  payroll_run_lines: PayrollRunLines;
+  payroll_runs: PayrollRuns;
   phase_dependencies: PhaseDependencies;
   platform_sessions: PlatformSessions;
   platform_support_sessions: PlatformSupportSessions;
@@ -1440,6 +1575,7 @@ export interface DB {
   work_week_approvals: WorkWeekApprovals;
   workday_revisions: WorkdayRevisions;
   workdays: Workdays;
+  worker_advances: WorkerAdvances;
   worker_history: WorkerHistory;
   worker_issuances: WorkerIssuances;
   worker_leave_entitlements: WorkerLeaveEntitlements;

@@ -286,8 +286,17 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
       expect(permissionsFor("OWNER").length).toBeGreaterThan(0);
       // Radnik od R3 ima TAČNO `projects.view` — prije R3 nije imao ništa. Tvrdnja je namjerno
       // tačna lista, a ne „prazno": dozvola koja se tiho doda radniku mora oboriti test.
-      // G3: radnik dobija `obligations.view` — vidi SVOJE rokove, ne i priloge uz njih.
-      expect(permissionsFor("WORKER")).toEqual(["obligations.view", "projects.view"]);
+      /*
+       * G3: radnik dobija `obligations.view` — vidi SVOJE rokove, ne i priloge uz njih.
+       * F6: dobija i `payroll.own.view` — vidi SVOJE sate i svoj obračun kad ga računovodstvo
+       * odobri. Bez te dozvole radnik ne bi mogao provjeriti svoj mjesec, a to je smisao
+       * ekrana „Moj obračun“; tuđe iznose i dalje ne vidi (`payroll.view` nema).
+       */
+      expect(permissionsFor("WORKER")).toEqual([
+        "obligations.view",
+        "projects.view",
+        "payroll.own.view",
+      ]);
     });
 
     it("ADMIN vidi matricu, WORKER dobija 403", async () => {

@@ -137,6 +137,20 @@ import { GET as profitabilityGet } from "@/app/api/projects/[id]/profitability/r
 import { PUT as progressPut } from "@/app/api/projects/[id]/progress/route";
 import { PUT as progressSourcePut } from "@/app/api/projects/[id]/progress-source/route";
 import { POST as projectReopenPost } from "@/app/api/projects/[id]/reopen/route";
+import { GET as payPeriodsGet, POST as payPeriodsPost } from "@/app/api/pay-periods/route";
+import { POST as payPeriodCalculate } from "@/app/api/pay-periods/[id]/calculate/route";
+import { POST as payPeriodApprove } from "@/app/api/pay-periods/[id]/approve/route";
+import { POST as payPeriodLock } from "@/app/api/pay-periods/[id]/lock/route";
+import { GET as payPeriodLines } from "@/app/api/pay-periods/[id]/lines/route";
+import { GET as payPeriodExport } from "@/app/api/pay-periods/[id]/export/route";
+import { GET as payrollComponentsGet, POST as payrollComponentsPost } from "@/app/api/payroll/components/route";
+import { PATCH as payrollComponentPatch } from "@/app/api/payroll/components/[id]/route";
+import { GET as payrollParametersGet, POST as payrollParametersPost } from "@/app/api/payroll/parameters/route";
+import { GET as payrollSources } from "@/app/api/payroll/lines/[id]/sources/route";
+import { GET as payrollCorrections } from "@/app/api/payroll/corrections/route";
+import { GET as myPayrollGet } from "@/app/api/me/payroll/route";
+import { GET as advancesGet, POST as advancesPost } from "@/app/api/workers/[id]/advances/route";
+
 import { POST as costManualPost } from "@/app/api/costs/manual/route";
 import { POST as costReversePost } from "@/app/api/costs/[id]/reverse/route";
 import { GET as tasksGet, POST as taskPost } from "@/app/api/tasks/route";
@@ -378,6 +392,20 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/projects/{id}/progress": { PUT: progressPut },
   "/api/projects/{id}/progress-source": { PUT: progressSourcePut },
   "/api/projects/{id}/reopen": { POST: projectReopenPost },
+  "/api/pay-periods": { GET: payPeriodsGet, POST: payPeriodsPost },
+  "/api/pay-periods/{id}/calculate": { POST: payPeriodCalculate },
+  "/api/pay-periods/{id}/approve": { POST: payPeriodApprove },
+  "/api/pay-periods/{id}/lock": { POST: payPeriodLock },
+  "/api/pay-periods/{id}/lines": { GET: payPeriodLines },
+  "/api/pay-periods/{id}/export": { GET: payPeriodExport },
+  "/api/payroll/components": { GET: payrollComponentsGet, POST: payrollComponentsPost },
+  "/api/payroll/components/{id}": { PATCH: payrollComponentPatch },
+  "/api/payroll/parameters": { GET: payrollParametersGet, POST: payrollParametersPost },
+  "/api/payroll/lines/{id}/sources": { GET: payrollSources },
+  "/api/payroll/corrections": { GET: payrollCorrections },
+  "/api/me/payroll": { GET: myPayrollGet },
+  "/api/workers/{id}/advances": { GET: advancesGet, POST: advancesPost },
+
   "/api/costs/manual": { POST: costManualPost },
   "/api/costs/{id}/reverse": { POST: costReversePost },
   "/api/tasks": { GET: tasksGet, POST: taskPost },

@@ -293,3 +293,22 @@ export {
   type PhaseStatus,
   type ProgressSource,
 } from "./projects";
+
+export {
+  CATEGORY_PRIORITY,
+  PAYROLL_CATEGORIES,
+  WEEK_START_ISO,
+  ZERO_HOURS,
+  classifyDay,
+  isSundayDate,
+  nightWindows,
+  parseClock,
+  sumCategoryHours,
+  totalHours,
+  type CategoryHours,
+  type DayClassificationInput,
+  type MinuteSlice,
+  type OvertimeBasis,
+  type PayrollCategory,
+  type PayrollRules,
+} from "./payroll-hours";
