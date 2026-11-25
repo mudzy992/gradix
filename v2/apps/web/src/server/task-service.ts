@@ -76,7 +76,18 @@ export async function listTasks(
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const today = await companyToday(client, toCompanyId(actor.companyId));
     const conditions = ["t.company_id = $1"];
-    const params: unknown[] = [actor.companyId, today];
+    /*
+     * `$2` se dodaje SAMO kad ga filter koristi: Postgres odbija višak parametara
+     * („bind message supplies 2 parameters, but prepared statement requires 1“), pa bi lista
+     * bez `due` filtera — najčešći poziv — vraćala 500.
+     */
+    const params: unknown[] = [actor.companyId];
+    const todayIndex = () => {
+      const index = params.indexOf(today);
+      if (index >= 0) return index + 1;
+      params.push(today);
+      return params.length;
+    };
     if (query.projectId) {
       params.push(query.projectId);
       conditions.push(`t.project_id = $${params.length}`);
@@ -86,10 +97,10 @@ export async function listTasks(
       conditions.push(`t.status = $${params.length}`);
     }
     if (query.due === "OVERDUE") {
-      conditions.push(`t.status NOT IN ('DONE', 'CANCELLED') AND t.due_on < $2::date`);
+      conditions.push(`t.status NOT IN ('DONE', 'CANCELLED') AND t.due_on < $${todayIndex()}::date`);
     }
     if (query.due === "TODAY") {
-      conditions.push(`t.status NOT IN ('DONE', 'CANCELLED') AND t.due_on = $2::date`);
+      conditions.push(`t.status NOT IN ('DONE', 'CANCELLED') AND t.due_on = $${todayIndex()}::date`);
     }
     if (query.assignee === "ME") {
       /*
