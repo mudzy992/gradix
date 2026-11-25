@@ -13,7 +13,6 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import {
   ServiceError,
   assertServiceTransition,
-  isServiceOrderStatus,
   serviceApprovalCheck,
   formatHundredths,
   toHundredths,
@@ -26,36 +25,10 @@ import { bookServiceOrderCostInCompany } from "./cost-entry-service";
 import { companyToday } from "./project-service";
 import { loadServiceOrder } from "./service-order-read";
 import type { ServiceActor, ServiceOutcome } from "./service-order-types";
+import { orderStatus, parseExternalCost } from "./service-order-shared";
 
 const NO_ROLE = { outcome: "FORBIDDEN" as const, code: "ROLE", message: "Nemate pravo na ovu radnju." };
 
-export async function orderStatus(
-  client: PoolClient,
-  companyId: string,
-  orderId: string,
-): Promise<
-  | { ok: true; status: ServiceOrderStatus }
-  | { ok: false; result: ServiceOutcome }
-> {
-  const row = await client.query<{ status: string }>(
-    "SELECT status FROM public.service_orders WHERE company_id = $1 AND id = $2 FOR UPDATE",
-    [companyId, orderId],
-  );
-  const found = row.rows[0];
-  if (!found) {
-    return {
-      ok: false,
-      result: { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." },
-    };
-  }
-  if (!isServiceOrderStatus(found.status)) {
-    return {
-      ok: false,
-      result: { outcome: "CONFLICT", code: "SERVICE_INVALID_STATUS", message: "Nepoznato stanje naloga." },
-    };
-  }
-  return { ok: true, status: found.status };
-}
 
 export async function setStatus(
   client: PoolClient,
@@ -240,14 +213,6 @@ export async function waitServiceOrderParts(
  * Vanjski trošak kao centi ili `null`. Zajednički za web i sync, da oba ulaza odbiju isti tekst
  * istom greškom — inače bi telefon mogao poslati iznos koji web odbija.
  */
-export function parseExternalCost(value: string | null | undefined): bigint | null | "INVALID" {
-  if (!value) return null;
-  try {
-    return toHundredths(value);
-  } catch {
-    return "INVALID";
-  }
-}
 
 export type FinishInput = {
   laborHours?: string;
@@ -588,3 +553,4 @@ export async function rejectServiceOrder(
 }
 
 export { loadServiceOrder, formatHundredths };
+export { orderStatus, parseExternalCost } from "./service-order-shared";

@@ -12,7 +12,8 @@
  */
 import type { PoolClient } from "pg";
 import { ServiceError, assertServiceTransition, type ServiceOrderStatus } from "@gradix/domain";
-import { approvalBlock, orderStatus, setStatus, transitionFailed } from "./service-order-actions";
+import { approvalBlock, setStatus, transitionFailed } from "./service-order-actions";
+import { orderStatus } from "./service-order-shared";
 import { loadServiceOrder } from "./service-order-read";
 import { finishOrderInTransaction } from "./service-order-transaction";
 import type { ServiceOutcome } from "./service-order-types";

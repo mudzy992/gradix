@@ -1,8 +1,7 @@
 /** Zajednički tipovi za `service_order_action` sync (F8). */
 import type { PoolClient } from "pg";
 import type { R4SyncPushItem, R4SyncPushItemResult } from "@gradix/domain";
-import type { SyncPushActor } from "./r4-sync-service";
-import type { SyncEntityType } from "./r4-sync-fault-types";
+import type { SyncEntityType, SyncPushActor } from "./r4-sync-fault-types";
 
 type SyncReservation = { cursor_seq: string; reservation_token: string; already_committed: boolean };
 

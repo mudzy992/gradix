@@ -15,7 +15,7 @@ import type { PoolClient } from "pg";
 import { ServiceError, assertServiceTransition, downtimeMinutes, serviceCost } from "@gradix/domain";
 import { writeAudit } from "./audit";
 import { recordManualDowntime } from "./service-order-downtime";
-import { orderStatus, parseExternalCost } from "./service-order-actions";
+import { orderStatus, parseExternalCost } from "./service-order-shared";
 import type { ServiceOutcome } from "./service-order-types";
 
 /**
