@@ -90,6 +90,16 @@ export const ERROR_CODES = [
   "TENDER_REFERENCE_TAKEN",
   "TENDER_INVALID_STATUS",
   "ALREADY_CONVERTED",
+  /* F9 (Modul 10): dnevnik građenja i HSE. Kodovi imenuju RAZLOG, jer „nije moguće“ ne kaže
+     čovjeku da li da potpiše, dopuni ili traži reviziju. */
+  "DIARY_ALREADY_LOCKED",
+  "DIARY_SIGNATURE_REQUIRED",
+  "DIARY_REASON_REQUIRED",
+  "DIARY_EXISTS",
+  "HSE_ACTION_RESPONSIBLE_REQUIRED",
+  "HSE_ACTION_DUE_REQUIRED",
+  "HSE_INCIDENT_IMMUTABLE",
+  "HSE_REPORT_OBLIGATION_REQUIRED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -215,6 +225,22 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   TENDER_REFERENCE_TAKEN: 409,
   TENDER_INVALID_STATUS: 409,
   ALREADY_CONVERTED: 409,
+  /*
+   * F9:
+   *  - 422 `DIARY_ALREADY_LOCKED`: zahtjev je ispravan, ali dokument je zaključan — ispravka ide
+   *    kroz reviziju sa razlogom (odluka, ne ispravka unosa).
+   *  - 422 `DIARY_SIGNATURE_REQUIRED`/`HSE_ACTION_*`: nedostaje PODATAK koji radnju čini dokazom.
+   *  - 409 `DIARY_EXISTS`: dan već postoji — ista trka kao dvije šifre, klijent nastavlja taj dan.
+   *  - 422 `HSE_INCIDENT_IMMUTABLE`: činjenice incidenta se dopunjuju, ne prepisuju.
+   */
+  DIARY_ALREADY_LOCKED: 422,
+  DIARY_SIGNATURE_REQUIRED: 422,
+  DIARY_REASON_REQUIRED: 422,
+  DIARY_EXISTS: 409,
+  HSE_ACTION_RESPONSIBLE_REQUIRED: 422,
+  HSE_ACTION_DUE_REQUIRED: 422,
+  HSE_INCIDENT_IMMUTABLE: 422,
+  HSE_REPORT_OBLIGATION_REQUIRED: 422,
 };
 
 /*

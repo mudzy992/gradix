@@ -215,7 +215,13 @@ class SimulatedNetwork implements R4SyncTransport {
         || pushed.entityType === "machine_fault"
         || pushed.entityType === "service_order_action"
         ? null
-        : pushed.workdayId;
+        : pushed.entityType === "site_diary"
+          || pushed.entityType === "site_diary_item"
+          || pushed.entityType === "hse_incident"
+          || pushed.entityType === "hse_action"
+          || pushed.entityType === "hse_training"
+          ? null
+          : pushed.workdayId;
       const canonicalWorkdayId = workDate && workdayId
         ? this.canonicalWorkdays.get(workDate) ?? workdayId
         : workdayId;
@@ -233,7 +239,17 @@ class SimulatedNetwork implements R4SyncTransport {
                   ? pushed.faultId
                   : pushed.entityType === "service_order_action"
                     ? pushed.serviceOrderId
-                    : pushed.workdayId;
+                    : pushed.entityType === "site_diary"
+                      ? pushed.diaryId
+                      : pushed.entityType === "site_diary_item"
+                        ? pushed.diaryItemId
+                        : pushed.entityType === "hse_incident"
+                          ? pushed.incidentId
+                          : pushed.entityType === "hse_action"
+                            ? pushed.actionId
+                            : pushed.entityType === "hse_training"
+                              ? pushed.trainingId
+                              : pushed.workdayId;
       const result: R4SyncPushItemResult = {
         localId: pushed.localId,
         status: "APPLIED",

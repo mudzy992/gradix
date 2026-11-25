@@ -3,7 +3,9 @@ import type { PoolClient } from "pg";
 
 type ForemanPullEvent = {
   id: string;
-  entityType: "workday" | "work_entry" | "sync_conflict";
+  /* F9 događaji (dnevnik/HSE) dolaze istim feedom, ali ih opseg radnika ne filtrira — zato su u
+     tipu, a grananja ispod ih preskaču (`candidate` vraća `null`). */
+  entityType: "workday" | "work_entry" | "sync_conflict" | "site_diary" | "hse_incident" | "hse_action" | "hse_training";
   entityId: string;
   payload: Record<string, unknown> | null;
   tombstone: boolean;

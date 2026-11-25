@@ -38,6 +38,31 @@ import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/
 import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenance/route";
 import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
+
+/* ---- F9 — dnevnik građenja i HSE ---- */
+import { GET as diaryListGet, POST as diaryCreatePost } from "@/app/api/site-diaries/route";
+import { GET as diaryGetRoute, PATCH as diaryPatchRoute } from "@/app/api/site-diaries/[id]/route";
+import { POST as diarySignPost } from "@/app/api/site-diaries/[id]/sign/route";
+import { POST as diaryLockPost } from "@/app/api/site-diaries/[id]/lock/route";
+import { POST as diaryRevisePost } from "@/app/api/site-diaries/[id]/revise/route";
+import { POST as diaryItemsPost } from "@/app/api/site-diaries/[id]/items/route";
+import { DELETE as diaryItemDelete } from "@/app/api/site-diaries/[id]/items/[itemId]/route";
+import { POST as diaryDelaysPost } from "@/app/api/site-diaries/[id]/delays/route";
+import { GET as diaryPdfGet } from "@/app/api/site-diaries/[id]/pdf/route";
+import { GET as diaryTemplatesGet, PATCH as diaryTemplatesPatch } from "@/app/api/site-diary-templates/route";
+import { GET as hseIncidentsGet, POST as hseIncidentsPost } from "@/app/api/hse/incidents/route";
+import { GET as hseIncidentGet } from "@/app/api/hse/incidents/[id]/route";
+import { POST as hseIncidentUpdatePost } from "@/app/api/hse/incidents/[id]/updates/route";
+import { PUT as hseInvestigationPut } from "@/app/api/hse/incidents/[id]/investigation/route";
+import { POST as hseIncidentClosePost } from "@/app/api/hse/incidents/[id]/close/route";
+import { GET as hseActionsGet, PATCH as hseActionsPatch } from "@/app/api/hse/actions/route";
+import { POST as hseActionCreatePost } from "@/app/api/hse/actions/create/route";
+import { GET as hseTrainingsGet, POST as hseTrainingsPost } from "@/app/api/hse/trainings/route";
+import { GET as hseTrainingAttendeesGet } from "@/app/api/hse/trainings/[id]/attendees/route";
+import { GET as hseInspectionsGet, POST as hseInspectionsPost, PATCH as hseInspectionsPatch } from "@/app/api/hse/inspections/route";
+import { GET as hseStatsGet } from "@/app/api/hse/stats/route";
+import { GET as hseReportPdfGet } from "@/app/api/hse/report/pdf/route";
+
 import { POST as loginRoute } from "@/app/api/auth/login/route";
 import { completeLogin } from "@/test/two-step-login";
 import { resetLoginAttempts, seedTotp } from "@/test/totp-fixture";
@@ -571,6 +596,32 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/machine-daily-checks/{id}/photo": { POST: f4PhotoPost },
   "/api/route-segments": { GET: f4SegmentsGet, POST: f4SegmentsPost, PATCH: f4SegmentsPatch },
   "/api/check-templates": { GET: f4TemplatesGet, POST: f4TemplatesPost, PATCH: f4TemplatesPatch },
+
+  /* ---- F9 — dnevnik građenja i HSE ---- */
+  // Dnevnik i HSE primaju tekst (opise, razloge, imena potpisnika, nalaze inspektora) i `{id}`
+  // putanje. Isti sweep kao svuda: NUL staje na granici API-ja, a ne u Postgresu (22021).
+  "/api/site-diaries": { GET: diaryListGet, POST: diaryCreatePost },
+  "/api/site-diaries/{id}": { GET: diaryGetRoute, PATCH: diaryPatchRoute },
+  "/api/site-diaries/{id}/sign": { POST: diarySignPost },
+  "/api/site-diaries/{id}/lock": { POST: diaryLockPost },
+  "/api/site-diaries/{id}/revise": { POST: diaryRevisePost },
+  "/api/site-diaries/{id}/items": { POST: diaryItemsPost },
+  "/api/site-diaries/{id}/items/{itemId}": { DELETE: diaryItemDelete },
+  "/api/site-diaries/{id}/delays": { POST: diaryDelaysPost },
+  "/api/site-diaries/{id}/pdf": { GET: diaryPdfGet },
+  "/api/site-diary-templates": { GET: diaryTemplatesGet, PATCH: diaryTemplatesPatch },
+  "/api/hse/incidents": { GET: hseIncidentsGet, POST: hseIncidentsPost },
+  "/api/hse/incidents/{id}": { GET: hseIncidentGet },
+  "/api/hse/incidents/{id}/updates": { POST: hseIncidentUpdatePost },
+  "/api/hse/incidents/{id}/investigation": { PUT: hseInvestigationPut },
+  "/api/hse/incidents/{id}/close": { POST: hseIncidentClosePost },
+  "/api/hse/actions": { GET: hseActionsGet, PATCH: hseActionsPatch },
+  "/api/hse/actions/create": { POST: hseActionCreatePost },
+  "/api/hse/trainings": { GET: hseTrainingsGet, POST: hseTrainingsPost },
+  "/api/hse/trainings/{id}/attendees": { GET: hseTrainingAttendeesGet },
+  "/api/hse/inspections": { GET: hseInspectionsGet, POST: hseInspectionsPost, PATCH: hseInspectionsPatch },
+  "/api/hse/stats": { GET: hseStatsGet },
+  "/api/hse/report/pdf": { GET: hseReportPdfGet },
 };
 
 

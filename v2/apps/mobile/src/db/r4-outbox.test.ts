@@ -7,8 +7,14 @@ import { migrateLocalDatabase } from "./migrations";
 import {
   activateLocalAccount,
   createSqliteR4SyncStore,
+  LocalOutboxError,
   pendingOutboxCount,
   queueForemanGroupWorkEntries,
+  queueHseAction,
+  queueHseIncident,
+  queueHseTraining,
+  queueSiteDiary,
+  queueSiteDiaryItem,
   readForemanWorkerRoster,
   saveForemanWorkerRoster,
   type LocalAccount,
@@ -223,6 +229,181 @@ describe("R4 SQLite outbox and account privacy", () => {
     await store.applyPullPage(page);
     expect(await store.readCursor()).toBe("opaque-cursor-1");
     expect((await db.getFirstAsync<{ count: number }>("SELECT count(*) AS count FROM sync_events"))?.count).toBe(1);
+    raw.close();
+  });
+
+  /*
+   * F9 — dnevnik i HSE u offline redu.
+   *
+   * Tri stvari se ovdje dokazuju, i to su tri stvari koje bi na terenu najskuplje pukle:
+   *   1. svih pet tipova stvarno ulazi u `outbox` (novi `CHECK` iz v3 ih prima);
+   *   2. neispravna prijava se odbija PRIJE upisa — telefon ne nosi smeće do servera;
+   *   3. `localId` je ključ idempotencije, pa dvostruki dodir ne pravi drugi red.
+   */
+  it("F9: dnevnik, količina i tri HSE zapisa ulaze u outbox kao 'pending'", async () => {
+    const sqlite = await freshDb();
+    const { raw } = sqlite;
+    const db = sqlite;
+    await activateLocalAccount(db, ACCOUNT_A);
+
+    const incident = {
+      kind: "NEAR_MISS" as const,
+      severity: "MINOR" as const,
+      occurredAt: `${WORK_DATE}T09:15:00+01:00`,
+      projectId: PROJECT,
+      locationText: "Kota 2",
+      lat: null,
+      lng: null,
+      description: "Daska pala pored radnika, bez povrede.",
+      immediateAction: "Zona obilježena.",
+      injuredWorkerId: null,
+      lostDays: 0,
+      reportableToAuthority: false,
+      photos: [],
+      updateBody: "Svjedok: vjetar je odnio dasku.",
+    };
+
+    await queueSiteDiary(db, ACCOUNT_A, {
+      diaryId: "diary-local-1",
+      baseVersion: 3,
+      diary: {
+        projectId: PROJECT,
+        diaryDate: WORK_DATE,
+        weather: "RAIN",
+        temperatureC: "12.5",
+        workedHours: "7.50",
+        description: "Kiša cijeli dan, betoniranje stalo.",
+        visitors: null,
+        events: null,
+        signedName: null,
+        delays: [{
+          kind: "RAIN",
+          fromAt: `${WORK_DATE}T08:00:00+01:00`,
+          toAt: `${WORK_DATE}T11:00:00+01:00`,
+          hours: "3.00",
+          note: "Jaka kiša",
+        }],
+      },
+    }, `${WORK_DATE}T17:00:00.000Z`, () => localUuid(101));
+    await queueSiteDiaryItem(db, ACCOUNT_A, {
+      diaryItemId: "diary-item-1",
+      item: { boqItemId: null, description: "Beton C25/30", unit: "m3", quantity: "12.500", source: "MANUAL" },
+    }, `${WORK_DATE}T17:01:00.000Z`, () => localUuid(102));
+    await queueHseIncident(db, ACCOUNT_A, { incidentId: "incident-local-1", incident },
+      `${WORK_DATE}T09:20:00.000Z`, () => localUuid(103));
+    await queueHseAction(db, ACCOUNT_A, {
+      actionId: "action-local-1",
+      action: {
+        incidentId: "incident-local-1",
+        inspectionId: null,
+        description: "Ograditi ivicu skele",
+        responsibleWorkerId: "worker-1",
+        dueOn: WORK_DATE,
+      },
+    }, `${WORK_DATE}T09:30:00.000Z`, () => localUuid(104));
+    await queueHseTraining(db, ACCOUNT_A, {
+      trainingId: "training-local-1",
+      training: {
+        kind: "TOOLBOX",
+        title: "Toolbox: rad na visini",
+        topic: "Vezivanje pojasa",
+        heldAt: `${WORK_DATE}T07:00:00+01:00`,
+        projectId: PROJECT,
+        location: "Konstrukcija",
+        durationMinutes: 15,
+        attendees: [{
+          workerId: "worker-1",
+          signatureName: "Amina Radnik",
+          signedAt: `${WORK_DATE}T07:15:00+01:00`,
+        }],
+      },
+    }, `${WORK_DATE}T07:16:00.000Z`, () => localUuid(105));
+
+    expect(await pendingOutboxCount(db, ACCOUNT_A)).toBe(5);
+    const rows = await db.getAllAsync<{ entity_type: string; status: string }>(
+      /* Redoslijed je po `local_id` (uuid fiksture), a ne po vremenu: `created_at` je tekst i
+         namjerno se ne koristi kao sorter u testu, jer bi tvrdnja zavisila od kazaljke sata. */
+      "SELECT entity_type, status FROM outbox WHERE company_id = ? AND user_id = ? ORDER BY local_id",
+      [ACCOUNT_A.companyId, ACCOUNT_A.userId],
+    );
+    expect(rows.map((row) => row.entity_type).sort()).toEqual([
+      "hse_action", "hse_incident", "hse_training", "site_diary", "site_diary_item",
+    ]);
+    expect(rows.every((row) => row.status === "pending")).toBe(true);
+
+    /*
+     * Idempotencija ima DVA sloja i oba su namjerna:
+     *  - isti `localId` sa ISTIM sadržajem je ponovni poziv (npr. nakon prekida) — ne pravi drugi red;
+     *  - isti `localId` sa DRUGAČIJIM sadržajem je greška u kodu, ne nova prijava — odbija se, jer bi
+     *    inače dvije različite prijave nosile isti ključ idempotencije i jedna nestala na serveru.
+     */
+    await queueHseIncident(db, ACCOUNT_A, { incidentId: "incident-local-1", incident },
+      `${WORK_DATE}T09:20:00.000Z`, () => localUuid(103));
+    expect(await pendingOutboxCount(db, ACCOUNT_A)).toBe(5);
+    await expect(queueHseIncident(db, ACCOUNT_A, { incidentId: "incident-local-1", incident },
+      `${WORK_DATE}T09:21:00.000Z`, () => localUuid(103))).rejects.toThrow(/Lokalni ID već postoji/);
+    raw.close();
+  });
+
+  it("F9: neispravna prijava se odbija PRIJE upisa (mjera bez roka, toolbox bez teme, zastoj > 24 h)", async () => {
+    const sqlite = await freshDb();
+    const { raw } = sqlite;
+    const db = sqlite;
+    await activateLocalAccount(db, ACCOUNT_A);
+
+    await expect(queueHseAction(db, ACCOUNT_A, {
+      actionId: "action-bad",
+      action: {
+        incidentId: "incident-local-9",
+        inspectionId: null,
+        description: "Nešto uraditi",
+        responsibleWorkerId: "worker-1",
+        dueOn: "nije datum",
+      },
+    })).rejects.toBeInstanceOf(LocalOutboxError);
+
+    await expect(queueHseTraining(db, ACCOUNT_A, {
+      trainingId: "training-bad",
+      training: {
+        kind: "TOOLBOX",
+        title: "Toolbox",
+        topic: null,
+        heldAt: `${WORK_DATE}T07:00:00+01:00`,
+        projectId: PROJECT,
+        location: null,
+        durationMinutes: 15,
+        attendees: [{
+          workerId: "worker-1",
+          signatureName: "Amina Radnik",
+          signedAt: `${WORK_DATE}T07:15:00+01:00`,
+        }],
+      },
+    })).rejects.toBeInstanceOf(LocalOutboxError);
+
+    await expect(queueSiteDiary(db, ACCOUNT_A, {
+      diaryId: "diary-bad",
+      baseVersion: 1,
+      diary: {
+        projectId: PROJECT,
+        diaryDate: WORK_DATE,
+        weather: "RAIN",
+        temperatureC: null,
+        workedHours: null,
+        description: null,
+        visitors: null,
+        events: null,
+        signedName: null,
+        delays: [{
+          kind: "RAIN",
+          fromAt: `${WORK_DATE}T08:00:00+01:00`,
+          toAt: `${WORK_DATE}T20:00:00+01:00`,
+          hours: "30.00",
+          note: null,
+        }],
+      },
+    })).rejects.toBeInstanceOf(LocalOutboxError);
+
+    expect(await pendingOutboxCount(db, ACCOUNT_A)).toBe(0);
     raw.close();
   });
 });

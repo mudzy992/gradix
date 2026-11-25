@@ -14,10 +14,16 @@ export const runtime = "nodejs";
 
 const DEFAULT_LIMIT = 100;
 
+/**
+ * F9 — dnevnik i HSE putuju istim feedom kao radni dani (spec 10 §1.8). Telefon šefa mora dobiti
+ * i dnevnik i HSE događaje, inače offline ekran nikad ne vidi šta je ured promijenio.
+ */
+const F9_PULL_TYPES = ["site_diary", "hse_incident", "hse_action", "hse_training"] as const;
+
 type DbEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict";
+  entityType: "workday" | "work_entry" | "sync_conflict" | (typeof F9_PULL_TYPES)[number];
   entityId: string;
   version: number;
   payload: Record<string, unknown> | null;
@@ -31,7 +37,7 @@ function isDbEvent(value: unknown): value is DbEvent {
   return typeof event.id === "string"
     && typeof event.cursorSeq === "string"
     && isValidCursorSequence(event.cursorSeq)
-    && ["workday", "work_entry", "sync_conflict"].includes(String(event.entityType))
+    && ["workday", "work_entry", "sync_conflict", ...F9_PULL_TYPES].includes(String(event.entityType))
     && typeof event.entityId === "string"
     && Number.isInteger(event.version)
     && (event.payload === null || (!!event.payload && typeof event.payload === "object"))
@@ -156,6 +162,13 @@ export async function GET(request: NextRequest): Promise<Response> {
           events.filter((event) => allowedEntityKeys.has(`${event.entityType}:${event.entityId}`))
             .map((event) => event.id),
         );
+        /* F9 događaji su na nivou firme: `hse.view` ima svaka rola, a dnevnik vidi šef gradilišta.
+           Ne prolaze kroz opseg radnika jer ne pripadaju jednom radniku. */
+        const f9Ids = new Set(
+          events.filter((event) => (F9_PULL_TYPES as readonly string[]).includes(event.entityType))
+            .map((event) => event.id),
+        );
+        if (isForeman) for (const id of f9Ids) allowedEventIds.add(id);
         if (foremanWorkerId) {
           const scopedIds = await foremanVisibleR4EventIds(
             client, ctx.companyId, foremanWorkerId, ctx.userId, events,
@@ -174,6 +187,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           entityId: event.entityId,
           entityVersion: event.version,
           payload: foremanWorkerId && !officeRead
+            && (event.entityType === "workday" || event.entityType === "work_entry" || event.entityType === "sync_conflict")
             ? sanitizeForemanPullPayload(event.entityType, event.payload)
             : event.payload,
           tombstone: event.tombstone,

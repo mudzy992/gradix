@@ -365,6 +365,139 @@ export interface Hauls {
   version: Generated<number>;
 }
 
+export interface HseActions {
+  client_local_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string;
+  done_at: Timestamp | null;
+  done_by: string | null;
+  due_on: string;
+  evidence_attachment_id: string | null;
+  id: string;
+  incident_id: string | null;
+  inspection_id: string | null;
+  responsible_worker_id: string;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface HseAttachments {
+  company_id: string;
+  content_type: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  entity_id: string;
+  entity_type: string;
+  file_name: string;
+  id: string;
+  object_key: string;
+  sha256: string;
+  size_bytes: Int8;
+  status: Generated<string>;
+  uploaded_at: Timestamp | null;
+}
+
+export interface HseIncidents {
+  authority_reported_at: Timestamp | null;
+  client_local_id: string | null;
+  closed_at: Timestamp | null;
+  closed_by: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string;
+  id: string;
+  immediate_action: string | null;
+  injured_worker_id: string | null;
+  kind: string;
+  lat: Numeric | null;
+  lng: Numeric | null;
+  location_text: string | null;
+  lost_days: Generated<number>;
+  occurred_at: Timestamp;
+  project_id: string | null;
+  report_obligation_id: string | null;
+  reportable_to_authority: Generated<boolean>;
+  reporter_user_id: string | null;
+  reporter_worker_id: string | null;
+  severity: string;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+}
+
+export interface HseIncidentUpdates {
+  author_id: string | null;
+  author_worker_id: string | null;
+  body: string;
+  client_local_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  incident_id: string;
+}
+
+export interface HseInspections {
+  authority_name: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  inspected_at: Timestamp;
+  inspector_name: string | null;
+  kind: string;
+  prohibition_lifted_at: Timestamp | null;
+  project_id: string | null;
+  result: string;
+  summary: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface HseInvestigations {
+  company_id: string;
+  completed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  findings: string | null;
+  id: string;
+  incident_id: string;
+  investigator_user_id: string;
+  method: Generated<string>;
+  root_cause: string;
+  started_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface HseTrainingAttendees {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  signature_name: string;
+  signed_at: Timestamp;
+  training_id: string;
+  worker_id: string;
+}
+
+export interface HseTrainings {
+  client_local_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  duration_minutes: number | null;
+  held_at: Timestamp;
+  held_by_user_id: string | null;
+  held_by_worker_id: string | null;
+  id: string;
+  kind: string;
+  location: string | null;
+  notes: string | null;
+  project_id: string | null;
+  title: string;
+  topic: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Invitations {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -1226,6 +1359,99 @@ export interface Sessions {
   user_id: string;
 }
 
+export interface SiteDiaries {
+  auto_snapshot: Generated<Json>;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string | null;
+  diary_date: string;
+  events: string | null;
+  id: string;
+  locked_at: Timestamp | null;
+  project_id: string;
+  signed_at: Timestamp | null;
+  signed_by_worker_id: string | null;
+  signed_name: string | null;
+  status: Generated<string>;
+  temperature_c: Numeric | null;
+  updated_at: Generated<Timestamp>;
+  updated_by: string;
+  version: Generated<number>;
+  visitors: string | null;
+  weather: string | null;
+  weather_source: Generated<string>;
+  worked_hours: Numeric | null;
+}
+
+export interface SiteDiaryAttachments {
+  company_id: string;
+  content_type: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  diary_id: string;
+  file_name: string;
+  id: string;
+  object_key: string;
+  sha256: string;
+  size_bytes: Int8;
+  status: Generated<string>;
+  uploaded_at: Timestamp | null;
+}
+
+export interface SiteDiaryDelays {
+  amendment_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  diary_id: string;
+  from_at: Timestamp;
+  hours: Numeric;
+  id: string;
+  kind: string;
+  note: string | null;
+  to_at: Timestamp;
+}
+
+export interface SiteDiaryItems {
+  boq_item_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  description: string;
+  diary_id: string;
+  id: string;
+  quantity: Numeric;
+  source: Generated<string>;
+  unit: string;
+}
+
+export interface SiteDiaryRevisions {
+  author_id: string;
+  base_version: number;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  diary_id: string;
+  id: string;
+  payload: Json;
+  reason: string;
+}
+
+export interface SiteDiaryTemplates {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string | null;
+  format_confirmed_at: Timestamp | null;
+  format_confirmed_by: string | null;
+  header: Generated<Json>;
+  id: string;
+  is_active: Generated<boolean>;
+  is_default: Generated<boolean>;
+  name: string;
+  sections: Generated<Json>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface StockItems {
   category_id: string | null;
   code: string;
@@ -1786,6 +2012,14 @@ export interface DB {
   fuel_tanks: FuelTanks;
   haul_revisions: HaulRevisions;
   hauls: Hauls;
+  hse_actions: HseActions;
+  hse_attachments: HseAttachments;
+  hse_incident_updates: HseIncidentUpdates;
+  hse_incidents: HseIncidents;
+  hse_inspections: HseInspections;
+  hse_investigations: HseInvestigations;
+  hse_training_attendees: HseTrainingAttendees;
+  hse_trainings: HseTrainings;
   invitations: Invitations;
   login_attempts: LoginAttempts;
   machine_cost_components: MachineCostComponents;
@@ -1841,6 +2075,12 @@ export interface DB {
   service_order_parts: ServiceOrderParts;
   service_orders: ServiceOrders;
   sessions: Sessions;
+  site_diaries: SiteDiaries;
+  site_diary_attachments: SiteDiaryAttachments;
+  site_diary_delays: SiteDiaryDelays;
+  site_diary_items: SiteDiaryItems;
+  site_diary_revisions: SiteDiaryRevisions;
+  site_diary_templates: SiteDiaryTemplates;
   stock_items: StockItems;
   stock_movements: StockMovements;
   sync_change_log: SyncChangeLog;

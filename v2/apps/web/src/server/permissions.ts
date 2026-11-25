@@ -227,6 +227,28 @@ export const PERMISSIONS = {
    */
   "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC", "ACCOUNTANT"],
   "stock.manage": ["OWNER", "ADMIN", "MECHANIC"],
+  /*
+   * F9 — dnevnik građenja. `view` je širi od `manage`: dnevnik čita i računovodstvo (količine idu
+   * u trošak i u obračun) i PM (napredak projekta). `manage` je unos i izmjena nacrta, a `sign`
+   * je POTPIS — namjerno uži od `manage`: potpisuje šef gradilišta, jer je on taj koji odgovara
+   * za sadržaj. Ko može unijeti, ne mora moći i potpisati.
+   */
+  "diary.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"],
+  "diary.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "diary.sign": ["OWNER", "ADMIN", "SITE_SUPERVISOR"],
+  /*
+   * F9 — HSE. `hse.view` je široko (PM, šef, mehaničar, rukovalac): svi moraju znati gdje je
+   * zabrana rada i koje mjere kasne. `hse.report` je PRAVO, ne privilegija — svaki radnik može
+   * prijaviti incident; sistem koji traži dozvolu za prijavu opasnosti je sistem koji gubi prijave.
+   * `hse.investigate` vodi istragu i zatvara mjere; `hse.training.manage` evidentira obuke.
+   */
+  "hse.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC", "DRIVER", "WORKER"],
+  "hse.report": [
+    "OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MACHINE_OPERATOR", "MECHANIC", "DRIVER", "WORKER",
+  ],
+  "hse.investigate": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "hse.training.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "hse.training.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "partners.view": [
     "OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC",
   ],
@@ -546,6 +568,41 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "stock.view": {
     label: "Pregled zaliha dijelova",
     description: "Artikli, stanje iz kretnji i upozorenje na minimum — bez izdavanja i primanja.",
+  },
+  "diary.view": {
+    label: "Pregled dnevnika građenja",
+    description:
+      "Dnevnik po projektu i danu: automatski povučeni radnici, mašine i ture, ručni opis radova, zastoji, potpis i PDF izvoz.",
+  },
+  "diary.manage": {
+    label: "Unos dnevnika građenja",
+    description:
+      "Otvara dan, unosi vrijeme, opis radova, količine, posjetioce, događaje i zastoje; mijenja nacrt i pokreće reviziju zaključanog dnevnika.",
+  },
+  "diary.sign": {
+    label: "Potpis dnevnika",
+    description: "Potpisuje dnevnik (SIGNED) i zaključava ga (LOCKED); poslije toga sadržaj se mijenja samo kroz reviziju sa razlogom.",
+  },
+  "hse.view": {
+    label: "Pregled HSE",
+    description: "Incidenti, inspekcije, mjere sa rokovima, obuke i statistika (LTIFR, izgubljeni dani, mjere na vrijeme).",
+  },
+  "hse.report": {
+    label: "Prijava incidenta",
+    description:
+      "Prijava incidenta ili neposredne opasnosti (NEAR_MISS) sa telefona i weba, offline. Pravo je svakog radnika, ne privilegija.",
+  },
+  "hse.investigate": {
+    label: "Istraga i mjere",
+    description: "Vodi istragu incidenta, otvara i zatvara korektivne mjere, evidentira inspekcije i nalaze.",
+  },
+  "hse.training.view": {
+    label: "Pregled obuka",
+    description: "Održane obuke, toolbox razgovori i prisustvo sa potpisima.",
+  },
+  "hse.training.manage": {
+    label: "Evidencija obuka",
+    description: "Unosi obuke i toolbox razgovore sa prisutnima i potpisima; obnavlja certifikacijsku obavezu iz Modula 2.",
   },
   "stock.manage": {
     label: "Kretanje zaliha",

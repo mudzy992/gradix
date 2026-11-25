@@ -27,6 +27,18 @@ import {
   validServiceOrderPushItem,
   type R4ServiceOrderActionPushItem,
 } from "./r5-service-order-sync";
+import {
+  validHseActionPushItem,
+  validHseIncidentPushItem,
+  validHseTrainingPushItem,
+  validSiteDiaryItemPushItem,
+  validSiteDiaryPushItem,
+  type R4HseActionPushItem,
+  type R4HseIncidentPushItem,
+  type R4HseTrainingPushItem,
+  type R4SiteDiaryItemPushItem,
+  type R4SiteDiaryPushItem,
+} from "./r6-diary-hse-sync";
 
 export { isOffsetDateTime, isR4Uuid } from "./r4-sync-time";
 export type {
@@ -47,6 +59,36 @@ export type {
   R4FaultPushItem,
   R4FaultStatus,
 } from "./r5-fault-sync";
+/* F9 — dnevnik i HSE (spec 10 §1.8/34): pet terenskih tipova sa svojim pravilima razrješenja. */
+export type {
+  DiaryDelayKind,
+  DiaryWeather,
+  HseIncidentKindCode,
+  HseSeverityCode,
+  R4DiaryDelayPayload,
+  R4HseActionPayload,
+  R4HseActionPushItem,
+  R4HseIncidentPayload,
+  R4HseIncidentPushItem,
+  R4HseTrainingPayload,
+  R4HseTrainingPushItem,
+  R4SiteDiaryItemPayload,
+  R4SiteDiaryItemPushItem,
+  R4SiteDiaryPayload,
+  R4SiteDiaryPushItem,
+} from "./r6-diary-hse-sync";
+export {
+  validHseActionPayload,
+  validHseActionPushItem,
+  validHseIncidentPayload,
+  validHseIncidentPushItem,
+  validHseTrainingPayload,
+  validHseTrainingPushItem,
+  validSiteDiaryItemPayload,
+  validSiteDiaryItemPushItem,
+  validSiteDiaryPayload,
+  validSiteDiaryPushItem,
+} from "./r6-diary-hse-sync";
 export {
   FAULT_COST_APPROVAL_THRESHOLD_CENTS,
   needsFaultCostApproval,
@@ -118,7 +160,13 @@ export type R4SyncPushItem =
   | R4DailyCheckPushItem
   | R4FaultPushItem
   /* F8: radionica sa telefona — jedna stavka, radnja je `action.kind`. */
-  | R4ServiceOrderActionPushItem;
+  | R4ServiceOrderActionPushItem
+  /* F9: dnevnik građenja i HSE — pet tipova, svaki sa svojim ključem idempotencije. */
+  | R4SiteDiaryPushItem
+  | R4SiteDiaryItemPushItem
+  | R4HseIncidentPushItem
+  | R4HseActionPushItem
+  | R4HseTrainingPushItem;
 
 export type R4SyncPushItemResult = {
   localId: string;
@@ -246,6 +294,26 @@ export function validateR4SyncPush(items: readonly R4SyncPushItem[]): R4SyncVali
     }
     if (item.entityType === "service_order_action") {
       if (!validServiceOrderPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "site_diary") {
+      if (!validSiteDiaryPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "site_diary_item") {
+      if (!validSiteDiaryItemPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "hse_incident") {
+      if (!validHseIncidentPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "hse_action") {
+      if (!validHseActionPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
+      continue;
+    }
+    if (item.entityType === "hse_training") {
+      if (!validHseTrainingPushItem(item)) return { ok: false, code: "SYNC_ITEM_INVALID" };
       continue;
     }
     if (!isR4Uuid(item.workdayId)) {

@@ -12,6 +12,11 @@ import {
   type R4WorkEntryPayload,
   type R4ServiceOrderActionPushItem,
   type ServiceOrderActionPayload,
+  type R4SiteDiaryPayload,
+  type R4SiteDiaryItemPayload,
+  type R4HseIncidentPayload,
+  type R4HseActionPayload,
+  type R4HseTrainingPayload,
 } from "@gradix/domain";
 import type { LocalSqlite } from "./migrations";
 import { resolutionsByLocalId, type ResolutionDisplay } from "../sync/r4-resolution";
@@ -243,7 +248,12 @@ type SyncEntityType =
   | "haul"
   | "machine_daily_check"
   | "machine_fault"
-  | "service_order_action";
+  | "service_order_action"
+  | "site_diary"
+  | "site_diary_item"
+  | "hse_incident"
+  | "hse_action"
+  | "hse_training";
 
 const SYNC_ENTITY_TYPES: readonly SyncEntityType[] = [
   "workday",
@@ -255,6 +265,11 @@ const SYNC_ENTITY_TYPES: readonly SyncEntityType[] = [
   "machine_daily_check",
   "machine_fault",
   "service_order_action",
+  "site_diary",
+  "site_diary_item",
+  "hse_incident",
+  "hse_action",
+  "hse_training",
 ];
 
 function uuid(): string {
@@ -586,6 +601,116 @@ export async function queueServiceOrderAction(
     serviceOrderId: input.orderId,
     deviceSentAt,
     action: input.action,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/* ------------------------------------------------------ F9: dnevnik i HSE u offline redu */
+
+/**
+ * F9 — dnevnik dana sa terena.
+ *
+ * `baseVersion` je verzija koju je šef VIDIO prije tipkanja (a ne broj sa servera u ovom trenutku):
+ * ako je neko drugi mijenjao isti dan, server odbija sa `DIARY_VERSION_CONFLICT` umjesto da tiho
+ * pregazi tuđi unos. Zato je parametar obavezan — pozivalac koji ne zna verziju ne smije ni da pošalje.
+ */
+export async function queueSiteDiary(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: { diaryId: string; baseVersion: number; diary: R4SiteDiaryPayload },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "site_diary",
+    diaryId: input.diaryId,
+    deviceSentAt,
+    baseVersion: input.baseVersion,
+    diary: input.diary,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/** Količina izvedenih radova; dan se nalazi na serveru iz BOQ stavke ili `diaryId`. */
+export async function queueSiteDiaryItem(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: { diaryItemId: string; item: R4SiteDiaryItemPayload },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "site_diary_item",
+    diaryItemId: input.diaryItemId,
+    deviceSentAt,
+    item: input.item,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/**
+ * F9 — HSE prijava sa terena.
+ *
+ * `incidentId` je lokalni ID i isti drugi put NE pravi drugi incident (server ga koristi kao
+ * `client_local_id`). Nema `baseVersion`: incident nema izmjenu činjenica, pa nema ni sukoba —
+ * dopuna ide kao zasebna izjava kroz `updateBody`.
+ */
+export async function queueHseIncident(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: { incidentId: string; incident: R4HseIncidentPayload },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "hse_incident",
+    incidentId: input.incidentId,
+    deviceSentAt,
+    incident: input.incident,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/** Korektivna mjera: tačno jedan izvor (incident ILI inspekcija), odgovorni i rok obavezni. */
+export async function queueHseAction(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: { actionId: string; action: R4HseActionPayload },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "hse_action",
+    actionId: input.actionId,
+    deviceSentAt,
+    action: input.action,
+  };
+  await enqueueR4Items(db, account, [item], deviceSentAt);
+  return item;
+}
+
+/** Toolbox / obuka: prisustvo je potpis (ime + vrijeme), pa se šalje uz zapis, ne naknadno. */
+export async function queueHseTraining(
+  db: LocalSqlite,
+  account: LocalAccount,
+  input: { trainingId: string; training: R4HseTrainingPayload },
+  deviceSentAt: string = new Date().toISOString(),
+  makeId: () => string = uuid,
+): Promise<R4SyncPushItem> {
+  const item: R4SyncPushItem = {
+    localId: makeId(),
+    entityType: "hse_training",
+    trainingId: input.trainingId,
+    deviceSentAt,
+    training: input.training,
   };
   await enqueueR4Items(db, account, [item], deviceSentAt);
   return item;

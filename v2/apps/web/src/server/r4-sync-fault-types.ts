@@ -17,7 +17,13 @@ export type SyncEntityType =
   | "machine_daily_check"
   | "machine_fault"
   /* F8: radionica sa telefona (jedna stavka, radnja je `action.kind`). */
-  | "service_order_action";
+  | "service_order_action"
+  /* F9: dnevnik i HSE (spec 10 §1.8/34). `site_diary_item` nije događaj — mijenja zaglavlje dana
+     i objavljuje se kao `site_diary`, pa telefon ne dobija tri događaja za jedan dan. */
+  | "site_diary"
+  | "hse_incident"
+  | "hse_action"
+  | "hse_training";
 
 export type SyncFaultApplyDeps = {
   actor: SyncPushActor;

@@ -21,6 +21,8 @@ import { payrollReminder } from "@/server/payroll-reminder";
 import { PayrollReminderCard } from "./payroll-reminder-card";
 import { serviceAttention } from "@/server/service-attention";
 import { ServiceAttentionCard } from "@/components/service-attention-card";
+import { HseAttentionCard } from "@/components/hse-attention-card";
+import { hseAttention } from "@/server/hse-service";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +122,16 @@ export default async function PregledPage() {
       )
     : null;
 
+  /*
+   * F9: HSE kartica — zabrana rada, mjere koje kasne, incidenti i dnevnik bez potpisa. Bez
+   * `hse.view` kartice nema; ista funkcija puni i HSE ekran, pa brojevi ne mogu biti različiti.
+   */
+  const hse = can(ctx.roles, "hse.view")
+    ? await withCompany(await getVerifiedPool(), ctx.companyId as CompanyId, (client) =>
+        hseAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] }),
+      )
+    : null;
+
   /* F6: podsjetnik „period nije zaključan“ — samo za one koji vide obračun i samo poslije 5. */
   const reminder = await payrollReminder(await getVerifiedPool(), {
     userId: ctx.userId,
@@ -151,6 +163,7 @@ export default async function PregledPage() {
           <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
           {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
           {service ? <ServiceAttentionCard data={service} /> : null}
+          {hse ? <HseAttentionCard data={hse} /> : null}
         </div>
       );
     }
@@ -219,6 +232,8 @@ export default async function PregledPage() {
       {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
 
       {service ? <ServiceAttentionCard data={service} /> : null}
+
+      {hse ? <HseAttentionCard data={hse} /> : null}
 
       {obligationCounts ? <ObligationSummary counts={obligationCounts} /> : null}
 

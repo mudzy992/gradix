@@ -275,4 +275,22 @@ BEGIN
 END
 $$;
 
+
+-- F9 (Modul 10) — dnevnik građenja i HSE: bez DELETE nad zakonskim zapisima; stavke i zastoji
+-- nacrta se mogu ukloniti dok je dnevnik `DRAFT` (čuva triger), revizije i dopune su append-only.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.site_diaries TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.site_diary_items TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.site_diary_revisions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.site_diary_delays TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.site_diary_templates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.site_diary_attachments TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_incidents TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.hse_incident_updates TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_investigations TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_actions TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_trainings TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_training_attendees TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_inspections TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_attachments TO gradix_app;
+
 COMMIT;

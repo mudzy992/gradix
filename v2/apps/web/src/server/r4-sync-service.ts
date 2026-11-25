@@ -17,6 +17,8 @@ import { applyHaulSyncItem } from "./r4-sync-haul";
 import { applyDailyCheckSyncItem } from "./r4-sync-daily-check";
 import { applyFaultSyncItem } from "./r4-sync-fault";
 import { applyServiceOrderAction, bookFinishedOrderCost } from "./r4-sync-service-order";
+import { applySiteDiaryItemSyncItem, applySiteDiarySyncItem } from "./r6-sync-diary";
+import { applyHseActionSyncItem, applyHseIncidentSyncItem, applyHseTrainingSyncItem } from "./r6-sync-hse";
 
 export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -437,7 +439,17 @@ async function createConflict(
             ? item.check
             : item.entityType === "machine_fault"
               ? item.fault
-              : item;
+              : item.entityType === "site_diary"
+                ? item.diary
+                : item.entityType === "site_diary_item"
+                  ? item.item
+                  : item.entityType === "hse_incident"
+                    ? item.incident
+                    : item.entityType === "hse_action"
+                      ? item.action
+                      : item.entityType === "hse_training"
+                        ? item.training
+                        : item;
   await client.query(
     `INSERT INTO public.sync_conflicts
        (id, company_id, actor_id, local_id, work_entry_id, received_payload, payload_hash, server_version)
@@ -498,6 +510,29 @@ function eventEntry(
   };
 }
 
+/** F9 `deps` — isti `helpers` kao R4/R5 handleri; tipovi događaja su suženi na F9 skup. */
+function f9Deps(
+  actor: SyncPushActor,
+  worker: Worker,
+  requestHash: string,
+  reservation: Reservation,
+) {
+  return {
+    actor,
+    worker,
+    requestHash,
+    reservation,
+    helpers: {
+      businessDate: (scoped: PoolClient, instant: string) => businessDate(scoped, actor.companyId, instant),
+      invalidItem,
+      rejectInTransaction,
+      createConflict,
+      publishEvent,
+      saveReceipt,
+    },
+  };
+}
+
 async function applyItem(
   pool: Pool,
   client: PoolClient,
@@ -510,6 +545,25 @@ async function applyItem(
   now: Date,
   workdayReservation?: Reservation,
 ): Promise<R4SyncPushItemResult> {
+  /*
+   * F9 — dnevnik i HSE. Ograničenja po roli su namjerno blaga: prijava opasnosti i dnevnik su
+   * radni zadatak šefa/radnika, a ne privilegija; `can` se provjerava u rutama koje daju dozvolu.
+   */
+  if (item.entityType === "site_diary" || item.entityType === "site_diary_item") {
+    const deps = f9Deps(actor, worker, requestHash, reservation);
+    return item.entityType === "site_diary"
+      ? applySiteDiarySyncItem(client, deps, item)
+      : applySiteDiaryItemSyncItem(client, deps, item);
+  }
+  if (item.entityType === "hse_incident") {
+    return applyHseIncidentSyncItem(client, f9Deps(actor, worker, requestHash, reservation), item);
+  }
+  if (item.entityType === "hse_action") {
+    return applyHseActionSyncItem(client, f9Deps(actor, worker, requestHash, reservation), item);
+  }
+  if (item.entityType === "hse_training") {
+    return applyHseTrainingSyncItem(client, f9Deps(actor, worker, requestHash, reservation), item);
+  }
   if (item.entityType === "machine_work_log") {
     return applyMachineWorkLogSyncItem(client, {
       actor,
@@ -677,6 +731,10 @@ async function applyItem(
 
   const workdaySlot = workdayReservation;
   if (!workdaySlot) throw new Error("SYNC_WORKDAY_RESERVATION_MISSING");
+  /* F9 tipovi su izašli iz `applyItem` prije ove tačke; ostaje samo dnevnik-radnika. */
+  if (item.entityType !== "work_entry") {
+    throw new Error("SYNC_ITEM_UNROUTED");
+  }
   const reject = (result = invalidItem(item)) =>
     rejectInTransaction(client, actor, item, requestHash, reservation, result, workdaySlot);
 
@@ -950,6 +1008,19 @@ export async function pushR4SyncItems(
         results.push(invalidItem(item, "SYNC_ITEM_REJECTED"));
         continue;
       }
+      worker = actorWorker;
+    } else if (
+      item.entityType === "site_diary" ||
+      item.entityType === "site_diary_item" ||
+      item.entityType === "hse_incident" ||
+      item.entityType === "hse_action" ||
+      item.entityType === "hse_training"
+    ) {
+      /*
+       * F9 — dnevnik i HSE ne traže `worker` zapis: šef gradilišta i radnik prijavljuju sa svog
+       * naloga, a ne u ime radnika iz kataloga. Dozvola se provjerava u handleru (`can`), jer
+       * `hse.report` ima SVAKA rola — prijava opasnosti nije privilegija.
+       */
       worker = actorWorker;
     } else if (item.workerId !== undefined) {
       if (!isForeman) {

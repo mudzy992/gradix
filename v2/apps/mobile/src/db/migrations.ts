@@ -5,7 +5,7 @@ export const DB_NAME = "gradix.db";
  * Verzija lokalne šeme. Podignuta na 2 u F8: `outbox`/`sync_events` su dobili šire skupove
  * `entity_type` (radioničke radnje i kvarovi), pa stara baza mora proći kroz `__v2` korak.
  */
-export const LOCAL_SCHEMA_VERSION = 2;
+export const LOCAL_SCHEMA_VERSION = 3;
 
 export type LocalSqlite = Pick<
   SQLite.SQLiteDatabase,
@@ -269,6 +269,57 @@ async function upgradeToV2(db: LocalSqlite): Promise<void> {
   `);
 }
 
+/**
+ * F9 (`user_version` 3): dnevnik i HSE u outbox-u.
+ *
+ * `CHECK (entity_type IN …)` se ne mijenja nadogradnjom — tabela se obnavlja u JEDNOJ transakciji
+ * sa prenosom redova, isto kao u v2. Redovi sa terena (`pending`) su rad koji još nije stigao na
+ * server; prekid između `DROP` i `INSERT` bio bi gubitak tog rada.
+ *
+ * Pet novih tipova dolazi iz `r6-diary-hse-sync`: `site_diary`, `site_diary_item`, `hse_incident`,
+ * `hse_action`, `hse_training`. `sync_events` prima iste vrijednosti jer ih feed vraća.
+ */
+async function upgradeToV3(db: LocalSqlite): Promise<void> {
+  const outboxSql = await db.getFirstAsync<{ sql: string }>(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'outbox'",
+  );
+  if (outboxSql?.sql?.includes("'hse_incident'")) return;
+
+  await db.execAsync(`
+    CREATE TABLE outbox__v3 (
+      company_id    TEXT NOT NULL,
+      user_id       TEXT NOT NULL,
+      local_id      TEXT NOT NULL,
+      worker_id     TEXT,
+      entity_type   TEXT NOT NULL CHECK (entity_type IN (
+        'workday', 'work_entry', 'machine_work_log', 'fuel_entry', 'haul',
+        'machine_daily_check', 'machine_fault', 'service_order_action',
+        'site_diary', 'site_diary_item', 'hse_incident', 'hse_action', 'hse_training'
+      )),
+      payload_json  TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'failed', 'sent', 'conflict', 'rejected')),
+      attempts      INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+      last_error    TEXT,
+      server_id     TEXT,
+      server_version INTEGER,
+      created_at    TEXT NOT NULL,
+      updated_at    TEXT NOT NULL,
+      PRIMARY KEY (company_id, user_id, local_id)
+    );
+    INSERT INTO outbox__v3
+      (company_id, user_id, local_id, worker_id, entity_type, payload_json, status, attempts,
+       last_error, server_id, server_version, created_at, updated_at)
+      SELECT company_id, user_id, local_id, worker_id, entity_type, payload_json, status, attempts,
+             last_error, server_id, server_version, created_at, updated_at
+        FROM outbox;
+    DROP TABLE outbox;
+    ALTER TABLE outbox__v3 RENAME TO outbox;
+    CREATE INDEX IF NOT EXISTS outbox_pending_scope_idx
+      ON outbox (company_id, user_id, status, created_at);
+  `);
+}
+
 async function createExpoBackup(database: LocalSqlite): Promise<LocalDatabaseBackup> {
   const SQLiteRuntime = await import("expo-sqlite");
   const source = database as SQLite.SQLiteDatabase;
@@ -343,6 +394,7 @@ export async function migrateLocalDatabase(
       await ensureLegacySchema(db);
       await db.execAsync(R4_SCHEMA);
       await upgradeToV2(db);
+      await upgradeToV3(db);
       await verifyR4Schema(db);
       await db.execAsync(`PRAGMA user_version = ${LOCAL_SCHEMA_VERSION}`);
     });

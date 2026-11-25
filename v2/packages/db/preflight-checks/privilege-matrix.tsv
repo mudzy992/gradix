@@ -105,3 +105,17 @@ table	tender_checklist_items	SELECT;INSERT;UPDATE	-		F7 stavke checkliste tender
 table	tender_outcomes	SELECT;INSERT	-		F7 ishod tendera je zapis odluke: jedan po tenderu, bez UPDATE i DELETE.
 table	tender_phases	SELECT;INSERT;UPDATE;DELETE	-		F7 faze tendera se prenose u `project_phases` pri konverziji; mijenjaju se dok tender nije predan.
 table	tender_team	SELECT;INSERT;DELETE	-		F7 predloženi tim tendera; član se dodaje i uklanja, izmjena role je novi red.
+table	site_diaries	SELECT;INSERT;UPDATE	-		F9 zakonski dokument: jedan dan po projektu, `DRAFT→SIGNED→LOCKED`; triger `site_diaries_locked_guard()` brani izmjenu zaključanog, ispravka ide kroz `site_diary_revisions`. Bez DELETE — zaključan dnevnik se ne briše.
+table	site_diary_items	SELECT;INSERT;UPDATE;DELETE	-		F9 količine izvedenih radova u DRAFT-u; DELETE je dozvoljen SAMO dok je dnevnik `DRAFT` (triger `site_diary_items_draft_guard()`), jer pogrešan red u nacrtu mora moći da nestane — u `SIGNED`/`LOCKED` brisanje pada.
+table	site_diary_revisions	SELECT;INSERT	-		F9 revizija zaključanog dnevnika je zapis sa razlogom ≥10 znakova; append-only (triger `site_diary_revisions_immutable()`), bez UPDATE i DELETE.
+table	site_diary_delays	SELECT;INSERT;UPDATE;DELETE	-		F9 strukturirani zastoji (kiša, materijal, dozvola) vezani na `TIME` aneks; DELETE samo u `DRAFT`-u, isti triger kao za stavke.
+table	site_diary_templates	SELECT;INSERT;UPDATE	-		F9 šablon dnevnika po firmi (zaglavlje, sekcije, potpisne linije); deaktivacija i potvrda obrasca su UPDATE (`is_active`, `format_confirmed_at`) — do potvrde izvoz nosi `DRAFT_FORMAT`.
+table	site_diary_attachments	SELECT;INSERT;UPDATE	-		F9 prilozi uz dnevnik, mirror `machine_daily_check_attachments`: `pending→confirmed` je UPDATE, fajl se ne briše (veza na `object_key`).
+table	hse_incidents	SELECT;INSERT;UPDATE	-		F9 incident je činjenica: triger `hse_incidents_facts_guard()` brani prepisivanje vrste/težine/vremena/opisa/povrijeđenog, dopuna ide u `hse_incident_updates`. Stanje i izgubljeni dani su UPDATE. Bez DELETE.
+table	hse_incident_updates	SELECT;INSERT	-		F9 dopuna incidenta (drugi svjedok, naknadna saznanja); append-only, bez UPDATE i DELETE — izjava se ne prepisuje.
+table	hse_investigations	SELECT;INSERT;UPDATE	-		F9 istraga incidenta (uzrok, metod, nalazi), jedna po incidentu; `completed_at` je UPDATE.
+table	hse_actions	SELECT;INSERT;UPDATE	-		F9 JEDNA tabela korektivnih mjera za incidente i inspekcije; `OPEN→DONE/CANCELLED` je UPDATE. `OVERDUE` se računa (`due_on < danas`), nikad ne čuva — upisano stanje bi u ponedjeljak lagalo o petku.
+table	hse_trainings	SELECT;INSERT;UPDATE	-		F9 održane obuke (indukcija, toolbox, certifikacija); `duration_minutes`/`topic` su UPDATE, bez DELETE.
+table	hse_training_attendees	SELECT;INSERT;UPDATE	-		F9 prisustvo je POTPIS (`signature_name` + `signed_at`), ne checkbox; unikat po radniku i obuci; `signed_at` je UPDATE kad se potpis dopuni, bez DELETE.
+table	hse_inspections	SELECT;INSERT;UPDATE	-		F9 inspekcije (`INTERNAL/EXTERNAL/AUTHORITY`) i nalaz; podizanje zabrane rada je UPDATE `prohibition_lifted_at`, nalaz se ne prepisuje.
+table	hse_attachments	SELECT;INSERT;UPDATE	-		F9 prilozi incidenata/inspekcija/obuka; `pending→confirmed` je UPDATE, bez DELETE.

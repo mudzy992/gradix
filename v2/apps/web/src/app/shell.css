@@ -1691,3 +1691,10 @@ select.gx-input option, select.gx-input optgroup {
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
+
+/* F9 — mreža potpisnih checkboxa (obuke): 20 radnika staje u nekoliko redova bez skrolovanja. */
+.gx-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2px 12px;
+}

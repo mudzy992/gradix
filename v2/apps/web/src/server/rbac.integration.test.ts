@@ -292,9 +292,16 @@ describeDb("R1b — matrica, dodjela i audit (integracija na pravoj bazi)", () =
        * odobri. Bez te dozvole radnik ne bi mogao provjeriti svoj mjesec, a to je smisao
        * ekrana „Moj obračun“; tuđe iznose i dalje ne vidi (`payroll.view` nema).
        */
+      /*
+       * F9: radnik dobija `hse.view` i `hse.report` — PRIJAVA INCIDENTA NIJE PRIVILEGIJA (§1.5/25).
+       * Radnik koji vidi opasnost mora je moći prijaviti; bez toga se `NEAR_MISS` ne prijavljuje,
+       * a statistika počinje lagati. `hse.investigate` i dalje NIJE njegov (`hse.report` != istraga).
+       */
       expect(permissionsFor("WORKER")).toEqual([
         "obligations.view",
         "projects.view",
+        "hse.view",
+        "hse.report",
         "payroll.own.view",
       ]);
     });

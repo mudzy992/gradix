@@ -118,6 +118,12 @@ export function buildOpenApi(): Record<string, unknown> {
                     schema: { type: "string", description: "CSV (UTF-8, RFC 4180)" },
                   },
                 }
+              : route.contentType === "application/pdf"
+              ? {
+                  "application/pdf": {
+                    schema: { type: "string", format: "binary", description: "PDF" },
+                  },
+                }
               : {
                   "application/json": {
                     schema: route.raw

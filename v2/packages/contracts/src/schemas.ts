@@ -952,6 +952,105 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       }).strict().nullable(),
     }).strict(),
   }).strict(),
+  /* ------------------------------------------------ F9: dnevnik građenja i HSE (spec 10) */
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("site_diary"),
+    diaryId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    baseVersion: z.number().int().min(1),
+    diary: z.object({
+      projectId: z.string().min(1).max(128),
+      diaryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      weather: z.enum(["CLEAR", "CLOUDY", "RAIN", "SNOW", "WIND", "FROST", "HEAT"]).nullable(),
+      temperatureC: z.string().regex(/^-?\d{1,3}(?:\.\d)?$/).nullable(),
+      workedHours: z.string().regex(/^\d{1,2}(?:\.\d{1,2})?$/).nullable(),
+      description: SafeText.max(4000).nullable(),
+      visitors: SafeText.max(2000).nullable(),
+      events: SafeText.max(4000).nullable(),
+      signedName: SafeText.min(2).max(200).nullable(),
+      delays: z.array(z.object({
+        kind: z.enum(["RAIN", "SNOW", "WIND", "FROST", "SUBCONTRACTOR", "MATERIAL", "PERMIT", "OTHER"]),
+        fromAt: OffsetDateTime,
+        toAt: OffsetDateTime,
+        hours: z.string().regex(/^\d{1,2}(?:\.\d{1,2})?$/),
+        note: SafeText.max(1000).nullable(),
+      }).strict()).max(20),
+    }).strict(),
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("site_diary_item"),
+    diaryItemId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    item: z.object({
+      boqItemId: z.string().min(1).max(128).nullable(),
+      description: SafeText.min(1).max(500),
+      unit: z.string().min(1).max(20),
+      quantity: z.string().regex(/^\d{1,14}(?:\.\d{1,3})?$/),
+      source: z.enum(["MANUAL", "HAUL", "BOQ"]),
+    }).strict(),
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("hse_incident"),
+    incidentId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    incident: z.object({
+      kind: z.enum(["ACCIDENT", "NEAR_MISS", "PROPERTY_DAMAGE", "ENVIRONMENTAL", "OCCUPATIONAL_ILLNESS"]),
+      severity: z.enum(["MINOR", "MODERATE", "SEVERE", "FATAL"]),
+      occurredAt: OffsetDateTime,
+      projectId: z.string().min(1).max(128).nullable(),
+      locationText: SafeText.max(300).nullable(),
+      lat: z.string().regex(/^-?\d{1,3}(?:\.\d{1,6})?$/).nullable(),
+      lng: z.string().regex(/^-?\d{1,3}(?:\.\d{1,6})?$/).nullable(),
+      description: SafeText.min(5).max(4000),
+      immediateAction: SafeText.max(2000).nullable(),
+      injuredWorkerId: z.string().min(1).max(128).nullable(),
+      lostDays: z.number().int().min(0).max(3650),
+      reportableToAuthority: z.boolean(),
+      photos: z.array(z.object({
+        fileName: z.string().min(1).max(200),
+        contentType: z.enum(["image/jpeg", "image/png", "image/webp", "image/heic"]),
+        sizeBytes: z.number().int().min(1).max(10_485_760),
+        sha256: z.string().regex(/^[0-9a-f]{64}$/),
+      }).strict()).max(10),
+      updateBody: SafeText.max(4000).nullable(),
+    }).strict(),
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("hse_action"),
+    actionId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    action: z.object({
+      incidentId: z.string().min(1).max(128).nullable(),
+      inspectionId: z.string().min(1).max(128).nullable(),
+      description: SafeText.min(5).max(1000),
+      responsibleWorkerId: z.string().min(1).max(128),
+      dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).strict(),
+  }).strict(),
+  z.object({
+    localId: z.string().uuid(),
+    entityType: z.literal("hse_training"),
+    trainingId: z.string().min(1).max(128),
+    deviceSentAt: OffsetDateTime,
+    training: z.object({
+      kind: z.enum(["INDUCTION", "TOOLBOX", "TASK_INSTRUCTION", "CERTIFICATION", "DRILL"]),
+      title: SafeText.min(2).max(200),
+      topic: SafeText.max(1000).nullable(),
+      heldAt: OffsetDateTime,
+      projectId: z.string().min(1).max(128).nullable(),
+      location: SafeText.max(200).nullable(),
+      durationMinutes: z.number().int().min(1).max(600).nullable(),
+      attendees: z.array(z.object({
+        workerId: z.string().min(1).max(128),
+        signatureName: SafeText.min(2).max(200),
+        signedAt: OffsetDateTime,
+      }).strict()).min(1).max(100),
+    }).strict(),
+  }).strict(),
 ]);
 export type SyncPushItem = z.infer<typeof SyncPushItem>;
 
@@ -980,6 +1079,8 @@ export const SyncPullEvent = z.object({
   entityType: z.enum([
     "workday", "work_entry", "sync_conflict", "machine_work_log", "fuel_entry", "haul",
     "machine_daily_check", "machine_fault", "service_order_action",
+    /* F9: dnevnik građenja i HSE. */
+    "site_diary", "site_diary_item", "hse_incident", "hse_action", "hse_training",
   ]),
   entityId: z.string(),
   entityVersion: z.number().int().positive(),
@@ -4535,3 +4636,428 @@ export const StockMovementInput = z
   })
   .strict();
 export type StockMovementInput = z.infer<typeof StockMovementInput>;
+
+/* ------------------------------------------------------------------ F9: dnevnik i HSE */
+
+/** Zaglavlje dana (§1.1). Status govori gdje je dokument: nacrt, potpisan ili zaključan. */
+export const SiteDiaryListItem = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  projectCode: z.string(),
+  projectName: z.string(),
+  diaryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  status: z.enum(["DRAFT", "SIGNED", "LOCKED"]),
+  weather: z.string().nullable(),
+  workedHours: z.string().nullable(),
+  signedName: z.string().nullable(),
+  version: z.number().int().positive(),
+  workersCount: z.number().int().nonnegative(),
+  machinesCount: z.number().int().nonnegative(),
+  delaysHours: z.string(),
+});
+export type SiteDiaryListItem = z.infer<typeof SiteDiaryListItem>;
+
+export const SiteDiariesResponse = z.object({ diaries: z.array(SiteDiaryListItem) });
+export type SiteDiariesResponse = z.infer<typeof SiteDiariesResponse>;
+
+export const SiteDiaryItemRow = z.object({
+  id: z.string(),
+  boqItemId: z.string().nullable(),
+  description: z.string(),
+  unit: z.string(),
+  quantity: z.string(),
+  /** `BOQ` stavka uvećava `project_boq_items.quantity_executed` — jedan izvor završenosti. */
+  source: z.enum(["MANUAL", "HAUL", "BOQ"]),
+  boqCode: z.string().nullable(),
+  boqQuantityExecuted: z.string().nullable(),
+  boqQuantityPlanned: z.string().nullable(),
+});
+export type SiteDiaryItemRow = z.infer<typeof SiteDiaryItemRow>;
+
+export const SiteDiaryDelayRow = z.object({
+  id: z.string(),
+  kind: z.enum(["RAIN", "SNOW", "WIND", "FROST", "SUBCONTRACTOR", "MATERIAL", "PERMIT", "OTHER"]),
+  fromAt: z.string(),
+  toAt: z.string(),
+  hours: z.string(),
+  note: z.string().nullable(),
+  amendmentId: z.string().nullable(),
+  /** Veza na `TIME` aneks iz Modula 6 — zastoji dokazuju produženje roka. */
+  extensionDays: z.number().int().nullable(),
+});
+export type SiteDiaryDelayRow = z.infer<typeof SiteDiaryDelayRow>;
+
+export const SiteDiaryDetail = z.object({
+  diary: z.object({
+    id: z.string(),
+    projectId: z.string(),
+    projectCode: z.string(),
+    projectName: z.string(),
+    diaryDate: z.string(),
+    status: z.enum(["DRAFT", "SIGNED", "LOCKED"]),
+    weather: z.string().nullable(),
+    temperatureC: z.string().nullable(),
+    workedHours: z.string().nullable(),
+    description: z.string().nullable(),
+    visitors: z.string().nullable(),
+    events: z.string().nullable(),
+    signedName: z.string().nullable(),
+    signedAt: z.string().nullable(),
+    signedByWorkerId: z.string().nullable(),
+    lockedAt: z.string().nullable(),
+    version: z.number().int().positive(),
+  }),
+  /** Automatski izvučeno iz Modula 3/5; `frozen` znači zamrznuto u trenutku potpisa. */
+  auto: z.object({
+    workers: z.array(z.object({ workerId: z.string(), workerName: z.string(), minutes: z.number(), hours: z.string() })),
+    machines: z.array(z.object({
+      machineId: z.string(), machineCode: z.string(), machineName: z.string(),
+      hours: z.string(), meterFrom: z.string().nullable(), meterTo: z.string().nullable(),
+    })),
+    hauls: z.array(z.object({
+      haulId: z.string(), machineName: z.string(), material: z.string().nullable(),
+      quantity: z.string(), quantityUnit: z.string(), phaseId: z.string().nullable(),
+    })),
+    faults: z.array(z.object({
+      faultId: z.string(), machineName: z.string(), title: z.string(),
+      downtimeMinutes: z.number().nullable(), priority: z.string(),
+    })),
+    workedHours: z.string(),
+    generatedAt: z.string(),
+  }),
+  frozen: z.boolean(),
+  items: z.array(SiteDiaryItemRow),
+  delays: z.array(SiteDiaryDelayRow),
+  delayHoursTotal: z.string(),
+  attachments: z.array(z.object({
+    id: z.string(), file_name: z.string(), content_type: z.string(), status: z.string(), created_at: z.string(),
+  })),
+  revisions: z.array(z.object({ id: z.string(), reason: z.string(), authorName: z.string(), createdAt: z.string() })),
+});
+export type SiteDiaryDetail = z.infer<typeof SiteDiaryDetail>;
+
+export const SiteDiaryCreateInput = z.object({
+  projectId: z.string().min(1).max(128),
+  diaryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weather: z.enum(["CLEAR", "CLOUDY", "RAIN", "SNOW", "WIND", "FROST", "HEAT"]).nullable().optional(),
+  /* Brojevi su i tekstualna polja: `SafeText` odbija kontrolne znakove PRIJE nego regex vidi
+     string, pa NUL ne može proći kao „broj“ u zaglavlju dnevnika. */
+  temperatureC: SafeText.regex(/^-?\d{1,3}(?:\.\d)?$/).nullable().optional(),
+  workedHours: SafeText.regex(/^\d{1,5}(?:\.\d{1,2})?$/).nullable().optional(),
+  description: SafeText.max(4000).nullable().optional(),
+  visitors: SafeText.max(2000).nullable().optional(),
+  events: SafeText.max(4000).nullable().optional(),
+});
+export type SiteDiaryCreateInput = z.infer<typeof SiteDiaryCreateInput>;
+
+export const SiteDiaryPatchInput = SiteDiaryCreateInput.omit({ projectId: true, diaryDate: true });
+export type SiteDiaryPatchInput = z.infer<typeof SiteDiaryPatchInput>;
+
+export const SiteDiaryItemInput = z.object({
+  boqItemId: SafeText.max(128).nullable().optional(),
+  description: SafeText.min(1).max(500),
+  unit: SafeText.min(1).max(20),
+  quantity: z.string().regex(/^\d{1,14}(?:\.\d{1,3})?$/),
+  source: z.enum(["MANUAL", "HAUL", "BOQ"]).optional(),
+});
+export type SiteDiaryItemInput = z.infer<typeof SiteDiaryItemInput>;
+
+export const SiteDiaryDelayInput = z.object({
+  kind: z.enum(["RAIN", "SNOW", "WIND", "FROST", "SUBCONTRACTOR", "MATERIAL", "PERMIT", "OTHER"]),
+  fromAt: z.string(),
+  toAt: z.string(),
+  /* Gornja granica 24 h je u domeni/bazi (`site_diary_delays_hours_check`); ovdje je samo oblik. */
+  hours: SafeText.regex(/^\d{1,2}(?:\.\d{1,2})?$/),
+  note: SafeText.max(1000).nullable().optional(),
+  amendmentId: SafeText.max(128).nullable().optional(),
+});
+export type SiteDiaryDelayInput = z.infer<typeof SiteDiaryDelayInput>;
+
+export const SiteDiarySignInput = z.object({
+  signedName: SafeText.min(2).max(200),
+  workerId: SafeText.max(128).nullable().optional(),
+});
+export type SiteDiarySignInput = z.infer<typeof SiteDiarySignInput>;
+
+export const SiteDiaryReviseInput = SiteDiaryPatchInput.extend({
+  /** Razlog ≥10 znakova — revizija bez razloga je samo trag da se nešto mijenjalo. */
+  reason: SafeText.min(10).max(500),
+});
+export type SiteDiaryReviseInput = z.infer<typeof SiteDiaryReviseInput>;
+
+export const SiteDiaryTemplate = z.object({
+  id: z.string(),
+  name: z.string(),
+  header: z.object({
+    companyLine: z.string().nullable(),
+    projectLine: z.string().nullable(),
+    legalNote: z.string().nullable(),
+  }),
+  sections: z.array(z.object({
+    key: z.enum(["HEADER", "WEATHER", "WORKERS", "MACHINES", "QUANTITIES", "HAULS", "EVENTS", "DELAYS", "ATTACHMENTS", "SIGNATURES"]),
+    label: z.string(),
+    enabled: z.boolean(),
+  })),
+  isDefault: z.boolean(),
+  formatConfirmedAt: z.string().nullable(),
+  /** `true` dok vlasnik/pravnik nije potvrdio obrazac — svaki izvoz tada nosi `DRAFT_FORMAT`. */
+  draftFormat: z.boolean(),
+});
+export type SiteDiaryTemplate = z.infer<typeof SiteDiaryTemplate>;
+
+/**
+ * PATCH tijelo šablona. Namjerno NE prima cijeli `SiteDiaryTemplate`: `formatConfirmedAt` i
+ * `draftFormat` su IZVEDENI (iz baze), pa bi ih klijent mogao „vratiti“ na staro. Potvrda obrasca
+ * ide samo kroz `confirmFormat: true`.
+ */
+export const SiteDiaryTemplatePatchInput = z.object({
+  id: SafeText.min(1).max(128),
+  name: SafeText.min(1).max(200).optional(),
+  header: z.object({
+    companyLine: SafeText.max(500).nullable().optional(),
+    projectLine: SafeText.max(500).nullable().optional(),
+    legalNote: SafeText.max(2000).nullable().optional(),
+  }).strict().optional(),
+  sections: z.array(z.object({
+    key: z.enum(["HEADER", "WEATHER", "WORKERS", "MACHINES", "QUANTITIES", "HAULS", "EVENTS", "DELAYS", "ATTACHMENTS", "SIGNATURES"]),
+    label: SafeText.min(1).max(100),
+    enabled: z.boolean(),
+  }).strict()).max(20).optional(),
+  confirmFormat: z.boolean().optional(),
+}).strict();
+export type SiteDiaryTemplatePatchInput = z.infer<typeof SiteDiaryTemplatePatchInput>;
+
+export const SiteDiaryTemplatesResponse = z.object({ templates: z.array(SiteDiaryTemplate) });
+export type SiteDiaryTemplatesResponse = z.infer<typeof SiteDiaryTemplatesResponse>;
+
+export const HseIncidentKind = z.enum(["ACCIDENT", "NEAR_MISS", "PROPERTY_DAMAGE", "ENVIRONMENTAL", "OCCUPATIONAL_ILLNESS"]);
+export const HseIncidentSeverity = z.enum(["MINOR", "MODERATE", "SEVERE", "FATAL"]);
+export const HseIncidentStatus = z.enum(["REPORTED", "INVESTIGATING", "ACTIONS_OPEN", "CLOSED"]);
+
+export const HseIncidentListItem = z.object({
+  id: z.string(),
+  kind: HseIncidentKind,
+  severity: HseIncidentSeverity,
+  status: HseIncidentStatus,
+  occurredAt: z.string(),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
+  description: z.string(),
+  lostDays: z.number().int().nonnegative(),
+  reportableToAuthority: z.boolean(),
+  /** Obaveza `HSE_REPORT` iz Modula 2 — zakonski rok, ne podsjetnik. */
+  reportObligationId: z.string().nullable(),
+  openActions: z.number().int().nonnegative(),
+  overdueActions: z.number().int().nonnegative(),
+});
+export type HseIncidentListItem = z.infer<typeof HseIncidentListItem>;
+
+export const HseIncidentsResponse = z.object({ incidents: z.array(HseIncidentListItem) });
+export type HseIncidentsResponse = z.infer<typeof HseIncidentsResponse>;
+
+export const HseIncidentInput = z.object({
+  kind: HseIncidentKind,
+  severity: HseIncidentSeverity,
+  occurredAt: SafeText.min(1).max(40),
+  projectId: SafeText.max(128).nullable().optional(),
+  locationText: SafeText.max(300).nullable().optional(),
+  lat: SafeText.regex(/^-?\d{1,3}(?:\.\d{1,6})?$/).nullable().optional(),
+  lng: SafeText.regex(/^-?\d{1,3}(?:\.\d{1,6})?$/).nullable().optional(),
+  description: SafeText.min(5).max(4000),
+  immediateAction: SafeText.max(2000).nullable().optional(),
+  reporterWorkerId: SafeText.max(128).nullable().optional(),
+  injuredWorkerId: SafeText.max(128).nullable().optional(),
+  lostDays: z.number().int().min(0).max(3650).optional(),
+  reportableToAuthority: z.boolean().optional(),
+  clientLocalId: SafeText.max(128).nullable().optional(),
+});
+export type HseIncidentInput = z.infer<typeof HseIncidentInput>;
+
+export const HseIncidentUpdateInput = z.object({
+  body: SafeText.min(1).max(4000),
+  authorWorkerId: SafeText.max(128).nullable().optional(),
+});
+export type HseIncidentUpdateInput = z.infer<typeof HseIncidentUpdateInput>;
+
+export const HseInvestigationInput = z.object({
+  rootCause: SafeText.min(5).max(4000),
+  method: z.enum(["FIVE_WHY", "FISHBONE", "OTHER"]).optional(),
+  findings: SafeText.max(4000).nullable().optional(),
+  completed: z.boolean().optional(),
+});
+export type HseInvestigationInput = z.infer<typeof HseInvestigationInput>;
+
+export const HseActionRowSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  dueOn: z.string(),
+  status: z.enum(["OPEN", "DONE", "CANCELLED"]),
+  doneOn: z.string().nullable(),
+  incidentId: z.string().nullable(),
+  inspectionId: z.string().nullable(),
+  responsibleName: z.string().nullable(),
+  /** Izračunato pri čitanju (`due_on < danas AND status='OPEN'`), nikad upisano. */
+  overdue: z.boolean(),
+});
+export type HseActionRowSchema = z.infer<typeof HseActionRowSchema>;
+
+export const HseActionsResponse = z.object({
+  today: z.string(),
+  actions: z.array(HseActionRowSchema),
+});
+export type HseActionsResponse = z.infer<typeof HseActionsResponse>;
+
+export const HseActionInput = z.object({
+  incidentId: SafeText.max(128).nullable().optional(),
+  inspectionId: SafeText.max(128).nullable().optional(),
+  description: SafeText.min(5).max(1000),
+  responsibleWorkerId: SafeText.min(1).max(128),
+  dueOn: SafeText.regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type HseActionInput = z.infer<typeof HseActionInput>;
+
+export const HseActionPatchInput = z.object({
+  id: SafeText.min(1).max(128),
+  kind: z.enum(["DONE", "CANCEL"]),
+  note: SafeText.max(2000).nullable().optional(),
+  reason: SafeText.max(500).optional(),
+});
+export type HseActionPatchInput = z.infer<typeof HseActionPatchInput>;
+
+export const HseTrainingInput = z.object({
+  kind: z.enum(["INDUCTION", "TOOLBOX", "TASK_INSTRUCTION", "CERTIFICATION", "DRILL"]),
+  title: SafeText.min(2).max(200),
+  topic: SafeText.max(1000).nullable().optional(),
+  heldAt: SafeText.min(1).max(40),
+  projectId: SafeText.max(128).nullable().optional(),
+  location: SafeText.max(200).nullable().optional(),
+  durationMinutes: z.number().int().min(1).max(600).nullable().optional(),
+  heldByWorkerId: SafeText.max(128).nullable().optional(),
+  /** Prisustvo je POTPIS, ne checkbox (§1.4/19). */
+  attendees: z.array(z.object({
+    workerId: SafeText.min(1).max(128),
+    signatureName: SafeText.min(2).max(200),
+    signedAt: SafeText.min(1).max(40),
+  })).min(1).max(100),
+  /** Certifikacijska obuka jednim pozivom obnavlja obavezu iz Modula 2. */
+  renewObligationId: SafeText.max(128).nullable().optional(),
+});
+export type HseTrainingInput = z.infer<typeof HseTrainingInput>;
+
+export const HseTrainingRow = z.object({
+  id: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  topic: z.string().nullable(),
+  heldAt: z.string(),
+  durationMinutes: z.number().int().nullable(),
+  location: z.string().nullable(),
+  projectName: z.string().nullable(),
+  attendees: z.number().int().nonnegative(),
+});
+export type HseTrainingRow = z.infer<typeof HseTrainingRow>;
+
+export const HseTrainingsResponse = z.object({ trainings: z.array(HseTrainingRow) });
+export type HseTrainingsResponse = z.infer<typeof HseTrainingsResponse>;
+
+export const HseTrainingAttendeesResponse = z.object({
+  training: z.object({ id: z.string(), title: z.string(), kind: z.string(), held_at: z.string() }),
+  attendees: z.array(z.object({
+    workerId: z.string(), workerName: z.string(), signatureName: z.string(), signedAt: z.string(),
+  })),
+});
+export type HseTrainingAttendeesResponse = z.infer<typeof HseTrainingAttendeesResponse>;
+
+export const HseInspectionRow = z.object({
+  id: z.string(),
+  kind: z.enum(["INTERNAL", "EXTERNAL", "AUTHORITY"]),
+  authorityName: z.string().nullable(),
+  inspectedAt: z.string(),
+  inspectorName: z.string().nullable(),
+  summary: z.string().nullable(),
+  result: z.enum(["PASS", "MINOR_FINDINGS", "MAJOR_FINDINGS", "PROHIBITION"]),
+  /** `null` znači zabrana još traje — nalaz je tada istaknut na Pregledu. */
+  prohibitionLiftedAt: z.string().nullable(),
+  projectName: z.string().nullable(),
+  openActions: z.number().int().nonnegative(),
+});
+export type HseInspectionRow = z.infer<typeof HseInspectionRow>;
+
+export const HseInspectionsResponse = z.object({ inspections: z.array(HseInspectionRow) });
+export type HseInspectionsResponse = z.infer<typeof HseInspectionsResponse>;
+
+export const HseInspectionInput = z.object({
+  kind: z.enum(["INTERNAL", "EXTERNAL", "AUTHORITY"]),
+  authorityName: SafeText.max(200).nullable().optional(),
+  inspectedAt: SafeText.min(1).max(40),
+  inspectorName: SafeText.max(200).nullable().optional(),
+  summary: SafeText.max(4000).nullable().optional(),
+  result: z.enum(["PASS", "MINOR_FINDINGS", "MAJOR_FINDINGS", "PROHIBITION"]),
+  projectId: SafeText.max(128).nullable().optional(),
+});
+
+/** Podizanje zabrane rada: razlog je obavezan, jer zabrana nestaje samo sa tragom ko i zašto. */
+export const HseInspectionLiftInput = z.object({
+  id: SafeText.min(1).max(128),
+  note: SafeText.min(5).max(1000),
+});
+export type HseInspectionInput = z.infer<typeof HseInspectionInput>;
+
+export const HseStats = z.object({
+  from: z.string(),
+  to: z.string(),
+  workedHours: z.number(),
+  incidents: z.number().int().nonnegative(),
+  bySeverity: z.record(z.string(), z.number()),
+  byKind: z.record(z.string(), z.number()),
+  nearMisses: z.number().int().nonnegative(),
+  lostDays: z.number().int().nonnegative(),
+  /** `(ozljede sa izgubljenim danima × 1 000 000) / sati`; `null` kad sati nema. */
+  ltifr: z.number().nullable(),
+  actions: z.object({ open: z.number(), overdue: z.number(), onTimeRate: z.number().nullable() }),
+  trainings: z.object({ count: z.number(), toolbox: z.number(), attendees: z.number() }),
+  activeProhibition: z.object({
+    id: z.string(), inspectedAt: z.string(), authorityName: z.string().nullable(),
+  }).nullable(),
+});
+export type HseStats = z.infer<typeof HseStats>;
+
+export const HseIncidentDetail = z.object({
+  incident: z.object({
+    id: z.string(),
+    projectId: z.string().nullable(),
+    projectName: z.string().nullable(),
+    kind: HseIncidentKind,
+    severity: HseIncidentSeverity,
+    status: HseIncidentStatus,
+    occurredAt: z.string(),
+    locationText: z.string().nullable(),
+    lat: z.string().nullable(),
+    lng: z.string().nullable(),
+    description: z.string(),
+    immediateAction: z.string().nullable(),
+    reporterWorkerId: z.string().nullable(),
+    reporterName: z.string().nullable(),
+    injuredWorkerId: z.string().nullable(),
+    injuredName: z.string().nullable(),
+    lostDays: z.number().int().nonnegative(),
+    reportableToAuthority: z.boolean(),
+    reportObligationId: z.string().nullable(),
+    authorityReportedAt: z.string().nullable(),
+    closedAt: z.string().nullable(),
+    createdAt: z.string(),
+  }),
+  updates: z.array(z.object({ id: z.string(), body: z.string(), authorName: z.string(), createdAt: z.string() })),
+  investigation: z.object({
+    id: z.string(), rootCause: z.string(), method: z.string(),
+    findings: z.string().nullable(), completedAt: z.string().nullable(),
+  }).nullable(),
+  actions: z.array(z.object({
+    id: z.string(), description: z.string(), dueOn: z.string(), status: z.enum(["OPEN", "DONE", "CANCELLED"]),
+    doneOn: z.string().nullable(), responsibleName: z.string().nullable(), overdue: z.boolean(),
+  })),
+  attachments: z.array(z.object({ id: z.string(), file_name: z.string(), content_type: z.string(), status: z.string() })),
+  /** `true` kad prijava tvrdi obavezu prijave, a veza na obavezu još ne postoji. */
+  needsReportObligation: z.boolean(),
+});
+export type HseIncidentDetail = z.infer<typeof HseIncidentDetail>;

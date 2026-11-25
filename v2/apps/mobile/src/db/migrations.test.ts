@@ -206,4 +206,77 @@ describe("versioned local SQLite migration", () => {
     );
     expect((await sqlite.getFirstAsync<{ count: number }>("SELECT count(*) AS count FROM outbox"))?.count).toBe(2);
   });
+
+  it("F9: podiže v2 outbox na v3 bez gubitka zapisa i prima dnevnik i HSE", async () => {
+    const sqlite = createNodeSqlite();
+    const { directory, raw } = sqlite;
+    tempDirs.push(directory);
+    /* Neslani zapis sa terena mora preživjeti obnovu `CHECK`-a — zato je u fiksturi PRIJE migracije. */
+    raw.exec(`
+      CREATE TABLE outbox (
+        company_id TEXT NOT NULL, user_id TEXT NOT NULL, local_id TEXT NOT NULL, worker_id TEXT,
+        entity_type TEXT NOT NULL CHECK (entity_type IN (
+          'workday', 'work_entry', 'machine_work_log', 'fuel_entry', 'haul',
+          'machine_daily_check', 'machine_fault', 'service_order_action'
+        )),
+        payload_json TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending'
+               CHECK (status IN ('pending', 'failed', 'sent', 'conflict', 'rejected')),
+        attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+        last_error TEXT, server_id TEXT, server_version INTEGER,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        PRIMARY KEY (company_id, user_id, local_id)
+      );
+      CREATE TABLE sync_cursors (
+        company_id TEXT NOT NULL, user_id TEXT NOT NULL, cursor TEXT NOT NULL,
+        cursor_floor TEXT NOT NULL, updated_at TEXT NOT NULL,
+        PRIMARY KEY (company_id, user_id)
+      );
+      CREATE TABLE sync_events (
+        company_id TEXT NOT NULL, user_id TEXT NOT NULL, event_id TEXT NOT NULL,
+        cursor_seq TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+        entity_version INTEGER NOT NULL CHECK (entity_version > 0),
+        payload_json TEXT, tombstone INTEGER NOT NULL CHECK (tombstone IN (0, 1)),
+        created_at TEXT NOT NULL, PRIMARY KEY (company_id, user_id, event_id)
+      );
+      CREATE TABLE foreman_workers_cache (
+        company_id TEXT NOT NULL, user_id TEXT NOT NULL, project_id TEXT NOT NULL,
+        work_date TEXT NOT NULL, worker_id TEXT NOT NULL, worker_name TEXT NOT NULL,
+        fetched_at TEXT NOT NULL,
+        PRIMARY KEY (company_id, user_id, project_id, work_date, worker_id)
+      );
+      CREATE TABLE active_account (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        company_id TEXT NOT NULL, user_id TEXT NOT NULL
+      );
+      INSERT INTO outbox
+        (company_id, user_id, local_id, worker_id, entity_type, payload_json, status, created_at, updated_at)
+        VALUES ('co1','u1','33333333-3333-4333-8333-333333333333', NULL, 'machine_fault',
+                '{"entityType":"machine_fault"}', 'pending', '2026-11-03T08:00:00Z', '2026-11-03T08:00:00Z');
+      PRAGMA user_version = 2;
+    `);
+
+    await migrateLocalDatabase(sqlite, async () => ({ name: "kopija.db", restore: async () => undefined, close: async () => undefined }));
+
+    expect((await sqlite.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))?.user_version)
+      .toBe(LOCAL_SCHEMA_VERSION);
+    expect((await sqlite.getFirstAsync<{ count: number }>("SELECT count(*) AS count FROM outbox"))?.count).toBe(1);
+
+    /* Pet F9 tipova prolazi kroz novi `CHECK` — dnevnik, količina i tri HSE zapisa. */
+    for (const [localId, entityType] of [
+      ["44444444-4444-4444-8444-444444444444", "site_diary"],
+      ["55555555-5555-4555-8555-555555555555", "site_diary_item"],
+      ["66666666-6666-4666-8666-666666666666", "hse_incident"],
+      ["77777777-7777-4777-8777-777777777777", "hse_action"],
+      ["88888888-8888-4888-8888-888888888888", "hse_training"],
+    ] as const) {
+      await sqlite.runAsync(
+        `INSERT INTO outbox
+           (company_id, user_id, local_id, entity_type, payload_json, status, created_at, updated_at)
+         VALUES ('co1','u1',?,?,?,'pending','2026-11-04T08:00:00Z','2026-11-04T08:00:00Z')`,
+        [localId, entityType, `{"entityType":"${entityType}"}`],
+      );
+    }
+    expect((await sqlite.getFirstAsync<{ count: number }>("SELECT count(*) AS count FROM outbox"))?.count).toBe(6);
+  });
 });

@@ -1,14 +1,16 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–8: završene** · **Tag `phase-8`** · **CI: zelen (run `45671009367`)**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–9: završene** · **Tag `phase-9`** · **CI: zelen (run `45671009367` za F8)**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. Faza 8 (Modul 9 — servis i održavanje mašina) je
-isporučena: puni životni ciklus naloga, preventivno održavanje po brojilu/datumu, zalihe kao
-append-only ledger (`SUM` kretnji, nikad `UPDATE`), garancija bez drugog troška, MTBF/MTTR i
-trošak održavanja po satu rada, odobrenje iznad praga firme, web radionica i offline mobilni
-ekran za mehaničara. Sljedeća je Faza 9 po `docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama:
-`docs/IZVJESTAJ-FAZA-*.md`.
+Moduli 1–12 zaključani u `docs/specs/`. Faza 9 (Modul 10 — dnevnik građenja i zaštita na radu) je
+isporučena: jedan dnevnik po `(projekt, dan)` sa automatskim sekcijama iz Modula 3/5, količine kao
+jedini izvor završenosti (BOQ uvećava `quantity_executed` u istoj transakciji), potpis pa
+zaključavanje pa revizija sa razlogom, PDF bez biblioteke uz `DRAFT_FORMAT` do potvrde obrasca;
+incidenti sa nepromjenjivim činjenicama i dopunama, istraga sa jednim uzrokom, mjere sa odgovornim
+i rokom, `PROHIBITION` zabrana rada sa obaveznim razlogom podizanja, obuke gdje je prisustvo
+POTPIS, i LTIFR iz stvarnih sati. Sljedeća je Faza 10 po `docs/IMPLEMENTATION_PLAN.md`.
+Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
 
 ## Šta je gotovo
 
@@ -71,6 +73,66 @@ ekran za mehaničara. Sljedeća je Faza 9 po `docs/IMPLEMENTATION_PLAN.md`. Izvj
 | 8.6 | UI: `/ured/servis` (red čekanja po prioritetu, filter „čekaju dijelove“, radnje stanja u listi), `/ured/servis/[id]` (sati, dijelovi, tok, trošak — `total_cost` je prikaz, nikad unos), `/ured/servis/planovi`, `/ured/dijelovi` (stanje bez polja za unos), tab „Održavanje“ na `/ured/masine/[id]`, kartica „Servis“ na `/pregled` (isti `dueMaintenancePlans` kao worker) | ✅ |
 | 8.7 | Mobilno: `/servisni-nalozi` za mehaničara — offline-first kroz R4 outbox (`service_order_action`), jedna glavna radnja iz stanja naloga, sati/dio u redu čekanja; `outbox`/`sync_events` podignuti na `user_version = 2` sa prenosom redova bez gubitka; mete ≥ 56 dp | ✅ |
 | 8.8 | Provjere: `f8-service-orders` (12) + `f8-service-sync` (6) + `f8-isolation` (3) protiv prave baze, `service-order-sync` (8) i `servis-model` (13) domenski, `migrations` (5) za v2 prenos; `pnpm test` **1 221 prošao** (web 691, domain 296, mobile 118), typecheck 6/6, lint čist, `db:types:check` sinhron, `check-tenant-sql` 96/96, matrix parity 0 grešaka, preflight SQL 001/002 prolazi, `check-cycles` 0 ciklusa | ✅ |
+
+| 9.1 | Baza: 12 novih tabela — `site_diaries` (`DRAFT → SIGNED → LOCKED`, unique `(company, project, diary_date)`, `auto_snapshot`, `version`), `site_diary_items` (`MANUAL`/`HAUL`/`BOQ`), `site_diary_delays` (`hours ≤ 24`), `site_diary_revisions`, `site_diary_templates` (`format_confirmed_at`), `hse_incidents` (+`client_local_id`, `NEAR_MISS` bez izgubljenih dana), `hse_incident_updates`, `hse_investigations`, `hse_actions`, `hse_inspections` (+`prohibition_lifted_at`), `hse_trainings` + prisustvo, `*_attachments`; trigeri `site_diaries_locked_guard` (potpis i zaključavanje), `hse_incidents_facts_guard`, `site_diary_revisions_immutable`, `hse_incident_updates_immutable`, delete-guard — **50 migracija, 119 tabela (110 tenant)** | ✅ |
+| 9.2 | Domena (`site-diary-hse.ts`): prelazi `DRAFT→SIGNED→LOCKED`, `validDiarySignature`, `unsignedDiaryIsOverdue`, zastoji (zbir + `≤ 24 h`), `canCloseIncident` (istraga + nijedna otvorena mjera), `ltifr` (`ozljede × 10⁶ / sati`, `null` bez sati), `nearMissCount` odvojeno, `hseOnTimeRate`, `isActiveProhibition`, `validToolboxInput` — **20 testova**; `r6-diary-hse-sync.ts` — offline ugovor + 5 validatora | ✅ |
+| 9.3 | API: **30 ruta** — dnevnik (lista/unos/detalj/izmjena/potpis/zaključavanje/revizija/stavke/zastoji/PDF), šabloni, incidenti (lista/prijava/detalj/dopuna/istraga/zatvaranje), mjere (lista/nova/završi/otkaži), obuke + prisustvo, inspekcije + podizanje zabrane, statistika, HSE PDF; 5 dozvola (`diary.*`, `hse.*`), 8 novih kodova (`DIARY_ALREADY_LOCKED`…), OpenAPI **241 putanja** | ✅ |
+| 9.4 | Servisi: `diary-service` (auto-sekcije, sekcijsko spajanje u sync-u, `baseVersion` sukob, revizija sa sadržajem PRIJE izmjene), `diary-template-service`, `hse-service` (+`*Tx` jezgra za sync), `diary-pdf-service`/`hse-report-pdf-service` (PDF bez biblioteke), `diaryAttention`/`hseAttention` za Pregled | ✅ |
+| 9.5 | UI: `/ured/dnevnik` (lista + traka nepotpisanih), `/ured/dnevnik/[id]` (auto sekcije read-only, ručni unos, količine, zastoji, potpis/zaključavanje/revizija, PDF sa `DRAFT_FORMAT`), `/ured/hse` (zabrana rada prva, mjere koje kasne, statistika), `/ured/hse/[id]` (činjenice bez forme za izmjenu, dopune, istraga, mjere, zatvaranje sa objašnjenjem šta nedostaje), `/ured/hse/inspekcije` (lift zabrane), `/ured/hse/obuke` (prisustvo kao potpis); kartica „Zaštita na radu“ na `/pregled`; navigacija: „Dnevnik građenja“ i „Zaštita na radu“ u grupi Evidencija | ✅ |
+| 9.6 | Mobilno: `LOCAL_SCHEMA_VERSION = 3` — `outbox`/`sync_events` primaju pet F9 tipova (`site_diary`, `site_diary_item`, `hse_incident`, `hse_action`, `hse_training`) uz prenos redova u JEDNOJ transakciji; `queueSiteDiary`/`queueSiteDiaryItem`/`queueHseIncident`/`queueHseAction`/`queueHseTraining` sa validacijom PRIJE upisa; `baseVersion` je obavezan (bez njega nema smislenog sukoba) | ✅ |
+| 9.7 | Provjere: `f9-diary-hse` (13) + `f9-sync` (8) protiv prave baze, `safe-text` sweep proširen na F9 šeme, `nul-guard` HANDLERS pokriva svih 30 ruta, `migrations` (6) za v3, `r4-outbox` (7) za pet tipova i odbijanje prije upisa, `rbac` tačna lista radnikovih dozvola; `pnpm test` **1 265 prošlo** (web 712, domain 316, mobile 111, db 70, contracts 21, worker 25), typecheck 6/6, lint čist, `check-cycles` 0, OpenAPI ažuran, `check-tenant-sql` 110/110 | ✅ |
+
+## Faza 9 — odluke koje se ne smiju izgubiti
+
+- **Dnevnik je jedan po `(projekt, dan)`, i to u BAZI.** Ponovni `POST` ne pravi drugi red nego
+  vraća `DIARY_EXISTS` sa ID-em postojećeg dana (status 200) — šef nastavlja isti dan. Duplikat po
+  šefu bi značio dva PDF-a za isti dan, pa inspektor dobija dva dokumenta sa različitim brojevima.
+- **Automatske sekcije se ne prepisuju ručno.** Radnici, sati, mašine, ture i kvarovi dolaze iz
+  Modula 3/5 i na ekranu su read-only; ispravka se radi u evidenciji, a dnevnik je pokazuje.
+- **Potpis je granica, ne ukras.** Triger `site_diaries_locked_guard` brani izmjenu sadržaja i u
+  `SIGNED` i u `LOCKED`; jedini dozvoljen put je RED u `site_diary_revisions` sa
+  `base_version = OLD.version`. Dokaz revizije je taj red (sa sadržajem PRIJE izmjene), a ne
+  parametar pozivaoca — `SET LOCAL` bi bio zaobilaz.
+- **Revizija čuva sadržaj prije izmjene, ne samo razlog.** Bez starog sadržaja revizija ne
+  dokazuje šta se promijenilo; bez razloga (≥10 znakova) je samo trag da se nešto mijenjalo.
+- **Zastoj > 24 h je greška unosa, ne zastoj.** Provjera je u servisu (poruka čovjeku) I u bazi
+  (`CHECK hours <= 24`). Ranije je `CHECK` vraćao 500 — nađeno F9 testom.
+- **Činjenice incidenta se ne prepisuju — ni kroz rutu, ni kroz SQL.** Nema `PATCH` rute za opis;
+  `hse_incidents_facts_guard` odbija `UPDATE` vrste, težine, vremena, opisa i povrijeđenog. Dopuna
+  je NOVA izjava u `hse_incident_updates` (dva svjedoka, ne neslaganje verzija).
+- **Incident nema `baseVersion` i nikad nije konflikt.** Nema šta da se pregazi; isti klijentski ID
+  daje `DUPLICATE`, a ne drugu prijavu. Dva telefona bez signala tako ne prave dva incidenta.
+- **`HSE_REPORT` obaveza nastaje u ISTOJ transakciji kao prijava.** Da nastaje kasnije (u workeru),
+  prijava bi mogla postojati bez zakonskog roka, a rok bez prijave. Rok je `occurredAt + 3 dana`.
+- **Mjera bez odgovornog ili bez roka nije mjera.** Odbija je domena, servis, ruta (422 sa
+  `HSE_ACTION_RESPONSIBLE_REQUIRED` / `HSE_ACTION_DUE_REQUIRED`) i baza. `OVERDUE` se **računa**
+  pri čitanju, nikad ne čuva — upisano stanje bi u ponedjeljak lagalo o petku.
+- **`NEAR_MISS` ne nosi izgubljene dane ni povrijeđenog.** Provjera je u domeni i u ruti: takav
+  zapis je „accident sa pogrešnom etiketom“ i statistika bi lagala na obje strane. U statistici se
+  `NEAR_MISS` broji **odvojeno**.
+- **`PROHIBITION` zaustavlja gradilište.** Obavještenje ide odmah vlasniku (`CRITICAL`) i nalaz je
+  prvi na ekranu; zabrana prestaje SAMO kroz `prohibition_lifted_at` sa razlogom ≥5 znakova. Nema
+  brisanja nalaza.
+- **Prisustvo na obuci je POTPIS, ne checkbox.** `signature_name` + `signed_at` po radniku, upisuje
+  ih server uz audit. Isti radnik dvaput je greška unosa (odbijeno u domeni), a toolbox bez teme
+  nije obuka — to je sastanak bez zapisa.
+- **LTIFR bez sati je `null`, ne nula.** Nula bi tvrdila „nema ozljeda na milion sati“; `null`
+  kaže da imenilac ne postoji.
+- **PDF ne tvrdi da je zakonski obrazac dok ga vlasnik nije potvrdio.** Svaki izvoz nosi
+  `DRAFT_FORMAT` do `format_confirmed_at`; potvrda ide SAMO kroz `confirmFormat`, jer je to jedina
+  tačka gdje sistem tvrdi da je obrazac potvrđen.
+- **Telefon šalje NAMJERU, ne izračun.** `site_diary_item` sa `BOQ` stavkom uvećava
+  `quantity_executed` na serveru u istoj transakciji — napredak projekta ima jedan izvor, a dva
+  telefona ne mogu dati dva procenta završenosti.
+- **`baseVersion` je ono što je šef VIDIO.** Starija verzija je `DIARY_VERSION_CONFLICT` sa
+  obavještenjem šefu, a ne tihi prepis tuđeg teksta. Sekcijsko spajanje (`weather`, `temperatureC`,
+  `workedHours`, `description`, `visitors`, `events`) popunjava samo PRAZNO polje.
+- **Radnik ima `hse.view` i `hse.report`.** Prijava opasnosti nije privilegija: bez nje se
+  `NEAR_MISS` ne prijavljuje, a statistika počinje lagati. `hse.investigate` (istraga, mjere,
+  zatvaranje) ostaje šefu/PM-u/vlasniku.
+- **`meter_start` ne postoji.** `machine_work_logs` čuva samo završno očitanje (`meter_end`, R5.1),
+  pa je raspon brojila u dnevniku najmanje→najveće očitanje DANA. Ranije je upit bacao
+  `column mwl.meter_start does not exist` — nađeno F9 integracionim testom.
 
 ## Faza 8 — odluke koje se ne smiju izgubiti
 
