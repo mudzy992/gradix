@@ -160,17 +160,23 @@ test.describe("auth/nav smoke", { tag: ["@smoke"] }, () => {
     await expect(page.getByRole("button", { name: "+ Nova kategorija" })).toHaveCount(0);
   });
 
-  test("računovođa: stiže do Obračun sati i vidi Preuzmi CSV", async ({ page }) => {
+  /*
+   * F6: „Obračun sati“ je postao „Obračun“ — mjesečni obračun sa iznosima. Izvoz sirovih sati
+   * (bivši ekran sa „Preuzmi CSV“) živi na `/ured/obracun-sati/sati`.
+   */
+  test("računovođa: stiže do Obračuna i do izvoza sirovih sati", async ({ page }) => {
     await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Obračun sati");
+    expect(await navLabels(page)).toContain("Obračun");
     await page.goto("/ured/obracun-sati");
-    await expect(page.getByRole("heading", { name: "Obračun sati" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Obračun" })).toBeVisible();
+    await page.goto("/ured/obracun-sati/sati");
+    await expect(page.getByRole("heading", { name: "Izvoz sirovih sati" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Preuzmi CSV" })).toBeVisible();
   });
 
-  test("radnik: ne vidi Obračun sati u meniju", async ({ page }) => {
+  test("radnik: ne vidi Obračun u meniju (iznose ne vidi)", async ({ page }) => {
     await loginUi(page, E2E_USERS.worker);
-    expect(await navLabels(page)).not.toContain("Obračun sati");
+    expect(await navLabels(page)).not.toContain("Obračun");
   });
 
   test("šef: vidi Radnike i Radne dane, ne vidi Korisnike", async ({ page }) => {

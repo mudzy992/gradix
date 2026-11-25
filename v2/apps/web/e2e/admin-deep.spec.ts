@@ -29,12 +29,15 @@ test.describe("admin deep", { tag: ["@deep", "@deep-admin"] }, () => {
     }
   });
 
-  test("računovođa: trošak mašina + obračun sati dostupni", async ({ page }) => {
+  test("računovođa: trošak mašina + obračun dostupni", async ({ page }) => {
     await loginUi(page, E2E_USERS.accountant);
     await page.goto("/ured/trosak-masina");
     await expectHeading(page, "Trošak mašina");
+    // F6: mjesečni obračun (iznosi) i izvoz sirovih sati su dva ekrana.
     await page.goto("/ured/obracun-sati");
-    await expectHeading(page, "Obračun sati");
+    await expectHeading(page, "Obračun");
+    await page.goto("/ured/obracun-sati/sati");
+    await expectHeading(page, "Izvoz sirovih sati");
     await expect(page.getByRole("button", { name: "Preuzmi CSV" })).toBeVisible();
   });
 });

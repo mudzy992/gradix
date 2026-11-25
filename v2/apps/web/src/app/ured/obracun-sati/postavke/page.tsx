@@ -37,8 +37,10 @@ export default async function PayrollSettingsPage() {
         </Link>
       </div>
       <PageHeader
-        title="Komponente i parametri obračuna"
-        subtitle="Šifarnik komponenti firme i stope sa datumom važenja. Nijedna stopa nije ugrađena u program."
+        /* Naslov je ISTI kao stavka u meniju (`nav.ts`) — E2E @smoke provjerava da dozvoljena
+           ruta pokaže naslov svoje stavke; dva naziva za isti ekran padaju na tom testu. */
+        title="Komponente obračuna"
+        subtitle="Šifarnik komponenti firme i parametri sa datumom važenja. Nijedna stopa nije ugrađena u program."
       />
       <PayrollSettingsClient canManage={can(auth.ctx.roles, "payroll.manage")} />
     </main>
