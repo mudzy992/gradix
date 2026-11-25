@@ -130250,6 +130250,3457 @@
         }
       }
     },
+    "/api/tenders/{id}/team": {
+      "get": {
+        "operationId": "get_tenders_id_team",
+        "summary": "Predloženi tim i faze tendera (tenders.view).",
+        "tags": [
+          "tenders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "team": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "workerId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "PM",
+                                  "SUPERVISOR",
+                                  "MEMBER"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "workerId",
+                              "name",
+                              "role"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "phases": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "weight": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "plannedStart": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "plannedEnd": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "weight",
+                              "plannedStart",
+                              "plannedEnd"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "team",
+                        "phases"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `tenders.view`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "post_tenders_id_team",
+        "summary": "Dodavanje člana u predloženi tim (tenders.manage).",
+        "tags": [
+          "tenders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string"
+                        },
+                        "workerId": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "outcome"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `tenders.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workerId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "PM",
+                      "SUPERVISOR",
+                      "MEMBER"
+                    ]
+                  }
+                },
+                "required": [
+                  "workerId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenders/{id}/team/{workerId}": {
+      "delete": {
+        "operationId": "delete_tenders_id_team_workerId",
+        "summary": "Uklanjanje člana iz predloženog tima (tenders.manage).",
+        "tags": [
+          "tenders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string",
+                          "enum": [
+                            "OK",
+                            "VALIDATION_FAILED",
+                            "FORBIDDEN",
+                            "CONFLICT",
+                            "NOT_FOUND"
+                          ]
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "projectId": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "outcome"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `tenders.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/tenders/{id}/phases": {
+      "post": {
+        "operationId": "post_tenders_id_phases",
+        "summary": "Nova faza tendera koja se prenosi na projekat (tenders.manage).",
+        "tags": [
+          "tenders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uspjeh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "outcome"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Greška",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHENTICATED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "AUTH_INVALID_CREDENTIALS",
+                            "AUTH_COMPANY_INACTIVE",
+                            "AUTH_PASSWORD_CHANGE_REQUIRED",
+                            "AUTH_REFRESH_INVALID",
+                            "AUTH_REFRESH_REUSE",
+                            "SYNC_BATCH_TOO_LARGE",
+                            "SYNC_BODY_TOO_LARGE",
+                            "SYNC_ITEM_TOO_LARGE",
+                            "SYNC_LOCAL_ID_INVALID",
+                            "SYNC_ITEM_INVALID",
+                            "SYNC_CURSOR_INVALID",
+                            "SYNC_CURSOR_EXPIRED",
+                            "SYNC_LOCAL_ID_REUSED",
+                            "SYNC_ITEM_REJECTED",
+                            "AUTH_PASSWORD_WEAK",
+                            "AUTH_PASSWORD_WRONG",
+                            "LINK_INVALID",
+                            "USERS_TARGET_PROTECTED",
+                            "AUTH_2FA_REQUIRED",
+                            "AUTH_2FA_INVALID",
+                            "AUTH_2FA_ENROLLMENT_REQUIRED",
+                            "AUTH_ACCOUNT_LOCKED",
+                            "AUTH_PASSWORD_REUSED",
+                            "AUTH_PASSWORD_EXPIRED",
+                            "PLATFORM_FORBIDDEN",
+                            "SUPPORT_ACCESS_EXPIRED",
+                            "OBLIGATION_BLOCKED",
+                            "OBLIGATION_ATTACHMENT_REQUIRED",
+                            "OBLIGATION_REVIEW_REQUIRED",
+                            "OBLIGATION_REQUIREMENT_EXISTS",
+                            "OBLIGATION_IMPORT_INVALID",
+                            "WORKDAY_ALREADY_OPEN",
+                            "WORKDAY_FORGOTTEN",
+                            "WORKDAY_LOCKED",
+                            "WORKER_SENSITIVE_FORBIDDEN",
+                            "WORKER_HAS_ACTIVE_ISSUANCES",
+                            "RATE_OVERLAP",
+                            "MACHINE_DOUBLE_BOOKED",
+                            "FUEL_DEVIATION_EXPLANATION_REQUIRED",
+                            "COST_RATE_MANUAL_OVERRIDE",
+                            "BUDGET_REVISION_CONFLICT",
+                            "PROJECT_CLOSED",
+                            "RATE_MISSING",
+                            "PARAMETER_MISSING",
+                            "PERIOD_NOT_READY",
+                            "SELF_APPROVAL_FORBIDDEN",
+                            "PERIOD_LOCKED_CORRECTION",
+                            "NEGATIVE_NET_FORBIDDEN",
+                            "PAYROLL_ALREADY_LOCKED",
+                            "PAYMENT_FORMAT_UNSUPPORTED",
+                            "COST_ALREADY_POSTED",
+                            "COST_REVERSAL_REASON_REQUIRED",
+                            "PHASE_WEIGHT_REQUIRED",
+                            "PROJECT_CLOSE_CHECKLIST_INCOMPLETE",
+                            "COST_ENTRY_IMMUTABLE",
+                            "COST_ENTRY_DELETE_FORBIDDEN",
+                            "TENDER_CHECKLIST_INCOMPLETE",
+                            "TENDER_DEADLINE_REQUIRED",
+                            "TENDER_DECISION_REQUIRED",
+                            "TENDER_OUTCOME_REASON_REQUIRED",
+                            "TENDER_PRICE_APPROVAL_REQUIRED",
+                            "TENDER_REFERENCE_TAKEN",
+                            "TENDER_INVALID_STATUS",
+                            "ALREADY_CONVERTED"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Traži dozvolu `tenders.manage`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "weight": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "plannedStart": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "plannedEnd": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/machine-cost-rates": {
       "get": {
         "operationId": "get_machine-cost-rates",

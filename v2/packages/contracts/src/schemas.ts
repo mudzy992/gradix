@@ -2132,9 +2132,49 @@ export const TenderPerformance = z.object({
 export type TenderPerformance = z.infer<typeof TenderPerformance>;
 
 export const TenderCopyInput = z.object({
-  copyFromTenderId: z.string().min(1),
+  copyFromTenderId: SafeText.min(1),
 }).strict();
 export type TenderCopyInput = z.infer<typeof TenderCopyInput>;
+
+/* --- predloženi tim i faze tendera (§1.6/22.6) --- */
+
+export const TenderTeamMemberRow = z.object({
+  workerId: z.string(),
+  name: z.string(),
+  role: z.enum(["PM", "SUPERVISOR", "MEMBER"]),
+});
+export type TenderTeamMemberRow = z.infer<typeof TenderTeamMemberRow>;
+
+export const TenderTeamInput = z.object({
+  workerId: SafeText.min(1).max(64),
+  role: z.enum(["PM", "SUPERVISOR", "MEMBER"]).optional(),
+}).strict();
+export type TenderTeamInput = z.infer<typeof TenderTeamInput>;
+
+export const TenderPhaseRow = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  weight: z.number().int(),
+  plannedStart: z.string().nullable(),
+  plannedEnd: z.string().nullable(),
+});
+export type TenderPhaseRow = z.infer<typeof TenderPhaseRow>;
+
+export const TenderTeamResponse = z.object({
+  team: z.array(TenderTeamMemberRow),
+  phases: z.array(TenderPhaseRow),
+});
+export type TenderTeamResponse = z.infer<typeof TenderTeamResponse>;
+
+export const TenderPhaseInput = z.object({
+  code: SafeText.min(1).max(20),
+  name: SafeText.min(1).max(200),
+  weight: z.number().int().min(1).max(1000).optional(),
+  plannedStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  plannedEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+}).strict();
+export type TenderPhaseInput = z.infer<typeof TenderPhaseInput>;
 
 export const TenderAttachment = z.object({
   id: z.string(),
