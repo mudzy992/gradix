@@ -191,14 +191,14 @@ export interface CostCategories {
   code: string;
   company_id: string;
   created_at: Generated<Timestamp>;
-  created_by: string;
+  created_by: string | null;
   default_for_source_type: string | null;
   id: string;
   is_active: Generated<boolean>;
   name: string;
   sort_order: Generated<number>;
   updated_at: Generated<Timestamp>;
-  updated_by: string;
+  updated_by: string | null;
 }
 
 export interface CostEntries {
