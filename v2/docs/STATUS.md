@@ -41,6 +41,7 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEM
 | 5.3 | API: **19 ruta** — faze i zavisnosti, napredak, profitabilnost, ledger troška, budžet, predmjer, aneksi, zatvaranje, zadaci, kategorije, prilozi projekta; `+22` audit akcije; OpenAPI **169 putanja / 222 metode** | ✅ |
 | 5.4 | Knjiženje troška na **jednom mjestu** (`bookFuelEntryCost`, `bookMachineWorkLogCost`, `bookHaulCost`, `postCost`, `settlePendingCost`, `reverseCost`, `reverseSourceCost`); **R4 sync sada knjiži** (gorivo, sat, tura) — ranije je upisivao red bez troška | ✅ |
 | 5.5 | UI: `/ured/projekti` (marža, rizičnost) + `/ured/projekti/[id]` sa 8 tabova, `/ured/zadaci`, `/ured/postavke/kategorije-troska`, kartica „Rizični projekti“ na `/pregled`; mobilni `/moji-zadaci` i `/trosak` (foto + `sha256`) | ✅ |
+| K0 | Šef gradilišta: dozvola **`tasks.update_status`** (status samo na svojim projektima, komentari bez `projects.manage`); **timer → `FOREMAN_CONFIRMED` sada knjiži trošak rada** i u grupnoj potvrdi; `PROJECT_CLOSED` na stornu je 422, ne 500; `FINISHED` guard ostaje uz `reopen_reason` | ✅ |
 | 5.6 | Worker `budget.thresholds` (`*/15 * * * *`, 80/100 %, dedupe 3 sloja, PM + OWNER); provjere: `pnpm test` 639 prošlo, typecheck 6/6, lint čist, `next build`, OpenAPI ažuran, `check-tenant-sql` 769 upita ✓ | ✅ |
 
 ## Faza 4 — odluke koje se ne smiju izgubiti
@@ -78,6 +79,22 @@ Moduli 1–12 zaključani u `docs/specs/`. Sljedeće: **Faza 6** po `docs/IMPLEM
   (`UNIQUE (company_id, fault_id)`), jer se status mijenja na više mjesta.
 - **Kalendar: „slobodno" je odsustvo reda.** Nema posebnog reda za slobodno; `to_date IS NULL` je
   otvorena dodjela. Tako kalendar ne može tvrditi nešto što baza ne zna.
+
+## Korak 0 (prije Faze 6) — šef gradilišta, timer i strogi `FINISHED`
+
+Tri odvojena nalaza; sva tri su bila **tiha** (ekran zelen, podatak pogrešan), pa ih čuvaju testovi.
+
+| # | Nalaz | Popravka |
+|---|---|---|
+| 1 | `SITE_SUPERVISOR` nije mogao potvrditi status zadatka (`PATCH /api/tasks/{id}` je tražio `projects.manage`, koji šef nema). Davanje pune dozvole bilo bi pogrešno: šef bi mogao preusmjeriti tuđi zadatak. | Nova dozvola **`tasks.update_status`** [OWNER, ADMIN, PM, SITE_SUPERVISOR]. Ruta bira dozvolu **prema sadržaju zahtjeva**: samo `status` → `tasks.update_status`, bilo šta drugo → `projects.manage`. Servis (`saveTask`) ponavlja provjeru (odbija `title`/`projectId`/`phaseId`/`dueOn`/`priority`/`assignee*` → `FORBIDDEN`) i provjerava opseg preko `visibleProjectIds` — šef mijenja status **samo na projektima na koje je raspoređen**; zadatak bez projekta ostaje u redu ureda. |
+| 2 | **Grupna potvrda šefa (`bulkConfirm`) nije knjižila trošak rada** — samo je mijenjala status dana. Tok mobilnog timera ide baš kroz nju, pa su sati potvrđeni „jednim klikom“ ostajali bez troška, a dan je bio zelen. | `bulkConfirm` sada zove `bookWorkdayCost`, isto kao pojedinačna potvrda. Idempotentno: `PENDING` bez satnice ostaje `PENDING` (iznos `NULL`, ne nula), ponovni poziv ne pravi drugi red. |
+| 3 | Storno na `FINISHED` projektu vraćao je **500** (guard u bazi baca `PROJECT_CLOSED`, ruta ga nije mapirala). | Ruta `POST /api/costs/{id}/reverse` mapira `PROJECT_CLOSED` → **422** sa porukom „storno traži ponovno otvaranje uz razlog“. Guard se **zadržava**: nema storna ni novog knjiženja dok se projekat eksplicitno ne otvori (`reopen_reason` ≥10 znakova, `project.reopened` u auditu). |
+
+**Komentari i prilozi** ostaju na `projects.view` — komentar je append-only zapis, ne izmjena
+zadatka; šef ga time ima bez `projects.manage`.
+
+Testovi: `task-service.test.ts` (+4), `workday-timer-cost.integration.test.ts` (3, prava baza),
+`project-close-storno.integration.test.ts` (2, prava baza).
 
 ## Korak 0 — zašto je CI bio crven i šta je popravljeno
 
@@ -117,7 +134,8 @@ Dva nezavisna uzroka; oba su bila **prvi** pad u nizu, pa su krila sve naredne k
 migracije       46          tabele          83 (74 tenant)
 OpenAPI         169 putanja (222 metode)
 pnpm test       639 prošlo, 338 preskočeno bez baze (web 277 + domain 226 + mobile 93 + contracts 21 + worker 22)
-                SA bazom (REQUIRE_DB_TESTS=1): web 615/615, 104/104 fajla — nula preskočenih
+                SA bazom (REQUIRE_DB_TESTS=1): **1072 testa** — web 627/627 (107/107 fajlova),
+                domain 226, mobile 103, contracts 21, worker 25, db 70 — nula preskočenih
 pnpm lint       6/6 · pnpm typecheck 6/6 · next build ✓
 check-tenant-sql 769 upita ✓ · check-matrix-parity 0 grešaka · check-application-coverage 0 grešaka
 a11y            axe (WCAG 2.1 AA) u svakom novom UI testu — bez serious/critical

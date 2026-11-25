@@ -13,9 +13,23 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, { params }: Params): Promise<Response> {
   try {
-    const guardResult = await guard(request, "projects.manage");
+    /*
+     * Dozvola se bira prema tome ŠTA zahtjev mijenja (F5/Korak 0):
+     *   - samo `status`  → `tasks.update_status` (šef gradilišta na svojim projektima),
+     *   - bilo šta drugo → `projects.manage` (ured).
+     *
+     * Servis ponavlja provjeru i ograničava polja — ruta ne smije biti jedina kapija, jer je
+     * zovu i testovi i mobilni klijent.
+     */
+    const body = await request.json().catch(() => null);
+    const statusOnlyRequest =
+      typeof body === "object" && body !== null && Object.keys(body).every((key) => key === "status");
+    const guardResult = await guard(
+      request,
+      statusOnlyRequest ? "tasks.update_status" : "projects.manage",
+    );
     if (!guardResult.ok) return guardResult.response;
-    const parsed = ProjectTaskPatch.safeParse(await request.json().catch(() => null));
+    const parsed = ProjectTaskPatch.safeParse(body);
     if (!parsed.success) return fail("VALIDATION_FAILED", "Neispravna izmjena zadatka.");
     const { id } = await params;
     const result = await saveTask(
@@ -24,6 +38,8 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       { ...parsed.data, id },
       true,

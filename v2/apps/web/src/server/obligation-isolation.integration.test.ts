@@ -84,7 +84,9 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
     await admin.query(
       `INSERT INTO public.obligation_types (id, company_id, code, label, entity_kind)
        VALUES ($1, 'cmp_demo', $2, 'Ljekarski demo firme', 'WORKER')`,
-      [demoWorkerType, `ISOW${STAMP.slice(-5)}`.toUpperCase()],
+      // Cijeli STAMP, ne zadnjih 5 znakova: base36 timestamp se u zadnjih 5 znakova mijenja
+      // tek svakih ~16 h, pa bi ponovljeni run u istom danu pao na `company_code_unique`.
+      [demoWorkerType, `ISOW${STAMP}`.toUpperCase()],
     );
     await admin.query(
       `INSERT INTO public.obligation_types (id, company_id, code, label, entity_kind)

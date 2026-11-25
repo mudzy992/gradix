@@ -8,7 +8,7 @@
  * ovdje se vidi jer lažni klijent broji parametre i baca istu grešku kao Postgres.
  */
 import { describe, expect, it } from "vitest";
-import { listTasks } from "./task-service";
+import { listTasks, saveTask } from "./task-service";
 
 type Call = { sql: string; params: unknown[] };
 
@@ -75,5 +75,115 @@ describe("zadaci — parametri liste", () => {
     expect(listCall.sql).toContain("t.due_on < $3::date");
     expect(listCall.sql).toContain("t.assignee_user_id = $4");
     expect(listCall.params).toEqual(["cmp_test", "prj_1", "2026-11-24", "usr_test"]);
+  });
+});
+
+/**
+ * F5/Korak 0: `SITE_SUPERVISOR` mijenja STATUS zadatka, ali NE upravlja projektima.
+ *
+ * Dvije stvari se lako pokvare tiho: (a) šef dobije `projects.manage` „usput“, pa može
+ * preusmjeriti tuđi zadatak; (b) servis prihvati cijeli patch jer ga je ruta već propustila.
+ * Testovi zato gledaju SAM SERVIS — on je posljednja kapija i njega zovu i testovi i mobilni.
+ */
+describe("zadaci — šef gradilišta mijenja samo status", () => {
+  const SUPERVISOR = {
+    userId: "usr_sef",
+    companyId: "cmp_test",
+    roles: ["SITE_SUPERVISOR"] as never,
+    scope: "PROJECTS" as const,
+    projectIds: ["prj_moj"],
+  };
+
+  it("odbija izmjenu naslova bez ijednog SQL upita", async () => {
+    const calls: Call[] = [];
+    const result = await saveTask(
+      pool(calls),
+      SUPERVISOR,
+      { id: "tsk_1", title: "Preusmjeren zadatak" },
+      true,
+    );
+    expect(result).toMatchObject({ code: "FORBIDDEN" });
+    expect((result as { message: string }).message).toContain("samo status");
+    // Nijedan upit: odbijanje je PRIJE transakcije, pa se ništa ne zaključava ni ne piše.
+    expect(calls).toHaveLength(0);
+  });
+
+  it("odbija kreiranje novog zadatka", async () => {
+    const calls: Call[] = [];
+    const result = await saveTask(
+      pool(calls),
+      SUPERVISOR,
+      { title: "Novi zadatak", projectId: "prj_moj" },
+      false,
+    );
+    expect(result).toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("dodjela na tuđi projekat je odbijena i poslije čitanja zadatka", async () => {
+    const calls: Call[] = [];
+    const client = {
+      query: async (sql: string, params: unknown[] = []) => {
+        calls.push({ sql, params });
+        // `saveTask` prvo čita poslovni datum firme — bez njega servis baca, ne vraća grešku.
+        if (sql.includes("clock_timestamp() AT TIME ZONE timezone")) {
+          return { rows: [{ today: "2026-11-24" }], rowCount: 1 };
+        }
+        if (sql.includes("FOR UPDATE")) {
+          return { rows: [{ status: "OPEN", project_id: "prj_tudji" }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => undefined,
+    };
+    const limitedPool = { connect: async () => client } as never;
+    const result = await saveTask(limitedPool, SUPERVISOR, { id: "tsk_1", status: "DONE" }, true);
+    expect(result).toMatchObject({ code: "FORBIDDEN" });
+    expect((result as { message: string }).message).toContain("raspoređeni");
+    // Status NIJE upisan: provjera opsega ide prije `UPDATE`.
+    expect(calls.some((call) => call.sql.includes("UPDATE public.project_tasks"))).toBe(false);
+  });
+
+  it("na svom projektu status prolazi, a opseg se čita iz zadatka", async () => {
+    const calls: Call[] = [];
+    const client = {
+      query: async (sql: string, params: unknown[] = []) => {
+        calls.push({ sql, params });
+        // `saveTask` prvo čita poslovni datum firme — bez njega servis baca, ne vraća grešku.
+        if (sql.includes("clock_timestamp() AT TIME ZONE timezone")) {
+          return { rows: [{ today: "2026-11-24" }], rowCount: 1 };
+        }
+        if (sql.includes("FOR UPDATE")) {
+          return { rows: [{ status: "OPEN", project_id: "prj_moj" }], rowCount: 1 };
+        }
+        if (sql.includes("UPDATE public.project_tasks")) {
+          return { rows: [{ id: "tsk_1" }], rowCount: 1 };
+        }
+        // Završno čitanje reda (`TASK_SELECT`) — servis vraća zadatak, ne broj pogođenih.
+        if (sql.includes("FROM public.project_tasks t")) {
+          return {
+            rows: [
+              {
+                id: "tsk_1",
+                project_id: "prj_moj",
+                title: "Zadatak",
+                priority: "NORMAL",
+                status: "DONE",
+                due_on: null,
+                completed_at: "2026-11-24T08:00:00Z",
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => undefined,
+    };
+    const limitedPool = { connect: async () => client } as never;
+    const result = await saveTask(limitedPool, SUPERVISOR, { id: "tsk_1", status: "DONE" }, true);
+    // Nije `FORBIDDEN` — servis je prošao kapiju i pokušao upis (oblik reda nije tema ovog testa).
+    expect(result).not.toMatchObject({ code: "FORBIDDEN" });
+    const update = calls.find((call) => call.sql.includes("UPDATE public.project_tasks"));
+    expect(update).toBeDefined();
   });
 });

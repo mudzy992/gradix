@@ -46,6 +46,18 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
     }
     return ok(result);
   } catch (error) {
+    /*
+     * Guard u bazi odbija novi red na `FINISHED` projektu sa `PROJECT_CLOSED` (P0001). To je
+     * STANJE, ne pad: bez ovog mapiranja korisnik dobija 500 i pomisli da je aplikacija pokvarena,
+     * a poruka „Projekat je zatvoren; knjiženje traži ponovno otvaranje uz razlog.“ je baš ono što
+     * mu treba. Isti obrazac kao `errorFromDb` u ostalim rutama.
+     */
+    if (error instanceof Error && error.message.includes("PROJECT_CLOSED")) {
+      return fail(
+        "PROJECT_CLOSED",
+        "Projekat je zatvoren; storno traži ponovno otvaranje uz razlog.",
+      );
+    }
     return internal(error, "costs.reverse");
   }
 }

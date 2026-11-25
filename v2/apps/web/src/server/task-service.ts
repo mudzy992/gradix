@@ -14,6 +14,8 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
+import type { Scope } from "@gradix/domain";
+import { visibleProjectIds } from "@gradix/domain";
 import type {
   TaskCommentRow,
   TaskInput,
@@ -145,14 +147,53 @@ export async function listTasks(
   });
 }
 
+/**
+ * Akter zadatka. `scope`/`projectIds` su OPCIONI: servis ih koristi da šefu gradilišta ograniči
+ * radnju na projekte na koje je raspoređen. Bez njih se ponaša kao `COMPANY` — to je slučaj za
+ * postojeće pozivaoce (worker poslovi, testovi) i za role koje ionako imaju `projects.manage`.
+ */
+export type TaskActor = {
+  userId: string;
+  companyId: string;
+  roles: Parameters<typeof can>[0];
+  scope?: Scope;
+  projectIds?: string[] | null;
+};
+
+/**
+ * Djelimična izmjena: `statusOnly` je jedina stvar koju smije šef gradilišta.
+ *
+ * `SITE_SUPERVISOR` ima `tasks.update_status`, ali NE `projects.manage` — pa servis mora sam
+ * odlučiti koja polja smije mijenjati. Provjera ide PRIJE upisa, jer bi inače šef mogao
+ * preusmjeriti tuđi zadatak na drugoga i time ga tiho izgubiti iz svog spiska.
+ */
+const STATUS_ONLY_FIELDS = ["status", "id"] as const;
+
 export async function saveTask(
   pool: Pool,
-  actor: { userId: string; companyId: string; roles: Parameters<typeof can>[0] },
+  actor: TaskActor,
   input: TaskInput,
   isUpdate: boolean,
 ): Promise<TaskRow | TaskServiceError> {
-  if (!can(actor.roles, "projects.manage")) {
+  const full = can(actor.roles, "projects.manage");
+  const statusOnly = !full && can(actor.roles, "tasks.update_status");
+  if (!full && !statusOnly) {
     return { code: "FORBIDDEN", message: "Nemate pravo upravljanja zadacima." };
+  }
+  if (statusOnly) {
+    if (!isUpdate) {
+      return { code: "FORBIDDEN", message: "Novi zadatak upisuje ured ili rukovodilac projekta." };
+    }
+    const allowed = new Set<string>([...STATUS_ONLY_FIELDS]);
+    const changed = Object.entries(input).filter(
+      ([key, value]) => value !== undefined && !allowed.has(key),
+    );
+    if (changed.length > 0) {
+      return {
+        code: "FORBIDDEN",
+        message: "Šef gradilišta mijenja samo status zadatka; ostala polja mijenja ured.",
+      };
+    }
   }
   if (input.assigneeWorkerId && input.assigneeUserId) {
     return { code: "VALIDATION_FAILED", message: "Zadatak ima jednog izvršioca — radnika ili nalog." };
@@ -161,11 +202,29 @@ export async function saveTask(
     const today = await companyToday(client, toCompanyId(actor.companyId));
     if (isUpdate) {
       if (!input.id) return { code: "VALIDATION_FAILED", message: "Nedostaje id zadatka." };
-      const existing = await client.query<{ status: string }>(
-        "SELECT status FROM public.project_tasks WHERE company_id = $1 AND id = $2 FOR UPDATE",
+      const existing = await client.query<{ status: string; project_id: string | null }>(
+        "SELECT status, project_id FROM public.project_tasks WHERE company_id = $1 AND id = $2 FOR UPDATE",
         [actor.companyId, input.id],
       );
       if (!existing.rows[0]) return { code: "NOT_FOUND", message: "Zadatak nije pronađen." };
+      /*
+       * Opseg `PROJECTS`: šef mijenja status samo na projektima na koje je raspoređen. Zadatak bez
+       * projekta (opći zadatak firme) ostaje u redu ureda — nije „svačiji“.
+       */
+      if (!full) {
+        const visible = visibleProjectIds({
+          userId: actor.userId,
+          scope: actor.scope ?? "COMPANY",
+          projectIds: actor.projectIds ?? [],
+        });
+        const projectId = existing.rows[0].project_id;
+        if (visible !== null && (projectId === null || !visible.includes(projectId))) {
+          return {
+            code: "FORBIDDEN",
+            message: "Status mijenjate samo na projektima na koje ste raspoređeni.",
+          };
+        }
+      }
       const status = input.status ?? existing.rows[0].status;
       /*
        * `completed_at` slijedi status, u OBA smjera: vraćanje iz `DONE` mora ga očistiti, inače

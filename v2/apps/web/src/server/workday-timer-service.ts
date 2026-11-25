@@ -28,6 +28,7 @@ import {
   type WorkdayReviewState,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { bookWorkdayCost } from "./cost-entry-service";
 
 export type ServiceActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
 
@@ -961,6 +962,20 @@ export async function bulkConfirm(
           WHERE company_id = $1 AND id = $2`,
         [actor.companyId, existing.id, actor.userId],
       );
+      /*
+       * F5/Korak 0: potvrda KNJIŽI trošak rada — isto kao pojedinačna potvrda
+       * (`workday-approval.ts`). Ranije je grupna potvrda (koju mobilni timer koristi) samo
+       * mijenjala status, pa sati potvrđeni „jednim klikom“ nisu ulazili u trošak projekta dok ih
+       * niko ne potvrdi pojedinačno.
+       *
+       * Idempotentno: `bookWorkdayCost` vraća `skipped` za već knjižen dan/projekat i traži
+       * `FOREMAN_CONFIRMED|LOCKED`, pa ponovni klik ne pravi drugi trošak.
+       */
+      await bookWorkdayCost(client, {
+        companyId: actor.companyId,
+        actorId: actor.userId,
+        workdayId: existing.id,
+      });
       confirmed += 1;
     }
 

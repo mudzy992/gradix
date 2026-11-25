@@ -40,6 +40,11 @@ export async function GET(request: NextRequest, { params }: Params): Promise<Res
 
 export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
   try {
+    /*
+     * Komentar ostaje otvoren svakome ko VIDI zadatak (`projects.view`): šef gradilišta i radnik
+     * pišu komentar uz zadatak iako ne upravljaju projektima, a komentar je append-only zapis —
+     * ne izmjena zadatka. Zato se ovdje NE traži `tasks.update_status`.
+     */
     const guardResult = await guard(request, "projects.view");
     if (!guardResult.ok) return guardResult.response;
     const parsed = TaskCommentInput.safeParse(await request.json().catch(() => null));

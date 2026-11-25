@@ -105,6 +105,16 @@ export const PERMISSIONS = {
     "ACCOUNTANT",
   ],
   "projects.manage": ["OWNER", "ADMIN"],
+  /*
+   * F5/Korak 0 (odluka vlasnika): šef gradilišta mijenja STATUS zadatka i piše komentare na
+   * projektima na koje je raspoređen, ali NE mijenja naslov, izvršioca ni projekt zadatka.
+   *
+   * Zašto odvojeno od `projects.manage`: potonje je „ured" — vlasnik i admin. Ako bi šef dobio
+   * `projects.manage`, dobio bi i pravo da preusmjeri tuđi zadatak na drugoga. Status je jedina
+   * radnja koju šef radi svaki dan na terenu, pa je dobija kao POSEBNO pravo; servis uz to
+   * provjerava dodjelu na projekat (opseg `PROJECTS`), ne samo rolu.
+   */
+  "tasks.update_status": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
   "projects.assign": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   /*
    * R3 (odluka vlasnika, 2026-11-09): iznimka od blokade je POSEBNO pravo.
@@ -296,6 +306,11 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
   "projects.manage": {
     label: "Upravljanje projektima",
     description: "Novi projekti, izmjena naziva, statusa, perioda i rukovodioca.",
+  },
+  "tasks.update_status": {
+    label: "Status zadatka",
+    description:
+      "Prelazak statusa zadatka i komentari na projektima na koje je osoba raspoređena — bez izmjene naslova, izvršioca i projekta.",
   },
   "projects.override": {
     label: "Odobravanje iznimke od blokade",
