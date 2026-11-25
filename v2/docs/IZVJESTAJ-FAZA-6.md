@@ -1,6 +1,7 @@
 # Izvještaj — Faza 6: Obračun sati i troška rada (Modul 7)
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Spec:** `07-obracun-sati-trosak-rada.md` (zaključano)
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-6` · **CI: zelen (run `45635787570`)** ·
+**Spec:** `07-obracun-sati-trosak-rada.md` (zaključano)
 
 Faza 6 je isporučena kao **vertikala do kraja**: baza → domena → ugovor → API → servis → izvoz →
 web → mobilni → podsjetnik → provjere. Nijedan sloj nije ostavljen kao „doći će poslije“.

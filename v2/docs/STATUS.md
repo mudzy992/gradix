@@ -1,6 +1,6 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–5: završene** · **Faza 6 (Modul 7 — obračun): isporučena** · **Tag `phase-5`**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–6: završene** · **Tag `phase-6`** · **CI: zelen (run `45635787570`)**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
 Moduli 1–12 zaključani u `docs/specs/`. Faza 6 (Modul 7 — obračun sati i troška rada) je
