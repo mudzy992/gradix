@@ -13,7 +13,7 @@
       "evidence": [
         {
           "file": "apps/web/e2e/evidencija-deep.spec.ts",
-          "title": "partner + tender DRAFT→SUBMITTED→WON→convert; UI vidi tender",
+          "title": "partner + tender OPPORTUNITY→…→WON→convert; UI vidi tender",
           "bodyIncludes": [
             "getByText(tender.title"
           ]
