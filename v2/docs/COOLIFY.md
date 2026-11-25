@@ -222,15 +222,42 @@ zamjenjuje završni test otvaranja Consolea i browser priloga nakon deploya.
 
 ### 2.2. Redis ACL koji dijagnostika traži (Redis se ne koristi u aplikaciji)
 
-Aplikacija Redis **ne koristi** (prijava/rate-limit je PostgreSQL); `NOPERM` u dijagnostici
-znači samo da ACL korisnik `gradix_v2` nema pravo na dijagnostički uzorak ključeva/komandi —
-to ne utiče na runtime weba. Za `redis.auth_rw` PASS efektivni ugovor je:
-`~gradix:stg:*` (dijagnostika piše samo pod `gradix:stg:diag:*`) uz
-`+ping +set +get +del +pttl` (i `+expire` ako ACL razdvaja `SET … PX`); AUTH+TLS na 6380
-(CA §3.6). Primjer ACL linije za diag prefiks:
-`ACL SETUSER gradix_v2 on >… ~gradix:stg:diag:* +ping +set +get +del +pttl`
-(ne pokretati s `reset` na live; audit: `v2/infra/redis/acl-v2.txt`). Dijagnostika loguje
-samo ime greške (`NOPERM`/`WRONGPASS`), `failed_command` i `key_pattern` — bez lozinke.
+Aplikacija Redis **ne koristi** (prijava/rate-limit je PostgreSQL), pa dijagnostika **ne piše
+nijedan ključ** — provjerava samo `AUTH` i `PING`. Upis u `gradix:stg:diag:*` je uklonjen: uz ACL
+koji daje `+ping` bez `+set` bacao je lažni `status=FAIL (NOPERM)` pri svakom pokretanju kontejnera,
+iako runtime weba ne dira Redis.
+
+Efektivni ugovor za `redis.auth_rw` je zato:
+
+- `~gradix:stg:diag:*` (prefiks ostaje u logu kao `key_pattern`, ali se ne koristi),
+- `+ping` (i `+auth` implicitno kroz lozinku),
+- AUTH+TLS na 6380 (CA §3.6).
+
+Primjer ACL linije: `ACL SETUSER gradix_v2 on >… ~gradix:stg:diag:* +ping`
+(ne pokretati s `reset` na live; audit: `v2/infra/redis/acl-v2.txt`). Dijagnostika loguje samo ime
+greške (`NOPERM`/`WRONGPASS`), `failed_command` i `key_pattern` — bez lozinke.
+
+`status=PASS` sada znači `cause=redis_auth_and_ping_ok_write_not_required`, a u detaljima stoji
+`prefixed_set='SKIP(application_redis_usage=none; no write attempted)'`.
+
+### 2.2a. Zašto S3 koristi path-style i šta piše u grešci
+
+Interni endpoint je `http://minio:9000`. Sa virtual-host adresiranjem SDK bi tražio
+`http://<bucket>.minio:9000`, što na Docker mreži ne postoji (DNS `ENOTFOUND`), a MinIO ga i ne
+podržava bez wildcard DNS-a. Zato **svaki** S3 klijent (`storage.ts`, `worker/object-storage.ts`,
+`infra/diagnostics/run.mjs`) postavlja `forcePathStyle: true`, a putanja je uvijek
+`http://minio:9000/<bucket>/<key>`.
+
+AWS SDK za MinIO greške vraća ime `Error`, pa je `error_code='Error'` bilo bezvrijedno. Dijagnostika
+sada u `s3.bucket_object` ispisuje:
+
+| Polje | Značenje |
+|---|---|
+| `error_name` | ime koje daje SDK (`Error`, `NoSuchBucket`, `AccessDenied`…) |
+| `s3_error_code` | stvarni `<Code>` iz MinIO tijela (`XMinioInvalidObjectName`, `SignatureDoesNotMatch`…) |
+| `http_status` | HTTP status iz `$metadata.httpStatusCode` |
+| `error_message` | poruka servera (bez potpisa i ključeva — `redactSecrets`) |
+| `addressing_style` / `addressing_bucket_url` / `addressing_force_path_style` | kako je zahtjev adresiran, da se host-style regresija vidi iz loga |
 
 ### 2.3. Čišćenje probnih objekata dijagnostike u bucketu
 

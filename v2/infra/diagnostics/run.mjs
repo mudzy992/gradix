@@ -297,21 +297,57 @@ function redisCommand(socket, parts, signal) {
   });
 }
 
+/**
+ * MinIO vraća `Error` kao `err.name` za SVE S3 greške, pa je `error_code='Error'` bilo bezvrijedno.
+ * Zato uzimamo stvarni `err.name`, `$metadata.httpStatusCode` i `Code` iz S3 tijela, a `message`
+ * prolazi kroz `redactSecrets` (AWS SDK u poruci može nositi URL sa potpisom i parametrima).
+ */
 function sanitizeS3Error(error) {
   const status = Number(error?.$metadata?.httpStatusCode ?? 0);
   const code = String(error?.name ?? error?.Code ?? "");
-  if (status === 404 || /NoSuchBucket|NotFound/i.test(code)) return { cause: "bucket_missing", status };
-  if (status === 401 || status === 403 || /AccessDenied|InvalidAccessKey|SignatureDoesNotMatch|InvalidToken/i.test(code)) {
-    return { cause: "credentials_or_bucket_policy_denied", status };
-  }
-  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|Timeout/i.test(code)) return { cause: "s3_network_unavailable", status };
-  return { cause: "s3_request_failed", status };
+  const s3Code = String(error?.Code ?? "");
+  const cause = status === 404 || /NoSuchBucket|NotFound/i.test(code)
+    ? "bucket_missing"
+    : status === 401 || status === 403 || /AccessDenied|InvalidAccessKey|SignatureDoesNotMatch|InvalidToken|ExpiredToken/i.test(code)
+      ? "credentials_or_bucket_policy_denied"
+      : /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|Timeout|aborted/i.test(code) || /ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT/i.test(String(error?.code ?? ""))
+        ? "s3_network_unavailable"
+        : "s3_request_failed";
+  return { cause, status, name: code || "unknown_error", s3Code, message: redactSecrets(String(error?.message ?? "")) };
+}
+
+/** Uklanja potpis, ključeve i token iz tekstova prije nego odu u log. */
+function redactSecrets(text) {
+  return text
+    .replace(/(X-Amz-[A-Za-z-]+|AWSAccessKeyId|Signature|X-Amz-Signature)=[^&\s"']+/gi, "$1=<redacted>")
+    .replace(/\b[A-Za-z0-9/+]{40}\b/g, "<redacted>")
+    .slice(0, 300);
+}
+
+/**
+ * Adresa koju SDK STVARNO gradi za dati endpoint i bucket — isti račun kao `@aws-sdk/client-s3`
+ * sa `forcePathStyle: true`. U log ide samo host i stil, nikad ključ ni potpis; ako se pojavi
+ * `virtual_host`, klijent je izgubio `forcePathStyle` i interni DNS (`<bucket>.minio`) pada.
+ */
+function s3Addressing(endpoint, bucket) {
+  const url = parseEndpoint(endpoint, "MINIO_ENDPOINT").url;
+  if (!url) return { style: "unknown", host: "unknown" };
+  const pathStyleUrl = new URL(url.toString());
+  pathStyleUrl.pathname = `${url.pathname.replace(/\/$/, "")}/${bucket}`;
+  return {
+    style: "path_style",
+    host: url.hostname,
+    bucket_url: `${pathStyleUrl.protocol}//${pathStyleUrl.host}${pathStyleUrl.pathname}`,
+    force_path_style: true,
+  };
 }
 
 function s3ClientOptions(endpoint, env) {
   return {
     endpoint,
     region: env.MINIO_REGION?.trim() || "us-east-1",
+    /* OBAVEZNO za interni `http://minio:9000`: bez ovoga SDK adresira `http://gradix-stg.minio:9000`,
+       što na Docker mreži ne postoji (ENOTFOUND), a MinIO ga i ne podržava bez wildcard DNS-a. */
     forcePathStyle: true,
     maxAttempts: 1,
     credentials: {
@@ -513,33 +549,27 @@ async function main() {
       stage = "ping";
       const ping = await redisCommand(socket, ["PING"], signal);
       if (ping !== "PONG") throw Object.assign(new Error("unexpected ping reply"), { code: "REDIS_PING_REPLY" });
-      const key = `${redisPrefix}diag:${randomBytes(12).toString("hex")}`;
-      const value = randomBytes(16).toString("hex");
-      state.redis.key = key;
-      stage = "set";
-      if (await redisCommand(socket, ["SET", key, value, "PX", "30000", "NX"], signal) !== "OK") {
-        throw Object.assign(new Error("set not accepted"), { code: "REDIS_SET_REPLY" });
-      }
-      stage = "ttl";
-      const ttl = Number(await redisCommand(socket, ["PTTL", key], signal));
-      if (!Number.isFinite(ttl) || ttl <= 0 || ttl > 30_000) throw Object.assign(new Error("ttl invalid"), { code: "REDIS_TTL_REPLY" });
-      stage = "get";
-      const readBack = await redisCommand(socket, ["GET", key], signal);
-      if (readBack !== value) throw Object.assign(new Error("value mismatch"), { code: "REDIS_GET_REPLY" });
-      stage = "delete";
-      const deleted = Number(await redisCommand(socket, ["DEL", key], signal));
-      if (deleted !== 1) throw Object.assign(new Error("delete count invalid"), { code: "REDIS_DEL_REPLY" });
-      state.redis.key = null;
+      /*
+       * ADR: aplikacija NE koristi Redis (`application_redis_usage=none`), pa je upis u
+       * `gradix:stg:diag:*` bio suvišan i, uz ACL `+ping` bez `SET`, prijavljivao je lažni
+       * `status=FAIL (NOPERM)` pri svakom pokretanju kontejnera. Provjeravamo samo ono što
+       * aplikacija stvarno radi: AUTH + PING. Upis se ne izvršava, pa se ni ne mjeri.
+       */
       return {
-        status: "PASS", cause: "redis_auth_ping_and_prefixed_rw_ok", action: "No Redis connectivity action required; the application currently does not use Redis.",
-        details: { auth: redisPassword ? "PASS" : "SKIP(no password configured)", ping: "PASS", prefixed_set: "PASS", ttl_ms: ttl, get: "PASS", delete: "PASS", key_prefix: `${redisPrefix}diag:` },
+        status: "PASS",
+        cause: "redis_auth_and_ping_ok_write_not_required",
+        action: "No Redis connectivity action required; the application does not use Redis, so no write was attempted.",
+        details: {
+          auth: redisPassword ? "PASS" : "SKIP(no password configured)",
+          ping: "PASS",
+          prefixed_set: "SKIP(application_redis_usage=none; no write attempted)",
+          ttl_ms: "SKIP", get: "SKIP", delete: "SKIP",
+          key_prefix: `${redisPrefix}diag:`,
+        },
       };
     } catch (error) {
       const authFailed = stage === "auth";
-      if (state.redis.key) {
-        await redisCommand(socket, ["DEL", state.redis.key], AbortSignal.timeout(150)).catch(() => undefined);
-        state.redis.key = null;
-      }
+      /* Nijedan ključ se više ne piše (vidi ADR iznad), pa nema ni šta da se briše. */
       socket.destroy();
       state.redis.socket = null;
       state.redis.connected = false;
@@ -547,7 +577,7 @@ async function main() {
         status: "FAIL", cause: authFailed ? "redis_auth_or_acl_failed" : stage === "ping" ? "redis_ping_failed" : `redis_${stage}_failed`,
         action: authFailed
           ? "Check REDIS_USER and REDIS_PASSWORD against the Redis ACL; values are never printed."
-          : "Check Redis ACL permissions for PING, SET, PTTL, GET, and DEL on REDIS_PREFIX*.",
+          : "Check that the Redis ACL user may run PING on the configured connection; diagnostics do not write keys.",
         details: {
           stage, failed_command: { auth: "AUTH", ping: "PING", set: "SET", ttl: "PTTL", get: "GET", delete: "DEL" }[stage] ?? stage.toUpperCase(),
           error_code: errorCode(error), redis_error: error?.redisError ?? "none",
@@ -679,7 +709,23 @@ async function main() {
           : classified.cause === "credentials_or_bucket_policy_denied"
             ? "Check the Coolify MinIO app keys and bucket-scoped policy; do not paste secret values into logs."
             : "Check MinIO DNS, service health, access policy, and endpoint; the application still starts.",
-        details: { put_get: classified.status ? `HTTP ${classified.status}` : "failed", error_code: errorCode(error), bucket },
+        details: {
+          put_get: classified.status ? `HTTP ${classified.status}` : "failed",
+          error_code: errorCode(error),
+          /* Ime koje SDK daje (`Error` za sve S3 greške) i stvarni S3 `<Code>` — oba, jer prvo
+             samo po sebi ne kaže ništa, a drugo je ono što operater traži u MinIO dokumentaciji. */
+          error_name: classified.name,
+          s3_error_code: classified.s3Code || "none",
+          http_status: classified.status || "none",
+          error_message: classified.message || "none",
+          /* Detalji se u logu ispisuju kao `kljuc='vrijednost'`, pa se ugniježđeni objekat
+             razlaže — inače bi u logu pisalo `[object Object]`. */
+          ...Object.fromEntries(
+            Object.entries(s3Addressing(endpointText, bucket)).map(([key, value]) => [`addressing_${key}`, value]),
+          ),
+          endpoint_host: endpointHost,
+          bucket,
+        },
       };
     }
   });

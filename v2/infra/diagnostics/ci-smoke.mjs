@@ -99,6 +99,63 @@ async function main() {
     await close(redis);
   }
 
+  /*
+   * ACL sa `+ping` bez `+set`: ranije je `redis.auth_rw` padao kao `FAIL (NOPERM)` iako
+   * aplikacija Redis ne koristi. Sada AUTH+PING daju PASS, a upis se uopšte ne šalje.
+   */
+  let writeAttempted = false;
+  /*
+   * ACL sa `+ping` bez `+set`: ranije je `redis.auth_rw` padao kao `FAIL (NOPERM)` iako aplikacija
+   * Redis ne koristi. Sada AUTH+PING daju PASS, a upis se uopšte ne šalje.
+   *
+   * Server govori RESP (niz bulk stringova `*3\r\n$4\r\nAUTH…`), pa se komande čitaju po okviru;
+   * linijski parser bi `AUTH` prepoznao kao `*3` i vratio NOPERM — lažni pad.
+   */
+  const pingOnlyRedis = createServer((socket) => {
+    socket.on("error", () => undefined);
+    let buffer = Buffer.alloc(0);
+    const readLine = () => {
+      const index = buffer.indexOf("\r\n");
+      if (index === -1) return null;
+      const line = buffer.subarray(0, index).toString("utf8");
+      buffer = buffer.subarray(index + 2);
+      return line;
+    };
+    socket.on("data", (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      for (;;) {
+        const header = readLine();
+        if (header === null) return;
+        if (!header.startsWith("*")) return;
+        const count = Number(header.slice(1));
+        const parts = [];
+        for (let index = 0; index < count; index += 1) {
+          readLine(); // `$<len>` — dužina se ne koristi, čita se sljedeći red
+          parts.push(readLine() ?? "");
+        }
+        const command = (parts[0] ?? "").toUpperCase();
+        if (command === "SET") writeAttempted = true;
+        socket.write(command === "PING" ? "+PONG\r\n" : command === "AUTH" ? "+OK\r\n" : "-NOPERM no permissions\r\n");
+      }
+    });
+  });
+  const pingOnlyPort = await listen(pingOnlyRedis);
+  try {
+    const pingOnly = await runDiagnostic(cleanEnv({
+      REDIS_HOST: "127.0.0.1",
+      REDIS_PORT: String(pingOnlyPort),
+      REDIS_USER: "gradix_v2",
+      REDIS_PASSWORD: "ci-ping-only-secret",
+      REDIS_PREFIX: "gradix:stg:",
+    }));
+    assert.equal(pingOnly.code, 0, pingOnly.output);
+    assert.match(pingOnly.output, /phase=redis\.auth_rw status=PASS cause=redis_auth_and_ping_ok_write_not_required/);
+    assert.match(pingOnly.output, /prefixed_set='SKIP\(application_redis_usage=none; no write attempted\)'/);
+    assert.equal(writeAttempted, false, "Redis SET was sent although the application does not use Redis");
+  } finally {
+    await close(pingOnlyRedis);
+  }
+
   const missingCa = await runDiagnostic(cleanEnv({
     REDIS_HOST: "127.0.0.1",
     REDIS_PORT: "6380",
@@ -131,6 +188,103 @@ async function main() {
     await close(missingBucket);
   }
 
+  /*
+   * Bucket postoji, ali PUT pada sa `Error` (MinIO vraća to ime za sve S3 greške). Dijagnostika
+   * mora ispisati stvarni status, S3 kod, putanju adresiranja i poruku — nikad samo `Error`.
+   */
+  const brokenPut = createHttpServer((request, response) => {
+    if (request.method === "PUT") {
+      response.writeHead(400, { "content-type": "application/xml" });
+      response.end(
+        "<Error><Code>XMinioInvalidObjectName</Code><Message>Object name contains unsupported characters.</Message></Error>",
+      );
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/xml" });
+    response.end("<ListBucketResult/>");
+  });
+  const brokenPutPort = await listen(brokenPut);
+  try {
+    const broken = await runDiagnostic(cleanEnv({
+      MINIO_ENDPOINT: `http://127.0.0.1:${brokenPutPort}`,
+      MINIO_ACCESS_KEY: "ci-access-key",
+      MINIO_SECRET_KEY: minioSecret,
+      MINIO_BUCKET: "gradix-stg",
+      MINIO_REGION: "us-east-1",
+    }));
+    assert.equal(broken.code, 0, broken.output);
+    assert.match(broken.output, /phase=s3\.bucket_object status=FAIL/);
+    assert.match(broken.output, /http_status='400'/);
+    assert.match(broken.output, /error_name='XMinioInvalidObjectName'/);
+    assert.match(broken.output, /s3_error_code='XMinioInvalidObjectName'/);
+    assert.match(broken.output, /error_message='Object name contains unsupported characters\.'/);
+    assert.match(broken.output, /addressing_style='path_style'/);
+    assert.match(broken.output, /addressing_force_path_style='true'/);
+    assert.match(broken.output, /addressing_bucket_url='http:\/\/127\.0\.0\.1:\d+\/gradix-stg'/);
+    assert.doesNotMatch(broken.output, /error_code='Error'/);
+    assert.ok(!broken.output.includes(minioSecret), "MinIO secret leaked while reporting a broken PUT");
+  } finally {
+    await close(brokenPut);
+  }
+
+  /*
+   * Sretna putanja + dokaz adresiranja: MinIO u Dockeru sluša na `minio:9000` i NE razumije
+   * `<bucket>.minio:9000`. Test bilježi putanju koju SDK stvarno pogađa.
+   */
+  const paths = [];
+  /* Dijagnostika provjerava da je pročitano tijelo identično poslanom, pa test pamti po ključu. */
+  const stored = new Map();
+  const workingS3 = createHttpServer((request, response) => {
+    paths.push(`${request.method} ${request.url}`);
+    const body = [];
+    request.on("data", (chunk) => body.push(chunk));
+    request.on("end", () => {
+      const key = request.url ?? "/";
+      if (request.method === "PUT") {
+        stored.set(key, Buffer.concat(body));
+        response.writeHead(200, { "content-type": "application/xml", etag: '"ci-etag"' });
+        response.end();
+        return;
+      }
+      const object = stored.get(key);
+      if (request.method === "GET" && object) {
+        response.writeHead(200, { "content-type": "image/png", "content-length": String(object.length) });
+        response.end(object);
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/xml" });
+      response.end("<ListBucketResult/>");
+    });
+  });
+  const workingPort = await listen(workingS3);
+  try {
+    const working = await runDiagnostic(cleanEnv({
+      MINIO_ENDPOINT: `http://127.0.0.1:${workingPort}`,
+      MINIO_ACCESS_KEY: "ci-access-key",
+      MINIO_SECRET_KEY: minioSecret,
+      MINIO_BUCKET: "gradix-stg",
+      MINIO_REGION: "us-east-1",
+    }));
+    assert.equal(working.code, 0, working.output);
+    /*
+     * Namjerno se NE traži `status=PASS`: AWS SDK šalje `aws-chunked` tijelo sa potpisom po
+     * chunk-u, koje lažni MinIO ne može vratiti bajt-identično. Ono što ovdje dokazujemo je
+     * ADRESIRANJE — da nijedan zahtjev ne ide na `<bucket>.host`.
+     */
+    /* SDK kodira `:` u `%3A`, a bucket mora ostati PRVI segment putanje. */
+    assert.ok(
+      paths.some((entry) => /^PUT \/gradix-stg\/gradix(%3A|:)/i.test(entry)),
+      `PUT must be path-style (/bucket/key); saw: ${paths.join(", ")}`,
+    );
+    assert.ok(
+      paths.every((entry) => /^(PUT|GET|HEAD|DELETE) \//.test(entry)),
+      `no request may be virtual-host addressed; saw: ${paths.join(", ")}`,
+    );
+    assert.ok(!working.output.includes(minioSecret), "MinIO secret leaked on the successful path");
+  } finally {
+    await close(workingS3);
+  }
+
   const nonexistent = await runDiagnostic(cleanEnv({
     MINIO_ENDPOINT: "http://gradix-minio-ci-probe-does-not-exist.invalid:9000",
     MINIO_ACCESS_KEY: "ci-access-key",
@@ -141,7 +295,7 @@ async function main() {
   assert.match(nonexistent.output, /phase=s3\.connection status=FAIL cause=s3_dns_not_found_same_stack_network/);
   assert.ok(!nonexistent.output.includes("ci-host-test-secret"), "MinIO secret leaked during DNS failure");
 
-  console.log("Diagnostics CI fault injection passed: missing Redis password skips commands, bad Redis auth, missing CA, missing bucket, absent DNS host; no test secrets were printed.");
+  console.log("Diagnostics CI fault injection passed: missing Redis password skips commands, ping-only ACL needs no write, bad Redis auth, missing CA, missing bucket, path-style addressing with real S3 error details, absent DNS host; no test secrets were printed.");
 }
 
 await main();
