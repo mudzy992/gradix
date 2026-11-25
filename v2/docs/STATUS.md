@@ -1,6 +1,6 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–8: završene** · **Tag `phase-8`** · **CI: vidi zadnji `ci-v2` run**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faza 0–8: završene** · **Tag `phase-8`** · **CI: zelen (run `45671009367`)**
 
 Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
 Moduli 1–12 zaključani u `docs/specs/`. Faza 8 (Modul 9 — servis i održavanje mašina) je
@@ -70,7 +70,7 @@ ekran za mehaničara. Sljedeća je Faza 9 po `docs/IMPLEMENTATION_PLAN.md`. Izvj
 | 8.5 | Worker `reminders.scan` proširen na preventivu (datum **i** sati rada), idempotentno po `(maintenance_plan_id, planned_for)`; `SERVICE_ORDER` seed u `ensureCostCategories` (dopuna, ne samo prazan šifarnik) | ✅ |
 | 8.6 | UI: `/ured/servis` (red čekanja po prioritetu, filter „čekaju dijelove“, radnje stanja u listi), `/ured/servis/[id]` (sati, dijelovi, tok, trošak — `total_cost` je prikaz, nikad unos), `/ured/servis/planovi`, `/ured/dijelovi` (stanje bez polja za unos), tab „Održavanje“ na `/ured/masine/[id]`, kartica „Servis“ na `/pregled` (isti `dueMaintenancePlans` kao worker) | ✅ |
 | 8.7 | Mobilno: `/servisni-nalozi` za mehaničara — offline-first kroz R4 outbox (`service_order_action`), jedna glavna radnja iz stanja naloga, sati/dio u redu čekanja; `outbox`/`sync_events` podignuti na `user_version = 2` sa prenosom redova bez gubitka; mete ≥ 56 dp | ✅ |
-| 8.8 | Provjere: `f8-service-orders` (12) + `f8-service-sync` (6) + `f8-isolation` (3) protiv prave baze, `service-order-sync` (8) i `servis-model` (13) domenski, `migrations` (5) za v2 prenos; `pnpm test` **1 221 prošao** (web 691, domain 296, mobile 118), typecheck 6/6, lint čist, `db:types:check` sinhron, `check-tenant-sql` 96/96, matrix parity 0 grešaka, preflight SQL 001/002 prolazi | ✅ |
+| 8.8 | Provjere: `f8-service-orders` (12) + `f8-service-sync` (6) + `f8-isolation` (3) protiv prave baze, `service-order-sync` (8) i `servis-model` (13) domenski, `migrations` (5) za v2 prenos; `pnpm test` **1 221 prošao** (web 691, domain 296, mobile 118), typecheck 6/6, lint čist, `db:types:check` sinhron, `check-tenant-sql` 96/96, matrix parity 0 grešaka, preflight SQL 001/002 prolazi, `check-cycles` 0 ciklusa | ✅ |
 
 ## Faza 8 — odluke koje se ne smiju izgubiti
 

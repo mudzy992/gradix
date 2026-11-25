@@ -1,7 +1,7 @@
 # Izvještaj — Faza 8: Servis i održavanje mašina (Modul 9)
 
 **Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-8` ·
-**Spec:** `09-servis-odrzavanje.md` (zaključano)
+**CI: zelen (run `45671009367`)** · **Spec:** `09-servis-odrzavanje.md` (zaključano)
 
 Faza 8 je isporučena kao **vertikala do kraja**: baza → domena → ugovor → API → servis → web →
 worker → mobilno → provjere. Radionica nije „još jedan spisak naloga“: nalog ima tok sa kapijom
@@ -114,6 +114,8 @@ drugu kretnju. `DUPLICATE`, `SERVICE_ALREADY_DONE` i `STOCK_ALREADY_POSTED` tele
 | `check-tenant-sql` | 96/96 tenant tabela, 995 upita ✓ |
 | `check-matrix-parity` | 0 grešaka (1 poznato upozorenje za R1 tenant listu) |
 | preflight `001_security.sql` / `002_privileges.sql` | oba prolaze protiv `gradix_fresh` |
+| `check-cycles` (A2) | 0 ciklusa u web i mobile |
+| CI `ci-v2` (`45671009367`) | `verify` **success** — migracije/role, preflight prije i poslije testova, integracijski testovi, E2E `@smoke`+`@deep`, Docker image, sinhroni tipovi, migracije na praznoj i popunjenoj bazi |
 | integracioni testovi F8 | `f8-service-orders` 12/12, `f8-service-sync` 6/6, `f8-isolation` 3/3 |
 | domenski | `service-maintenance` 20/20, `service-order-sync` 8/8, `servis-model` 13/13, `migrations` 5/5, `mobile-nav` 10/10 |
 
@@ -143,7 +145,12 @@ temp tabelu umjesto `\copy`); SQL je isti, izvršava se aplikacijskom rolom.
    veza na nalog, pa brisanje `service_orders` prije nuliranja veze obara `afterAll`. Popravljeno
    u `machine-fault.integration.test.ts` i `phase4.integration.test.ts` — redoslijed je sada
    veza → događaji → nalog.
-7. **Nepoznat `entityType` u pull-u je prolazio na mobilnom.** Lokalni `sync_events` CHECK je
+7. **Dva ciklusa uvozâ koja `pnpm test` ne vidi.** CI korak A2 ih je našao: tip je uziman iz
+   barrela (`r4-sync-service`) i `orderStatus`/`parseExternalCost` su bili u fajlu koji zove
+   transakciju koja ih uvozi. Popravka: tip iz `r4-sync-fault-types`, a dijeljene funkcije u
+   `service-order-shared.ts`. Pouka: `check-cycles` ide u lokalnu završnu provjeru, jer zeleni
+   `pnpm test` ne znači zelen CI.
+8. **Nepoznat `entityType` u pull-u je prolazio na mobilnom.** Lokalni `sync_events` CHECK je
    proširen u F8, pa je test „nepoznat tip odbija stranicu“ ostao bez zaštite. Popravka: izričita
    provjera tipa **prije** transakcije u `applyPullPage` — događaj ne uđe u keš i kursor ne ode
    dalje.
