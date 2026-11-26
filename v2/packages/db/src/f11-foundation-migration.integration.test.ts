@@ -53,7 +53,14 @@ describeDb("F11 temeljna migracija", () => {
   });
   it("aktivira trigram indekse, FORCE RLS i zadržava granicu firme", async () => {
     const indexes = await db.query<{ n: number }>("SELECT count(*)::int n FROM pg_indexes WHERE schemaname='public' AND indexname LIKE '%search%trgm_idx'");
-    expect(indexes.rows[0]?.n).toBe(12);
+    // Four more indexes were added for tasks, obligations, service orders and incidents.
+    expect(indexes.rows[0]?.n).toBe(16);
+    const extra = await db.query<{ indexname: string }>(
+      "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND indexname = ANY($1::text[]) ORDER BY indexname",
+      [["project_tasks_search_title_trgm_idx", "obligation_types_search_label_trgm_idx",
+        "service_orders_search_description_trgm_idx", "hse_incidents_search_kind_trgm_idx"]],
+    );
+    expect(extra.rows).toHaveLength(4);
     const rls = await db.query<{ relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }>("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class WHERE oid IN ('public.report_jobs'::regclass,'public.daily_rollups'::regclass) ORDER BY relname");
     expect(rls.rows).toEqual([{relname:"daily_rollups",relrowsecurity:true,relforcerowsecurity:true},{relname:"report_jobs",relrowsecurity:true,relforcerowsecurity:true}]);
     await db.query("BEGIN");
