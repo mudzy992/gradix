@@ -9,6 +9,7 @@ import { startServiceOrder, waitServiceOrderParts, finishServiceOrder, addServic
 import { updateServiceOrder } from "./service-order-patch";
 import { listMachineFaults, createMachineFault } from "./machine-fault-service";
 import { createDailyCheck } from "./daily-check-service";
+import { checkUse, checkUseBatch, meBlockers, withMessages } from "./usage-service";
 import { reviseMachineFault } from "./machine-fault-revise";
 import { approveMachineFault, rejectMachineFault } from "./machine-fault-decide";
 import { POST as syncPush } from "@/app/api/sync/push/route";
@@ -113,6 +114,48 @@ describeDb("equipment PROJECTS/SELF boundaries", () => {
     expect((await finishServiceOrder(app, self, ownOrder, {})).outcome).toBe("NOT_FOUND");
     await withCompany(admin, companyId(co), c => c.query("UPDATE service_orders SET fault_id=NULL WHERE company_id=$1 AND id=$2", [co,ownOrder]));
     expect((await reviseMachineFault(app, self, ownFault, {reason:"Dovoljno dug razlog",payload:{}})).outcome).toBe("OK");
+  });
+
+  it("usage računa sve kvarove i iznimke, ali ne otkriva tuđe detalje", async () => {
+    const secret = `TAJNI-KVAR-${suffix}`;
+    const created = await createMachineFault(app, company, { machineId:m1, projectId:p2,
+      reporterWorkerId:otherWorker, reportedAt:"2026-11-20T08:00:00Z", title:secret, priority:"LOW" });
+    if (created.outcome !== "OK") throw new Error("fault fixture failed");
+    const today = "2026-11-23";
+    const override = `uo_eq_${suffix}`;
+    const obligationType = `ot_eq_${suffix}`, obligation = `ob_eq_${suffix}`;
+    await admin.query(`INSERT INTO obligation_types (id,company_id,code,label,entity_kind,blocks_assignment)
+      VALUES ($1,$2,'TESTUSAGE','Istekla obaveza','MACHINE',true)`, [obligationType,co]);
+    await admin.query(`INSERT INTO obligations (id,company_id,type_id,machine_id,expires_at,created_by)
+      VALUES ($1,$2,$3,$4,'2000-01-01',$5)`, [obligation,co,obligationType,m1,user]);
+    await admin.query(`INSERT INTO usage_overrides
+      (id,company_id,subject_kind,subject_id,action,reference_id,reason,valid_from,valid_to,approved_by,approved_at)
+      VALUES ($1,$2,'MACHINE',$3,'haul',$4,'Tajna iznimka odobrena', '2020-01-01','2099-01-01',$5,now())`,
+      [override,co,m1,created.id,user]);
+    try {
+      const input = { entityKind:"MACHINE" as const, entityId:m1, action:"haul" as const, today };
+      const full = await checkUse(app, co, {...input, viewer:company});
+      const scoped = await checkUse(app, co, {...input, viewer:projects});
+      expect(JSON.stringify(full)).toContain(secret);
+      expect(JSON.stringify(scoped)).not.toContain(secret);
+      expect(JSON.stringify(scoped)).not.toContain("Tajna iznimka");
+      expect(full.allowed).toBe(false);
+      expect(scoped.allowed).toBe(full.allowed);
+      expect(scoped.overrideAvailable).toBe(full.overrideAvailable);
+      expect(scoped.warns.find(w => w.label === "Kvar izvan vašeg opsega")).toMatchObject({overridden:true});
+      expect(JSON.stringify(withMessages(scoped))).not.toContain(secret);
+      const batch = await checkUseBatch(app, co, { entityKind:"MACHINE", entityIds:[m1], action:"haul", today, viewer:projects });
+      expect(batch.get(m1)).toEqual(scoped);
+      const result = await meBlockers(app, {...projects, permissions:["machines.view"]});
+      expect(result.machines.map(m => m.id)).toContain(m1);
+      expect(result.machines.map(m => m.id)).not.toContain(m2);
+      expect(JSON.stringify(result)).not.toContain(secret);
+      expect(JSON.stringify(await meBlockers(app, {...projects, projectIds:[], permissions:["machines.view"]}))).not.toContain(m1);
+    } finally {
+      await admin.query("DELETE FROM usage_overrides WHERE id=$1", [override]);
+      await admin.query("DELETE FROM obligations WHERE id=$1", [obligation]);
+      await admin.query("DELETE FROM obligation_types WHERE id=$1", [obligationType]);
+    }
   });
 
   it("kritičan dnevni pregled ne smije zaobići scope pri automatskom otvaranju kvara", async () => {

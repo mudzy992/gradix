@@ -209,6 +209,28 @@ export async function GET(request: NextRequest): Promise<Response> {
         for (const row of rows.rows) allowedFaults.add(row.id);
       }
       visible = visible.filter((event) => event.entityType !== "machine_fault" || allowedFaults.has(event.entityId));
+      // Office role does not override a restricted session. Re-check the authoritative
+      // conflict and both project references; never authorize using the event payload.
+      if (ctx.scope !== "COMPANY") {
+        const conflictIds = visible.filter(event => event.entityType === "sync_conflict").map(event => event.entityId);
+        const allowed = new Set<string>();
+        if (conflictIds.length && ctx.scope === "PROJECTS") {
+          const rows = await client.query<{ id: string }>(`SELECT c.id FROM public.sync_conflicts c
+            JOIN public.work_entries e ON e.company_id=c.company_id AND e.id=c.work_entry_id
+            WHERE c.company_id=$1 AND c.id=ANY($2::text[]) AND e.project_id=ANY($3::text[])
+              AND (c.received_payload->>'projectId' IS NULL OR c.received_payload->>'projectId'=ANY($3::text[]))`,
+            [ctx.companyId, conflictIds, ctx.projectIds ?? []]);
+          for (const row of rows.rows) allowed.add(row.id);
+        } else if (conflictIds.length && ctx.scope === "SELF") {
+          const rows = await client.query<{ id: string }>(`SELECT c.id FROM public.sync_conflicts c
+            LEFT JOIN public.work_entries e ON e.company_id=c.company_id AND e.id=c.work_entry_id
+            WHERE c.company_id=$1 AND c.id=ANY($2::text[]) AND (c.actor_id=$3 OR e.worker_id IN
+              (SELECT w.id FROM public.workers w WHERE w.company_id=c.company_id AND w.user_id=$3 AND w.is_active))`,
+            [ctx.companyId, conflictIds, ctx.userId]);
+          for (const row of rows.rows) allowed.add(row.id);
+        }
+        visible = visible.filter(event => event.entityType !== "sync_conflict" || allowed.has(event.entityId));
+      }
       // Legacy conflict rows do not reliably identify their source entity. Do not expose
       // historical diary/fault conflict payloads after an actor loses company scope.
       if (ctx.scope !== "COMPANY") visible = visible.filter((event) => {

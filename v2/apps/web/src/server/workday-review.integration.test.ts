@@ -99,15 +99,15 @@ describeDb("workday review scope (PostgreSQL)", () => {
     // opseg pokriva samo dan radnika u opsegu, nikad drugu firmu.
     const scoped = await withCompany(app, companyId(CO), async (client) => {
       const viewer = await resolveViewerWorkerId(client, CO, `usr_wdr_pm_${RUN}`);
-      const scope = workdayResolveScopeFor(["PROJECT_MANAGER"], viewer);
+      const scope = workdayResolveScopeFor(["PROJECT_MANAGER"], viewer, { scope: "COMPANY", projectIds: null });
       expect(scope.kind).toBe("assignments");
       return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer));
     });
     expect(scoped.map((row) => row.id)).toEqual([`wd_wdr_in_${RUN}`]);
 
     // ACCOUNTANT: view = cijela firma, resolve = none.
-    expect(workdayResolveScopeFor(["ACCOUNTANT"], null)).toEqual({ kind: "none" });
-    expect(workdayResolveScopeFor(["OWNER"], null)).toEqual({ kind: "company" });
+    expect(workdayResolveScopeFor(["ACCOUNTANT"], null, { scope: "COMPANY", projectIds: null })).toEqual({ kind: "none" });
+    expect(workdayResolveScopeFor(["OWNER"], null, { scope: "COMPANY", projectIds: null })).toEqual({ kind: "company" });
 
     // Strana u sukobu na stvarnim fixture ID-evima: PM je autor dana (created_by
     // usr_wdr_pm), pa kao radnik-strana ne razrješava; OWNER smije.

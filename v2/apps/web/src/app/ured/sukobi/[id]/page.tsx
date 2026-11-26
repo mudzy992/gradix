@@ -52,7 +52,7 @@ export default async function SukobDetailPage({
 
   const data = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
-    const scope = workdayResolveScopeFor(auth.ctx.roles, viewerWorkerId);
+    const scope = workdayResolveScopeFor(auth.ctx.roles, viewerWorkerId, auth.ctx);
     const detail = await getConflictDetail(client, auth.ctx.companyId, scope, id);
     if (!detail) return { detail: null, nextId: null as string | null };
     const open = await listConflicts(client, auth.ctx.companyId, scope, { status: "OPEN", limit: 200 });

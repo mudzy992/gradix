@@ -21,6 +21,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { companyId as toCompanyId, withCompany, type CompanyId } from "@gradix/db";
 import type { Pool, PoolClient } from "pg";
+import type { Scope } from "@gradix/domain";
 import { writeAudit } from "./audit";
 import { NOTIFICATION_HREFS } from "./notification-hrefs";
 import { notify } from "./notification-service";
@@ -36,6 +37,8 @@ export type ResolveActor = {
   companyId: CompanyId;
   roles: readonly string[];
   email: string | null;
+  scope: Scope;
+  projectIds: readonly string[] | null;
 };
 
 export type ResolveConflictInput = {
@@ -199,38 +202,17 @@ export async function countOpenConflicts(
   scope: ReturnType<typeof workdayResolveScopeFor>,
 ): Promise<{ open: number; olderThanThreshold: number; thresholdDays: number }> {
   if (scope.kind === "none") return { open: 0, olderThanThreshold: 0, thresholdDays: 3 };
+  const values: unknown[] = [companyId];
+  const predicate = scopeClause(scope, values);
   const result = await client.query<{ open: string; older: string; threshold: number }>(
-    `SELECT count(conflict.id)::text AS open,
-            count(conflict.id) FILTER (
-              WHERE conflict.created_at < clock_timestamp() - make_interval(days => company.conflict_reminder_days)
-            )::text AS older,
+    `SELECT count(conflict.id) FILTER (WHERE ${predicate})::text AS open,
+            count(conflict.id) FILTER (WHERE ${predicate}
+              AND conflict.created_at < clock_timestamp() - make_interval(days => company.conflict_reminder_days))::text AS older,
             company.conflict_reminder_days AS threshold
        FROM public.companies company
-       LEFT JOIN public.sync_conflicts conflict
-         ON conflict.company_id = company.id AND conflict.status = 'OPEN'
-        AND (
-          $2::text = 'company'
-          OR (
-            $3::text IS NOT NULL
-            AND EXISTS (
-              SELECT 1
-                FROM public.work_entries entry
-               WHERE entry.company_id = conflict.company_id AND entry.id = conflict.work_entry_id
-                 AND EXISTS (
-                   SELECT 1
-                     FROM public.project_assignments va
-                     JOIN public.project_assignments ta
-                       ON ta.company_id = va.company_id AND ta.project_id = va.project_id
-                    WHERE va.company_id = conflict.company_id AND ta.company_id = conflict.company_id
-                      AND va.worker_id = $3 AND ta.worker_id = entry.worker_id
-                      AND va.voided_at IS NULL AND ta.voided_at IS NULL
-                 )
-            )
-          )
-        )
-      WHERE company.id = $1
-      GROUP BY company.conflict_reminder_days`,
-    [companyId, scope.kind, scope.kind === "assignments" ? scope.viewerWorkerId : null],
+       LEFT JOIN public.sync_conflicts conflict ON conflict.company_id = company.id AND conflict.status = 'OPEN'
+       LEFT JOIN public.work_entries e ON e.company_id = conflict.company_id AND e.id = conflict.work_entry_id
+      WHERE company.id = $1 GROUP BY company.conflict_reminder_days`, values,
   );
   const row = result.rows[0];
   return {
@@ -283,9 +265,6 @@ export async function resolveWorkdayConflict(
     const conflict = found.rows[0];
     if (!conflict) return fail({ outcome: "NOT_FOUND", conflictId: input.conflictId });
 
-    // Idempotentnost: već razriješen sukob vraća pohranjeni ishod, bez ponovne primjene.
-    if (conflict.status === "RESOLVED") return fail(storedOutcome(conflict));
-
     const serverEntry = conflict.work_entry_id
       ? (await client.query<EntryRow>(
           `SELECT id, workday_id, worker_id, kind, started_at, ended_at, end_state,
@@ -295,42 +274,27 @@ export async function resolveWorkdayConflict(
         )).rows[0] ?? null
       : null;
 
+    const resolver = await client.query<{ id: string }>(
+      "SELECT id FROM public.workers WHERE company_id=$1 AND user_id=$2 AND is_active", [company, actor.userId],
+    );
+    const resolverWorkerId = resolver.rows[0]?.id ?? null;
+    const scope = workdayResolveScopeFor(actor.roles, resolverWorkerId, actor);
+    const scopeParams: unknown[] = [company, input.conflictId];
+    const allowed = scopeClause(scope, scopeParams);
+    const accessible = await client.query(`SELECT conflict.id FROM public.sync_conflicts conflict
+      LEFT JOIN public.work_entries e ON e.company_id=conflict.company_id AND e.id=conflict.work_entry_id
+      WHERE conflict.company_id=$1 AND conflict.id=$2 AND ${allowed}`, scopeParams);
+    if (!accessible.rows[0]) return fail({ outcome: "NOT_FOUND", conflictId: input.conflictId });
+
+    // Idempotentnost: već razriješen sukob vraća pohranjeni ishod, bez ponovne primjene.
+    if (conflict.status === "RESOLVED") return fail(storedOutcome(conflict));
+
     const actorWorker = (await client.query<{ id: string }>(
       "SELECT id FROM public.workers WHERE company_id = $1 AND user_id = $2 AND is_active",
       [company, conflict.actor_id],
     )).rows[0]?.id ?? null;
 
-    const resolverWorkerId = (await client.query<{ id: string }>(
-      "SELECT id FROM public.workers WHERE company_id = $1 AND user_id = $2 AND is_active",
-      [company, actor.userId],
-    )).rows[0]?.id ?? null;
-
-    // Opseg: PM/šef smiju razriješiti samo sukobe radnika iz svog R3 opsega.
-    const scope = workdayResolveScopeFor(actor.roles, resolverWorkerId);
-    if (scope.kind === "none") {
-      return fail({ outcome: "FORBIDDEN", conflictId: input.conflictId, code: "RESOLVE_FORBIDDEN" });
-    }
     const targetWorkerId = serverEntry?.worker_id ?? actorWorker;
-    if (scope.kind === "assignments") {
-      if (!scope.viewerWorkerId || !targetWorkerId) {
-        return fail({ outcome: "FORBIDDEN", conflictId: input.conflictId, code: "RESOLVE_OUT_OF_SCOPE" });
-      }
-      const inScope = await client.query<{ allowed: boolean }>(
-        `SELECT EXISTS (
-           SELECT 1 FROM public.project_assignments va
-             JOIN public.project_assignments ta
-               ON ta.company_id = va.company_id AND ta.project_id = va.project_id
-            WHERE va.company_id = $1 AND ta.company_id = $1
-              AND va.worker_id = $2 AND ta.worker_id = $3
-              AND va.voided_at IS NULL AND ta.voided_at IS NULL
-         ) AS allowed`,
-        [company, scope.viewerWorkerId, targetWorkerId],
-      );
-      if (!inScope.rows[0]?.allowed) {
-        return fail({ outcome: "FORBIDDEN", conflictId: input.conflictId, code: "RESOLVE_OUT_OF_SCOPE" });
-      }
-    }
-
     const partyWorkerIds = [serverEntry?.worker_id ?? null, actorWorker];
     const party = isConflictParty(resolverWorkerId, partyWorkerIds);
     if (!canResolveConflict({ roles: actor.roles, resolverWorkerId, partyWorkerIds })) {
@@ -648,20 +612,29 @@ const CONFLICT_SELECT = `
     LEFT JOIN public.users cu ON cu.id = conflict.actor_id
     LEFT JOIN public.workers cw ON cw.company_id = conflict.company_id AND cw.user_id = cu.id`;
 
-function scopeClause(scope: ReturnType<typeof workdayResolveScopeFor>): string {
-  // $2 (viewer) mora biti tipiziran i kad je opseg cijela firma — inače Postgres
-  // za neiskorišten parametar javlja „could not determine data type of parameter".
-  if (scope.kind === "company") return "($2::text IS NULL OR $2::text IS NOT NULL)";
-  if (scope.kind === "assignments") {
-    return `(e.worker_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.project_assignments va
-        JOIN public.project_assignments ta
-          ON ta.company_id = va.company_id AND ta.project_id = va.project_id
-       WHERE va.company_id = conflict.company_id AND ta.company_id = conflict.company_id
-         AND va.worker_id = $SCOPE AND ta.worker_id = e.worker_id
-         AND va.voided_at IS NULL AND ta.voided_at IS NULL))`;
+function scopeClause(scope: ReturnType<typeof workdayResolveScopeFor>, params: unknown[]): string {
+  if (scope.kind === "company") return "TRUE";
+  if (scope.kind === "none") return "FALSE";
+  const conditions: string[] = [];
+  const ids = scope.projectIds;
+  if (ids !== null) {
+    params.push(ids);
+    const p = `$${params.length}`;
+    // Both sides must be in scope. A client-provided project is not an authorization anchor.
+    conditions.push(`(e.project_id = ANY(${p}::text[]) AND
+      (conflict.received_payload->>'projectId' IS NULL OR conflict.received_payload->>'projectId' = ANY(${p}::text[])))`);
   }
-  return "FALSE";
+  if (scope.kind === "assignments") {
+    params.push(scope.viewerWorkerId);
+    const v = `$${params.length}`;
+    conditions.push(`(e.worker_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM public.project_assignments va
+        JOIN public.project_assignments ta ON ta.company_id = va.company_id AND ta.project_id = va.project_id
+      WHERE va.company_id = conflict.company_id AND va.project_id = e.project_id
+        AND va.worker_id = ${v} AND ta.worker_id = e.worker_id
+        AND va.voided_at IS NULL AND ta.voided_at IS NULL))`);
+  }
+  return conditions.length ? conditions.join(" AND ") : "FALSE";
 }
 
 type ConflictDbRow = {
@@ -714,34 +687,35 @@ export async function listConflicts(
 ): Promise<{ conflicts: ConflictListItem[]; total: number }> {
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
   const offset = Math.max(filters.offset ?? 0, 0);
-  const scopeSql = scopeClause(scope).replace("$SCOPE", "$2");
+  const values: unknown[] = [companyId, filters.status ?? null, filters.projectId ?? null,
+    filters.olderThanDays ?? null, limit, offset, filters.entityType ?? null];
+  const scopeSql = scopeClause(scope, values);
   const rows = await client.query<ConflictDbRow>(
     `${CONFLICT_SELECT}
       WHERE conflict.company_id = $1
         AND ${scopeSql}
-        AND ($3::text IS NULL OR conflict.status = $3)
-        AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
-        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))
-        AND ($8::text IS NULL OR conflict.entity_type = $8)
+        AND ($2::text IS NULL OR conflict.status = $2)
+        AND ($3::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $3)
+        AND ($4::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $4))
+        AND ($7::text IS NULL OR conflict.entity_type = $7)
       ORDER BY conflict.status, conflict.created_at ASC
-      LIMIT $6 OFFSET $7`,
-    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
-      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null, limit, offset,
-      filters.entityType ?? null],
+      LIMIT $5 OFFSET $6`,
+    values,
   );
+  const countValues: unknown[] = [companyId, filters.status ?? null, filters.projectId ?? null,
+    filters.olderThanDays ?? null, filters.entityType ?? null];
+  const countScopeSql = scopeClause(scope, countValues);
   const total = await client.query<{ n: string }>(
     `SELECT count(*)::text AS n FROM public.sync_conflicts conflict
        LEFT JOIN public.work_entries e
          ON e.company_id = conflict.company_id AND e.id = conflict.work_entry_id
       WHERE conflict.company_id = $1
-        AND ${scopeSql}
-        AND ($3::text IS NULL OR conflict.status = $3)
-        AND ($4::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $4)
-        AND ($5::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $5))
-        AND ($6::text IS NULL OR conflict.entity_type = $6)`,
-    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null,
-      filters.status ?? null, filters.projectId ?? null, filters.olderThanDays ?? null,
-      filters.entityType ?? null],
+        AND ${countScopeSql}
+        AND ($2::text IS NULL OR conflict.status = $2)
+        AND ($3::text IS NULL OR COALESCE(e.project_id, conflict.received_payload->>'projectId') = $3)
+        AND ($4::int IS NULL OR conflict.created_at < clock_timestamp() - make_interval(days => $4))
+        AND ($5::text IS NULL OR conflict.entity_type = $5)`,
+    countValues,
   );
   return { conflicts: rows.rows.map(toListItem), total: Number(total.rows[0]?.n ?? 0) };
 }
@@ -769,11 +743,12 @@ export async function getConflictDetail(
   scope: ReturnType<typeof workdayResolveScopeFor>,
   conflictId: string,
 ): Promise<ConflictDetail | null> {
-  const scopeSql = scopeClause(scope).replace("$SCOPE", "$2");
+  const values: unknown[] = [companyId, conflictId];
+  const scopeSql = scopeClause(scope, values);
   const rows = await client.query<ConflictDbRow>(
     `${CONFLICT_SELECT}
-      WHERE conflict.company_id = $1 AND conflict.id = $3 AND ${scopeSql}`,
-    [companyId, scope.kind === "assignments" ? scope.viewerWorkerId : null, conflictId],
+      WHERE conflict.company_id = $1 AND conflict.id = $2 AND ${scopeSql}`,
+    values,
   );
   const row = rows.rows[0];
   if (!row) return null;

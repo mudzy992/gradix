@@ -21,6 +21,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     const data = await meBlockers(await getVerifiedPool(), {
       companyId: guardResult.ctx.companyId,
       userId: guardResult.ctx.userId,
+      roles: guardResult.ctx.roles,
+      scope: guardResult.ctx.scope,
+      projectIds: guardResult.ctx.projectIds,
       // Dozvole se izvode iz rola ISTOM tabelom koju koristi `guard` — nema drugog spiska.
       permissions: Object.keys(PERMISSIONS).filter((permission) =>
         can(guardResult.ctx.roles, permission as keyof typeof PERMISSIONS),

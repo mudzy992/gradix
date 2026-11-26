@@ -48,7 +48,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   if (can(ctx.roles, "workdays.resolve")) {
     const conflictCounts = await withCompany(pool, ctx.companyId, async (client) => {
       const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
-      return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId));
+      return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId, ctx));
     });
     badges = { "/ured/sukobi": { count: conflictCounts.open, older: conflictCounts.olderThanThreshold } };
   }

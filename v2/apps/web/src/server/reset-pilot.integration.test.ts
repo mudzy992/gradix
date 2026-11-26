@@ -30,7 +30,7 @@ describeDb("reset-pilot (--reset-pilot)", () => {
   const ured: ResolveActor = {
     userId: "usr_ured",
     companyId: companyId("cmp_demo"),
-    roles: ["ADMIN"],
+    roles: ["ADMIN"], scope: "COMPANY", projectIds: null,
     email: "ured@demo.test",
   };
 

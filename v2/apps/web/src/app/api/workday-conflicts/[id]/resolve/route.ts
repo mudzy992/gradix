@@ -39,6 +39,8 @@ export async function POST(
       userId: ctx.userId,
       companyId: ctx.companyId,
       roles: ctx.roles,
+      scope: ctx.scope,
+      projectIds: ctx.projectIds,
       email: null,
     }, input);
     if (result.outcome === "NOT_FOUND") return fail("NOT_FOUND", "Sukob nije pronađen ili nije u vašem opsegu.");

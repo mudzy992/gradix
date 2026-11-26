@@ -19,7 +19,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const ctx = guardResult.ctx;
     const counts = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
-      return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId));
+      return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId, ctx));
     });
     return ok(counts);
   } catch (error) {

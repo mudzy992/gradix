@@ -20,12 +20,12 @@ describe("workdays.resolve (R4a-2 korak a)", () => {
   });
 
   it("opseg: OWNER/ADMIN cijela firma; PM/šef dodjele; ostali ništa", () => {
-    expect(workdayResolveScopeFor(["OWNER"], null)).toEqual({ kind: "company" });
-    expect(workdayResolveScopeFor(["ADMIN"], "wrk_x")).toEqual({ kind: "company" });
-    expect(workdayResolveScopeFor(["PROJECT_MANAGER"], "wrk_x")).toEqual({ kind: "assignments", viewerWorkerId: "wrk_x" });
-    expect(workdayResolveScopeFor(["SITE_SUPERVISOR"], null)).toEqual({ kind: "assignments", viewerWorkerId: null });
-    expect(workdayResolveScopeFor(["ACCOUNTANT"], null)).toEqual({ kind: "none" });
-    expect(workdayResolveScopeFor(["WORKER"], "wrk_x")).toEqual({ kind: "none" });
+    expect(workdayResolveScopeFor(["OWNER"], null, { scope: "COMPANY", projectIds: null })).toEqual({ kind: "company" });
+    expect(workdayResolveScopeFor(["ADMIN"], "wrk_x", { scope: "COMPANY", projectIds: null })).toEqual({ kind: "company" });
+    expect(workdayResolveScopeFor(["PROJECT_MANAGER"], "wrk_x", { scope: "COMPANY", projectIds: null })).toEqual({ kind: "assignments", viewerWorkerId: "wrk_x", projectIds: null });
+    expect(workdayResolveScopeFor(["SITE_SUPERVISOR"], null, { scope: "COMPANY", projectIds: null })).toEqual({ kind: "assignments", viewerWorkerId: null, projectIds: null });
+    expect(workdayResolveScopeFor(["ACCOUNTANT"], null, { scope: "COMPANY", projectIds: null })).toEqual({ kind: "none" });
+    expect(workdayResolveScopeFor(["WORKER"], "wrk_x", { scope: "COMPANY", projectIds: null })).toEqual({ kind: "none" });
   });
 
   it("strana u sukobu ne razrješava: autor server ili telefon unosa je blokiran", () => {

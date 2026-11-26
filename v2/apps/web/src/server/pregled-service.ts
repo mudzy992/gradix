@@ -164,7 +164,7 @@ export async function buildPregled(
       }));
 
     // --- 3. Sukobi: isti brojevi kao kartica i ekran sukoba; primjeri najstariji. ---
-    const resolveScope = workdayResolveScopeFor(actor.roles, viewerWorkerId);
+    const resolveScope = workdayResolveScopeFor(actor.roles, viewerWorkerId, { scope: actor.scope, projectIds: actor.projectIds ?? null });
     const conflictCounts = await countOpenConflicts(client, companyIdValue, resolveScope);
     let conflictOldest: ConflictListItem[] = [];
     if (conflictCounts.open > 0) {

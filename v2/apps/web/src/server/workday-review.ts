@@ -120,16 +120,24 @@ export async function listWeekApprovals(
  */
 export type WorkdayResolveScope =
   | { kind: "company" }
-  | { kind: "assignments"; viewerWorkerId: string | null }
+  | { kind: "projects"; projectIds: readonly string[] }
+  | { kind: "assignments"; viewerWorkerId: string | null; projectIds: readonly string[] | null }
   | { kind: "none" };
 
+/** Session scope intersects role permissions; role alone never widens it. */
 export function workdayResolveScopeFor(
   roles: readonly string[],
   viewerWorkerId: string | null,
+  session: { scope: string; projectIds: readonly string[] | null },
 ): WorkdayResolveScope {
-  if (roles.includes("OWNER") || roles.includes("ADMIN")) return { kind: "company" };
+  if (session.scope !== "COMPANY" && session.scope !== "PROJECTS") return { kind: "none" };
+  if (roles.includes("OWNER") || roles.includes("ADMIN")) {
+    return session.scope === "COMPANY" ? { kind: "company" }
+      : { kind: "projects", projectIds: session.projectIds ?? [] };
+  }
   if (roles.includes("PROJECT_MANAGER") || roles.includes("SITE_SUPERVISOR")) {
-    return { kind: "assignments", viewerWorkerId };
+    return { kind: "assignments", viewerWorkerId,
+      projectIds: session.scope === "PROJECTS" ? (session.projectIds ?? []) : null };
   }
   return { kind: "none" };
 }

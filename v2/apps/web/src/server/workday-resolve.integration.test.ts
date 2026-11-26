@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
-import { resolveWorkdayConflict, countOpenConflicts, type ResolveActor } from "./workday-resolve";
+import { resolveWorkdayConflict, countOpenConflicts, listConflicts, getConflictDetail, type ResolveActor } from "./workday-resolve";
 import { NOTIFICATION_HREFS } from "./notification-hrefs";
 import { workdayResolveScopeFor } from "./workday-review";
 
@@ -22,18 +22,18 @@ const OTHER = `cmp_rsvx_${RUN}`;
 const HASH = "a".repeat(64);
 const INTERNAL = `INTERNA-NAPOMENA-${RUN}`;
 
-const owner: ResolveActor = { userId: `usr_rsv_owner_${RUN}`, companyId: companyId(CO), roles: ["OWNER"], email: "owner@test.example" };
-const adminActor: ResolveActor = { userId: `usr_rsv_admin_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], email: "admin@test.example" };
-const pmOut: ResolveActor = { userId: `usr_rsv_pmout_${RUN}`, companyId: companyId(CO), roles: ["PROJECT_MANAGER"], email: "pmout@test.example" };
+const owner: ResolveActor = { userId: `usr_rsv_owner_${RUN}`, companyId: companyId(CO), roles: ["OWNER"], scope: "COMPANY", projectIds: null, email: "owner@test.example" };
+const adminActor: ResolveActor = { userId: `usr_rsv_admin_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], scope: "COMPANY", projectIds: null, email: "admin@test.example" };
+const pmOut: ResolveActor = { userId: `usr_rsv_pmout_${RUN}`, companyId: companyId(CO), roles: ["PROJECT_MANAGER"], scope: "COMPANY", projectIds: null, email: "pmout@test.example" };
 const reason = "Dupli unos istog segmenta s telefona";
 
 const DATES: Record<string, string> = {
   acc: "2026-11-10", short: "2026-11-17", rej: "2026-11-11", recv: "2026-11-12",
   corr: "2026-11-13", race: "2026-11-14", party: "2026-11-15", scope: "2026-11-16",
-  keep: "2026-11-18", term: "2026-11-19", hours: "2026-11-20", ntf: "2026-11-21",
+  keep: "2026-11-18", term: "2026-11-19", hours: "2026-11-20", ntf: "2026-11-21", mixed: "2026-11-22",
 };
 
-async function seedConflict(admin: Pool, suffix: string): Promise<string> {
+async function seedConflict(admin: Pool, suffix: string, receivedProject = `prj_rsv_a_${RUN}`): Promise<string> {
   const conflictId = `cnf_rsv_${suffix}_${RUN}`;
   const entryId = `we_rsv_${suffix}_${RUN}`;
   const date = DATES[suffix] ?? "2026-11-10";
@@ -58,7 +58,7 @@ async function seedConflict(admin: Pool, suffix: string): Promise<string> {
      VALUES ($1, $2, 'usr_rsv_worker_${RUN}', 'local-${suffix}-${RUN}', $3,
              $4::jsonb, $5, 1)`,
     [conflictId, CO, entryId,
-      JSON.stringify({ kind: "WORK", startedAt: `${date}T08:05:00Z`, endedAt: `${date}T15:30:00Z`, endState: "KNOWN_END", projectId: `prj_rsv_a_${RUN}`, machineId: null, note: null }), HASH],
+      JSON.stringify({ kind: "WORK", startedAt: `${date}T08:05:00Z`, endedAt: `${date}T15:30:00Z`, endState: "KNOWN_END", projectId: receivedProject, machineId: null, note: null }), HASH],
   );
   return conflictId;
 }
@@ -264,13 +264,13 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
     // server unos je autorov (worker), pa napravimo razrješavača-admina čiji je
     // radnički zapis upravo taj worker — privremeno preveži admina na worker zapis.
     const conflictId = await seedConflict(admin, "party");
-    const partyAdmin: ResolveActor = { userId: `usr_rsv_worker_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], email: "w@test.example" };
+    const partyAdmin: ResolveActor = { userId: `usr_rsv_worker_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], scope: "COMPANY", projectIds: null, email: "w@test.example" };
     const denied = await resolveWorkdayConflict(app, partyAdmin, {
       conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-party-no-${RUN}`,
     });
     expect(denied).toMatchObject({ outcome: "FORBIDDEN", code: "RESOLVER_IS_PARTY" });
 
-    const partyOwner: ResolveActor = { userId: `usr_rsv_worker_${RUN}`, companyId: companyId(CO), roles: ["OWNER"], email: "w@test.example" };
+    const partyOwner: ResolveActor = { userId: `usr_rsv_worker_${RUN}`, companyId: companyId(CO), roles: ["OWNER"], scope: "COMPANY", projectIds: null, email: "w@test.example" };
     const allowed = await resolveWorkdayConflict(app, partyOwner, {
       conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-party-owner-${RUN}`,
     });
@@ -289,9 +289,9 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
     const denied = await resolveWorkdayConflict(app, pmOut, {
       conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-scope-${RUN}`,
     });
-    expect(denied.outcome).toBe("FORBIDDEN");
+    expect(denied.outcome).toBe("NOT_FOUND");
 
-    const otherActor: ResolveActor = { userId: owner.userId, companyId: companyId(OTHER), roles: ["OWNER"], email: "o@test.example" };
+    const otherActor: ResolveActor = { userId: owner.userId, companyId: companyId(OTHER), roles: ["OWNER"], scope: "COMPANY", projectIds: null, email: "o@test.example" };
     const hidden = await resolveWorkdayConflict(app, otherActor, {
       conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `key-tenant-${RUN}`,
     });
@@ -358,13 +358,45 @@ describeDb("R4a-2 resolve (PostgreSQL)", () => {
     expect(after).toEqual({ active: 1, total: 8.5 });
   });
 
+  it("ograničeni OWNER: lista, broj, detalj i idempotentni odgovor poštuju oba projekta", async () => {
+    const inProject = `prj_rsv_a_${RUN}`;
+    const resolvedId = `cnf_rsv_acc_${RUN}`;
+    const openId = `cnf_rsv_scope_${RUN}`;
+    const visible = workdayResolveScopeFor(["OWNER"], null, { scope: "PROJECTS", projectIds: [inProject] });
+    const hidden = workdayResolveScopeFor(["OWNER"], null, { scope: "PROJECTS", projectIds: [] });
+    const self = workdayResolveScopeFor(["OWNER"], null, { scope: "SELF", projectIds: [inProject] });
+    await withCompany(app, companyId(CO), async (client) => {
+      expect((await listConflicts(client, CO, visible)).conflicts.map(x => x.id)).toContain(resolvedId);
+      expect(await getConflictDetail(client, CO, visible, resolvedId)).not.toBeNull();
+      for (const restricted of [hidden, self]) {
+        expect((await listConflicts(client, CO, restricted)).total).toBe(0);
+        expect((await countOpenConflicts(client, CO, restricted)).open).toBe(0);
+        expect(await getConflictDetail(client, CO, restricted, resolvedId)).toBeNull();
+      }
+    });
+    const restrictedOwner: ResolveActor = { ...owner, scope: "PROJECTS", projectIds: [] };
+    for (const conflictId of [resolvedId, openId]) {
+      expect(await resolveWorkdayConflict(app, restrictedOwner, {
+        conflictId, kind: "ACCEPT_SERVER", reason, idempotencyKey: `hidden-${conflictId}`,
+      })).toEqual({ outcome: "NOT_FOUND", conflictId });
+    }
+    const mixedId = await seedConflict(admin, "mixed", "foreign-project");
+    await withCompany(app, companyId(CO), async (client) => {
+      expect(await getConflictDetail(client, CO, visible, mixedId)).toBeNull();
+      expect((await listConflicts(client, CO, visible)).conflicts.map(x => x.id)).not.toContain(mixedId);
+    });
+    expect((await resolveWorkdayConflict(app, { ...owner, scope: "PROJECTS", projectIds: [inProject] }, {
+      conflictId: mixedId, kind: "ACCEPT_RECEIVED", reason, idempotencyKey: `foreign-${RUN}`,
+    })).outcome).toBe("NOT_FOUND");
+  });
+
   it("podsjetnik: broji samo nerazriješene; prag iz firme", async () => {
     const counts = await withCompany(app, companyId(CO), (client) =>
-      countOpenConflicts(client, CO, workdayResolveScopeFor(["OWNER"], null)));
+      countOpenConflicts(client, CO, workdayResolveScopeFor(["OWNER"], null, { scope: "COMPANY", projectIds: null })));
     expect(counts.thresholdDays).toBe(3);
     expect(counts.open).toBeGreaterThanOrEqual(1); // "short" i "scope" su ostali OPEN
     const none = await withCompany(app, companyId(CO), (client) =>
-      countOpenConflicts(client, CO, workdayResolveScopeFor(["ACCOUNTANT"], null)));
+      countOpenConflicts(client, CO, workdayResolveScopeFor(["ACCOUNTANT"], null, { scope: "COMPANY", projectIds: null })));
     expect(none.open).toBe(0);
   });
 });

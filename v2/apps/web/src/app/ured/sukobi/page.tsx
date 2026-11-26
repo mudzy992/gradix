@@ -50,7 +50,7 @@ export default async function SukobiPage({
 
   const data = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
-    const scope = workdayResolveScopeFor(auth.ctx.roles, viewerWorkerId);
+    const scope = workdayResolveScopeFor(auth.ctx.roles, viewerWorkerId, auth.ctx);
     const list = await listConflicts(client, auth.ctx.companyId, scope, {
       status: filters.status,
       olderThanDays: filters.olderOnly ? 0 : undefined,

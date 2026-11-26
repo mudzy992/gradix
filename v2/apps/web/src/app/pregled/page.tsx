@@ -188,7 +188,7 @@ export default async function PregledPage() {
   const conflictCounts = can(ctx.roles, "workdays.resolve")
     ? await withCompany(await getVerifiedPool(), ctx.companyId as CompanyId, async (client) => {
         const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
-        return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId));
+        return countOpenConflicts(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId, ctx));
       })
     : null;
 

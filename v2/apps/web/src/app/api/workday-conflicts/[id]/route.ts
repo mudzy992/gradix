@@ -24,7 +24,7 @@ export async function GET(
     const { id } = await params;
     const conflict = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
-      return getConflictDetail(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId), id);
+      return getConflictDetail(client, ctx.companyId, workdayResolveScopeFor(ctx.roles, viewerWorkerId, ctx), id);
     });
     if (!conflict) return fail("NOT_FOUND", "Sukob nije pronađen ili nije u vašem opsegu.");
     return ok({ conflict });

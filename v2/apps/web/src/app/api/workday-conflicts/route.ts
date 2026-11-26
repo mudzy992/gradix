@@ -23,7 +23,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const older = params.get("olderThanDays");
     const result = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const viewerWorkerId = await resolveViewerWorkerId(client, ctx.companyId, ctx.userId);
-      const scope = workdayResolveScopeFor(ctx.roles, viewerWorkerId);
+      const scope = workdayResolveScopeFor(ctx.roles, viewerWorkerId, ctx);
       return listConflicts(client, ctx.companyId, scope, {
         status: status === "OPEN" || status === "RESOLVED" ? status : undefined,
         projectId: params.get("projectId") ?? undefined,

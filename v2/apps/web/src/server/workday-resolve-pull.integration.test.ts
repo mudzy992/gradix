@@ -23,7 +23,7 @@ const INTERNAL = `INTERNA-PULL-${RUN}`;
 const reason = "Dupli unos istog segmenta s telefona";
 
 const adminActor: ResolveActor = {
-  userId: `usr_pll_admin_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], email: "a@test.example",
+  userId: `usr_pll_admin_${RUN}`, companyId: companyId(CO), roles: ["ADMIN"], scope: "COMPANY", projectIds: null, email: "a@test.example",
 };
 
 async function pullAs(userId: string, sessionId: string, cursor?: string) {
@@ -147,4 +147,22 @@ describeDb("R4a-2 pull ishoda (PostgreSQL + ruta)", () => {
     expect(outcomes[0]!.payload).toMatchObject({ status: "RESOLVED", kind: "ACCEPT_RECEIVED", reason });
     expect(JSON.stringify(outcomes[0]!.payload)).not.toContain(INTERNAL);
   });
+  it("ADMIN sa PROJECTS ili SELF ne dobija tuđe ishode kroz pull", async () => {
+    const user = `usr_pll_admin_${RUN}`;
+    const session = `ses_${user}`;
+    const membership = `mem_${user}`;
+    const conflictId = `cnf_pll_one_${RUN}`;
+    const full = await pullAs(user, session);
+    expect(full.events.some(event => event.entityId === conflictId)).toBe(true);
+    try {
+      for (const scope of ["PROJECTS", "SELF"]) {
+        await admin.query("UPDATE public.memberships SET scope=$2 WHERE id=$1", [membership, scope]);
+        const restricted = await pullAs(user, session);
+        expect(restricted.events.some(event => event.entityId === conflictId)).toBe(false);
+      }
+    } finally {
+      await admin.query("UPDATE public.memberships SET scope='COMPANY' WHERE id=$1", [membership]);
+    }
+  });
+
 });

@@ -23,6 +23,16 @@ import {
   type UsageSignal,
 } from "@gradix/domain";
 import { companyToday } from "./project-service";
+import { equipmentScope, type EquipmentActor } from "./equipment-scope";
+
+const HIDDEN_FAULT = "__hidden_fault_signal__";
+
+function redactDecision(decision: UsageDecision): UsageDecision {
+  const redact = (cause: UsageDecision["warns"][number]) => cause.label === HIDDEN_FAULT
+    ? { source: cause.source, label: "Kvar izvan vašeg opsega", state: "ACTIVE", overridden: cause.overridden }
+    : cause;
+  return { ...decision, blockers: decision.blockers.map(redact), warns: decision.warns.map(redact) };
+}
 
 type EntityRef = { entityKind: UsageEntityKind; entityId: string };
 
@@ -41,6 +51,7 @@ async function loadSignals(
   companyId: string | CompanyId,
   refs: readonly EntityRef[],
   today: string,
+  viewer?: EquipmentActor,
 ): Promise<Map<string, UsageSignal[]>> {
   const byEntity = new Map<string, UsageSignal[]>();
   for (const ref of refs) byEntity.set(signalKey(ref.entityKind, ref.entityId), []);
@@ -102,16 +113,18 @@ async function loadSignals(
   }
 
   if (machineIds.length > 0) {
-    const faults = await client.query<{ id: string; machine_id: string; title: string; status: string }>(
-      `SELECT id, machine_id, title, status FROM machine_faults
-        WHERE company_id = $1 AND machine_id = ANY($2)
-          AND status IN ('OPEN', 'WAITING_APPROVAL', 'APPROVED', 'IN_PROGRESS')`,
-      [companyId, machineIds],
+    const params: unknown[] = [companyId, machineIds];
+    const visibility = viewer && viewer.companyId === String(companyId)
+      ? equipmentScope(viewer, params, "f", "fault") : "FALSE";
+    const faults = await client.query<{ id: string; machine_id: string; title: string; status: string; visible: boolean }>(
+      `SELECT f.id, f.machine_id, f.title, f.status, (${visibility}) AS visible FROM machine_faults f
+        WHERE f.company_id = $1 AND f.machine_id = ANY($2)
+          AND f.status IN ('OPEN', 'WAITING_APPROVAL', 'APPROVED', 'IN_PROGRESS')`, params,
     );
     for (const row of faults.rows) {
       byEntity.get(signalKey("MACHINE", String(row.machine_id)))?.push({
         source: "FAULT",
-        label: `Kvar: ${String(row.title)}`,
+        label: row.visible ? `Kvar: ${String(row.title)}` : HIDDEN_FAULT,
         state: String(row.status),
         blocking: true,
         referenceId: String(row.id),
@@ -173,33 +186,33 @@ export function withMessages(decision: UsageDecision) {
 export async function checkUse(
   pool: Pool | PoolClient,
   companyId: string | CompanyId,
-  input: EntityRef & { action: UsageAction; today: string },
+  input: EntityRef & { action: UsageAction; today: string; viewer?: EquipmentActor },
 ): Promise<UsageDecision> {
   const cid = typeof companyId === "string" ? toCompanyId(companyId) : companyId;
   if (isPoolClient(pool)) {
     const client = pool;
-    const signals = await loadSignals(client, cid, [input], input.today);
+    const signals = await loadSignals(client, cid, [input], input.today, input.viewer);
     const overrides = await loadOverrides(client, cid, input, input.action, input.today);
-    return canUseEntity({
+    return redactDecision(canUseEntity({
       entityKind: input.entityKind,
       entityId: input.entityId,
       action: input.action,
       onDate: input.today,
       signals: signals.get(signalKey(input.entityKind, input.entityId)) ?? [],
       overrides,
-    });
+    }));
   }
   return withCompany(pool, cid, async (client) => {
-    const signals = await loadSignals(client, cid, [input], input.today);
+    const signals = await loadSignals(client, cid, [input], input.today, input.viewer);
     const overrides = await loadOverrides(client, cid, input, input.action, input.today);
-    return canUseEntity({
+    return redactDecision(canUseEntity({
       entityKind: input.entityKind,
       entityId: input.entityId,
       action: input.action,
       onDate: input.today,
       signals: signals.get(signalKey(input.entityKind, input.entityId)) ?? [],
       overrides,
-    });
+    }));
   });
 }
 
@@ -207,7 +220,7 @@ export async function checkUse(
 export async function checkUseBatch(
   pool: Pool | PoolClient,
   companyId: string | CompanyId,
-  input: { entityKind: UsageEntityKind; entityIds: readonly string[]; action: UsageAction; today: string },
+  input: { entityKind: UsageEntityKind; entityIds: readonly string[]; action: UsageAction; today: string; viewer?: EquipmentActor },
 ): Promise<Map<string, UsageDecision>> {
   const cid = typeof companyId === "string" ? toCompanyId(companyId) : companyId;
   const decisions = new Map<string, UsageDecision>();
@@ -215,7 +228,7 @@ export async function checkUseBatch(
 
   const run = async (client: PoolClient) => {
     const refs = input.entityIds.map((entityId) => ({ entityKind: input.entityKind, entityId }));
-    const signals = await loadSignals(client, cid, refs, input.today);
+    const signals = await loadSignals(client, cid, refs, input.today, input.viewer);
 
     const overrides = await client.query<{
       subject_id: string;
@@ -242,14 +255,14 @@ export async function checkUseBatch(
         }));
       decisions.set(
         entityId,
-        canUseEntity({
+        redactDecision(canUseEntity({
           entityKind: input.entityKind,
           entityId,
           action: input.action,
           onDate: input.today,
           signals: signals.get(signalKey(input.entityKind, entityId)) ?? [],
           overrides: own,
-        }),
+        })),
       );
     }
     return decisions;
@@ -266,7 +279,7 @@ export async function checkUseBatch(
  */
 export async function meBlockers(
   pool: Pool,
-  input: { companyId: string; userId: string; permissions: readonly string[] },
+  input: EquipmentActor & { permissions: readonly string[] },
 ): Promise<{
   today: string;
   workerId: string | null;
@@ -322,6 +335,15 @@ export async function meBlockers(
          FROM public.machines m
         WHERE m.company_id = $1
           AND (m.is_active)
+          AND ($3::text = 'COMPANY' OR EXISTS (
+            SELECT 1 FROM public.project_assignments ma
+             WHERE ma.company_id = m.company_id AND ma.machine_id = m.id AND ma.voided_at IS NULL
+               AND ma.from_date <= $2::date AND (ma.to_date IS NULL OR ma.to_date >= $2::date)
+               AND (($3::text = 'PROJECTS' AND ma.project_id = ANY($4::text[])) OR
+                 ($3::text = 'SELF' AND EXISTS (SELECT 1 FROM public.project_assignments wa
+                   WHERE wa.company_id = ma.company_id AND wa.project_id = ma.project_id
+                     AND wa.worker_id = $5 AND wa.voided_at IS NULL AND wa.from_date <= $2::date
+                     AND (wa.to_date IS NULL OR wa.to_date >= $2::date))))))
           AND (
             NOT EXISTS (
               SELECT 1 FROM public.project_assignments a
@@ -334,14 +356,14 @@ export async function meBlockers(
             )
           )
         ORDER BY m.code`,
-      [input.companyId, today],
+      [input.companyId, today, input.scope, input.projectIds ?? [], workerId],
     );
 
     const ids = machines.rows.map((row) => String(row.id));
     const [haul, hours, fuel] = await Promise.all([
-      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "haul", today }),
-      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "machine_hours", today }),
-      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "fuel", today }),
+      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "haul", today, viewer: input }),
+      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "machine_hours", today, viewer: input }),
+      checkUseBatch(client, input.companyId, { entityKind: "MACHINE", entityIds: ids, action: "fuel", today, viewer: input }),
     ]);
 
     const empty = canUseEntity({ entityKind: "MACHINE", entityId: "", action: "fuel", onDate: today, signals: [] });
