@@ -36,6 +36,12 @@ import { GET as purchaseInvoicesGet, POST as purchaseInvoicesPost } from "@/app/
 import { GET as purchaseInvoiceGet, PATCH as purchaseInvoicePatch } from "@/app/api/purchase-invoices/[id]/route";
 import { POST as purchaseInvoiceApprove } from "@/app/api/purchase-invoices/[id]/approve/route";
 import { POST as materialIssuePost } from "@/app/api/material-issues/route";
+import { GET as subContractsGet, POST as subContractsPost } from "@/app/api/subcontractor-contracts/route";
+import { GET as subContractGet, PATCH as subContractPatch } from "@/app/api/subcontractor-contracts/[id]/route";
+import { POST as subContractAmend } from "@/app/api/subcontractor-contracts/[id]/amend/route";
+import { GET as subStatementsGet, POST as subStatementsPost } from "@/app/api/subcontractor-statements/route";
+import { GET as subStatementGet } from "@/app/api/subcontractor-statements/[id]/route";
+import { POST as subStatementApprove } from "@/app/api/subcontractor-statements/[id]/approve/route";
 import { GET as purchaseOrdersGet, POST as purchaseOrdersPost } from "@/app/api/purchase-orders/route";
 import { GET as purchaseOrderGet, PATCH as purchaseOrderPatch } from "@/app/api/purchase-orders/[id]/route";
 import { POST as purchaseOrderSend } from "@/app/api/purchase-orders/[id]/send/route";
@@ -237,6 +243,8 @@ import { GET as payrollCorrections } from "@/app/api/payroll/corrections/route";
 import { GET as myPayrollGet } from "@/app/api/me/payroll/route";
 import { GET as advancesGet, POST as advancesPost } from "@/app/api/workers/[id]/advances/route";
 
+import { POST as costManualApprove } from "@/app/api/costs/manual/[id]/approve/route";
+import { POST as costManualReject } from "@/app/api/costs/manual/[id]/reject/route";
 import { POST as costManualPost } from "@/app/api/costs/manual/route";
 import { POST as costReversePost } from "@/app/api/costs/[id]/reverse/route";
 import { GET as tasksGet, POST as taskPost } from "@/app/api/tasks/route";
@@ -452,6 +460,12 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/purchase-invoices/{id}": { GET: purchaseInvoiceGet, PATCH: purchaseInvoicePatch },
   "/api/purchase-invoices/{id}/approve": { POST: purchaseInvoiceApprove },
   "/api/material-issues": { POST: materialIssuePost },
+  "/api/subcontractor-contracts": { GET: subContractsGet, POST: subContractsPost },
+  "/api/subcontractor-contracts/{id}": { GET: subContractGet, PATCH: subContractPatch },
+  "/api/subcontractor-contracts/{id}/amend": { POST: subContractAmend },
+  "/api/subcontractor-statements": { GET: subStatementsGet, POST: subStatementsPost },
+  "/api/subcontractor-statements/{id}": { GET: subStatementGet },
+  "/api/subcontractor-statements/{id}/approve": { POST: subStatementApprove },
   "/api/purchase-orders": { GET: purchaseOrdersGet, POST: purchaseOrdersPost },
   "/api/purchase-orders/{id}": { GET: purchaseOrderGet, PATCH: purchaseOrderPatch },
   "/api/purchase-orders/{id}/send": { POST: purchaseOrderSend },
@@ -557,6 +571,8 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/workers/{id}/advances": { GET: advancesGet, POST: advancesPost },
 
   "/api/costs/manual": { POST: costManualPost },
+  "/api/costs/manual/{id}/approve": { POST: costManualApprove },
+  "/api/costs/manual/{id}/reject": { POST: costManualReject },
   "/api/costs/{id}/reverse": { POST: costReversePost },
   "/api/tasks": { GET: tasksGet, POST: taskPost },
   "/api/tasks/{id}": { PATCH: taskPatch },

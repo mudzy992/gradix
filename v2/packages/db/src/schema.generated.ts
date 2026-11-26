@@ -151,6 +151,7 @@ export interface Companies {
   legal_name: string | null;
   locale: Generated<Locale>;
   logo_object_key: string | null;
+  manual_cost_approval_threshold_cents: Generated<Int8>;
   min_markup_pct: Generated<Numeric>;
   monthly_report_enabled: Generated<boolean>;
   monthly_report_recipients: string[] | null;
@@ -219,6 +220,7 @@ export interface CostEntries {
   booked_at: Generated<Timestamp>;
   booked_by: string;
   category_id: string;
+  client_generated_id: string | null;
   company_id: string;
   currency_code: string | null;
   entry_kind: Generated<string>;
@@ -786,6 +788,28 @@ export interface MaintenanceTemplates {
   tolerance_pct: Generated<Numeric>;
   updated_at: Generated<Timestamp>;
   updated_by: string;
+}
+
+export interface ManualCostRequests {
+  amount_cents: Int8;
+  attachment_id: string | null;
+  category_id: string;
+  client_generated_id: string;
+  company_id: string;
+  cost_entry_id: string | null;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  note: string | null;
+  occurred_on: string;
+  phase_id: string | null;
+  project_id: string;
+  quantity: Numeric | null;
+  request_hash: string;
+  status: string;
+  unit: string | null;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface MaterialIssueAllocations {
@@ -1703,6 +1727,73 @@ export interface StockMovements {
   warehouse_id: string;
 }
 
+export interface SubcontractorContractAmendments {
+  client_generated_id: string;
+  company_id: string;
+  contract_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  reason: string;
+  request_hash: string;
+  value_amendment_cents: Int8;
+}
+
+export interface SubcontractorContracts {
+  client_generated_id: string;
+  code: string;
+  company_id: string;
+  contract_value_cents: Int8;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  document_attachment_id: string | null;
+  id: string;
+  partner_id: string;
+  project_id: string;
+  request_hash: string;
+  retention_pct: Generated<Numeric>;
+  scope: string | null;
+  status: Generated<string>;
+  title: string;
+  updated_at: Generated<Timestamp>;
+  valid_from: string | null;
+  valid_to: string | null;
+  warranty_pct: Generated<Numeric>;
+}
+
+export interface SubcontractorStatementItems {
+  amount_cents: Int8;
+  company_id: string;
+  description: string;
+  id: string;
+  statement_id: string;
+}
+
+export interface SubcontractorStatements {
+  client_generated_id: string;
+  company_id: string;
+  contract_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  exceeded_at_approval: Generated<boolean>;
+  gross_cents: Int8;
+  id: string;
+  net_cents: Int8;
+  period_from: string;
+  period_to: string;
+  phase_id: string | null;
+  request_hash: string;
+  retention_cents: Int8;
+  retention_pct: Numeric;
+  statement_no: string;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  warranty_cents: Int8;
+  warranty_pct: Numeric;
+}
+
 export interface SyncChangeLog {
   company_id: string;
   created_at: Generated<Timestamp>;
@@ -2270,6 +2361,7 @@ export interface DB {
   machines: Machines;
   maintenance_plans: MaintenancePlans;
   maintenance_templates: MaintenanceTemplates;
+  manual_cost_requests: ManualCostRequests;
   material_issue_allocations: MaterialIssueAllocations;
   material_issue_items: MaterialIssueItems;
   material_issues: MaterialIssues;
@@ -2331,6 +2423,10 @@ export interface DB {
   stock_item_levels: StockItemLevels;
   stock_items: StockItems;
   stock_movements: StockMovements;
+  subcontractor_contract_amendments: SubcontractorContractAmendments;
+  subcontractor_contracts: SubcontractorContracts;
+  subcontractor_statement_items: SubcontractorStatementItems;
+  subcontractor_statements: SubcontractorStatements;
   sync_change_log: SyncChangeLog;
   sync_conflicts: SyncConflicts;
   sync_cursor_allocators: SyncCursorAllocators;

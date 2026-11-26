@@ -74,7 +74,12 @@ DECLARE
     'public.purchase_cost_guard()',
     'public.purchase_invoice_guard()',
     'public.purchase_allocation_lock()',
-    'public.purchase_offset_guard()'
+    'public.purchase_offset_guard()',
+    'public.subcontract_statement_guard()',
+    'public.subcontract_ledger_guard()',
+    'public.manual_cost_identity_guard()',
+    'public.manual_cost_request_guard()',
+    'public.manual_cost_ledger_guard()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

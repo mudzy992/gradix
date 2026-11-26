@@ -35,6 +35,10 @@ describeDb("F10A-1 migracija naslijeđene cisterne i F8 zaliha", () => {
     await db.query(`INSERT INTO fuel_entries(id,company_id,machine_id,driver_worker_id,filled_at,liters,amount_cents,currency_code,created_by,updated_by,tank_id)
       VALUES ('fuel-old','a','machine','worker',now(),80,1000,'BAM','u','u','t1')`);
     await db.query(readFileSync(`${migrations}/${target}/migration.sql`, "utf8"));
+    // Tekući grants.sql prati najnoviju šemu, pa nadograđujemo i preostale migracije.
+    for (const dir of readdirSync(migrations).sort().filter((name) => name > target)) {
+      await db.query(readFileSync(`${migrations}/${dir}/migration.sql`, "utf8"));
+    }
     await db.query(readFileSync(fileURLToPath(new URL("../bootstrap/grants.sql", import.meta.url)), "utf8"));
   }, 120_000);
   afterAll(async () => {

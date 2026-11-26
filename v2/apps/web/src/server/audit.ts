@@ -224,6 +224,14 @@ export const AUDIT_ACTIONS = [
   "purchase.invoice_updated",
   "purchase.invoice_approved",
   "purchase.material_issued",
+  "subcontract.contract_created",
+  "subcontract.contract_updated",
+  "subcontract.contract_amended",
+  "subcontract.statement_created",
+  "subcontract.statement_approved",
+  "manual_cost.requested",
+  "manual_cost.approved",
+  "manual_cost.rejected",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -473,6 +481,14 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "purchase.invoice_updated": "Račun dobavljača izmijenjen",
   "purchase.invoice_approved": "Račun dobavljača odobren",
   "purchase.material_issued": "Materijal izdat",
+  "subcontract.contract_created": "Ugovor podizvođača kreiran",
+  "subcontract.contract_updated": "Ugovor podizvođača izmijenjen",
+  "subcontract.contract_amended": "Ugovor podizvođača aneksiran",
+  "subcontract.statement_created": "Situacija podizvođača kreirana",
+  "subcontract.statement_approved": "Situacija podizvođača odobrena",
+  "manual_cost.requested": "Ručni trošak predan na odobrenje",
+  "manual_cost.approved": "Ručni trošak odobren",
+  "manual_cost.rejected": "Ručni trošak odbijen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

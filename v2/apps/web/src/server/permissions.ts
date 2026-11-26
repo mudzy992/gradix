@@ -227,6 +227,8 @@ export const PERMISSIONS = {
    */
   "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MECHANIC", "ACCOUNTANT"],
   "stock.manage": ["OWNER", "ADMIN", "SITE_SUPERVISOR", "MECHANIC"],
+  "subcontractors.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "subcontractors.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "purchase.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "purchase.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
   "purchase.approve": ["OWNER", "ADMIN"],
@@ -568,6 +570,8 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     description:
       "Odobrava ili odbija nalog čiji je predračun iznad praga firme; vanjski servis iznad praga traži i ponudu.",
   },
+  "subcontractors.view": { label: "Pregled podizvođača", description: "Pregled ugovora i situacija podizvođača." },
+  "subcontractors.manage": { label: "Upravljanje podizvođačima", description: "Ugovori, aneksi i situacije podizvođača." },
   "purchase.view": {
     label: "Pregled nabavke",
     description: "Pregled zahtjeva, narudžbenica, prijema i računa dobavljača.",

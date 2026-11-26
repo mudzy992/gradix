@@ -136,3 +136,8 @@ table	hse_trainings	SELECT;INSERT;UPDATE	-		F9 održane obuke (indukcija, toolbo
 table	hse_training_attendees	SELECT;INSERT;UPDATE	-		F9 prisustvo je POTPIS (`signature_name` + `signed_at`), ne checkbox; unikat po radniku i obuci; `signed_at` je UPDATE kad se potpis dopuni, bez DELETE.
 table	hse_inspections	SELECT;INSERT;UPDATE	-		F9 inspekcije (`INTERNAL/EXTERNAL/AUTHORITY`) i nalaz; podizanje zabrane rada je UPDATE `prohibition_lifted_at`, nalaz se ne prepisuje.
 table	hse_attachments	SELECT;INSERT;UPDATE	-		F9 prilozi incidenata/inspekcija/obuka; `pending→confirmed` je UPDATE, bez DELETE.
+table	subcontractor_contracts	SELECT;INSERT;UPDATE	-		Ugovori podizvođača; FORCE RLS.
+table	subcontractor_contract_amendments	SELECT;INSERT	-		Aneksi ugovora; FORCE RLS.
+table	subcontractor_statements	SELECT;INSERT;UPDATE	-		Situacije podizvođača; FORCE RLS.
+table	subcontractor_statement_items	SELECT;INSERT	-		Stavke situacija; FORCE RLS.
+table	manual_cost_requests	SELECT;INSERT;UPDATE	-		Odobrenje ručnog troška; FORCE RLS.

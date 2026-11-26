@@ -5,6 +5,8 @@ export type CostActor = {
   userId: string;
   companyId: string;
   roles: readonly Role[];
+  scope?: "COMPANY" | "PROJECTS" | "SELF";
+  projectIds?: string[] | null;
 };
 
 /** Red u ledgeru, u obliku koji ide preko API-ja (iznos je decimalni string ili `null`). */
@@ -56,6 +58,7 @@ export type CostListResult = {
 };
 
 export type CostPostInput = {
+  clientGeneratedId?: string;
   projectId: string;
   categoryId: string;
   occurredOn: string;
@@ -75,6 +78,8 @@ export type CostPostOutcome = {
   id?: string;
   code?: string;
   message?: string;
+  approvalRequired?: boolean;
+  approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
 };
 
 export type CostReverseInput = {

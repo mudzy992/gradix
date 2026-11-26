@@ -3674,6 +3674,7 @@ export type CostEntryQuery = z.infer<typeof CostEntryQuery>;
 
 export const ManualCostInput = z
   .object({
+    clientGeneratedId: z.uuid().optional(),
     projectId: SafeText,
     phaseId: SafeText.nullable().optional(),
     categoryId: SafeText,
@@ -3709,6 +3710,8 @@ export const CostReversalInput = z
 export type CostReversalInput = z.infer<typeof CostReversalInput>;
 
 export const CostMutationOutcome = z.object({
+  approvalRequired: z.boolean().optional(),
+  approvalStatus: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
   outcome: z.enum(["OK", "VALIDATION_FAILED", "FORBIDDEN", "CONFLICT"]),
   id: SafeText.optional(),
   replaced_by: SafeText.optional(),
@@ -5198,3 +5201,30 @@ export const MaterialIssueInput=z.object({
 }).strict();
 export type MaterialIssueInput=z.infer<typeof MaterialIssueInput>;
 export const MaterialIssueResponse=z.object({id:z.string(),amountCents:z.string(),offsetCents:z.string(),belowMinimum:z.boolean()});
+const SubcontractPct=z.string().regex(/^(?:\d{1,2}(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/);
+export const SubcontractContractInput=z.object({
+  clientGeneratedId:z.uuid(),projectId:SafeText.min(1).max(128),partnerId:SafeText.min(1).max(128),code:SafeText.min(1).max(100),
+  title:SafeText.min(1).max(300),scope:SafeText.max(2000).nullable().optional(),contractValueCents:PurchaseCents,
+  currencyCode:z.enum(["BAM","EUR","USD"]),retentionPct:SubcontractPct,warrantyPct:SubcontractPct,
+  validFrom:z.iso.date().nullable().optional(),validTo:z.iso.date().nullable().optional(),documentAttachmentId:SafeText.min(1).max(128).nullable().optional(),
+}).strict();
+export type SubcontractContractInput=z.infer<typeof SubcontractContractInput>;
+export const SubcontractContractPatch=z.object({status:z.enum(["ACTIVE","COMPLETED","TERMINATED"])}).strict();
+export type SubcontractContractPatch=z.infer<typeof SubcontractContractPatch>;
+export const SubcontractAmendInput=z.object({clientGeneratedId:z.uuid(),valueAmendmentCents:PurchaseCents,reason:SafeText.min(10).max(1000)}).strict();
+export type SubcontractAmendInput=z.infer<typeof SubcontractAmendInput>;
+export const SubcontractStatementInput=z.object({
+  clientGeneratedId:z.uuid(),contractId:SafeText.min(1).max(128),phaseId:SafeText.min(1).max(128).nullable().optional(),
+  statementNo:SafeText.min(1).max(100),periodFrom:z.iso.date(),periodTo:z.iso.date(),
+  items:z.array(z.object({description:SafeText.min(1).max(500),amountCents:PurchaseCents}).strict()).min(1).max(200),
+}).strict();
+export type SubcontractStatementInput=z.infer<typeof SubcontractStatementInput>;
+export const SubcontractContractRow=z.object({id:z.string(),project_id:z.string(),partner_id:z.string(),code:z.string(),title:z.string(),scope:z.string().nullable(),contract_value_cents:z.string(),amendment_cents:z.string(),currency_code:z.string(),retention_pct:z.string(),warranty_pct:z.string(),valid_from:z.string().nullable(),valid_to:z.string().nullable(),status:z.string(),document_attachment_id:z.string().nullable(),created_at:z.string()});
+export const SubcontractStatementRow=z.object({id:z.string(),contract_id:z.string(),phase_id:z.string().nullable(),period_from:z.string(),period_to:z.string(),statement_no:z.string(),status:z.string(),gross_cents:z.string(),retention_pct:z.string(),warranty_pct:z.string(),retention_cents:z.string(),warranty_cents:z.string(),net_cents:z.string(),currency_code:z.string(),exceeded_at_approval:z.boolean(),created_at:z.string()});
+export const SubcontractContractsResponse=z.object({contracts:z.array(SubcontractContractRow)});
+export const SubcontractContractDetail=z.object({contract:SubcontractContractRow});
+export const SubcontractStatementsResponse=z.object({statements:z.array(SubcontractStatementRow)});
+export const SubcontractStatementDetail=z.object({statement:SubcontractStatementRow,items:z.array(z.object({id:z.string(),description:z.string(),amount_cents:z.string()}))});
+export const SubcontractMutationResponse=z.object({id:z.string(),status:z.string().optional(),warnings:z.array(z.literal("SUBCONTRACTOR_CONTRACT_EXCEEDED")).optional(),alreadyApproved:z.boolean().optional()});
+
+export const ManualCostDecisionResponse=z.object({id:z.string(),status:z.string(),costEntryId:z.string().nullable()});

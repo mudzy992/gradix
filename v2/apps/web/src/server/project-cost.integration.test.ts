@@ -106,6 +106,7 @@ describeDb("R6.1 project cost web API", () => {
     await withCompany(admin, companyId(COMPANY), async (client) => {
       // Ledger je append-only: teardown isključuje korisničke trigere za svoju transakciju.
       await client.query("SET LOCAL session_replication_role = replica");
+      await client.query("DELETE FROM manual_cost_requests WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM cost_entries WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM attachments WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM fuel_entries WHERE company_id = $1", [COMPANY]);

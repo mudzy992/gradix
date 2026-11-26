@@ -184,6 +184,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_item_levels TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_counts TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_count_items TO gradix_app;
 -- F10A-2: dokumenti nabavke; potvrđeni prijemi/izlazi i razgraničenja su append-only.
+GRANT SELECT, INSERT, UPDATE ON TABLE public.subcontractor_contracts, public.subcontractor_statements, public.manual_cost_requests TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.subcontractor_contract_amendments, public.subcontractor_statement_items TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.purchase_requests, public.purchase_request_items, public.purchase_orders, public.purchase_order_items, public.purchase_invoices, public.purchase_invoice_items TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.goods_receipts, public.goods_receipt_items, public.material_issues, public.material_issue_items, public.material_issue_allocations TO gradix_app;
 -- F1: jezgro firme i sigurnost pristupa (spec 01).

@@ -18,7 +18,7 @@
  * Kategorija: `cost_categories.default_for_source_type` je mapiranje PO FIRMI (§1.3.14); izvor bez
  * mapiranja ide na `OSTALO`. Mapiranje se čita u trenutku knjiženja i NE dira postojeće troškove.
  */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import {
@@ -166,6 +166,7 @@ export type CostPostDraft = {
   entryKind?: "CHARGE" | "OVERHEAD" | "OFFSET";
   supplierInvoiceId?: string | null;
   materialIssueItemId?: string | null;
+  clientGeneratedId?: string | null;
   occurredOn: string;
   amountCents: bigint | null;
   currency?: Currency | null;
@@ -205,8 +206,8 @@ export async function postCost(
     `INSERT INTO public.cost_entries
        (id, company_id, project_id, phase_id, category_id, source_type, source_id, machine_id,
         occurred_on, amount_cents, currency_code, quantity, unit, rate_snapshot, status, note,
-        booked_by, entry_kind, supplier_invoice_id, material_issue_item_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::date,$10,$11,$12,$13,$14::jsonb,$15,$16,$17,$18,$19,$20)
+        booked_by, entry_kind, supplier_invoice_id, material_issue_item_id, client_generated_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::date,$10,$11,$12,$13,$14::jsonb,$15,$16,$17,$18,$19,$20,$21)
      ON CONFLICT (company_id, source_type, source_id) WHERE status <> 'REVERSED' DO NOTHING
      RETURNING id, status`,
     [
@@ -230,6 +231,7 @@ export async function postCost(
       draft.entryKind ?? "CHARGE",
       draft.supplierInvoiceId ?? null,
       draft.materialIssueItemId ?? null,
+      draft.clientGeneratedId ?? null,
     ],
   );
   const row = inserted.rows[0];
@@ -870,8 +872,8 @@ export async function reverseCost(
     );
     const original = found.rows[0];
     if (!original) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Trošak ne postoji." };
-    if (original.source_type === "PURCHASE") {
-      return { outcome: "CONFLICT", code: "PURCHASE_COST_REVERSAL_FORBIDDEN", message: "Trošak nabavke ne može se jednostrano stornirati bez povezanog dokumenta." };
+    if (original.source_type === "PURCHASE" || original.source_type === "SUBCONTRACTOR") {
+      return { outcome: "CONFLICT", code: "PURCHASE_COST_REVERSAL_FORBIDDEN", message: "Trošak nabavke ili podizvođača ne može se jednostrano stornirati bez povezanog dokumenta." };
     }
     if (original.status === "REVERSED") {
       return { outcome: "CONFLICT", code: "COST_ALREADY_POSTED", message: "Trošak je već storniran." };
@@ -1094,65 +1096,52 @@ export async function createManualCost(
   actor: CostActor,
   input: ManualCostInput,
 ): Promise<CostPostOutcome> {
-  if (!can(actor.roles, "projects.costs.book")) {
-    return { outcome: "FORBIDDEN", message: "Nemate pravo knjiženja." };
-  }
+  if (!can(actor.roles, "projects.costs.book")) return { outcome:"FORBIDDEN",message:"Nemate pravo knjiženja." };
+  if (actor.scope && actor.scope!=="COMPANY" && (actor.scope!=="PROJECTS" || !(actor.projectIds ?? []).includes(input.projectId))) return {outcome:"FORBIDDEN",message:"Projekat nije u vašem opsegu."};
+  const clientId=input.clientGeneratedId ?? randomUUID();
+  const hash=createHash("sha256").update(JSON.stringify({...input,clientGeneratedId:clientId})).digest("hex");
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const project = await client.query<{ id: string }>(
-      "SELECT id FROM public.projects WHERE company_id = $1 AND id = $2",
-      [actor.companyId, input.projectId],
-    );
-    if (!project.rows[0]) {
-      return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Projekat nije pronađen." };
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended('manual-cost:' || $1 || ':' || $2,0))",[actor.companyId,clientId]);
+    const previous=await client.query<{id:string;project_id:string;request_hash:string;status:"PENDING"|"APPROVED"|"REJECTED";cost_entry_id:string|null}>(
+      "SELECT id,project_id,request_hash,status,cost_entry_id FROM public.manual_cost_requests WHERE company_id=$1 AND client_generated_id=$2",[actor.companyId,clientId]);
+    const old=previous.rows[0];
+    if(old) {
+      if(actor.scope && actor.scope!=="COMPANY" && (actor.scope!=="PROJECTS" || !(actor.projectIds ?? []).includes(old.project_id))) return {outcome:"FORBIDDEN",message:"Projekat nije u vašem opsegu."};
+      if(old.request_hash!==hash) return {outcome:"CONFLICT",message:"Identifikator je već korišten za drugi trošak."};
+      return {outcome:"OK",id:old.cost_entry_id ?? old.id,approvalRequired:old.status==='PENDING',approvalStatus:old.status};
     }
-    const category = await client.query<{ id: string }>(
-      "SELECT id FROM public.cost_categories WHERE company_id = $1 AND id = $2 AND is_active FOR SHARE",
-      [actor.companyId, input.categoryId],
-    );
-    if (!category.rows[0]) {
-      return { outcome: "VALIDATION_FAILED", code: "CATEGORY", message: "Aktivna kategorija troška nije pronađena." };
+    const project=await client.query("SELECT id FROM public.projects WHERE company_id=$1 AND id=$2 AND status<>'FINISHED'",[actor.companyId,input.projectId]);
+    if(!project.rowCount) return {outcome:"VALIDATION_FAILED",code:"NOT_FOUND",message:"Projekat nije pronađen ili je završen."};
+    const category=await client.query("SELECT id FROM public.cost_categories WHERE company_id=$1 AND id=$2 AND is_active FOR SHARE",[actor.companyId,input.categoryId]);
+    if(!category.rowCount) return {outcome:"VALIDATION_FAILED",code:"CATEGORY",message:"Aktivna kategorija troška nije pronađena."};
+    if(input.phaseId) {
+      const phase=await client.query("SELECT id FROM public.project_phases WHERE company_id=$1 AND project_id=$2 AND id=$3",[actor.companyId,input.projectId,input.phaseId]);
+      if(!phase.rowCount) return {outcome:"VALIDATION_FAILED",message:"Faza ne pripada projektu."};
     }
-    if (input.attachmentId) {
-      // Validacija mora biti PRIJE knjiženja: povratak VALIDATION_FAILED ne radi rollback transakcije.
-      const attachment = await client.query<{ id: string }>(
-        `SELECT id FROM public.attachments
-          WHERE company_id = $1 AND id = $2 AND entity_type = 'PROJECT' AND entity_id = $3 AND status = 'ready' FOR SHARE`,
-        [actor.companyId, input.attachmentId, input.projectId],
-      );
-      if (!attachment.rows[0]) {
-        return { outcome: "VALIDATION_FAILED", code: "ATTACHMENT", message: "Fotografija računa nije spremna ili ne pripada ovom projektu." };
-      }
+    if(input.attachmentId) {
+      const attachment=await client.query(`SELECT id FROM public.attachments WHERE company_id=$1 AND id=$2 AND entity_type='PROJECT' AND entity_id=$3 AND status='ready' FOR SHARE`,[actor.companyId,input.attachmentId,input.projectId]);
+      if(!attachment.rowCount) return {outcome:"VALIDATION_FAILED",code:"ATTACHMENT",message:"Fotografija računa nije spremna ili ne pripada ovom projektu."};
     }
-    const currency: Currency = input.currencyCode ?? "BAM";
-    const amount = money(input.amount, currency);
-    const sourceId = `man_${randomUUID().replace(/-/g, "").slice(0, 18)}`;
-    const result = await postCost(client, {
-      companyId: actor.companyId,
-      projectId: input.projectId,
-      phaseId: input.phaseId ?? null,
-      categoryId: input.categoryId,
-      sourceType: "MANUAL",
-      sourceId,
-      occurredOn: input.occurredOn,
-      amountCents: amount.cents,
-      currency,
-      quantity: input.quantity ?? null,
-      unit: input.unit ?? null,
-      rateSnapshot: input.attachmentId ? { attachment_id: input.attachmentId } : null,
-      note: input.note ?? null,
-      actorId: actor.userId,
-    });
-    await writeAudit(client, {
-      companyId: actor.companyId,
-      actorId: actor.userId,
-      actorEmail: null,
-      action: "project.cost_posted_manual",
-      entityType: "project_cost_entry",
-      entityId: result.id,
-      metadata: { projectId: input.projectId, amount: input.amount, occurredOn: input.occurredOn },
-      retentionClass: "FINANCIAL",
-    });
-    return { outcome: "OK", id: result.id };
+    const currency:Currency=input.currencyCode ?? "BAM", amount=money(input.amount,currency);
+    if(amount.cents<0n || amount.cents>9223372036854775807n) return {outcome:"VALIDATION_FAILED",message:"Iznos nije validan."};
+    const company=await client.query<{threshold:string;currency:string}>("SELECT manual_cost_approval_threshold_cents::text AS threshold,currency FROM public.companies WHERE id=$1",[actor.companyId]);
+    if(company.rows[0]?.currency!==currency) return {outcome:"VALIDATION_FAILED",message:"Valuta nije valuta firme."};
+    const approvalRequired=amount.cents>BigInt(company.rows[0]!.threshold), requestId=`mcr_${randomUUID().replace(/-/g,"")}`;
+    await client.query(`INSERT INTO public.manual_cost_requests(id,company_id,client_generated_id,request_hash,project_id,phase_id,category_id,occurred_on,amount_cents,currency_code,quantity,unit,note,attachment_id,status,created_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'PENDING',$15)`,
+    [requestId,actor.companyId,clientId,hash,input.projectId,input.phaseId ?? null,input.categoryId,input.occurredOn,amount.cents.toString(),currency,input.quantity ?? null,input.unit ?? null,input.note ?? null,input.attachmentId ?? null,actor.userId]);
+    if(approvalRequired) {
+      await client.query(`INSERT INTO public.approval_requests(id,company_id,subject_type,subject_id,amount_cents,currency_code,status,requested_by)
+        VALUES ($1,$2,'purchase',$3,$4,$5,'OPEN',$6)`,[`apr_${randomUUID().replace(/-/g,"")}`,actor.companyId,requestId,amount.cents.toString(),currency,actor.userId]);
+      await writeAudit(client,{companyId:actor.companyId,actorId:actor.userId,actorEmail:null,action:"manual_cost.requested",entityType:"manual_cost_request",entityId:requestId,retentionClass:"FINANCIAL",metadata:{projectId:input.projectId,amountCents:amount.cents.toString()}});
+      return {outcome:"OK",id:requestId,approvalRequired:true,approvalStatus:"PENDING"};
+    }
+    const result=await postCost(client,{companyId:actor.companyId,projectId:input.projectId,phaseId:input.phaseId ?? null,categoryId:input.categoryId,sourceType:"MANUAL",sourceId:requestId,
+      occurredOn:input.occurredOn,amountCents:amount.cents,currency,quantity:input.quantity ?? null,unit:input.unit ?? null,
+      rateSnapshot:input.attachmentId ? {attachment_id:input.attachmentId} : null,note:input.note ?? null,actorId:actor.userId,clientGeneratedId:clientId});
+    await client.query("UPDATE public.manual_cost_requests SET status='APPROVED',cost_entry_id=$3,updated_at=clock_timestamp() WHERE company_id=$1 AND id=$2",[actor.companyId,requestId,result.id]);
+    await writeAudit(client,{companyId:actor.companyId,actorId:actor.userId,actorEmail:null,action:"project.cost_posted_manual",entityType:"project_cost_entry",entityId:result.id,metadata:{projectId:input.projectId,amount:input.amount,occurredOn:input.occurredOn},retentionClass:"FINANCIAL"});
+    return {outcome:"OK",id:result.id,approvalRequired:false,approvalStatus:"APPROVED"};
   });
 }
 
