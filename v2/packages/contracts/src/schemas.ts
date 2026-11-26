@@ -4591,18 +4591,11 @@ export type MachineReliabilityResponse = z.infer<typeof MachineReliabilityRespon
 /* --- zalihe --- */
 
 export const StockItemRow = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string(),
-  unit: z.string(),
-  categoryId: z.string().nullable(),
-  minQuantity: z.string(),
-  /** Isključivo `SUM(stock_movements)` — nigdje se ne čuva na artiklu. */
-  onHand: z.string(),
-  belowMinimum: z.boolean(),
-  lastUnitCostAmount: z.string().nullable(),
-  isActive: z.boolean(),
-  note: z.string().nullable(),
+  id: z.string(), code: z.string(), name: z.string(), unit: z.string(),
+  category_id: z.string().nullable(), min_quantity: z.string(),
+  /** Isključivo SUM(stock_movements). */
+  on_hand: z.string(), below_minimum: z.boolean(), last_unit_cost_amount: z.string().nullable(),
+  is_active: z.boolean(), note: z.string().nullable(),
 });
 export type StockItemRow = z.infer<typeof StockItemRow>;
 
@@ -5231,6 +5224,7 @@ export const SubcontractStatementInput=z.object({
 export type SubcontractStatementInput=z.infer<typeof SubcontractStatementInput>;
 export const SubcontractContractRow=z.object({id:z.string(),project_id:z.string(),partner_id:z.string(),code:z.string(),title:z.string(),scope:z.string().nullable(),contract_value_cents:z.string(),amendment_cents:z.string(),currency_code:z.string(),retention_pct:z.string(),warranty_pct:z.string(),valid_from:z.string().nullable(),valid_to:z.string().nullable(),status:z.string(),document_attachment_id:z.string().nullable(),created_at:z.string()});
 export const SubcontractStatementRow=z.object({id:z.string(),contract_id:z.string(),phase_id:z.string().nullable(),period_from:z.string(),period_to:z.string(),statement_no:z.string(),status:z.string(),gross_cents:z.string(),retention_pct:z.string(),warranty_pct:z.string(),retention_cents:z.string(),warranty_cents:z.string(),net_cents:z.string(),currency_code:z.string(),exceeded_at_approval:z.boolean(),created_at:z.string()});
+export const SubcontractAmendmentsResponse=z.object({amendments:z.array(z.object({id:z.string(),contract_id:z.string(),value_amendment_cents:z.string(),reason:z.string(),created_at:z.string()}))});
 export const SubcontractContractsResponse=z.object({contracts:z.array(SubcontractContractRow)});
 export const SubcontractContractDetail=z.object({contract:SubcontractContractRow});
 export const SubcontractStatementsResponse=z.object({statements:z.array(SubcontractStatementRow)});

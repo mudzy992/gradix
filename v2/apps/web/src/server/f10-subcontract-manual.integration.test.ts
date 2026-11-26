@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
-import { PendingManualCostsResponse } from "@gradix/contracts";
+import { PendingManualCostsResponse, SubcontractAmendmentsResponse } from "@gradix/contracts";
 import { listPendingManualCosts } from "./phase-10b-list-service";
 import { createManualCost } from "./cost-entry-service";
 import { decideManualCost } from "./manual-cost-approval-service";
-import { amendSubContract, createSubContract, patchSubContract } from "./subcontract-contract-service";
+import { amendSubContract, createSubContract, patchSubContract, listSubContractAmendments, listSubcontractorPartners } from "./subcontract-contract-service";
 import { approveSubStatement, createSubStatement, getSubStatement } from "./subcontract-statement-service";
 import type { PurchaseActor } from "./purchase-request-service";
 
@@ -61,6 +61,18 @@ describeDb("F10A-3 podizvođači i ručni trošak",()=>{
     expect(costs.rows).toEqual([{amount:"12000",category:"PODIZVOĐAČI"}]);
     const amend={clientGeneratedId:randomUUID(),valueAmendmentCents:"5000",reason:"Dodatni radovi na objektu"};
     expect((await amendSubContract(app,owner,created.data.id,amend)).outcome).toBe("OK");
+    const amendments=await listSubContractAmendments(app,pm,created.data.id);
+    expect(amendments.outcome).toBe("OK");
+    if(amendments.outcome==="OK") {
+      expect(SubcontractAmendmentsResponse.safeParse({amendments:amendments.data}).success).toBe(true);
+      expect(amendments.data).toContainEqual(expect.objectContaining({value_amendment_cents:"5000",reason:amend.reason}));
+    }
+    expect((await listSubContractAmendments(app,{...pm,projectIds:[]},created.data.id)).outcome).toBe("NOT_FOUND");
+    expect((await listSubContractAmendments(app,{...owner,companyId:other},created.data.id)).outcome).toBe("NOT_FOUND");
+    expect((await listSubContractAmendments(app,{...owner,roles:["WORKER"]},created.data.id)).outcome).toBe("FORBIDDEN");
+    expect(await listSubcontractorPartners(app,owner)).toContainEqual(expect.objectContaining({id:partner}));
+    expect(await listSubcontractorPartners(app,{...owner,companyId:other})).toEqual([]);
+
     const next=await createSubStatement(app,owner,{...input,clientGeneratedId:randomUUID(),statementNo:"2",items:[{description:"Dodatni radovi",amountCents:"2000"}]});
     if(next.outcome!=="OK") throw Error(next.message);
     expect(await approveSubStatement(app,owner,next.data.id)).toMatchObject({outcome:"OK",data:{warnings:[]}});

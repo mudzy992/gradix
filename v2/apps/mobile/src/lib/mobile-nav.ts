@@ -27,6 +27,7 @@ export type MobileNavEntry = {
     | "/hse/prijava"
     | "/hse/toolbox"
     | "/dnevnik"
+    | "/izlaz-materijala"
     | "/rokovi"
     | "/projekti"
     | "/moji-zadaci"
@@ -89,6 +90,7 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
   },
   { href: "/hse/toolbox", label: "Toolbox razgovor", visible: (p) =>
     p.workerId !== null && p.roles.includes("SITE_SUPERVISOR") },
+  { href: "/izlaz-materijala", label: "Izlaz materijala", visible: (p) => p.roles.some(role=>["OWNER","ADMIN","SITE_SUPERVISOR","MECHANIC"].includes(role)) },
   { href: "/dnevnik", label: "Dnevnik građenja", visible: (p) =>
     p.workerId !== null && p.roles.includes("SITE_SUPERVISOR") },
   /*

@@ -38,7 +38,7 @@ import { POST as purchaseInvoiceApprove } from "@/app/api/purchase-invoices/[id]
 import { GET as materialIssueGet, POST as materialIssuePost } from "@/app/api/material-issues/route";
 import { GET as subContractsGet, POST as subContractsPost } from "@/app/api/subcontractor-contracts/route";
 import { GET as subContractGet, PATCH as subContractPatch } from "@/app/api/subcontractor-contracts/[id]/route";
-import { POST as subContractAmend } from "@/app/api/subcontractor-contracts/[id]/amend/route";
+import { GET as subContractAmendGet, POST as subContractAmend } from "@/app/api/subcontractor-contracts/[id]/amend/route";
 import { GET as subStatementsGet, POST as subStatementsPost } from "@/app/api/subcontractor-statements/route";
 import { GET as subStatementGet } from "@/app/api/subcontractor-statements/[id]/route";
 import { POST as subStatementApprove } from "@/app/api/subcontractor-statements/[id]/approve/route";
@@ -462,7 +462,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/material-issues": { GET: materialIssueGet, POST: materialIssuePost },
   "/api/subcontractor-contracts": { GET: subContractsGet, POST: subContractsPost },
   "/api/subcontractor-contracts/{id}": { GET: subContractGet, PATCH: subContractPatch },
-  "/api/subcontractor-contracts/{id}/amend": { POST: subContractAmend },
+  "/api/subcontractor-contracts/{id}/amend": { GET: subContractAmendGet, POST: subContractAmend },
   "/api/subcontractor-statements": { GET: subStatementsGet, POST: subStatementsPost },
   "/api/subcontractor-statements/{id}": { GET: subStatementGet },
   "/api/subcontractor-statements/{id}/approve": { POST: subStatementApprove },

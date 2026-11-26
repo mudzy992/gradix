@@ -21,7 +21,9 @@ import type {
   SyncPushRequest,
   SyncPushResponse,
   SiteDiaryDetail,
+  MaterialIssueInput,
 } from "@gradix/contracts";
+import type { MaterialCatalog } from "../db/material-issue";
 import { deleteStore, readStore, writeStore } from "../lib/store";
 import { assertSyncAccount, type AccountIdentity } from "./account-binding";
 
@@ -470,3 +472,28 @@ export async function machines(): Promise<MachinesResponse> {
 }
 
 export type { LoginResponse };
+
+/** F10: katalog i izlaz su vezani za isti account/token kao lokalni red. */
+export async function fetchMaterialCatalog(account:AccountIdentity):Promise<MaterialCatalog> {
+  const token=await tokenForAccount(account);
+  const [projects,warehouses,items]=await Promise.all([
+    client.get("/api/projects",undefined,{query:{mine:"1"},accessToken:token}),
+    client.get("/api/warehouses",undefined,{accessToken:token}),
+    client.get("/api/stock-items",undefined,{accessToken:token}),
+  ]);
+  const visible=projects.data.projects.filter(p=>p.status!=="FINISHED").map(p=>({id:p.id,code:p.code,name:p.name}));
+  const allowed=new Set(visible.map(p=>p.id));
+  const sites=warehouses.data.warehouses.filter(w=>w.is_active && w.kind==="SITE" && w.project_id && allowed.has(w.project_id))
+    .map(w=>({id:w.id,name:w.name,project_id:w.project_id!}));
+  const stock=items.data.items.filter(i=>i.is_active).map(i=>({id:i.id,code:i.code,name:i.name,unit:i.unit}));
+  const phasePairs=await Promise.all(visible.map(async p=>{
+    const result=await client.get("/api/projects/{id}/phases",{id:p.id},{accessToken:token});
+    return [p.id,result.data.phases.map(phase=>({id:phase.id,name:phase.name}))] as const;
+  }));
+  return {projects:visible,warehouses:sites,items:stock,phases:Object.fromEntries(phasePairs)};
+}
+export async function sendMaterialIssue(account:AccountIdentity,input:MaterialIssueInput) {
+  const token=await tokenForAccount(account);
+  const {data}=await client.post("/api/material-issues",input,undefined,{accessToken:token});
+  return data;
+}

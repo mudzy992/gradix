@@ -5,7 +5,7 @@ export const DB_NAME = "gradix.db";
  * Verzija lokalne šeme. Podignuta na 2 u F8: `outbox`/`sync_events` su dobili šire skupove
  * `entity_type` (radioničke radnje i kvarovi), pa stara baza mora proći kroz `__v2` korak.
  */
-export const LOCAL_SCHEMA_VERSION = 5;
+export const LOCAL_SCHEMA_VERSION = 6;
 
 export type LocalSqlite = Pick<
   SQLite.SQLiteDatabase,
@@ -148,6 +148,20 @@ const R4_SCHEMA = `
   );
 `;
 
+const MATERIAL_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS material_issue_outbox (
+    company_id TEXT NOT NULL, user_id TEXT NOT NULL, local_id TEXT NOT NULL, payload_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','failed','rejected','sent')),
+    attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT, server_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+    PRIMARY KEY(company_id,user_id,local_id)
+  );
+  CREATE INDEX IF NOT EXISTS material_issue_pending_idx ON material_issue_outbox(company_id,user_id,status,created_at);
+  CREATE TABLE IF NOT EXISTS material_issue_catalog (
+    company_id TEXT NOT NULL, user_id TEXT NOT NULL, payload_json TEXT NOT NULL, fetched_at TEXT NOT NULL,
+    PRIMARY KEY(company_id,user_id)
+  );
+`;
+
 const CORE_TABLES = [
   "active_account",
   "outbox",
@@ -156,6 +170,8 @@ const CORE_TABLES = [
   "hse_photo_queue",
   "diary_detail_cache",
   "foreman_workers_cache",
+  "material_issue_outbox",
+  "material_issue_catalog",
 ] as const;
 
 function tableColumns(rows: readonly { name: string }[]): Set<string> {
@@ -419,6 +435,7 @@ export async function migrateLocalDatabase(
       await db.execAsync(R4_SCHEMA);
       await upgradeToV2(db);
       await upgradeToV3(db);
+      await db.execAsync(MATERIAL_SCHEMA);
       await verifyR4Schema(db);
       await db.execAsync(`PRAGMA user_version = ${LOCAL_SCHEMA_VERSION}`);
     });

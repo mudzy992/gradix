@@ -83,3 +83,26 @@ export async function amendSubContract(pool:Pool,actor:PurchaseActor,id:string,i
     return {outcome:"OK",data:{id:aid}};
   });
 }
+
+/** Detaljni aneksi su vidljivi samo kroz ugovor u projektnom opsegu korisnika. */
+export async function listSubContractAmendments(pool:Pool,actor:PurchaseActor,id:string):Promise<WarehouseResult<unknown[]>> {
+  if(!can(actor.roles,"subcontractors.view")) return subDenied;
+  return withCompany(pool,companyId(actor.companyId),async client=>{
+    if(!await subContract(client,actor,id)) return subMissing;
+    const rows=await client.query(`SELECT id,contract_id,value_amendment_cents::text,reason,created_at::text
+      FROM public.subcontractor_contract_amendments WHERE company_id=$1 AND contract_id=$2 ORDER BY created_at DESC,id LIMIT 500`,[actor.companyId,id]);
+    return {outcome:"OK",data:rows.rows};
+  });
+}
+
+/** Za izbor partnera računaju se i dodatne aktivne uloge, ne samo primarna vrsta. */
+export async function listSubcontractorPartners(pool:Pool,actor:PurchaseActor):Promise<Array<{id:string;code:string;name:string}>> {
+  if(!can(actor.roles,"subcontractors.manage") || !can(actor.roles,"partners.manage")) return [];
+  return withCompany(pool,companyId(actor.companyId),async client=>{
+    const rows=await client.query<{id:string;code:string;name:string}>(`SELECT p.id,p.code,p.name FROM public.partners p
+      WHERE p.company_id=$1 AND p.active AND EXISTS (SELECT 1 FROM public.partner_roles r
+      WHERE r.company_id=p.company_id AND r.partner_id=p.id AND r.role='SUBCONTRACTOR' AND r.is_active)
+      ORDER BY p.code LIMIT 500`,[actor.companyId]);
+    return rows.rows;
+  });
+}

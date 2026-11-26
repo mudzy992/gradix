@@ -60,6 +60,7 @@ async function clearCachedRows(db: LocalSqlite): Promise<void> {
     DELETE FROM projects_cache;
     DELETE FROM foreman_workers_cache;
     DELETE FROM diary_detail_cache;
+    DELETE FROM material_issue_catalog;
     -- Conflict payloads are not disposable cache: keep their original account-bound event rows.
     DELETE FROM sync_events WHERE entity_type <> 'sync_conflict';
     DELETE FROM sync_cursors;
@@ -107,10 +108,14 @@ export async function activateLocalAccount(db: LocalSqlite, account: LocalAccoun
        ON CONFLICT(singleton) DO UPDATE SET company_id = excluded.company_id, user_id = excluded.user_id`,
       [account.companyId, account.userId],
     );
+    const materialPending = await db.getFirstAsync<{ count: number }>(
+      `SELECT count(*) AS count FROM material_issue_outbox WHERE status IN ('pending','failed','rejected') AND NOT (company_id=? AND user_id=?)`,
+      [account.companyId, account.userId],
+    );
     outcome = {
       changed,
       previous,
-      pendingForOtherAccounts: pending?.count ?? 0,
+      pendingForOtherAccounts: (pending?.count ?? 0) + (materialPending?.count ?? 0),
     };
   });
   return outcome;
@@ -132,7 +137,11 @@ export async function pendingOutboxCount(db: LocalSqlite, account: LocalAccount)
         AND (last_error IS NULL OR last_error NOT LIKE 'DIARY_REFERENCE_RECOVERED:%')`,
     [account.companyId, account.userId],
   );
-  return row?.count ?? 0;
+  const material = await db.getFirstAsync<{count:number}>(
+    "SELECT count(*) AS count FROM material_issue_outbox WHERE company_id=? AND user_id=? AND status IN ('pending','failed','rejected')",
+    [account.companyId,account.userId],
+  );
+  return (row?.count ?? 0)+(material?.count ?? 0);
 }
 
 /** Legacy R0 rows have no account key: preserve and warn, never mix them into the R4 outbox. */

@@ -15,6 +15,7 @@ import { buildOpenApi } from "./openapi";
 import { ROUTES } from "./routes";
 import {
   AuditResponse,
+  StockItemsResponse,
   ForemanWorkersResponse,
   LoginResponse,
   isTwoFactorRequired,
@@ -352,4 +353,11 @@ describe("OpenAPI", () => {
   it("nema ugniježđenog $schema", () => {
     expect(JSON.stringify(buildOpenApi())).not.toContain('"$schema"');
   });
+});
+
+
+it("stock katalog odgovara stvarnom snake_case DTO-u", () => {
+  const result = StockItemsResponse.safeParse({items:[{id:"i",code:"C",name:"Cement",unit:"kg",category_id:null,min_quantity:"0.000",on_hand:"5.000",below_minimum:false,last_unit_cost_amount:null,is_active:true,note:null}]});
+  expect(result.success).toBe(true);
+  if (result.success) expect(result.data.items[0]?.is_active).toBe(true);
 });

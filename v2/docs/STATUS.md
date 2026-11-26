@@ -495,3 +495,15 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
   `{reversed:false}`. Pravilo „storno je dozvoljen i poslije zatvaranja“ je odluka, ne bug.
 - **F5:** integracioni testovi protiv baze u ovom okruženju nisu pokrenuti (nema `psql`/PG);
   oslanjaju se na CI i lokalno se prijavljuju kao **preskočeni**, ne kao prošli.
+
+## Faza 10 — odluke koje se ne smiju izgubiti
+
+- Skladište je zbir kretnji, ne prepisivo stanje; gradilišno skladište pripada projektu. Trošak materijala ide u jedinstveni ledger, a reklasifikacija ne smije dvostruko teretiti projekat.
+- Nabava, fakture i ručni troškovi čuvaju prag odobrenja pri predaji; ručni trošak se ne knjiži prije potrebnog odobrenja. Novi GET spiskovi poštuju tenant i projektni opseg.
+- Partner s aktivnom dodatnom ulogom `SUBCONTRACTOR` je prihvatljiv i kad mu primarni `kind` nije podizvođač. Ugovor je prvo DRAFT, situacije i aneksi traže ACTIVE.
+- Neto situacije je bruto umanjen za retention i warranty; odobrena situacija knjiži bruto jednom. Prekoračenje ugovora je upozorenje, ne blokada; konačna računica je na serveru, ne u listi ograničenoj na 500 redova.
+- Mobilni izlaz ima poseban trajni SQLite outbox vezan za firmu i korisnika i stabilni `clientGeneratedId`; POST je idempotentan. Čuvanje na telefonu nije knjiženje zalihe; server provjerava prava, opseg, količinu i cijenu. Odjava briše privatni katalog, ali ne i neposlane redove. Za offline izbor prethodno osvježiti katalog online.
+- Katalog izbora koristi `mine=1`: korisnik mora imati aktivnu dodjelu projektu, uključujući uredske korisnike na mobilnom. Pristup izlazu ima postojeća `stock.manage` matrica (OWNER, ADMIN, SITE_SUPERVISOR, MECHANIC); zasebna uloga magacionera zasad ne postoji.
+- Uredske liste imaju gornju granicu, a nabavne forme trenutno obrađuju po jednu stavku. Prije produkcije provjeriti stvarnu migraciju i lokacije; dosadašnji upgrade test nije stvarna produkcijska baza.
+
+**Provjere i otvorena ograničenja:** vidjeti [IZVJESTAJ-FAZA-10.md](IZVJESTAJ-FAZA-10.md). Jedini puni lokalni prolaz nije bio zelen; naknadno je popravljena i ciljano provjerena mobilna regresija, ali kompletni prolaz nije ponovljen. Originalni `preflight` zahtijeva nedostajući `psql`; oba SQL fajla su zasebno prošla preko Node PostgreSQL klijenta. CI za završni commit treba provjeriti zasebno prije tvrdnje o spremnosti za Fazu 11.

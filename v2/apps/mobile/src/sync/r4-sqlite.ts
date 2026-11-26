@@ -2,6 +2,7 @@ import type { LocalSqlite } from "../db/migrations";
 import type { LocalAccount } from "../db/r4-outbox";
 import { createSqliteR4SyncStore } from "../db/r4-outbox";
 import { runR4Sync, type R4SyncOutcome } from "./r4-engine";
+import { syncMaterialIssues } from "./material-issue-sync";
 import { runHsePhotoSync } from "./hse-photo-sync";
 import type { R4SyncPullPage } from "@gradix/domain";
 
@@ -21,6 +22,13 @@ export async function runSqliteR4Sync(db: LocalSqlite, account: LocalAccount): P
       return page as unknown as R4SyncPullPage;
     },
   });
+  if (outcome.error !== "LOCAL_ACCOUNT_SCOPE_MISMATCH") {
+    try {
+      const material=await syncMaterialIssues(db,account,async (a,input)=>(await import("../api/client")).sendMaterialIssue(a,input));
+      outcome.applied+=material.applied;outcome.rejected+=material.rejected;outcome.retry+=material.retry;
+      if(material.retry && !outcome.error) outcome.error="MATERIAL_ISSUE_RETRY";
+    } catch { outcome.retry+=1; outcome.error ??= "MATERIAL_ISSUE_SYNC_FAILED"; }
+  }
   if (!outcome.error) {
     try {
       const result = await runHsePhotoSync(db, account, {
