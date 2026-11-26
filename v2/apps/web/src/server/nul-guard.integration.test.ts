@@ -66,6 +66,7 @@ import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/
 import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenance/route";
 import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
+import { GET as searchGet } from "@/app/api/search/route";
 import { GET as dashboardActionsGet } from "@/app/api/dashboard/route";
 import { GET as dataHealthGet } from "@/app/api/data-health/route";
 
@@ -400,6 +401,7 @@ type Handler = (request: NextRequest, context?: any) => Promise<Response>;
 const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/data-health": { GET: dataHealthGet },
   "/api/dashboard": { GET: dashboardActionsGet },
+  "/api/search": { GET: searchGet },
   "/api/auth/login": { POST: loginRoute },
   "/api/auth/refresh": { POST: refreshRoute },
   "/api/auth/change-password": { POST: changePasswordRoute },

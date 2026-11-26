@@ -122,10 +122,21 @@ export const NotificationReadInput = z.object({
 });
 export type NotificationReadInput = z.infer<typeof NotificationReadInput>;
 
+export const SearchQuery = z.object({ q: SafeText.trim().min(2).max(100) });
+export const SearchResponse = z.object({ results:z.array(z.object({
+  type:z.enum(["PROJECT","WORKER","MACHINE","PARTNER","TENDER","DOCUMENT","INVOICE","TASK","OBLIGATION","SERVICE_ORDER","INCIDENT"]),
+  title:z.string(), href:z.string().startsWith("/"),
+})) });
+
 export const DashboardActionsResponse = z.object({ checkedAt: IsoDate, items: z.array(z.object({
   key: z.string(), role: z.enum(["OWNER", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MECHANIC"]),
   count: z.number().int().positive(), href: z.string().startsWith("/"), priority: z.number().int().nonnegative(),
-})) });
+})), projectFinancials: z.array(z.object({projectId:z.string(), code:z.string(), name:z.string(),
+  budget:z.string().nullable(), actual:z.string(), currency:z.string(), progressPercent:z.number().nullable(),
+  budgetUsedPercent:z.number().nullable(), href:z.string().startsWith("/")})),
+  topMachines: z.array(z.object({machineId:z.string(),code:z.string(),name:z.string(),rate:z.string(),
+    currency:z.string(),href:z.string().startsWith("/")})).max(3),
+});
 
 /** Data health: only nonzero action items. */
 export const DataHealthResponse = z.object({ items: z.array(z.object({

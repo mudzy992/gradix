@@ -128,6 +128,8 @@ function pdfString(value: string): string {
 export type PdfOptions = {
   title: string;
   subtitle?: string;
+  /** Izvor i vrijeme nastanka, vidljivo na svakoj stranici. */
+  footer?: string;
   /** Kolone tabele: širina u bodovima i zaglavlje. */
   columns: ReadonlyArray<{ header: string; width: number }>;
   rows: ReadonlyArray<readonly string[]>;
@@ -184,6 +186,9 @@ export function buildObligationsPdf(options: PdfOptions): Uint8Array {
     drawRow(header, true);
     for (const row of slice) drawRow(row, false);
 
+    if (options.footer) {
+      ops.push(`BT /F1 7 Tf 1 0 0 1 ${MARGIN} ${MARGIN - 12} Tm ${pdfString(options.footer)} Tj ET`);
+    }
     // Broj stranice ide na dno: izvještaj odštampan u 3 dijela mora imati red.
     ops.push(
       `BT /F1 8 Tf 1 0 0 1 ${PAGE_WIDTH - MARGIN - 40} ${MARGIN - 12} Tm ${pdfString(`strana ${page + 1}/${chunkCount}`)} Tj ET`,

@@ -5,7 +5,7 @@
  * to su dva skupa (ledger + faze + aneksi). Ako ih klijent dohvata po redu, lista od 40 projekata
  * radi 40 zahtjeva — isti N+1 koji je `PROJECT_SELECT` već izbjegao za brojače tima.
  */
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { isCurrency, toAmountString, type Currency } from "@gradix/domain";
 
@@ -19,15 +19,29 @@ export type ProjectFinancialSummary = {
   risky: boolean;
 };
 
+export type ProjectFinancialDetail = ProjectFinancialSummary & { code: string; name: string; currency_code: string; posted_amount: string; budget_amount: string | null };
+
 export async function projectFinancialSummaries(
   pool: Pool,
   companyId: CompanyId,
   projectIds: string[],
 ): Promise<Map<string, ProjectFinancialSummary>> {
-  if (projectIds.length === 0) return new Map();
-  return withCompany(pool, companyId, async (client) => {
+  return withCompany(pool, companyId, async client => {
+    const details = await projectFinancialSummariesWithClient(client, companyId, projectIds);
+    return new Map([...details].map(([id, d]) => [id, {
+      project_id:d.project_id, margin:d.margin, margin_pct:d.margin_pct, progress_pct:d.progress_pct,
+      budget_used_pct:d.budget_used_pct, pending_cost_count:d.pending_cost_count, risky:d.risky,
+    }]));
+  });
+}
+
+/** Reuses exactly the project list financial definitions within an existing tenant transaction. */
+export async function projectFinancialSummariesWithClient(client: PoolClient, companyId: string, projectIds: readonly string[]) {
+    if (projectIds.length === 0) return new Map<string, ProjectFinancialDetail>();
     const rows = await client.query<{
       id: string;
+      code: string;
+      name: string;
       currency_code: string | null;
       contract_value_cents: string | null;
       amendments: string | null;
@@ -36,7 +50,7 @@ export async function projectFinancialSummaries(
       pending: string;
       progress: string | null;
     }>(
-      `SELECT p.id, p.currency_code, p.contract_value_cents::text,
+      `SELECT p.id, p.code, p.name, p.currency_code, p.contract_value_cents::text,
               (SELECT coalesce(sum(a.amount_cents), 0)::text FROM public.project_amendments a
                 WHERE a.company_id = p.company_id AND a.project_id = p.id
                   AND a.status = 'APPROVED') AS amendments,
@@ -59,7 +73,7 @@ export async function projectFinancialSummaries(
         WHERE p.company_id = $1 AND p.id = ANY($2::text[])`,
       [companyId, projectIds],
     );
-    const map = new Map<string, ProjectFinancialSummary>();
+    const map = new Map<string, ProjectFinancialDetail>();
     for (const row of rows.rows) {
       const currency: Currency = isCurrency(row.currency_code) ? row.currency_code : "BAM";
       const posted = BigInt(row.posted ?? "0");
@@ -77,6 +91,9 @@ export async function projectFinancialSummaries(
         budget !== null && budget > 0n ? Math.round(Number((posted * 100_00n) / budget)) / 100 : null;
       map.set(row.id, {
         project_id: row.id,
+        code: row.code, name: row.name, currency_code: currency,
+        posted_amount: toAmountString({ cents: posted, currency }),
+        budget_amount: budget === null ? null : toAmountString({ cents: budget, currency }),
         margin: margin === null ? null : toAmountString({ cents: margin, currency }),
         margin_pct: marginPct,
         progress_pct: row.progress === null ? null : Number(row.progress),
@@ -90,5 +107,4 @@ export async function projectFinancialSummaries(
       });
     }
     return map;
-  });
 }

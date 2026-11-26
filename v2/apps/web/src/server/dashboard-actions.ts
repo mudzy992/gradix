@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 import type { DashboardActor } from "./dashboard-aggregates";
 import { dueMaintenancePlans } from "./maintenance-service";
+import { dashboardProjectDetails, dashboardTopMachines } from "./dashboard-details";
 
 type DashboardRole = "OWNER" | "PROJECT_MANAGER" | "SITE_SUPERVISOR" | "ACCOUNTANT" | "MECHANIC";
 type Definition = { key: string; role: DashboardRole; href: string; priority: number; sql: string; global?: boolean };
@@ -77,6 +78,8 @@ export async function loadDashboardActions(pool: Pool, actor: DashboardActor) {
       if (count) items.push({key:"preventive_due",role:"MECHANIC",count,href:"/ured/servis/planovi",priority:1});
     }
     items.sort((a,b)=>a.priority-b.priority || a.key.localeCompare(b.key));
-    return {checkedAt:new Date().toISOString(),items};
+    const projectFinancials = await dashboardProjectDetails(client,actor,assigned);
+    const topMachines = await dashboardTopMachines(client,actor,scopeIds);
+    return {checkedAt:new Date().toISOString(),items,projectFinancials,topMachines};
   });
 }

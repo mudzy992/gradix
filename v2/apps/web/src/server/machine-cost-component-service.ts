@@ -227,7 +227,14 @@ export async function getMachineCostRate(
   onDate?: string,
 ): Promise<CostRateView | null> {
   if (!can(actor.roles, "machines.cost_rate.view")) return null;
-  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+  return withCompany(pool, toCompanyId(actor.companyId), client => getMachineCostRateWithClient(client, actor, machineId, onDate));
+}
+
+/** Same computation as the cost screen, without opening a nested tenant transaction. */
+export async function getMachineCostRateWithClient(
+  client: PoolClient, actor: CostActor, machineId: string, onDate?: string,
+): Promise<CostRateView | null> {
+  if (!can(actor.roles, "machines.cost_rate.view")) return null;
     const machine = await client.query<{ id: string; code: string; name: string }>(
       "SELECT id, code, name FROM public.machines WHERE company_id = $1 AND id = $2",
       [actor.companyId, machineId],
@@ -273,7 +280,6 @@ export async function getMachineCostRate(
       planned_hours_per_month: hours,
       breakdown,
     };
-  });
 }
 
 export async function createCostComponent(

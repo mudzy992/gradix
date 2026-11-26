@@ -4,6 +4,7 @@ import { Client, Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadDataHealth } from "./data-health";
 import { loadDashboardActions } from "./dashboard-actions";
+import { globalSearch } from "./global-search";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appUrl = process.env.DATABASE_URL;
@@ -32,7 +33,7 @@ describeDb("data health pod stvarnim RLS-om", () => {
     await admin.query("INSERT INTO public.warehouses(id,company_id,code,name,kind,project_id) VALUES ('dh-ha','dh-a','S','S','SITE','dh-pa'),('dh-hb','dh-b','S','S','SITE','dh-pb')");
     await admin.query("INSERT INTO public.workdays(id,company_id,worker_id,work_date,status,created_by,updated_by) VALUES ('dh-da','dh-a','dh-wa','2026-01-01','SUBMITTED','dh-u','dh-u'),('dh-db','dh-b','dh-wb','2026-01-01','SUBMITTED','dh-u','dh-u')");
     await admin.query(`INSERT INTO public.hse_incidents(id,company_id,project_id,kind,severity,occurred_at,description,created_by,updated_by)
-      VALUES ('dh-ia','dh-a','dh-pa','NEAR_MISS','MINOR',now(),'Primjer incidenta','dh-u','dh-u'),('dh-ib','dh-b','dh-pb','NEAR_MISS','MINOR',now(),'Drugi incident','dh-u','dh-u')`);
+      VALUES ('dh-ia','dh-a','dh-pa','NEAR_MISS','MINOR',now(),'Skela primjer incidenta','dh-u','dh-u'),('dh-ib','dh-b','dh-pb','NEAR_MISS','MINOR',now(),'Skela drugi incident','dh-u','dh-u')`);
   }, 120_000);
   afterAll(async () => { await app.end(); await admin.end(); await root.query(`DROP DATABASE IF EXISTS ${database}`); await root.end(); });
   it("vraća samo stanje firme, šest validnih kategorija i ne otkriva drugu firmu", async () => {
@@ -103,6 +104,83 @@ describeDb("data health pod stvarnim RLS-om", () => {
     expect(result?.items.map(x=>x.key)).not.toContain("workers_without_rate");
     expect(result?.items.map(x=>x.key)).not.toContain("warehouses_without_minimum");
     expect(result?.items.map(x=>x.key)).not.toContain("incidents_without_actions");
+  });
+
+  it("PM finansije i OWNER top stope koriste ekranove definicije i čuvaju scope", async () => {
+    await admin.query(`INSERT INTO public.cost_entries(id,company_id,project_id,category_id,source_type,source_id,occurred_on,amount_cents,currency_code,booked_by)
+      VALUES ('dh-cost','dh-a','dh-pa','dh-ca','MANUAL','dh-cost',CURRENT_DATE,30,'BAM','dh-u')`);
+    await admin.query(`INSERT INTO public.project_phases(id,company_id,project_id,code,name,weight,progress_pct,created_by,updated_by)
+      VALUES ('dh-phase','dh-a','dh-pa','P','Faza',1,40,'dh-u','dh-u')`);
+    await admin.query(`INSERT INTO public.machines(id,company_id,code,name,category_id) VALUES
+      ('dh-m2','dh-a','M2','Druga','dh-a_cat_excavator'),('dh-m3','dh-a','M3','Treća','dh-a_cat_excavator'),
+      ('dh-m4','dh-a','M4','Četvrta','dh-a_cat_excavator')`);
+    await admin.query(`INSERT INTO public.machine_cost_components(id,company_id,machine_id,component,amount_cents,currency_code,basis,valid_from,created_by) VALUES
+      ('dh-c2','dh-a','dh-m2','FUEL',300,'BAM','PER_HOUR',CURRENT_DATE-1,'dh-u'),
+      ('dh-c3','dh-a','dh-m3','FUEL',400,'BAM','PER_HOUR',CURRENT_DATE-1,'dh-u'),
+      ('dh-c4','dh-a','dh-m4','FUEL',200,'BAM','PER_HOUR',CURRENT_DATE-1,'dh-u'),
+      ('dh-cb','dh-b','dh-mb','FUEL',900,'BAM','PER_HOUR',CURRENT_DATE-1,'dh-u')`);
+    await admin.query(`INSERT INTO public.project_assignments(id,company_id,project_id,machine_id,from_date,created_by)
+      VALUES ('dh-mach-ass','dh-a','dh-pa','dh-ma','2020-01-01','dh-u')`);
+    const pm=await loadDashboardActions(app,{...actor,roles:["PROJECT_MANAGER"]});
+    expect(pm?.projectFinancials).toEqual([expect.objectContaining({projectId:"dh-pa",budget:"1.00",actual:"0.30",progressPercent:40,budgetUsedPercent:30})]);
+    expect(pm?.topMachines).toEqual([]);
+    const owner=await loadDashboardActions(app,actor);
+    expect(owner?.topMachines.map(m=>m.machineId)).toEqual(["dh-m3","dh-m2","dh-m4"]);
+    expect(owner?.topMachines.map(m=>m.rate)).toEqual(["4.00","3.00","2.00"]);
+    expect(owner?.projectFinancials).toEqual([]);
+    const restricted=await loadDashboardActions(app,{...actor,scope:"PROJECTS",projectIds:["dh-pa"]});
+    expect(restricted?.topMachines.map(m=>m.machineId)).toEqual(["dh-ma"]);
+    expect((await loadDashboardActions(app,{...actor,scope:"SELF"}))?.topMachines).toEqual([]);
+  });
+
+  it("pretraga čuva firmu, projektni opseg, dozvole, osjetljiva polja i doslovne znakove", async () => {
+    await admin.query("UPDATE public.projects SET name=CASE id WHEN 'dh-pa' THEN 'Most skela' WHEN 'dh-pa2' THEN 'Skela skrivena' ELSE 'Skela druga firma' END WHERE id IN ('dh-pa','dh-pa2','dh-pb')");
+    await admin.query("UPDATE public.workers SET first_name='Skela',last_name='Radnik' WHERE id IN ('dh-wa','dh-wb')");
+    await admin.query("UPDATE public.machines SET name='Skela mašina' WHERE id IN ('dh-ma','dh-mb')");
+    await admin.query(`INSERT INTO public.partners(id,company_id,code,name,kind) VALUES
+      ('dh-partner-a','dh-a','V','Skela dobavljač','VENDOR'),('dh-partner-b','dh-b','V','Skela tuđa','VENDOR')`);
+    await admin.query(`INSERT INTO public.tenders(id,company_id,title,partner_id,submitted_value_cents,currency_code,status,created_by,updated_by)
+      VALUES ('dh-tender','dh-a','Skela tender','dh-partner-a',100,'BAM','OPPORTUNITY','dh-u','dh-u')`);
+    await admin.query(`INSERT INTO public.purchase_invoices(id,company_id,partner_id,invoice_number,invoice_date,amount_cents,currency_code,project_id,created_by)
+      VALUES ('dh-inv','dh-a','dh-partner-a','Skela račun',CURRENT_DATE,100,'BAM','dh-pa','dh-u')`);
+    await admin.query(`INSERT INTO public.attachments(id,company_id,entity_type,entity_id,object_key,file_name,content_type,size_bytes,sha256,status,uploaded_at)
+      VALUES ('dh-doc-a','dh-a','PROJECT','dh-pa','obj-a','Skela.pdf','application/pdf',1,repeat('a',64),'ready',now()),
+      ('dh-doc-b','dh-b','PROJECT','dh-pb','obj-b','Skela privatno.pdf','application/pdf',1,repeat('b',64),'ready',now())`);
+    await admin.query("UPDATE public.project_tasks SET title='Skela zadatak' WHERE id IN ('dh-ta','dh-ta2','dh-tb')");
+    await admin.query("UPDATE public.service_orders SET description='Skela servis' WHERE id='dh-so'");
+    await admin.query(`INSERT INTO public.obligation_types(id,company_id,code,label,entity_kind) VALUES
+      ('dh-ot-a','dh-a','SKELA','Skela obaveza','PROJECT'),('dh-ot-b','dh-b','SKELA','Skela strana','PROJECT')`);
+    await admin.query(`INSERT INTO public.obligations(id,company_id,type_id,project_id,expires_at) VALUES
+      ('dh-ob-a','dh-a','dh-ot-a','dh-pa',CURRENT_DATE),('dh-ob-a2','dh-a','dh-ot-a','dh-pa2',CURRENT_DATE),('dh-ob-b','dh-b','dh-ot-b','dh-pb',CURRENT_DATE)`);
+    const full=await globalSearch(app,actor,"skela");
+    expect(new Set(full.map(x=>x.type))).toEqual(new Set(["PROJECT","WORKER","MACHINE","PARTNER","TENDER","DOCUMENT","INVOICE","TASK","OBLIGATION","SERVICE_ORDER"]));
+    expect(JSON.stringify(full)).not.toContain("druga firma"); expect(JSON.stringify(full)).not.toContain("privatno");
+    const pm=await globalSearch(app,{...actor,roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["dh-pa"]},"skela");
+    expect(pm.filter(x=>x.type==="PROJECT").map(x=>x.title)).toEqual(["P — Most skela"]);
+    expect(pm.some(x=>x.type==="PARTNER" || x.type==="TENDER")).toBe(false);
+    expect(pm.some(x=>x.type==="DOCUMENT")).toBe(true);
+    expect(pm.filter(x=>x.type==="OBLIGATION")).toHaveLength(1);
+    expect(pm.filter(x=>x.type==="TASK")).toHaveLength(1);
+    const pmIncidents=await globalSearch(app,{...actor,roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["dh-pa"]},"NEAR_MISS");
+    expect(pmIncidents.filter(x=>x.type==="INCIDENT")).toHaveLength(1);
+    expect(pm.find(x=>x.type==="PROJECT")?.href).toBe("/ured/projekti/dh-pa");
+    const otherScope=await globalSearch(app,{...actor,roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["dh-pa2"]},"skela");
+    expect(otherScope.filter(x=>x.type==="OBLIGATION")).toHaveLength(1);
+    const otherIncidents=await globalSearch(app,{...actor,roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["dh-pa2"]},"NEAR_MISS");
+    expect(otherIncidents.filter(x=>x.type==="INCIDENT")).toHaveLength(0);
+    expect(otherScope.filter(x=>x.type==="DOCUMENT")).toHaveLength(0);
+    const mechanic=await globalSearch(app,{...actor,roles:["MECHANIC"],scope:"SELF"},"skela");
+    expect(mechanic.filter(x=>x.type==="SERVICE_ORDER")).toHaveLength(1);
+    const mechanicIncidents=await globalSearch(app,{...actor,roles:["MECHANIC"],scope:"SELF"},"NEAR_MISS");
+    expect(mechanicIncidents.filter(x=>x.type==="INCIDENT")).toHaveLength(0);
+    expect(mechanic.filter(x=>x.type==="OBLIGATION")).toHaveLength(0);
+    const supervisor=await globalSearch(app,{...actor,roles:["SITE_SUPERVISOR"],scope:"PROJECTS",projectIds:["dh-pa"]},"skela");
+    expect(supervisor.some(x=>x.type==="DOCUMENT" || x.type==="INVOICE")).toBe(false);
+    expect(JSON.stringify(supervisor)).not.toContain("skrivena");
+    const worker=await globalSearch(app,{...actor,roles:["WORKER"],scope:"SELF"},"skela");
+    expect(worker.map(x=>x.type)).toEqual(["PROJECT"]);
+    expect(await globalSearch(app,actor,"%_")).toEqual([]);
+    expect(full.every(x=>x.href.startsWith("/ured/") && Object.keys(x).sort().join(",")==="href,title,type")).toBe(true);
   });
 
 });

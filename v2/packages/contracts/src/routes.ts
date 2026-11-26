@@ -273,6 +273,8 @@ import {
   QueueHealthResponse,
   DataHealthResponse,
   DashboardActionsResponse,
+  SearchQuery,
+  SearchResponse,
   NotificationReadInput,
   NotificationsResponse,
   SafeText,
@@ -2951,6 +2953,10 @@ export const ROUTES = [
     permission: "payroll.own.view",
     request: null,
     response: MyPayrollResponse,
+  },
+  {
+    method: "GET", path: "/api/search", summary: "Pretraga prema dozvolama i opsegu sesije.",
+    auth: true, permission: null, request: null, query: SearchQuery, response: SearchResponse,
   },
   {
     method: "GET",

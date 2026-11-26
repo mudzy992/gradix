@@ -459,3 +459,5 @@ export {
   warehouseBalance,
   type WarehouseMovement,
 } from "./warehouse-purchase";
+
+export { REPORT_DEFINITIONS, isReportKey, type ReportKey } from "./report-definitions";
