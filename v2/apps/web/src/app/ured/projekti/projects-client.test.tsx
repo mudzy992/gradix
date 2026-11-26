@@ -123,6 +123,14 @@ afterEach(() => {
 });
 
 describe("projekti", () => {
+  it("izvoz prati stanje i rizičnost", async () => {
+    mockApi(); const {container}=render(<ProjectsClient canManage canAssign canOverride canSeeMoney canExport />);
+    await screen.findByText("Dionica Visoko–Kiseljak");
+    await userEvent.selectOptions(screen.getByLabelText("Stanje projekta"),"ACTIVE");
+    await userEvent.selectOptions(screen.getByLabelText("Rizičnost"),"risky");
+    expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih projekata"})).toHaveAttribute("href","/api/projects/export?status=ACTIVE&risky=1");
+    await expectNoSeriousA11yViolations(container);
+  });
   it("lista pokazuje šifru, stanje riječima, tim i rokove kao tekst", async () => {
     mockApi();
     render(<ProjectsClient canManage canAssign canOverride />);

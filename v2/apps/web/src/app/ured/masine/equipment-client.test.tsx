@@ -72,6 +72,15 @@ afterEach(() => {
 });
 
 describe("mašine", () => {
+  it("izvoz prenosi sve filtere prikaza", async () => {
+    mockApi(); const {container}=render(<EquipmentClient canManage canExport />);
+    await screen.findByText("Bager CAT 320");
+    await userEvent.type(screen.getByLabelText("Traži mašinu"),"CAT");
+    await userEvent.selectOptions(screen.getByLabelText("Kategorija"),"cat_bager");
+    await userEvent.click(screen.getByLabelText(/Prikaži i neaktivne/));
+    expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih mašina"})).toHaveAttribute("href","/api/equipment/export?q=CAT&categoryId=cat_bager&inactive=1");
+    await expectNoSeriousA11yViolations(container);
+  });
   it("u redu se vide oznaka, kategorija i trenutno brojilo sa jedinicom iz kategorije", async () => {
     mockApi();
     render(<EquipmentClient canManage />);

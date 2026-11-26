@@ -66,6 +66,13 @@ import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/
 import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenance/route";
 import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
+import { GET as legacyObligationsExportGet } from "@/app/api/obligations/export/route";
+import { GET as obligationsListExportGet } from "@/app/api/obligations/list-export/route";
+import { GET as projectsListExportGet } from "@/app/api/projects/export/route";
+import { GET as equipmentListExportGet } from "@/app/api/equipment/export/route";
+import { GET as hseListExportGet } from "@/app/api/hse/incidents/export/route";
+import { GET as tenderListExportGet } from "@/app/api/tenders/export/route";
+import { GET as fuelListExportGet } from "@/app/api/fuel-entries/export/route";
 import { GET as searchGet } from "@/app/api/search/route";
 import { GET as reportJobsGet, POST as reportJobsPost } from "@/app/api/report-jobs/route";
 import { GET as reportJobGet } from "@/app/api/report-jobs/[id]/route";
@@ -408,6 +415,13 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/search": { GET: searchGet },
   "/api/reports/{key}": { GET: reportGet },
   "/api/report-jobs": { GET: reportJobsGet, POST: reportJobsPost },
+  "/api/fuel-entries/export": { GET: fuelListExportGet },
+  "/api/tenders/export": { GET: tenderListExportGet },
+  "/api/hse/incidents/export": { GET: hseListExportGet },
+  "/api/equipment/export": { GET: equipmentListExportGet },
+  "/api/projects/export": { GET: projectsListExportGet },
+  "/api/obligations/list-export": { GET: obligationsListExportGet },
+  "/api/obligations/export": { GET: legacyObligationsExportGet },
   "/api/report-jobs/{id}": { GET: reportJobGet },
   "/api/report-jobs/{id}/download": { GET: reportJobDownload },
   "/api/auth/login": { POST: loginRoute },

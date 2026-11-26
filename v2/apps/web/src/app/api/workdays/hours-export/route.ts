@@ -6,7 +6,7 @@ import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { buildHoursCsv } from "@/server/hours-csv";
 import { listHoursForExport } from "@/server/hours-export-service";
-import type { Role } from "@/server/permissions";
+import { can, type Role } from "@/server/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "payroll.hours.export");
     if (!guardResult.ok) return guardResult.response;
+    if (!can(guardResult.ctx.roles, "export.data")) return fail("FORBIDDEN", "Nemate pravo izvoza podataka.");
     const params = request.nextUrl.searchParams;
     const parsed = HoursExportQuery.safeParse({
       from: params.get("from") ?? "", to: params.get("to") ?? "",

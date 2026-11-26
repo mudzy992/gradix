@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/index";
 import { MachineDialog, MeterDialog } from "./equipment-dialogs";
 import { CategoriesDialog } from "./equipment-categories";
+import { filterEquipment } from "./equipment-filter";
 
 type LoadState =
   | { kind: "loading" }
@@ -33,7 +34,7 @@ type LoadState =
 
 
 
-export default function EquipmentClient({ canManage }: { canManage: boolean }) {
+export default function EquipmentClient({ canManage, canExport = false }: { canManage: boolean; canExport?: boolean }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [filter, setFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -67,17 +68,7 @@ export default function EquipmentClient({ canManage }: { canManage: boolean }) {
   const machines = state.kind === "ready" ? state.machines : [];
   const categories = state.kind === "ready" ? state.categories : [];
 
-  const visible = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    return machines.filter((machine) => {
-      if (!showInactive && !machine.isActive) return false;
-      if (categoryFilter && machine.categoryId !== categoryFilter) return false;
-      if (needle.length === 0) return true;
-      return `${machine.code} ${machine.name} ${machine.plate ?? ""} ${machine.make ?? ""} ${machine.model ?? ""}`
-        .toLowerCase()
-        .includes(needle);
-    });
-  }, [machines, filter, categoryFilter, showInactive]);
+  const visible = useMemo(() => filterEquipment(machines,filter,categoryFilter,showInactive), [machines,filter,categoryFilter,showInactive]);
 
   const inactiveCount = machines.filter((machine) => !machine.isActive).length;
 
@@ -131,7 +122,7 @@ export default function EquipmentClient({ canManage }: { canManage: boolean }) {
 
       <Card>
         <FilterBar>
-          <Input label="Traži mašinu" id="equipment-filter" placeholder="Oznaka, naziv, tablice" value={filter} onChange={(event) => setFilter(event.target.value)} />
+          <Input label="Traži mašinu" id="equipment-filter" maxLength={128} placeholder="Oznaka, naziv, tablice" value={filter} onChange={(event) => setFilter(event.target.value)} />
           <Select label="Kategorija"id="equipment-category"
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
@@ -146,6 +137,7 @@ export default function EquipmentClient({ canManage }: { canManage: boolean }) {
           <Checkbox label={`Prikaži i neaktivne (${inactiveCount})`} id="equipment-show-inactive" checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />
         </FilterBar>
 
+        {canExport ? <p><a className="gx-link" href={`/api/equipment/export?${new URLSearchParams({q:filter,categoryId:categoryFilter,inactive:showInactive ? "1" : "0"})}`}>Preuzmi CSV prikazanih mašina</a> · Sinhroni izvoz podržava do 1000 redova.</p> : null}
         {state.kind === "loading" ? <Skeleton rows={4} /> : null}
 
         {state.kind === "error" ? (

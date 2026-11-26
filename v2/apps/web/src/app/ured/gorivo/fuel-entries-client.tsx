@@ -13,6 +13,7 @@ import { FuelEntryPrice } from "./fuel-entry-price";
 import { FuelEntryRevise } from "./fuel-entry-revise";
 
 type Caps = {
+  canExport?: boolean;
   canCreate: boolean;
   canRevise: boolean;
   showPrice: boolean;
@@ -138,6 +139,7 @@ export function FuelEntriesClient({
           />
         ) : null}
       </FilterBar>
+      {caps.canExport ? <p><a className="gx-link" href={`/api/fuel-entries/export${machineFilter ? `?machineId=${encodeURIComponent(machineFilter)}` : ""}`}>Preuzmi CSV prikazanih unosa</a> · Prikaz i izvoz obuhvataju najviše 500 najnovijih unosa.</p> : null}
       <DataTable
         caption="Gorivo"
         rows={visible}

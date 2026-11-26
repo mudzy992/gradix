@@ -52,8 +52,9 @@ const ENTITY_LABELS_SR: Record<string, string> = {
 
 /** Ćelija po RFC 4180 — navodnici, zarezi i prelomi reda se escape-uju. */
 export function escapeCsvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
+  const safe = /^[\s]*[=+@-]/.test(value) ? `'${value}` : value;
+  if (/[",\r\n]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
+  return safe;
 }
 
 const BOM = "\uFEFF";

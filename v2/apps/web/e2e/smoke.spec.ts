@@ -36,12 +36,14 @@ const API_BY_HREF: Record<string, string> = {
   "/ured/korisnici": "/api/users",
   "/ured/role": "/api/roles",
   "/ured/audit": "/api/audit",
+  "/ured/izvjestaji": "/api/report-jobs",
 };
 
 const HEADING_BY_HREF: Record<string, string | RegExp> = {
   // pregled.view: „Dobro jutro/Dobar dan/Dobro veče“. Ostali: „Dobro došli“. Bez imena: „Pregled“.
   "/pregled": /Dobro došli|Dobro jutro|Dobar dan|Dobro veče|^Pregled$/,
   "/ured/sukobi": "Sukobi radnih dana",
+  "/ured/izvjestaji": /^Izvještaji$/,
 };
 
 const headingFor = (href: string, label: string): string | RegExp => HEADING_BY_HREF[href] ?? label;

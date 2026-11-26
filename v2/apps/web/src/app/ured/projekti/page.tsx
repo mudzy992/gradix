@@ -61,6 +61,7 @@ export default async function ProjectsPage({
     <main className="mx-auto w-full max-w-6xl">
       <ProjectsClient
         canManage={can(auth.ctx.roles, "projects.manage")}
+        canExport={can(auth.ctx.roles, "export.data")}
         canBook={can(auth.ctx.roles, "projects.costs.book")}
         canApproveManual={can(auth.ctx.roles, "purchase.approve")}
         canAssign={can(auth.ctx.roles, "projects.assign")}

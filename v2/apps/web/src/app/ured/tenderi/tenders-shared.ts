@@ -1,4 +1,4 @@
-import type { TenderStatus } from "@gradix/contracts";
+import type { TenderRow, TenderStatus } from "@gradix/contracts";
 
 export const STATUS_LABEL: Record<TenderStatus, string> = {
   OPPORTUNITY: "Prilika",
@@ -107,3 +107,12 @@ export const APPROVAL_REASON_LABEL: Record<string, string> = {
   ABOVE_CHANGE_THRESHOLD: "Promjena cijene preko 5 %",
   BELOW_MIN_MARKUP: "Marža ispod minimuma firme",
 };
+
+/** Filtering after the 500-row list limit matches table, kanban and snapshot export. */
+export function filterTenderList(rows:readonly TenderRow[], status:string, urgent:boolean):TenderRow[] {
+  return rows.filter(row => {
+    if (status && row.status !== status) return false;
+    if (urgent && (row.daysToDeadline === null || row.daysToDeadline < 0 || row.daysToDeadline > 14 || TERMINAL_STATUSES.includes(row.status))) return false;
+    return true;
+  });
+}

@@ -27,6 +27,7 @@ export {
 import { STATUS_LABEL } from "./projects-shared";
 import { ProjectDetail } from "./project-detail";
 import type { ProjectFinancialSummary } from "./projects-summary";
+import { filterProjects } from "./projects-filter";
 
 
 const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
@@ -43,6 +44,7 @@ const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
 
 export default function ProjectsClient({
   canManage,
+  canExport = false,
   canBook = canManage,
   canApproveManual = false,
   canAssign,
@@ -52,6 +54,7 @@ export default function ProjectsClient({
   initialOpenProjectId = null,
 }: {
   canManage: boolean;
+  canExport?: boolean;
   canBook?: boolean;
   canApproveManual?: boolean;
   canAssign: boolean;
@@ -94,12 +97,7 @@ export default function ProjectsClient({
     void load();
   }, [load]);
 
-  const visible = useMemo(() => {
-    let list = projects ?? [];
-    if (statusFilter) list = list.filter((project) => project.status === statusFilter);
-    if (riskyOnly) list = list.filter((project) => financials[project.id]?.risky === true);
-    return list;
-  }, [projects, statusFilter, riskyOnly, financials]);
+  const visible = useMemo(() => filterProjects(projects ?? [],statusFilter,riskyOnly,financials), [projects,statusFilter,riskyOnly,financials]);
 
   const openedOnce = useRef(false);
   useEffect(() => {
@@ -165,6 +163,7 @@ export default function ProjectsClient({
           ) : null}
         </FilterBar>
 
+        {canExport ? <p><a className="gx-link" href={`/api/projects/export?${new URLSearchParams({status:statusFilter,risky:riskyOnly ? "1" : "0"})}`}>Preuzmi CSV prikazanih projekata</a> · Sinhroni izvoz podržava do 1000 redova.</p> : null}
         {projects === null ? <Skeleton rows={4} /> : null}
 
         {projects !== null && visible.length === 0 ? (

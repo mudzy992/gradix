@@ -62,6 +62,7 @@ export default async function GorivoPage() {
       <FuelEntriesClient
         initialEntries={entries}
         caps={{
+          canExport: auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data"),
           canCreate: can(auth.ctx.roles, "machines.fuel.create"),
           canRevise: can(auth.ctx.roles, "machines.fuel.revise"),
           showPrice: canViewFuelPrice(auth.ctx.roles),

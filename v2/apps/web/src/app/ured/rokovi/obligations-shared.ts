@@ -41,7 +41,7 @@ export function daysLabel(obligation: Obligation): string {
   return ago === 1 ? "prije 1 dan" : `prije ${ago} dana`;
 }
 
-export const targetLabel = (obligation: Obligation): string => {
+export const targetLabel = (obligation: Pick<Obligation,"workerName"|"machineCode"|"machineName"|"projectName"|"projectCode"|"tenderTitle">): string => {
   if (obligation.workerName) return obligation.workerName;
   if (obligation.machineCode) return `${obligation.machineCode} · ${obligation.machineName ?? ""}`.trim();
   if (obligation.projectName) {

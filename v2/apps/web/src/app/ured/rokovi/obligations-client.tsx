@@ -24,6 +24,7 @@ import MissingPanel from "./missing-panel";
 import { DetailDialog } from "./obligation-detail";
 export { STATE_LABEL, daysLabel, targetLabel, count3190, type MachineOption, type WorkerOption } from "./obligations-shared";
 import { STATE_LABEL, count3190, daysLabel, targetLabel } from "./obligations-shared";
+import { filterObligations } from "./obligations-filter";
 
 type LoadState =
   | { kind: "loading" }
@@ -63,10 +64,12 @@ const STATE_TONE: Record<ObligationStateName, "full" | "hot" | "hollow"> = {
 
 export default function ObligationsClient({
   canManage,
+  canExport = false,
   initialStateFilter = "",
   initialEntityKind = "",
 }: {
   canManage: boolean;
+  canExport?: boolean;
   /** C.1: stanje iz adrese (?stanje=isteklo i sl.) — dolazi iz servera, već provjereno. */
   initialStateFilter?: string;
   /** R7: ?entityKind=TENDER (i ostali) — filter sa detalja tendera. */
@@ -113,21 +116,7 @@ export default function ObligationsClient({
   const obligations = state.kind === "ready" ? state.obligations : [];
   const types = state.kind === "ready" ? state.types : [];
 
-  const visible = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    return obligations.filter((row) => {
-      if (stateFilter === "31-90") {
-        // Prozor dana, ne stanje u bazi: server je `daysLeft` već izračunao po
-        // poslovnom datumu firme, pa klijent samo sužava ono što je dobilo.
-        if (row.daysLeft === null || row.daysLeft < 31 || row.daysLeft > 90) return false;
-      } else if (stateFilter && row.state !== stateFilter) return false;
-      if (typeFilter && row.typeId !== typeFilter) return false;
-      if (needle.length === 0) return true;
-      return `${row.typeLabel} ${targetLabel(row)} ${row.number ?? ""} ${row.issuer ?? ""}`
-        .toLowerCase()
-        .includes(needle);
-    });
-  }, [obligations, stateFilter, typeFilter, filter]);
+  const visible = useMemo(() => filterObligations(obligations,stateFilter,typeFilter,filter), [obligations,stateFilter,typeFilter,filter]);
 
   return (
     <div>
@@ -192,13 +181,14 @@ export default function ObligationsClient({
                   </option>
                 ))}
               </Select>
-            <Input label="Traži"id="obligation-filter"
+            <Input label="Traži"id="obligation-filter" maxLength={128}
                 placeholder="Osoba, mašina, broj"
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)} />
           </FilterBar>
         ) : null}
 
+        {canExport && state.kind === "ready" ? <p><a className="gx-link" href={`/api/obligations/list-export?${new URLSearchParams({state:stateFilter,entityKind:entityKindFilter,typeId:typeFilter,q:filter})}`}>Preuzmi CSV prikazanih obaveza</a> · Sinhroni izvoz podržava do 1000 redova.</p> : null}
         {state.kind === "loading" ? <Skeleton rows={5} /> : null}
 
         {state.kind === "error" ? (

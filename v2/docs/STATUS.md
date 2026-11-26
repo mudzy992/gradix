@@ -507,3 +507,11 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 - Uredske liste imaju gornju granicu, a nabavne forme trenutno obrađuju po jednu stavku. Prije produkcije provjeriti stvarnu migraciju i lokacije; dosadašnji upgrade test nije stvarna produkcijska baza.
 
 **Provjere i otvorena ograničenja:** vidjeti [IZVJESTAJ-FAZA-10.md](IZVJESTAJ-FAZA-10.md). Jedini puni lokalni prolaz nije bio zelen; naknadno je popravljena i ciljano provjerena mobilna regresija, ali kompletni prolaz nije ponovljen. Originalni `preflight` zahtijeva nedostajući `psql`; oba SQL fajla su zasebno prošla preko Node PostgreSQL klijenta. CI za završni commit treba provjeriti zasebno prije tvrdnje o spremnosti za Fazu 11.
+
+## Faza 11 — odluke koje se ne smiju izgubiti (rad u toku)
+
+- Worker koristi usku enumeraciju aktivnih ID-jeva firmi i odvojene tenant transakcije; dijeljena aplikacijska rola znači da i web može izvršiti enumeraciju ID-jeva, ne drugih podataka firmi. `report_jobs` koristi outbox i at-least-once relay; prava i opseg se provjeravaju pri obradi i preuzimanju, a potpisani URL vrijedi do 60 sekundi.
+- SMTP slanje i DB nisu atomski. Neizvjestan ishod zahtijeva ručnu provjeru; propušteni mjeseci se ne dopunjavaju automatski. PDF ne čuva dijakritiku. Worker izvještaji imaju granice veličine i odbijaju prekoračenje.
+- Health brojači i njihovih pet novih paginiranih lista dijele SQL predikate. Nepotvrđeni radni dani filtriraju se prema opsegu prije limita. Većina drugih akcionih linkova još nije filtrirana i ne smije se opisati kao dovršena.
+- CSV izvozi lista su lokalno pripremljeni, ali nisu commitovani: projekti po session scopeu, ostalih pet u COMPANY opsegu; postoje ograničenja broja redova i nema asinhronog izvoza tih lista. Stari izvoz rokova ostaje odvojen od novog snapshot izvoza.
+- Nalaz za nastavak: postojeći task servis ne primjenjuje session project scope; prije linkova PM/šefa gradilišta osigurati i testirati scope na serveru. Završni commit/tag i CI za ovaj presjek nisu napravljeni, Faza 11 nije zaključena. Detalji: [IZVJESTAJ-FAZA-11.md](IZVJESTAJ-FAZA-11.md).

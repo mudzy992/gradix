@@ -78,6 +78,12 @@ describeDb("workday review scope (PostgreSQL)", () => {
     }
   });
 
+  it("dani bez potvrde poštuju ograničeni opseg i filter prije limita", async () => {
+    const rows = await withCompany(app, companyId(CO), (client) =>
+      listWorkdaysForReview(client, CO, {kind:"company"}, 200, {unconfirmed:true,projectIds:[]}));
+    expect(rows).toEqual([]);
+  });
+
   it("PM i šef vide samo radnike iz svog R3 opsega", async () => {
     for (const userId of [`usr_wdr_pm_${RUN}`, `usr_wdr_ss_${RUN}`]) {
       const rows = await withCompany(app, companyId(CO), async (client) => {

@@ -63,6 +63,7 @@ export default async function HsePage({searchParams}: {searchParams: Promise<{fi
         attention={attention}
         today={today}
         caps={{
+          canExport: auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data"),
           canReport: can(auth.ctx.roles, "hse.report"),
           canInvestigate: can(auth.ctx.roles, "hse.investigate"),
           canManageTrainings: can(auth.ctx.roles, "hse.training.manage"),

@@ -15,6 +15,7 @@ import {
   SectionTitle, Stack, Stat, StatusDot, Textarea,
 } from "@/components/ui/index";
 import type { HseStats } from "@gradix/contracts";
+import { filterIncidents } from "./hse-filter";
 
 type IncidentRow = {
   id: string;
@@ -74,7 +75,7 @@ export function HseClient({
   stats: HseStats;
   attention: HseAttention | null;
   today: string;
-  caps: { canReport: boolean; canInvestigate: boolean; canManageTrainings: boolean };
+  caps: { canReport: boolean; canInvestigate: boolean; canManageTrainings: boolean; canExport?: boolean };
 }) {
   const router = useRouter();
   const [kindFilter, setKindFilter] = useState("");
@@ -91,14 +92,7 @@ export function HseClient({
   const [notice, setNotice] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const rows = useMemo(
-    () => initialIncidents.filter((incident) => {
-      if (kindFilter && incident.kind !== kindFilter) return false;
-      if (statusFilter && incident.status !== statusFilter) return false;
-      return true;
-    }),
-    [initialIncidents, kindFilter, statusFilter],
-  );
+  const rows = useMemo(() => filterIncidents(initialIncidents,kindFilter,statusFilter), [initialIncidents,kindFilter,statusFilter]);
 
   const submitReport = useCallback(async () => {
     setBusy(true);
@@ -266,6 +260,7 @@ export function HseClient({
         </Field>
       </FilterBar>
 
+      {caps.canExport ? <p><a className="gx-link" href={`/api/hse/incidents/export?${new URLSearchParams({kind:kindFilter,status:statusFilter})}`}>Preuzmi CSV prikazanih incidenata</a> · Prikaz i izvoz obuhvataju najviše 200 incidenata.</p> : null}
       <DataTable
         rows={rows}
         rowKey={(row) => row.id}

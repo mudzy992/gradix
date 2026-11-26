@@ -31,7 +31,7 @@ export default async function EquipmentPage({searchParams}: {searchParams: Promi
 
   return (
     <main className="mx-auto w-full max-w-6xl">
-      <EquipmentClient canManage={can(auth.ctx.roles, "equipment.manage")} />
+      <EquipmentClient canManage={can(auth.ctx.roles, "equipment.manage")} canExport={auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data")} />
     </main>
   );
 }

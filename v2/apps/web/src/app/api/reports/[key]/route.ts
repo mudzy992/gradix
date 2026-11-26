@@ -8,7 +8,7 @@ import { getVerifiedPool } from "@/server/db";
 import { loadReport } from "@/server/report-service";
 import { renderReportPdf, renderReportXlsx } from "@/server/report-render";
 import { writeAudit } from "@/server/audit";
-import type { Role } from "@/server/permissions";
+import { can, type Role } from "@/server/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest, {params}: {params: Promise<{key:
   try {
     const auth = await guard(request, "reports.view");
     if (!auth.ok) return auth.response;
+    if (!can(auth.ctx.roles,"export.data")) return fail("FORBIDDEN", "Nemate pravo izvoza podataka.");
     const {key} = await params;
     if (!isReportKey(key)) return fail("VALIDATION_FAILED", "Nepoznat izvještaj.");
     const search=request.nextUrl.searchParams;

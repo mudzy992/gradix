@@ -46,6 +46,7 @@ export default async function TenderiPage() {
       <TendersClient
         initialTenders={tenders}
         caps={{
+          canExport: auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data"),
           canManage: can(auth.ctx.roles, "tenders.manage"),
           canConvert: can(auth.ctx.roles, "tenders.convert"),
           canPrice: can(auth.ctx.roles, "tenders.price.manage"),

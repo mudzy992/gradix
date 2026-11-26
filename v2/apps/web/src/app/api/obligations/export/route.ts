@@ -12,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { fail, internal } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
+import { can } from "@/server/permissions";
 import { listObligations } from "@/server/obligation-service";
 import { writeAudit } from "@/server/audit";
 import { withCompany } from "@gradix/db";
@@ -37,8 +38,8 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     // Izvoz cijele firme nije za radnika: `SELF` opseg bi dao samo njegove redove, pa izvoz
     // nema smisla — a ako bi ga dobio, dvije rute bi imale različito vidno polje.
-    if (ctx.scope === "SELF") {
-      return fail("FORBIDDEN", "Izvoz rokova je dostupan samo uredu.");
+    if (ctx.scope !== "COMPANY" || !can(ctx.roles, "export.data") || !can(ctx.roles, "workers.view")) {
+      return fail("FORBIDDEN", "Izvoz rokova zahtijeva pravo izvoza, pregled radnika i opseg firme.");
     }
 
     const params = request.nextUrl.searchParams;
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       stateLabel: STATE_LABELS_SR[row.state] ?? row.state,
       daysLeft: row.daysLeft,
       responsibleName: row.responsibleName,
-      note: row.note,
+      note: can(ctx.roles, "workers.sensitive.view") ? row.note : null,
     }));
 
     // Trag ide PRIJE odgovora: ako upis padne, izvoz se ne šalje (ne postoji izvezeno bez traga).

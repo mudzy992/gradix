@@ -15,11 +15,12 @@ import {
   formatTenderValue,
   STATUS_LABEL,
   STATUS_OPTIONS,
-  TERMINAL_STATUSES,
+  filterTenderList,
 } from "./tenders-shared";
 import { EMPTY_TENDER_FORM, TenderFormDialog, type TenderFormState } from "./tender-form-dialog";
 
 type Caps = {
+  canExport?: boolean;
   canManage: boolean;
   canConvert: boolean;
   canPrice: boolean;
@@ -53,19 +54,7 @@ export function TendersClient({
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<TenderFormState>({ ...EMPTY_TENDER_FORM });
 
-  const visible = useMemo(
-    () =>
-      initialTenders.filter((row) => {
-        if (statusFilter && row.status !== statusFilter) return false;
-        if (urgentOnly) {
-          if (row.daysToDeadline === null) return false;
-          if (row.daysToDeadline < 0 || row.daysToDeadline > 14) return false;
-          if (TERMINAL_STATUSES.includes(row.status)) return false;
-        }
-        return true;
-      }),
-    [initialTenders, statusFilter, urgentOnly],
-  );
+  const visible = useMemo(() => filterTenderList(initialTenders,statusFilter,urgentOnly), [initialTenders,statusFilter,urgentOnly]);
 
   const openCreate = async () => {
     if (!partners) {
@@ -177,6 +166,7 @@ export function TendersClient({
         ) : null}
       </FilterBar>
 
+      {caps.canExport ? <p><a className="gx-link" href={`/api/tenders/export?${new URLSearchParams({status:statusFilter,urgent:urgentOnly ? "1" : "0"})}`}>Preuzmi CSV prikazanih tendera</a> · Prikaz i izvoz obuhvataju najviše 500 tendera.</p> : null}
       {visible.length === 0 ? (
         <p className="gx-page-sub">Nema tendera za izabrane filtere.</p>
       ) : view === "table" ? (

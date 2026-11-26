@@ -953,9 +953,9 @@ export const ROUTES = [
   {
     method: "GET",
     path: "/api/obligations/export",
-    summary: "Izvoz rokova u CSV ili PDF; svaki izvoz se auditira.",
+    summary: "Izvoz rokova u CSV ili PDF; svaki izvoz se auditira (opseg firme).",
     auth: true,
-    permission: "obligations.view",
+    permission: "export.data",
     request: null,
     // Fajl, ne JSON: `z.string()` je obrazac iz `hours-export` — `contentType` kaže šta je,
     // a `raw` isključuje JSON envelope u klijentu.
@@ -2957,6 +2957,36 @@ export const ROUTES = [
     permission: "payroll.own.view",
     request: null,
     response: MyPayrollResponse,
+  },
+  {
+    method: "GET", path: "/api/obligations/list-export", summary: "CSV filtrirane liste obaveza (do 1000 redova, opseg firme).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({state:z.string().max(32).optional(),entityKind:z.string().max(32).optional(),typeId:z.string().max(128).optional(),q:z.string().max(128).optional()}), response: z.string(), contentType: "text/csv", raw: true,
+  },
+  {
+    method: "GET", path: "/api/projects/export", summary: "CSV filtrirane liste projekata (do 1000 redova).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({status:z.string().max(32).optional(),risky:z.enum(["0","1"]).optional()}), response: z.string(), contentType: "text/csv", raw: true,
+  },
+  {
+    method: "GET", path: "/api/equipment/export", summary: "CSV filtrirane liste mašina (do 1000 redova, opseg firme).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({q:z.string().max(128).optional(),categoryId:z.string().max(128).optional(),inactive:z.enum(["0","1"]).optional()}), response: z.string(), contentType: "text/csv", raw: true,
+  },
+  {
+    method: "GET", path: "/api/hse/incidents/export", summary: "CSV prikazanih incidenata (najviše 200, opseg firme).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({kind:z.string().max(32).optional(),status:z.string().max(32).optional()}), response: z.string(), contentType: "text/csv", raw: true,
+  },
+  {
+    method: "GET", path: "/api/tenders/export", summary: "CSV prikazanih tendera (najviše 500, opseg firme).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({status:z.string().max(32).optional(),urgent:z.enum(["0","1"]).optional()}), response: z.string(), contentType: "text/csv", raw: true,
+  },
+  {
+    method: "GET", path: "/api/fuel-entries/export", summary: "CSV prikazanih unosa goriva (najviše 500, opseg firme).",
+    auth: true, permission: "export.data", request: null,
+    query: z.object({machineId:z.string().max(128).optional()}), response: z.string(), contentType: "text/csv", raw: true,
   },
   {
     method: "GET", path: "/api/report-jobs", summary: "Statusi vlastitih asinhronih izvještaja.",

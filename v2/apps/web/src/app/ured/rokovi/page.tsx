@@ -45,6 +45,7 @@ export default async function ObligationsPage({
     <main className="mx-auto w-full max-w-6xl">
       <ObligationsClient
         canManage={can(auth.ctx.roles, "obligations.manage")}
+        canExport={auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data") && can(auth.ctx.roles, "workers.view")}
         initialStateFilter={initialStateFilter}
         initialEntityKind={initialEntityKind}
       />

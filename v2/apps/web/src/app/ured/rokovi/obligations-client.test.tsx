@@ -161,6 +161,15 @@ afterEach(() => {
 });
 
 describe("rokovi", () => {
+  it("izvoz prenosi aktivne filtere", async () => {
+    mockApi(); const {container}=render(<ObligationsClient canManage canExport />);
+    await screen.findAllByText(/L-24\/2026/);
+    await userEvent.selectOptions(screen.getByLabelText("Stanje"),"expired");
+    await userEvent.selectOptions(screen.getByLabelText("Tip obaveze"),"obt_medical");
+    await userEvent.type(screen.getByLabelText("Traži"),"Amina");
+    expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih obaveza"})).toHaveAttribute("href","/api/obligations/list-export?state=expired&entityKind=&typeId=obt_medical&q=Amina");
+    await expectNoSeriousA11yViolations(container);
+  });
   it("stanje i preostali dani se prikazuju onako kako ih server vraća", async () => {
     mockApi();
     render(<ObligationsClient canManage />);
