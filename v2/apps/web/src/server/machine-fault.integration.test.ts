@@ -131,6 +131,20 @@ describeDb("R5.5 machine fault web API", () => {
     expect(createdBody.data.outcome).toBe("OK");
     const created = createdBody.data;
 
+    // A field user without a linked worker must not fall back to the company-wide list.
+    await withCompany(admin, companyId(COMPANY), (client) => client.query(
+      "UPDATE workers SET user_id = NULL WHERE company_id = $1 AND id = $2", [COMPANY, WORKER],
+    ));
+    try {
+      const unlinked = await listRoute(new NextRequest("http://t/api/machine-faults", { headers: { cookie: cookieOp } }));
+      const unlinkedBody = await unlinked.json() as { data: { faults: unknown[] } };
+      expect(unlinkedBody.data.faults).toEqual([]);
+    } finally {
+      await withCompany(admin, companyId(COMPANY), (client) => client.query(
+        "UPDATE workers SET user_id = $3 WHERE company_id = $1 AND id = $2", [COMPANY, WORKER, USER_OP],
+      ));
+    }
+
     const list = await listRoute(new NextRequest("http://t/api/machine-faults", {
       headers: { cookie: cookieOwner },
     }));

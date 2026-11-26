@@ -32,7 +32,7 @@ export default async function DnevnikPage() {
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
   if (!can(auth.ctx.roles, "diary.view")) redirect("/nemate-pristup");
 
-  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
+  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds };
   const pool = await getVerifiedPool();
   const [diaries, unsigned, projects] = await Promise.all([
     listDiaries(pool, actor, { limit: 200 }),

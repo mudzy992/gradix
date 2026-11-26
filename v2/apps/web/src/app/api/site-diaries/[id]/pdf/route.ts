@@ -27,7 +27,7 @@ export async function GET(
     const ctx = guardResult.ctx;
     const { id } = await context.params;
     const pool = await getVerifiedPool();
-    const actor = { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] };
+    const actor = { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[], scope: ctx.scope, projectIds: ctx.projectIds };
 
     const diary = await getDiary(pool, actor, id);
     if (!diary) return fail("NOT_FOUND", "Dnevnik ne postoji.");

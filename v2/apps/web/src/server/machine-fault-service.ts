@@ -46,7 +46,8 @@ export async function listMachineFaults(
     const conditions = ["f.company_id = $1"];
     const params: unknown[] = [actor.companyId];
     let idx = 2;
-    if (isFieldOnly && viewerWorkerId) {
+    if (isFieldOnly && !viewerWorkerId) return [];
+    if (isFieldOnly) {
       conditions.push(`f.reporter_worker_id = $${idx}`);
       params.push(viewerWorkerId);
       idx += 1;

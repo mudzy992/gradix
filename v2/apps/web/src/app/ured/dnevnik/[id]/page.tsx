@@ -33,7 +33,7 @@ export default async function DnevnikDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const detail = await getDiary(
     await getVerifiedPool(),
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     id,
   );
   if (!detail) notFound();

@@ -26,6 +26,8 @@ export async function POST(
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       id,
       body as PatchDiaryInput & { reason: string },

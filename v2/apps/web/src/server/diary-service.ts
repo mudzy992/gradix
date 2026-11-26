@@ -23,8 +23,10 @@ import {
   type DiaryDelayKind,
   type DiaryItemSource,
   type DiaryStatus,
+  type Scope,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { can } from "./permissions";
 import { companyToday } from "./project-service";
 import { ensureDefaultDiaryTemplate } from "./diary-template-service";
 
@@ -33,7 +35,27 @@ export function isDiaryStatus(value: unknown): value is DiaryStatus {
   return value === "DRAFT" || value === "SIGNED" || value === "LOCKED";
 }
 
+// DiaryActor is also used by HSE; the diary entry points require the session scope explicitly.
 export type DiaryActor = { userId: string; companyId: string; roles: readonly string[] };
+export type ScopedDiaryActor = DiaryActor & { scope: Scope; projectIds: readonly string[] | null };
+
+function diaryProjectAllowed(actor: ScopedDiaryActor, projectId: string): boolean {
+  return actor.scope === "COMPANY" || (actor.scope === "PROJECTS" && (actor.projectIds ?? []).includes(projectId));
+}
+
+/** Fail closed for SELF: a construction diary contains other workers' and project-wide data. */
+async function diaryInScope(client: PoolClient, actor: ScopedDiaryActor, diaryId: string): Promise<boolean> {
+  const params: unknown[] = [actor.companyId, diaryId];
+  let scope = "FALSE";
+  if (actor.scope === "COMPANY") scope = "TRUE";
+  else if (actor.scope === "PROJECTS") {
+    params.push(actor.projectIds ?? []);
+    scope = `project_id = ANY($${params.length}::text[])`;
+  }
+  const result = await client.query(`SELECT id FROM public.site_diaries
+    WHERE company_id=$1 AND id=$2 AND ${scope} FOR UPDATE`, params);
+  return (result.rowCount ?? 0) > 0;
+}
 
 export type DiaryOutcome =
   | { outcome: "OK"; id: string; version?: number }
@@ -236,7 +258,7 @@ export type DiaryListItem = {
 
 export async function listDiaries(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   filter: {
     projectId?: string;
     from?: string;
@@ -247,9 +269,14 @@ export async function listDiaries(
     limit?: number;
   } = {},
 ): Promise<DiaryListItem[]> {
+  if (!can(actor.roles, "diary.view")) return [];
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const conditions = ["d.company_id = $1"];
     const params: unknown[] = [actor.companyId];
+    if (actor.scope === "PROJECTS") {
+      params.push(actor.projectIds ?? []);
+      conditions.push(`d.project_id = ANY($${params.length}::text[])`);
+    } else if (actor.scope !== "COMPANY") conditions.push("FALSE");
     if (filter.projectId) {
       params.push(filter.projectId);
       conditions.push(`d.project_id = $${params.length}`);
@@ -343,8 +370,10 @@ export type DiaryDetail = {
   revisions: { id: string; reason: string; authorName: string; createdAt: string }[];
 };
 
-export async function getDiary(pool: Pool, actor: DiaryActor, diaryId: string): Promise<DiaryDetail | null> {
+export async function getDiary(pool: Pool, actor: ScopedDiaryActor, diaryId: string): Promise<DiaryDetail | null> {
+  if (!can(actor.roles, "diary.view")) return null;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return null;
     const header = await client.query<{
       id: string; project_id: string; project_code: string; project_name: string; diary_date: string;
       status: DiaryStatus; weather: string | null; temperature_c: string | null; worked_hours: string | null;
@@ -498,7 +527,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * `auto_snapshot` se puni odmah: dnevnik otvoren u 7:00 i potpisan u 18:00 mora imati podatke
  * onog trenutka kad je otvoren, a ne prazan ekran do potpisa.
  */
-export async function createDiary(pool: Pool, actor: DiaryActor, input: CreateDiaryInput): Promise<DiaryOutcome> {
+export async function createDiary(pool: Pool, actor: ScopedDiaryActor, input: CreateDiaryInput): Promise<DiaryOutcome> {
+  if (!can(actor.roles, "diary.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
+  if (!diaryProjectAllowed(actor, input.projectId)) return NOT_FOUND;
   if (!input.projectId || !DATE_RE.test(input.diaryDate)) {
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Projekat i datum su obavezni." };
   }
@@ -566,11 +597,13 @@ export type PatchDiaryInput = {
  */
 export async function patchDiary(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   input: PatchDiaryInput,
 ): Promise<DiaryOutcome> {
+  if (!can(actor.roles, "diary.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const current = await client.query<{ status: DiaryStatus; version: number }>(
       "SELECT status, version FROM public.site_diaries WHERE company_id = $1 AND id = $2 FOR UPDATE",
       [actor.companyId, diaryId],
@@ -616,7 +649,7 @@ export async function patchDiary(
  */
 export async function addDiaryItem(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   input: {
     boqItemId?: string | null;
@@ -633,7 +666,9 @@ export async function addDiaryItem(
   if (!/^\d{1,14}(?:\.\d{1,3})?$/.test(input.quantity) || Number(input.quantity) <= 0) {
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Količina mora biti veća od nule." };
   }
+  if (!can(actor.roles, "diary.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const diary = await client.query<{ status: DiaryStatus; project_id: string }>(
       "SELECT status, project_id FROM public.site_diaries WHERE company_id = $1 AND id = $2 FOR UPDATE",
       [actor.companyId, diaryId],
@@ -686,11 +721,13 @@ export async function addDiaryItem(
 /** Briše stavku — samo u nacrtu; `BOQ` stavka vraća i količinu iz predmjera. */
 export async function deleteDiaryItem(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   itemId: string,
 ): Promise<DiaryOutcome> {
+  if (!can(actor.roles, "diary.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const diary = await client.query<{ status: DiaryStatus }>(
       "SELECT status FROM public.site_diaries WHERE company_id = $1 AND id = $2",
       [actor.companyId, diaryId],
@@ -731,7 +768,7 @@ export type AddDelayInput = {
 
 export async function addDiaryDelay(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   input: AddDelayInput,
 ): Promise<DiaryOutcome> {
@@ -747,7 +784,9 @@ export async function addDiaryDelay(
       message: "Sati zastoja moraju biti veći od 0 i najviše 24.",
     };
   }
+  if (!can(actor.roles, "diary.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const diary = await client.query<{ status: DiaryStatus; project_id: string }>(
       "SELECT status, project_id FROM public.site_diaries WHERE company_id = $1 AND id = $2",
       [actor.companyId, diaryId],
@@ -799,7 +838,7 @@ export async function addDiaryDelay(
  */
 export async function signDiary(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   input: { signedName: string; signedByWorkerId?: string | null },
 ): Promise<DiaryOutcome> {
@@ -810,7 +849,9 @@ export async function signDiary(
       message: "Potpis mora biti ime i prezime (2–200 znakova).",
     };
   }
+  if (!can(actor.roles, "diary.sign")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const current = await client.query<{
       status: DiaryStatus; version: number; project_id: string; diary_date: string;
     }>(
@@ -867,8 +908,10 @@ export async function signDiary(
   });
 }
 
-export async function lockDiary(pool: Pool, actor: DiaryActor, diaryId: string): Promise<DiaryOutcome> {
+export async function lockDiary(pool: Pool, actor: ScopedDiaryActor, diaryId: string): Promise<DiaryOutcome> {
+  if (!can(actor.roles, "diary.sign")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const current = await client.query<{ status: DiaryStatus; version: number }>(
       "SELECT status, version FROM public.site_diaries WHERE company_id = $1 AND id = $2 FOR UPDATE",
       [actor.companyId, diaryId],
@@ -913,7 +956,7 @@ export async function lockDiary(pool: Pool, actor: DiaryActor, diaryId: string):
  */
 export async function reviseDiary(
   pool: Pool,
-  actor: DiaryActor,
+  actor: ScopedDiaryActor,
   diaryId: string,
   input: { reason: string } & PatchDiaryInput,
 ): Promise<DiaryOutcome> {
@@ -924,7 +967,9 @@ export async function reviseDiary(
       message: "Razlog ispravke mora imati bar 10 znakova.",
     };
   }
+  if (!can(actor.roles, "diary.sign")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await diaryInScope(client, actor, diaryId)) return NOT_FOUND;
     const current = await client.query<Record<string, unknown> & { status: DiaryStatus; version: number }>(
       `SELECT status, version, weather, temperature_c::text, worked_hours::text, description, visitors, events
          FROM public.site_diaries WHERE company_id = $1 AND id = $2 FOR UPDATE`,

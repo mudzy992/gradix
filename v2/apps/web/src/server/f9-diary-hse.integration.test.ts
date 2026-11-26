@@ -26,6 +26,8 @@ import { POST as signPost } from "@/app/api/site-diaries/[id]/sign/route";
 import { POST as lockPost } from "@/app/api/site-diaries/[id]/lock/route";
 import { POST as revisePost } from "@/app/api/site-diaries/[id]/revise/route";
 import { POST as itemsPost } from "@/app/api/site-diaries/[id]/items/route";
+import { DELETE as itemDelete } from "@/app/api/site-diaries/[id]/items/[itemId]/route";
+import { GET as diaryPdf } from "@/app/api/site-diaries/[id]/pdf/route";
 import { POST as delaysPost } from "@/app/api/site-diaries/[id]/delays/route";
 import { GET as incidentsGet, POST as incidentsPost } from "@/app/api/hse/incidents/route";
 import { GET as incidentGet } from "@/app/api/hse/incidents/[id]/route";
@@ -185,6 +187,7 @@ describeDb("F9 dnevnik i HSE — integraciono", () => {
         await client.query("DELETE FROM obligations WHERE company_id = $1", [company]);
         await client.query("DELETE FROM obligation_types WHERE company_id = $1", [company]);
         await client.query("DELETE FROM sessions WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM project_assignments WHERE company_id = $1", [company]);
         await client.query("DELETE FROM projects WHERE company_id = $1", [company]);
         await client.query("DELETE FROM workers WHERE company_id = $1", [company]);
         await client.query("DELETE FROM memberships WHERE company_id = $1", [company]);
@@ -196,6 +199,52 @@ describeDb("F9 dnevnik i HSE — integraciono", () => {
   }, 60_000);
 
   describe("dnevnik", () => {
+    it("PROJECTS i SELF scope se provode na listi, kreiranju, detalju, PDF-u i svim izmjenama", async () => {
+      const otherProject = `prj_f9_other_${RUN}`;
+      const assignment = `pas_f9_${RUN}`;
+      await withCompany(admin, companyId(CO_A), async (client) => {
+        await client.query("INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'F9-2','Drugi projekat')", [otherProject, CO_A]);
+        await client.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date)
+          VALUES ($1,$2,$3,$4,'2020-01-01')`, [assignment, CO_A, PROJECT, WORKER_SUP]);
+      });
+      const ownId = await ensureDiary(COOKIES.owner, "2026-08-10");
+      const otherResponse = await diariesPost(jsonRequest("http://t/api/site-diaries", COOKIES.owner, {
+        projectId: otherProject, diaryDate: "2026-08-10",
+      }));
+      const otherId = String((await bodyOf(otherResponse)).data?.id ?? "");
+      expect(otherId).not.toBe("");
+      try {
+        await withCompany(admin, companyId(CO_A), (client) => client.query(
+          "UPDATE memberships SET scope='PROJECTS' WHERE company_id=$1 AND user_id=$2", [CO_A, USER_SUP],
+        ));
+        const cookie = COOKIES.sup;
+        const list = await bodyOf(await diariesGet(new NextRequest("http://t/api/site-diaries", { headers: { cookie } })));
+        const ids = (list.data?.diaries as { id: string }[]).map((entry) => entry.id);
+        expect(ids).toContain(ownId);
+        expect(ids).not.toContain(otherId);
+        expect((await diariesPost(jsonRequest("http://t/api/site-diaries", cookie, { projectId: otherProject, diaryDate: "2026-08-11" }))).status).toBe(404);
+        expect((await diaryGet(new NextRequest(`http://t/api/site-diaries/${otherId}`, { headers: { cookie } }), ctx(otherId))).status).toBe(404);
+        expect((await diaryPdf(new NextRequest(`http://t/api/site-diaries/${otherId}/pdf`, { headers: { cookie } }), ctx(otherId))).status).toBe(404);
+        expect((await diaryPatch(jsonRequest(`http://t/api/site-diaries/${otherId}`, cookie, { description: "nedozvoljeno" }, "PATCH"), ctx(otherId))).status).toBe(404);
+        expect((await itemsPost(jsonRequest(`http://t/api/site-diaries/${otherId}/items`, cookie, { description: "test", unit: "m", quantity: "1" }), ctx(otherId))).status).toBe(404);
+        expect((await itemDelete(new NextRequest(`http://t/api/site-diaries/${otherId}/items/none`, { method: "DELETE", headers: { cookie } }), { params: Promise.resolve({ id: otherId, itemId: "none" }) })).status).toBe(404);
+        expect((await delaysPost(jsonRequest(`http://t/api/site-diaries/${otherId}/delays`, cookie, { kind: "WEATHER", fromAt: "2026-08-10T08:00:00Z", toAt: "2026-08-10T09:00:00Z", hours: "1" }), ctx(otherId))).status).toBe(404);
+        expect((await signPost(jsonRequest(`http://t/api/site-diaries/${otherId}/sign`, cookie, { signedName: "Test Osoba" }), ctx(otherId))).status).toBe(404);
+        expect((await lockPost(new NextRequest(`http://t/api/site-diaries/${otherId}/lock`, { method: "POST", headers: { cookie } }), ctx(otherId))).status).toBe(404);
+        expect((await revisePost(jsonRequest(`http://t/api/site-diaries/${otherId}/revise`, cookie, { reason: "Dovoljno dugačak razlog" }), ctx(otherId))).status).toBe(404);
+        expect((await diaryPatch(jsonRequest(`http://t/api/site-diaries/${ownId}`, cookie, { description: "Dozvoljeno" }, "PATCH"), ctx(ownId))).status).toBe(200);
+        await withCompany(admin, companyId(CO_A), (client) => client.query(
+          "UPDATE memberships SET scope='SELF' WHERE company_id=$1 AND user_id=$2", [CO_A, USER_SUP],
+        ));
+        const selfList = await bodyOf(await diariesGet(new NextRequest("http://t/api/site-diaries", { headers: { cookie } })));
+        expect(selfList.data?.diaries).toEqual([]);
+        expect((await diaryGet(new NextRequest(`http://t/api/site-diaries/${ownId}`, { headers: { cookie } }), ctx(ownId))).status).toBe(404);
+      } finally {
+        await withCompany(admin, companyId(CO_A), (client) => client.query(
+          "UPDATE memberships SET scope='COMPANY' WHERE company_id=$1 AND user_id=$2", [CO_A, USER_SUP],
+        ));
+      }
+    });
     it("isti dan se ne otvara dvaput, a susjedni dan jeste novi red", async () => {
       const firstDate = "2026-09-14";
       const secondDate = "2026-09-15";
