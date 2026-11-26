@@ -163,6 +163,7 @@ export interface Companies {
   phone: string | null;
   planned_hours_per_month: Generated<number>;
   postal_code: string | null;
+  purchase_approval_threshold_cents: Generated<Int8>;
   /**
    * Zaokruživanje PO SEGMENTU, ne po danu (spec 03 §1.4). 0 = bez zaokruživanja (default).
    */
@@ -220,8 +221,10 @@ export interface CostEntries {
   category_id: string;
   company_id: string;
   currency_code: string | null;
+  entry_kind: Generated<string>;
   id: string;
   machine_id: string | null;
+  material_issue_item_id: string | null;
   note: string | null;
   occurred_on: string;
   phase_id: string | null;
@@ -236,6 +239,7 @@ export interface CostEntries {
   source_id: string;
   source_type: string;
   status: Generated<string>;
+  supplier_invoice_id: string | null;
   unit: string | null;
   version: Generated<number>;
 }
@@ -329,6 +333,34 @@ export interface FuelTanks {
   last_count_at: Timestamp | null;
   name: string;
   updated_at: Generated<Timestamp>;
+  warehouse_id: string;
+}
+
+export interface GoodsReceiptItems {
+  amount_cents: Int8;
+  company_id: string;
+  id: string;
+  item_id: string;
+  movement_id: string;
+  order_item_id: string | null;
+  quantity: Numeric;
+  receipt_id: string;
+  unit_price_cents: Int8;
+}
+
+export interface GoodsReceipts {
+  client_generated_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  note: string | null;
+  order_id: string | null;
+  partner_id: string;
+  received_at: Timestamp;
+  request_hash: string | null;
+  resulting_order_status: string | null;
   warehouse_id: string;
 }
 
@@ -754,6 +786,44 @@ export interface MaintenanceTemplates {
   tolerance_pct: Generated<Numeric>;
   updated_at: Generated<Timestamp>;
   updated_by: string;
+}
+
+export interface MaterialIssueAllocations {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  invoice_item_id: string;
+  issue_item_id: string;
+  offset_cents: Int8;
+  offset_cost_id: string;
+  quantity: Numeric;
+}
+
+export interface MaterialIssueItems {
+  amount_cents: Int8;
+  company_id: string;
+  id: string;
+  issue_id: string;
+  item_id: string;
+  movement_id: string;
+  quantity: Numeric;
+}
+
+export interface MaterialIssues {
+  below_minimum: Generated<boolean>;
+  client_generated_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  issued_at: Timestamp;
+  issued_to_worker_id: string | null;
+  note: string | null;
+  phase_id: string | null;
+  project_id: string | null;
+  request_hash: string | null;
+  warehouse_id: string;
 }
 
 export interface Memberships {
@@ -1271,6 +1341,93 @@ export interface ProjectTasks {
   title: string;
   updated_at: Generated<Timestamp>;
   updated_by: string;
+}
+
+export interface PurchaseInvoiceItems {
+  amount_cents: Int8;
+  company_id: string;
+  id: string;
+  invoice_id: string;
+  quantity: Numeric;
+  receipt_item_id: string;
+}
+
+export interface PurchaseInvoices {
+  amount_cents: Int8;
+  attachment_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  due_date: string | null;
+  id: string;
+  invoice_date: string;
+  invoice_number: string;
+  order_id: string | null;
+  partner_id: string;
+  phase_id: string | null;
+  project_id: string | null;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface PurchaseOrderItems {
+  company_id: string;
+  description: string;
+  id: string;
+  item_id: string;
+  order_id: string;
+  quantity: Numeric;
+  request_item_id: string | null;
+  unit: string;
+  unit_price_cents: Int8;
+}
+
+export interface PurchaseOrders {
+  client_generated_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  expected_at: string | null;
+  id: string;
+  ordered_at: Timestamp | null;
+  partner_id: string;
+  request_hash: string | null;
+  request_id: string | null;
+  status: Generated<string>;
+  total_cents: Int8;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface PurchaseRequestItems {
+  company_id: string;
+  description: string;
+  estimated_unit_price_cents: Int8;
+  id: string;
+  item_id: string | null;
+  quantity: Numeric;
+  request_id: string;
+  unit: string;
+}
+
+export interface PurchaseRequests {
+  approval_threshold_cents: Int8 | null;
+  client_generated_id: string | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  currency_code: string;
+  id: string;
+  justification: string;
+  needed_by: string | null;
+  phase_id: string | null;
+  project_id: string | null;
+  request_hash: string | null;
+  requested_by_worker_id: string | null;
+  status: Generated<string>;
+  total_estimated_cents: Int8;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface ReportJobs {
@@ -2085,6 +2242,8 @@ export interface DB {
   fuel_entry_revisions: FuelEntryRevisions;
   fuel_prices: FuelPrices;
   fuel_tanks: FuelTanks;
+  goods_receipt_items: GoodsReceiptItems;
+  goods_receipts: GoodsReceipts;
   haul_revisions: HaulRevisions;
   hauls: Hauls;
   hse_actions: HseActions;
@@ -2111,6 +2270,9 @@ export interface DB {
   machines: Machines;
   maintenance_plans: MaintenancePlans;
   maintenance_templates: MaintenanceTemplates;
+  material_issue_allocations: MaterialIssueAllocations;
+  material_issue_items: MaterialIssueItems;
+  material_issues: MaterialIssues;
   memberships: Memberships;
   notification_deliveries: NotificationDeliveries;
   notification_preferences: NotificationPreferences;
@@ -2146,6 +2308,12 @@ export interface DB {
   project_phases: ProjectPhases;
   project_tasks: ProjectTasks;
   projects: Projects;
+  purchase_invoice_items: PurchaseInvoiceItems;
+  purchase_invoices: PurchaseInvoices;
+  purchase_order_items: PurchaseOrderItems;
+  purchase_orders: PurchaseOrders;
+  purchase_request_items: PurchaseRequestItems;
+  purchase_requests: PurchaseRequests;
   report_jobs: ReportJobs;
   route_segments: RouteSegments;
   service_order_events: ServiceOrderEvents;

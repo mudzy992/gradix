@@ -5116,3 +5116,85 @@ export const StockCountDetailResponse = z.object({
   count: StockCountsResponse.shape.counts.element,
   items: z.array(z.object({ item_id: z.string(), counted_quantity: z.string(), system_quantity: z.string().nullable(), difference: z.string().nullable() })),
 });
+
+/* F10A-2: iznosi putuju kao cijeli feningi, količine kao decimalni stringovi. */
+const PurchaseCents = z.string().regex(/^\d{1,15}$/);
+const PurchaseItem = z.object({
+  itemId: SafeText.min(1).max(128).nullable().optional(), description: SafeText.min(1).max(500),
+  unit: SafeText.min(1).max(16), quantity: StockQuantity,
+  estimatedUnitPriceCents: PurchaseCents,
+}).strict();
+export const PurchaseRequestInput = z.object({
+  clientGeneratedId:z.uuid(), projectId: SafeText.min(1).max(128).nullable().optional(), phaseId: SafeText.min(1).max(128).nullable().optional(),
+  requestedByWorkerId: SafeText.min(1).max(128).nullable().optional(), neededBy: z.iso.date().nullable().optional(),
+  justification: SafeText.min(1).max(2000), currencyCode: z.enum(["BAM", "EUR", "USD"]),
+  items: z.array(PurchaseItem).min(1).max(200),
+}).strict();
+export type PurchaseRequestInput = z.infer<typeof PurchaseRequestInput>;
+export const PurchaseRequestPatchInput = z.object({
+  neededBy: z.iso.date().nullable().optional(), justification: SafeText.min(1).max(2000).optional(),
+}).strict();
+export type PurchaseRequestPatchInput = z.infer<typeof PurchaseRequestPatchInput>;
+export const PurchaseRejectInput = z.object({ reason: SafeText.min(10).max(500) }).strict();
+export const PurchaseEmptyInput = z.object({}).strict();
+export const PurchaseRequestRow = z.object({
+  id: z.string(), project_id: z.string().nullable(), phase_id: z.string().nullable(), requested_by_worker_id: z.string().nullable(),
+  needed_by: z.string().nullable(), justification: z.string(), status: z.enum(["DRAFT","SUBMITTED","APPROVED","REJECTED","ORDERED","CLOSED","CANCELLED"]),
+  total_estimated_cents: z.string(), currency_code: z.string(), created_by: z.string(), created_at: z.string(),
+});
+export const PurchaseRequestsResponse = z.object({ requests: z.array(PurchaseRequestRow) });
+export const PurchaseRequestDetail = z.object({ request: PurchaseRequestRow, items: z.array(z.object({
+  id:z.string(), item_id:z.string().nullable(), description:z.string(), unit:z.string(), quantity:z.string(), estimated_unit_price_cents:z.string(),
+})) });
+export const PurchaseMutationResponse = z.object({ id:z.string(), status:z.string().optional(), approvalRequired:z.boolean().optional() });
+export const PurchaseOrderInput = z.object({
+  clientGeneratedId:z.uuid(), requestId: SafeText.min(1).max(128).nullable().optional(), partnerId: SafeText.min(1).max(128),
+  expectedAt: z.iso.date().nullable().optional(), currencyCode: z.enum(["BAM","EUR","USD"]),
+  items: z.array(z.object({
+    requestItemId: SafeText.min(1).max(128).nullable().optional(), itemId: SafeText.min(1).max(128),
+    description: SafeText.min(1).max(500), unit: SafeText.min(1).max(16), quantity: StockQuantity, unitPriceCents: PurchaseCents,
+  }).strict()).min(1).max(200),
+}).strict();
+export type PurchaseOrderInput=z.infer<typeof PurchaseOrderInput>;
+export const PurchaseOrderPatchInput = z.object({expectedAt:z.iso.date().nullable().optional()}).strict();
+export type PurchaseOrderPatchInput=z.infer<typeof PurchaseOrderPatchInput>;
+export const PurchaseOrderRow = z.object({
+  id:z.string(),request_id:z.string().nullable(),partner_id:z.string(),ordered_at:z.string().nullable(),expected_at:z.string().nullable(),
+  status:z.enum(["DRAFT","SENT","PARTIALLY_RECEIVED","RECEIVED","CANCELLED"]),total_cents:z.string(),currency_code:z.string(),created_at:z.string(),
+});
+export const PurchaseOrdersResponse=z.object({orders:z.array(PurchaseOrderRow)});
+export const PurchaseOrderDetail=z.object({order:PurchaseOrderRow,items:z.array(z.object({
+  id:z.string(),request_item_id:z.string().nullable(),item_id:z.string(),description:z.string(),unit:z.string(),quantity:z.string(),unit_price_cents:z.string(),received_quantity:z.string(),
+}))});
+export const GoodsReceiptInput=z.object({
+  clientGeneratedId:z.uuid(), orderId:SafeText.min(1).max(128).nullable().optional(),partnerId:SafeText.min(1).max(128),warehouseId:SafeText.min(1).max(128),
+  receivedAt:z.iso.datetime({offset:true}),currencyCode:z.enum(["BAM","EUR","USD"]),note:SafeText.min(3).max(1000).nullable().optional(),
+  items:z.array(z.object({orderItemId:SafeText.min(1).max(128).nullable().optional(),itemId:SafeText.min(1).max(128),quantity:StockQuantity,unitPriceCents:PurchaseCents}).strict()).min(1).max(200),
+}).strict();
+export type GoodsReceiptInput=z.infer<typeof GoodsReceiptInput>;
+export const GoodsReceiptResponse=z.object({id:z.string(),warnings:z.array(z.string()),orderStatus:z.string().nullable()});
+export const PurchaseInvoiceInput=z.object({
+  partnerId:SafeText.min(1).max(128),invoiceNumber:SafeText.min(1).max(120),invoiceDate:z.iso.date(),dueDate:z.iso.date().nullable().optional(),
+  amountCents:PurchaseCents,currencyCode:z.enum(["BAM","EUR","USD"]),orderId:SafeText.min(1).max(128).nullable().optional(),
+  projectId:SafeText.min(1).max(128).nullable().optional(),phaseId:SafeText.min(1).max(128).nullable().optional(),attachmentId:SafeText.min(1).max(128).nullable().optional(),
+  items:z.array(z.object({receiptItemId:SafeText.min(1).max(128),quantity:StockQuantity,amountCents:PurchaseCents}).strict()).max(200).default([]),
+}).strict();
+export type PurchaseInvoiceInput=z.infer<typeof PurchaseInvoiceInput>;
+export const PurchaseInvoicePatchInput=z.object({dueDate:z.iso.date().nullable().optional()}).strict();
+export type PurchaseInvoicePatchInput=z.infer<typeof PurchaseInvoicePatchInput>;
+export const PurchaseInvoiceRow=z.object({
+  id:z.string(),partner_id:z.string(),invoice_number:z.string(),invoice_date:z.string(),due_date:z.string().nullable(),
+  amount_cents:z.string(),currency_code:z.string(),order_id:z.string().nullable(),project_id:z.string().nullable(),phase_id:z.string().nullable(),
+  attachment_id:z.string().nullable(),status:z.enum(["PENDING","APPROVED","PAID","DISPUTED"]),created_at:z.string(),
+  warnings:z.array(z.string()),
+});
+export const PurchaseInvoicesResponse=z.object({invoices:z.array(PurchaseInvoiceRow)});
+export const PurchaseInvoiceDetail=z.object({invoice:PurchaseInvoiceRow,items:z.array(z.object({id:z.string(),receipt_item_id:z.string(),quantity:z.string(),amount_cents:z.string()}))});
+export const PurchaseInvoiceMutationResponse=z.object({id:z.string(),warnings:z.array(z.string()),alreadyApproved:z.boolean().optional()});
+export const MaterialIssueInput=z.object({
+  clientGeneratedId:z.uuid(), warehouseId:SafeText.min(1).max(128),projectId:SafeText.min(1).max(128).nullable().optional(),phaseId:SafeText.min(1).max(128).nullable().optional(),
+  issuedToWorkerId:SafeText.min(1).max(128).nullable().optional(),issuedAt:z.iso.datetime({offset:true}),note:SafeText.min(1).max(1000).nullable().optional(),
+  items:z.array(z.object({itemId:SafeText.min(1).max(128),quantity:StockQuantity}).strict()).min(1).max(200),
+}).strict();
+export type MaterialIssueInput=z.infer<typeof MaterialIssueInput>;
+export const MaterialIssueResponse=z.object({id:z.string(),amountCents:z.string(),offsetCents:z.string(),belowMinimum:z.boolean()});

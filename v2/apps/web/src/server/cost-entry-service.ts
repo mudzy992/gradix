@@ -115,7 +115,7 @@ export async function resolveCostCategory(
  * neknjižen. Postojeće kategorije se ne diraju (`ON CONFLICT DO NOTHING`); dodaje se samo ono
  * što nedostaje.
  */
-async function ensureCostCategories(
+export async function ensureCostCategories(
   client: PoolClient,
   companyId: string,
   actorId: string,
@@ -163,6 +163,9 @@ export type CostPostDraft = {
   sourceType: CostSourceType;
   sourceId: string;
   machineId?: string | null;
+  entryKind?: "CHARGE" | "OVERHEAD" | "OFFSET";
+  supplierInvoiceId?: string | null;
+  materialIssueItemId?: string | null;
   occurredOn: string;
   amountCents: bigint | null;
   currency?: Currency | null;
@@ -202,8 +205,8 @@ export async function postCost(
     `INSERT INTO public.cost_entries
        (id, company_id, project_id, phase_id, category_id, source_type, source_id, machine_id,
         occurred_on, amount_cents, currency_code, quantity, unit, rate_snapshot, status, note,
-        booked_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::date,$10,$11,$12,$13,$14::jsonb,$15,$16,$17)
+        booked_by, entry_kind, supplier_invoice_id, material_issue_item_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::date,$10,$11,$12,$13,$14::jsonb,$15,$16,$17,$18,$19,$20)
      ON CONFLICT (company_id, source_type, source_id) WHERE status <> 'REVERSED' DO NOTHING
      RETURNING id, status`,
     [
@@ -224,6 +227,9 @@ export async function postCost(
       status,
       draft.note ?? null,
       draft.actorId,
+      draft.entryKind ?? "CHARGE",
+      draft.supplierInvoiceId ?? null,
+      draft.materialIssueItemId ?? null,
     ],
   );
   const row = inserted.rows[0];
@@ -864,6 +870,9 @@ export async function reverseCost(
     );
     const original = found.rows[0];
     if (!original) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Trošak ne postoji." };
+    if (original.source_type === "PURCHASE") {
+      return { outcome: "CONFLICT", code: "PURCHASE_COST_REVERSAL_FORBIDDEN", message: "Trošak nabavke ne može se jednostrano stornirati bez povezanog dokumenta." };
+    }
     if (original.status === "REVERSED") {
       return { outcome: "CONFLICT", code: "COST_ALREADY_POSTED", message: "Trošak je već storniran." };
     }

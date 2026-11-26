@@ -72,6 +72,17 @@ table	warehouses	SELECT;INSERT;UPDATE	-		F10 skladišta; FORCE RLS; bez DELETE.
 table	stock_item_levels	SELECT;INSERT;UPDATE	-		F10 nivoi po skladištu; FORCE RLS; bez DELETE.
 table	stock_counts	SELECT;INSERT;UPDATE	-		F10 inventure; FORCE RLS; bez DELETE.
 table	stock_count_items	SELECT;INSERT;UPDATE	-		F10 stavke inventura; FORCE RLS; bez DELETE.
+table	purchase_requests	SELECT;INSERT;UPDATE	-		Zahtjevi nabavke; FORCE RLS.
+table	purchase_request_items	SELECT;INSERT;UPDATE	-		Stavke zahtjeva; FORCE RLS.
+table	purchase_orders	SELECT;INSERT;UPDATE	-		Narudžbenice; FORCE RLS.
+table	purchase_order_items	SELECT;INSERT;UPDATE	-		Stavke narudžbenice; FORCE RLS.
+table	goods_receipts	SELECT;INSERT	-		Prijemi robe; FORCE RLS.
+table	goods_receipt_items	SELECT;INSERT	-		Stavke prijema; FORCE RLS.
+table	purchase_invoices	SELECT;INSERT;UPDATE	-		Računi dobavljača; FORCE RLS.
+table	purchase_invoice_items	SELECT;INSERT;UPDATE	-		Vezani dio računa i prijema; FORCE RLS.
+table	material_issues	SELECT;INSERT	-		Izlazi materijala; FORCE RLS.
+table	material_issue_items	SELECT;INSERT	-		Stavke izlaza; FORCE RLS.
+table	material_issue_allocations	SELECT;INSERT	-		Razgraničenja računa; FORCE RLS.
 table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
 table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.

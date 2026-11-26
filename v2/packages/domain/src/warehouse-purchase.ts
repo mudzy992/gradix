@@ -86,7 +86,7 @@ export function purchaseNeedsApproval(estimatedCents: bigint, thresholdCents: bi
 /** PM smije odobriti samo zahtjev do praga; iznad praga odlučuje OWNER ili ADMIN. */
 export function canApprovePurchase(roles: readonly string[], estimatedCents: bigint, thresholdCents: bigint): boolean {
   const elevated = purchaseNeedsApproval(estimatedCents, thresholdCents);
-  return roles.includes("OWNER") || roles.includes("ADMIN") || (!elevated && roles.includes("PM"));
+  return roles.includes("OWNER") || roles.includes("ADMIN") || (!elevated && roles.includes("PROJECT_MANAGER"));
 }
 
 /** Status se izvodi iz ukupno zaprimljenih količina po stavci, ne iz broja prijema. */

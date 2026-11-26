@@ -70,7 +70,11 @@ DECLARE
     'public.stock_movement_lock()',
     'public.stock_transfer_pair_guard()',
     'public.stock_count_guard()',
-    'public.companies_seed_central_warehouse()'
+    'public.companies_seed_central_warehouse()',
+    'public.purchase_cost_guard()',
+    'public.purchase_invoice_guard()',
+    'public.purchase_allocation_lock()',
+    'public.purchase_offset_guard()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

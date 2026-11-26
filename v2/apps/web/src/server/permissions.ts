@@ -227,6 +227,9 @@ export const PERMISSIONS = {
    */
   "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MECHANIC", "ACCOUNTANT"],
   "stock.manage": ["OWNER", "ADMIN", "SITE_SUPERVISOR", "MECHANIC"],
+  "purchase.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "purchase.manage": ["OWNER", "ADMIN", "PROJECT_MANAGER"],
+  "purchase.approve": ["OWNER", "ADMIN"],
   /*
    * F9 — dnevnik građenja. `view` je širi od `manage`: dnevnik čita i računovodstvo (količine idu
    * u trošak i u obračun) i PM (napredak projekta). `manage` je unos i izmjena nacrta, a `sign`
@@ -564,6 +567,18 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     label: "Odobrenje servisnog naloga",
     description:
       "Odobrava ili odbija nalog čiji je predračun iznad praga firme; vanjski servis iznad praga traži i ponudu.",
+  },
+  "purchase.view": {
+    label: "Pregled nabavke",
+    description: "Pregled zahtjeva, narudžbenica, prijema i računa dobavljača.",
+  },
+  "purchase.manage": {
+    label: "Upravljanje nabavkom",
+    description: "Kreiranje i obrada dokumenata nabavke; viši prag zahtijeva vlasnika ili administratora.",
+  },
+  "purchase.approve": {
+    label: "Odobravanje nabavke iznad praga",
+    description: "Odluka o zahtjevu čija procijenjena vrijednost prelazi prag firme.",
   },
   "stock.view": {
     label: "Pregled zaliha dijelova",

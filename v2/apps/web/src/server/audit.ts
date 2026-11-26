@@ -211,6 +211,19 @@ export const AUDIT_ACTIONS = [
   "partner.role_changed",
   "stock.transfer_created",
   "stock.count_applied",
+  "purchase.request_created",
+  "purchase.request_updated",
+  "purchase.request_submitted",
+  "purchase.request_approved",
+  "purchase.request_rejected",
+  "purchase.order_created",
+  "purchase.order_updated",
+  "purchase.order_sent",
+  "purchase.goods_received",
+  "purchase.invoice_created",
+  "purchase.invoice_updated",
+  "purchase.invoice_approved",
+  "purchase.material_issued",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -447,6 +460,19 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "partner.role_changed": "Uloga partnera promijenjena",
   "stock.transfer_created": "Transfer zaliha",
   "stock.count_applied": "Popis zaliha primijenjen",
+  "purchase.request_created": "Zahtjev nabavke kreiran",
+  "purchase.request_updated": "Zahtjev nabavke izmijenjen",
+  "purchase.request_submitted": "Zahtjev nabavke predan",
+  "purchase.request_approved": "Zahtjev nabavke odobren",
+  "purchase.request_rejected": "Zahtjev nabavke odbijen",
+  "purchase.order_created": "Narudžbenica kreirana",
+  "purchase.order_updated": "Narudžbenica izmijenjena",
+  "purchase.order_sent": "Narudžbenica poslana",
+  "purchase.goods_received": "Roba primljena",
+  "purchase.invoice_created": "Račun dobavljača evidentiran",
+  "purchase.invoice_updated": "Račun dobavljača izmijenjen",
+  "purchase.invoice_approved": "Račun dobavljača odobren",
+  "purchase.material_issued": "Materijal izdat",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

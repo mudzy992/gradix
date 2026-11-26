@@ -74,8 +74,8 @@ describe("F10: skladište, nabavka i podizvođači", () => {
     expect(purchaseNeedsApproval(100000n, 100000n)).toBe(false);
     expect(purchaseNeedsApproval(100001n, 100000n)).toBe(true);
     expect(() => purchaseNeedsApproval(-1n, 100000n)).toThrow(RangeError);
-    expect(canApprovePurchase(["PM"], 100000n, 100000n)).toBe(true);
-    expect(canApprovePurchase(["PM"], 100001n, 100000n)).toBe(false);
+    expect(canApprovePurchase(["PROJECT_MANAGER"], 100000n, 100000n)).toBe(true);
+    expect(canApprovePurchase(["PROJECT_MANAGER"], 100001n, 100000n)).toBe(false);
     expect(canApprovePurchase(["OWNER"], 100001n, 100000n)).toBe(true);
     expect(canApprovePurchase(["ADMIN"], 100001n, 100000n)).toBe(true);
     expect(canApprovePurchase(["ACCOUNTANT"], 1n, 100000n)).toBe(false);

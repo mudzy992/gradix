@@ -32,6 +32,19 @@ import { GET as maintenanceTemplatesGet, POST as maintenanceTemplatesPost } from
 import { PATCH as maintenanceTemplatePatch } from "@/app/api/maintenance-templates/[id]/route";
 import { GET as maintenancePlansGet, POST as maintenancePlansPost } from "@/app/api/machines/[id]/maintenance-plans/route";
 import { PATCH as maintenancePlanPatch } from "@/app/api/machines/[id]/maintenance-plans/[planId]/route";
+import { GET as purchaseInvoicesGet, POST as purchaseInvoicesPost } from "@/app/api/purchase-invoices/route";
+import { GET as purchaseInvoiceGet, PATCH as purchaseInvoicePatch } from "@/app/api/purchase-invoices/[id]/route";
+import { POST as purchaseInvoiceApprove } from "@/app/api/purchase-invoices/[id]/approve/route";
+import { POST as materialIssuePost } from "@/app/api/material-issues/route";
+import { GET as purchaseOrdersGet, POST as purchaseOrdersPost } from "@/app/api/purchase-orders/route";
+import { GET as purchaseOrderGet, PATCH as purchaseOrderPatch } from "@/app/api/purchase-orders/[id]/route";
+import { POST as purchaseOrderSend } from "@/app/api/purchase-orders/[id]/send/route";
+import { POST as goodsReceiptPost } from "@/app/api/goods-receipts/route";
+import { GET as purchaseRequestsGet, POST as purchaseRequestsPost } from "@/app/api/purchase-requests/route";
+import { GET as purchaseRequestGet, PATCH as purchaseRequestPatch } from "@/app/api/purchase-requests/[id]/route";
+import { POST as purchaseRequestSubmit } from "@/app/api/purchase-requests/[id]/submit/route";
+import { POST as purchaseRequestApprove } from "@/app/api/purchase-requests/[id]/approve/route";
+import { POST as purchaseRequestReject } from "@/app/api/purchase-requests/[id]/reject/route";
 import { GET as warehousesGet, POST as warehousesPost } from "@/app/api/warehouses/route";
 import { PATCH as warehousePatch } from "@/app/api/warehouses/[id]/route";
 import { GET as stockBalanceGet } from "@/app/api/stock/balance/route";
@@ -435,6 +448,19 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/partners": { POST: partnersPost },
   "/api/partners/{id}": { PATCH: partnersPatch },
   "/api/partners/{id}/roles": { GET: partnerRolesGet, POST: partnerRolesPost, PATCH: partnerRolesPatch },
+  "/api/purchase-invoices": { GET: purchaseInvoicesGet, POST: purchaseInvoicesPost },
+  "/api/purchase-invoices/{id}": { GET: purchaseInvoiceGet, PATCH: purchaseInvoicePatch },
+  "/api/purchase-invoices/{id}/approve": { POST: purchaseInvoiceApprove },
+  "/api/material-issues": { POST: materialIssuePost },
+  "/api/purchase-orders": { GET: purchaseOrdersGet, POST: purchaseOrdersPost },
+  "/api/purchase-orders/{id}": { GET: purchaseOrderGet, PATCH: purchaseOrderPatch },
+  "/api/purchase-orders/{id}/send": { POST: purchaseOrderSend },
+  "/api/goods-receipts": { POST: goodsReceiptPost },
+  "/api/purchase-requests": { GET: purchaseRequestsGet, POST: purchaseRequestsPost },
+  "/api/purchase-requests/{id}": { GET: purchaseRequestGet, PATCH: purchaseRequestPatch },
+  "/api/purchase-requests/{id}/submit": { POST: purchaseRequestSubmit },
+  "/api/purchase-requests/{id}/approve": { POST: purchaseRequestApprove },
+  "/api/purchase-requests/{id}/reject": { POST: purchaseRequestReject },
   "/api/warehouses": { GET: warehousesGet, POST: warehousesPost },
   "/api/warehouses/{id}": { PATCH: warehousePatch },
   "/api/stock/balance": { GET: stockBalanceGet },
