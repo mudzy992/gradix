@@ -130,6 +130,17 @@ export const ReportQuery = z.object({
   team: SafeText.min(1).max(128).optional(),
 });
 
+/** Async report request; actual availability depends on worker/queue configuration. */
+export const ReportJobRequest = ReportQuery.extend({
+  key: z.enum(["PROJECT_COSTS", "MACHINE_UTILIZATION", "FUEL", "WORK_HOURS", "DEADLINES", "TENDERS", "HSE"]),
+}).strict();
+export const ReportJob = z.object({
+  id: z.string(), key: z.string(), format: z.enum(["pdf", "xlsx"]),
+  from: z.string(), to: z.string(), status: z.enum(["QUEUED", "RUNNING", "DONE", "FAILED", "DEAD"]),
+  createdAt: IsoDate, completedAt: IsoDate.nullable(),
+});
+export const ReportJobsResponse = z.object({ jobs: z.array(ReportJob) });
+
 export const SearchQuery = z.object({ q: SafeText.trim().min(2).max(100) });
 export const SearchResponse = z.object({ results:z.array(z.object({
   type:z.enum(["PROJECT","WORKER","MACHINE","PARTNER","TENDER","DOCUMENT","INVOICE","TASK","OBLIGATION","SERVICE_ORDER","INCIDENT"]),

@@ -274,6 +274,9 @@ import {
   DataHealthResponse,
   DashboardActionsResponse,
   ReportQuery,
+  ReportJobRequest,
+  ReportJob,
+  ReportJobsResponse,
   SearchQuery,
   SearchResponse,
   NotificationReadInput,
@@ -2954,6 +2957,18 @@ export const ROUTES = [
     permission: "payroll.own.view",
     request: null,
     response: MyPayrollResponse,
+  },
+  {
+    method: "GET", path: "/api/report-jobs", summary: "Statusi vlastitih asinhronih izvještaja.",
+    auth: true, permission: "reports.view", request: null, response: ReportJobsResponse,
+  },
+  {
+    method: "POST", path: "/api/report-jobs", summary: "Kreiranje asinhronog izvještaja (trenutno nedostupno).",
+    auth: true, permission: "export.data", request: ReportJobRequest, response: ReportJob,
+  },
+  {
+    method: "GET", path: "/api/report-jobs/{id}", summary: "Status vlastitog asinhronog izvještaja.",
+    auth: true, permission: "reports.view", request: null, response: ReportJob,
   },
   {
     method: "GET", path: "/api/reports/{key}", summary: "Sinhroni izvoz izvještaja (PDF ili XLSX).",
