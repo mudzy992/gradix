@@ -44,7 +44,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (result.outcome === "FORBIDDEN") {
       return fail("FORBIDDEN", result.message ?? "Nemate pravo unosa.");
     }
-    if (result.outcome === "CONFLICT") return fail("CONFLICT", result.message);
+    if (result.outcome === "CONFLICT") return fail(result.code === "STOCK_COUNT_IN_PROGRESS" ? "STOCK_COUNT_IN_PROGRESS" : "CONFLICT", result.message);
     if (result.outcome === "VALIDATION_FAILED") return fail("VALIDATION_FAILED", result.message);
     return ok(result);
   } catch (error) {

@@ -225,8 +225,8 @@ export const PERMISSIONS = {
    * Zalihe dijelova (F8 §1.3). Računovođa vidi stanje i vrijednost zaliha (to ulazi u trošak),
    * ali ne izdaje dijelove; mehaničar izdaje i prima, jer on jedini zna šta je utrošeno.
    */
-  "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "MECHANIC", "ACCOUNTANT"],
-  "stock.manage": ["OWNER", "ADMIN", "MECHANIC"],
+  "stock.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "MECHANIC", "ACCOUNTANT"],
+  "stock.manage": ["OWNER", "ADMIN", "SITE_SUPERVISOR", "MECHANIC"],
   /*
    * F9 — dnevnik građenja. `view` je širi od `manage`: dnevnik čita i računovodstvo (količine idu
    * u trošak i u obračun) i PM (napredak projekta). `manage` je unos i izmjena nacrta, a `sign`

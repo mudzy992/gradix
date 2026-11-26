@@ -209,6 +209,8 @@ export const AUDIT_ACTIONS = [
   "hse.report_exported",
   "hse.photo_confirmed",
   "partner.role_changed",
+  "stock.transfer_created",
+  "stock.count_applied",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -443,6 +445,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "hse.report_exported": "HSE izvještaj izvezen",
   "hse.photo_confirmed": "Fotografija incidenta potvrđena",
   "partner.role_changed": "Uloga partnera promijenjena",
+  "stock.transfer_created": "Transfer zaliha",
+  "stock.count_applied": "Popis zaliha primijenjen",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

@@ -4640,11 +4640,12 @@ export type StockMovementsResponse = z.infer<typeof StockMovementsResponse>;
 
 export const StockMovementInput = z
   .object({
-    itemId: z.string().min(1),
+    itemId: SafeText.min(1),
+    warehouseId: SafeText.min(1).optional(),
     kind: z.enum(["IN", "OUT", "COUNT"]),
-    quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
-    unitCostAmount: z.string().regex(/^\d+\.\d{2}$/).nullable().optional(),
-    occurredOn: IsoDate,
+    quantity: z.string().regex(/^\d{1,11}(\.\d{1,3})?$/),
+    unitCostAmount: z.string().regex(/^\d{1,14}\.\d{2}$/).nullable().optional(),
+    occurredOn: z.iso.date().optional(),
     note: SafeText.max(1000).nullable().optional(),
   })
   .strict();
@@ -5076,3 +5077,42 @@ export const HseIncidentDetail = z.object({
   needsReportObligation: z.boolean(),
 });
 export type HseIncidentDetail = z.infer<typeof HseIncidentDetail>;
+
+/* F10A-1: skladišta i popis. Količine su decimalni stringovi, ne float. */
+const StockQuantity = z.string().regex(/^\d{1,11}(?:\.\d{1,3})?$/);
+export const WarehouseCreateInput = z.object({
+  code: SafeText.min(1).max(64), name: SafeText.min(1).max(200), kind: z.literal('SITE'),
+  projectId: SafeText.min(1), address: SafeText.max(500).nullable().optional(),
+}).strict();
+export const WarehousePatchInput = z.object({
+  name: SafeText.min(1).max(200).optional(), address: SafeText.max(500).nullable().optional(), isActive: z.boolean().optional(),
+}).strict();
+export const WarehousesResponse = z.object({ warehouses: z.array(z.object({
+  id: z.string(), code: z.string(), name: z.string(), kind: z.enum(['CENTRAL','SITE','TANK']),
+  project_id: z.string().nullable(), address: z.string().nullable(), is_active: z.boolean(),
+})) });
+export const WarehouseIdResponse = z.object({ id: z.string() });
+export const StockLevelInput = z.object({ warehouseId: SafeText.min(1), minQuantity: StockQuantity, maxQuantity: StockQuantity.nullable().optional() }).strict();
+export const StockBalanceResponse = z.object({ balances: z.array(z.object({
+  warehouse_id: z.string(), warehouse_name: z.string(), item_id: z.string(), code: z.string(), name: z.string(), unit: z.string(),
+  min_quantity: z.string(), max_quantity: z.string().nullable(), on_hand: z.string(), below_minimum: z.boolean(),
+})) });
+export const StockTransferInput = z.object({
+  fromWarehouseId: SafeText.min(1), toWarehouseId: SafeText.min(1), itemId: SafeText.min(1),
+  quantity: StockQuantity, occurredOn: z.iso.date(),
+}).strict();
+export const StockTransferResponse = z.object({ transferId: z.string(), belowMinimum: z.boolean() });
+export const StockCountCreateInput = z.object({
+  warehouseId: SafeText.min(1), reason: SafeText.min(3).max(1000).nullable().optional(),
+  items: z.array(z.object({ itemId: SafeText.min(1), countedQuantity: StockQuantity }).strict()).min(1).max(500),
+}).strict();
+export const StockCountApplyInput = z.object({ reason: SafeText.min(3).max(1000).nullable().optional() }).strict();
+export const StockCountsResponse = z.object({ counts: z.array(z.object({
+  id: z.string(), warehouse_id: z.string(), status: z.enum(['DRAFT','APPLIED']), reason: z.string().nullable(),
+  created_at: z.string(), applied_at: z.string().nullable(),
+})) });
+export const StockCountApplyResponse = z.object({ id: z.string(), alreadyApplied: z.boolean() });
+export const StockCountDetailResponse = z.object({
+  count: StockCountsResponse.shape.counts.element,
+  items: z.array(z.object({ item_id: z.string(), counted_quantity: z.string(), system_quantity: z.string().nullable(), difference: z.string().nullable() })),
+});

@@ -5,8 +5,7 @@
  * (spec 09 §1.3/14). Zato `stock_items` NEMA kolonu stanja. Zaliha je izvod iz dokumenata —
  * kad se pojavi razlika, vidi se KOJA kretnja je pogrešna, a ne samo da broj ne valja.
  *
- * `warehouse_id` je nullable (§1.3/16): MVP ima jedno implicitno skladište po firmi, a Modul 10
- * dodaje više skladišta bez promjene modela kretnji (samo počne puniti kolonu).
+ * F10 uvodi više skladišta; starim pozivima bez warehouseId koristi se Centralno.
  */
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
@@ -16,6 +15,7 @@ import {
   formatThousandths,
   isBelowMinimum,
   stockOnHand,
+  toHundredths,
   toThousandths,
 } from "@gradix/domain";
 import { can } from "./permissions";
@@ -59,9 +59,11 @@ export type StockMovementRow = {
 const ON_HAND_SQL = `COALESCE((
   SELECT SUM(CASE WHEN sm.kind = 'IN' THEN sm.quantity
                   WHEN sm.kind = 'OUT' THEN -sm.quantity
+                  WHEN sm.kind = 'COUNT' AND NOT sm.legacy_ignored THEN sm.quantity
                   ELSE 0 END)
     FROM public.stock_movements sm
    WHERE sm.company_id = i.company_id AND sm.item_id = i.id
+     AND sm.warehouse_id = (SELECT w.id FROM public.warehouses w WHERE w.company_id=i.company_id AND w.kind='CENTRAL')
 ), 0)`;
 
 export async function listStockItems(
@@ -89,7 +91,10 @@ export async function listStockItems(
       is_active: boolean;
       note: string | null;
     }>(
-      `SELECT i.id, i.code, i.name, i.unit, i.category_id, i.min_quantity::text,
+      `SELECT i.id, i.code, i.name, i.unit, i.category_id,
+              COALESCE((SELECT l.min_quantity FROM public.stock_item_levels l JOIN public.warehouses w
+                ON w.company_id=l.company_id AND w.id=l.warehouse_id
+                WHERE l.company_id=i.company_id AND l.item_id=i.id AND w.kind='CENTRAL'),i.min_quantity)::text AS min_quantity,
               ${ON_HAND_SQL}::text AS on_hand,
               (SELECT sm.unit_cost_cents::text FROM public.stock_movements sm
                 WHERE sm.company_id = i.company_id AND sm.item_id = i.id
@@ -144,6 +149,14 @@ export async function saveStockItem(
         [actor.companyId, itemId],
       );
       if (!existing.rows[0]) return { outcome: "NOT_FOUND" as const };
+      if (input.minQuantity !== undefined) {
+        const max = await client.query<{ max_quantity: string | null }>(`SELECT l.max_quantity::text FROM public.stock_item_levels l
+          JOIN public.warehouses w ON w.company_id=l.company_id AND w.id=l.warehouse_id
+          WHERE l.company_id=$1 AND l.item_id=$2 AND w.kind='CENTRAL'`, [actor.companyId,itemId]);
+        if (max.rows[0]?.max_quantity != null && toThousandths(input.minQuantity) > toThousandths(max.rows[0].max_quantity)) {
+          return { outcome: "VALIDATION_FAILED" as const, message: "Minimum ne može biti veći od maksimuma centralnog skladišta." };
+        }
+      }
       /* Namjerno NEMA `on_hand`/`quantity` u SET-u: stanje se mijenja ISKLJUČIVO kretnjom. */
       await client.query(
         `UPDATE public.stock_items
@@ -170,6 +183,10 @@ export async function saveStockItem(
           actor.userId,
         ],
       );
+      if (input.minQuantity !== undefined) await client.query(`INSERT INTO public.stock_item_levels(id,company_id,item_id,warehouse_id,min_quantity)
+        SELECT $1,$2,$3,w.id,$4 FROM public.warehouses w WHERE w.company_id=$2 AND w.kind='CENTRAL'
+        ON CONFLICT (company_id,item_id,warehouse_id) DO UPDATE SET min_quantity=EXCLUDED.min_quantity`,
+      [`lvl_${randomUUID().replace(/-/g, "")}`,actor.companyId,itemId,input.minQuantity]);
       return { outcome: "OK" as const, id: itemId };
     }
     if (!input.code || !input.name) {
@@ -204,6 +221,10 @@ export async function saveStockItem(
       }
       throw error;
     }
+    await client.query(`INSERT INTO public.stock_item_levels(id,company_id,item_id,warehouse_id,min_quantity)
+      SELECT $1,$2,$3,w.id,i.min_quantity FROM public.warehouses w JOIN public.stock_items i ON i.company_id=w.company_id
+      WHERE w.company_id=$2 AND w.kind='CENTRAL' AND i.id=$3`,
+    [`lvl_${randomUUID().replace(/-/g, "")}`,actor.companyId,id]);
     return { outcome: "OK" as const, id };
   });
 }
@@ -246,6 +267,7 @@ export async function listStockMovements(
 
 export type StockMovementInput = {
   itemId: string;
+  warehouseId?: string;
   kind: "IN" | "OUT" | "COUNT";
   quantity: string;
   unitCostAmount?: string | null;
@@ -254,21 +276,29 @@ export type StockMovementInput = {
 };
 
 /**
- * Ručna kretnja. `COUNT` (popis) je korekcija na izbrojano stanje: upisuje se kao `IN` ili `OUT`
- * za RAZLIKU, ne kao novo stanje — inače bi popis bio drugi izvor istine pored kretnji.
+ * Ručna kretnja. `COUNT` je potpisana razlika izbrojanog i trenutnog stanja; uz kretnju
+ * nastaje i nepromjenjiv dokument popisa, a ne paralelno stanje.
  */
 export async function recordStockMovement(
   pool: Pool,
   actor: ServiceActor,
   input: StockMovementInput,
-): Promise<{ outcome: "OK"; id: string; onHand: string; belowMinimum: boolean } | { outcome: "FORBIDDEN" | "NOT_FOUND" | "VALIDATION_FAILED"; message?: string }> {
+): Promise<{ outcome: "OK"; id: string; onHand: string; belowMinimum: boolean } | { outcome: "FORBIDDEN" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"; message?: string; code?: string }> {
   if (!can(actor.roles, "stock.manage")) return { outcome: "FORBIDDEN" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const item = await client.query<{ min_quantity: string }>(
-      "SELECT min_quantity::text FROM public.stock_items WHERE company_id = $1 AND id = $2 AND is_active",
-      [actor.companyId, input.itemId],
+    const item = await client.query<{ min_quantity: string; warehouse_id: string; tank_item: string | null; capacity_l: string | null }>(
+      `SELECT COALESCE(l.min_quantity,CASE WHEN w.kind='CENTRAL' THEN i.min_quantity ELSE 0 END)::text AS min_quantity,
+              w.id AS warehouse_id,t.fuel_item_id AS tank_item,t.capacity_l::text AS capacity_l
+         FROM public.stock_items i JOIN public.warehouses w ON w.company_id=i.company_id
+         LEFT JOIN public.stock_item_levels l ON l.company_id=i.company_id AND l.item_id=i.id AND l.warehouse_id=w.id
+         LEFT JOIN public.fuel_tanks t ON t.company_id=w.company_id AND t.warehouse_id=w.id
+        WHERE i.company_id=$1 AND i.id=$2 AND i.is_active AND w.is_active
+          AND (w.id=$3 OR ($3::text IS NULL AND w.kind='CENTRAL'))`,
+      [actor.companyId, input.itemId, input.warehouseId ?? null],
     );
-    if (!item.rows[0]) return { outcome: "NOT_FOUND" as const, message: "Artikal ne postoji." };
+    if (!item.rows[0]) return { outcome: "NOT_FOUND" as const, message: "Artikal ili skladište ne postoji." };
+    if (item.rows[0].tank_item && item.rows[0].tank_item !== input.itemId) return { outcome: "VALIDATION_FAILED", message: "U cisterni se može voditi samo gorivo." };
+    const warehouseId = item.rows[0].warehouse_id;
     let quantity = input.quantity;
     try {
       /* Količina je na TRI decimale (metar, kilogram, litar) — `10.500` je ispravno, a
@@ -278,9 +308,19 @@ export async function recordStockMovement(
       return { outcome: "VALIDATION_FAILED" as const, message: "Količina mora biti broj." };
     }
     const onDate = input.occurredOn ?? (await companyToday(client, toCompanyId(actor.companyId)));
+    const lock = await client.query<{ locked: boolean }>(
+      `SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0)) AS locked`, [actor.companyId, warehouseId],
+    );
+    if (!lock.rows[0]?.locked) return { outcome: "CONFLICT", code: "STOCK_COUNT_IN_PROGRESS", message: "Popis ili kretnja su u toku." };
+    if (item.rows[0].capacity_l && (input.kind === "IN" || input.kind === "COUNT")) {
+      const newLevel = input.kind === "COUNT" ? toThousandths(quantity) : toThousandths(await currentOnHand(client, actor.companyId, input.itemId, warehouseId)) + toThousandths(quantity);
+      if (newLevel > toThousandths(item.rows[0].capacity_l)) return { outcome: "VALIDATION_FAILED", message: "Količina premašuje kapacitet cisterne." };
+    }
 
     if (input.kind === "COUNT") {
-      const current = await currentOnHand(client, actor.companyId, input.itemId);
+      if (input.note && input.note.trim().length < 3) return { outcome: "VALIDATION_FAILED", message: "Razlog mora imati najmanje tri znaka." };
+      if (toThousandths(quantity) < 0n) return { outcome: "VALIDATION_FAILED", message: "Izbrojana količina ne može biti negativna." };
+      const current = await currentOnHand(client, actor.companyId, input.itemId, warehouseId);
       const difference = toThousandths(quantity) - toThousandths(current);
       if (difference === 0n) {
         return {
@@ -288,19 +328,40 @@ export async function recordStockMovement(
           message: "Izbrojano stanje je jednako stanju po kretnjama — popis ne mijenja ništa.",
         };
       }
-      const kind = difference > 0n ? "IN" : "OUT";
-      quantity = formatThousandths(difference < 0n ? -difference : difference);
+      const valuation = await client.query<{ needs_reason: boolean }>(
+        `SELECT (CASE WHEN count(*) FILTER (WHERE m.kind='IN' AND m.amount_cents IS NULL)>0
+                   OR COALESCE(sum(m.quantity) FILTER (WHERE m.kind='IN'),0)=0 THEN true
+                 ELSE round(abs($3::numeric) * sum(m.amount_cents) FILTER (WHERE m.kind='IN') /
+                   sum(m.quantity) FILTER (WHERE m.kind='IN')) > c.stock_count_tolerance_cents END) AS needs_reason
+           FROM public.companies c JOIN public.warehouses w ON w.company_id=c.id AND w.id=$4
+           LEFT JOIN public.stock_movements m ON m.company_id=c.id AND m.warehouse_id=w.id AND m.item_id=$2
+          WHERE c.id=$1 GROUP BY c.stock_count_tolerance_cents`,
+        [actor.companyId, input.itemId, formatThousandths(difference), warehouseId],
+      );
+      if (valuation.rows[0]?.needs_reason && (!input.note || input.note.trim().length < 3)) {
+        return { outcome: "VALIDATION_FAILED", message: "Razlika iznad tolerancije ili bez cijene traži razlog." };
+      }
+      const countId = `cnt_${randomUUID().replace(/-/g, "")}`;
+      await client.query(`INSERT INTO public.stock_counts(id,company_id,warehouse_id,reason,created_by) VALUES ($1,$2,$3,$4,$5)`,
+        [countId,actor.companyId,warehouseId,input.note?.trim() || null,actor.userId]);
+      await client.query(`INSERT INTO public.stock_count_items(id,company_id,count_id,item_id,counted_quantity,system_quantity,difference)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)`, [`cni_${randomUUID().replace(/-/g, "")}`,actor.companyId,countId,input.itemId,input.quantity,current,formatThousandths(difference)]);
+      quantity = formatThousandths(difference);
       const moved = await insertMovement(client, {
         companyId: actor.companyId,
         actorId: actor.userId,
         itemId: input.itemId,
-        kind,
+        kind: "COUNT",
         quantity,
+        sourceId: countId,
+        warehouseId,
         unitCostAmount: input.unitCostAmount ?? null,
         occurredOn: onDate,
         note: `Popis: izbrojano ${input.quantity}${input.note ? ` — ${input.note}` : ""}`.slice(0, 1000),
       });
-      const after = await currentOnHand(client, actor.companyId, input.itemId);
+      await client.query("UPDATE public.stock_counts SET status='APPLIED',applied_at=clock_timestamp() WHERE company_id=$1 AND id=$2",[actor.companyId,countId]);
+      if (item.rows[0].tank_item) await client.query("UPDATE public.fuel_tanks SET last_count_at=clock_timestamp(),updated_at=clock_timestamp() WHERE company_id=$1 AND warehouse_id=$2",[actor.companyId,warehouseId]);
+      const after = await currentOnHand(client, actor.companyId, input.itemId, warehouseId);
       return {
         outcome: "OK" as const,
         id: moved,
@@ -309,17 +370,24 @@ export async function recordStockMovement(
       };
     }
 
+    if ((input.kind !== "IN" && input.kind !== "OUT") || toThousandths(quantity) <= 0n) {
+      return { outcome: "VALIDATION_FAILED", message: "Smjer i količina kretnje nisu validni." };
+    }
+    if (input.kind === "OUT" && toThousandths(await currentOnHand(client, actor.companyId, input.itemId, warehouseId)) < toThousandths(quantity)) {
+      return { outcome: "CONFLICT", code: "STOCK_INSUFFICIENT", message: "Nema dovoljno zaliha." };
+    }
     const id = await insertMovement(client, {
       companyId: actor.companyId,
       actorId: actor.userId,
       itemId: input.itemId,
       kind: input.kind,
       quantity,
+      warehouseId,
       unitCostAmount: input.unitCostAmount ?? null,
       occurredOn: onDate,
       note: input.note ?? null,
     });
-    const after = await currentOnHand(client, actor.companyId, input.itemId);
+    const after = await currentOnHand(client, actor.companyId, input.itemId, warehouseId);
     return {
       outcome: "OK" as const,
       id,
@@ -333,11 +401,14 @@ export async function currentOnHand(
   client: PoolClient,
   companyId: string,
   itemId: string,
+  warehouseId?: string,
 ): Promise<string> {
   const result = await client.query<{ on_hand: string }>(
-    `SELECT ${ON_HAND_SQL}::text AS on_hand
-       FROM public.stock_items i WHERE i.company_id = $1 AND i.id = $2`,
-    [companyId, itemId],
+    `SELECT COALESCE(sum(CASE WHEN sm.kind='IN' THEN sm.quantity WHEN sm.kind='OUT' THEN -sm.quantity
+                   WHEN sm.kind='COUNT' AND NOT sm.legacy_ignored THEN sm.quantity ELSE 0 END),0)::text AS on_hand
+       FROM public.stock_movements sm JOIN public.warehouses w ON w.company_id=sm.company_id AND w.id=sm.warehouse_id
+      WHERE sm.company_id=$1 AND sm.item_id=$2 AND (w.id=$3 OR ($3::text IS NULL AND w.kind='CENTRAL'))`,
+    [companyId, itemId, warehouseId ?? null],
   );
   return result.rows[0]?.on_hand ?? "0";
 }
@@ -348,8 +419,10 @@ export async function insertMovement(
     companyId: string;
     actorId: string;
     itemId: string;
-    kind: "IN" | "OUT";
+    kind: "IN" | "OUT" | "COUNT";
     quantity: string;
+    warehouseId?: string;
+    sourceId?: string;
     unitCostAmount: string | null;
     occurredOn: string;
     note: string | null;
@@ -359,18 +432,21 @@ export async function insertMovement(
   await client.query(
     `INSERT INTO public.stock_movements
        (id, company_id, item_id, kind, quantity, unit_cost_cents, occurred_on, source_type,
-        source_id, note, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7::date,NULL,NULL,$8,$9)`,
+        source_id, note, created_by, warehouse_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::date,$10,$11,$8,$9,$12)`,
     [
       id,
       params.companyId,
       params.itemId,
       params.kind,
       params.quantity,
-      params.unitCostAmount === null ? null : (BigInt(Math.round(Number(params.unitCostAmount) * 100))).toString(),
+      params.unitCostAmount === null ? null : toHundredths(params.unitCostAmount).toString(),
       params.occurredOn,
       params.note,
       params.actorId,
+      params.sourceId ? "COUNT" : null,
+      params.sourceId ?? null,
+      params.warehouseId ?? null,
     ],
   );
   return id;
@@ -381,9 +457,9 @@ export async function itemLedger(
   client: PoolClient,
   companyId: string,
   itemId: string,
-): Promise<{ kind: string; quantity: string }[]> {
-  const result = await client.query<{ kind: string; quantity: string }>(
-    `SELECT kind, quantity::text FROM public.stock_movements
+): Promise<{ kind: string; quantity: string; legacy_ignored: boolean }[]> {
+  const result = await client.query<{ kind: string; quantity: string; legacy_ignored: boolean }>(
+    `SELECT kind, quantity::text, legacy_ignored FROM public.stock_movements
       WHERE company_id = $1 AND item_id = $2 ORDER BY occurred_on, created_at`,
     [companyId, itemId],
   );
@@ -391,11 +467,12 @@ export async function itemLedger(
 }
 
 /** Isti zbir kao u SQL-u, ali kroz domenu — koristi se u testu koji dokazuje da su jednaki. */
-export function onHandFromRows(rows: { kind: string; quantity: string }[]): string {
+export function onHandFromRows(rows: { kind: string; quantity: string; legacy_ignored?: boolean }[]): string {
   return stockOnHand(
     rows.map((row) => ({
       kind: row.kind === "IN" || row.kind === "OUT" || row.kind === "TRANSFER" || row.kind === "COUNT" ? row.kind : "IN",
       quantity: row.quantity,
+      legacyIgnored: row.legacy_ignored,
     })),
   );
 }

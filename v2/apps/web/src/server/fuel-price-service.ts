@@ -271,10 +271,15 @@ export async function listFuelTanks(pool: Pool, actor: FuelActor): Promise<FuelT
       id: string; name: string; capacity_l: string; current_l: string;
       last_count_at: string | null; is_active: boolean;
     }>(
-      `SELECT id, name, capacity_l::text, current_l::text, last_count_at::text, is_active
-         FROM public.fuel_tanks
-        WHERE company_id = $1
-        ORDER BY is_active DESC, name`,
+      `SELECT t.id, t.name, t.capacity_l::text,
+              COALESCE((SELECT sum(CASE WHEN sm.kind='IN' THEN sm.quantity WHEN sm.kind='OUT' THEN -sm.quantity
+                     WHEN sm.kind='COUNT' AND NOT sm.legacy_ignored THEN sm.quantity ELSE 0 END)
+                  FROM public.stock_movements sm WHERE sm.company_id=t.company_id AND sm.warehouse_id=t.warehouse_id
+                   AND sm.item_id=t.fuel_item_id),0)::text AS current_l,
+              t.last_count_at::text, t.is_active
+         FROM public.fuel_tanks t
+        WHERE t.company_id = $1
+        ORDER BY t.is_active DESC, t.name`,
       [actor.companyId],
     );
     return result.rows.map((row) => ({
@@ -295,7 +300,7 @@ export async function createFuelTank(
 ): Promise<Outcome<FuelTankView>> {
   if (!can(actor.roles, "machines.fuel.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   const current = input.currentL ?? 0;
-  if (current > input.capacityL) {
+  if (!Number.isFinite(current) || current < 0 || !Number.isFinite(input.capacityL) || input.capacityL <= 0 || current > input.capacityL) {
     return {
       outcome: "VALIDATION_FAILED",
       code: "CAPACITY",
@@ -304,11 +309,29 @@ export async function createFuelTank(
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const id = `ftk_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
+    const warehouseId = `wht_${randomUUID().replace(/-/g, "")}`;
     await client.query(
-      `INSERT INTO public.fuel_tanks (id, company_id, name, capacity_l, current_l, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [id, actor.companyId, input.name.trim(), input.capacityL, current, input.isActive ?? true],
+      `INSERT INTO public.stock_items(id,company_id,code,name,unit,system_managed,created_by,updated_by)
+       VALUES ('stf_' || md5($1),$1,'F10-GORIVO-' || substr(md5($1),1,16),'Gorivo','l',true,$2,$2)
+       ON CONFLICT (id) DO NOTHING`, [actor.companyId, actor.userId],
     );
+    await client.query(
+      `INSERT INTO public.warehouses(id,company_id,code,name,kind,is_active)
+       VALUES ($1,$2,'TANK-' || substr(md5($3),1,24),$4,'TANK',$5)`,
+      [warehouseId, actor.companyId, id, input.name.trim(), input.isActive ?? true],
+    );
+    await client.query(
+      `INSERT INTO public.fuel_tanks (id, company_id, name, capacity_l, is_active, warehouse_id, fuel_item_id)
+       VALUES ($1,$2,$3,$4,$5,$6,'stf_' || md5($2))`,
+      [id, actor.companyId, input.name.trim(), input.capacityL, input.isActive ?? true, warehouseId],
+    );
+    if (current > 0) {
+      await client.query(
+        `INSERT INTO public.stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,occurred_on,source_type,source_id,created_by)
+         VALUES ($1,$2,'stf_' || md5($2),$3,'IN',$4,current_date,'TANK_OPENING',$5,$6)`,
+        [`stm_${randomUUID().replace(/-/g, "")}`, actor.companyId, warehouseId, current, id, actor.userId],
+      );
+    }
     await writeAudit(client, {
       companyId: actor.companyId,
       actorId: actor.userId,
@@ -346,9 +369,23 @@ export async function countFuelTank(
   input: { currentL: number; note?: string | null },
 ): Promise<Outcome<FuelTankView>> {
   if (!can(actor.roles, "machines.fuel.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
+  if (input.note && input.note.trim().length < 3) return { outcome: "VALIDATION_FAILED", code: "COUNT_REASON", message: "Razlog mora imati najmanje tri znaka." };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const tank = await client.query<{ capacity_l: string; current_l: string }>(
-      "SELECT capacity_l::text, current_l::text FROM public.fuel_tanks WHERE company_id = $1 AND id = $2 FOR UPDATE",
+    const location = await client.query<{ warehouse_id: string }>(
+      "SELECT warehouse_id FROM public.fuel_tanks WHERE company_id=$1 AND id=$2", [actor.companyId, tankId],
+    );
+    if (!location.rows[0]) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Cisterna nije pronađena." };
+    const locked = await client.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2,0)) AS locked", [actor.companyId, location.rows[0].warehouse_id],
+    );
+    if (!locked.rows[0]?.locked) return { outcome: "CONFLICT", code: "STOCK_COUNT_IN_PROGRESS", message: "Popis ili kretnja su u toku." };
+    const tank = await client.query<{ capacity_l: string; current_l: string; warehouse_id: string; fuel_item_id: string }>(
+      `SELECT t.capacity_l::text, t.warehouse_id, t.fuel_item_id,
+          COALESCE((SELECT sum(CASE WHEN sm.kind='IN' THEN sm.quantity WHEN sm.kind='OUT' THEN -sm.quantity
+                 WHEN sm.kind='COUNT' AND NOT sm.legacy_ignored THEN sm.quantity ELSE 0 END)
+            FROM public.stock_movements sm WHERE sm.company_id=t.company_id AND sm.warehouse_id=t.warehouse_id
+             AND sm.item_id=t.fuel_item_id),0)::text AS current_l
+         FROM public.fuel_tanks t WHERE t.company_id=$1 AND t.id=$2 FOR UPDATE OF t`,
       [actor.companyId, tankId],
     );
     if (!tank.rows[0]) {
@@ -362,11 +399,42 @@ export async function countFuelTank(
       };
     }
     const previous = Number(tank.rows[0].current_l);
+    if (input.currentL !== previous) {
+      const valuation = await client.query<{ needs_reason: boolean }>(
+        `SELECT CASE WHEN count(*) FILTER(WHERE m.kind='IN' AND m.amount_cents IS NULL)>0
+                    OR sum(m.quantity) FILTER(WHERE m.kind='IN') IS NULL THEN true
+                 ELSE round(abs($4::numeric-$5::numeric)*sum(m.amount_cents) FILTER(WHERE m.kind='IN') /
+                    sum(m.quantity) FILTER(WHERE m.kind='IN')) > c.stock_count_tolerance_cents END AS needs_reason
+           FROM public.companies c LEFT JOIN public.stock_movements m ON m.company_id=c.id AND m.warehouse_id=$2 AND m.item_id=$3
+          WHERE c.id=$1 GROUP BY c.stock_count_tolerance_cents`,
+        [actor.companyId,tank.rows[0].warehouse_id,tank.rows[0].fuel_item_id,input.currentL,tank.rows[0].current_l],
+      );
+      if (valuation.rows[0]?.needs_reason && (!input.note || input.note.trim().length < 3)) {
+        return { outcome: "VALIDATION_FAILED", code: "COUNT_REASON", message: "Razlika iznad tolerancije ili bez poznate cijene traži razlog." };
+      }
+    }
+    const countId = `cnt_${randomUUID().replace(/-/g, "")}`;
     await client.query(
-      `UPDATE public.fuel_tanks
-          SET current_l = $3, last_count_at = clock_timestamp(), updated_at = clock_timestamp()
-        WHERE company_id = $1 AND id = $2`,
-      [actor.companyId, tankId, input.currentL],
+      `INSERT INTO public.stock_counts(id,company_id,warehouse_id,reason,created_by) VALUES ($1,$2,$3,$4,$5)`,
+      [countId,actor.companyId,tank.rows[0].warehouse_id,input.note?.trim() || null,actor.userId],
+    );
+    await client.query(
+      `INSERT INTO public.stock_count_items(id,company_id,count_id,item_id,counted_quantity,system_quantity,difference)
+       VALUES ($1,$2,$3,$4,$5,$6,$5::numeric-$6::numeric)`,
+      [`cni_${randomUUID().replace(/-/g, "")}`,actor.companyId,countId,tank.rows[0].fuel_item_id,input.currentL,tank.rows[0].current_l],
+    );
+    if (input.currentL !== previous) {
+      await client.query(
+        `INSERT INTO public.stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,occurred_on,source_type,source_id,note,created_by)
+         VALUES ($1,$2,$3,$4,'COUNT',$5::numeric-$6::numeric,current_date,'COUNT',$7,$8,$9)`,
+        [`stm_${randomUUID().replace(/-/g, "")}`, actor.companyId, tank.rows[0].fuel_item_id,
+          tank.rows[0].warehouse_id, input.currentL, tank.rows[0].current_l, countId, input.note?.trim() || null, actor.userId],
+      );
+    }
+    await client.query("UPDATE public.stock_counts SET status='APPLIED',applied_at=clock_timestamp() WHERE company_id=$1 AND id=$2",[actor.companyId,countId]);
+    await client.query(
+      `UPDATE public.fuel_tanks SET last_count_at = clock_timestamp(), updated_at = clock_timestamp()
+        WHERE company_id = $1 AND id = $2`, [actor.companyId, tankId],
     );
     await writeAudit(client, {
       companyId: actor.companyId,
@@ -382,8 +450,13 @@ export async function countFuelTank(
     const updated = await client.query<{
       id: string; name: string; capacity_l: string; current_l: string; last_count_at: string | null; is_active: boolean;
     }>(
-      `SELECT id, name, capacity_l::text, current_l::text, last_count_at::text, is_active
-         FROM public.fuel_tanks WHERE company_id = $1 AND id = $2`,
+      `SELECT t.id,t.name,t.capacity_l::text,
+          COALESCE((SELECT sum(CASE WHEN sm.kind='IN' THEN sm.quantity WHEN sm.kind='OUT' THEN -sm.quantity
+                WHEN sm.kind='COUNT' AND NOT sm.legacy_ignored THEN sm.quantity ELSE 0 END)
+            FROM public.stock_movements sm WHERE sm.company_id=t.company_id AND sm.warehouse_id=t.warehouse_id
+             AND sm.item_id=t.fuel_item_id),0)::text AS current_l,
+          t.last_count_at::text,t.is_active
+         FROM public.fuel_tanks t WHERE t.company_id = $1 AND t.id = $2`,
       [actor.companyId, tankId],
     );
     const row = updated.rows[0]!;

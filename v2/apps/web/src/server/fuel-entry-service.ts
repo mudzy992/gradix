@@ -185,6 +185,7 @@ export async function createFuelEntry(
      * je cisterna isključena, a baza odbija stanje veće od kapaciteta.
      */
     let tankId: string | null = null;
+    let tankWarehouse: { warehouse_id: string; fuel_item_id: string } | null = null;
     if (input.tankId) {
       const tanksEnabled = await client.query<{ fuel_tank_enabled: boolean }>(
         "SELECT fuel_tank_enabled FROM public.companies WHERE id = $1",
@@ -197,8 +198,21 @@ export async function createFuelEntry(
           message: "Cisterna nije uključena u postavkama firme — točenje ide na pumpu.",
         };
       }
-      const tank = await client.query<{ capacity_l: string; current_l: string }>(
-        "SELECT capacity_l::text, current_l::text FROM public.fuel_tanks WHERE company_id = $1 AND id = $2 AND is_active FOR UPDATE",
+      const location = await client.query<{ warehouse_id: string }>(
+        "SELECT warehouse_id FROM public.fuel_tanks WHERE company_id=$1 AND id=$2 AND is_active", [actor.companyId, input.tankId],
+      );
+      if (!location.rows[0]) return { outcome: "VALIDATION_FAILED", code: "TANK", message: "Cisterna nije pronađena." };
+      const locked = await client.query<{ locked: boolean }>(
+        "SELECT pg_try_advisory_xact_lock(hashtextextended($1 || ':' || $2,0)) AS locked", [actor.companyId, location.rows[0].warehouse_id],
+      );
+      if (!locked.rows[0]?.locked) return { outcome: "CONFLICT", code: "STOCK_COUNT_IN_PROGRESS", message: "Popis ili kretnja su u toku." };
+      const tank = await client.query<{ capacity_l: string; current_l: string; warehouse_id: string; fuel_item_id: string }>(
+        `SELECT t.capacity_l::text,t.warehouse_id,t.fuel_item_id,
+           COALESCE((SELECT sum(CASE WHEN sm.kind='IN' THEN sm.quantity WHEN sm.kind='OUT' THEN -sm.quantity
+                   WHEN sm.kind='COUNT' AND NOT sm.legacy_ignored THEN sm.quantity ELSE 0 END)
+             FROM public.stock_movements sm WHERE sm.company_id=t.company_id AND sm.warehouse_id=t.warehouse_id
+              AND sm.item_id=t.fuel_item_id),0)::text AS current_l
+          FROM public.fuel_tanks t WHERE t.company_id=$1 AND t.id=$2 AND t.is_active FOR UPDATE OF t`,
         [actor.companyId, input.tankId],
       );
       if (!tank.rows[0]) {
@@ -213,6 +227,7 @@ export async function createFuelEntry(
         };
       }
       tankId = input.tankId;
+      tankWarehouse = { warehouse_id: tank.rows[0].warehouse_id, fuel_item_id: tank.rows[0].fuel_item_id };
     }
 
     // F4 §1.3.13: odstupanje potrošnje. Upozorenje, NIKAD blokada — unos je uvijek dopušten.
@@ -242,11 +257,12 @@ export async function createFuelEntry(
           deviation.status,
         ],
       );
-      if (tankId) {
+      if (tankWarehouse) {
         await client.query(
-          `UPDATE public.fuel_tanks SET current_l = current_l - $3, updated_at = clock_timestamp()
-            WHERE company_id = $1 AND id = $2`,
-          [actor.companyId, tankId, input.liters],
+          `INSERT INTO public.stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,occurred_on,source_type,source_id,created_by)
+           VALUES ($1,$2,$3,$4,'OUT',$5,($6::timestamptz)::date,'FUEL_ENTRY',$7,$8)`,
+          [`stm_${randomUUID().replace(/-/g, "")}`, actor.companyId, tankWarehouse.fuel_item_id,
+            tankWarehouse.warehouse_id, input.liters, input.filledAt, id, actor.userId],
         );
       }
     } catch (error) {

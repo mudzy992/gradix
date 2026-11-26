@@ -85,6 +85,7 @@ export function createTenderWorld(): TenderWorld {
       );
       await admin.query(`DELETE FROM public.projects WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.audit_events WHERE company_id = ANY($1)`, [companies]);
+      await admin.query(`DELETE FROM public.partner_roles WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.partners WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.obligation_types WHERE company_id = ANY($1)`, [companies]);
       await admin.query(`DELETE FROM public.users WHERE id = $1`, [userA]);

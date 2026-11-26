@@ -37,6 +37,8 @@ export function fail(code: ErrorCode, message: string): NextResponse {
  */
 export function internal(error: unknown, context: string): NextResponse {
   const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("STOCK_COUNT_IN_PROGRESS")) return fail("STOCK_COUNT_IN_PROGRESS", "Popis ili kretnja su u toku.");
+  if (message.includes("TANK_LEVEL_INVALID") || message.includes("TANK_ITEM_INVALID")) return fail("VALIDATION_FAILED", "Neispravna zaliha cisterne ili prekoračen kapacitet.");
   if (message.includes('invalid byte sequence for encoding "UTF8"')) {
     console.error(
       JSON.stringify({

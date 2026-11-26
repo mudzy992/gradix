@@ -30,7 +30,7 @@ export async function PATCH(
       parsed.data,
     );
     if (result.outcome === "FORBIDDEN") return fail("FORBIDDEN", result.message ?? "Nemate pravo.");
-    if (result.outcome === "CONFLICT") return fail("CONFLICT", result.message);
+    if (result.outcome === "CONFLICT") return fail(result.code === "STOCK_COUNT_IN_PROGRESS" ? "STOCK_COUNT_IN_PROGRESS" : "CONFLICT", result.message);
     if (result.outcome === "VALIDATION_FAILED") return fail("VALIDATION_FAILED", result.message);
     return ok(result.data);
   } catch (error) {

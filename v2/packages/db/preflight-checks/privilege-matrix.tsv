@@ -14,7 +14,7 @@ table	equipment_categories	SELECT;INSERT	SELECT;INSERT;UPDATE;DELETE		Read and c
 table	fuel_entries	SELECT;INSERT;UPDATE	-		R5.2 fuel CRUD path; Money centi+valuta; FORCE RLS; no DELETE.
 table	fuel_entry_revisions	SELECT;INSERT	-		R5.2 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	fuel_prices	SELECT;INSERT;UPDATE	-		F4 šifarnik cijena goriva po datumu (spec 05 §1.3.10); nova cijena je novi red, bez DELETE; FORCE RLS.
-table	fuel_tanks	SELECT;INSERT;UPDATE	-		F4 cisterna (opciono po firmi); `current_l` se mijenja točenjem i popisom, deaktivacija je UPDATE; FORCE RLS.
+table	fuel_tanks	SELECT;INSERT;UPDATE	-		Cisterna povezana s TANK skladištem; stanje se izvodi iz kretnji; FORCE RLS.
 table	haul_revisions	SELECT;INSERT	-		R5.3 append-only office revisions; FORCE RLS; no UPDATE/DELETE.
 table	hauls	SELECT;INSERT;UPDATE	-		R5.3 ture CRUD path; FORCE RLS; no DELETE.
 table	invitations	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Invite management and exact-token preview/claim; use/revoke are updates; no hard-delete path.
@@ -68,6 +68,10 @@ table	maintenance_templates	SELECT;INSERT;UPDATE	-		F8 šabloni preventivnog odr
 table	maintenance_plans	SELECT;INSERT;UPDATE	-		F8 plan po mašini sa rokom i tolerancijom; FORCE RLS.
 table	stock_items	SELECT;INSERT;UPDATE	-		F8 katalog dijelova; NEMA kolone stanja — stanje je SUM kretnji; FORCE RLS.
 table	stock_movements	SELECT;INSERT	-		F8 append-only ledger zaliha; stanje je isključivo zbir, zato bez UPDATE/DELETE; FORCE RLS.
+table	warehouses	SELECT;INSERT;UPDATE	-		F10 skladišta; FORCE RLS; bez DELETE.
+table	stock_item_levels	SELECT;INSERT;UPDATE	-		F10 nivoi po skladištu; FORCE RLS; bez DELETE.
+table	stock_counts	SELECT;INSERT;UPDATE	-		F10 inventure; FORCE RLS; bez DELETE.
+table	stock_count_items	SELECT;INSERT;UPDATE	-		F10 stavke inventura; FORCE RLS; bez DELETE.
 table	sessions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Login/refresh create, read and revoke sessions; revocation is UPDATE, not DELETE.
 table	sync_change_log	SELECT	-		Append-only event log; app reads through tenant RLS, writes only through the atomic cursor publish function.
 table	sync_conflicts	SELECT;INSERT;UPDATE	-		Tenant-scoped segment conflicts; one-time resolution and per-company payload retention; no hard-delete path.

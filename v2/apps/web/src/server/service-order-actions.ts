@@ -26,6 +26,7 @@ import { companyToday } from "./project-service";
 import { loadServiceOrder } from "./service-order-read";
 import type { ServiceActor, ServiceOutcome } from "./service-order-types";
 import { orderStatus, parseExternalCost } from "./service-order-shared";
+import { preparePartStock } from "./service-part-stock";
 
 const NO_ROLE = { outcome: "FORBIDDEN" as const, code: "ROLE", message: "Nemate pravo na ovu radnju." };
 
@@ -336,9 +337,9 @@ export async function recordPartUsage(
   },
 ): Promise<ServiceOutcome> {
   try {
-    toThousandths(params.quantity);
+    if (toThousandths(params.quantity) <= 0n) throw new Error("invalid quantity");
   } catch {
-    return { outcome: "VALIDATION_FAILED", code: "QUANTITY_INVALID", message: "Količina mora biti broj sa do tri decimale." };
+    return { outcome: "VALIDATION_FAILED", code: "QUANTITY_INVALID", message: "Količina mora biti pozitivan broj sa do tri decimale." };
   }
   const item = await client.query<{ unit: string }>(
     "SELECT unit FROM public.stock_items WHERE company_id = $1 AND id = $2 AND is_active",
@@ -347,6 +348,8 @@ export async function recordPartUsage(
   if (!item.rows[0]) {
     return { outcome: "NOT_FOUND", code: "ITEM_NOT_FOUND", message: "Artikal ne postoji ili nije aktivan." };
   }
+  const stockError = await preparePartStock(client, params);
+  if (stockError) return stockError;
   let unitCostCents: bigint;
   if (params.unitCostAmount) {
     try {
@@ -363,7 +366,8 @@ export async function recordPartUsage(
        nula, ne izmišljena vrijednost — i to se vidi kao `0,00` u nalogu. */
     const last = await client.query<{ unit_cost_cents: string | null }>(
       `SELECT unit_cost_cents::text FROM public.stock_movements
-        WHERE company_id = $1 AND item_id = $2 AND unit_cost_cents IS NOT NULL
+        WHERE company_id = $1 AND item_id = $2 AND kind = 'IN' AND unit_cost_cents IS NOT NULL
+          AND warehouse_id = (SELECT id FROM public.warehouses WHERE company_id = $1 AND kind = 'CENTRAL')
         ORDER BY occurred_on DESC, created_at DESC LIMIT 1`,
       [params.companyId, params.itemId],
     );

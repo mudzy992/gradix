@@ -174,7 +174,7 @@ describeDb("F4 mehanizacija — baza", () => {
         "machine_cost_components", "machine_cost_rates", "machine_work_logs", "service_orders",
         "approval_requests", "machine_faults", "machine_daily_checks", "check_templates",
         "attachments", "usage_overrides",
-        "fuel_entries", "fuel_prices", "fuel_tanks", "hauls", "route_segments", "projects",
+        "fuel_entries", "fuel_prices", "fuel_tanks", "stock_movements", "stock_count_items", "stock_counts", "stock_item_levels", "stock_items", "warehouses", "hauls", "route_segments", "projects",
         "machines", "partner_roles", "partners", "workers", "sessions", "memberships",
       ]) {
         await db.query(`DELETE FROM ${table} WHERE company_id = $1`, [COMPANY]);
@@ -513,7 +513,7 @@ describeDb("F4 mehanizacija — baza", () => {
     expect(tanksBody.data.tanks[0]!.current_l).toBe(900);
 
     const count = await tankCountPatch(
-      req(cookieOwner, `/api/fuel-tanks/${tankBody.data.id}/count`, "PATCH", { currentL: 880 }),
+      req(cookieOwner, `/api/fuel-tanks/${tankBody.data.id}/count`, "PATCH", { currentL: 880, note: "Provjera stanja cisterne" }),
       { params: Promise.resolve({ id: tankBody.data.id }) },
     );
     expect(count.status).toBe(200);

@@ -284,8 +284,9 @@ describe("Servis — garancija, odobrenje i stanje dijelova", () => {
         { kind: "IN", quantity: "2.25" },
       ]),
     ).toBe("8.750");
-    // Prenos ne mijenja stanje firme, popis sam po sebi nije kretanje.
-    expect(stockOnHand([{ kind: "TRANSFER", quantity: "5.00" }, { kind: "COUNT", quantity: "9.00" }])).toBe("0.000");
+    // Historijska F8 kretnja se ne broji, novi COUNT je potpisana razlika.
+    expect(stockOnHand([{ kind: "TRANSFER", quantity: "5.00" }, { kind: "COUNT", quantity: "9.00", legacyIgnored: true }])).toBe("0.000");
+    expect(stockOnHand([{ kind: "IN", quantity: "10.000" }, { kind: "COUNT", quantity: "-3.250" }])).toBe("6.750");
     // Više izdatih nego primljenih je negativno stanje — vidi se, ne skriva se na nulu.
     expect(stockOnHand([{ kind: "OUT", quantity: "1.00" }])).toBe("-1.000");
     // Količina ide na tri decimale (metar, kilogram, litar) — zato nije isti parser kao novac.

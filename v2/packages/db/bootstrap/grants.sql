@@ -151,8 +151,7 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.pay_corrections TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_cost_components TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.machine_cost_rate_snapshots TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.fuel_prices TO gradix_app;
--- Cisterna: `current_l` se mijenja pri svakom točenju i popisu; brisanje nije predviđeno
--- (deaktivacija je UPDATE).
+-- Cisterna: stanje je izvod iz stock_movements; metapodaci i deaktivacija su UPDATE.
 GRANT SELECT, INSERT, UPDATE ON TABLE public.fuel_tanks TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.check_templates TO gradix_app;
 -- Modul 8 puni nalog; u F4 se otvara automatski iz kvara i nosi trošak na projekat.
@@ -180,6 +179,10 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.maintenance_templates TO gradix_app
 GRANT SELECT, INSERT, UPDATE ON TABLE public.maintenance_plans TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_items TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.stock_movements TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.warehouses TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_item_levels TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_counts TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.stock_count_items TO gradix_app;
 -- F1: jezgro firme i sigurnost pristupa (spec 01).
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.company_holidays TO gradix_app;
 GRANT SELECT, INSERT, DELETE ON TABLE public.password_history TO gradix_app;

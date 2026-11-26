@@ -1,10 +1,11 @@
 /** GET/POST /api/stock-movements — F8 kretnje zaliha (stanje je isključivo zbir kretnji). */
 import type { NextRequest } from "next/server";
+import { StockMovementInput } from "@gradix/contracts";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import type { Role } from "@/server/permissions";
-import { listStockMovements, recordStockMovement, type StockMovementInput } from "@/server/stock-service";
+import { listStockMovements, recordStockMovement } from "@/server/stock-service";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +37,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "stock.manage");
     if (!guardResult.ok) return guardResult.response;
-    const body = (await request.json().catch(() => null)) as StockMovementInput | null;
-    if (!body?.itemId || !body.kind || !body.quantity) {
-      return fail("VALIDATION_FAILED", "itemId, kind i quantity su obavezni.");
+    const body = StockMovementInput.safeParse(await request.json().catch(() => null));
+    if (!body.success) {
+      return fail("VALIDATION_FAILED", "Kretnja nije validna.");
     }
     const outcome = await recordStockMovement(
       await getVerifiedPool(),
@@ -47,10 +48,15 @@ export async function POST(request: NextRequest): Promise<Response> {
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
       },
-      body,
+      body.data,
     );
     if (outcome.outcome === "FORBIDDEN") return fail("FORBIDDEN", "Nemate pravo.");
     if (outcome.outcome === "NOT_FOUND") return fail("NOT_FOUND", outcome.message ?? "Artikal ne postoji.");
+    if (outcome.outcome === "CONFLICT") {
+      if (outcome.code === "STOCK_INSUFFICIENT") return fail("STOCK_INSUFFICIENT", outcome.message ?? "Nema dovoljno zaliha.");
+      if (outcome.code === "STOCK_COUNT_IN_PROGRESS") return fail("STOCK_COUNT_IN_PROGRESS", outcome.message ?? "Popis je u toku.");
+      return fail("CONFLICT", outcome.message ?? "Konflikt.");
+    }
     if (outcome.outcome === "VALIDATION_FAILED") return fail("VALIDATION_FAILED", outcome.message ?? "Unos nije validan.");
     return ok(outcome);
   } catch (error) {

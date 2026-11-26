@@ -176,6 +176,7 @@ export interface Companies {
   settings_updated_at: Timestamp | null;
   settings_updated_by: string | null;
   slug: string;
+  stock_count_tolerance_cents: Generated<Int8>;
   sync_conflict_retention_days: Generated<number>;
   tax_id: string | null;
   timezone: Generated<string>;
@@ -322,12 +323,13 @@ export interface FuelTanks {
   capacity_l: Numeric;
   company_id: string;
   created_at: Generated<Timestamp>;
-  current_l: Generated<Numeric>;
+  fuel_item_id: string;
   id: string;
   is_active: Generated<boolean>;
   last_count_at: Timestamp | null;
   name: string;
   updated_at: Generated<Timestamp>;
+  warehouse_id: string;
 }
 
 export interface HaulRevisions {
@@ -1476,36 +1478,72 @@ export interface SiteDiaryTemplates {
   updated_at: Generated<Timestamp>;
 }
 
+export interface StockCountItems {
+  company_id: string;
+  count_id: string;
+  counted_quantity: Numeric;
+  difference: Numeric | null;
+  id: string;
+  item_id: string;
+  system_quantity: Numeric | null;
+}
+
+export interface StockCounts {
+  applied_at: Timestamp | null;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  id: string;
+  reason: string | null;
+  status: Generated<string>;
+  warehouse_id: string;
+}
+
+export interface StockItemLevels {
+  company_id: string;
+  id: string;
+  item_id: string;
+  max_quantity: Numeric | null;
+  min_quantity: Generated<Numeric>;
+  warehouse_id: string;
+}
+
 export interface StockItems {
   category_id: string | null;
   code: string;
   company_id: string;
   created_at: Generated<Timestamp>;
-  created_by: string;
+  created_by: string | null;
+  default_unit_cost_cents: Int8 | null;
   id: string;
   is_active: Generated<boolean>;
   min_quantity: Generated<Numeric>;
   name: string;
   note: string | null;
+  system_managed: Generated<boolean>;
   unit: Generated<string>;
   updated_at: Generated<Timestamp>;
-  updated_by: string;
+  updated_by: string | null;
 }
 
 export interface StockMovements {
+  amount_cents: Int8 | null;
+  client_generated_id: string | null;
   company_id: string;
   created_at: Generated<Timestamp>;
-  created_by: string;
+  created_by: string | null;
   id: string;
   item_id: string;
   kind: string;
+  legacy_ignored: Generated<boolean>;
   note: string | null;
   occurred_on: string;
   quantity: Numeric;
   source_id: string | null;
   source_type: string | null;
+  transfer_id: string | null;
   unit_cost_cents: Int8 | null;
-  warehouse_id: string | null;
+  warehouse_id: string;
 }
 
 export interface SyncChangeLog {
@@ -1820,6 +1858,19 @@ export interface UserTotp {
   user_id: string;
 }
 
+export interface Warehouses {
+  address: string | null;
+  code: string;
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  is_active: Generated<boolean>;
+  kind: string;
+  name: string;
+  project_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface WorkdayRevisions {
   author_id: string;
   base_version: number;
@@ -2107,6 +2158,9 @@ export interface DB {
   site_diary_items: SiteDiaryItems;
   site_diary_revisions: SiteDiaryRevisions;
   site_diary_templates: SiteDiaryTemplates;
+  stock_count_items: StockCountItems;
+  stock_counts: StockCounts;
+  stock_item_levels: StockItemLevels;
   stock_items: StockItems;
   stock_movements: StockMovements;
   sync_change_log: SyncChangeLog;
@@ -2129,6 +2183,7 @@ export interface DB {
   user_recovery_codes: UserRecoveryCodes;
   user_totp: UserTotp;
   users: Users;
+  warehouses: Warehouses;
   work_entries: WorkEntries;
   work_week_approvals: WorkWeekApprovals;
   workday_revisions: WorkdayRevisions;

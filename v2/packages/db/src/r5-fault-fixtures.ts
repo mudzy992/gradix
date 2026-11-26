@@ -101,6 +101,7 @@ export async function teardownFaults(admin: Pool): Promise<void> {
       await client.query("DELETE FROM public.approval_requests WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_fault_revisions WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machine_faults WHERE company_id = $1", [fixture.company]);
+      await client.query("DELETE FROM public.partner_roles WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.partners WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.machines WHERE company_id = $1", [fixture.company]);
       await client.query("DELETE FROM public.projects WHERE company_id = $1", [fixture.company]);

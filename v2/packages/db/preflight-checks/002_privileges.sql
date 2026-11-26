@@ -65,7 +65,12 @@ DECLARE
     'public.machine_fault_open_service_order()',
     'public.hse_incident_workers_guard()',
     'public.partner_roles_guard()',
-    'public.partners_sync_primary_role()'
+    'public.partners_sync_primary_role()',
+    'public.stock_movement_warehouse_default()',
+    'public.stock_movement_lock()',
+    'public.stock_transfer_pair_guard()',
+    'public.stock_count_guard()',
+    'public.companies_seed_central_warehouse()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

@@ -438,11 +438,13 @@ export type StockMovementRow = {
   kind: "IN" | "OUT" | "TRANSFER" | "COUNT";
   /** Količina sa do TRI decimale (`"10.500"`). */
   quantity: string;
+  /** Historijski F8 COUNT/TRANSFER nije mijenjao stanje. */
+  legacyIgnored?: boolean;
 };
 
 /**
- * Stanje artikla = `Σ IN − Σ OUT` (`COUNT` je popis i postavlja stanje kroz zasebnu korekciju,
- * `TRANSFER` ne mijenja ukupno stanje firme u MVP-u jer skladište još nije višekratno).
+ * Stanje artikla = `Σ IN − Σ OUT + Σ COUNT`, pri čemu je COUNT potpisana razlika.
+ * Historijske F8 kretnje koje ranije nisu učestvovale u stanju ostaju označene i ignorisane.
  *
  * Ovo je JEDINA formula stanja; nigdje se ne čuva `quantity` na artiklu.
  */
@@ -452,6 +454,7 @@ export function stockOnHand(movements: readonly StockMovementRow[]): string {
     const quantity = toThousandths(movement.quantity);
     if (movement.kind === "IN") total += quantity;
     else if (movement.kind === "OUT") total -= quantity;
+    else if (movement.kind === "COUNT" && !movement.legacyIgnored) total += quantity;
   }
   return formatThousandths(total);
 }

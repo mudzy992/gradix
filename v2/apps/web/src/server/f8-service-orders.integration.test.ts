@@ -189,6 +189,7 @@ describeDb("F8 servis i održavanje — integraciono", () => {
       await client.query("DELETE FROM service_order_events WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM service_order_parts WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM stock_movements WHERE company_id = $1", [CO_A]);
+      await client.query("DELETE FROM stock_item_levels WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM stock_items WHERE company_id = $1", [CO_A]);
       /* Redoslijed je obrnut od FK-ova: `machine_faults.service_order_id` drži RESTRICT vezu na
          nalog (F8 je dodaje), pa nalog ne može otići dok kvar pokazuje na njega. */
@@ -371,6 +372,22 @@ describeDb("F8 servis i održavanje — integraciono", () => {
       { params: Promise.resolve({ id: orderId }) },
     );
     expect(used.status).toBe(200);
+    const tooMuch = await partsPost(
+      jsonRequest(`http://t/api/service-orders/${orderId}/parts`, COOKIES.mech, { itemId, quantity: "9" }),
+      { params: Promise.resolve({ id: orderId }) },
+    );
+    expect(tooMuch.status).toBe(409);
+    const blocker = await admin.connect();
+    try {
+      await blocker.query("BEGIN");
+      const wh = await blocker.query<{id:string}>("SELECT id FROM warehouses WHERE company_id=$1 AND kind='CENTRAL'", [CO_A]);
+      await blocker.query("SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || $2,0))", [CO_A,wh.rows[0]!.id]);
+      const locked = await partsPost(
+        jsonRequest(`http://t/api/service-orders/${orderId}/parts`, COOKIES.mech, { itemId, quantity: "1" }),
+        { params: Promise.resolve({ id: orderId }) },
+      );
+      expect(locked.status).toBe(409);
+    } finally { await blocker.query("ROLLBACK"); blocker.release(); }
 
     const detail = await orderGet(
       new NextRequest(`http://t/api/service-orders/${orderId}`, { headers: { cookie: COOKIES.mech } }),
