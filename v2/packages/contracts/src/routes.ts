@@ -3245,6 +3245,7 @@ export const ROUTES = [
     permission: "hse.report",
     request: null,
     response: ForemanWorkersResponse,
+    query: z.object({ projectId: z.string().min(1).max(128), workDate: z.string().regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) }),
   },
   {
     method: "GET",

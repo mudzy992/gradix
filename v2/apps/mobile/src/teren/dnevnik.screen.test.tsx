@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ saved: [] as unknown[], unresolved: false }));
+const state = vi.hoisted(() => ({ saved: [] as unknown[], unresolved: false,
+  legacy: [] as { localId: string; description: string; unit: string; quantity: string; deviceSentAt: string }[], recovered: [] as unknown[] }));
 vi.mock("expo-crypto", () => ({ randomUUID: () => "11111111-1111-4111-8111-111111111111" }));
 vi.mock("expo-router", async () => {
   const React = await import("react");
@@ -19,7 +20,10 @@ vi.mock("../db/sqlite", () => ({ openDb: async () => ({}), readProjects: async (
 ] }) }));
 vi.mock("../db/r4-outbox", () => ({
   getActiveLocalAccount: async () => ({ companyId: "c1", userId: "u1" }),
-  readOutboxEntries: async () => [],
+  readOutboxEntries: async () => [], readLegacyDiaryItems: async () => state.legacy,
+  recoverLegacyDiaryItem: async (_db: unknown, _account: unknown, localId: string, project: string, day: string) => {
+    state.recovered.push({ localId, project, day }); state.legacy = [];
+  },
   cacheDiaryDetail: async () => undefined, clearDiaryDetailCache: async () => undefined,
   readDiaryDetailCache: async () => ({ fetchedAt: "2026-11-23", detail: {
     diary: { id: "d1", projectId: "p1", diaryDate: "2026-11-23", status: "DRAFT", version: 2 },
@@ -33,7 +37,7 @@ vi.mock("../db/r4-outbox", () => ({
 vi.mock("../sync/r4-sqlite", () => ({ runSqliteR4Sync: async () => ({ applied: 0, duplicate: 0, conflict: 0, rejected: 0, retry: 1, error: "NETWORK_ERROR" }) }));
 import DnevnikScreen from "../app/dnevnik";
 
-beforeEach(() => { state.saved = []; state.unresolved = false; });
+beforeEach(() => { state.saved = []; state.unresolved = false; state.legacy = []; state.recovered = []; });
 afterEach(cleanup);
 
 describe("Mobilni dnevnik", () => {
@@ -79,6 +83,18 @@ describe("Mobilni dnevnik", () => {
     const saved = state.saved[0] as { diary: { signature: { autoSnapshotJson: string } } };
     expect(JSON.parse(saved.diary.signature.autoSnapshotJson).workers[0].workerName).toBe("Ana Anić");
     expect(JSON.parse(saved.diary.signature.autoSnapshotJson).generatedAt).toBeUndefined();
+  });
+
+  it("traži eksplicitni izbor dana za odbijenu staru količinu", async () => {
+    state.legacy = [{ localId: "old", description: "Iskop", unit: "m3", quantity: "5", deviceSentAt: "2026-11-24T10:00:00Z" }];
+    render(<DnevnikScreen />);
+    fireEvent.change(await screen.findByLabelText("Datum dnevnika (GGGG-MM-DD)"), { target: { value: "2026-11-23" } });
+    fireEvent.click(await screen.findByText("P1 · Gradilište"));
+    await screen.findByText("Ana Anić");
+    expect(await screen.findByText("Iskop: 5 m3")).toBeTruthy();
+    fireEvent.click(screen.getByText("Potvrdi za p1 · 2026-11-23"));
+    await screen.findByText(/Stara količina je vezana/);
+    expect(state.recovered).toEqual([{ localId: "old", project: "p1", day: "2026-11-23" }]);
   });
 
   it("ne prenosi nespremljeni unos na drugi datum", async () => {

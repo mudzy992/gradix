@@ -21,6 +21,7 @@ import {
 import type { SiteDiaryDetail } from "@gradix/contracts";
 import type { LocalSqlite } from "./migrations";
 import { resolutionsByLocalId, type ResolutionDisplay } from "../sync/r4-resolution";
+import { readyR4Rows } from "../sync/r4-dependencies";
 
 export type LocalAccount = { companyId: string; userId: string };
 export type LocalForemanWorker = { id: string; name: string };
@@ -96,6 +97,7 @@ export async function activateLocalAccount(db: LocalSqlite, account: LocalAccoun
     const pending = await db.getFirstAsync<{ count: number }>(
       `SELECT count(*) AS count FROM outbox
         WHERE status IN ('pending', 'failed', 'conflict', 'rejected')
+          AND (last_error IS NULL OR last_error NOT LIKE 'DIARY_REFERENCE_RECOVERED:%')
           AND NOT (company_id = ? AND user_id = ?)`,
       [account.companyId, account.userId],
     );
@@ -126,7 +128,8 @@ export async function pendingOutboxCount(db: LocalSqlite, account: LocalAccount)
   const row = await db.getFirstAsync<{ count: number }>(
     `SELECT count(*) AS count FROM outbox
       WHERE company_id = ? AND user_id = ?
-        AND status IN ('pending', 'failed', 'conflict', 'rejected')`,
+        AND status IN ('pending', 'failed', 'conflict', 'rejected')
+        AND (last_error IS NULL OR last_error NOT LIKE 'DIARY_REFERENCE_RECOVERED:%')`,
     [account.companyId, account.userId],
   );
   return row?.count ?? 0;
@@ -249,9 +252,11 @@ export async function hasUnresolvedDiaryEdit(db: LocalSqlite, account: LocalAcco
        AND status IN ('pending', 'failed', 'rejected', 'conflict')`, [account.companyId, account.userId],
   );
   return rows.some((row) => {
-    const item = JSON.parse(row.payload_json) as R4SyncPushItem;
-    return (item.entityType === "site_diary" && item.diary.projectId === projectId && item.diary.diaryDate === date) ||
-      (item.entityType === "site_diary_item" && item.diaryProjectId === projectId && item.diaryDate === date);
+    try {
+      const item = parseOutboxItem(row.payload_json);
+      return (item.entityType === "site_diary" && item.diary.projectId === projectId && item.diary.diaryDate === date) ||
+        (item.entityType === "site_diary_item" && item.diaryProjectId === projectId && item.diaryDate === date);
+    } catch { return true; } // Nepoznat sadržaj nije dokaz da je potpis siguran.
   });
 }
 
@@ -388,13 +393,35 @@ export function createSqliteR4SyncStore(db: LocalSqlite, account: LocalAccount) 
   return {
     pending: async (): Promise<readonly R4SyncPushItem[]> => {
       await assertActiveAccount(db, account);
-      const rows = await db.getAllAsync<{ payload_json: string }>(
-        `SELECT payload_json FROM outbox
-          WHERE company_id = ? AND user_id = ? AND status IN ('pending', 'failed')
-          ORDER BY created_at, local_id`,
+      const rows = await db.getAllAsync<{ local_id: string; payload_json: string; status: string; last_error: string | null; entity_type: string }>(
+        `SELECT local_id, payload_json, status, last_error, entity_type FROM outbox
+          WHERE company_id = ? AND user_id = ? AND status IN ('pending', 'failed', 'conflict', 'rejected')
+          ORDER BY rowid`,
         [account.companyId, account.userId],
       );
-      return rows.map((row) => parseOutboxItem(row.payload_json));
+      const parsed: { item: R4SyncPushItem; status: string }[] = [];
+      const damaged = new Set<string>();
+      for (const row of rows) {
+        if (row.last_error?.startsWith("DIARY_REFERENCE_RECOVERED:")) continue;
+        try { parsed.push({ item: parseOutboxItem(row.payload_json), status: row.status }); }
+        catch {
+          damaged.add(row.entity_type);
+          // Oštećen red ostaje sačuvan; bez poznatog ključa zavisni tipovi moraju čekati.
+          if (row.status === "pending" || row.status === "failed") {
+            await db.withTransactionAsync(async () => {
+              await assertActiveAccount(db, account);
+              await db.runAsync("UPDATE outbox SET status = 'rejected', last_error = 'LOCAL_ITEM_INVALID', updated_at = ? WHERE company_id = ? AND user_id = ? AND local_id = ? AND status IN ('pending', 'failed')",
+                [new Date().toISOString(), account.companyId, account.userId, row.local_id]);
+            });
+          }
+        }
+      }
+      return readyR4Rows(parsed).filter((item) => {
+        if (damaged.has("site_diary") && (item.entityType === "site_diary_item" || item.entityType === "site_diary")) return false;
+        if (damaged.has("site_diary_item") && item.entityType === "site_diary" && item.diary.signature) return false;
+        if (damaged.has("hse_incident") && item.entityType === "hse_action") return false;
+        return true;
+      });
     },
     markResult: async (result: R4SyncPushItemResult): Promise<void> => {
       await db.withTransactionAsync(async () => {
@@ -504,7 +531,8 @@ export async function readOutboxEntries(db: LocalSqlite, account: LocalAccount):
   await assertActiveAccount(db, account);
   const rows = await db.getAllAsync<{ local_id: string; worker_id: string | null; status: string; last_error: string | null; created_at: string }>(
     `SELECT local_id, worker_id, status, last_error, created_at FROM outbox
-      WHERE company_id = ? AND user_id = ? ORDER BY created_at DESC, local_id DESC`,
+      WHERE company_id = ? AND user_id = ? AND (last_error IS NULL OR last_error NOT LIKE 'DIARY_REFERENCE_RECOVERED:%')
+      ORDER BY created_at DESC, local_id DESC`,
     [account.companyId, account.userId],
   );
   return rows.map((row) => ({
@@ -658,6 +686,53 @@ export async function queueServiceOrderAction(
 }
 
 /* ------------------------------------------------------ F9: dnevnik i HSE u offline redu */
+
+export type LegacyDiaryItem = { localId: string; description: string; unit: string; quantity: string; deviceSentAt: string };
+
+/** Oporavljaju se samo redovi za koje je server potvrdio odbijanje, nikad nepoznat ishod. */
+export async function readLegacyDiaryItems(db: LocalSqlite, account: LocalAccount): Promise<LegacyDiaryItem[]> {
+  await assertActiveAccount(db, account);
+  const rows = await db.getAllAsync<{ local_id: string; payload_json: string }>(
+    `SELECT local_id, payload_json FROM outbox WHERE company_id = ? AND user_id = ?
+      AND entity_type = 'site_diary_item' AND status = 'rejected' AND last_error = 'DIARY_REFERENCE_REQUIRED' ORDER BY rowid`,
+    [account.companyId, account.userId],
+  );
+  return rows.flatMap((row) => {
+    try {
+      const parsed = parseOutboxItem(row.payload_json);
+      if (parsed.entityType !== "site_diary_item" || parsed.diaryProjectId || parsed.diaryDate) return [];
+      return [{ localId: row.local_id, description: parsed.item.description, unit: parsed.item.unit,
+        quantity: parsed.item.quantity, deviceSentAt: parsed.deviceSentAt }];
+    } catch { return []; }
+  });
+}
+
+/** Korisnik potvrđuje poslovni ključ; izvorni sadržaj ostaje netaknut i dobija novu idempotency oznaku. */
+export async function recoverLegacyDiaryItem(db: LocalSqlite, account: LocalAccount, localId: string,
+  projectId: string, date: string, makeId: () => string = uuid): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await assertActiveAccount(db, account);
+    const row = await db.getFirstAsync<{ payload_json: string }>(
+      `SELECT payload_json FROM outbox WHERE company_id = ? AND user_id = ? AND local_id = ?
+        AND entity_type = 'site_diary_item' AND status = 'rejected' AND last_error = 'DIARY_REFERENCE_REQUIRED'`,
+      [account.companyId, account.userId, localId],
+    );
+    if (!row) throw new LocalOutboxError("LEGACY_ITEM_NOT_RECOVERABLE", "Red nije pronađen ili je već popravljen.");
+    const original = parseOutboxItem(row.payload_json);
+    if (original.entityType !== "site_diary_item" || original.diaryProjectId || original.diaryDate) {
+      throw new LocalOutboxError("LEGACY_ITEM_NOT_RECOVERABLE", "Ovaj red ne traži izbor dana.");
+    }
+    const item: R4SyncPushItem = { ...original, localId: makeId(), diaryProjectId: projectId, diaryDate: date };
+    const validation = validateR4SyncPush([item]);
+    if (!validation.ok) throw new LocalOutboxError(validation.code, "Izaberi ispravan projekat i datum.");
+    const now = new Date().toISOString();
+    await db.runAsync(`INSERT INTO outbox (company_id, user_id, local_id, worker_id, entity_type, payload_json, status, created_at, updated_at)
+      VALUES (?, ?, ?, NULL, 'site_diary_item', ?, 'pending', ?, ?)`,
+    [account.companyId, account.userId, item.localId, canonicalJson(item), now, now]);
+    await db.runAsync("UPDATE outbox SET last_error = ?, updated_at = ? WHERE company_id = ? AND user_id = ? AND local_id = ?",
+      [`DIARY_REFERENCE_RECOVERED:${item.localId}`, now, account.companyId, account.userId, localId]);
+  });
+}
 
 /**
  * F9 — dnevnik dana sa terena.

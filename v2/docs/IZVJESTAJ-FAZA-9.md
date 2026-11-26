@@ -1,72 +1,95 @@
-# Izvještaj — Faza 9: Dnevnik građenja i zaštita na radu (Modul 10)
+# Izvještaj — Faza 9: Dnevnik građenja i zaštita na radu
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Tag:** `phase-9` (`b144273`) ·
-**CI:** `45694333436`, `verify` uspješan · **Spec:** `10-dnevnik-hse.md`
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Specifikacija:** `10-dnevnik-hse.md`
 
-F9 isporučuje bazu, domenska pravila, API i web za dnevnik i HSE, te infrastrukturu za offline
-red i sinkronizaciju. Poslije taga dodati su početni mobilni ekrani `/hse/prijava` i `/hse/toolbox`;
-mobilni dnevnik i fotografije još nisu isporučeni. Red i server nisu isto što i mogućnost da
-korisnik na telefonu unese podatke, pa se potpuna isporuka F9 prema planu ne može smatrati završenom.
+Ovaj izvještaj bilježi isporuku i lokalne rezultate prije završnog GitHub CI pokretanja. Stvarni
+rezultat CI-ja i položaj taga `phase-9` provjeravaju se na GitHubu; prethodni zeleni run za
+`e5b0a7f` ne pokriva ove izmjene. Faza 10 nije mijenjana u ovom zadatku.
 
-## 1. Isporučeno
+## 1. Šta je isporučeno
 
-- **Baza:** migracija `20261126100000_f9_1_dnevnik_hse`; dnevnici, stavke, zastoji, revizije i
-  šabloni; incidenti, dopune, istrage, mjere, inspekcije, obuke, prisustvo i prilozi. Jedinstven
-  dnevnik po firmi, projektu i danu; trigeri štite potpisan sadržaj, činjenice incidenta i
-  nepromjenjive zapise. Svježa baza ima 50 migracija, 119 tabela i 110 tenant tabela.
-- **Domena i ugovor:** prelazi dnevnika, potpisi, zastoji, uslovi zatvaranja incidenta, LTIFR,
-  `NEAR_MISS`, mjere i obuke; 30 ugovorenih ruta, OpenAPI 241 putanja, `SafeText` za ulaze.
-- **Servisi i web:** `/ured/dnevnik` i detalj, `/ured/hse`, detalj incidenta, inspekcije i obuke;
-  PDF dnevnika i HSE izvještaj; HSE kartica na Pregledu. PDF dnevnika označen je `DRAFT_FORMAT`
-  dok obrazac nije potvrđen.
-- **Offline infrastruktura:** SQLite verzija 3 prenosi postojeće redove i podržava pet tipova
-  (`site_diary`, `site_diary_item`, `hse_incident`, `hse_action`, `hse_training`). Server
-  obrađuje push i pull, provjerava verzije dnevnika i idempotenciju prijave incidenta.
+### Baza
 
-## 2. Provjere
+- Dnevnik po firmi, projektu i danu; stavke, zastoji, revizije i šabloni. Zaključavanje i zaštita
+  potpisanog sadržaja, audit i trag revizije.
+- Incidenti, nepromjenjive činjenice i dopune, istrage, mjere, inspekcije, obuke, prisustvo i
+  prilozi. Forward migracija dodaje sve uključene i više povrijeđenih radnika, composite tenant
+  FK-ove, FORCE RLS i backfill ranijeg povrijeđenog; `NEAR_MISS` ne prima povrijeđene.
+- Svježa baza: **51 migracija, 120 tabela**, uključujući `schema_migrations`; 111 tenant tabela
+  u admin katalogu. Aplikacijska rola nema direktni pristup internim cursor tabelama.
+- Mobilni SQLite v5 zadržava postojeće redove i dodaje account-scoped keš dnevnika i trajni red
+  foto bajtova; incident i lokalne fotografije spremaju se atomski.
+
+### Domena i API
+
+- Pravila dnevnika, zastoj do 24 h, sekcijski sukobi, projekt i poslovni datum količine, BOQ
+  ažuriranje u transakciji, potpis i audit. Offline potpis uspoređuje prikazani automatski
+  presjek i verziju; promijenjeni presjek ide u konflikt, a nepotpisan ili nedozvoljen zahtjev
+  ne potpisuje dnevnik.
+- `NEAR_MISS`, mjere s odgovornim i rokom, Toolbox potpisi, odvojena statistika i LTIFR. Lista
+  svih učesnika provjerava firmu i ne dozvoljava duplikate.
+- Push/pull sa idempotentnim potvrdama; zavisne stavke čekaju uspješan roditeljski dnevnik ili
+  incident. Potpis čeka prethodne promjene. Nakon prekida se prvo ponavlja isti ID, pa tek nakon
+  potvrde šalje zavisni zapis.
+- Stara količina bez poslovnog ključa ne pogađa dan slanja: tek nakon potvrđenog odbijanja
+  `DIARY_REFERENCE_REQUIRED` korisnik bira projekt/dan i kreira novi idempotency ID, dok original
+  ostaje sačuvan. Neizvjestan ishod se prvo sigurno ponavlja.
+- Foto nastavak: prijavitelj ili istražitelj dobija kratkotrajni staging PUT; server provjerava
+  bajtove, veličinu, MIME i SHA-256, snima u zaseban trajni ključ i auditira potvrdu. Pristup je
+  tenant-scoped; potvrđeni prilog dostupan je preko kratkotrajnog linka uz `hse.view`.
+- OpenAPI: **243 putanje**; uključuje minimalni roster kolega na vlastitoj projektnoj dodjeli.
+
+### Web i mobilni UI
+
+- Web `/ured/dnevnik` i `/ured/hse`: pregled, potpis, revizija, dopune, istraga, mjere,
+  inspekcije, obuke, PDF; detalj incidenta prikazuje sve učesnike i potvrđene fotografije.
+- Mobilni `/dnevnik`: presjek radnika/sati, mašina, tura i kvarova; vrijeme, opis, posjetioci,
+  događaji, zastoj, ručne količine i offline potpis. Nespremljeni unos se ne prenosi tiho na
+  drugi dan/projekt; mete zajedničkog UI-ja su najmanje 56 dp.
+- `/hse/prijava`: višestruki učesnici i povrijeđeni, kamera ili izbor slike, lokalni red,
+  nastavak uploada, prikaz čekanja/odbijanja. `/hse/toolbox`: tema/projekt, lokalni roster i
+  pojedinačna imena/vremena potpisa.
+
+## 2. Nalazi testova i CI-ja
+
+- Međukorak `d4573e0`: CI `45761033852` pao je na ESLint pravilu za import tipa; ispravljeno.
+- Jednokratni lokalni puni `pnpm test` otkrio je dvije greške NUL-sweep registra novih foto ruta:
+  1 312 testova prošlo, dva pala. Registrovane su GET/POST foto rute i roster/query; naknadni
+  ciljani `nul-guard` prolazi **9/9**. Puni suite poslije ispravke lokalno nije ponovljen.
+- `check-tenant-sql` prvi put pokrenut samo s aplikacijskom rolom nije vidio dvije namjerno
+  privatne cursor tabele. Direktna ponovljena provjera s `DATABASE_ADMIN_URL`, kako dokumentuje
+  sama skripta i koristi CI, prolazi **111/111**; bez proširivanja aplikacijskih grantova.
+- Testovi provjeravaju izgubljen odgovor, ponovno otvaranje SQLite, odbijenog roditelja, nepoznat
+  ishod, oporavak uz eksplicitni dan, promjenu naloga, neprijavljenog korisnika, tuđi tenant,
+  neovlaštenog prijavitelja, neispravne bajtove, idempotentnu potvrdu i audit.
+
+## 3. Tabela provjera
 
 | Provjera | Rezultat |
 |---|---|
-| `REQUIRE_DB_TESTS=1 pnpm test` | 1 265 prošlo: web 712, domain 316, mobile 111 + 10, db 70, contracts 21, worker 25 |
-| F9 integracija | `f9-diary-hse` 13/13 i `f9-sync` 8/8 protiv baze |
-| Offline red | `r4-outbox` 7/7; mobilna migracija 6/6 |
-| Statičke provjere | typecheck 6/6, lint čist, bez ciklusa; OpenAPI ažuran; tenant SQL 110/110; preflight 2/2 |
-| CI za F9 | `45694333436`: `verify` success; `e2e-stabilnost` skipped |
-| CI za Korak 0 | `45681549112`: success |
+| Puni test, jednokratni lokalni pokušaj | **1 312 prošlo, 2 pala** prije ispravke registra |
+| Web u tom pokušaju | 723 prošla / 2 pala; naknadni ciljani NUL sweep 9/9 |
+| Domena | 328 prošlo |
+| Mobile | 123 unit + 22 screen = 145 prošlo |
+| DB / contracts / worker | 70 / 21 / 25 prošlo |
+| Ciljana F9 PG integracija | `f9-sync` 21/21 + `f9-diary-hse` 13/13 |
+| `lint`, `typecheck`, `check-cycles` | prošli u jednokratnoj lokalnoj provjeri |
+| `db:types:check` | prošao; tipovi sinhroni sa svježom bazom |
+| `check-tenant-sql` | prvi pokušaj samo app rolom pao; ciljana provjera s admin katalogom 111/111 |
+| `check-matrix-parity` | 0 grešaka; ranije R1 upozorenje |
+| OpenAPI check / Android Metro export | prošli; export nije test na uređaju |
+| Preflight SQL 001/002 | prošao kroz `pg` kao `gradix_app`; `run.sh` lokalno nije izvršen jer nema `psql` |
+| S3 Coolify | korisnik ranije potvrdio bucket/object i browser CORS PASS |
 
-Lokalno nisu pokrenuti Playwright ni mobilni E2E; zeleni testovi offline reda ne dokazuju rad
-nepostojećih mobilnih ekrana.
+## 4. Ograničenja i primopredaja
 
-## 3. Važne odluke i ispravke
+Mobilni screen testovi koriste mockove, a puni Maestro emulator i fizički uređaj nisu pokrenuti.
+Offline roster je dostupan samo ako je prethodno dohvaćen za konkretnu dodjelu/dan; u suprotnom
+je moguće ručno navesti ID povrijeđenog. Mobilni izbor BOQ stavke nije isporučen (ručni unos je
+omogućen); za presjek koji ne stane u limit sync zapisa ekran upućuje na web potpis. PDF dnevnika
+je `DRAFT_FORMAT` do potvrde obrasca. Oštećeni nečitljivi red se čuva za provjeru i ne šalje
+zavisne zapise dok mu se ne utvrdi sadržaj. Staging objekt može ostati ako brisanje ne uspije;
+potvrđena datoteka je u odvojenom ključu.
 
-- Potpis i zaključavanje štite sadržaj; izmjena ide kroz reviziju sa razlogom i prethodnim
-  sadržajem. Jedan projekt i dan imaju jedan dnevnik.
-- Činjenice incidenta se ne prepisuju; dopuna je zaseban zapis. Prijava koja traži zakonsku
-  obavezu i sama obaveza nastaju u istoj transakciji.
-- Mjera mora imati odgovornu osobu i rok; `NEAR_MISS` se broji odvojeno; LTIFR bez radnih sati
-  je `null`. Zabrana rada se podiže uz razlog; prisustvo na obuci ima ime i vrijeme potpisa.
-- Telefon šalje namjeru; BOQ količina se knjiži na serveru. Starija verzija dnevnika je konflikt,
-  a ponovljeni klijentski ID incidenta ne pravi drugi zapis.
-- Integracioni testovi otkrili su nepostojeći `machine_work_logs.meter_start`, pogrešku 500 za
-  zastoj duži od 24 sata i izmjenu potpisanog dnevnika; ispravljeni su upit, servisna validacija
-  i zaštita potpisa. `SafeText` test otkrio je ulaze koji nisu odbijali NUL.
-
-## 4. Preostalo prema planu F9
-
-- Mobilni `/dnevnik`, njegova navigacija i povezivanje na offline red, uključujući automatske
-  sekcije, zastoj, količine i siguran potpis vezan za snapshot koji je korisnik vidio. Trenutni
-  sync odbija `signedName`, jer ga je ranije tiho ignorisao i nije provjeravao vidljivi snapshot.
-  Sync količina sada nosi projekat i datum dnevnika, obrađuje ručne i BOQ stavke i odbija stare
-  redove bez poslovnog ključa umjesto pogrešnog knjiženja na dan slanja.
-- Početni ekran `/hse/prijava` čuva i šalje lokalni zapis, bira projekat iz lokalnog spiska i
-  povrijeđenog iz keširanog šefovog rostera (ili ID-em kada roster nije dostupan). Status
-  odbijenog zapisa je vidljiv. Fotografije i izbor ostalih uključenih radnika još nisu dovršeni.
-- `/hse/toolbox` koristi lokalni roster sa pojedinačnim potpisima; treba dokazati puni tok na
-  uređaju, kao i stanje korisnika koji nije prethodno preuzeo projekat i ekipu.
-- Odgovarajući offline/E2E testovi na uređaju koji dokazuju unos, ponovno slanje i obradu.
-  Ekranski test prijave koristi mockove; testovi reda i servera ga ne zamjenjuju.
-- Poslije taga ispravljena je provjera dozvola za F9 sync i odbijanje izmjena potpisanog dnevnika;
-  prošireni integracioni testovi pokrivaju obje granice.
-
-Detaljni redovi isporuke i odluke su u `docs/STATUS.md`; puni zahtjevi su u zaključanoj
-specifikaciji i `docs/IMPLEMENTATION_PLAN.md`.
+Završni commit i tag su na aktivnoj grani nakon objave; GitHub Actions je mjerodavan za konačni
+CI status. Faza 10 ostaje sljedeći zaseban zadatak.

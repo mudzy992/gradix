@@ -1,19 +1,12 @@
 # STATUS — Gradix v2
 
-**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faze 0–8: završene; F9: preostaju mobilni ekrani** · **Tag `phase-9`** · **CI: zelen (run `45694333436` za F9)**
+**Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faze 0–8: završene; F9: završni checkpoint** · **Tag:** `phase-9` · **CI:** rezultat provjeriti na završnom commitu
 
-Realizacija ide po `docs/IMPLEMENTATION_PLAN.md` (odobren u cjelosti, strogi redoslijed).
-Moduli 1–12 zaključani u `docs/specs/`. U Fazi 9 (Modul 10 — dnevnik i zaštita na radu) isporučeni
-su backend, web i offline sync infrastruktura; mobilni ekrani iz plana još nisu isporučeni. Jedan
-je dnevnik po `(projekt, dan)` sa automatskim sekcijama iz Modula 3/5, količine kao
-jedini izvor završenosti (BOQ uvećava `quantity_executed` u istoj transakciji), potpis pa
-zaključavanje pa revizija sa razlogom, PDF bez biblioteke uz `DRAFT_FORMAT` do potvrde obrasca;
-incidenti sa nepromjenjivim činjenicama i dopunama, istraga sa jednim uzrokom, mjere sa odgovornim
-i rokom, `PROHIBITION` zabrana rada sa obaveznim razlogom podizanja, obuke gdje je prisustvo
-POTPIS, i LTIFR iz stvarnih sati. Mobilni `/hse/prijava` i `/hse/toolbox` su započeti uz
-ograničenja opisana u izvještaju; preostaju `/dnevnik`, fotografije i mobilni E2E testovi.
-Red/sync sami ne ispunjavaju mobilnu isporuku. Faza 10 je sljedeća po
-`docs/IMPLEMENTATION_PLAN.md`. Izvještaji po fazama: `docs/IZVJESTAJ-FAZA-*.md`.
+Faza 9 dodaje mobilni dnevnik, incident s učesnicima i offline foto red te Toolbox, uz postojeću
+bazu, domen i web. Redoslijed i oporavak starih offline zapisa, autorizacija potpisa i fotografija
+opisani su u `IZVJESTAJ-FAZA-9.md`. Lokalni puni test jednom je pronašao dvije greške NUL registra;
+ciljana provjera nakon popravke prolazi. Završni GitHub CI ne treba poistovjećivati sa starijim
+zelenim runovima. Faza 10 ostaje sljedeći zaseban zadatak.
 
 ## Šta je gotovo
 
@@ -95,34 +88,21 @@ Red/sync sami ne ispunjavaju mobilnu isporuku. Faza 10 je sljedeća po
   unutar slike. Korisnik je naknadno potvrdio Coolify produkciju: `s3.bucket_object` i
   `s3.browser_cors` su `PASS`.
 
-## Faza 9 — naknadne popravke i mobilna prijava
+## Faza 9 — mobilna isporuka i sigurnosne provjere
 
-- Sync sada provjerava `diary.manage`, `hse.report`, `hse.investigate` i `hse.training.manage`
-  po tipu zapisa; ranije su obrađivači mogli zaobići dozvole ruta. Potpisani dnevnik odbija i sync
-  zaglavlje i BOQ stavku prije promjene. Integracioni testovi provjeravaju radničku prijavu,
-  zabranjene radnje, potpis i vozački sync sa ograničenim pull opsegom.
-- `/hse/prijava`: lokalni unos i slanje kroz outbox; stanje odbijenih zapisa je vidljivo. Izbor
-  projekta koristi lokalni spisak, a izbor povrijeđenog šefov lokalni roster za projekat i datum;
-  ostali bez tog rostera moraju unijeti ID. Fotografije i više uključenih radnika još nisu rađeni.
-- `/hse/toolbox`: projekat i ekipa iz keša, pojedinačni dodir za svakog potpisnika, tema i
-  trajanje ulaze u offline red; server bilježi identitete i vremena u auditu. Ekranski testovi
-  koriste mockove; potpuni mobilni E2E na uređaju nije pokrenut.
-- Sync sada **odbija** `signedName`: prethodno ga je tiho ignorisao. Ispravan offline potpis tek
-  treba vezati za konkretan snapshot automatskih sekcija koje je šef vidio, tako da ga promjene
-  nastale dok je telefon bio offline ne mogu neprimjetno izmijeniti.
-- Količine sync nose projekat i datum dnevnika, ne dan slanja; ručne i BOQ stavke se podržavaju,
-  HAUL se ne unosi duplo, a stari red bez datuma odbija se (`DIARY_REFERENCE_REQUIRED`) i zahtijeva
-  intervenciju. Različite vrijednosti iste sekcije više se ne odbacuju tiho. Pri istoj fotografiji
-  u dva incidenta više nema sudara ID-a; sam upload i dalje nije implementiran.
-- Naknadna provjera: `REQUIRE_DB_TESTS=1 pnpm test` **1 278 prošlo** (web 715, domain 323,
-  mobile 112 + 12, db 70, contracts 21, worker 25); typecheck 6/6, lint čist, bez ciklusa.
-  Run `45694333436` odnosi se na raniji tag, ne na ove naknadne izmjene.
-- Lokalni puni test nakon naknadnih F9 izmjena: **1 287 prošlo** (web 720, domain 323,
-  mobile 113 + 15, db 70, contracts 21, worker 25). Lint, typecheck, check-cycles,
-  db:types:check, check-tenant-sql i matrix parity prolaze (parity upozorava na raniji R1 gap).
-  `run.sh` se lokalno ne može izvršiti jer nema `psql`; iste SQL provjere 001/002 izvršene su
-  kroz `pg` kao gradix_app i prošle. Ekranski testovi koriste mockove; ove naknadne F9 izmjene
-  nisu u CI-ju i mobilni emulator nije pokrenut.
+- SQLite v5 čuva incident i foto bajtove atomski, partitionirano po firmi/korisniku; nastavak
+  nakon potvrđenog incidenta provjerava aktivni nalog i čuva bajtove do potvrde servera.
+- Potpis uspoređuje verziju i prikazani automatski presjek, provjerava `diary.sign` i piše audit.
+  Fotografija koristi staging ključ, provjeru sadržaja i checksum, zaseban trajni ključ te dozvole.
+- Zavisne stavke/mjere čekaju roditelja, a potpis čeka stavke. Potvrđeno odbijena stara količina
+  dobija eksplicitno odabran poslovni dan i novi ID; original ostaje sačuvan.
+- Mobilni ekran prikazuje radnike/sate, mašine, ture, kvarove, ručne unose, količine i potpise;
+  HSE bira učesnike, slike i toolbox potpise. Screen testovi su mockirani, emulator nije pokrenut.
+- Jednokratni puni test: **1 312 prošlo, 2 pala** u NUL registru; ispravka je naknadno prošla
+  ciljano 9/9. F9 PG testovi 34/34, mobile 145/145, lint/typecheck/cycles i db tipovi prolaze.
+  Tenant katalog 111/111 uz admin URL; matrix parity ima ranije R1 upozorenje. SQL preflight
+  prolazi preko `pg` kao app rola, ali `run.sh` nije pokrenut bez `psql`. Detalji i ograničenja:
+  `IZVJESTAJ-FAZA-9.md`.
 
 ## Faza 10 — početak (nije isporučena)
 

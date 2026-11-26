@@ -213,7 +213,7 @@ export default function HsePrijavaScreen() {
   return (
     <Screen title="Prijava opasnosti" subtitle="Prijavi događaj i bez mreže; slanje je odvojeni korak."
       loading={loading} error={error} empty={null} onRetry={load}>
-      <Banner>{syncBannerText({ pending: pending + photosPending, syncFailed })} {photosPending ? `Fotografije na čekanju: ${photosPending}.` : ""} {needsReview > 0 ? `${needsReview} zahtijeva provjeru.` : ""}</Banner>
+      <Banner>{syncBannerText({ pending: pending + photosPending, syncFailed, review: needsReview })} {photosPending ? `Fotografije na čekanju: ${photosPending}.` : ""} {pending + photosPending > 0 && needsReview > 0 ? `${needsReview} zahtijeva provjeru.` : ""}</Banner>
       {!error ? <CardView>
         <Segmented label="Vrsta događaja" value={kind} onChange={(value) => {
           setKind(value); if (value === "NEAR_MISS") { setInjured({}); setInjuredWorkerId(""); }

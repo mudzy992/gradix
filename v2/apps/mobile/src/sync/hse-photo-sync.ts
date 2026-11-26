@@ -44,7 +44,9 @@ export async function runHsePhotoSync(db: LocalSqlite, account: LocalAccount, tr
       const state = await transport.resume(photo.incident_id, photo.sha256, "UPLOAD_URL");
       if (state.status !== "confirmed") {
         if (!state.uploadUrl) throw new Error("PHOTO_UPLOAD_URL_MISSING");
+        await assertAccount(db, account);
         await transport.put(state.uploadUrl, photo.content_type, photo.data_base64);
+        await assertAccount(db, account);
         const confirmed = await transport.resume(photo.incident_id, photo.sha256, "CONFIRM");
         if (confirmed.status !== "confirmed") throw new Error("PHOTO_CONFIRM_FAILED");
       }

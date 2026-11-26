@@ -136,7 +136,7 @@ export default function ToolboxScreen() {
   const review = entries.filter((entry) => entry.status === "rejected" || entry.status === "conflict").length;
   return <Screen title="Toolbox razgovor" subtitle="Tema, trajanje i pojedinačni potpisi ekipe."
     loading={loading} error={error} empty={null} onRetry={load}>
-    <Banner>{syncBannerText({ pending, syncFailed })} {review ? `${review} zahtijeva provjeru.` : ""}</Banner>
+    <Banner>{syncBannerText({ pending, syncFailed, review })} {pending > 0 && review > 0 ? `${review} zahtijeva provjeru.` : ""}</Banner>
     {!error ? <CardView>
       <Button label="Osvježi projekte" variant="secondary" busy={busy} onPress={() => void refreshProjects()} />
       {projects.length ? <Segmented label="Projekat" value={projectId} onChange={(value) => {

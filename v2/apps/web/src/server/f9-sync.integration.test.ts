@@ -17,10 +17,11 @@ import { NextRequest } from "next/server";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
+import type * as StorageModule from "./storage";
 
 const photoStorage = vi.hoisted(() => ({ staging: new Uint8Array(), permanent: new Uint8Array() }));
 vi.mock("./storage", async (importOriginal) => {
-  const real = await importOriginal<typeof import("./storage")>();
+  const real = await importOriginal<typeof StorageModule>();
   const { Readable } = await import("node:stream");
   const client = { send: async (command: { constructor: { name: string }; input: { Body?: Uint8Array } }) => {
     if (command.constructor.name === "GetObjectCommand") return { ContentLength: photoStorage.staging.length, Body: Readable.from([photoStorage.staging]) };
@@ -443,6 +444,16 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     payload.incident.photos = [{ fileName: "test.jpg", contentType: "image/jpeg", sizeBytes: bytes.length, sha256: sha }];
     expect((await pushOne(COOKIES.sup, payload)).status).toBe("APPLIED");
     const { hsePhotoDownload, resumeHsePhoto } = await import("./hse-photo-service");
+    const route = await import("@/app/api/hse/incidents/[id]/photos/[sha]/route");
+    const context = { params: Promise.resolve({ id: payload.incidentId, sha }) };
+    const photoRequest = (cookie?: string) => new NextRequest(`http://t/api/hse/incidents/${payload.incidentId}/photos/${sha}`, {
+      method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+      body: JSON.stringify({ action: "UPLOAD_URL" }),
+    });
+    expect((await route.POST(photoRequest(), context)).status).toBe(401);
+    expect((await route.POST(photoRequest(COOKIES.worker), context)).status).toBe(403);
+    expect((await route.POST(photoRequest(COOKIES.b), context)).status).toBe(404);
+    expect((await route.GET(new NextRequest("http://t/photo"), context)).status).toBe(401);
     const actor = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"] };
     const stranger = { companyId: CO, userId: USER_WORKER, roles: ["WORKER"] };
     expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toBeNull();
@@ -605,6 +616,11 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         description: null, visitors: null, events: null, delays: [], signedName: "Šef Gradilišta",
         signature: { signedAt, autoSnapshotJson: JSON.stringify(snapshot) } },
     });
+    const unauthenticated = await push(pushRequest("", [signatureItem(shown)]));
+    expect(unauthenticated.status).toBe(401);
+    const unauthorized = await pushOne(COOKIES.worker, signatureItem(shown));
+    expect(unauthorized.status).toBe("REJECTED");
+    expect(unauthorized.code).toBe("SYNC_ITEM_REJECTED");
     const wrong = await pushOne(COOKIES.sup, signatureItem({ ...shown, workedHours: "999.00" }));
     expect(wrong.status).toBe("CONFLICT");
     const item = signatureItem(shown);

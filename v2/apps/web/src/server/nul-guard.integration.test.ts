@@ -52,6 +52,8 @@ import { GET as diaryPdfGet } from "@/app/api/site-diaries/[id]/pdf/route";
 import { GET as diaryTemplatesGet, PATCH as diaryTemplatesPatch } from "@/app/api/site-diary-templates/route";
 import { GET as hseIncidentsGet, POST as hseIncidentsPost } from "@/app/api/hse/incidents/route";
 import { GET as hseIncidentGet } from "@/app/api/hse/incidents/[id]/route";
+import { GET as hsePhotoGet, POST as hsePhotoPost } from "@/app/api/hse/incidents/[id]/photos/[sha]/route";
+import { GET as hseRosterGet } from "@/app/api/hse/roster/route";
 import { POST as hseIncidentUpdatePost } from "@/app/api/hse/incidents/[id]/updates/route";
 import { PUT as hseInvestigationPut } from "@/app/api/hse/incidents/[id]/investigation/route";
 import { POST as hseIncidentClosePost } from "@/app/api/hse/incidents/[id]/close/route";
@@ -612,6 +614,8 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/site-diary-templates": { GET: diaryTemplatesGet, PATCH: diaryTemplatesPatch },
   "/api/hse/incidents": { GET: hseIncidentsGet, POST: hseIncidentsPost },
   "/api/hse/incidents/{id}": { GET: hseIncidentGet },
+  "/api/hse/incidents/{id}/photos/{sha}": { GET: hsePhotoGet, POST: hsePhotoPost },
+  "/api/hse/roster": { GET: hseRosterGet },
   "/api/hse/incidents/{id}/updates": { POST: hseIncidentUpdatePost },
   "/api/hse/incidents/{id}/investigation": { PUT: hseInvestigationPut },
   "/api/hse/incidents/{id}/close": { POST: hseIncidentClosePost },

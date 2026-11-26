@@ -5,7 +5,8 @@ import { calendarDateFromLocalDate, R4_SYNC_PUSH_MAX_ITEM_BYTES, type DiaryWeath
 import type { SiteDiaryDetail } from "@gradix/contracts";
 import { fetchDiaryDetail } from "../api/client";
 import { cacheDiaryDetail, clearDiaryDetailCache, getActiveLocalAccount, hasUnresolvedDiaryEdit, queueSiteDiary, queueSiteDiaryItem,
-  readDiaryDetailCache, readOutboxEntries, type LocalOutboxEntry } from "../db/r4-outbox";
+  readDiaryDetailCache, readOutboxEntries, readLegacyDiaryItems, recoverLegacyDiaryItem,
+  type LegacyDiaryItem, type LocalOutboxEntry } from "../db/r4-outbox";
 import { openDb, readProjects, type LocalProject } from "../db/sqlite";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { sendResultMessage } from "../teren/outcome";
@@ -32,6 +33,7 @@ export default function DnevnikScreen() {
   const [detail, setDetail] = useState<SiteDiaryDetail | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [entries, setEntries] = useState<LocalOutboxEntry[]>([]);
+  const [legacyItems, setLegacyItems] = useState<LegacyDiaryItem[]>([]);
   const [weather, setWeather] = useState<DiaryWeather | null>(null);
   const [temperature, setTemperature] = useState("");
   const [hours, setHours] = useState("");
@@ -66,6 +68,7 @@ export default function DnevnikScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       setProjects((await readProjects(db)).rows);
       setEntries(await readOutboxEntries(db, account));
+      setLegacyItems(await readLegacyDiaryItems(db, account));
       setError(null);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Lokalni podaci nisu dostupni."); }
     finally { setLoading(false); }
@@ -145,12 +148,30 @@ export default function DnevnikScreen() {
     finally { saving.current = false; setBusy(false); }
   }
 
+  async function recover(localId: string) {
+    if (saving.current) return;
+    if (!detail || detail.diary.projectId !== projectId || detail.diary.diaryDate !== date || detail.diary.status !== "DRAFT") {
+      setMessage("Za popravak izaberi projekat i datum te osvježi njegov otvoreni nacrt."); return;
+    }
+    saving.current = true; setBusy(true);
+    try {
+      const db = await openDb();
+      const account = await getActiveLocalAccount(db);
+      if (!account) throw new Error("Nema aktivnog naloga.");
+      await recoverLegacyDiaryItem(db, account, localId, projectId, date);
+      setMessage("Stara količina je vezana za izabrani dan i čeka ponovno slanje. Izvorni red je sačuvan.");
+      await load();
+    } catch (caught) { setMessage(caught instanceof Error ? caught.message : "Red nije popravljen."); }
+    finally { saving.current = false; setBusy(false); }
+  }
+
   async function sign() {
     if (saving.current) return;
     if (!detail || detail.diary.projectId !== projectId || detail.diary.diaryDate !== date || detail.diary.status !== "DRAFT") {
       setMessage("Za potpis najprije osvježi sačuvani nacrt odabranog dana."); return;
     }
     if (signedName.trim().length < 2 || signedName.trim().length > 200) { setMessage("Potpis traži ime i prezime (2–200 znakova)."); return; }
+    if (legacyItems.length) { setMessage("Najprije razriješi stare količine bez poznatog datuma, pa osvježi dan prije potpisa."); return; }
     if (weather || temperature || hours || description || visitors || events || delayFrom || delayTo || delayHours || delayNote ||
         itemDescription || itemUnit || itemQuantity) {
       setMessage("Prvo sačuvaj i pošalji dopune i količine, pa osvježi presjek prije potpisa."); return;
@@ -249,6 +270,15 @@ export default function DnevnikScreen() {
       <Button label="Sačuvaj nacrt na telefon" busy={busy} onPress={() => void save()} />
       <Button label="Pošalji sada" variant="secondary" busy={busy} onPress={() => void send()} />
     </CardView>
+    {legacyItems.length ? <CardView>
+      <Text variant="label">Stare količine zahtijevaju izbor dana</Text>
+      <Text>Server je odbio ove redove jer ne sadrže projekat i datum. Izaberi i osvježi tačan dan iznad; datum slanja nije datum radova.</Text>
+      {legacyItems.map((item) => <CardView key={item.localId}>
+        <Text>{item.description}: {item.quantity} {item.unit}</Text>
+        <Text variant="muted">Vrijeme čuvanja: {item.deviceSentAt} (nije dokaz datuma radova).</Text>
+        <Button label={`Potvrdi za ${projectId || "izabrani projekat"} · ${date}`} variant="secondary" busy={busy} onPress={() => void recover(item.localId)} />
+      </CardView>)}
+    </CardView> : null}
     <CardView>
       <Text variant="label">Ručna količina za već otvoreni dan</Text>
       <TextField label="Opis količine" value={itemDescription} onChangeText={setItemDescription} />
@@ -264,7 +294,7 @@ export default function DnevnikScreen() {
     </CardView>
     {message ? <Text>{message}</Text> : null}
     {entries.slice(0, 10).map((entry) => <ListItem key={entry.localId}
-      title={entry.status === "sent" ? "Poslano" : entry.status === "rejected" ? "Odbijeno" : entry.status === "conflict" ? "Sukob — provjeri" : "Čeka slanje"}
+      title={entry.lastError?.startsWith("DIARY_REFERENCE_RECOVERED:") ? "Stari red zamijenjen" : entry.status === "sent" ? "Poslano" : entry.status === "rejected" ? "Odbijeno" : entry.status === "conflict" ? "Sukob — provjeri" : "Čeka slanje"}
       meta={entry.lastError ?? entry.createdAt} />)}
   </Screen>;
 }

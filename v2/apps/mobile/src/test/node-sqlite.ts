@@ -13,7 +13,10 @@ export type TestSqlite = LocalSqlite & {
 
 export function createNodeSqlite(prefix = "gradix-sqlite-test-"): TestSqlite {
   const directory = mkdtempSync(join(tmpdir(), prefix));
-  const path = join(directory, "gradix.db");
+  return openNodeSqlite(join(directory, "gradix.db"), directory);
+}
+
+export function openNodeSqlite(path: string, directory = ""): TestSqlite {
   const raw = new DatabaseSync(path);
   const adapter = {
     raw,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createNodeSqlite } from "../test/node-sqlite";
+import { createNodeSqlite, openNodeSqlite } from "../test/node-sqlite";
 import { migrateLocalDatabase } from "../db/migrations";
 import { activateLocalAccount, createSqliteR4SyncStore, queueHseIncident } from "../db/r4-outbox";
 import { pendingHsePhotos, runHsePhotoSync, type HsePhotoTransport } from "./hse-photo-sync";
@@ -42,6 +42,38 @@ describe("HSE nastavak fotografija", () => {
     expect(await pendingHsePhotos(db, account)).toHaveLength(0);
     expect(await db.getFirstAsync("SELECT status, data_base64 FROM hse_photo_queue")).toEqual({ status: "sent", data_base64: "" });
     db.close();
+  });
+
+  it("nastavlja fotografiju nakon gašenja, prekida mreže i promjene naloga bez curenja bajtova", async () => {
+    const setupResult = await setup();
+    let db = setupResult.db;
+    await createSqliteR4SyncStore(db, account).markResult({ localId: setupResult.item.localId, status: "APPLIED", entityId: "incident-1", version: 1, cursor: "1" });
+    const failed: HsePhotoTransport = { resume: async () => { throw new Error("offline"); }, put: async () => { throw new Error("unexpected"); } };
+    expect(await runHsePhotoSync(db, account, failed)).toEqual({ sent: 0, failed: 1 });
+    const path = db.path; db.close(); db = openNodeSqlite(path);
+    await activateLocalAccount(db, { companyId: "c1", userId: "u2" });
+    expect(await pendingHsePhotos(db, { companyId: "c1", userId: "u2" })).toEqual([]);
+    await expect(pendingHsePhotos(db, account)).rejects.toMatchObject({ code: "LOCAL_ACCOUNT_SCOPE_MISMATCH" });
+    await activateLocalAccount(db, account);
+    let uploaded = "";
+    expect(await runHsePhotoSync(db, account, {
+      resume: async (_id, _sha, action) => action === "CONFIRM" ? { status: "confirmed", uploadUrl: null } : { status: "pending", uploadUrl: "https://example.test" },
+      put: async (_url, _type, data) => { uploaded = data; },
+    })).toEqual({ sent: 1, failed: 0 });
+    expect(uploaded).toBe("/9j/AA=="); db.close();
+  });
+
+  it("promjena naloga nakon dobijanja URL-a zaustavlja slanje bajtova", async () => {
+    const { db, item } = await setup();
+    await createSqliteR4SyncStore(db, account).markResult({ localId: item.localId, status: "APPLIED", entityId: "incident-1", version: 1, cursor: "1" });
+    let puts = 0;
+    await expect(runHsePhotoSync(db, account, {
+      resume: async () => { await activateLocalAccount(db, { companyId: "c1", userId: "u2" }); return { status: "pending", uploadUrl: "https://example.test" }; },
+      put: async () => { puts += 1; },
+    })).rejects.toMatchObject({ code: "LOCAL_ACCOUNT_SCOPE_MISMATCH" });
+    expect(puts).toBe(0);
+    await activateLocalAccount(db, account);
+    expect((await pendingHsePhotos(db, account))[0]?.data_base64).toBe("/9j/AA=="); db.close();
   });
 
   it("ne čuva prijavu kad nedostaju bajtovi fotografije", async () => {

@@ -74,7 +74,14 @@ export async function runR4Sync(store: R4SyncStore, transport: R4SyncTransport):
   try {
     let cursor = await store.readCursor();
     outcome.cursor = cursor;
-    for (const batch of chunkR4(await store.pending())) {
+    const attempted = new Set<string>();
+    // Ponovo pročitaj SQLite nakon svakog vala: zavisni red postaje spreman tek nakon
+    // potvrde roditelja. Jedan red pokušavamo najviše jednom u ovom pokretanju.
+    while (true) {
+      const ready = (await store.pending()).filter((item) => !attempted.has(item.localId));
+      if (!ready.length) break;
+      for (const batch of chunkR4(ready)) {
+      for (const item of batch) attempted.add(item.localId);
       let response: R4SyncPushResponse;
       try {
         response = await transport.push(batch);
@@ -101,6 +108,7 @@ export async function runR4Sync(store: R4SyncStore, transport: R4SyncTransport):
         else if (result.status === "DUPLICATE") outcome.duplicate += 1;
         else if (result.status === "CONFLICT") outcome.conflict += 1;
         else outcome.rejected += 1;
+      }
       }
     }
 

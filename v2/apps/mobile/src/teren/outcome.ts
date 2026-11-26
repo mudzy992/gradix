@@ -23,8 +23,8 @@ export const OUT_OF_SCOPE_NOTE =
  * 2026-11-07: banner je vikao "Bez veze" i na mreži). "Bez veze" se kaže tek kad je
  * pokušaj slanja stvarno pao (syncFailed) — do tada samo broji koliko čeka.
  */
-export function syncBannerText(input: { pending: number; syncFailed: boolean }): string {
-  if (input.pending === 0) return "Sve je poslano.";
+export function syncBannerText(input: { pending: number; syncFailed: boolean; review?: number }): string {
+  if (input.pending === 0) return input.review ? `${input.review} zahtijeva provjeru; nije sve poslano.` : "Sve je poslano.";
   return input.syncFailed
     ? `Bez veze · ${input.pending} čeka slanje. Sačuvano na ovom telefonu.`
     : `${input.pending} čeka slanje.`;
@@ -44,7 +44,7 @@ export function sendResultMessage(outcome: SendOutcomeSummary): string {
   if (processed === 0 && outcome.retry > 0) {
     return "Nema veze sa serverom. Zapisi ostaju na telefonu i poslaće se kasnije.";
   }
-  const base = `Slanje završeno: poslano ${outcome.applied + outcome.duplicate}, za provjeru ${outcome.conflict}.`;
+  const base = `Slanje završeno: poslano ${outcome.applied + outcome.duplicate}, za provjeru ${outcome.conflict}, odbijeno ${outcome.rejected}.`;
   return outcome.error
     ? `${base} Potvrda sa servera nije stigla do kraja — ishod po zapisu je ispod, a ponovno slanje je sigurno (server prepoznaje duplikate).`
     : base;

@@ -18,6 +18,7 @@ describe("ishod slanja za UI", () => {
 
   it("banner: 'bez veze' tek kad je slanje stvarno palo, ne dok samo čeka", () => {
     expect(syncBannerText({ pending: 0, syncFailed: true })).toBe("Sve je poslano.");
+    expect(syncBannerText({ pending: 0, syncFailed: false, review: 2 })).toContain("nije sve poslano");
     expect(syncBannerText({ pending: 3, syncFailed: false })).toBe("3 čeka slanje.");
     expect(syncBannerText({ pending: 3, syncFailed: true })).toContain("Bez veze");
   });
