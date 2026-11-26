@@ -43,6 +43,8 @@ const STATUS_TONE: Record<string, "full" | "hot" | "hollow"> = {
 
 export default function ProjectsClient({
   canManage,
+  canBook = canManage,
+  canApproveManual = false,
   canAssign,
   canOverride,
   canSeeMoney = false,
@@ -50,6 +52,8 @@ export default function ProjectsClient({
   initialOpenProjectId = null,
 }: {
   canManage: boolean;
+  canBook?: boolean;
+  canApproveManual?: boolean;
   canAssign: boolean;
   /** `projects.override`: bez njega se iznimka može samo ZATRAŽITI, ne odobriti. */
   canOverride: boolean;
@@ -279,6 +283,8 @@ export default function ProjectsClient({
         <ProjectDetail
           project={open}
           canManage={canManage}
+          canBook={canBook}
+          canApproveManual={canApproveManual}
           canAssign={canAssign}
           canOverride={canOverride}
           canSeeMoney={canSeeMoney}

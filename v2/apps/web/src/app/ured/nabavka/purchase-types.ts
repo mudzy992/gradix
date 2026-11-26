@@ -1,0 +1,16 @@
+import type { z } from "zod";
+import type { StockItemRow } from "@/server/stock-service";
+import type { GoodsReceiptsResponse, MaterialIssuesResponse, PurchaseInvoicesResponse, PurchaseOrdersResponse, PurchaseRequestsResponse, WarehousesResponse, PartnersResponse, PurchaseOrderDetail, PurchaseRequestDetail } from "@gradix/contracts";
+export type RequestRow=z.infer<typeof PurchaseRequestsResponse>["requests"][number];
+export type Order=z.infer<typeof PurchaseOrdersResponse>["orders"][number];
+export type Receipt=z.infer<typeof GoodsReceiptsResponse>["receipts"][number];
+export type Invoice=z.infer<typeof PurchaseInvoicesResponse>["invoices"][number];
+export type Issue=z.infer<typeof MaterialIssuesResponse>["issues"][number];
+export type Item=StockItemRow;
+export type Warehouse=z.infer<typeof WarehousesResponse>["warehouses"][number];
+export type Partner=z.infer<typeof PartnersResponse>["partners"][number];
+export type Project={id:string;code:string;name:string};
+export type RequestDetail=z.infer<typeof PurchaseRequestDetail>;
+export type OrderDetail=z.infer<typeof PurchaseOrderDetail>;
+export type Notice={tone:"success"|"error";text:string};
+export type Options={items:Item[];warehouses:Warehouse[];partners:Partner[];projects:Project[];requests:RequestRow[];orders:Order[];receipts:Receipt[]};

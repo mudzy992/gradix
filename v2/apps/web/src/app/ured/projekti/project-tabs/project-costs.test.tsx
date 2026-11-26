@@ -64,6 +64,8 @@ function mockApi(entries = [ENTRY_POSTED, ENTRY_PENDING]) {
   const fetchMock = vi.fn(async (url: string) => {
     const body = url.startsWith("/api/costs?")
       ? { entries, totals: TOTALS }
+      : url.startsWith("/api/costs/manual?")
+        ? { requests: [] }
       : url.includes("/api/cost-categories")
         ? { categories: [{ id: "cc_rad", code: "RAD", name: "Rad", sort_order: 10, default_for_source_type: "WORKDAY", is_active: true, usage_count: 0 }], unmapped_sources: [] }
         : {};
@@ -119,6 +121,24 @@ describe("troškovi projekta — ledger", () => {
     await screen.findAllByText("300.00");
     expect(screen.queryByRole("button", { name: "+ Ručni trošak" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Više radnji/ })).not.toBeInTheDocument();
+  });
+
+  it("prikazuje neknjiženi zahtjev i vlasniku nudi odobrenje", async () => {
+    const fetchMock=vi.fn(async (url:string,init?:RequestInit) => {
+      let data:unknown={};
+      if(url.startsWith("/api/costs?")) data={entries:[ENTRY_POSTED],totals:TOTALS};
+      else if(url.startsWith("/api/costs/manual?")) data={requests:[{id:"mcr",project_id:"prj_1",phase_id:null,category_id:"cc_rad",category_name:"Rad",occurred_on:"2026-11-20",amount_cents:"50001",currency_code:"BAM",note:null,attachment_id:null,created_at:"2026-11-20"}]};
+      else if(url.includes("/api/cost-categories")) data={categories:[]};
+      else if(init?.method==="POST") data={id:"mcr",status:"APPROVED"};
+      return {ok:true,status:200,json:async()=>({success:true,data}),headers:{get:()=>null}};
+    });
+    vi.stubGlobal("fetch",fetchMock);
+    const user=userEvent.setup();render(<ProjectCosts projectId="prj_1" canManage={false} canBook canApproveManual />);
+    expect(await screen.findByText("Čeka odobrenje")).toBeInTheDocument();
+    expect(screen.getByRole("button",{name:"+ Ručni trošak"})).toBeInTheDocument();
+    await user.click(screen.getByRole("button",{name:"Odobri ručni trošak"}));
+    await waitFor(()=>expect(fetchMock).toHaveBeenCalledWith("/api/costs/manual/mcr/approve",expect.objectContaining({method:"POST"})));
+    expect(await screen.findByText("Ručni trošak je odobren i knjižen.")).toBeInTheDocument();
   });
 
   it("nema ozbiljnih a11y prekršaja", async () => {

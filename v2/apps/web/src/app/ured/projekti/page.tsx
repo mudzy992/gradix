@@ -59,6 +59,8 @@ export default async function ProjectsPage({
     <main className="mx-auto w-full max-w-6xl">
       <ProjectsClient
         canManage={can(auth.ctx.roles, "projects.manage")}
+        canBook={can(auth.ctx.roles, "projects.costs.book")}
+        canApproveManual={can(auth.ctx.roles, "purchase.approve")}
         canAssign={can(auth.ctx.roles, "projects.assign")}
         canOverride={can(auth.ctx.roles, "projects.override")}
         canSeeMoney={can(auth.ctx.roles, "projects.costs.view")}

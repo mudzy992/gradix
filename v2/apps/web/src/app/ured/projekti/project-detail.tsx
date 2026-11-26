@@ -41,6 +41,8 @@ type TabKey =
 export function ProjectDetail({
   project,
   canManage,
+  canBook = canManage,
+  canApproveManual = false,
   canAssign,
   canOverride,
   canSeeMoney,
@@ -50,6 +52,8 @@ export function ProjectDetail({
 }: {
   project: Project;
   canManage: boolean;
+  canBook?: boolean;
+  canApproveManual?: boolean;
   canAssign: boolean;
   canOverride: boolean;
   /** `projects.costs.view` — bez njega novčani tabovi ne postoje (ni prazni). */
@@ -151,7 +155,7 @@ export function ProjectDetail({
           onOpenTab={(next) => setTab(next as TabKey)}
         />
       ) : tab === "costs" ? (
-        <ProjectCosts projectId={project.id} canManage={canManage} />
+        <ProjectCosts projectId={project.id} canManage={canManage} canBook={canBook} canApproveManual={canApproveManual} />
       ) : tab === "budget" ? (
         <ProjectBudget projectId={project.id} canManage={canManage} />
       ) : tab === "boq" ? (

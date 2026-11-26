@@ -52,6 +52,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <ProjectPageClient
         project={dto}
         canManage={can(auth.ctx.roles, "projects.manage")}
+        canBook={can(auth.ctx.roles, "projects.costs.book")}
+        canApproveManual={can(auth.ctx.roles, "purchase.approve")}
         canAssign={can(auth.ctx.roles, "projects.assign")}
         canOverride={can(auth.ctx.roles, "projects.override")}
         canSeeMoney={can(auth.ctx.roles, "projects.costs.view")}

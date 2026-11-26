@@ -14,12 +14,16 @@ import { ProjectDetail } from "../project-detail";
 export function ProjectPageClient({
   project,
   canManage,
+  canBook = canManage,
+  canApproveManual = false,
   canAssign,
   canOverride,
   canSeeMoney,
 }: {
   project: Project;
   canManage: boolean;
+  canBook?: boolean;
+  canApproveManual?: boolean;
   canAssign: boolean;
   canOverride: boolean;
   canSeeMoney: boolean;
@@ -29,6 +33,8 @@ export function ProjectPageClient({
     <ProjectDetail
       project={project}
       canManage={canManage}
+      canBook={canBook}
+      canApproveManual={canApproveManual}
       canAssign={canAssign}
       canOverride={canOverride}
       canSeeMoney={canSeeMoney}

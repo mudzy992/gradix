@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
+import { PendingManualCostsResponse } from "@gradix/contracts";
+import { listPendingManualCosts } from "./phase-10b-list-service";
 import { createManualCost } from "./cost-entry-service";
 import { decideManualCost } from "./manual-cost-approval-service";
 import { amendSubContract, createSubContract, patchSubContract } from "./subcontract-contract-service";
@@ -80,12 +82,24 @@ describeDb("F10A-3 podizvođači i ručni trošak",()=>{
     const large={...small,clientGeneratedId:randomUUID(),amount:"500.01"};
     const pending=await createManualCost(app,actor,large); expect(pending).toMatchObject({outcome:"OK",approvalRequired:true});
     expect(await createManualCost(app,actor,large)).toEqual(pending);
+    const visible=await listPendingManualCosts(app,pm,project);
+    expect(visible.outcome).toBe("OK");
+    if (visible.outcome === "OK") {
+      expect(PendingManualCostsResponse.safeParse({requests:visible.data}).success).toBe(true);
+      expect(visible.data).toContainEqual(expect.objectContaining({id:pending.id,amount_cents:"50001"}));
+    }
+    expect(await listPendingManualCosts(app,{...pm,projectIds:[]},project)).toMatchObject({outcome:"OK",data:[]});
+    expect(await listPendingManualCosts(app,{...owner,companyId:other},project)).toMatchObject({outcome:"OK",data:[]});
+    expect((await listPendingManualCosts(app,{...owner,roles:["WORKER"]})).outcome).toBe("FORBIDDEN");
     const before=await withCompany(admin,companyId(company),client=>client.query("SELECT 1 FROM cost_entries WHERE company_id=$1 AND client_generated_id=$2",[company,large.clientGeneratedId]));
     expect(before.rowCount).toBe(0);
     expect((await decideManualCost(app,pm,pending.id!,"approve")).outcome).toBe("FORBIDDEN");
     const approved=await decideManualCost(app,owner,pending.id!,"approve");
     expect(approved).toMatchObject({outcome:"OK",data:{status:"APPROVED"}});
     expect(await decideManualCost(app,owner,pending.id!,"approve")).toEqual(approved);
+    const noLongerPending=await listPendingManualCosts(app,pm,project);
+    if(noLongerPending.outcome!=="OK") throw Error(noLongerPending.message);
+    expect(noLongerPending.data).not.toContainEqual(expect.objectContaining({id:pending.id}));
     const after=await withCompany(admin,companyId(company),client=>client.query<{amount:string}>("SELECT amount_cents::text AS amount FROM cost_entries WHERE company_id=$1 AND client_generated_id=$2",[company,large.clientGeneratedId]));
     expect(after.rows).toEqual([{amount:"50001"}]);
     const rejected=await createManualCost(app,actor,{...large,clientGeneratedId:randomUUID()});

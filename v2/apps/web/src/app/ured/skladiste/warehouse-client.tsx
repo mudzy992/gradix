@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import type { z } from "zod";
 import type { WarehousesResponse, StockBalanceResponse, StockCountsResponse, StockCountDetailResponse } from "@gradix/contracts";
 import { apiCall, jsonBody } from "@/api-client";
@@ -66,7 +67,7 @@ export function WarehouseClient({canManage,canPurchase}:{canManage:boolean;canPu
       {key:"warehouse",header:"Skladište",cell:r=>r.warehouse_name}, {key:"item",header:"Artikal",cell:r=>`${r.code} · ${r.name}`},
       {key:"balance",header:"Stanje",cell:r=>`${r.on_hand} ${r.unit}`}, {key:"min",header:"Minimum",cell:r=>`${r.min_quantity} ${r.unit}`},
       {key:"warning",header:"Upozorenje",cell:r=>r.below_minimum ? "Ispod minimuma" : "—"},
-      {key:"proposal",header:"Nabavka",cell:r=>r.below_minimum && canPurchase ? "Prijedlog nabavke još nije dostupan" : "—"},
+      {key:"proposal",header:"Nabavka",cell:r=>r.below_minimum && canPurchase ? <Link href={`/ured/nabavka?item=${encodeURIComponent(r.item_id)}&warehouse=${encodeURIComponent(r.warehouse_id)}`}>Predloži nabavku</Link> : "—"},
     ]} />
     {canManage ? <>
       <Card><FormSection title="Transfer između skladišta"><form onSubmit={sendTransfer}><FormGrid>

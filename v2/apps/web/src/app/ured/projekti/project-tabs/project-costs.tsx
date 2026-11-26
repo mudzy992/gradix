@@ -14,10 +14,13 @@ import { apiCall, jsonBody } from "@/api-client";
 import Link from "next/link";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Chip, DataTable, Dialog, EmptyState, FilterBar, Input, Select, Skeleton, Stat, Textarea,
+  Alert, Button, Chip, DataTable, Dialog, EmptyState, FilterBar, Select, Skeleton, Stat, Textarea,
 } from "@/components/ui/index";
 
 import type { CostEntryRow as CostEntry } from "@/server/cost-entry-types";
+import { ManualCostForm } from "./manual-cost-form";
+import type { PendingManualCostsResponse } from "@gradix/contracts";
+import type { z } from "zod";
 import type { CategoryRow } from "@/server/project-budget-types";
 
 type CostTotals = {
@@ -25,17 +28,6 @@ type CostTotals = {
   currency_code: string;
   pending_count: number;
   pending_quantity_by_unit: Array<{ unit: string; quantity: string }>;
-};
-
-type ManualForm = {
-  categoryId: string;
-  phaseId: string;
-  occurredOn: string;
-  amount: string;
-  currencyCode: "BAM" | "EUR" | "USD";
-  quantity: string;
-  unit: string;
-  note: string;
 };
 
 const STATUS_LABEL: Record<CostEntry["status"], string> = {
@@ -48,18 +40,22 @@ export function ProjectCosts({
   projectId,
   canManage,
   canBook = canManage,
+  canApproveManual = false,
 }: {
   projectId: string;
   canManage: boolean;
   /** `projects.costs.book` — ručni unos i storno. ACCOUNTANT vidi, ali ne knjiži. */
   canBook?: boolean;
+  canApproveManual?: boolean;
 }) {
   const [entries, setEntries] = useState<CostEntry[] | null>(null);
   const [totals, setTotals] = useState<CostTotals | null>(null);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [manual, setManual] = useState<ManualForm | null>(null);
+  const [manual, setManual] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<z.infer<typeof PendingManualCostsResponse>["requests"]>([]);
+  const [pendingError, setPendingError] = useState<string|null>(null);
   const [reversing, setReversing] = useState<CostEntry | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,15 +65,18 @@ export function ProjectCosts({
     setError(null);
     const query = new URLSearchParams({ projectId });
     if (statusFilter) query.set("status", statusFilter);
-    const [listResult, categoryResult] = await Promise.all([
+    const [listResult, categoryResult, pendingResult] = await Promise.all([
       apiCall<{ entries: CostEntry[]; totals: CostTotals }>(`/api/costs?${query.toString()}`),
       apiCall<{ categories: CategoryRow[] }>("/api/cost-categories"),
+      apiCall<z.infer<typeof PendingManualCostsResponse>>(`/api/costs/manual?projectId=${encodeURIComponent(projectId)}`),
     ]);
     if (!listResult.ok) {
       setError(listResult.message);
       setEntries(null);
       return;
     }
+    if(pendingResult.ok) { setPendingRequests(pendingResult.data.requests); setPendingError(null); }
+    else { setPendingError(pendingResult.message); }
     setEntries(listResult.data.entries);
     setTotals(listResult.data.totals);
     if (categoryResult.ok) {
@@ -96,33 +95,12 @@ export function ProjectCosts({
       .join(" · ");
   }, [totals]);
 
-  async function submitManual(event: React.FormEvent) {
-    event.preventDefault();
-    if (!manual) return;
-    setBusy(true);
-    setError(null);
-    const result = await apiCall<{ id?: string }>("/api/costs/manual", {
-      ...jsonBody({
-        projectId,
-        categoryId: manual.categoryId,
-        phaseId: manual.phaseId || null,
-        occurredOn: manual.occurredOn,
-        amount: manual.amount,
-        currencyCode: manual.currencyCode,
-        quantity: manual.quantity ? Number(manual.quantity) : undefined,
-        unit: manual.unit || null,
-        note: manual.note.trim() || null,
-      }),
-      method: "POST",
-    });
+  async function approveManual(id:string) {
+    setBusy(true); setError(null);
+    const result=await apiCall(`/api/costs/manual/${encodeURIComponent(id)}/approve`,jsonBody({}));
     setBusy(false);
-    if (!result.ok) {
-      setError(result.message);
-      return;
-    }
-    setManual(null);
-    setMessage("Trošak je knjižen. Ispravka ide kroz storno, ne brisanjem.");
-    await load();
+    if(!result.ok) {setError(result.message);return;}
+    setMessage("Ručni trošak je odobren i knjižen."); await load();
   }
 
   async function submitReverse(event: React.FormEvent) {
@@ -170,6 +148,17 @@ export function ProjectCosts({
         />
       </div>
 
+      <section aria-label="Ručni troškovi na čekanju">
+        <h2>Ručni troškovi na čekanju odobrenja</h2>
+        {pendingError ? <Alert tone="error" role="alert">{pendingError}</Alert> : null}
+        <DataTable caption="Zahtjevi ručnog troška na čekanju" rows={pendingRequests} rowKey={r=>r.id} emptyText="Nema zahtjeva na čekanju." columns={[
+          {key:"date",header:"Datum",cell:r=>formatDate(r.occurred_on)}, {key:"category",header:"Kategorija",cell:r=>r.category_name},
+          {key:"amount",header:"Iznos (feninga)",cell:r=>`${r.amount_cents} ${r.currency_code}`}, {key:"note",header:"Napomena",cell:r=>r.note ?? "—"},
+          {key:"status",header:"Status",cell:()=>"Čeka odobrenje"},
+          {key:"actions",header:"Radnja",cell:r=>canApproveManual ? <Button disabled={busy} onClick={()=>void approveManual(r.id)}>Odobri ručni trošak</Button> : "—"},
+        ]} />
+      </section>
+
       <FilterBar>
         <Select
           label="Status"
@@ -187,18 +176,7 @@ export function ProjectCosts({
         <div className="gx-inline-flex">
           <Button
             variant="primary"
-            onClick={() =>
-              setManual({
-                categoryId: categories[0]?.id ?? "",
-                phaseId: "",
-                occurredOn: new Date().toISOString().slice(0, 10),
-                amount: "",
-                currencyCode: totals?.currency_code === "EUR" ? "EUR" : totals?.currency_code === "USD" ? "USD" : "BAM",
-                quantity: "",
-                unit: "",
-                note: "",
-              })
-            }
+            onClick={() => setManual(true)}
           >
             + Ručni trošak
           </Button>
@@ -292,78 +270,7 @@ export function ProjectCosts({
         />
       )}
 
-      {manual ? (
-        <Dialog title="Ručni trošak" returnFocusTo={null} onClose={() => setManual(null)}>
-          <form className="gx-stack" onSubmit={submitManual}>
-            <Select
-              label="Kategorija"
-              required
-              value={manual.categoryId}
-              onChange={(event) => setManual({ ...manual, categoryId: event.target.value })}
-            >
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Datum troška"
-              type="date"
-              required
-              value={manual.occurredOn}
-              onChange={(event) => setManual({ ...manual, occurredOn: event.target.value })}
-            />
-            <Input
-              label="Iznos"
-              required
-              inputMode="decimal"
-              placeholder="npr. 120.00"
-              hint="Dvije decimale, npr. 120.00. Bez iznosa nema knjiženja."
-              value={manual.amount}
-              onChange={(event) => setManual({ ...manual, amount: event.target.value })}
-            />
-            <Select
-              label="Valuta"
-              value={manual.currencyCode}
-              onChange={(event) =>
-                setManual({ ...manual, currencyCode: event.target.value as ManualForm["currencyCode"] })
-              }
-            >
-              <option value="BAM">BAM</option>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
-            </Select>
-            <Input
-              label="Količina (opciono)"
-              inputMode="decimal"
-              value={manual.quantity}
-              onChange={(event) => setManual({ ...manual, quantity: event.target.value })}
-            />
-            <Input
-              label="Jedinica (opciono)"
-              maxLength={10}
-              value={manual.unit}
-              onChange={(event) => setManual({ ...manual, unit: event.target.value })}
-            />
-            <Textarea
-              label="Napomena"
-              rows={2}
-              maxLength={1000}
-              value={manual.note}
-              onChange={(event) => setManual({ ...manual, note: event.target.value })}
-            />
-            <div className="gx-inline-flex gx-mt-2">
-              <Button variant="quiet" onClick={() => setManual(null)}>
-                Otkaži
-              </Button>
-              <Button type="submit" variant="primary" disabled={busy || manual.categoryId === ""}>
-                Knjiži trošak
-              </Button>
-            </div>
-          </form>
-        </Dialog>
-      ) : null}
+      {manual ? <ManualCostForm projectId={projectId} categories={categories} currency={totals?.currency_code ?? "BAM"} onClose={()=>setManual(false)} onSaved={async text=>{setManual(false);setMessage(text);await load();}} /> : null}
 
       {reversing ? (
         <Dialog

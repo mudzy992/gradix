@@ -35,7 +35,7 @@ import { PATCH as maintenancePlanPatch } from "@/app/api/machines/[id]/maintenan
 import { GET as purchaseInvoicesGet, POST as purchaseInvoicesPost } from "@/app/api/purchase-invoices/route";
 import { GET as purchaseInvoiceGet, PATCH as purchaseInvoicePatch } from "@/app/api/purchase-invoices/[id]/route";
 import { POST as purchaseInvoiceApprove } from "@/app/api/purchase-invoices/[id]/approve/route";
-import { POST as materialIssuePost } from "@/app/api/material-issues/route";
+import { GET as materialIssueGet, POST as materialIssuePost } from "@/app/api/material-issues/route";
 import { GET as subContractsGet, POST as subContractsPost } from "@/app/api/subcontractor-contracts/route";
 import { GET as subContractGet, PATCH as subContractPatch } from "@/app/api/subcontractor-contracts/[id]/route";
 import { POST as subContractAmend } from "@/app/api/subcontractor-contracts/[id]/amend/route";
@@ -45,7 +45,7 @@ import { POST as subStatementApprove } from "@/app/api/subcontractor-statements/
 import { GET as purchaseOrdersGet, POST as purchaseOrdersPost } from "@/app/api/purchase-orders/route";
 import { GET as purchaseOrderGet, PATCH as purchaseOrderPatch } from "@/app/api/purchase-orders/[id]/route";
 import { POST as purchaseOrderSend } from "@/app/api/purchase-orders/[id]/send/route";
-import { POST as goodsReceiptPost } from "@/app/api/goods-receipts/route";
+import { GET as goodsReceiptGet, POST as goodsReceiptPost } from "@/app/api/goods-receipts/route";
 import { GET as purchaseRequestsGet, POST as purchaseRequestsPost } from "@/app/api/purchase-requests/route";
 import { GET as purchaseRequestGet, PATCH as purchaseRequestPatch } from "@/app/api/purchase-requests/[id]/route";
 import { POST as purchaseRequestSubmit } from "@/app/api/purchase-requests/[id]/submit/route";
@@ -245,7 +245,7 @@ import { GET as advancesGet, POST as advancesPost } from "@/app/api/workers/[id]
 
 import { POST as costManualApprove } from "@/app/api/costs/manual/[id]/approve/route";
 import { POST as costManualReject } from "@/app/api/costs/manual/[id]/reject/route";
-import { POST as costManualPost } from "@/app/api/costs/manual/route";
+import { GET as costManualGet, POST as costManualPost } from "@/app/api/costs/manual/route";
 import { POST as costReversePost } from "@/app/api/costs/[id]/reverse/route";
 import { GET as tasksGet, POST as taskPost } from "@/app/api/tasks/route";
 import { PATCH as taskPatch } from "@/app/api/tasks/[id]/route";
@@ -459,7 +459,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/purchase-invoices": { GET: purchaseInvoicesGet, POST: purchaseInvoicesPost },
   "/api/purchase-invoices/{id}": { GET: purchaseInvoiceGet, PATCH: purchaseInvoicePatch },
   "/api/purchase-invoices/{id}/approve": { POST: purchaseInvoiceApprove },
-  "/api/material-issues": { POST: materialIssuePost },
+  "/api/material-issues": { GET: materialIssueGet, POST: materialIssuePost },
   "/api/subcontractor-contracts": { GET: subContractsGet, POST: subContractsPost },
   "/api/subcontractor-contracts/{id}": { GET: subContractGet, PATCH: subContractPatch },
   "/api/subcontractor-contracts/{id}/amend": { POST: subContractAmend },
@@ -469,7 +469,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/purchase-orders": { GET: purchaseOrdersGet, POST: purchaseOrdersPost },
   "/api/purchase-orders/{id}": { GET: purchaseOrderGet, PATCH: purchaseOrderPatch },
   "/api/purchase-orders/{id}/send": { POST: purchaseOrderSend },
-  "/api/goods-receipts": { POST: goodsReceiptPost },
+  "/api/goods-receipts": { GET: goodsReceiptGet, POST: goodsReceiptPost },
   "/api/purchase-requests": { GET: purchaseRequestsGet, POST: purchaseRequestsPost },
   "/api/purchase-requests/{id}": { GET: purchaseRequestGet, PATCH: purchaseRequestPatch },
   "/api/purchase-requests/{id}/submit": { POST: purchaseRequestSubmit },
@@ -570,7 +570,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/me/payroll": { GET: myPayrollGet },
   "/api/workers/{id}/advances": { GET: advancesGet, POST: advancesPost },
 
-  "/api/costs/manual": { POST: costManualPost },
+  "/api/costs/manual": { GET: costManualGet, POST: costManualPost },
   "/api/costs/manual/{id}/approve": { POST: costManualApprove },
   "/api/costs/manual/{id}/reject": { POST: costManualReject },
   "/api/costs/{id}/reverse": { POST: costReversePost },
@@ -822,6 +822,23 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
   afterAll(async () => {
     await cleanFixtures();
     await admin.end();
+  });
+
+  it("F10B GET liste čuvaju autentikaciju, prava i kontrolne znakove", async () => {
+    const cases = [
+      {handler:materialIssueGet,path:"/api/material-issues",field:"issues"},
+      {handler:goodsReceiptGet,path:"/api/goods-receipts",field:"receipts"},
+      {handler:costManualGet,path:"/api/costs/manual",field:"requests"},
+    ];
+    for(const entry of cases) {
+      const response=await entry.handler(jsonRequest(`http://localhost${entry.path}`,null,"GET",ownerCookie));
+      expect(response.status,entry.path).toBe(200);
+      const result=await response.json() as {data:Record<string,unknown>};
+      expect(Array.isArray(result.data[entry.field])).toBe(true);
+      expect((await entry.handler(jsonRequest(`http://localhost${entry.path}`,null,"GET",workerCookie))).status).toBe(403);
+      expect((await entry.handler(jsonRequest(`http://localhost${entry.path}`,null,"GET"))).status).toBe(401);
+      expect((await entry.handler(jsonRequest(`http://localhost${entry.path}?q=%00`,null,"GET",ownerCookie))).status).toBe(400);
+    }
   });
 
   it("svaka ruta iz ROUTES s ulaznom površinom (tijelo/query/path) je obuhvaćena testom", () => {

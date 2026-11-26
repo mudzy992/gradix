@@ -14,7 +14,7 @@ export function canUsePurchaseProject(actor: PurchaseActor, projectId: string | 
 const uid = (p: string) => `${p}_${randomUUID().replace(/-/g, "")}`;
 const denied = {outcome:"FORBIDDEN",message:"Nemate pravo upravljanja nabavkom."} as const;
 const missing = {outcome:"NOT_FOUND",message:"Zahtjev ne postoji."} as const;
-const fields = "id,project_id,phase_id,requested_by_worker_id,needed_by::text,justification,status,total_estimated_cents::text,currency_code,created_by,created_at::text";
+const fields = "id,project_id,phase_id,requested_by_worker_id,needed_by::text,justification,status,total_estimated_cents::text,currency_code,approval_threshold_cents::text,created_by,created_at::text";
 
 type Header = { id:string; project_id:string|null; status:string; total_estimated_cents:string; currency_code:string; approval_threshold_cents:string|null };
 async function header(client:PoolClient, actor:PurchaseActor, id:string, lock=false):Promise<Header | null> {

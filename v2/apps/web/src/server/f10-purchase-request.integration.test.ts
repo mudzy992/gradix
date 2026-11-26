@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
+import { MaterialIssuesResponse, GoodsReceiptsResponse, PurchaseRequestsResponse } from "@gradix/contracts";
+import { listMaterialIssues, listGoodsReceipts } from "./phase-10b-list-service";
 import { createPurchaseRequest, getPurchaseRequest, listPurchaseRequests, patchPurchaseRequest, transitionPurchaseRequest, type PurchaseActor } from "./purchase-request-service";
 import { createPurchaseOrder, getPurchaseOrder, sendPurchaseOrder } from "./purchase-order-service";
 import { receiveGoods } from "./goods-receipt-service";
@@ -41,6 +43,10 @@ describeDb("F10A-2 zahtjevi nabavke",()=>{
     expect(created.outcome).toBe("OK"); if(created.outcome!=="OK") return;
     const id=created.data.id;
     expect(await transitionPurchaseRequest(app,manager,id,"submit")).toMatchObject({outcome:"OK",data:{approvalRequired:true}});
+    const submitted=await listPurchaseRequests(app,manager);
+    if(submitted.outcome!=="OK") throw Error(submitted.message);
+    expect(PurchaseRequestsResponse.safeParse({requests:submitted.data}).success).toBe(true);
+    expect(submitted.data).toContainEqual(expect.objectContaining({id,approval_threshold_cents:"100000"}));
     await admin.query("UPDATE companies SET purchase_approval_threshold_cents=200000 WHERE id=$1",[company]);
     expect((await transitionPurchaseRequest(app,manager,id,"approve")).outcome).toBe("FORBIDDEN");
     expect((await transitionPurchaseRequest(app,owner,id,"approve")).outcome).toBe("OK");
@@ -78,6 +84,15 @@ describeDb("F10A-2 zahtjevi nabavke",()=>{
     const firstInput={...base,clientGeneratedId:randomUUID(),items:[{orderItemId:line,itemId:item,quantity:"4",unitPriceCents:"125"}]};
     const first=await receiveGoods(app,owner,firstInput);
     expect(first).toMatchObject({outcome:"OK",data:{orderStatus:"PARTIALLY_RECEIVED",warnings:[]}});
+    const receipts=await listGoodsReceipts(app,manager);
+    expect(receipts.outcome).toBe("OK");
+    if(receipts.outcome==="OK") {
+      expect(GoodsReceiptsResponse.safeParse({receipts:receipts.data}).success).toBe(true);
+      expect(receipts.data).toContainEqual(expect.objectContaining({item_name:"Artikal",quantity:"4.000"}));
+    }
+    expect(await listGoodsReceipts(app,{...manager,projectIds:[]})).toMatchObject({outcome:"OK",data:[]});
+    expect(await listGoodsReceipts(app,{...owner,companyId:other})).toMatchObject({outcome:"OK",data:[]});
+    expect((await listGoodsReceipts(app,{...owner,roles:["WORKER"]})).outcome).toBe("FORBIDDEN");
     expect(await receiveGoods(app,owner,firstInput)).toEqual(first);
     expect((await receiveGoods(app,owner,{...firstInput,items:[{orderItemId:line,itemId:item,quantity:"3",unitPriceCents:"125"}]})).outcome).toBe("CONFLICT");
     const second=await receiveGoods(app,owner,{...base,clientGeneratedId:randomUUID(),items:[{orderItemId:line,itemId:item,quantity:"6",unitPriceCents:"125"}]});
@@ -101,6 +116,15 @@ describeDb("F10A-2 zahtjevi nabavke",()=>{
     const issued=await issueMaterial(app,owner,issue);
     expect(issued).toMatchObject({outcome:"OK",data:{amountCents:"63",offsetCents:"63"}});
     expect(await issueMaterial(app,owner,issue)).toEqual(issued);
+    const visible=await listMaterialIssues(app,manager);
+    expect(visible.outcome).toBe("OK");
+    if(visible.outcome==="OK") {
+      expect(MaterialIssuesResponse.safeParse({issues:visible.data}).success).toBe(true);
+      expect(visible.data).toContainEqual(expect.objectContaining({project_id:project,amount_cents:"63"}));
+    }
+    expect(await listMaterialIssues(app,{...manager,projectIds:[]})).toMatchObject({outcome:"OK",data:[]});
+    expect(await listMaterialIssues(app,{...owner,companyId:other})).toMatchObject({outcome:"OK",data:[]});
+    expect((await listMaterialIssues(app,{...owner,roles:["WORKER"]})).outcome).toBe("FORBIDDEN");
     expect((await issueMaterial(app,owner,{...issue,items:[{itemId:item,quantity:"0.6"}]})).outcome).toBe("CONFLICT");
     expect(await issueMaterial(app,owner,{...issue,clientGeneratedId:randomUUID()})).toMatchObject({outcome:"OK",data:{amountCents:"63",offsetCents:"63"}});
     const costs=await withCompany(admin,companyId(company),client=>client.query<{kind:string;amount:string}>("SELECT entry_kind AS kind,amount_cents::text AS amount FROM cost_entries WHERE company_id=$1 AND project_id=$2 AND source_type='PURCHASE' AND status='POSTED' ORDER BY amount_cents DESC",[company,project]));

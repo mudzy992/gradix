@@ -32,7 +32,7 @@ describe("skladište", () => {
     const user = userEvent.setup();
     const { container } = render(<WarehouseClient canManage canPurchase />);
     expect(await screen.findByText("Ispod minimuma")).toBeInTheDocument();
-    expect(screen.getByText("Prijedlog nabavke još nije dostupan")).toBeInTheDocument();
+    expect(screen.getByRole("link", {name:"Predloži nabavku"})).toHaveAttribute("href", "/ured/nabavka?item=i&warehouse=central");
     await user.click(screen.getByRole("button", { name: "Pregledaj popis" }));
     expect(await screen.findByRole("table", { name: "Stavke odabranog popisa" })).toHaveTextContent("2");
     await user.click(screen.getByRole("button", { name: "Primijeni ovaj popis" }));

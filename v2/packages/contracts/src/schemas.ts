@@ -5143,7 +5143,7 @@ export const PurchaseEmptyInput = z.object({}).strict();
 export const PurchaseRequestRow = z.object({
   id: z.string(), project_id: z.string().nullable(), phase_id: z.string().nullable(), requested_by_worker_id: z.string().nullable(),
   needed_by: z.string().nullable(), justification: z.string(), status: z.enum(["DRAFT","SUBMITTED","APPROVED","REJECTED","ORDERED","CLOSED","CANCELLED"]),
-  total_estimated_cents: z.string(), currency_code: z.string(), created_by: z.string(), created_at: z.string(),
+  total_estimated_cents: z.string(), currency_code: z.string(), approval_threshold_cents: z.string().nullable(), created_by: z.string(), created_at: z.string(),
 });
 export const PurchaseRequestsResponse = z.object({ requests: z.array(PurchaseRequestRow) });
 export const PurchaseRequestDetail = z.object({ request: PurchaseRequestRow, items: z.array(z.object({
@@ -5175,6 +5175,7 @@ export const GoodsReceiptInput=z.object({
   items:z.array(z.object({orderItemId:SafeText.min(1).max(128).nullable().optional(),itemId:SafeText.min(1).max(128),quantity:StockQuantity,unitPriceCents:PurchaseCents}).strict()).min(1).max(200),
 }).strict();
 export type GoodsReceiptInput=z.infer<typeof GoodsReceiptInput>;
+export const GoodsReceiptsResponse=z.object({receipts:z.array(z.object({id:z.string(),order_id:z.string().nullable(),partner_id:z.string(),warehouse_id:z.string(),received_at:z.string(),currency_code:z.string(),note:z.string().nullable(),item_id:z.string(),stock_item_id:z.string(),item_name:z.string(),unit:z.string(),quantity:z.string(),amount_cents:z.string()}))});
 export const GoodsReceiptResponse=z.object({id:z.string(),warnings:z.array(z.string()),orderStatus:z.string().nullable()});
 export const PurchaseInvoiceInput=z.object({
   partnerId:SafeText.min(1).max(128),invoiceNumber:SafeText.min(1).max(120),invoiceDate:z.iso.date(),dueDate:z.iso.date().nullable().optional(),
@@ -5200,6 +5201,15 @@ export const MaterialIssueInput=z.object({
   items:z.array(z.object({itemId:SafeText.min(1).max(128),quantity:StockQuantity}).strict()).min(1).max(200),
 }).strict();
 export type MaterialIssueInput=z.infer<typeof MaterialIssueInput>;
+export const MaterialIssuesResponse=z.object({issues:z.array(z.object({
+  id:z.string(),warehouse_id:z.string(),warehouse_name:z.string(),project_id:z.string().nullable(),phase_id:z.string().nullable(),
+  issued_at:z.string(),currency_code:z.string(),note:z.string().nullable(),below_minimum:z.boolean(),amount_cents:z.string(),
+}))});
+export const ManualCostListQuery=z.object({projectId:SafeText.min(1).max(128).optional()}).strict();
+export const PendingManualCostsResponse=z.object({requests:z.array(z.object({
+  id:z.string(),project_id:z.string(),phase_id:z.string().nullable(),category_id:z.string(),category_name:z.string(),
+  occurred_on:z.string(),amount_cents:z.string(),currency_code:z.string(),note:z.string().nullable(),attachment_id:z.string().nullable(),created_at:z.string(),
+}))});
 export const MaterialIssueResponse=z.object({id:z.string(),amountCents:z.string(),offsetCents:z.string(),belowMinimum:z.boolean()});
 const SubcontractPct=z.string().regex(/^(?:\d{1,2}(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/);
 export const SubcontractContractInput=z.object({
