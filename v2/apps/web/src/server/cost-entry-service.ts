@@ -1096,6 +1096,24 @@ export async function createManualCost(
     if (!project.rows[0]) {
       return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Projekat nije pronađen." };
     }
+    const category = await client.query<{ id: string }>(
+      "SELECT id FROM public.cost_categories WHERE company_id = $1 AND id = $2 AND is_active FOR SHARE",
+      [actor.companyId, input.categoryId],
+    );
+    if (!category.rows[0]) {
+      return { outcome: "VALIDATION_FAILED", code: "CATEGORY", message: "Aktivna kategorija troška nije pronađena." };
+    }
+    if (input.attachmentId) {
+      // Validacija mora biti PRIJE knjiženja: povratak VALIDATION_FAILED ne radi rollback transakcije.
+      const attachment = await client.query<{ id: string }>(
+        `SELECT id FROM public.attachments
+          WHERE company_id = $1 AND id = $2 AND entity_type = 'PROJECT' AND entity_id = $3 AND status = 'ready' FOR SHARE`,
+        [actor.companyId, input.attachmentId, input.projectId],
+      );
+      if (!attachment.rows[0]) {
+        return { outcome: "VALIDATION_FAILED", code: "ATTACHMENT", message: "Fotografija računa nije spremna ili ne pripada ovom projektu." };
+      }
+    }
     const currency: Currency = input.currencyCode ?? "BAM";
     const amount = money(input.amount, currency);
     const sourceId = `man_${randomUUID().replace(/-/g, "").slice(0, 18)}`;
@@ -1111,33 +1129,10 @@ export async function createManualCost(
       currency,
       quantity: input.quantity ?? null,
       unit: input.unit ?? null,
+      rateSnapshot: input.attachmentId ? { attachment_id: input.attachmentId } : null,
       note: input.note ?? null,
       actorId: actor.userId,
     });
-    if (input.attachmentId) {
-      /*
-       * Prilog mora biti ISTOG PROJEKTA i `ready`. Bez provjere projekta bi se ID priloga mogao
-       * „prebaciti“ sa tuđeg projekta (ili tuđe firme) — dozvola za prilog se provjerava na nivou
-       * firme, pa je ovo jedina tačka gdje se veza sa projektom potvrđuje.
-       */
-      const attachment = await client.query<{ id: string; status: string }>(
-        `SELECT id, status FROM public.attachments
-          WHERE company_id = $1 AND id = $2 AND entity_type = 'PROJECT' AND entity_id = $3`,
-        [actor.companyId, input.attachmentId, input.projectId],
-      );
-      const attachmentRow = attachment.rows[0];
-      if (!attachmentRow || attachmentRow.status !== "ready") {
-        return {
-          outcome: "VALIDATION_FAILED",
-          code: "ATTACHMENT",
-          message: "Fotografija računa nije spremna ili ne pripada ovom projektu.",
-        };
-      }
-      await client.query(
-        "UPDATE public.cost_entries SET rate_snapshot = jsonb_build_object('attachment_id', $3::text) WHERE company_id = $1 AND id = $2",
-        [actor.companyId, result.id, input.attachmentId],
-      );
-    }
     await writeAudit(client, {
       companyId: actor.companyId,
       actorId: actor.userId,

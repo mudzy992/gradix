@@ -109,6 +109,7 @@ GRANT SELECT, INSERT ON TABLE public.haul_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_daily_checks TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.machine_daily_check_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.partners TO gradix_app;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.partner_roles TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machine_faults TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.machine_fault_revisions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.approval_requests TO gradix_app;

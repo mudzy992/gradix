@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   averageIssueCostCents,
+  invoiceReceiptComparison,
+  invoiceReclassificationCents,
   purchaseNeedsApproval,
   stockCountDifference,
   subcontractorContractExceeded,
@@ -36,6 +38,34 @@ describe("F10: skladište, nabavka i podizvođači", () => {
     expect(averageIssueCostCents(0n, 0n, 1000n)).toBeNull();
     expect(averageIssueCostCents(0n, 1000n, 1000n)).toBe(0n);
     expect(() => averageIssueCostCents(-1n, 1n, 1n)).toThrow(RangeError);
+  });
+
+  it("djelimično razgraničenje ne knjiži isti materijal dvaput i ne gubi feninge", () => {
+    const invoice = 10001n;
+    const parts = [1000n, 1000n, 1000n];
+    let issued = 0n;
+    let credits = 0n;
+    for (const part of parts) {
+      const reclassification = invoiceReclassificationCents(invoice, 3000n, issued, part);
+      credits += reclassification;
+      issued += part;
+    }
+    expect(credits).toBe(invoice);
+    const issueCost = 10001n;
+    expect(invoice + issueCost - credits).toBe(issueCost);
+    expect(invoiceReclassificationCents(101n, 2000n, 0n, 1000n)).toBe(51n);
+    expect(invoiceReclassificationCents(101n, 2000n, 1000n, 1000n)).toBe(50n);
+    expect(() => invoiceReclassificationCents(100n, 1000n, 900n, 101n)).toThrow(RangeError);
+    expect(() => invoiceReclassificationCents(100n, 0n, 0n, 1n)).toThrow(RangeError);
+  });
+
+  it("neslaganje računa i prijema ne zamjenjuje nepostojeći prijem ili drugu valutu", () => {
+    const invoice = { invoiceCents: 10000n, invoiceCurrency: "BAM" };
+    expect(invoiceReceiptComparison({ ...invoice, receivedCents: 10000n, receiptCurrency: "BAM" })).toBe("MATCH");
+    expect(invoiceReceiptComparison({ ...invoice, receivedCents: 9999n, receiptCurrency: "BAM" })).toBe("PURCHASE_INVOICE_MISMATCH");
+    expect(invoiceReceiptComparison({ ...invoice, receivedCents: null, receiptCurrency: null })).toBe("NO_RECEIPT");
+    expect(invoiceReceiptComparison({ ...invoice, receivedCents: 10000n, receiptCurrency: "EUR" })).toBe("CURRENCY_MISMATCH");
+    expect(() => invoiceReceiptComparison({ ...invoice, receivedCents: -1n, receiptCurrency: "BAM" })).toThrow(RangeError);
   });
 
   it("prag odobrenja je strogo iznad praga", () => {

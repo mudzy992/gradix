@@ -63,7 +63,9 @@ DECLARE
     'public.machine_daily_checks_checklist_guard()',
     'public.project_assignment_machine_global_guard()',
     'public.machine_fault_open_service_order()',
-    'public.hse_incident_workers_guard()'
+    'public.hse_incident_workers_guard()',
+    'public.partner_roles_guard()',
+    'public.partners_sync_primary_role()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

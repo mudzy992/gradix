@@ -41,6 +41,7 @@ table	obligation_types	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Type li
 table	obligation_versions	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Version history is read/append; current-version sync updates an existing version; no delete path.
 table	obligations	SELECT;INSERT;UPDATE;DELETE	SELECT;INSERT;UPDATE;DELETE		Obligation create/renew/correct/delete and read.
 table	partners	SELECT;INSERT;UPDATE	-		R5.5 B15 partner catalog; FORCE RLS; no DELETE.
+table	partner_roles	SELECT;INSERT;UPDATE	-		F10 višestruke uloge partnera; FORCE RLS; deaktiviranje bez DELETE.
 table	password_history	SELECT;INSERT;DELETE	SELECT;INSERT;DELETE		Istorija hash-eva (max 3 po korisniku). DELETE je nužan za trim; servis je jedini put pisanja i bez DELETE-a bi trim tražio SECURITY DEFINER funkciju — dodatnu izvršivu površinu.
 table	password_resets	SELECT;INSERT;UPDATE	SELECT;INSERT;UPDATE;DELETE		Reset issue/lookup/claim/revoke; no hard-delete path.
 table	phase_dependencies	SELECT;INSERT;DELETE	-		F5 zavisnosti faza; pogrešno unesena zavisnost se briše (nije istorijski podatak), a `CHECK phase_id <> depends_on_phase_id` brani samoreferencu.

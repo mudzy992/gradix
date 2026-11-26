@@ -41,6 +41,42 @@ export function averageIssueCostCents(
   return (numerator + totalIncomingMilli / 2n) / totalIncomingMilli;
 }
 
+/**
+ * Razgraničenje već knjiženog dijela fakture pri izdavanju povezane robe. Koriste se
+ * kumulativni zaokruženi udjeli: zbir parcijalnih korekcija je tačno fakturisani iznos,
+ * ne zavisi od podjele izlaza i ne može premašiti fakturu. Pozivalac mora u istoj
+ * transakciji zaključati vezu račun–prijem i sačuvati prethodno razgraničenu količinu.
+ * Izvorni račun i izlaz ostaju zasebni zapisi; ova funkcija ne knjiži korekciju.
+ */
+export function invoiceReclassificationCents(
+  invoiceLineCents: bigint,
+  invoicedMilli: bigint,
+  previouslyIssuedMilli: bigint,
+  issuedMilli: bigint,
+): bigint {
+  if (invoiceLineCents < 0n || invoicedMilli <= 0n || previouslyIssuedMilli < 0n || issuedMilli < 0n ||
+      previouslyIssuedMilli + issuedMilli > invoicedMilli) {
+    throw new RangeError("Neispravni iznos ili količine razgraničenja računa");
+  }
+  const allocated = (quantity: bigint) => (invoiceLineCents * quantity + invoicedMilli / 2n) / invoicedMilli;
+  return allocated(previouslyIssuedMilli + issuedMilli) - allocated(previouslyIssuedMilli);
+}
+
+/** Poređenje iznosa je dozvoljeno samo za poznat prijem u istoj valuti; manjak podataka nije podudaranje. */
+export function invoiceReceiptComparison(input: {
+  invoiceCents: bigint;
+  invoiceCurrency: string;
+  receivedCents: bigint | null;
+  receiptCurrency: string | null;
+}): "MATCH" | "PURCHASE_INVOICE_MISMATCH" | "NO_RECEIPT" | "CURRENCY_MISMATCH" {
+  if (input.invoiceCents < 0n || (input.receivedCents !== null && input.receivedCents < 0n)) {
+    throw new RangeError("Iznosi računa i prijema ne mogu biti negativni");
+  }
+  if (input.receivedCents === null) return "NO_RECEIPT";
+  if (input.receiptCurrency === null || input.invoiceCurrency !== input.receiptCurrency) return "CURRENCY_MISMATCH";
+  return input.receivedCents === input.invoiceCents ? "MATCH" : "PURCHASE_INVOICE_MISMATCH";
+}
+
 /** Spec 11: iznad praga, ne na samom pragu, traži viši nivo odobrenja. */
 export function purchaseNeedsApproval(estimatedCents: bigint, thresholdCents: bigint): boolean {
   if (estimatedCents < 0n || thresholdCents < 0n) throw new RangeError("Iznos i prag ne mogu biti negativni");

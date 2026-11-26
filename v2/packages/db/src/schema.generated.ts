@@ -902,16 +902,31 @@ export interface ObligationVersions {
   version: number;
 }
 
-export interface Partners {
-  active: Generated<boolean>;
-  code: string;
+export interface PartnerRoles {
   company_id: string;
   created_at: Generated<Timestamp>;
+  id: string;
+  is_active: Generated<boolean>;
+  partner_id: string;
+  role: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface Partners {
+  active: Generated<boolean>;
+  address: string | null;
+  code: string;
+  company_id: string;
+  contact_person: string | null;
+  created_at: Generated<Timestamp>;
+  email: string | null;
   id: string;
   kind: string;
   name: string;
   note: string | null;
+  phone: string | null;
   updated_at: Generated<Timestamp>;
+  vat_number: string | null;
 }
 
 export interface PasswordHistory {
@@ -2055,6 +2070,7 @@ export interface DB {
   obligation_types: ObligationTypes;
   obligation_versions: ObligationVersions;
   obligations: Obligations;
+  partner_roles: PartnerRoles;
   partners: Partners;
   password_history: PasswordHistory;
   password_resets: PasswordResets;

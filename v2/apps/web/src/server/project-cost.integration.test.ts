@@ -12,7 +12,7 @@ import { withCompany, companyId } from "@gradix/db";
 import { GET as listRoute } from "@/app/api/costs/route";
 import { POST as rateRoute } from "@/app/api/machine-cost-rates/route";
 import { POST as priceRoute } from "@/app/api/fuel-entries/[id]/price/route";
-import { bookMachineWorkLogCostInCompany } from "./cost-entry-service";
+import { bookMachineWorkLogCostInCompany, createManualCost } from "./cost-entry-service";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -107,6 +107,7 @@ describeDb("R6.1 project cost web API", () => {
       // Ledger je append-only: teardown isključuje korisničke trigere za svoju transakciju.
       await client.query("SET LOCAL session_replication_role = replica");
       await client.query("DELETE FROM cost_entries WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM attachments WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM fuel_entries WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_cost_rate_snapshots WHERE company_id = $1", [COMPANY]);
       await client.query("DELETE FROM machine_cost_rates WHERE company_id = $1", [COMPANY]);
@@ -232,6 +233,44 @@ describeDb("R6.1 project cost web API", () => {
     expect(rows).toHaveLength(1);
     // 2 h × 100.00 = 200.00
     expect(rows[0]).toMatchObject({ amount: "200.00", status: "POSTED" });
+  });
+
+  it("ručni trošak ne knjiži neispravan prilog ili kategoriju, a spreman prilog zamrzava pri upisu", async () => {
+    const category = await withCompany(admin, companyId(COMPANY), async (client) => {
+      const rows = await client.query<{ id: string }>("SELECT id FROM cost_categories WHERE company_id = $1 AND is_active ORDER BY code LIMIT 1", [COMPANY]);
+      return rows.rows[0]!.id;
+    });
+    const actor = { companyId: COMPANY, userId: USER_OWNER, roles: ["OWNER"] as const };
+    const input = { projectId: PROJECT, categoryId: category, occurredOn: "2026-11-19", amount: "10.00" };
+    const count = async () => withCompany(admin, companyId(COMPANY), async (client) => {
+      const rows = await client.query<{ n: string }>("SELECT count(*)::text AS n FROM cost_entries WHERE company_id = $1 AND source_type = 'MANUAL'", [COMPANY]);
+      return rows.rows[0]!.n;
+    });
+    const before = await count();
+    expect(await createManualCost(admin, actor, { ...input, attachmentId: "missing" })).toMatchObject({ outcome: "VALIDATION_FAILED", code: "ATTACHMENT" });
+    expect(await count()).toBe(before);
+    expect(await createManualCost(admin, actor, { ...input, categoryId: "missing" })).toMatchObject({ outcome: "VALIDATION_FAILED", code: "CATEGORY" });
+    expect(await count()).toBe(before);
+    const unrelatedId = `att_other_${RUN}`;
+    await withCompany(admin, companyId(COMPANY), (client) => client.query(
+      `INSERT INTO attachments (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256, status, uploaded_at, created_by)
+       VALUES ($1,$2,'PROJECT','another-project',$3,'racun.pdf','application/pdf',10,$4,'ready',now(),$5)`,
+      [unrelatedId, COMPANY, `other/${RUN}`, "b".repeat(64), USER_OWNER],
+    ));
+    expect(await createManualCost(admin, actor, { ...input, attachmentId: unrelatedId })).toMatchObject({ outcome: "VALIDATION_FAILED", code: "ATTACHMENT" });
+    expect(await count()).toBe(before);
+    const attachmentId = `att_cost_${RUN}`;
+    await withCompany(admin, companyId(COMPANY), (client) => client.query(
+      `INSERT INTO attachments (id, company_id, entity_type, entity_id, object_key, file_name, content_type, size_bytes, sha256, status, uploaded_at, created_by)
+       VALUES ($1,$2,'PROJECT',$3,$4,'racun.pdf','application/pdf',10,$5,'ready',now(),$6)`,
+      [attachmentId, COMPANY, PROJECT, `test/${RUN}`, "a".repeat(64), USER_OWNER],
+    ));
+    const created = await createManualCost(admin, actor, { ...input, attachmentId });
+    expect(created).toMatchObject({ outcome: "OK", id: expect.any(String) });
+    const stored = await withCompany(admin, companyId(COMPANY), (client) => client.query<{ rate_snapshot: object }>(
+      "SELECT rate_snapshot FROM cost_entries WHERE company_id = $1 AND id = $2", [COMPANY, created.id],
+    ));
+    expect(stored.rows[0]?.rate_snapshot).toEqual({ attachment_id: attachmentId });
   });
 
   it("ACCOUNTANT vidi troškove, ali ne smije knjižiti ručni trošak", async () => {
