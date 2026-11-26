@@ -204,6 +204,7 @@ describeDb("F8 servis i održavanje — integraciono", () => {
       await client.query("DELETE FROM machine_faults WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM worker_rates WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM sessions WHERE company_id = $1", [CO_A]);
+      await client.query("DELETE FROM partner_roles WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM partners WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM projects WHERE company_id = $1", [CO_A]);
       await client.query("DELETE FROM machines WHERE company_id = $1", [CO_A]);

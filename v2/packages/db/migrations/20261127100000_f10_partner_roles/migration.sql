@@ -1,4 +1,6 @@
 -- F10: više uloga partnera, bez gubitka stare primarne vrste ili podataka.
+BEGIN;
+
 ALTER TABLE public.partners DROP CONSTRAINT partners_kind_check;
 ALTER TABLE public.partners ADD CONSTRAINT partners_kind_check
   CHECK (kind IN ('VENDOR', 'SERVICE', 'OTHER', 'CLIENT', 'SUBCONTRACTOR'));
@@ -41,14 +43,18 @@ CREATE POLICY partner_roles_tenant_isolation ON public.partner_roles
 
 CREATE FUNCTION public.partner_roles_guard() RETURNS trigger
 LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  primary_role TEXT;
 BEGIN
   IF NEW.company_id IS DISTINCT FROM OLD.company_id OR NEW.partner_id IS DISTINCT FROM OLD.partner_id OR NEW.role IS DISTINCT FROM OLD.role THEN
     RAISE EXCEPTION 'PARTNER_ROLE_IMMUTABLE';
   END IF;
-  IF NOT NEW.is_active AND EXISTS (
-    SELECT 1 FROM public.partners p WHERE p.company_id = NEW.company_id AND p.id = NEW.partner_id AND p.kind = NEW.role
-  ) THEN
-    RAISE EXCEPTION 'PARTNER_PRIMARY_ROLE_REQUIRED';
+  IF NOT NEW.is_active THEN
+    SELECT p.kind INTO primary_role FROM public.partners p
+     WHERE p.company_id = NEW.company_id AND p.id = NEW.partner_id FOR UPDATE;
+    IF primary_role = NEW.role THEN
+      RAISE EXCEPTION 'PARTNER_PRIMARY_ROLE_REQUIRED';
+    END IF;
   END IF;
   RETURN NEW;
 END
@@ -71,3 +77,8 @@ $$;
 REVOKE ALL ON FUNCTION public.partners_sync_primary_role() FROM PUBLIC, gradix_app;
 CREATE TRIGGER partners_sync_primary_role AFTER INSERT OR UPDATE OF kind ON public.partners
   FOR EACH ROW EXECUTE FUNCTION public.partners_sync_primary_role();
+
+INSERT INTO public.schema_migrations (name)
+VALUES ('20261127100000_f10_partner_roles') ON CONFLICT DO NOTHING;
+
+COMMIT;

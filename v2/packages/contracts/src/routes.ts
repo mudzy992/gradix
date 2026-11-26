@@ -157,6 +157,9 @@ import {
   MachineFaultsResponse,
   PartnerCreateInput,
   PartnerPatchInput,
+  PartnerRoleInput,
+  PartnerRolePatchInput,
+  PartnerRolesResponse,
   PartnerMutationOutcome,
   TenderCreateInput,
   TenderPatchInput,
@@ -1465,6 +1468,18 @@ export const ROUTES = [
     permission: "partners.manage",
     request: PartnerPatchInput,
     response: PartnerMutationOutcome,
+  },
+  {
+    method: "GET", path: "/api/partners/{id}/roles", summary: "Uloge partnera.",
+    auth: true, permission: "partners.manage", request: null, response: PartnerRolesResponse,
+  },
+  {
+    method: "POST", path: "/api/partners/{id}/roles", summary: "Dodavanje ili ponovno aktiviranje uloge partnera.",
+    auth: true, permission: "partners.manage", request: PartnerRoleInput, response: PartnerRolesResponse,
+  },
+  {
+    method: "PATCH", path: "/api/partners/{id}/roles", summary: "Promjena aktivnosti uloge partnera.",
+    auth: true, permission: "partners.manage", request: PartnerRolePatchInput, response: PartnerRolesResponse,
   },
   {
     method: "GET",

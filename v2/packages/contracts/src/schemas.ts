@@ -1865,6 +1865,15 @@ export const MachineFaultRejectInput = z.object({
 }).strict();
 export type MachineFaultRejectInput = z.infer<typeof MachineFaultRejectInput>;
 
+export const PartnerRole = z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT", "SUBCONTRACTOR"]);
+export type PartnerRole = z.infer<typeof PartnerRole>;
+
+export const PartnerRoleInput = z.object({ role: PartnerRole }).strict();
+export const PartnerRolePatchInput = z.object({ role: PartnerRole, isActive: z.boolean() }).strict();
+export const PartnerRolesResponse = z.object({
+  roles: z.array(z.object({ role: PartnerRole, isActive: z.boolean(), primary: z.boolean() })),
+});
+
 export const PartnerRow = z.object({
   id: z.string(),
   code: z.string(),

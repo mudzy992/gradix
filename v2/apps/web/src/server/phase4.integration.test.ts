@@ -175,7 +175,7 @@ describeDb("F4 mehanizacija — baza", () => {
         "approval_requests", "machine_faults", "machine_daily_checks", "check_templates",
         "attachments", "usage_overrides",
         "fuel_entries", "fuel_prices", "fuel_tanks", "hauls", "route_segments", "projects",
-        "machines", "partners", "workers", "sessions", "memberships",
+        "machines", "partner_roles", "partners", "workers", "sessions", "memberships",
       ]) {
         await db.query(`DELETE FROM ${table} WHERE company_id = $1`, [COMPANY]);
       }
