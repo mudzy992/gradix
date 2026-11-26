@@ -5,6 +5,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withCompany, companyId } from "@gradix/db";
 import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
+import ExcelJS from "exceljs";
+import { listHoursForExport } from "./hours-export-service";
+import { loadWorkHoursReport } from "./report-work-hours";
+import { renderReportPdf, renderReportXlsx } from "./report-render";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -60,8 +64,8 @@ describeDb("R6.2 hours export API", () => {
         [`mem_o_${RUN}`, USER_OWNER, COMPANY, `mem_a_${RUN}`, USER_ACCT, `mem_w_${RUN}`, USER_WORKER],
       );
       await client.query(
-        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at)
-         VALUES ($1,$2,'Amar','Hadžić','2024-01-01'::date)`,
+        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, team)
+         VALUES ($1,$2,'Amar','Hadžić','2024-01-01'::date,'Sjever')`,
         [WORKER, COMPANY],
       );
       await client.query(
@@ -126,6 +130,41 @@ describeDb("R6.2 hours export API", () => {
     );
     expect(res.status).toBe(200);
     expect(await res.text()).toContain("LOCKED");
+  });
+
+  it("CSV filteri projekat i tim sužavaju iste redove, a neispravan datum daje 400", async () => {
+    const base = "http://localhost/api/workdays/hours-export?from=2026-11-01&to=2026-11-30";
+    const options = { headers: { cookie: cookieOwner } };
+    const selected = await hoursExportGet(new NextRequest(`${base}&projectId=${PROJECT}&team=Sjever`, options));
+    expect(selected.status).toBe(200);
+    expect(await selected.text()).toContain("8.000");
+    const other = await hoursExportGet(new NextRequest(`${base}&projectId=${PROJECT}&team=Jug`, options));
+    expect(await other.text()).not.toContain("8.000");
+    const invalid = await hoursExportGet(new NextRequest("http://localhost/api/workdays/hours-export?from=2026-02-31&to=2026-03-01", options));
+    expect(invalid.status).toBe(400);
+  });
+
+  it("WORK_HOURS izvještaj koristi stvarne redove CSV izvoza u oba formata i sužava opseg", async () => {
+    const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      const actor = { userId: USER_OWNER, companyId: COMPANY, roles: ["PROJECT_MANAGER" as const], scope: "PROJECTS", projectIds: [PROJECT] };
+      const filters = { from: "2026-11-01", to: "2026-11-30", team: "Sjever", projectId: PROJECT };
+      const screenRows = await listHoursForExport(app, actor, filters);
+      const doc = await loadWorkHoursReport(app, actor, filters, new Date("2026-12-01T12:00:00Z"));
+      expect(screenRows).toHaveLength(1);
+      expect(doc.rows).toEqual([[screenRows[0]!.worker, screenRows[0]!.date, screenRows[0]!.project, "8.000", "LOCKED"]]);
+      const pdf = Buffer.from(renderReportPdf(doc)).toString("latin1");
+      expect(pdf).toContain("8.000"); expect(pdf).toContain(USER_OWNER);
+      const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(await renderReportXlsx(doc) as never);
+      const sheet = workbook.getWorksheet("Izvještaj")!;
+      expect(sheet.getCell("A4").value).toBe("Amar Hadžić");
+      expect(sheet.getCell("D4").value).toBe("8.000");
+      expect(sheet.getCell("E4").value).toBe("LOCKED");
+      expect((await loadWorkHoursReport(app, actor, {...filters, team: "Jug"})).rows).toEqual([]);
+      expect((await loadWorkHoursReport(app, {...actor, projectIds: []}, filters)).rows).toEqual([]);
+      expect((await loadWorkHoursReport(app, actor, {...filters, projectId: "drugi"})).rows).toEqual([]);
+      await expect(loadWorkHoursReport(app, {...actor, roles: ["WORKER"]}, filters)).rejects.toThrow("REPORT_FORBIDDEN");
+    } finally { await app.end(); }
   });
 
   it("WORKER dobija 403", async () => {

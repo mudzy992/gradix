@@ -9,3 +9,5 @@ export { companyId, setTenant, withCompany, type CompanyId } from "./tenant";
 export type { DB, Companies, Workers, Machines, Projects } from "./schema.generated";
 
 export { periodTotals } from "./period-totals";
+
+export { hoursExportSegments, type HoursExportSegment } from "./hours-export";

@@ -1,27 +1,15 @@
 /** R6.2: locked/confirmed worker hours for list + CSV. */
 import type { Pool } from "pg";
-import { companyId as toCompanyId, withCompany } from "@gradix/db";
+import { companyId as toCompanyId, withCompany, hoursExportSegments, type HoursExportSegment } from "@gradix/db";
 import { computeHoursFromInterval, visibleProjectIds } from "@gradix/domain";
 import { can } from "./permissions";
 import type { HoursExportActor, HoursExportFilters, HoursExportRow } from "./hours-export-types";
-
-type DbSeg = {
-  worker_id: string;
-  worker_name: string;
-  work_date: string;
-  project_id: string;
-  project_code: string;
-  project_name: string;
-  approval_status: string;
-  started_at: string;
-  ended_at: string;
-};
 
 function mapStatus(raw: string): "LOCKED" | "CONFIRMED" {
   return raw === "LOCKED" ? "LOCKED" : "CONFIRMED";
 }
 
-function aggregate(segments: DbSeg[]): HoursExportRow[] {
+function aggregate(segments: HoursExportSegment[]): HoursExportRow[] {
   const map = new Map<string, HoursExportRow & { hoursNum: number }>();
   for (const seg of segments) {
     const hours = computeHoursFromInterval(new Date(seg.started_at), new Date(seg.ended_at));
@@ -62,40 +50,10 @@ export async function listHoursForExport(
       scope: (actor.scope as "COMPANY" | "PROJECTS" | "SELF") ?? "COMPANY",
       projectIds: actor.projectIds ?? [],
     });
-    const params: unknown[] = [actor.companyId, filters.from, filters.to];
-    let scopeSql = "";
-    if (projectIds !== null) {
-      params.push(projectIds);
-      scopeSql = `AND e.project_id = ANY($${params.length}::text[])`;
-    }
-    const result = await client.query<DbSeg>(
-      `SELECT e.worker_id,
-              (w.first_name || ' ' || w.last_name) AS worker_name,
-              d.work_date::text AS work_date,
-              e.project_id,
-              p.code AS project_code,
-              p.name AS project_name,
-              d.approval_status,
-              e.started_at::text,
-              e.ended_at::text
-         FROM public.work_entries e
-         JOIN public.workdays d
-           ON d.company_id = e.company_id AND d.id = e.workday_id
-         JOIN public.workers w
-           ON w.company_id = e.company_id AND w.id = e.worker_id
-         JOIN public.projects p
-           ON p.company_id = e.company_id AND p.id = e.project_id
-        WHERE e.company_id = $1
-          AND e.kind = 'WORK'
-          AND e.end_state = 'KNOWN_END'
-          AND e.ended_at IS NOT NULL
-          AND d.approval_status IN ('LOCKED', 'FOREMAN_CONFIRMED')
-          AND d.work_date >= $2::date
-          AND d.work_date <= $3::date
-          ${scopeSql}
-        ORDER BY d.work_date, worker_name, p.code, e.started_at`,
-      params,
-    );
-    return aggregate(result.rows);
+    const rows = await hoursExportSegments(client, {
+      companyId: actor.companyId, from: filters.from, to: filters.to, projectIds,
+      projectId: filters.projectId, team: filters.team,
+    });
+    return aggregate(rows);
   });
 }

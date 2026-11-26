@@ -15,10 +15,12 @@ const HEADER = "radnik,datum,sati,projekat,status";
 const BOM = "\uFEFF";
 
 export function escapeCsvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Quoting alone does not stop spreadsheet applications interpreting a cell as a formula.
+  const safe = /^[\s]*[=+@-]/.test(value) ? `'${value}` : value;
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 export function buildHoursCsv(rows: readonly HoursCsvRow[]): string {

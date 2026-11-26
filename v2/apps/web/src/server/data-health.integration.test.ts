@@ -5,6 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadDataHealth } from "./data-health";
 import { loadDashboardActions } from "./dashboard-actions";
 import { globalSearch } from "./global-search";
+import { loadProjectCostReport } from "./report-project-costs";
+import { renderReportPdf, renderReportXlsx } from "./report-render";
+import ExcelJS from "exceljs";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appUrl = process.env.DATABASE_URL;
@@ -131,6 +134,23 @@ describeDb("data health pod stvarnim RLS-om", () => {
     const restricted=await loadDashboardActions(app,{...actor,scope:"PROJECTS",projectIds:["dh-pa"]});
     expect(restricted?.topMachines.map(m=>m.machineId)).toEqual(["dh-ma"]);
     expect((await loadDashboardActions(app,{...actor,scope:"SELF"}))?.topMachines).toEqual([]);
+  });
+
+  it("periodni trošak projekta koristi isti ledger, PDF/XLSX i ne širi projektni opseg", async () => {
+    const filters = { from: "2000-01-01", to: "2100-12-31", projectId: "dh-pa" };
+    const pm = { ...actor, roles: ["PROJECT_MANAGER" as const], scope: "PROJECTS" as const, projectIds: ["dh-pa"] };
+    const doc = await loadProjectCostReport(app, pm, filters, new Date("2026-11-01T12:00:00Z"));
+    expect(doc.rows).toEqual([["P", "A", "0.30", "BAM"]]);
+    const pdf = Buffer.from(renderReportPdf(doc)).toString("latin1");
+    expect(pdf).toContain("0.30"); expect(pdf).toContain("dh-u");
+    const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(await renderReportXlsx(doc) as never);
+    const sheet = workbook.getWorksheet("Izvještaj")!;
+    expect(sheet.getCell("C4").value).toBe("0.30");
+    expect(sheet.getCell("D4").value).toBe("BAM");
+    expect((await loadProjectCostReport(app, {...pm, projectIds: ["dh-pa2"]}, filters)).rows).toEqual([]);
+    expect((await loadProjectCostReport(app, {...pm, companyId: "dh-b", scope: "COMPANY", projectIds: null}, filters)).rows).toEqual([]);
+    expect((await loadProjectCostReport(app, pm, {...filters, from: "2000-01-01", to: "2000-12-31"})).rows[0]?.[2]).toBe("0.00");
+    await expect(loadProjectCostReport(app, {...pm, roles: ["WORKER"]}, filters)).rejects.toThrow("REPORT_FORBIDDEN");
   });
 
   it("pretraga čuva firmu, projektni opseg, dozvole, osjetljiva polja i doslovne znakove", async () => {

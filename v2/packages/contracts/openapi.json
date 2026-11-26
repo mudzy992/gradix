@@ -219997,6 +219997,26 @@
               "type": "string",
               "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
             }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "team",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
           }
         ]
       }

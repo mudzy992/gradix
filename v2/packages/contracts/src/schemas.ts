@@ -2402,6 +2402,8 @@ export type MachineCostRateMutationOutcome = z.infer<typeof MachineCostRateMutat
 export const HoursExportQuery = z.object({
   from: BusinessDate,
   to: BusinessDate,
+  projectId: SafeText.min(1).max(128).optional(),
+  team: SafeText.min(1).max(128).optional(),
 });
 export type HoursExportQuery = z.infer<typeof HoursExportQuery>;
 

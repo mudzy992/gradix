@@ -12,6 +12,8 @@ export type HoursExportActor = {
 export type HoursExportFilters = {
   from: string;
   to: string;
+  projectId?: string;
+  team?: string;
 };
 
 export type HoursExportRow = HoursCsvRow & {

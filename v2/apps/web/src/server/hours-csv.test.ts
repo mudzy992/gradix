@@ -6,6 +6,13 @@ describe("escapeCsvCell", () => {
     expect(escapeCsvCell("Amar Hadžić")).toBe("Amar Hadžić");
   });
 
+  it("sprečava formule iz imena i drugih tekstualnih ćelija", () => {
+    expect(escapeCsvCell("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
+    expect(escapeCsvCell("  +cmd")).toBe("'  +cmd");
+    expect(escapeCsvCell("@formula")).toBe("'@formula");
+    expect(escapeCsvCell("-cmd")).toBe("'-cmd");
+  });
+
   it("citira zarez, navodnike i novi red", () => {
     expect(escapeCsvCell("a,b")).toBe('"a,b"');
     expect(escapeCsvCell('kaže "da"')).toBe('"kaže ""da"""');
