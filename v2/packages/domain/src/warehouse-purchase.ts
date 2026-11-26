@@ -83,6 +83,21 @@ export function purchaseNeedsApproval(estimatedCents: bigint, thresholdCents: bi
   return estimatedCents > thresholdCents;
 }
 
+/** PM smije odobriti samo zahtjev do praga; iznad praga odlučuje OWNER ili ADMIN. */
+export function canApprovePurchase(roles: readonly string[], estimatedCents: bigint, thresholdCents: bigint): boolean {
+  const elevated = purchaseNeedsApproval(estimatedCents, thresholdCents);
+  return roles.includes("OWNER") || roles.includes("ADMIN") || (!elevated && roles.includes("PM"));
+}
+
+/** Status se izvodi iz ukupno zaprimljenih količina po stavci, ne iz broja prijema. */
+export function purchaseReceiptStatus(lines: readonly { orderedMilli: bigint; receivedMilli: bigint }[]): "SENT" | "PARTIALLY_RECEIVED" | "RECEIVED" {
+  if (!lines.length || lines.some((line) => line.orderedMilli <= 0n || line.receivedMilli < 0n)) {
+    throw new RangeError("Narudžbenica mora imati stavke s pozitivnom količinom i nenegativnim prijemom");
+  }
+  if (lines.every((line) => line.receivedMilli >= line.orderedMilli)) return "RECEIVED";
+  return lines.some((line) => line.receivedMilli > 0n) ? "PARTIALLY_RECEIVED" : "SENT";
+}
+
 /** Procenti su bazni poeni (10000 = 100 %); svaki odbitak se zaokružuje u feninzima. */
 export function subcontractorStatementAmounts(
   grossCents: bigint,

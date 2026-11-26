@@ -448,9 +448,11 @@ export {
 /* F10: formule skladišta, nabavke i podizvođača; knjiženje ostaje u servisima. */
 export {
   averageIssueCostCents,
+  canApprovePurchase,
   invoiceReceiptComparison,
   invoiceReclassificationCents,
   purchaseNeedsApproval,
+  purchaseReceiptStatus,
   stockCountDifference,
   subcontractorContractExceeded,
   subcontractorStatementAmounts,

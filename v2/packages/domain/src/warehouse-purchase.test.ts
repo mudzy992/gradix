@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   averageIssueCostCents,
+  canApprovePurchase,
   invoiceReceiptComparison,
   invoiceReclassificationCents,
   purchaseNeedsApproval,
+  purchaseReceiptStatus,
   stockCountDifference,
   subcontractorContractExceeded,
   subcontractorStatementAmounts,
@@ -72,6 +74,23 @@ describe("F10: skladište, nabavka i podizvođači", () => {
     expect(purchaseNeedsApproval(100000n, 100000n)).toBe(false);
     expect(purchaseNeedsApproval(100001n, 100000n)).toBe(true);
     expect(() => purchaseNeedsApproval(-1n, 100000n)).toThrow(RangeError);
+    expect(canApprovePurchase(["PM"], 100000n, 100000n)).toBe(true);
+    expect(canApprovePurchase(["PM"], 100001n, 100000n)).toBe(false);
+    expect(canApprovePurchase(["OWNER"], 100001n, 100000n)).toBe(true);
+    expect(canApprovePurchase(["ADMIN"], 100001n, 100000n)).toBe(true);
+    expect(canApprovePurchase(["ACCOUNTANT"], 1n, 100000n)).toBe(false);
+  });
+
+  it("status prijema zavisi od kumulativne količine svake stavke", () => {
+    const first = {orderedMilli: 3000n, receivedMilli: 0n};
+    const second = {orderedMilli: 2000n, receivedMilli: 0n};
+    expect(purchaseReceiptStatus([first,second])).toBe("SENT");
+    expect(purchaseReceiptStatus([{...first,receivedMilli:3000n},second])).toBe("PARTIALLY_RECEIVED");
+    expect(purchaseReceiptStatus([{...first,receivedMilli:3000n},{...second,receivedMilli:1999n}])).toBe("PARTIALLY_RECEIVED");
+    expect(purchaseReceiptStatus([{...first,receivedMilli:3000n},{...second,receivedMilli:2000n}])).toBe("RECEIVED");
+    expect(() => purchaseReceiptStatus([])).toThrow(RangeError);
+    expect(() => purchaseReceiptStatus([{orderedMilli:0n,receivedMilli:0n}])).toThrow(RangeError);
+    expect(() => purchaseReceiptStatus([{orderedMilli:1n,receivedMilli:-1n}])).toThrow(RangeError);
   });
 
   it("računa bruto, zadržavanje, garanciju i neto u feninzima", () => {

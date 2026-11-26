@@ -117154,7 +117154,8 @@
                                   "VENDOR",
                                   "SERVICE",
                                   "OTHER",
-                                  "CLIENT"
+                                  "CLIENT",
+                                  "SUBCONTRACTOR"
                                 ]
                               },
                               "note": {
@@ -118924,7 +118925,8 @@
                       "VENDOR",
                       "SERVICE",
                       "OTHER",
-                      "CLIENT"
+                      "CLIENT",
+                      "SUBCONTRACTOR"
                     ]
                   },
                   "note": {
@@ -119866,7 +119868,8 @@
                       "VENDOR",
                       "SERVICE",
                       "OTHER",
-                      "CLIENT"
+                      "CLIENT",
+                      "SUBCONTRACTOR"
                     ]
                   },
                   "note": {

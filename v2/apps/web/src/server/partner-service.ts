@@ -5,7 +5,7 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import type { FaultActor, MutationOutcome, PartnerCreateInput, PartnerRow } from "./machine-fault-types";
 
-export const PARTNER_KINDS = ["VENDOR", "SERVICE", "OTHER", "CLIENT"] as const;
+export const PARTNER_KINDS = ["VENDOR", "SERVICE", "OTHER", "CLIENT", "SUBCONTRACTOR"] as const;
 export type PartnerKind = (typeof PARTNER_KINDS)[number];
 
 export type PartnerPatchInput = {

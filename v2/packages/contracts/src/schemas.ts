@@ -1878,7 +1878,7 @@ export const PartnerRow = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string(),
-  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]),
+  kind: PartnerRole,
   note: z.string().nullable(),
   active: z.boolean(),
 });
@@ -1892,14 +1892,14 @@ export type PartnersResponse = z.infer<typeof PartnersResponse>;
 export const PartnerCreateInput = z.object({
   code: SafeText.min(1).max(64),
   name: SafeText.min(1).max(200),
-  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]),
+  kind: PartnerRole,
   note: SafeText.max(2000).nullable().optional(),
 }).strict();
 export type PartnerCreateInput = z.infer<typeof PartnerCreateInput>;
 
 export const PartnerPatchInput = z.object({
   name: SafeText.min(1).max(200).optional(),
-  kind: z.enum(["VENDOR", "SERVICE", "OTHER", "CLIENT"]).optional(),
+  kind: PartnerRole.optional(),
   note: SafeText.max(2000).nullable().optional(),
   active: z.boolean().optional(),
 }).strict();

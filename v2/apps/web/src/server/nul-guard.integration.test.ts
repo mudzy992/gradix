@@ -32,6 +32,15 @@ import { GET as maintenanceTemplatesGet, POST as maintenanceTemplatesPost } from
 import { PATCH as maintenanceTemplatePatch } from "@/app/api/maintenance-templates/[id]/route";
 import { GET as maintenancePlansGet, POST as maintenancePlansPost } from "@/app/api/machines/[id]/maintenance-plans/route";
 import { PATCH as maintenancePlanPatch } from "@/app/api/machines/[id]/maintenance-plans/[planId]/route";
+import { GET as warehousesGet, POST as warehousesPost } from "@/app/api/warehouses/route";
+import { PATCH as warehousePatch } from "@/app/api/warehouses/[id]/route";
+import { GET as stockBalanceGet } from "@/app/api/stock/balance/route";
+import { POST as stockLevelPost } from "@/app/api/stock-items/[id]/levels/route";
+import { POST as stockTransferPost } from "@/app/api/stock-transfers/route";
+import { GET as stockCountsGet, POST as stockCountsPost } from "@/app/api/stock-counts/route";
+import { GET as stockCountGet } from "@/app/api/stock-counts/[id]/route";
+import { POST as stockCountApply } from "@/app/api/stock-counts/[id]/apply/route";
+import { GET as partnerRolesGet, POST as partnerRolesPost, PATCH as partnerRolesPatch } from "@/app/api/partners/[id]/roles/route";
 import { GET as stockItemsGet, POST as stockItemsPost } from "@/app/api/stock-items/route";
 import { PATCH as stockItemPatch } from "@/app/api/stock-items/[id]/route";
 import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/stock-movements/route";
@@ -425,6 +434,15 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/machine-faults/{id}/reject": { POST: machineFaultRejectRoute },
   "/api/partners": { POST: partnersPost },
   "/api/partners/{id}": { PATCH: partnersPatch },
+  "/api/partners/{id}/roles": { GET: partnerRolesGet, POST: partnerRolesPost, PATCH: partnerRolesPatch },
+  "/api/warehouses": { GET: warehousesGet, POST: warehousesPost },
+  "/api/warehouses/{id}": { PATCH: warehousePatch },
+  "/api/stock/balance": { GET: stockBalanceGet },
+  "/api/stock-items/{id}/levels": { POST: stockLevelPost },
+  "/api/stock-transfers": { POST: stockTransferPost },
+  "/api/stock-counts": { GET: stockCountsGet, POST: stockCountsPost },
+  "/api/stock-counts/{id}": { GET: stockCountGet },
+  "/api/stock-counts/{id}/apply": { POST: stockCountApply },
   "/api/tenders": { GET: tendersGet, POST: tendersPost },
   "/api/tenders/{id}": { GET: tenderGet, PATCH: tendersPatch },
   "/api/tenders/{id}/convert": { POST: tendersConvertPost },
