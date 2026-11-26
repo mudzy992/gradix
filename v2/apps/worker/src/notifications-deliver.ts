@@ -56,8 +56,8 @@ export async function deliverNotifications(
     await client.query("BEGIN");
     await client.query("SELECT set_config('app.company_id', $1, true)", [options.companyId]);
 
-    const pending = await client.query<{ id: string; user_id: string | null; kind: string }>(
-      `SELECT n.id, n.user_id, n.kind
+    const pending = await client.query<{ id: string; user_id: string | null; kind: string; dedupe_key: string | null }>(
+      `SELECT n.id, n.user_id, n.kind, n.dedupe_key
          FROM public.notifications n
         WHERE n.company_id = $1
         ORDER BY n.created_at
@@ -68,6 +68,9 @@ export async function deliverNotifications(
     for (const row of pending.rows) {
       outcome.processed += 1;
       for (const channel of ["EMAIL", "PUSH"] as const) {
+        // Scheduled report owns its EMAIL delivery and attachment; the generic adapter must
+        // not create or retry it, particularly when the SMTP outcome is ambiguous.
+        if (channel === "EMAIL" && row.kind === "report.ready" && row.dedupe_key?.startsWith("monthly-report:")) continue;
         const configured = channel === "EMAIL" ? emailOk : pushOk;
         if (!configured) {
           const inserted = await client.query(

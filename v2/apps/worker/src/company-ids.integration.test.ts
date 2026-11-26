@@ -4,6 +4,8 @@ import { Client, Pool } from "pg";
 import PgBoss from "pg-boss";
 import { queueHealth } from "../../web/src/server/queue-health";
 import { grantQueueHealthRead } from "./queue-health-grants";
+import { runScheduledReports } from "./reports-scheduled";
+import { deliverNotifications } from "./notifications-deliver";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { listActiveCompanyIds } from "./company-ids";
 import { scanBudgetThresholds } from "./budget-thresholds";
@@ -77,6 +79,43 @@ describeDb("worker enumeracija pod RLS", () => {
     expect(removed).toEqual(["stale-key"]);
     expect((await admin.query("SELECT status FROM public.attachments WHERE id='stale'")).rows[0]).toEqual({status:"deleted"});
     expect(await purgeAttachments(app, {logger, onlyCompanyId:"worker-a", removeObject:async()=>undefined})).toMatchObject({staleDropped:0});
+  });
+  it("mjesečni izvještaj je opcionalan, bez SMTP je blokiran, poslije šalje jednom", async () => {
+    const now = new Date("2026-12-03T10:00:00Z");
+    expect(await runScheduledReports(app,{logger,now,send:null})).toMatchObject({companies:0,blocked:0});
+    await admin.query("UPDATE public.companies SET monthly_report_enabled=true,monthly_report_recipients=ARRAY['owner@example.test'] WHERE id='worker-a'");
+    expect(await runScheduledReports(app,{logger,now,send:null,onlyCompanyId:"worker-a"})).toMatchObject({blocked:1});
+    expect(await runScheduledReports(app,{logger,now,send:null,onlyCompanyId:"worker-a"})).toMatchObject({blocked:1});
+    const statuses=await admin.query("SELECT channel,status FROM public.notification_deliveries WHERE company_id='worker-a' ORDER BY channel");
+    expect(statuses.rows).toEqual([{channel:"EMAIL",status:"BLOCKED_NO_PROVIDER"},{channel:"IN_APP",status:"SENT"}]);
+    let delivered=0;
+    const send=async (mail:{pdf:Buffer;recipients:string[]})=>{delivered++;expect(mail.pdf.subarray(0,8).toString()).toBe("%PDF-1.4");expect(mail.recipients).toEqual(["owner@example.test"]);};
+    expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({sent:1});
+    expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({duplicate:1});
+    expect(delivered).toBe(1);
+    const jobs=await admin.query("SELECT company_id,period_from::text,period_to::text,status FROM public.report_jobs");
+    expect(jobs.rows).toEqual([{company_id:"worker-a",period_from:"2026-11-01",period_to:"2026-11-30",status:"DONE"}]);
+  });
+  it("SMTP pokušaj se evidentira prije slanja; konkurentni prolaz i greška ne šalju ponovo", async () => {
+    const now = new Date("2027-01-03T10:00:00Z");
+    let started!: () => void, release!: () => void;
+    const sending = new Promise<void>(resolve => { started = resolve; });
+    const waiting = new Promise<void>(resolve => { release = resolve; });
+    let calls = 0;
+    const send = async () => { calls++; started(); await waiting; throw new Error("SMTP ishod nepoznat"); };
+    const first = runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"});
+    await sending;
+    try {
+      expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({indeterminate:1});
+      await deliverNotifications(app,{companyId:"worker-a",logger,env:{SMTP_HOST:"smtp",SMTP_FROM:"a@example.test"}});
+      const row=await admin.query(`SELECT d.status,d.attempts FROM public.notification_deliveries d
+        JOIN public.notifications n ON n.id=d.notification_id WHERE n.company_id='worker-a'
+          AND n.dedupe_key='monthly-report:2026-12-01' AND d.channel='EMAIL'`);
+      expect(row.rows).toEqual([{status:"PENDING",attempts:1}]);
+    } finally { release(); }
+    expect(await first).toMatchObject({failed:1});
+    expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({indeterminate:1});
+    expect(calls).toBe(1);
   });
   it("queue health prikazuje raspored i poslove bez pristupa payloadu", async () => {
     expect(await queueHealth(app)).toMatchObject({available:false,jobs:[]});
