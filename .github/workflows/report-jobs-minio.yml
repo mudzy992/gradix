@@ -51,7 +51,7 @@ jobs:
         working-directory: v2
         run: |
           psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS"
-          docker run -d --name report-flow-minio -p 9000:9000 -e MINIO_ROOT_USER="$REPORT_FLOW_MINIO_ACCESS_KEY" -e MINIO_ROOT_PASSWORD="$REPORT_FLOW_MINIO_SECRET_KEY" minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          docker run -d --name report-flow-minio -p 9000:9000 -e MINIO_ROOT_USER="$REPORT_FLOW_MINIO_ACCESS_KEY" -e MINIO_ROOT_PASSWORD="$REPORT_FLOW_MINIO_SECRET_KEY" minio/minio:RELEASE.2025-09-07T16-13-09Z server /data 2>/tmp/report-minio-error || { echo "::error::MinIO docker: $(tail -1 /tmp/report-minio-error)"; exit 1; }
           for i in $(seq 1 60); do curl -fsS "$REPORT_FLOW_MINIO_ENDPOINT/minio/health/ready" >/dev/null && break; sleep 1; done
           cd apps/web
           node --input-type=module -e 'import {S3Client,CreateBucketCommand} from "@aws-sdk/client-s3"; const c=new S3Client({endpoint:process.env.REPORT_FLOW_MINIO_ENDPOINT,region:"us-east-1",forcePathStyle:true,credentials:{accessKeyId:process.env.REPORT_FLOW_MINIO_ACCESS_KEY,secretAccessKey:process.env.REPORT_FLOW_MINIO_SECRET_KEY}}); await c.send(new CreateBucketCommand({Bucket:process.env.REPORT_FLOW_MINIO_BUCKET})); c.destroy();'
