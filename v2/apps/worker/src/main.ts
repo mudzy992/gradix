@@ -21,6 +21,7 @@ import { purgeSyncPayloads } from "./sync-purge";
 import { scanBudgetThresholds } from "./budget-thresholds";
 import { refreshDailyRollups } from "./rollup-nightly";
 import { createObjectRemover } from "./object-storage";
+import { grantQueueHealthRead } from "./queue-health-grants";
 
 const config = loadConfig();
 
@@ -120,6 +121,8 @@ async function main(): Promise<void> {
   boss.on("error", (error) => logger.error("pg-boss greška", { message: error.message }));
 
   await boss.start();
+  try { await grantQueueHealthRead(boss.getDb()); }
+  catch (error) { logger.warn("queue health: operativni pregled nije dostupan", { message: error instanceof Error ? error.message : String(error) }); }
   // `createQueue` je idempotentan; šema reda mora postojati prije `work`.
   await boss.createQueue(JOB_NAMES.pingHealth);
   await boss.createQueue(JOB_NAMES.notificationsDeliver);

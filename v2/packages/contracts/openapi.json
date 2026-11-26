@@ -6065,6 +6065,71 @@
                         },
                         "stale": {
                           "type": "boolean"
+                        },
+                        "jobs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "cron": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "timezone": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "active": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "created": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "retry": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "failed": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "lastCompletedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "description": "ISO 8601, UTC"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "cron",
+                              "timezone",
+                              "active",
+                              "created",
+                              "retry",
+                              "failed",
+                              "lastCompletedAt"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -6076,7 +6141,8 @@
                         "completed",
                         "stuck",
                         "lastPingAt",
-                        "stale"
+                        "stale",
+                        "jobs"
                       ],
                       "additionalProperties": false
                     },

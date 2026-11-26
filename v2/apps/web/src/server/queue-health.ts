@@ -24,14 +24,16 @@ export type QueueHealth = {
   lastPingAt: string | null;
   /** `true` kad canarinac nije prošao duže od 30 min. */
   stale: boolean;
+  jobs: Array<{ name: string; cron: string | null; timezone: string | null; active: number; created: number;
+    retry: number; failed: number; lastCompletedAt: string | null }>;
 };
 
 export async function queueHealth(pool: Pool): Promise<QueueHealth> {
   const schema = await pool.query<{ exists: boolean }>(
-    "SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'pgboss') AS exists",
+    "SELECT coalesce((SELECT has_schema_privilege(current_user,n.oid,'USAGE') AND has_column_privilege(current_user,to_regclass('pgboss.job'),'state','SELECT') AND has_column_privilege(current_user,to_regclass('pgboss.schedule'),'cron','SELECT') FROM pg_namespace n WHERE n.nspname='pgboss'),false) AS exists",
   );
   if (schema.rows[0]?.exists !== true) {
-    return { available: false, active: 0, created: 0, retry: 0, failed: 0, completed: 0, stuck: 0, lastPingAt: null, stale: true };
+    return { available: false, active: 0, created: 0, retry: 0, failed: 0, completed: 0, stuck: 0, lastPingAt: null, stale: true, jobs: [] };
   }
 
   const counts = await pool.query<Record<string, number>>(
@@ -51,6 +53,17 @@ export async function queueHealth(pool: Pool): Promise<QueueHealth> {
       WHERE name = 'ping.health' AND state = 'completed'`,
   );
 
+  const jobs = await pool.query<{ name: string; cron: string | null; timezone: string | null; active: number;
+    created: number; retry: number; failed: number; last_completed: Date | null }>(
+    `SELECT coalesce(s.name,j.name) AS name, s.cron, s.timezone, coalesce(j.active,0)::int AS active,
+      coalesce(j.created,0)::int AS created, coalesce(j.retry,0)::int AS retry, coalesce(j.failed,0)::int AS failed,
+      j.last_completed FROM pgboss.schedule s FULL JOIN (
+        SELECT name,count(*) FILTER (WHERE state='active')::int AS active,
+          count(*) FILTER (WHERE state='created')::int AS created,count(*) FILTER (WHERE state='retry')::int AS retry,
+          count(*) FILTER (WHERE state='failed')::int AS failed,max(completed_on) FILTER (WHERE state='completed') AS last_completed
+        FROM pgboss.job GROUP BY name
+      ) j ON j.name=s.name ORDER BY name`,
+  );
   const lastPing = ping.rows[0]?.last_ping ?? null;
   const row = counts.rows[0] ?? {};
   return {
@@ -63,5 +76,8 @@ export async function queueHealth(pool: Pool): Promise<QueueHealth> {
     stuck: Number(row.stuck ?? 0),
     lastPingAt: lastPing ? new Date(lastPing).toISOString() : null,
     stale: !lastPing || Date.now() - new Date(lastPing).getTime() > 30 * 60_000,
+    jobs: jobs.rows.map(job => ({ name:job.name, cron:job.cron, timezone:job.timezone, active:job.active,
+      created:job.created, retry:job.retry, failed:job.failed,
+      lastCompletedAt:job.last_completed ? new Date(job.last_completed).toISOString() : null })),
   };
 }

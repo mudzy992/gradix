@@ -1,6 +1,9 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client, Pool } from "pg";
+import PgBoss from "pg-boss";
+import { queueHealth } from "../../web/src/server/queue-health";
+import { grantQueueHealthRead } from "./queue-health-grants";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { listActiveCompanyIds } from "./company-ids";
 import { scanBudgetThresholds } from "./budget-thresholds";
@@ -75,6 +78,21 @@ describeDb("worker enumeracija pod RLS", () => {
     expect((await admin.query("SELECT status FROM public.attachments WHERE id='stale'")).rows[0]).toEqual({status:"deleted"});
     expect(await purgeAttachments(app, {logger, onlyCompanyId:"worker-a", removeObject:async()=>undefined})).toMatchObject({staleDropped:0});
   });
+  it("queue health prikazuje raspored i poslove bez pristupa payloadu", async () => {
+    expect(await queueHealth(app)).toMatchObject({available:false,jobs:[]});
+    const boss = new PgBoss({connectionString:dbUrl.toString(),schema:"pgboss"});
+    await boss.start();
+    try {
+      await boss.createQueue("rollup.nightly");
+      await boss.schedule("rollup.nightly","0 2 * * *");
+      await boss.send("rollup.nightly",{secret:"privatno"});
+      await grantQueueHealthRead(boss.getDb());
+      const health=await queueHealth(app);
+      expect(health.available).toBe(true);
+      expect(health.jobs).toContainEqual(expect.objectContaining({name:"rollup.nightly",cron:"0 2 * * *",created:1}));
+      await expect(app.query("SELECT data FROM pgboss.job")).rejects.toMatchObject({code:"42501"});
+    } finally { await boss.stop(); }
+  }, 30_000);
   it("postojeći poslovi obrađuju svaku firmu unutar vlastitog tenant konteksta", async () => {
     for (const id of ["worker-a", "worker-b"]) {
       expect(await scanBudgetThresholds(app, { logger, onlyCompanyId: id })).toMatchObject({ companiesScanned: 1, projectsChecked: 1 });

@@ -133,6 +133,9 @@ export const QueueHealthResponse = z.object({
   stuck: z.number(),
   lastPingAt: IsoDate.nullable(),
   stale: z.boolean(),
+  jobs: z.array(z.object({ name: z.string(), cron: z.string().nullable(), timezone: z.string().nullable(),
+    active: z.number().int().nonnegative(), created: z.number().int().nonnegative(), retry: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(), lastCompletedAt: IsoDate.nullable() })),
 });
 export type QueueHealthResponse = z.infer<typeof QueueHealthResponse>;
 
