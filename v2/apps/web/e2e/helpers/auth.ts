@@ -160,7 +160,7 @@ export async function loginUi(page: Page, email: string): Promise<void> {
   const loginResponse = page.waitForResponse((response) => response.url().includes("/api/auth/login"), {
     timeout: 20_000,
   });
-  await page.getByRole("button", { name: "Prijavi se" }).click();
+  await page.getByRole("button", { name: "Prijavi se", exact: true }).click();
 
   // Drugi korak: polje za kod. `isVisible` odmah poslije prikaza lozinke; bez čekanja bi
   // test prošao i kad 2FA nije ni tražena (lažno zeleno).

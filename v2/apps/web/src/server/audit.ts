@@ -25,6 +25,9 @@ export const AUDIT_ACTIONS = [
   "user.activated",
   "user.membership_changed",
   "session.revoked_all",
+  "passkey.registered",
+  "passkey.deleted",
+  "passkey.login",
   // R2a
   "worker.created",
   "worker.updated",
@@ -237,6 +240,7 @@ export const AUDIT_ACTIONS = [
 
 export const AUDIT_ENTITY_TYPES = [
   "invitation",
+  "passkey",
   "user",
   "session",
   "worker",
@@ -299,6 +303,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "user.activated": "Osoba aktivirana",
   "user.membership_changed": "Promijenjene role ili opseg",
   "session.revoked_all": "Sve sesije ugašene",
+  "passkey.registered": "Passkey registrovan",
+  "passkey.deleted": "Passkey obrisan",
+  "passkey.login": "Prijava passkey ključem",
   "worker.created": "Radnik dodan",
   "worker.updated": "Radnik izmijenjen",
   "worker.deactivated": "Radnik deaktiviran",

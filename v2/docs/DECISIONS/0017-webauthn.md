@@ -1,0 +1,5 @@
+# 0017 — WebAuthn biblioteka i origin
+
+Za passkeys koristimo `@simplewebauthn/server` i `@simplewebauthn/browser`, umjesto ručne obrade CBOR/COSE, potpisa i autentikatorskih podataka. Biblioteka provodi provjere challengea, RP ID-ja, origina, user verification i brojača. Rizici su ažuriranja zavisnosti, podrška uređaja i autentikatori s brojačem nula; jednokratni izazov ostaje obavezan i kad brojač ne raste.
+
+Globalni korisnički ključevi nisu tenant zapisi. RLS koristi transakcijski identitet koji postavlja pouzdani backend, isto kao postojeći `app.company_id`: DB kredencijal aplikacije može sam postaviti kontekst, pa ne izoluje od kompromitovanog backenda. Izazovi su vezani za browser tajni token i ističu nakon pet minuta. Javne domene se ne prihvataju iz proizvoljnog Host zaglavlja: produkcija mora imati pouzdan HTTPS `APP_URL` (ili `NEXT_PUBLIC_APP_URL`), dok je Host fallback samo za lokalni development. RP ID je hostname konfigurisanog origina; promjena domene zahtijeva ponovnu registraciju ključeva.

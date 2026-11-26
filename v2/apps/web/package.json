@@ -22,6 +22,8 @@
     "@gradix/contracts": "workspace:*",
     "@gradix/db": "workspace:*",
     "@gradix/domain": "workspace:*",
+    "@simplewebauthn/browser": "^13",
+    "@simplewebauthn/server": "^13",
     "@tailwindcss/postcss": "4.3.5",
     "argon2": "0.45.2",
     "exceljs": "4.4.0",

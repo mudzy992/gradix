@@ -32,6 +32,7 @@ DECLARE
   v_effective BOOLEAN;
   v_required_functions TEXT[] := ARRAY[
     'public.auth_memberships(text)',
+    'public.purge_expired_webauthn_challenges()',
     'public.list_active_company_ids_for_worker()',
     'public.auth_session_by_hash(text)',
     'public.login_attempt_record(text,text,integer)',
@@ -209,6 +210,27 @@ BEGIN
     RAISE EXCEPTION 'PREFLIGHT: nedostaju obavezne users/companies RLS politike: %.', v_missing_policies;
   END IF;
 
+  -- Globalne WebAuthn tabele nemaju company_id, zato provjeravamo FORCE RLS,
+  -- sve politike i kome pripadaju dodatne owner-only politike za istekle izazove.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname='user_passkeys' AND c.relrowsecurity AND c.relforcerowsecurity
+      AND (SELECT count(*) FROM pg_policy p WHERE p.polrelid=c.oid)=1
+      AND EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid AND p.polname='passkeys_user_isolation')
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname='webauthn_challenges' AND c.relrowsecurity AND c.relforcerowsecurity
+      AND (SELECT count(*) FROM pg_policy p WHERE p.polrelid=c.oid)=3
+      AND EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid AND p.polname='webauthn_challenge_token_isolation')
+      AND (SELECT count(*) FROM pg_policy p WHERE p.polrelid=c.oid
+        AND p.polname IN ('webauthn_expired_owner_select','webauthn_expired_owner_delete')
+        AND p.polroles=ARRAY[c.relowner]::oid[])=2
+      AND EXISTS (SELECT 1 FROM pg_proc f WHERE f.oid=to_regprocedure('public.purge_expired_webauthn_challenges()')
+        AND f.prosecdef AND f.proowner=c.relowner)
+  ) THEN
+    RAISE EXCEPTION 'PREFLIGHT: WebAuthn FORCE RLS/politike ili owner cleanup nisu ispravni.';
+  END IF;
+
   -- Efektivna prava, uključujući prava naslijeđena kroz PUBLIC/članstvo u drugim rolama,
   -- moraju biti tačno jednaka needed koloni. Column-level ACL-ovi su uključeni u provjeru.
   FOR v_item IN SELECT * FROM privilege_matrix ORDER BY kind, object LOOP
@@ -363,6 +385,7 @@ BEGIN
        SELECT 1
          FROM unnest(ARRAY[
            to_regprocedure('public.list_active_company_ids_for_worker()')::oid,
+           to_regprocedure('public.purge_expired_webauthn_challenges()')::oid,
            to_regprocedure('public.login_attempt_record(text,text,integer)')::oid,
            to_regprocedure('public.login_attempt_count(text,integer)')::oid,
            to_regprocedure('public.login_attempt_clear(text)')::oid,

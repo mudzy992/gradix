@@ -107,6 +107,12 @@ import { GET as hseInspectionsGet, POST as hseInspectionsPost, PATCH as hseInspe
 import { GET as hseStatsGet } from "@/app/api/hse/stats/route";
 import { GET as hseReportPdfGet } from "@/app/api/hse/report/pdf/route";
 
+import { GET as passkeysGet } from "@/app/api/auth/passkeys/route";
+import { DELETE as passkeyDelete } from "@/app/api/auth/passkeys/[id]/route";
+import { POST as passkeyRegisterOptions } from "@/app/api/auth/passkeys/register/options/route";
+import { POST as passkeyRegisterVerify } from "@/app/api/auth/passkeys/register/verify/route";
+import { POST as passkeyLoginOptions } from "@/app/api/auth/passkeys/login/options/route";
+import { POST as passkeyLoginVerify } from "@/app/api/auth/passkeys/login/verify/route";
 import { POST as loginRoute } from "@/app/api/auth/login/route";
 import { completeLogin } from "@/test/two-step-login";
 import { resetLoginAttempts, seedTotp } from "@/test/totp-fixture";
@@ -424,6 +430,12 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/obligations/export": { GET: legacyObligationsExportGet },
   "/api/report-jobs/{id}": { GET: reportJobGet },
   "/api/report-jobs/{id}/download": { GET: reportJobDownload },
+  "/api/auth/passkeys": { GET: passkeysGet },
+  "/api/auth/passkeys/{id}": { DELETE: passkeyDelete },
+  "/api/auth/passkeys/register/options": { POST: passkeyRegisterOptions },
+  "/api/auth/passkeys/register/verify": { POST: passkeyRegisterVerify },
+  "/api/auth/passkeys/login/options": { POST: passkeyLoginOptions },
+  "/api/auth/passkeys/login/verify": { POST: passkeyLoginVerify },
   "/api/auth/login": { POST: loginRoute },
   "/api/auth/refresh": { POST: refreshRoute },
   "/api/auth/change-password": { POST: changePasswordRoute },
@@ -719,6 +731,8 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
 
 /** Rute kojima tijelo NE treba sesiju (prijava, token linkovi). */
 const PUBLIC_PATHS = new Set([
+  "/api/auth/passkeys/login/options",
+  "/api/auth/passkeys/login/verify",
   "/api/auth/login",
   "/api/auth/2fa/login",
   "/api/platform/login",

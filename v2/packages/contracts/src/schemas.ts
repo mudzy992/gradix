@@ -63,6 +63,37 @@ export const SafeText = z.string().refine((value) => !CONTROL_CHARS.test(value),
   message: "Polje sadrži nedozvoljene kontrolne znakove.",
 });
 
+// WebAuthn JSON envelopes (binary fields use base64url, not raw bytes).
+const WebAuthnBinary = SafeText.min(1).max(32768).regex(/^[A-Za-z0-9_-]+$/);
+const WebAuthnTransport = z.enum(["usb", "nfc", "ble", "internal", "hybrid", "smart-card"]);
+const WebAuthnBase = {
+  id: WebAuthnBinary, rawId: WebAuthnBinary, type: z.literal("public-key"),
+  authenticatorAttachment: z.enum(["platform", "cross-platform"]).nullable().optional(),
+  clientExtensionResults: z.record(z.string(), z.unknown()),
+};
+export const PasskeyRegisterOptionsInput = z.object({ password: SafeText.min(1).max(200), code: SafeText.max(20).optional() });
+export const PasskeyRegisterVerifyInput = z.object({
+  deviceName: SafeText.trim().min(1).max(100),
+  credential: z.object({ ...WebAuthnBase, response: z.object({
+    clientDataJSON: WebAuthnBinary, attestationObject: WebAuthnBinary,
+    transports: z.array(WebAuthnTransport).max(10).optional(),
+    publicKeyAlgorithm: z.number().int().optional(), publicKey: WebAuthnBinary.optional(),
+    authenticatorData: WebAuthnBinary.optional(),
+  }) }),
+});
+export const PasskeyLoginOptionsInput = z.object({ email: SafeText.trim().min(3).max(200) });
+export const PasskeyLoginVerifyInput = z.object({
+  email: SafeText.trim().min(3).max(200),
+  credential: z.object({ ...WebAuthnBase, response: z.object({
+    clientDataJSON: WebAuthnBinary, authenticatorData: WebAuthnBinary,
+    signature: WebAuthnBinary, userHandle: WebAuthnBinary.nullable().optional(),
+  }) }),
+});
+export const PasskeysResponse = z.object({ passkeys: z.array(z.object({
+  id: z.string(), deviceName: z.string(), createdAt: z.string(), lastUsedAt: z.string().nullable(),
+})) });
+export const PasskeyOptionsResponse = z.object({ options: z.record(z.string(), z.unknown()) });
+
 /* ------------------------------------------------------------------ identitet */
 
 export const MeResponse = z.object({

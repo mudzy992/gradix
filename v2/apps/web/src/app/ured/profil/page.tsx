@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
-import { authenticate } from "@/server/tenant-context";
+import { authenticate, enrollmentRedirect } from "@/server/tenant-context";
 import { ACCESS_COOKIE } from "@/server/session";
+import { Passkeys } from "./passkeys";
 import { Card, PageHeader, SectionTitle, Stack } from "@/components/ui/index";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export default async function ProfilePage() {
   });
   const auth = await authenticate(request);
   if (!auth.ok) redirect("/login");
+  const enrollment = enrollmentRedirect(auth.ctx, "/ured/profil");
+  if (enrollment) redirect(enrollment);
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
 
   return (
@@ -28,6 +31,7 @@ export default async function ProfilePage() {
       <Stack>
         {/* Naslov stranice je `h1`; `SectionTitle` je `h2` i ne smije nositi naslov ekrana. */}
         <PageHeader title="Moj profil" subtitle="Uređaji na kojima ste prijavljeni i sigurnost naloga." />
+        <Passkeys />
         <Card>
           <SectionTitle>Prečice</SectionTitle>
           <Stack>

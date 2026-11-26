@@ -46,6 +46,7 @@ build ponavlja sa starom greškom.
 |---|---|---|
 | `DATABASE_URL` | `postgresql://gradix_app:LOZINKA@HOST:5432/BAZA?sslmode=verify-full&sslrootcert=/etc/ssl/certs/coolify-ca.crt` | `HOST` = **interni** hostname iz Coolify resource-a Postgres (`Connect to Predefined Network`), nikad javni UUID hostname. `BAZA` = tačno ime baze iz tog resource-a (`current_database()`), ne pretpostavka. `&` piši kao `&`, **nikad** `&amp;`. |
 | `DATABASE_ADMIN_URL` | konekcija vlasnika šeme/migratora, odvojena od `DATABASE_URL` | Obavezno kad je `RUN_MIGRATIONS=true`; ne koristi se za aplikacijske upite. |
+| `APP_URL` | `https://gradix.ba101.top` | Tačan javni HTTPS origin bez putanje; potreban za WebAuthn. Ako se koristi `NEXT_PUBLIC_APP_URL`, mora imati isti origin. Promjena domene mijenja RP ID i zahtijeva novu registraciju ključeva. |
 | `AUTH_SECRET` | 48+ slučajnih bajtova, base64 | Generiši: `openssl rand -base64 48`. Min 32 znaka. Rotacija odjavljuje sve korisnike. |
 | `RUN_MIGRATIONS` | `true` | Prvi deploy `true`; poslije može ostati `true` (idempotentno). |
 

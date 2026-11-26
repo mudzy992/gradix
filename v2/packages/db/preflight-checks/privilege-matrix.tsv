@@ -141,3 +141,5 @@ table	subcontractor_contract_amendments	SELECT;INSERT	-		Aneksi ugovora; FORCE R
 table	subcontractor_statements	SELECT;INSERT;UPDATE	-		Situacije podizvođača; FORCE RLS.
 table	subcontractor_statement_items	SELECT;INSERT	-		Stavke situacija; FORCE RLS.
 table	manual_cost_requests	SELECT;INSERT;UPDATE	-		Odobrenje ručnog troška; FORCE RLS.
+table	user_passkeys	SELECT;INSERT;UPDATE;DELETE	-		Global user credentials; FORCE RLS by transaction-local user, selected only by trusted auth service; DELETE for user-managed revocation.
+table	webauthn_challenges	SELECT;INSERT;DELETE	-		Short-lived browser-bound challenges, FORCE RLS by token digest; one-time DELETE claims.

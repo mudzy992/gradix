@@ -518,3 +518,10 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 - **Rizik prije pilota:** opći servisi/API-ji servisnih naloga, kvarova i dnevnika uočenim kodom ne primjenjuju session project scope; filtrirane dashboard liste ne popravljaju opće API-je. Potreban zaseban sigurnosni pregled, popravka i testovi prije pilota. Ovaj završni obim ne dokazuje da su ostali moduli bez sličnih nedostataka.
 
 Detalji i provjere: [IZVJESTAJ-FAZA-11.md](IZVJESTAJ-FAZA-11.md). Rezultat CI-ja za završni commit provjeriti nakon pusha; CI ranijeg checkpointa ne dokazuje novi commit.
+
+## Faza 11.5 — Passkeys
+
+- WebAuthn passkey s obaveznom korisničkom verifikacijom; prijava traži email, ali ne lozinku ni TOTP. Registracija u Mojem profilu traži svježu lozinku i TOTP ako je uključen. Postojeći tok prijave i 2FA ostaju dostupni.
+- Izazov ističe za pet minuta, vezan je za HttpOnly browser cookie i jednokratno se potroši; propušteni izazovi čiste se ograničeno pri kreiranju novih. Brojači koji nisu nula moraju rasti; autentikatori s brojačem nula oslanjaju se na jednokratnost izazova. Ključevi su globalni po korisniku, ne po firmi: RLS identitet postavlja pouzdani backend, pa kompromitovana aplikacijska DB rola može postaviti drugi kontekst, kao i kod postojećeg tenant modela.
+- U Coolifyju podesiti `APP_URL=https://gradix.ba101.top` na tačan HTTPS origin. `NEXT_PUBLIC_APP_URL`, ako postoji, mora se slagati. Proizvoljni Host nije pouzdan origin; bez konfiguracije fallback je samo lokalni development. RP ID je hostname; promjena domene zahtijeva ponovnu registraciju.
+- Scope problem općih servis/kvar/dnevnik API-ja iz Faze 11 ostaje za dogovoreni Security & Invariant Sweep prije pilota. Stvarni uređaj i Coolify deploy nisu verificirani. Detalji: [IZVJESTAJ-FAZA-11-5.md](IZVJESTAJ-FAZA-11-5.md).

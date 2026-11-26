@@ -2074,6 +2074,18 @@ export interface UserDevices {
   user_id: string;
 }
 
+export interface UserPasskeys {
+  counter: Generated<Int8>;
+  created_at: Generated<Timestamp>;
+  credential_id: string;
+  device_name: string;
+  id: string;
+  last_used_at: Timestamp | null;
+  public_key: Buffer;
+  transports: Generated<string[]>;
+  user_id: string;
+}
+
 export interface UserRecoveryCodes {
   code_hash: string;
   created_at: Generated<Timestamp>;
@@ -2124,6 +2136,19 @@ export interface Warehouses {
   name: string;
   project_id: string | null;
   updated_at: Generated<Timestamp>;
+}
+
+export interface WebauthnChallenges {
+  challenge: string;
+  created_at: Generated<Timestamp>;
+  expires_at: Generated<Timestamp>;
+  login_identifier_hash: string | null;
+  origin: string;
+  purpose: string;
+  rp_id: string;
+  session_id: string | null;
+  token_hash: string;
+  user_id: string | null;
 }
 
 export interface WorkdayRevisions {
@@ -2451,10 +2476,12 @@ export interface DB {
   tenders: Tenders;
   usage_overrides: UsageOverrides;
   user_devices: UserDevices;
+  user_passkeys: UserPasskeys;
   user_recovery_codes: UserRecoveryCodes;
   user_totp: UserTotp;
   users: Users;
   warehouses: Warehouses;
+  webauthn_challenges: WebauthnChallenges;
   work_entries: WorkEntries;
   work_week_approvals: WorkWeekApprovals;
   workday_revisions: WorkdayRevisions;

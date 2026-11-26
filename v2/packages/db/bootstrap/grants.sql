@@ -55,6 +55,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 -- Tabele — tačno `needed` kolona iz privilege-matrix.tsv.
 GRANT SELECT ON TABLE public.companies TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.users TO gradix_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.user_passkeys TO gradix_app;
+GRANT SELECT, INSERT, DELETE ON TABLE public.webauthn_challenges TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.memberships TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.sessions TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.machines TO gradix_app;
@@ -223,6 +225,9 @@ REVOKE ALL ON FUNCTION public.sync_cursor_sweep(TEXT, INTEGER) FROM PUBLIC, grad
 GRANT EXECUTE ON FUNCTION public.sync_cursor_sweep(TEXT, INTEGER) TO gradix_app;
 REVOKE ALL ON FUNCTION public.sync_cursor_pull(TEXT, BIGINT, INTEGER) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.sync_cursor_pull(TEXT, BIGINT, INTEGER) TO gradix_app;
+
+REVOKE ALL ON FUNCTION public.purge_expired_webauthn_challenges() FROM PUBLIC, gradix_app;
+GRANT EXECUTE ON FUNCTION public.purge_expired_webauthn_challenges() TO gradix_app;
 
 REVOKE ALL ON FUNCTION public.login_attempt_record(TEXT, TEXT, INTEGER) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.login_attempt_record(TEXT, TEXT, INTEGER) TO gradix_app;

@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 import {
+  PasskeyRegisterOptionsInput, PasskeyRegisterVerifyInput, PasskeyLoginOptionsInput, PasskeyLoginVerifyInput, PasskeysResponse, PasskeyOptionsResponse,
   HseActionInput,
   HseActionPatchInput,
   HseActionsResponse,
@@ -406,6 +407,12 @@ export const ROUTES = [
     }),
     raw: true,
   },
+  { method: "GET", path: "/api/auth/passkeys", summary: "Moji passkeys.", auth: true, permission: null, request: null, response: PasskeysResponse },
+  { method: "DELETE", path: "/api/auth/passkeys/{id}", summary: "Opozovi svoj passkey.", auth: true, permission: null, request: null, response: OkDeletedResponse },
+  { method: "POST", path: "/api/auth/passkeys/register/options", summary: "Pripremi registraciju uz ponovnu autentikaciju.", auth: true, permission: null, request: PasskeyRegisterOptionsInput, response: PasskeyOptionsResponse },
+  { method: "POST", path: "/api/auth/passkeys/register/verify", summary: "Potvrdi i registruj passkey.", auth: true, permission: null, request: PasskeyRegisterVerifyInput, response: OkDeletedResponse },
+  { method: "POST", path: "/api/auth/passkeys/login/options", summary: "Pripremi passkey prijavu.", auth: false, permission: null, request: PasskeyLoginOptionsInput, response: PasskeyOptionsResponse },
+  { method: "POST", path: "/api/auth/passkeys/login/verify", summary: "Potvrdi passkey prijavu i izdaj sesiju.", auth: false, permission: null, request: PasskeyLoginVerifyInput, response: LoginResponse },
   {
     method: "POST",
     path: "/api/auth/login",

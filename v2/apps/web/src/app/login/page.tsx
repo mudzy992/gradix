@@ -12,6 +12,7 @@
  * komponente, pa se prijava sa 2FA ne može „nastaviti" iz druge kartice — i ne treba.
  */
 import { useRouter } from "next/navigation";
+import { browserSupportsWebAuthn, startAuthentication, type PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { useEffect, useState } from "react";
 import { apiCall, jsonBody } from "@/api-client";
 import { isTwoFactorRequired, type LoginResponse } from "@gradix/contracts";
@@ -33,6 +34,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [code, setCode] = useState("");
+  const [passkeysSupported, setPasskeysSupported] = useState(false);
+  useEffect(() => { setPasskeysSupported(browserSupportsWebAuthn()); }, []);
 
   // Odbrojavanje traje samo dok traje zabrana; `retryAfter` u stanju je početna vrijednost.
   const retryAfter = state.kind === "error" ? state.retryAfter : undefined;
@@ -101,6 +104,20 @@ export default function LoginPage() {
     // Obavezna promjena lozinke ide prije bilo čega drugog.
     router.replace(result.data.mustChangePassword ? "/lozinka/promjena" : "/pregled");
     router.refresh();
+  }
+
+  async function submitPasskey() {
+    if (!email.trim()) { setState({ kind: "error", message: "Unesite email za prijavu passkey ključem." }); return; }
+    setBusy(true);
+    try {
+      const options = await apiCall<{options: PublicKeyCredentialRequestOptionsJSON}>("/api/auth/passkeys/login/options", jsonBody({email}));
+      if (!options.ok) { setState({kind:"error",message:options.message}); return; }
+      const credential = await startAuthentication({optionsJSON: options.data.options});
+      const result = await apiCall<{mustChangePassword: boolean}>("/api/auth/passkeys/login/verify", jsonBody({email, credential}));
+      if (!result.ok) { setState({kind:"error",message:result.message}); return; }
+      router.replace(result.data.mustChangePassword ? "/lozinka/promjena" : "/pregled"); router.refresh();
+    } catch { setState({kind:"error",message:"Passkey prijava nije dovršena. Pokušajte ponovo ili koristite lozinku."}); }
+    finally { setBusy(false); }
   }
 
   /** Sesija za uparivanje: dobija se bez koda, ali vidi samo Postavke → Sigurnost. */
@@ -191,6 +208,10 @@ export default function LoginPage() {
               >
                 {busy ? "Prijava…" : "Prijavi se"}
               </Button>
+              <Button type="button" variant="quiet" fullWidthOnMobile disabled={busy || secondsLeft > 0 || !passkeysSupported} onClick={submitPasskey}>
+                Prijavi se pomoću Passkey-ja (otisak / Face ID)
+              </Button>
+              {!passkeysSupported ? <p>Passkeys nisu dostupni u ovom pregledniku ili uređaju. Prijavite se lozinkom.</p> : null}
             </Stack>
           </form>
         )}
