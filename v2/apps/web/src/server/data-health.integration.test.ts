@@ -164,15 +164,31 @@ describeDb("data health pod stvarnim RLS-om", () => {
     await admin.query(`INSERT INTO public.machine_work_logs(id,company_id,machine_id,worker_id,project_id,started_at,ended_at,mode,created_by,updated_by) VALUES
       ('dh-ml1','dh-a','dh-ma','dh-wa','dh-pa','2026-11-10T08:00:00Z','2026-11-10T10:00:00Z','WORK','dh-u','dh-u'),
       ('dh-ml2','dh-a','dh-ma','dh-wa','dh-pa2','2026-11-10T11:00:00Z','2026-11-10T15:00:00Z','WORK','dh-u','dh-u')`);
+    await admin.query(`INSERT INTO public.cost_entries
+      (id,company_id,project_id,category_id,source_type,source_id,machine_id,occurred_on,amount_cents,currency_code,status,booked_by) VALUES
+      ('dh-mc1','dh-a','dh-pa','dh-ca','MACHINE_WORK_LOG','dh-ml1','dh-ma','2026-11-10',1250,'BAM','POSTED','dh-u'),
+      ('dh-mc2','dh-a','dh-pa2','dh-ca','MACHINE_WORK_LOG','dh-ml2','dh-ma','2026-11-10',9999,'BAM','POSTED','dh-u'),
+      ('dh-mc3','dh-a','dh-pa','dh-ca','FUEL_ENTRY','dh-fuel-pending','dh-ma','2026-11-10',NULL,NULL,'PENDING','dh-u'),
+      ('dh-mc4','dh-a','dh-pa','dh-ca','SERVICE_ORDER','dh-foreign-currency','dh-ma','2026-11-10',200,'EUR','POSTED','dh-u'),
+      ('dh-mc6','dh-a','dh-pa','dh-ca','MANUAL','dh-outside-period','dh-ma','2026-10-31',40000,'BAM','POSTED','dh-u')`);
     const pm={...actor,roles:["PROJECT_MANAGER" as const],scope:"PROJECTS" as const,projectIds:["dh-pa"]};
     const filters={from:"2026-11-01",to:"2026-11-30",projectId:"dh-pa",team:"Sjever"};
     const screen=await machineUtilization(app,pm,"dh-ma",filters.from,filters.to,{...filters,projectIds:pm.projectIds});
     expect(screen?.work_hours).toBe(2);
     const doc=await loadMachinesReport(app,pm,filters,new Date("2026-11-30T12:00:00Z"));
     expect(doc.rows).toHaveLength(1); expect(doc.rows[0]?.[2]).toBe("2");
+    expect(doc.columns).toContain("Knjizeni trosak masine (svi timovi)");
+    expect(doc.rows[0]?.[10]).toBe("12.50 BAM; 2.00 EUR"); expect(doc.rows[0]?.[11]).toBe("1");
+    expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("12.50 BAM; 2.00 EUR");
     expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("Rad h: 2");
     const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
     expect(wb.getWorksheet("Izvještaj")!.getCell("C4").value).toBe("2");
+    expect(wb.getWorksheet("Izvještaj")!.getCell("K4").value).toBe("12.50 BAM; 2.00 EUR");
+    const supervisor=await loadMachinesReport(app,{...pm,roles:["SITE_SUPERVISOR"]},filters);
+    expect(supervisor.columns).not.toContain("Knjizeni trosak masine (svi timovi)");
+    expect(JSON.stringify(supervisor)).not.toContain("12.50");
+    const noTeam=await loadMachinesReport(app,pm,{from:filters.from,to:filters.to,projectId:filters.projectId});
+    expect(noTeam.rows[0]?.[10]).toBe("12.50 BAM; 2.00 EUR");
     expect((await loadMachinesReport(app,{...pm,projectIds:["dh-pa2"]},filters)).rows).toEqual([]);
     expect((await loadMachinesReport(app,{...pm,companyId:"dh-b",scope:"COMPANY",projectIds:null},filters)).rows).toEqual([]);
     expect((await loadMachinesReport(app,pm,{...filters,team:"Jug"})).rows).toEqual([]);
