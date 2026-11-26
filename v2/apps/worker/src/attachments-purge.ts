@@ -14,6 +14,7 @@
  * trag treba da kaže „obrisano po retenciji“, ne da reprodukuje dokument koji je trebalo nestati.
  */
 import type { Pool, PoolClient } from "pg";
+import { listActiveCompanyIds } from "./company-ids";
 import type { JobLogger } from "./jobs";
 
 export type PurgeCandidate = {
@@ -97,19 +98,20 @@ export async function purgeAttachments(
 ): Promise<PurgeOutcome> {
   const outcome: PurgeOutcome = { candidates: 0, purged: 0, failed: 0, staleDropped: 0 };
 
-  const companies = await pool.query<{ id: string; timezone: string | null }>(
-    "SELECT id, timezone FROM companies WHERE ($1::text IS NULL OR id = $1)",
-    [options.onlyCompanyId ?? null],
-  );
-
-  for (const company of companies.rows) {
-    const today = options.today ?? formatToday(company.timezone);
+  let failures = 0;
+  const companies = await listActiveCompanyIds(pool, options.onlyCompanyId);
+  for (const companyId of companies) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("SELECT set_config('app.company_id', $1, true)", [company.id]);
+      await client.query("SELECT set_config('app.company_id', $1, true)", [companyId]);
+      const company = (await client.query<{ timezone: string | null }>(
+        "SELECT timezone FROM public.companies WHERE id = $1 AND is_active", [companyId],
+      )).rows[0];
+      if (!company) { await client.query("COMMIT"); continue; }
+      const today = options.today ?? formatToday(company.timezone);
 
-      const candidates = await findPurgeCandidates(client, company.id, today);
+      const candidates = await findPurgeCandidates(client, companyId, today);
       outcome.candidates += candidates.length;
 
       for (const candidate of candidates) {
@@ -120,7 +122,7 @@ export async function purgeAttachments(
           await client.query(
             `UPDATE attachments SET status = 'deleted', deleted_at = now()
               WHERE company_id = $1 AND id = $2`,
-            [company.id, candidate.id],
+            [companyId, candidate.id],
           );
           await client.query(
             `INSERT INTO audit_events
@@ -129,7 +131,7 @@ export async function purgeAttachments(
              VALUES (gen_random_uuid()::text, $1, NULL, NULL, NULL,
                      'attachment.retention_purged', 'attachment', $2, $3::jsonb, 'ACCESS')`,
             [
-              company.id,
+              companyId,
               candidate.id,
               JSON.stringify({
                 basis: candidate.retention_basis,
@@ -152,23 +154,25 @@ export async function purgeAttachments(
       /*
        * `pending` prilozi stariji od 24 h: upload je počeo i nikad nije potvrđen (prekinut
        * zahtjev, zatvoren tab). Objekat postoji u bucketu, ali red nikad nije postao `ready`.
-       * Briše se red; objekat se briše istim putem kao i ostali.
+       * Red se logički briše (nema DELETE granta), tek po uklanjanju objekta.
        */
       const stale = await client.query<{ id: string; object_key: string }>(
         `SELECT id, object_key FROM attachments
           WHERE company_id = $1 AND status = 'pending'
             AND created_at < now() - INTERVAL '24 hours'`,
-        [company.id],
+        [companyId],
       );
       for (const row of stale.rows) {
         try {
           await options.removeObject(row.object_key);
-        } catch {
-          // Objekat možda nikad nije ni stigao — red se svejedno briše, jer `pending` bez
-          // objekta nije ništa.
+        } catch (error) {
+          outcome.failed += 1;
+          options.logger.warn("attachments.purge: objekat nije uklonjen", { attachmentId: row.id,
+            message: error instanceof Error ? error.message : String(error) });
+          continue;
         }
-        await client.query("DELETE FROM attachments WHERE company_id = $1 AND id = $2", [
-          company.id,
+        await client.query("UPDATE public.attachments SET status='deleted',deleted_at=clock_timestamp() WHERE company_id=$1 AND id=$2 AND status='pending'", [
+          companyId,
           row.id,
         ]);
         outcome.staleDropped += 1;
@@ -177,8 +181,9 @@ export async function purgeAttachments(
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
+      failures += 1;
       options.logger.error("attachments.purge: firma preskočena", {
-        companyId: company.id,
+        companyId: companyId,
         message: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -186,6 +191,7 @@ export async function purgeAttachments(
     }
   }
 
+  if (failures || outcome.failed) throw new Error("ATTACHMENTS_COMPANY_FAILED");
   options.logger.info("attachments.purge gotov", { ...outcome });
   return outcome;
 }

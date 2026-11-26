@@ -11,7 +11,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { purgeSyncPayloads } from "./sync-purge";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
-const describeDb = adminUrl ? describe : describe.skip;
+const appUrl = process.env.DATABASE_URL;
+const describeDb = adminUrl && appUrl ? describe : describe.skip;
 const RUN = Date.now().toString(36);
 const COMPANY = `cmp_purge_${RUN}`;
 const USER = `usr_purge_${RUN}`;
@@ -20,6 +21,7 @@ const logger = { info: () => undefined, warn: () => undefined };
 
 describeDb("sync.purge", () => {
   const admin = new Pool({ connectionString: adminUrl, max: 1 });
+  const app = new Pool({ connectionString: appUrl, max: 1 });
 
   beforeAll(async () => {
     await admin.query(`INSERT INTO companies (id, name, slug) VALUES ($1, 'Purge', $2)`, [COMPANY, `pg-${RUN}`]);
@@ -72,10 +74,11 @@ describeDb("sync.purge", () => {
     await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
     await admin.query("DELETE FROM users WHERE id = $1", [USER]);
     await admin.end();
+    await app.end();
   });
 
   it("čisti samo tijelo starog razriješenog sukoba", async () => {
-    const outcome = await purgeSyncPayloads(admin, { logger, retentionDays: 90 });
+    const outcome = await purgeSyncPayloads(app, { logger, retentionDays: 90, onlyCompanyId: COMPANY });
     expect(outcome.purged).toBe(1);
 
     const rows = await admin.query<{
@@ -101,13 +104,13 @@ describeDb("sync.purge", () => {
   });
 
   it("drugi prolaz ne nalazi ništa — posao je idempotentan", async () => {
-    const outcome = await purgeSyncPayloads(admin, { logger, retentionDays: 90 });
+    const outcome = await purgeSyncPayloads(app, { logger, retentionDays: 90, onlyCompanyId: COMPANY });
     expect(outcome.candidates).toBe(0);
     expect(outcome.purged).toBe(0);
   });
 
   it("neispravna retencija ne briše ništa", async () => {
-    const outcome = await purgeSyncPayloads(admin, { logger, retentionDays: 0 });
+    const outcome = await purgeSyncPayloads(app, { logger, retentionDays: 0 });
     expect(outcome.purged).toBe(0);
   });
 });

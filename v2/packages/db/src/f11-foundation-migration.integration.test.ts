@@ -29,6 +29,9 @@ describeDb("F11 temeljna migracija", () => {
     await db.query("INSERT INTO public.daily_rollups(id,company_id,rollup_date,hours_total,cost_cents) VALUES ('old','a','2026-11-01',2,20)");
     await db.query("INSERT INTO public.report_jobs(id,company_id,kind,period_from,period_to) VALUES ('old-report','a','COST_EXPORT','2026-11-01','2026-11-30')");
     await db.query(readFileSync(`${migrations}/${target}/migration.sql`, "utf8"));
+    for (const dir of readdirSync(migrations).sort().filter((name) => name > target)) {
+      await db.query(readFileSync(`${migrations}/${dir}/migration.sql`, "utf8"));
+    }
     await db.query(readFileSync(fileURLToPath(new URL("../bootstrap/grants.sql", import.meta.url)), "utf8"));
   }, 120_000);
   afterAll(async () => {
@@ -38,7 +41,7 @@ describeDb("F11 temeljna migracija", () => {
   });
   it("zadržava prethodne zbirne redove i omogućava projektni neto negativan trošak", async () => {
     const row = await db.query("SELECT project_id,hours_total::text,cost_cents::text FROM public.daily_rollups WHERE id='old'");
-    expect(row.rows[0]).toEqual({ project_id: null, hours_total: "2.00", cost_cents: "20" });
+    expect(row.rows[0]).toEqual({ project_id: null, hours_total: "2.000", cost_cents: "20" });
     await db.query("INSERT INTO public.daily_rollups(id,company_id,project_id,rollup_date,cost_cents) VALUES ('new','a','pa','2026-11-01',-5)");
     await expect(db.query("INSERT INTO public.daily_rollups(id,company_id,project_id,rollup_date) VALUES ('duplicate','a','pa','2026-11-01')")).rejects.toMatchObject({ code: "23505" });
     await expect(db.query("INSERT INTO public.daily_rollups(id,company_id,project_id,rollup_date) VALUES ('foreign-project','a','pb','2026-11-01')")).rejects.toMatchObject({ code: "23503" });

@@ -19,6 +19,7 @@
  * odgovara novcem — ne „svi u uredu“, jer bi upozorenje postalo šum.
  */
 import type { Pool, PoolClient } from "pg";
+import { listActiveCompanyIds } from "./company-ids";
 import { budgetAlertDedupeKey, crossedBudgetThreshold } from "@gradix/domain";
 import type { JobLogger } from "./jobs";
 
@@ -187,27 +188,22 @@ export async function scanBudgetThresholds(
     notificationsCreated: 0,
   };
 
-  const companies = await pool.query<{ id: string }>(
-    options.onlyCompanyId
-      ? "SELECT id FROM public.companies WHERE id = $1"
-      : "SELECT id FROM public.companies WHERE is_active ORDER BY id",
-    options.onlyCompanyId ? [options.onlyCompanyId] : [],
-  );
-
-  for (const company of companies.rows) {
+  let failures = 0;
+  const companies = await listActiveCompanyIds(pool, options.onlyCompanyId);
+  for (const companyId of companies) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       // Tenant se postavlja PO FIRMI: posao nikad ne miješa dvije firme u istoj transakciji.
-      await client.query("SELECT set_config('app.company_id', $1, true)", [company.id]);
+      await client.query("SELECT set_config('app.company_id', $1, true)", [companyId]);
 
-      const projects = await loadProjects(client, company.id);
+      const projects = await loadProjects(client, companyId);
       for (const project of projects) {
         outcome.projectsChecked += 1;
         // Bez budžeta nema ni praga — nema šta da se pređe.
         if (project.revision === null || project.budget_cents === null) continue;
 
-        const categories = await loadCategories(client, company.id, project.id);
+        const categories = await loadCategories(client, companyId, project.id);
         const candidates = evaluateThresholds({
           total: {
             budgetCents: BigInt(project.budget_cents),
@@ -231,7 +227,7 @@ export async function scanBudgetThresholds(
         const stale = await client.query<{ id: string; scope: string; revision: number }>(
           `SELECT id, scope, revision FROM public.budget_alert_events
             WHERE company_id = $1 AND project_id = $2 AND resolved_at IS NULL`,
-          [company.id, project.id],
+          [companyId, project.id],
         );
         for (const alert of stale.rows) {
           const stillRelevant =
@@ -241,7 +237,7 @@ export async function scanBudgetThresholds(
             `UPDATE public.budget_alert_events
                 SET resolved_at = clock_timestamp()
               WHERE company_id = $1 AND id = $2 AND resolved_at IS NULL`,
-            [company.id, alert.id],
+            [companyId, alert.id],
           );
           /*
            * `resolved_by` ostaje NULL: upozorenje nije zatvorio ČOVJEK nego stanje (potrošnja je
@@ -264,7 +260,7 @@ export async function scanBudgetThresholds(
              VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6)
              ON CONFLICT (company_id, dedupe_key) DO NOTHING
              RETURNING id`,
-            [company.id, project.id, project.revision, candidate.scope, candidate.thresholdPct, dedupeKey],
+            [companyId, project.id, project.revision, candidate.scope, candidate.thresholdPct, dedupeKey],
           );
           if ((inserted.rowCount ?? 0) === 0) continue;
           outcome.alertsFired += 1;
@@ -279,7 +275,7 @@ export async function scanBudgetThresholds(
                      $2, $3, $4, $5, 'project', $6, $7)
              ON CONFLICT (company_id, dedupe_key) DO NOTHING`,
             [
-              company.id,
+              companyId,
               alertTitle(candidate, project.code),
               alertBody(candidate),
               `/ured/projekti/${project.id}`,
@@ -302,7 +298,7 @@ export async function scanBudgetThresholds(
                      $2, $3, $4, $5, 'project', $6, $7)
              ON CONFLICT (company_id, dedupe_key) DO NOTHING`,
             [
-              company.id,
+              companyId,
               alertTitle(candidate, project.code),
               alertBody(candidate),
               `/ured/projekti/${project.id}`,
@@ -319,8 +315,9 @@ export async function scanBudgetThresholds(
       outcome.companiesScanned += 1;
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
+      failures += 1;
       options.logger.error("budget.thresholds: firma preskočena", {
-        companyId: company.id,
+        companyId: companyId,
         message: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -328,6 +325,7 @@ export async function scanBudgetThresholds(
     }
   }
 
+  if (failures) throw new Error("BUDGET_COMPANY_FAILED");
   options.logger.info("budget.thresholds", { ...outcome });
   return outcome;
 }

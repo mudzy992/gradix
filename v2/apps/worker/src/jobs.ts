@@ -25,6 +25,7 @@ export const JOB_NAMES = {
    * u logu i u `notifications.kind` vidi isti pojam, bez prevoda između dva rječnika.
    */
   budgetThresholds: "budget.thresholds",
+  rollupNightly: "rollup.nightly",
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

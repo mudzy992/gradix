@@ -93,6 +93,7 @@ describe("JOB_NAMES", () => {
       syncPurge: "sync.purge",
       // F5: pragovi budžeta; ime je isto kao `notifications.kind` koje posao pravi.
       budgetThresholds: "budget.thresholds",
+      rollupNightly: "rollup.nightly",
     });
   });
 });

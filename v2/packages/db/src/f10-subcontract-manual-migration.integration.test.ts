@@ -19,6 +19,7 @@ describeDb("F10A-3 upgrade",()=>{
       await db.query("INSERT INTO cost_categories(id,company_id,code,name) VALUES ('cat','a','C','C')");
       await db.query("INSERT INTO cost_entries(id,company_id,project_id,category_id,source_type,source_id,occurred_on,amount_cents,currency_code,booked_by) VALUES ('cost','a','p','cat','MANUAL','old',current_date,100,'BAM','u')");
       await db.query(readFileSync(`${migrations}/${target}/migration.sql`,"utf8"));
+      for(const dir of readdirSync(migrations).sort().filter(d=>d>target)) await db.query(readFileSync(`${migrations}/${dir}/migration.sql`,"utf8"));
       await db.query(readFileSync(fileURLToPath(new URL("../bootstrap/grants.sql",import.meta.url)),"utf8"));
       expect((await db.query("SELECT amount_cents::text,client_generated_id FROM cost_entries WHERE id='cost'")).rows[0]).toEqual({amount_cents:"100",client_generated_id:null});
       expect((await db.query("SELECT manual_cost_approval_threshold_cents::text AS threshold FROM companies ORDER BY id")).rows).toEqual([{threshold:"50000"},{threshold:"50000"}]);

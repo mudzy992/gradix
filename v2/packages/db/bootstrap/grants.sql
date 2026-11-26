@@ -204,6 +204,9 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.user_devices TO gradix_app;
 -- functions are the only deliberate exceptions to direct table access in the login path.
 REVOKE ALL ON FUNCTION public.auth_memberships(TEXT) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.auth_memberships(TEXT) TO gradix_app;
+-- Worker-only use by convention; app principal can enumerate IDs, never company details.
+REVOKE ALL ON FUNCTION public.list_active_company_ids_for_worker() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_active_company_ids_for_worker() TO gradix_app;
 REVOKE ALL ON FUNCTION public.auth_session_by_hash(TEXT) FROM PUBLIC, gradix_app;
 GRANT EXECUTE ON FUNCTION public.auth_session_by_hash(TEXT) TO gradix_app;
 

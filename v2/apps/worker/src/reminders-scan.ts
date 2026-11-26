@@ -18,6 +18,7 @@
  * rasporeda po firmi u pg-boss-u.
  */
 import type { Pool, PoolClient } from "pg";
+import { listActiveCompanyIds } from "./company-ids";
 import {
   addDays,
   evaluateMaintenance,
@@ -231,36 +232,28 @@ export async function scanReminders(
     maintenanceOrdersOpened: 0,
   };
 
-  const companies = await pool.query<CompanyRow>(
-    `SELECT id, timezone, name FROM companies
-      WHERE ($1::text IS NULL OR id = $1)`,
-    [options.onlyCompanyId ?? null],
-  );
-
-  for (const company of companies.rows) {
-    const timezone = safeTimezoneOrNull(company.timezone);
-    if (timezone === null) {
-      // Loša zona nije razlog da firma ne dobije podsjetnike — ide UTC, ali se vidi u logu.
-      options.logger.warn("reminders.scan: neispravna vremenska zona, koristi se UTC", {
-        companyId: company.id,
-        timezone: company.timezone,
-      });
-    }
-    const zone = timezone ?? "UTC";
-
-    if (!options.force && localHour(zone, now) !== 6) {
-      outcome.companiesSkipped += 1;
-      continue;
-    }
-
-    const today = localDate(zone, now);
-    outcome.companiesScanned += 1;
-
-    // `withCompany` postavlja `app.company_id`; RLS je uključen i nad ovim tabelama.
+  let failures = 0;
+  const companies = await listActiveCompanyIds(pool, options.onlyCompanyId);
+  for (const companyId of companies) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query("SELECT set_config('app.company_id', $1, true)", [company.id]);
+      await client.query("SELECT set_config('app.company_id', $1, true)", [companyId]);
+      const company = (await client.query<CompanyRow>(
+        "SELECT id, timezone, name FROM public.companies WHERE id = $1 AND is_active", [companyId],
+      )).rows[0];
+      if (!company) { await client.query("COMMIT"); continue; }
+      const timezone = safeTimezoneOrNull(company.timezone);
+      if (timezone === null) options.logger.warn("reminders.scan: neispravna vremenska zona, koristi se UTC", {
+        companyId, timezone: company.timezone,
+      });
+      const zone = timezone ?? "UTC";
+      if (!options.force && localHour(zone, now) !== 6) {
+        outcome.companiesSkipped += 1;
+        await client.query("COMMIT");
+        continue;
+      }
+      const today = localDate(zone, now);
 
       const rows = await pendingReminders(client, company.id);
       for (const row of rows) {
@@ -364,12 +357,14 @@ export async function scanReminders(
       outcome.notificationsCreated += maintenance.notifications;
 
       await client.query("COMMIT");
+      outcome.companiesScanned += 1;
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
+      failures += 1;
       // Greška u jednoj firmi ne smije zaustaviti ostale: firma bez baze je jedan problem,
       // a prekid cijelog prolaza je sto firmi bez podsjetnika.
       options.logger.error("reminders.scan: firma preskočena zbog greške", {
-        companyId: company.id,
+        companyId,
         message: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -377,6 +372,7 @@ export async function scanReminders(
     }
   }
 
+  if (failures) throw new Error("REMINDERS_COMPANY_FAILED");
   options.logger.info("reminders.scan gotov", { ...outcome });
   return outcome;
 }

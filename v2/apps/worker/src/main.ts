@@ -19,6 +19,7 @@ import { scanReminders } from "./reminders-scan";
 import { purgeAttachments } from "./attachments-purge";
 import { purgeSyncPayloads } from "./sync-purge";
 import { scanBudgetThresholds } from "./budget-thresholds";
+import { refreshDailyRollups } from "./rollup-nightly";
 import { createObjectRemover } from "./object-storage";
 
 const config = loadConfig();
@@ -126,6 +127,7 @@ async function main(): Promise<void> {
   await boss.createQueue(JOB_NAMES.attachmentsPurge);
   await boss.createQueue(JOB_NAMES.syncPurge);
   await boss.createQueue(JOB_NAMES.budgetThresholds);
+  await boss.createQueue(JOB_NAMES.rollupNightly);
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -139,6 +141,7 @@ async function main(): Promise<void> {
   await boss.work(JOB_NAMES.attachmentsPurge, async () => runAttachmentsPurge());
   await boss.work(JOB_NAMES.syncPurge, async () => runSyncPurge());
   await boss.work(JOB_NAMES.budgetThresholds, async () => runBudgetThresholds());
+  await boss.work(JOB_NAMES.rollupNightly, async () => { await refreshDailyRollups(pool, { logger }); });
 
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
@@ -154,6 +157,7 @@ async function main(): Promise<void> {
   // Pragovi budžeta: svakih 15 minuta. Za razliku od `reminders.scan`, ovdje NEMA filtera po zoni —
   // prag ne zavisi od doba dana, a odgađanje do jutra bi značilo da se prekoračenje vidi tek sutra.
   await boss.schedule(JOB_NAMES.budgetThresholds, "*/15 * * * *");
+  await boss.schedule(JOB_NAMES.rollupNightly, "0 2 * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),

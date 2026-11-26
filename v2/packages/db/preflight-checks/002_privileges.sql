@@ -32,6 +32,7 @@ DECLARE
   v_effective BOOLEAN;
   v_required_functions TEXT[] := ARRAY[
     'public.auth_memberships(text)',
+    'public.list_active_company_ids_for_worker()',
     'public.auth_session_by_hash(text)',
     'public.login_attempt_record(text,text,integer)',
     'public.login_attempt_count(text,integer)',
@@ -333,6 +334,21 @@ BEGIN
       v_sync_function_unsafe;
   END IF;
 
+  -- Ograničeni globalni worker lookup je eksplicitni izuzetak: funkcija smije
+  -- vratiti samo ID aktivne firme, bez argumenata i uz vlasnika globalnog registra.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_class c ON c.oid = 'public.companies'::regclass
+     WHERE p.oid = 'public.list_active_company_ids_for_worker()'::regprocedure
+       AND p.prosecdef AND p.proowner = c.relowner AND NOT c.relforcerowsecurity
+       AND p.provolatile = 's' AND p.pronargs = 0
+       AND pg_get_function_result(p.oid) = 'TABLE(id text)'
+       AND NOT EXISTS (SELECT 1 FROM aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a WHERE a.privilege_type = 'EXECUTE' AND a.grantee NOT IN (p.proowner, (SELECT oid FROM pg_roles WHERE rolname='gradix_app')))
+       AND position('search_path=pg_catalog, public, pg_temp' IN array_to_string(COALESCE(p.proconfig, ARRAY[]::text[]), ';')) > 0
+       AND NOT EXISTS (SELECT 1 FROM aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE')
+  ) THEN
+    RAISE EXCEPTION 'PREFLIGHT: worker company lookup ima nesiguran owner, RLS, path ili EXECUTE.';
+  END IF;
+
   -- App ne smije direktno pozivati neočekivanu SECURITY DEFINER funkciju. Samo provjerene
   -- lookup/rate-limit/cursor funkcije su dozvoljeni definer API; trigger helperi nisu direktno
   -- izvršivi od gradix_app.
@@ -346,6 +362,7 @@ BEGIN
      AND NOT EXISTS (
        SELECT 1
          FROM unnest(ARRAY[
+           to_regprocedure('public.list_active_company_ids_for_worker()')::oid,
            to_regprocedure('public.login_attempt_record(text,text,integer)')::oid,
            to_regprocedure('public.login_attempt_count(text,integer)')::oid,
            to_regprocedure('public.login_attempt_clear(text)')::oid,
