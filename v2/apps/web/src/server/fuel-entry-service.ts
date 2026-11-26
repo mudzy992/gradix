@@ -50,10 +50,12 @@ export async function listFuelEntries(
     const conditions = ["fe.company_id = $1"];
     const params: unknown[] = [actor.companyId];
     let idx = 2;
-    if (isFieldOnly && viewerWorkerId) {
-      conditions.push(`fe.driver_worker_id = $${idx}`);
-      params.push(viewerWorkerId);
-      idx += 1;
+    if (isFieldOnly) {
+      if (viewerWorkerId) {
+        conditions.push(`fe.driver_worker_id = $${idx}`);
+        params.push(viewerWorkerId);
+        idx += 1;
+      } else conditions.push("false");
     }
     if (filters.machineId) {
       conditions.push(`fe.machine_id = $${idx}`);
@@ -70,6 +72,28 @@ export async function listFuelEntries(
       params.push(filters.to);
       idx += 1;
     }
+    if (filters.untilExclusive) {
+      conditions.push(`fe.filled_at < $${idx}::timestamptz`);
+      params.push(filters.untilExclusive);
+      idx += 1;
+    }
+    if (filters.projectIds != null) {
+      conditions.push(`fe.project_id = ANY($${idx}::text[])`);
+      params.push(filters.projectIds);
+      idx += 1;
+    }
+    if (filters.projectId) {
+      conditions.push(`fe.project_id = $${idx}`);
+      params.push(filters.projectId);
+      idx += 1;
+    }
+    if (filters.team) {
+      conditions.push(`w.team = $${idx}`);
+      params.push(filters.team);
+      idx += 1;
+    }
+    const limit = Math.min(Math.max(filters.limit ?? 500, 1), 10001);
+    params.push(limit);
     const result = await client.query<DbFuelRow>(
       `SELECT fe.id, fe.machine_id, m.code AS machine_code, m.name AS machine_name,
               fe.driver_worker_id, w.first_name || ' ' || w.last_name AS driver_name,
@@ -85,7 +109,7 @@ export async function listFuelEntries(
          LEFT JOIN public.projects p ON p.company_id = fe.company_id AND p.id = fe.project_id
         WHERE ${conditions.join(" AND ")}
         ORDER BY fe.filled_at DESC, fe.id
-        LIMIT 500`,
+        LIMIT $${idx}`,
       params,
     );
     return result.rows.map((row) => mapFuelRow(row, showPrice));

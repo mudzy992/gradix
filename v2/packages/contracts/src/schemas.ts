@@ -122,6 +122,14 @@ export const NotificationReadInput = z.object({
 });
 export type NotificationReadInput = z.infer<typeof NotificationReadInput>;
 
+export const ReportQuery = z.object({
+  from: SafeText.regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: SafeText.regex(/^\d{4}-\d{2}-\d{2}$/),
+  format: z.enum(["pdf", "xlsx"]),
+  projectId: SafeText.min(1).max(128).optional(),
+  team: SafeText.min(1).max(128).optional(),
+});
+
 export const SearchQuery = z.object({ q: SafeText.trim().min(2).max(100) });
 export const SearchResponse = z.object({ results:z.array(z.object({
   type:z.enum(["PROJECT","WORKER","MACHINE","PARTNER","TENDER","DOCUMENT","INVOICE","TASK","OBLIGATION","SERVICE_ORDER","INCIDENT"]),

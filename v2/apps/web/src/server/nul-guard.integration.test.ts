@@ -67,6 +67,7 @@ import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenanc
 import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
 import { GET as searchGet } from "@/app/api/search/route";
+import { GET as reportGet } from "@/app/api/reports/[key]/route";
 import { GET as dashboardActionsGet } from "@/app/api/dashboard/route";
 import { GET as dataHealthGet } from "@/app/api/data-health/route";
 
@@ -402,6 +403,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/data-health": { GET: dataHealthGet },
   "/api/dashboard": { GET: dashboardActionsGet },
   "/api/search": { GET: searchGet },
+  "/api/reports/{key}": { GET: reportGet },
   "/api/auth/login": { POST: loginRoute },
   "/api/auth/refresh": { POST: refreshRoute },
   "/api/auth/change-password": { POST: changePasswordRoute },

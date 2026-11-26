@@ -944,9 +944,12 @@ export async function hseStats(
     }));
 
     const actionRows = await client.query<{ status: HseActionRow["status"]; due_on: string; done_at: string | null }>(
-      `SELECT status, due_on::text, done_at::text FROM public.hse_actions
-        WHERE company_id = $1 AND due_on BETWEEN $2::date AND $3::date`,
-      [actor.companyId, filter.from, filter.to],
+      `SELECT a.status, a.due_on::text, a.done_at::text FROM public.hse_actions a
+        LEFT JOIN public.hse_incidents i ON i.company_id=a.company_id AND i.id=a.incident_id
+        LEFT JOIN public.hse_inspections ins ON ins.company_id=a.company_id AND ins.id=a.inspection_id
+        WHERE a.company_id = $1 AND a.due_on BETWEEN $2::date AND $3::date
+          AND ($4::text IS NULL OR i.project_id=$4 OR ins.project_id=$4)`,
+      [actor.companyId, filter.from, filter.to, filter.projectId ?? null],
     );
     const actions: HseActionRow[] = actionRows.rows.map((row) => ({
       status: row.status,
@@ -959,10 +962,12 @@ export async function hseStats(
               count(DISTINCT t.id) FILTER (WHERE t.kind = 'TOOLBOX')::text AS toolbox,
               (SELECT count(*)::text FROM public.hse_training_attendees a
                  JOIN public.hse_trainings tt ON tt.company_id = a.company_id AND tt.id = a.training_id
-                WHERE a.company_id = $1 AND tt.held_at::date BETWEEN $2::date AND $3::date) AS attendees
+                WHERE a.company_id = $1 AND tt.held_at::date BETWEEN $2::date AND $3::date
+                  AND ($4::text IS NULL OR tt.project_id=$4)) AS attendees
          FROM public.hse_trainings t
-        WHERE t.company_id = $1 AND t.held_at::date BETWEEN $2::date AND $3::date`,
-      [actor.companyId, filter.from, filter.to],
+        WHERE t.company_id = $1 AND t.held_at::date BETWEEN $2::date AND $3::date
+          AND ($4::text IS NULL OR t.project_id=$4)`,
+      [actor.companyId, filter.from, filter.to, filter.projectId ?? null],
     );
 
     const prohibition = await client.query<{
@@ -971,8 +976,9 @@ export async function hseStats(
       `SELECT id, inspected_at::text, authority_name, result, prohibition_lifted_at::text AS lifted
          FROM public.hse_inspections
         WHERE company_id = $1 AND result = 'PROHIBITION' AND prohibition_lifted_at IS NULL
+          AND ($2::text IS NULL OR project_id=$2)
         ORDER BY inspected_at DESC LIMIT 1`,
-      [actor.companyId],
+      [actor.companyId, filter.projectId ?? null],
     );
     const activeProhibition = prohibition.rows[0] && isActiveProhibition({
       result: prohibition.rows[0].result,

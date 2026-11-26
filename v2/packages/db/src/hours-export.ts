@@ -19,7 +19,7 @@ export type HoursExportSegment = {
  */
 export async function hoursExportSegments(
   client: PoolClient,
-  input: { companyId: string; from: string; to: string; projectIds: readonly string[] | null; projectId?: string; team?: string },
+  input: { companyId: string; from: string; to: string; projectIds: readonly string[] | null; projectId?: string; team?: string; maxSegments?: number },
 ): Promise<HoursExportSegment[]> {
   const result = await client.query<HoursExportSegment>(
     `SELECT e.worker_id, (w.first_name || ' ' || w.last_name) AS worker_name,
@@ -35,8 +35,8 @@ export async function hoursExportSegments(
         AND ($4::text[] IS NULL OR e.project_id = ANY($4::text[]))
         AND ($5::text IS NULL OR e.project_id = $5)
         AND ($6::text IS NULL OR w.team = $6)
-      ORDER BY d.work_date, worker_name, p.code, e.started_at`,
-    [input.companyId, input.from, input.to, input.projectIds, input.projectId ?? null, input.team ?? null],
+      ORDER BY d.work_date, worker_name, p.code, e.started_at LIMIT $7`,
+    [input.companyId, input.from, input.to, input.projectIds, input.projectId ?? null, input.team ?? null, input.maxSegments ?? null],
   );
   return result.rows;
 }

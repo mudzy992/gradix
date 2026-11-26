@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withCompany, companyId } from "@gradix/db";
 import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
+import { GET as reportGet } from "@/app/api/reports/[key]/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 import ExcelJS from "exceljs";
 import { listHoursForExport } from "./hours-export-service";
@@ -130,6 +131,38 @@ describeDb("R6.2 hours export API", () => {
     );
     expect(res.status).toBe(200);
     expect(await res.text()).toContain("LOCKED");
+  });
+
+  it("report API vraća stvarni PDF/XLSX, odbija rolu, filtere i neispravan datum", async () => {
+    const base = "http://localhost/api/reports/WORK_HOURS?from=2026-11-01&to=2026-11-30";
+    const params = {params:Promise.resolve({key:"WORK_HOURS"})};
+    const pdf = await reportGet(new NextRequest(`${base}&format=pdf`, {headers:{cookie:cookieOwner}}), params);
+    expect(pdf.status).toBe(200); expect(pdf.headers.get("content-type")).toBe("application/pdf");
+    expect(Buffer.from(await pdf.arrayBuffer()).toString("latin1")).toContain("8.000");
+    const excel = await reportGet(new NextRequest(`${base}&format=xlsx&team=Sjever`, {headers:{cookie:cookieOwner}}), params);
+    expect(excel.status).toBe(200);
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(await excel.arrayBuffer()) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("D4").value).toBe("8.000");
+    expect((await reportGet(new NextRequest(`${base}&format=pdf`,{headers:{cookie:cookieWorker}}),params)).status).toBe(403);
+    expect((await reportGet(new NextRequest(`${base}&format=other`,{headers:{cookie:cookieOwner}}),params)).status).toBe(400);
+    expect((await reportGet(new NextRequest(`${base}&format=pdf`,{headers:{cookie:cookieOwner}}),{params:Promise.resolve({key:"NOPE"})})).status).toBe(400);
+    expect((await reportGet(new NextRequest("http://localhost/api/reports/WORK_HOURS?from=2026-02-30&to=2026-03-01&format=pdf",{headers:{cookie:cookieOwner}}),params)).status).toBe(400);
+    expect((await reportGet(new NextRequest(`${base}&format=pdf&team=Sjever`,{headers:{cookie:cookieOwner}}),{params:Promise.resolve({key:"PROJECT_COSTS"})})).status).toBe(400);
+  });
+
+  it("svih sedam ključeva prolazi kroz zajednički HTTP izvoz u oba formata", async () => {
+    const keys = ["PROJECT_COSTS", "MACHINE_UTILIZATION", "FUEL", "WORK_HOURS", "DEADLINES", "TENDERS", "HSE"];
+    for (const key of keys) {
+      const base = `http://localhost/api/reports/${key}?from=2026-11-01&to=2026-11-30`;
+      const params = {params:Promise.resolve({key})};
+      const pdf = await reportGet(new NextRequest(`${base}&format=pdf`, {headers:{cookie:cookieOwner}}), params);
+      expect(pdf.status, `${key} PDF`).toBe(200);
+      expect(Buffer.from(await pdf.arrayBuffer()).toString("latin1").startsWith("%PDF-")).toBe(true);
+      const excel = await reportGet(new NextRequest(`${base}&format=xlsx`, {headers:{cookie:cookieOwner}}), params);
+      expect(excel.status, `${key} XLSX`).toBe(200);
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(await excel.arrayBuffer()) as never);
+      expect(wb.getWorksheet("Izvještaj")).toBeDefined();
+    }
   });
 
   it("CSV filteri projekat i tim sužavaju iste redove, a neispravan datum daje 400", async () => {

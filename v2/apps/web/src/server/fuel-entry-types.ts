@@ -36,6 +36,12 @@ export type ListFilters = {
   machineId?: string;
   from?: string;
   to?: string;
+  untilExclusive?: string;
+  /** Internal report filters; always narrow the tenant-visible source. */
+  projectIds?: readonly string[] | null;
+  projectId?: string;
+  team?: string;
+  limit?: number;
 };
 
 export type CreateInput = {

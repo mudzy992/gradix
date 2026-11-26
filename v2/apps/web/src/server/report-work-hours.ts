@@ -12,7 +12,7 @@ export async function loadWorkHoursReport(
   generatedAt: Date = new Date(),
 ): Promise<ReportDocument> {
   if (!can(actor.roles, "payroll.hours.export")) throw new Error("REPORT_FORBIDDEN");
-  const rows = await listHoursForExport(pool, actor, filters);
+  const rows = await listHoursForExport(pool, actor, {...filters, maxSegments:10001});
   // No rates, sensitive worker fields or attachments are fetched by the shared source.
   return {
     key: "WORK_HOURS",

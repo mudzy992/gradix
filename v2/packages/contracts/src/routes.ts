@@ -273,6 +273,7 @@ import {
   QueueHealthResponse,
   DataHealthResponse,
   DashboardActionsResponse,
+  ReportQuery,
   SearchQuery,
   SearchResponse,
   NotificationReadInput,
@@ -363,7 +364,7 @@ export type RouteSpec = {
   request: z.ZodType | null;
   response: z.ZodType;
   /** Za rute koje ne primaju JSON (uvoz): `multipart/form-data` umjesto `application/json`. */
-  contentType?: "application/json" | "multipart/form-data" | "text/csv" | "application/pdf";
+  contentType?: "application/json" | "multipart/form-data" | "text/csv" | "application/pdf" | "application/octet-stream";
   /** Query parametri koje ruta čita (za OpenAPI; klijent ih dobija kroz `query` opciju). */
   query?: z.ZodObject;
   /** Neke rute vraćaju `meta` u envelope-u (sync pull, sync push). */
@@ -2953,6 +2954,11 @@ export const ROUTES = [
     permission: "payroll.own.view",
     request: null,
     response: MyPayrollResponse,
+  },
+  {
+    method: "GET", path: "/api/reports/{key}", summary: "Sinhroni izvoz izvještaja (PDF ili XLSX).",
+    auth: true, permission: "reports.view", request: null, query: ReportQuery,
+    response: z.string(), contentType: "application/octet-stream", raw: true,
   },
   {
     method: "GET", path: "/api/search", summary: "Pretraga prema dozvolama i opsegu sesije.",

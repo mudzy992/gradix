@@ -43,6 +43,7 @@ export const PERMISSIONS = {
   // WORKER, DRIVER i ostali ostaju na postojećem pregledu — zato ova dozvola postoji:
   // da granica između starog i novog ekrana bude podatak (matrica, test), ne `if` u stranici.
   "pregled.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR"],
+  "reports.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
   "users.manage": ["OWNER", "ADMIN"],
   "audit.view": ["OWNER", "ADMIN"],
   "roles.view": ["OWNER", "ADMIN"],
@@ -360,6 +361,10 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     label: "Početni pregled (šta traži pažnju)",
     description:
       "Početni ekran nakon prijave: istekli rokovi, nerazriješeni sukobi, dani za provjeru, blokirane dodjele i stanje sinhronizacije. Vlasnik i admin vide cijelu firmu i sinhronizaciju; vođa projekta i šef samo svoj opseg, bez sinhronizacije. Radnik, vozač i ostali ostaju na starom pregledu.",
+  },
+  "reports.view": {
+    label: "Pregled izvještaja",
+    description: "Preuzimanje izvještaja uz dozvole za izvor podataka i opseg korisnika.",
   },
   "users.manage": {
     label: "Upravljanje korisnicima",

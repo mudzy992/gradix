@@ -14,6 +14,8 @@ export type HoursExportFilters = {
   to: string;
   projectId?: string;
   team?: string;
+  /** Internal bounded report query; existing list/CSV stays unlimited. */
+  maxSegments?: number;
 };
 
 export type HoursExportRow = HoursCsvRow & {

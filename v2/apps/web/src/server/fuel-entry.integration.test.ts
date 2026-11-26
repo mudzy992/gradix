@@ -5,6 +5,9 @@ import { withCompany, companyId } from "@gradix/db";
 import { GET as listRoute, POST as createRoute } from "@/app/api/fuel-entries/route";
 import { POST as reviseRoute } from "@/app/api/fuel-entries/[id]/revise/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
+import ExcelJS from "exceljs";
+import { loadFuelReport } from "./report-fuel";
+import { renderReportPdf, renderReportXlsx } from "./report-render";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -54,8 +57,8 @@ describeDb("R5.2 fuel-entry web API", () => {
         [`mem_o_${RUN}`, USER_OWNER, COMPANY, `mem_a_${RUN}`, USER_ACCT, `mem_d_${RUN}`, USER_DRIVER],
       );
       await client.query(
-        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id)
-         VALUES ($1, $2, 'D', 'River', '2024-01-01'::date, $3)`,
+        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id, team)
+         VALUES ($1, $2, 'D', 'River', '2024-01-01'::date, $3, 'Sjever')`,
         [WORKER, COMPANY, USER_DRIVER],
       );
       await client.query(
@@ -89,6 +92,25 @@ describeDb("R5.2 fuel-entry web API", () => {
     await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
     await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER_OWNER, USER_ACCT, USER_DRIVER]]);
     await admin.end();
+  });
+
+  it("izvještaj goriva koristi redove liste, skriva cijene i poštuje opseg i tim", async () => {
+    const app = new Pool({connectionString: process.env.DATABASE_URL, max: 1});
+    try {
+      const owner = {userId: USER_OWNER, companyId: COMPANY, roles: ["OWNER" as const], scope: "COMPANY" as const, projectIds: null};
+      const filters = {from:"2026-11-19", to:"2026-11-19", team:"Sjever"};
+      const doc = await loadFuelReport(app, owner, filters, new Date("2026-11-20T12:00:00Z"));
+      expect(doc.rows).toHaveLength(1); expect(doc.rows[0]?.[4]).toBe("40.5"); expect(doc.rows[0]?.[7]).toBe("85.00");
+      expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("40.5");
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
+      expect(wb.getWorksheet("Izvještaj")!.getCell("H4").value).toBe("85.00");
+      const driver = await loadFuelReport(app, {...owner,userId:USER_DRIVER,roles:["DRIVER"]}, filters);
+      expect(driver.rows).toHaveLength(1); expect(driver.columns).not.toContain("Iznos");
+      expect(JSON.stringify(driver)).not.toContain("85.00");
+      expect((await loadFuelReport(app, owner, {...filters, team:"Jug"})).rows).toEqual([]);
+      expect((await loadFuelReport(app, {...owner, scope:"PROJECTS", projectIds:[]}, filters)).rows).toEqual([]);
+      expect((await loadFuelReport(app, {...owner, companyId:"other"}, filters)).rows).toEqual([]);
+    } finally { await app.end(); }
   });
 
   it("ACCOUNTANT može listu ali ne može kreirati unos", async () => {

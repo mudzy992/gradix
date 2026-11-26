@@ -33,11 +33,17 @@ export async function loadProjectCostReport(
       `SELECT p.id,p.code,p.name,coalesce(p.currency_code,c.currency) AS currency
          FROM public.projects p JOIN public.companies c ON c.id=p.company_id
         WHERE p.company_id=$1 AND ($2::text[] IS NULL OR p.id=ANY($2::text[]))
-          AND ($3::text IS NULL OR p.id=$3) ORDER BY p.code,p.id`,
+          AND ($3::text IS NULL OR p.id=$3) ORDER BY p.code,p.id LIMIT 201`,
       [actor.companyId, allowed, filters.projectId ?? null],
     );
+    if (projects.rows.length > 200) throw new Error("REPORT_TOO_LARGE");
     const rows: string[][] = [];
     for (const project of projects.rows) {
+      // Do not give a false monetary sum when ledger entries have incompatible currencies.
+      const currencies = await client.query<{currency_code:string}>(`SELECT DISTINCT e.currency_code FROM public.cost_entries e
+        WHERE e.company_id=$1 AND e.project_id=$2 AND e.status='POSTED' AND e.occurred_on BETWEEN $3::date AND $4::date`,
+      [actor.companyId, project.id, filters.from, filters.to]);
+      if (currencies.rows.some(row => row.currency_code !== project.currency)) throw new Error("REPORT_MIXED_CURRENCY");
       const total = await periodTotals(client, actor.companyId, filters.from, filters.to, [project.id]);
       rows.push([project.code, project.name, amount(total.cents), project.currency]);
     }

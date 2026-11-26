@@ -124,6 +124,11 @@ export function buildOpenApi(): Record<string, unknown> {
                     schema: { type: "string", format: "binary", description: "PDF" },
                   },
                 }
+              : route.contentType === "application/octet-stream"
+              ? {
+                  "application/pdf": { schema: { type: "string", format: "binary" } },
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { schema: { type: "string", format: "binary" } },
+                }
               : {
                   "application/json": {
                     schema: route.raw

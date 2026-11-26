@@ -108,7 +108,8 @@ function mapFor(actor: TenderActor, row: Record<string, unknown>): TenderRow {
 export async function listTenders(
   pool: Pool,
   actor: TenderActor,
-  filter: { status?: string; urgent?: boolean } = {},
+  filter: { status?: string; urgent?: boolean; from?: string; to?: string; projectIds?: readonly string[] | null;
+    projectId?: string; team?: string; limit?: number } = {},
 ): Promise<TenderRow[]> {
   if (!can(actor.roles, "tenders.view")) return [];
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
@@ -123,13 +124,22 @@ export async function listTenders(
                     AND (clock_timestamp() AT TIME ZONE 'Europe/Sarajevo')::date + $4::int
             AND t.status NOT IN ('WON', 'LOST', 'WITHDRAWN', 'CANCELLED')
           ))
+          AND ($5::date IS NULL OR COALESCE(t.deadline_at,t.created_at) >= $5::date)
+          AND ($6::date IS NULL OR COALESCE(t.deadline_at,t.created_at) < ($6::date + 1))
+          AND ($7::text[] IS NULL OR t.converted_project_id = ANY($7::text[]))
+          AND ($8::text IS NULL OR t.converted_project_id = $8)
+          AND ($9::text IS NULL OR EXISTS (SELECT 1 FROM public.tender_team tt
+            JOIN public.workers w ON w.company_id=tt.company_id AND w.id=tt.worker_id
+            WHERE tt.company_id=t.company_id AND tt.tender_id=t.id AND w.team=$9))
         ORDER BY COALESCE(t.deadline_at, t.created_at) ASC, t.created_at DESC
-        LIMIT 500`,
+        LIMIT $10`,
       [
         actor.companyId,
         filter.status && isTenderStatus(filter.status) ? filter.status : null,
         filter.urgent === true,
         TENDER_UPCOMING_DAYS,
+        filter.from ?? null, filter.to ?? null, filter.projectIds ?? null, filter.projectId ?? null,
+        filter.team ?? null, Math.min(Math.max(filter.limit ?? 500,1),10001),
       ],
     );
     return rows.rows.map((row) => mapFor(actor, row));

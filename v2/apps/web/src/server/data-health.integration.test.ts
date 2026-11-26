@@ -6,6 +6,12 @@ import { loadDataHealth } from "./data-health";
 import { loadDashboardActions } from "./dashboard-actions";
 import { globalSearch } from "./global-search";
 import { loadProjectCostReport } from "./report-project-costs";
+import { loadHseReport } from "./report-hse";
+import { loadDeadlinesReport } from "./report-deadlines";
+import { loadTendersReport } from "./report-tenders";
+import { loadMachinesReport } from "./report-machines";
+import { machineUtilization } from "./machine-utilization-service";
+import { hseStats } from "./hse-service";
 import { renderReportPdf, renderReportXlsx } from "./report-render";
 import ExcelJS from "exceljs";
 
@@ -153,6 +159,50 @@ describeDb("data health pod stvarnim RLS-om", () => {
     await expect(loadProjectCostReport(app, {...pm, roles: ["WORKER"]}, filters)).rejects.toThrow("REPORT_FORBIDDEN");
   });
 
+  it("iskorištenost mašine koristi isti servis i ne miješa rad drugih projekata", async () => {
+    await admin.query("UPDATE public.workers SET team='Sjever' WHERE id='dh-wa'");
+    await admin.query(`INSERT INTO public.machine_work_logs(id,company_id,machine_id,worker_id,project_id,started_at,ended_at,mode,created_by,updated_by) VALUES
+      ('dh-ml1','dh-a','dh-ma','dh-wa','dh-pa','2026-11-10T08:00:00Z','2026-11-10T10:00:00Z','WORK','dh-u','dh-u'),
+      ('dh-ml2','dh-a','dh-ma','dh-wa','dh-pa2','2026-11-10T11:00:00Z','2026-11-10T15:00:00Z','WORK','dh-u','dh-u')`);
+    const pm={...actor,roles:["PROJECT_MANAGER" as const],scope:"PROJECTS" as const,projectIds:["dh-pa"]};
+    const filters={from:"2026-11-01",to:"2026-11-30",projectId:"dh-pa",team:"Sjever"};
+    const screen=await machineUtilization(app,pm,"dh-ma",filters.from,filters.to,{...filters,projectIds:pm.projectIds});
+    expect(screen?.work_hours).toBe(2);
+    const doc=await loadMachinesReport(app,pm,filters,new Date("2026-11-30T12:00:00Z"));
+    expect(doc.rows).toHaveLength(1); expect(doc.rows[0]?.[2]).toBe("2");
+    expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("Rad h: 2");
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("C4").value).toBe("2");
+    expect((await loadMachinesReport(app,{...pm,projectIds:["dh-pa2"]},filters)).rows).toEqual([]);
+    expect((await loadMachinesReport(app,{...pm,companyId:"dh-b",scope:"COMPANY",projectIds:null},filters)).rows).toEqual([]);
+    expect((await loadMachinesReport(app,pm,{...filters,team:"Jug"})).rows).toEqual([]);
+  });
+
+  it("HSE izvještaj dijeli statistiku ekrana i ograničava incidente, obuke i mjere na projekat", async () => {
+    await admin.query(`INSERT INTO public.hse_incidents(id,company_id,project_id,kind,severity,occurred_at,description,created_by,updated_by)
+      VALUES ('dh-i2','dh-a','dh-pa2','ACCIDENT','MINOR',now(),'Drugi projekat','dh-u','dh-u')`);
+    await admin.query(`INSERT INTO public.hse_actions(id,company_id,incident_id,description,responsible_worker_id,due_on,created_by)
+      VALUES ('dh-action2','dh-a','dh-i2','Mjera drugi projekat','dh-wa',CURRENT_DATE,'dh-u')`);
+    await admin.query(`INSERT INTO public.hse_trainings(id,company_id,project_id,kind,title,held_at,created_by)
+      VALUES ('dh-training1','dh-a','dh-pa','TOOLBOX','Obuka jedan',now(),'dh-u'),
+             ('dh-training2','dh-a','dh-pa2','TOOLBOX','Obuka dva',now(),'dh-u')`);
+    await admin.query(`INSERT INTO public.hse_inspections(id,company_id,project_id,kind,inspected_at,result,created_by)
+      VALUES ('dh-insp2','dh-a','dh-pa2','INTERNAL',now(),'PROHIBITION','dh-u')`);
+    const pm = { ...actor, roles: ["PROJECT_MANAGER" as const], scope: "PROJECTS" as const, projectIds: ["dh-pa"] };
+    const filters = { from: "2000-01-01", to: "2100-12-31", projectId: "dh-pa" };
+    const stats = await hseStats(app, pm, filters);
+    expect(stats.incidents).toBe(1); expect(stats.actions.open).toBe(1);
+    expect(stats.trainings.count).toBe(1); expect(stats.activeProhibition).toBeNull();
+    const doc = await loadHseReport(app, pm, filters, new Date("2026-11-01T12:00:00Z"));
+    expect(doc.rows).toHaveLength(1);
+    expect(doc.rows[0]).toEqual(["A",String(stats.workedHours),"1","NEAR_MISS: 1","MINOR: 1","1","0","—","1","0","—","1","1","0","NE"]);
+    expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("NEAR_MISS: 1");
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("D4").value).toBe("NEAR_MISS: 1");
+    expect((await loadHseReport(app, {...pm, projectIds: ["dh-pa2"]}, filters)).rows).toEqual([]);
+    expect((await loadHseReport(app, {...pm, companyId: "dh-b", scope: "COMPANY", projectIds: null}, filters)).rows).toEqual([]);
+  });
+
   it("pretraga čuva firmu, projektni opseg, dozvole, osjetljiva polja i doslovne znakove", async () => {
     await admin.query("UPDATE public.projects SET name=CASE id WHEN 'dh-pa' THEN 'Most skela' WHEN 'dh-pa2' THEN 'Skela skrivena' ELSE 'Skela druga firma' END WHERE id IN ('dh-pa','dh-pa2','dh-pb')");
     await admin.query("UPDATE public.workers SET first_name='Skela',last_name='Radnik' WHERE id IN ('dh-wa','dh-wb')");
@@ -201,6 +251,42 @@ describeDb("data health pod stvarnim RLS-om", () => {
     expect(worker.map(x=>x.type)).toEqual(["PROJECT"]);
     expect(await globalSearch(app,actor,"%_")).toEqual([]);
     expect(full.every(x=>x.href.startsWith("/ured/") && Object.keys(x).sort().join(",")==="href,title,type")).toBe(true);
+  });
+
+  it("rokovi koriste stanje liste, period i projektni opseg bez izvoza priloga i napomena", async () => {
+    const pm = { ...actor, roles: ["PROJECT_MANAGER" as const], scope: "PROJECTS" as const, projectIds: ["dh-pa"] };
+    const filters = { from: "2000-01-01", to: "2100-12-31" };
+    const doc = await loadDeadlinesReport(app, pm, filters, new Date("2026-11-01T12:00:00Z"));
+    expect(doc.rows).toHaveLength(1);
+    expect(doc.rows[0]).toEqual(["Skela obaveza", "PROJECT", "Most skela", expect.any(String), "", expect.any(String)]);
+    expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("Skela obaveza");
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("C4").value).toBe("Most skela");
+    expect((await loadDeadlinesReport(app, pm, {...filters, projectId: "dh-pa2"})).rows).toEqual([]);
+    expect((await loadDeadlinesReport(app, {...pm, projectIds: []}, filters)).rows).toEqual([]);
+    const other = await loadDeadlinesReport(app, {...pm, companyId: "dh-b", scope: "COMPANY", projectIds: null}, filters);
+    expect(other.rows.every(row => row[0] !== "Skela obaveza")).toBe(true);
+  });
+
+  it("tender izvještaj koristi checklistu i ishod te skriva maržu bez posebne dozvole", async () => {
+    await admin.query("UPDATE public.tenders SET markup_pct=17.5 WHERE id='dh-tender'");
+    await admin.query(`INSERT INTO public.tender_checklist_items(id,company_id,tender_id,code,label,guarantee_type,valid_until,amount_cents,created_by,updated_by)
+      VALUES ('dh-guarantee','dh-a','dh-tender','BID','Ponuda','BID','2099-01-01',2500,'dh-u','dh-u')`);
+    await admin.query(`INSERT INTO public.tender_outcomes(id,company_id,tender_id,result,lost_reason,recorded_by)
+      VALUES ('dh-result','dh-a','dh-tender','LOST','PRICE','dh-u')`);
+    const owner = {...actor,roles:["OWNER" as const],scope:"COMPANY" as const};
+    const filters = {from:"2000-01-01",to:"2100-12-31"};
+    const doc = await loadTendersReport(app, owner, filters, new Date("2026-11-01T12:00:00Z"));
+    expect(doc.rows).toHaveLength(1); expect(doc.rows[0]?.[0]).toBe("Skela tender");
+    expect(doc.rows[0]?.[6]).toBe("LOST"); expect(doc.rows[0]?.[8]).toContain("25.00");
+    expect(doc.rows[0]?.[9]).toBe("17.50");
+    expect(Buffer.from(renderReportPdf(doc)).toString("latin1")).toContain("Skela tender");
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await renderReportXlsx(doc) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("J4").value).toBe("17.50");
+    const accountant = await loadTendersReport(app, {...owner, roles:["ACCOUNTANT"]}, filters);
+    expect(accountant.columns).not.toContain("Marza %"); expect(JSON.stringify(accountant)).not.toContain("17.50");
+    expect((await loadTendersReport(app, {...owner, scope:"PROJECTS", projectIds:["dh-pa"]}, filters)).rows).toEqual([]);
+    expect((await loadTendersReport(app, {...owner, companyId:"dh-b"}, filters)).rows).toEqual([]);
   });
 
 });

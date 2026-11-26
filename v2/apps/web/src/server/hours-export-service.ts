@@ -52,8 +52,9 @@ export async function listHoursForExport(
     });
     const rows = await hoursExportSegments(client, {
       companyId: actor.companyId, from: filters.from, to: filters.to, projectIds,
-      projectId: filters.projectId, team: filters.team,
+      projectId: filters.projectId, team: filters.team, maxSegments: filters.maxSegments,
     });
+    if (filters.maxSegments && rows.length >= filters.maxSegments) throw new Error("REPORT_TOO_LARGE");
     return aggregate(rows);
   });
 }
