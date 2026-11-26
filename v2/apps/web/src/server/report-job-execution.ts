@@ -35,7 +35,7 @@ export async function executeReportJob(pool: Pool, company: string, jobId: strin
       const params=job.params as Record<string,unknown>;
       if ((params.projectId != null && typeof params.projectId !== "string") ||
           (params.team != null && typeof params.team !== "string")) throw new Error("REPORT_REQUEST_INVALID");
-      const filters={from:job.from,to:job.to,
+      const filters={from:job.from,to:job.to,asyncExport:true,
         ...(typeof params.projectId === "string" ? {projectId:params.projectId} : {}),
         ...(typeof params.team === "string" ? {team:params.team} : {})};
       const doc=await loadReport(pool,{...actor,roles:[...actor.roles]},job.report_key,filters);

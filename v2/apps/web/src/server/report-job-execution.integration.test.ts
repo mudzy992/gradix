@@ -8,6 +8,8 @@ import { createReportJob } from "./report-job-create";
 import { executeReportJob, type ReportStore } from "./report-job-execution";
 import { createReportAttachmentStore } from "./report-job-attachment-service";
 import { reportJobDownload } from "./report-job-download";
+import { loadReport } from "./report-service";
+import ExcelJS from "exceljs";
 import { type HeadObjectCommand, PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
 
 const adminUrl=process.env.DATABASE_ADMIN_URL, appUrl=process.env.DATABASE_URL;
@@ -21,7 +23,7 @@ const migrations=fileURLToPath(new URL("../../../../packages/db/migrations",impo
 run("izvršavanje report joba u tenant transakciji", () => {
   const root=new Client(rootUrl.toString()), admin=new Client(dbUrl.toString());
   const app=new Pool({connectionString:runtimeUrl.toString(),max:5});
-  const actor={companyId:"a",userId:"u",roles:["OWNER"],scope:"COMPANY" as const,projectIds:null};
+  const actor={companyId:"a",userId:"u",roles:["OWNER" as const],scope:"COMPANY" as const,projectIds:null};
   let uploads=0;
   const store:ReportStore=async ({client,companyId,jobId,userId,format,bytes})=>{
     uploads++;
@@ -61,6 +63,27 @@ run("izvršavanje report joba u tenant transakciji", () => {
       }
     }
     expect(uploads).toBe(14);
+  },60_000);
+  it("worker izvozi više redova nego sinhroni limiti bez mijenjanja sinhronog ponašanja", async () => {
+    await admin.query(`INSERT INTO public.projects(id,company_id,code,name)
+      SELECT 'bulk-p-' || n,'a','B' || n,'Bulk' FROM generate_series(1,200) n`);
+    const filters={from:"2026-01-01",to:"2026-01-31"};
+    await expect(loadReport(app,actor,"PROJECT_COSTS",filters)).rejects.toThrow("REPORT_TOO_LARGE");
+    const project=await createReportJob(app,actor,{key:"PROJECT_COSTS",format:"xlsx",...filters});
+    if (!project.ok) throw new Error("fixture");
+    expect(await executeReportJob(app,"a",project.id,store)).toBe("DONE");
+    await admin.query("INSERT INTO public.workers(id,company_id,first_name,last_name,hired_at) VALUES ('bulk-w','a','A','B','2020-01-01')");
+    await admin.query("INSERT INTO public.machines(id,company_id,code,name,category_id) VALUES ('bulk-m','a','BULK','Bulk','a_cat_truck')");
+    await admin.query(`INSERT INTO public.fuel_entries(id,company_id,machine_id,driver_worker_id,filled_at,liters,currency_code,created_by,updated_by)
+      SELECT 'bulk-f-' || n,'a','bulk-m','bulk-w','2026-01-02T08:00:00Z',1,'BAM','u','u' FROM generate_series(1,1001) n`);
+    await expect(loadReport(app,actor,"FUEL",filters)).rejects.toThrow("REPORT_TOO_LARGE");
+    const fuel=await createReportJob(app,actor,{key:"FUEL",format:"xlsx",...filters});
+    if (!fuel.ok) throw new Error("fixture");
+    let data:Uint8Array | undefined;
+    expect(await executeReportJob(app,"a",fuel.id,async input=>{data=input.bytes;return store(input);})).toBe("DONE");
+    if (!data) throw new Error("missing XLSX");
+    const workbook=new ExcelJS.Workbook(); await workbook.xlsx.load(data as never);
+    expect(workbook.getWorksheet("Izvještaj")?.rowCount).toBe(1006);
   },60_000);
   it("S3 adapter prvo bilježi pending, potvrđuje veličinu i uvezuje gotov prilog", async () => {
     const objects=new Map<string,{body:Uint8Array;type:string}>();

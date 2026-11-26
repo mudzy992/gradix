@@ -7,14 +7,15 @@ import { getTenderOutcome } from "./tender-outcome-service";
 import type { ReportDocument } from "./report-render";
 
 type Actor = { userId: string; companyId: string; roles: Role[]; scope: Scope; projectIds: readonly string[] | null };
-type Filters = { from: string; to: string; projectId?: string; team?: string };
+type Filters = { from: string; to: string; projectId?: string; team?: string; asyncExport?: boolean };
 
 /** The list, checklist and outcome services remain the source of truth and enforce margin RBAC. */
 export async function loadTendersReport(pool: Pool, actor: Actor, filters: Filters, generatedAt = new Date()): Promise<ReportDocument> {
   if (!can(actor.roles, "tenders.view")) throw new Error("REPORT_FORBIDDEN");
+  const maxTenders=filters.asyncExport ? 1000 : 200;
   const ids = visibleProjectIds({userId:actor.userId, scope:actor.scope, projectIds:actor.projectIds ?? []});
-  const tenders = await listTenders(pool, actor, {...filters, projectIds:ids, limit:201});
-  if (tenders.length > 200) throw new Error("REPORT_TOO_LARGE");
+  const tenders = await listTenders(pool, actor, {...filters, projectIds:ids, limit:maxTenders+1});
+  if (tenders.length > maxTenders) throw new Error("REPORT_TOO_LARGE");
   const showMargin = can(actor.roles, "tenders.price.manage");
   const columns = ["Tender", "Narucilac", "Status", "Rok", "Ponuda", "Valuta", "Ishod", "Razlog", "Garancije"];
   if (showMargin) columns.push("Marza %");

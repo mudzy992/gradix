@@ -8,12 +8,13 @@ import { machinePeriodCosts, formatMachineCost } from "./machine-period-costs";
 import type { ReportDocument } from "./report-render";
 
 type Actor = { userId: string; companyId: string; roles: Role[]; scope: Scope; projectIds: readonly string[] | null };
-type Filters = { from: string; to: string; projectId?: string; team?: string };
+type Filters = { from: string; to: string; projectId?: string; team?: string; asyncExport?: boolean };
 const number = (value: number | null) => value === null ? "" : String(value);
 
 /** Uses screen utilization, the posted ledger, and the effective rate at period end. */
 export async function loadMachinesReport(pool: Pool, actor: Actor, filters: Filters, generatedAt = new Date()): Promise<ReportDocument> {
   if (!can(actor.roles,"equipment.view")) throw new Error("REPORT_FORBIDDEN");
+  const maxMachines=filters.asyncExport ? 1000 : 200;
   const ids=visibleProjectIds({userId:actor.userId,scope:actor.scope,projectIds:actor.projectIds ?? []});
   const machines = await withCompany(pool, companyId(actor.companyId), async client => {
     const result = await client.query<{id:string;code:string;name:string}>(`SELECT m.id,m.code,m.name FROM public.machines m
@@ -26,11 +27,11 @@ export async function loadMachinesReport(pool: Pool, actor: Actor, filters: Filt
           WHERE e.company_id=m.company_id AND e.machine_id=m.id AND e.status IN ('POSTED','PENDING')
             AND e.occurred_on BETWEEN $5::date AND $6::date AND ($2::text[] IS NULL OR e.project_id=ANY($2::text[]))
             AND ($3::text IS NULL OR e.project_id=$3))))
-      ORDER BY m.code,m.id LIMIT 201`,[actor.companyId,ids,filters.projectId ?? null,filters.team ?? null,
-      `${filters.from}T00:00:00Z`,`${filters.to}T00:00:00Z`]);
+      ORDER BY m.code,m.id LIMIT $7`,[actor.companyId,ids,filters.projectId ?? null,filters.team ?? null,
+      `${filters.from}T00:00:00Z`,`${filters.to}T00:00:00Z`,maxMachines+1]);
     return result.rows;
   });
-  if (machines.length > 200) throw new Error("REPORT_TOO_LARGE");
+  if (machines.length > maxMachines) throw new Error("REPORT_TOO_LARGE");
   const showRate = can(actor.roles,"machines.cost_rate.view");
   const columns = ["Kod", "Masina", "Rad h", "Prazni hod h", "Kvar h", "Iskoristenost %", "Kvarova", "Zastoj min"];
   if (showRate) columns.push("Stopa/h na kraju perioda", "Valuta");

@@ -11,7 +11,7 @@ import { loadHseReport } from "./report-hse";
 import type { ReportDocument } from "./report-render";
 
 type Actor = { userId: string; companyId: string; roles: Role[]; scope: Scope; projectIds: readonly string[] | null };
-type Filters = { from: string; to: string; projectId?: string; team?: string };
+type Filters = { from: string; to: string; projectId?: string; team?: string; asyncExport?: boolean };
 type Loader = (pool: Pool, actor: Actor, filters: Filters, generatedAt: Date) => Promise<ReportDocument>;
 
 /** Loader registry is data: one dispatch path, with each source retaining its own authorization. */

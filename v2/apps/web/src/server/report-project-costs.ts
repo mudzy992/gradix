@@ -12,7 +12,7 @@ export type ProjectCostReportActor = {
   scope: Scope;
   projectIds: readonly string[] | null;
 };
-export type ProjectCostReportFilters = { from: string; to: string; projectId?: string };
+export type ProjectCostReportFilters = { from: string; to: string; projectId?: string; asyncExport?: boolean };
 
 function amount(centsValue: string): string {
   const cents = BigInt(centsValue);
@@ -27,16 +27,17 @@ export async function loadProjectCostReport(
   generatedAt: Date = new Date(),
 ): Promise<ReportDocument> {
   if (!can(actor.roles, "projects.costs.view")) throw new Error("REPORT_FORBIDDEN");
+  const maxProjects=filters.asyncExport ? 1000 : 200;
   const allowed = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: [...(actor.projectIds ?? [])] });
   return withCompany(pool, companyId(actor.companyId), async client => {
     const projects = await client.query<{ id: string; code: string; name: string; currency: string }>(
       `SELECT p.id,p.code,p.name,coalesce(p.currency_code,c.currency) AS currency
          FROM public.projects p JOIN public.companies c ON c.id=p.company_id
         WHERE p.company_id=$1 AND ($2::text[] IS NULL OR p.id=ANY($2::text[]))
-          AND ($3::text IS NULL OR p.id=$3) ORDER BY p.code,p.id LIMIT 201`,
-      [actor.companyId, allowed, filters.projectId ?? null],
+          AND ($3::text IS NULL OR p.id=$3) ORDER BY p.code,p.id LIMIT $4`,
+      [actor.companyId, allowed, filters.projectId ?? null,maxProjects+1],
     );
-    if (projects.rows.length > 200) throw new Error("REPORT_TOO_LARGE");
+    if (projects.rows.length > maxProjects) throw new Error("REPORT_TOO_LARGE");
     const rows: string[][] = [];
     for (const project of projects.rows) {
       // Do not give a false monetary sum when ledger entries have incompatible currencies.
