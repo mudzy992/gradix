@@ -44,6 +44,20 @@ export function DataTable<Row>({
   actions?: (row: Row) => RowAction[];
   rowActionLabel?: (row: Row) => string;
 }) {
+  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
+  const sortedRows = useMemo(() => {
+    const col = sort ? columns.find((c) => c.key === sort.key && c.sortValue) : undefined;
+    if (!col?.sortValue || !sort) return rows;
+    return [...rows].sort((a, b) => {
+      const va = col.sortValue!(a);
+      const vb = col.sortValue!(b);
+      const cmp =
+        typeof va === "number" && typeof vb === "number"
+          ? va - vb
+          : String(va).localeCompare(String(vb), "bs");
+      return cmp * sort.dir;
+    });
+  }, [rows, columns, sort]);
   if (loading) return <p className="gx-page-sub">Učitavanje…</p>;
   if (error) {
     return (
@@ -72,20 +86,6 @@ export function DataTable<Row>({
     }
     return <p className="gx-page-sub">Nema zapisa.</p>;
   }
-  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
-  const sortedRows = useMemo(() => {
-    const col = sort ? columns.find((c) => c.key === sort.key && c.sortValue) : undefined;
-    if (!col?.sortValue || !sort) return rows;
-    return [...rows].sort((a, b) => {
-      const va = col.sortValue!(a);
-      const vb = col.sortValue!(b);
-      const cmp =
-        typeof va === "number" && typeof vb === "number"
-          ? va - vb
-          : String(va).localeCompare(String(vb), "bs");
-      return cmp * sort.dir;
-    });
-  }, [rows, columns, sort]);
   const allColumns = actions
     ? [...columns, { key: "__actions", header: "Akcija", cell: () => null }]
     : columns;

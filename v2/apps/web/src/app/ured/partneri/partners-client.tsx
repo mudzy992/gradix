@@ -12,6 +12,7 @@ const KIND_LABEL: Record<PartnerRow["kind"], string> = {
   CLIENT: "Naručilac",
   VENDOR: "Dobavljač",
   SERVICE: "Servis",
+  SUBCONTRACTOR: "Podizvođač",
   OTHER: "Ostalo",
 };
 
