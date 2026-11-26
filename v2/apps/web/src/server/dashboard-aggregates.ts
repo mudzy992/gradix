@@ -1,6 +1,6 @@
 /** R6.2: OWNER/PM/ACCOUNTANT dashboard numbers for /pregled Sažetak. */
 import type { Pool, PoolClient } from "pg";
-import { companyId as toCompanyId, withCompany } from "@gradix/db";
+import { companyId as toCompanyId, periodTotals, withCompany } from "@gradix/db";
 import {
   isCurrency,
   toAmountString,
@@ -69,12 +69,6 @@ async function buildDashboard(
     projectIds: actor.projectIds ?? [],
   });
   const scoped = projectIds !== null;
-  const params: unknown[] = scoped
-    ? [actor.companyId, projectIds, from, today]
-    : [actor.companyId, from, today];
-  const scopePred = scoped ? "AND e.project_id = ANY($2::text[])" : "";
-  const fromIdx = scoped ? "$3" : "$2";
-  const toIdx = scoped ? "$4" : "$3";
   const projects = await client.query<{ n: number }>(
     scoped
       ? `SELECT count(*)::int AS n FROM public.projects p
@@ -83,37 +77,12 @@ async function buildDashboard(
           WHERE p.company_id = $1 AND p.is_active`,
     scoped ? [actor.companyId, projectIds] : [actor.companyId],
   );
-  const costs = await client.query<{ cents: string }>(
-    /*
-     * F5: jedan ledger (`cost_entries`). Period ide po `occurred_on` (dan događaja), a ne po
-     * `booked_at`: izvještaj mjeseca govori o poslu koji se tada radio, ne o trenutku kad je
-     * neko stisnuo „potvrdi“.
-     */
-    `SELECT coalesce(sum(e.amount_cents), 0)::text AS cents
-       FROM public.cost_entries e
-      WHERE e.company_id = $1
-        AND e.status = 'POSTED'
-        ${scopePred}
-        AND e.occurred_on BETWEEN ${fromIdx}::date AND ${toIdx}::date`,
-    params,
-  );
-  const hours = await client.query<{ hours: number }>(
-    `SELECT coalesce(sum(extract(epoch FROM (e.ended_at - e.started_at)) / 3600.0), 0)::float8 AS hours
-       FROM public.work_entries e
-       JOIN public.workdays d ON d.company_id = e.company_id AND d.id = e.workday_id
-      WHERE e.company_id = $1
-        AND e.kind = 'WORK' AND e.end_state = 'KNOWN_END' AND e.ended_at IS NOT NULL
-        AND d.approval_status IN ('LOCKED', 'FOREMAN_CONFIRMED')
-        AND d.work_date BETWEEN ${fromIdx}::date AND ${toIdx}::date
-        ${scopePred}`,
-    params,
-  );
-  const hoursVal = Number(hours.rows[0]?.hours ?? 0);
+  const totals = await periodTotals(client, actor.companyId, from, today, projectIds);
   return {
     activeProjects: projects.rows[0]?.n ?? 0,
-    bookedCostsAmount: toAmountString({ cents: BigInt(costs.rows[0]?.cents ?? "0"), currency }),
+    bookedCostsAmount: toAmountString({ cents: BigInt(totals.cents), currency }),
     bookedCostsCurrency: currency,
-    hoursInPeriod: hoursVal.toFixed(3),
+    hoursInPeriod: totals.hours,
     periodFrom: from,
     periodTo: today,
   };

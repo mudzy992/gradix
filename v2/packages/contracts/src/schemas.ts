@@ -122,6 +122,17 @@ export const NotificationReadInput = z.object({
 });
 export type NotificationReadInput = z.infer<typeof NotificationReadInput>;
 
+export const DashboardActionsResponse = z.object({ checkedAt: IsoDate, items: z.array(z.object({
+  key: z.string(), role: z.enum(["OWNER", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MECHANIC"]),
+  count: z.number().int().positive(), href: z.string().startsWith("/"), priority: z.number().int().nonnegative(),
+})) });
+
+/** Data health: only nonzero action items. */
+export const DataHealthResponse = z.object({ items: z.array(z.object({
+  key: z.enum(["unconfirmed_days", "projects_without_budget", "machines_without_rate", "workers_without_rate", "warehouses_without_minimum", "incidents_without_actions"]),
+  count: z.number().int().positive(), href: z.string().startsWith("/"),
+})) });
+
 /** F0.4 — stanje reda poslova; `available: false` znači „worker nikad nije pokrenut“. */
 export const QueueHealthResponse = z.object({
   available: z.boolean(),

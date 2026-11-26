@@ -89,7 +89,7 @@ describeDb("worker enumeracija pod RLS", () => {
     const statuses=await admin.query("SELECT channel,status FROM public.notification_deliveries WHERE company_id='worker-a' ORDER BY channel");
     expect(statuses.rows).toEqual([{channel:"EMAIL",status:"BLOCKED_NO_PROVIDER"},{channel:"IN_APP",status:"SENT"}]);
     let delivered=0;
-    const send=async (mail:{pdf:Buffer;recipients:string[]})=>{delivered++;expect(mail.pdf.subarray(0,8).toString()).toBe("%PDF-1.4");expect(mail.recipients).toEqual(["owner@example.test"]);};
+    const send=async (mail:{pdf:Buffer;recipients:string[]})=>{delivered++;expect(mail.pdf.subarray(0,8).toString()).toBe("%PDF-1.4");expect(mail.pdf.toString()).toContain("Knjizeni trosak: 1.30 BAM");expect(mail.pdf.toString()).not.toContain("Knjizeni trosak: 2.50 BAM");expect(mail.recipients).toEqual(["owner@example.test"]);};
     expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({sent:1});
     expect(await runScheduledReports(app,{logger,now,send,onlyCompanyId:"worker-a"})).toMatchObject({duplicate:1});
     expect(delivered).toBe(1);
@@ -123,12 +123,15 @@ describeDb("worker enumeracija pod RLS", () => {
     await boss.start();
     try {
       await boss.createQueue("rollup.nightly");
+      await boss.createQueue("reports.scheduled");
+      await boss.schedule("reports.scheduled","0 * * * *");
       await boss.schedule("rollup.nightly","0 2 * * *");
       await boss.send("rollup.nightly",{secret:"privatno"});
       await grantQueueHealthRead(boss.getDb());
       const health=await queueHealth(app);
       expect(health.available).toBe(true);
       expect(health.jobs).toContainEqual(expect.objectContaining({name:"rollup.nightly",cron:"0 2 * * *",created:1}));
+      expect(health.jobs).toContainEqual(expect.objectContaining({name:"reports.scheduled",cron:"0 * * * *"}));
       await expect(app.query("SELECT data FROM pgboss.job")).rejects.toMatchObject({code:"42501"});
     } finally { await boss.stop(); }
   }, 30_000);

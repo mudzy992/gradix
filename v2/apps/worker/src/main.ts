@@ -20,6 +20,7 @@ import { purgeAttachments } from "./attachments-purge";
 import { purgeSyncPayloads } from "./sync-purge";
 import { scanBudgetThresholds } from "./budget-thresholds";
 import { refreshDailyRollups } from "./rollup-nightly";
+import { runScheduledReports } from "./reports-scheduled";
 import { createObjectRemover } from "./object-storage";
 import { grantQueueHealthRead } from "./queue-health-grants";
 
@@ -131,6 +132,7 @@ async function main(): Promise<void> {
   await boss.createQueue(JOB_NAMES.syncPurge);
   await boss.createQueue(JOB_NAMES.budgetThresholds);
   await boss.createQueue(JOB_NAMES.rollupNightly);
+  await boss.createQueue(JOB_NAMES.reportsScheduled);
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -145,6 +147,7 @@ async function main(): Promise<void> {
   await boss.work(JOB_NAMES.syncPurge, async () => runSyncPurge());
   await boss.work(JOB_NAMES.budgetThresholds, async () => runBudgetThresholds());
   await boss.work(JOB_NAMES.rollupNightly, async () => { await refreshDailyRollups(pool, { logger }); });
+  await boss.work(JOB_NAMES.reportsScheduled, async () => { await runScheduledReports(pool, { logger }); });
 
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
@@ -161,6 +164,8 @@ async function main(): Promise<void> {
   // prag ne zavisi od doba dana, a odgađanje do jutra bi značilo da se prekoračenje vidi tek sutra.
   await boss.schedule(JOB_NAMES.budgetThresholds, "*/15 * * * *");
   await boss.schedule(JOB_NAMES.rollupNightly, "0 2 * * *");
+  // Svaki sat, prethodni mjesec određuje se u vremenskoj zoni svake firme.
+  await boss.schedule(JOB_NAMES.reportsScheduled, "0 * * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),

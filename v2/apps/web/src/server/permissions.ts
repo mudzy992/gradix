@@ -337,6 +337,7 @@ export const PERMISSIONS = {
     "ACCOUNTANT",
   ],
   "dashboard.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "ACCOUNTANT"],
+  "dashboard.actions.view": ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT", "MECHANIC"],
   /*
    * F1 (spec 01 §3): postavke firme.
    *
@@ -726,6 +727,7 @@ export const PERMISSION_INFO: Record<Permission, { label: string; description: s
     description:
       "Vlastiti sati po danu i vlastite linije obračuna kad je period odobren ili zaključan. Tuđe se ne vidi nikad.",
   },
+  "dashboard.actions.view": { label: "Akcioni dashboard", description: "Akcione stavke po roli i opsegu korisnika." },
   "dashboard.view": {
     label: "Dashboard agregati",
     description: "Na pregledu: aktivni projekti, zbir knjiženih troškova i sati u tekućem mjesecu.",

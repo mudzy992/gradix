@@ -66,6 +66,8 @@ import { GET as stockMovementsGet, POST as stockMovementsPost } from "@/app/api/
 import { GET as machineMaintenanceGet } from "@/app/api/machines/[id]/maintenance/route";
 import { GET as machineReliabilityGet } from "@/app/api/machines/[id]/reliability/route";
 import { ROUTES } from "@gradix/contracts";
+import { GET as dashboardActionsGet } from "@/app/api/dashboard/route";
+import { GET as dataHealthGet } from "@/app/api/data-health/route";
 
 /* ---- F9 — dnevnik građenja i HSE ---- */
 import { GET as diaryListGet, POST as diaryCreatePost } from "@/app/api/site-diaries/route";
@@ -396,6 +398,8 @@ type Handler = (request: NextRequest, context?: any) => Promise<Response>;
 
 /** Sve rute s tijelom iz ROUTES, ručno uvezene (dinamički import u vitestu nije pouzdan). */
 const HANDLERS: Record<string, Record<string, Handler>> = {
+  "/api/data-health": { GET: dataHealthGet },
+  "/api/dashboard": { GET: dashboardActionsGet },
   "/api/auth/login": { POST: loginRoute },
   "/api/auth/refresh": { POST: refreshRoute },
   "/api/auth/change-password": { POST: changePasswordRoute },
@@ -839,6 +843,20 @@ describeDb("A1: kontrolni znakovi na granici API-ja", () => {
       expect((await entry.handler(jsonRequest(`http://localhost${entry.path}`,null,"GET"))).status).toBe(401);
       expect((await entry.handler(jsonRequest(`http://localhost${entry.path}?q=%00`,null,"GET",ownerCookie))).status).toBe(400);
     }
+  });
+
+  it("dashboard provjerava prijavu, rolu i NUL", async () => {
+    expect((await dashboardActionsGet(jsonRequest("http://localhost/api/dashboard", null, "GET", ownerCookie))).status).toBe(200);
+    expect((await dashboardActionsGet(jsonRequest("http://localhost/api/dashboard", null, "GET", workerCookie))).status).toBe(403);
+    expect((await dashboardActionsGet(jsonRequest("http://localhost/api/dashboard", null, "GET"))).status).toBe(401);
+    expect((await dashboardActionsGet(jsonRequest("http://localhost/api/dashboard?q=%00", null, "GET", ownerCookie))).status).toBe(400);
+  });
+
+  it("data-health provjerava prijavu, rolu i NUL", async () => {
+    expect((await dataHealthGet(jsonRequest("http://localhost/api/data-health", null, "GET", ownerCookie))).status).toBe(200);
+    expect((await dataHealthGet(jsonRequest("http://localhost/api/data-health", null, "GET", workerCookie))).status).toBe(403);
+    expect((await dataHealthGet(jsonRequest("http://localhost/api/data-health", null, "GET"))).status).toBe(401);
+    expect((await dataHealthGet(jsonRequest("http://localhost/api/data-health?q=%00", null, "GET", ownerCookie))).status).toBe(400);
   });
 
   it("svaka ruta iz ROUTES s ulaznom površinom (tijelo/query/path) je obuhvaćena testom", () => {

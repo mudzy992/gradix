@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { periodTotals } from "@gradix/db";
 import nodemailer from "nodemailer";
 import { listActiveCompanyIds } from "./company-ids";
 import { monthlyReportPdf } from "./monthly-report-pdf";
@@ -76,17 +77,11 @@ export async function runScheduledReports(pool: Pool, options: { logger: JobLogg
       const valid=recipients.length>0 && recipients.length<=50 && recipients.every(x=>/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(x));
       let status:"BLOCKED_NO_PROVIDER"|"FAILED"|"SENT" = !send ? "BLOCKED_NO_PROVIDER" : !valid ? "FAILED" : "SENT";
       if(status === "SENT" && send) {
-        const totals=await client.query<{cents:string;hours:string}>(`SELECT
-          (SELECT coalesce(sum(e.amount_cents),0)::text FROM public.cost_entries e
-            WHERE e.company_id=$1 AND e.status='POSTED' AND e.occurred_on BETWEEN $2::date AND $3::date) AS cents,
-          (SELECT coalesce(sum(extract(epoch FROM (w.ended_at-w.started_at))/3600),0)::numeric(16,3)::text
-             FROM public.work_entries w JOIN public.workdays d ON d.company_id=w.company_id AND d.id=w.workday_id
-            WHERE w.company_id=$1 AND w.kind='WORK' AND w.end_state='KNOWN_END' AND w.ended_at IS NOT NULL
-              AND d.approval_status IN ('LOCKED','FOREMAN_CONFIRMED') AND d.work_date BETWEEN $2::date AND $3::date) AS hours`,[companyId,c.from_date,c.to_date]);
-        const cents=BigInt(totals.rows[0]!.cents); const abs=cents<0n?-cents:cents;
+        const totals=await periodTotals(client,companyId,c.from_date,c.to_date,null);
+        const cents=BigInt(totals.cents); const abs=cents<0n?-cents:cents;
         const pdf=monthlyReportPdf([c.name,"MJESECNI PREGLED",`Period: ${c.from_date} - ${c.to_date}`,
           `Knjizeni trosak: ${cents<0n?"-":""}${abs/100n}.${String(abs%100n).padStart(2,"0")} ${c.currency}`,
-          `Potvrdjeni sati: ${totals.rows[0]!.hours}`,`Generisao: automatski worker; ${new Date().toISOString()}`]);
+          `Potvrdjeni sati: ${totals.hours}`,`Generisao: automatski worker; ${new Date().toISOString()}`]);
         // Commit the attempt before talking to SMTP; a crash now requires manual reconciliation,
         // but a later scheduled run cannot send a duplicate. A stable Message-ID alone is not dedupe.
         await client.query(`INSERT INTO public.notification_deliveries(id,company_id,notification_id,channel,status,attempts,last_error)
