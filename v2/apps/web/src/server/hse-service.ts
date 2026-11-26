@@ -1,3 +1,4 @@
+import type { Scope } from "@gradix/domain";
 /**
  * F9 — HSE: incident → istraga → mjere → zatvaranje, plus obuke i inspekcije.
  *
@@ -1037,7 +1038,7 @@ export type HseAttention = {
 
 export async function hseAttention(
   client: PoolClient,
-  actor: { userId: string; companyId: string; roles: readonly string[] },
+  actor: { userId: string; companyId: string; roles: readonly string[]; scope: Scope; projectIds: readonly string[] | null },
 ): Promise<HseAttention | null> {
   const today = await companyToday(client, toCompanyId(actor.companyId));
   const counts = await client.query<{ overdue: string; open_incidents: string; unsigned: string }>(
@@ -1047,8 +1048,9 @@ export async function hseAttention(
         (SELECT count(*)::text FROM public.hse_incidents i
           WHERE i.company_id = $1 AND i.status <> 'CLOSED') AS open_incidents,
         (SELECT count(*)::text FROM public.site_diaries d
-          WHERE d.company_id = $1 AND d.status = 'DRAFT' AND d.diary_date <= $2::date - INTERVAL '2 days') AS unsigned`,
-    [actor.companyId, today],
+          WHERE d.company_id = $1 AND d.status = 'DRAFT' AND d.diary_date <= $2::date - INTERVAL '2 days'
+            AND ($3::boolean OR ($4::boolean AND d.project_id=ANY($5::text[])))) AS unsigned`,
+    [actor.companyId, today, actor.scope === "COMPANY", actor.scope === "PROJECTS", actor.projectIds ?? []],
   );
   const prohibition = await client.query<{ id: string; inspected_at: string; authority_name: string | null }>(
     `SELECT id, inspected_at::text, authority_name FROM public.hse_inspections

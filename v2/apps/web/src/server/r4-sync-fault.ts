@@ -7,6 +7,7 @@ import {
   type R4SyncPushItemResult,
 } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
+import { equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
 import { companyCurrency } from "./machine-fault-db-helpers";
 import { initialFaultStatus, insertFaultApprovalRequest } from "./machine-fault-approval";
 import { faultApprovalThreshold } from "./machine-availability-service";
@@ -23,6 +24,8 @@ export async function applyFaultSyncItem(
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
 
+  if (!await equipmentTargetAllowed(client, actor, item.fault.projectId, item.fault.machineId))
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   const machine = await client.query<{ id: string }>(
     "SELECT id FROM public.machines WHERE company_id = $1 AND id = $2 AND is_active",
     [actor.companyId, item.fault.machineId],
@@ -64,6 +67,7 @@ export async function applyFaultSyncItem(
     [actor.companyId, item.faultId],
   );
   if (duplicate.rows[0]) {
+    if (!await equipmentRecordAllowed(client, actor, "fault", item.faultId)) return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
     return helpers.createConflict(
       client, actor, worker, item, workDate, requestHash, reservation,
       null, duplicate.rows[0].version, "MACHINE_FAULT_EXISTS",

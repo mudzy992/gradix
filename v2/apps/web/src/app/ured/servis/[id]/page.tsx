@@ -32,7 +32,7 @@ export default async function ServisNalogPage({ params }: { params: Promise<{ id
   if (!can(auth.ctx.roles, "service.view")) redirect("/nemate-pristup");
 
   const pool = await getVerifiedPool();
-  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
+  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds };
   const detail = await getServiceOrder(pool, actor, id);
   if (!detail) notFound();
   const stockItems = await listStockItems(pool, actor);

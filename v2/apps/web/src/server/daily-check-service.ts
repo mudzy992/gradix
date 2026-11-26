@@ -1,3 +1,4 @@
+import { equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
 /** R5.4: daily check list and create. Revise in daily-check-revise.ts. */
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
@@ -87,7 +88,7 @@ export async function listDailyChecks(
 
 export async function createDailyCheck(
   pool: Pool,
-  actor: DailyCheckActor,
+  actor: EquipmentActor,
   input: CreateInput,
 ): Promise<MutationOutcome> {
   if (!can(actor.roles, "machines.check.create")) return { outcome: "FORBIDDEN", code: "ROLE" };
@@ -178,6 +179,11 @@ export async function createDailyCheck(
      */
     const checklist = (input.checklistJson ?? {}) as Record<string, string>;
     const failed = template ? criticalFailures(template.items, checklist) : [];
+    // A critical check creates a fault as a side effect: enforce the same fault boundary.
+    if (failed.length > 0 && (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId)
+      || (actor.scope === "SELF" && !await isActorWorker(client, actor, workerId)))) {
+      return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
+    }
 
     const id = `mdc_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
     await client.query(

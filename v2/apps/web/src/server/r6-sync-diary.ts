@@ -22,7 +22,7 @@ import type {
   R4SyncPushItemResult,
 } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
-import { collectDiaryAutoData } from "./diary-service";
+import { collectDiaryAutoData, diaryProjectAllowed } from "./diary-service";
 import { writeAudit } from "./audit";
 import { can } from "./permissions";
 import { ensureDefaultDiaryTemplate } from "./diary-template-service";
@@ -66,6 +66,7 @@ export async function applySiteDiarySyncItem(
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
+  if (!diaryProjectAllowed(actor, item.diary.projectId)) return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   if (item.diary.signedName !== null && (!item.diary.signature || !can(actor.roles, "diary.sign"))) {
     return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   }
@@ -96,6 +97,7 @@ export async function applySiteDiarySyncItem(
     [actor.companyId, item.diaryId],
   );
   if (sameId.rows[0] && sameId.rows[0].id !== current?.id) {
+    if (!diaryProjectAllowed(actor, sameId.rows[0].project_id)) return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
     return helpers.createConflict(
       client, actor, worker, item, item.diary.diaryDate, requestHash, reservation,
       null, sameId.rows[0].version, "DIARY_EXISTS",
@@ -274,6 +276,7 @@ export async function applySiteDiaryItemSyncItem(
 
   // Stari redovi nemaju ključ dana. Ne nagađaj ga iz vremena slanja: korisnik mora popraviti red.
   if (!item.diaryProjectId || !item.diaryDate) return reject(helpers.invalidItem(item, "DIARY_REFERENCE_REQUIRED"));
+  if (!diaryProjectAllowed(actor, item.diaryProjectId)) return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   // Ture su automatske činjenice, ne smiju se duplirati kao ručne stavke.
   if (item.item.source === "HAUL") return reject(helpers.invalidItem(item, "SYNC_ITEM_INVALID"));
 
@@ -311,7 +314,7 @@ export async function applySiteDiaryItemSyncItem(
     [actor.companyId, item.diaryItemId],
   );
   if (existingItem.rows[0]) {
-    return reject({ ...helpers.invalidItem(item), entityId: existingItem.rows[0].id });
+    return reject(helpers.invalidItem(item));
   }
 
   await client.query(

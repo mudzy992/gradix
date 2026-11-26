@@ -141,7 +141,7 @@ describeDb("journey A project lifecycle", () => {
     expect(await rows(CO, `SELECT count(*)::text AS n FROM public.project_assignments
       WHERE company_id = $1 AND project_id = $2 AND voided_at IS NULL`, [CO, created.id])).toBe("3");
 
-    await expect(pushR4SyncItems(dbApp, { ...ownerAct, companyId: companyId(CO) }, [{
+    await expect(pushR4SyncItems(dbApp, { ...ownerAct, companyId: companyId(CO), scope: "COMPANY", projectIds: null }, [{
       localId: randomUUID(), entityType: "work_entry", workerId, workdayId: randomUUID(), workEntryId: randomUUID(),
       deviceSentAt: new Date().toISOString(),
       entry: { kind: "WORK", startedAt: STARTED, endedAt: ENDED, endState: "KNOWN_END", projectId: created.id, machineId: null, note: null },
@@ -149,7 +149,7 @@ describeDb("journey A project lifecycle", () => {
     expect(await rows(CO, "SELECT count(*)::text AS n FROM public.work_entries WHERE company_id = $1", [CO])).toBe("0");
 
     const workdayId = randomUUID();
-    const pushed = await pushR4SyncItems(dbApp, foreman, [{
+    const pushed = await pushR4SyncItems(dbApp, { ...foreman, scope: "COMPANY", projectIds: null }, [{
       localId: randomUUID(), entityType: "work_entry", workerId, workdayId, workEntryId: randomUUID(),
       deviceSentAt: new Date().toISOString(),
       entry: { kind: "WORK", startedAt: STARTED, endedAt: ENDED, endState: "KNOWN_END", projectId: created.id, machineId: null, note: null },
@@ -157,7 +157,7 @@ describeDb("journey A project lifecycle", () => {
     expect(pushed[0]?.status).toBe("APPLIED");
     const version = await withCompany(dbApp, companyId(CO), (client) => client.query<{ n: string }>(
       `SELECT header_version::text AS n FROM public.workdays WHERE company_id = $1 AND id = $2`, [CO, workdayId]));
-    const submitted = await pushR4SyncItems(dbApp, foreman, [{
+    const submitted = await pushR4SyncItems(dbApp, { ...foreman, scope: "COMPANY", projectIds: null }, [{
       localId: randomUUID(), entityType: "workday", workerId, workdayId,
       baseVersion: Number(version.rows[0]?.n), deviceSentAt: new Date().toISOString(), status: "SUBMITTED",
     }]);

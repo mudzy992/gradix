@@ -7,6 +7,8 @@ import { withCompany } from "@gradix/db";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
+import { can } from "@/server/permissions";
+import { equipmentScope } from "@/server/equipment-scope";
 import { decodeSyncCursor, encodeSyncCursor, SyncCursorError } from "@/server/sync-cursor";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,7 @@ const F9_PULL_TYPES = ["site_diary", "hse_incident", "hse_action", "hse_training
 type DbEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | (typeof F9_PULL_TYPES)[number];
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_fault" | (typeof F9_PULL_TYPES)[number];
   entityId: string;
   version: number;
   payload: Record<string, unknown> | null;
@@ -37,7 +39,7 @@ function isDbEvent(value: unknown): value is DbEvent {
   return typeof event.id === "string"
     && typeof event.cursorSeq === "string"
     && isValidCursorSequence(event.cursorSeq)
-    && ["workday", "work_entry", "sync_conflict", ...F9_PULL_TYPES].includes(String(event.entityType))
+    && ["workday", "work_entry", "sync_conflict", "machine_fault", ...F9_PULL_TYPES].includes(String(event.entityType))
     && typeof event.entityId === "string"
     && Number.isInteger(event.version)
     && (event.payload === null || (!!event.payload && typeof event.payload === "object"))
@@ -170,6 +172,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             .map((event) => event.id),
         );
         if (isForeman) for (const id of f9Ids) allowedEventIds.add(id);
+        for (const event of events) if (event.entityType === "machine_fault") allowedEventIds.add(event.id);
         if (foremanWorkerId) {
           const scopedIds = await foremanVisibleR4EventIds(
             client, ctx.companyId, foremanWorkerId, ctx.userId, events,
@@ -178,6 +181,41 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
         visible = events.filter((event) => allowedEventIds.has(event.id));
       }
+
+      // Diary events are project-wide data, including for OWNER/ADMIN with a restricted scope.
+      // Resolve against the authoritative row, not the client-controlled event payload.
+      const diaryIds = visible.filter((event) => event.entityType === "site_diary").map((event) => event.entityId);
+      const allowedDiaries = new Set<string>();
+      if (diaryIds.length && can(ctx.roles, "diary.view") && ctx.scope !== "SELF") {
+        const rows = await client.query<{ id: string }>(
+          `SELECT id FROM public.site_diaries WHERE company_id = $1 AND id = ANY($2::text[])
+             AND ($3::boolean OR project_id = ANY($4::text[]))`,
+          [ctx.companyId, diaryIds, ctx.scope === "COMPANY", ctx.projectIds ?? []],
+        );
+        for (const row of rows.rows) allowedDiaries.add(row.id);
+      }
+      visible = visible.filter((event) => event.entityType !== "site_diary" || allowedDiaries.has(event.entityId));
+      const faultIds = visible.filter((event) => event.entityType === "machine_fault").map((event) => event.entityId);
+      const allowedFaults = new Set<string>();
+      if (faultIds.length && can(ctx.roles, "machines.fault.view")) {
+        const values: unknown[] = [ctx.companyId, faultIds];
+        const predicate = equipmentScope(ctx, values, "f", "fault");
+        const fieldOnly = ctx.roles.some((role) => ["MACHINE_OPERATOR", "MECHANIC"].includes(role))
+          && !ctx.roles.some((role) => ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"].includes(role));
+        if (fieldOnly) values.push(ctx.userId);
+        const fieldPredicate = fieldOnly ? `AND f.reporter_worker_id IN (SELECT w.id FROM public.workers w WHERE w.company_id=f.company_id AND w.user_id=$${values.length} AND w.is_active)` : "";
+        const rows = await client.query<{ id: string }>(`SELECT f.id FROM public.machine_faults f
+          WHERE f.company_id=$1 AND f.id=ANY($2::text[]) AND ${predicate} ${fieldPredicate}`, values);
+        for (const row of rows.rows) allowedFaults.add(row.id);
+      }
+      visible = visible.filter((event) => event.entityType !== "machine_fault" || allowedFaults.has(event.entityId));
+      // Legacy conflict rows do not reliably identify their source entity. Do not expose
+      // historical diary/fault conflict payloads after an actor loses company scope.
+      if (ctx.scope !== "COMPANY") visible = visible.filter((event) => {
+        if (event.entityType !== "sync_conflict") return true;
+        const reason = event.payload?.reason;
+        return typeof reason !== "string" || (!reason.startsWith("DIARY_") && !reason.startsWith("MACHINE_FAULT_"));
+      });
 
       return {
         forbidden: false as const,

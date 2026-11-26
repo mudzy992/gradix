@@ -1,3 +1,4 @@
+import { equipmentScope, equipmentRecordAllowed, equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
 /**
  * F8 (Modul 9) — servisni nalozi: rad, a ne samo kvar.
  *
@@ -24,7 +25,7 @@ import { isWarrantyClaim, serviceApprovalCheck, toHundredths } from "@gradix/dom
 import { can } from "./permissions";
 import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
-import type { ServiceActor, ServiceOrderFilters, ServiceOrderRow } from "./service-order-types";
+import type { ServiceOrderFilters, ServiceOrderRow } from "./service-order-types";
 import { toServiceOrderRow, type DbServiceOrderRow } from "./service-order-mapper";
 import { ORDER_SELECT, serviceOrderDetail } from "./service-order-read";
 
@@ -39,16 +40,32 @@ export type {
 
 /* ------------------------------------------------------------------- čitanje */
 
+async function redactHiddenFaults(client: PoolClient, actor: EquipmentActor, orders: ServiceOrderRow[]): Promise<void> {
+  const ids = orders.flatMap((order) => order.fault_id ? [order.fault_id] : []);
+  if (!ids.length) return;
+  const params: unknown[] = [actor.companyId, ids];
+  const scope = equipmentScope(actor, params, "f", "fault");
+  const result = can(actor.roles, "machines.fault.view")
+    ? await client.query<{id:string}>(`SELECT f.id FROM public.machine_faults f WHERE f.company_id=$1 AND f.id=ANY($2::text[]) AND ${scope}`, params)
+    : { rows: [] };
+  const visible = new Set(result.rows.map((row) => row.id));
+  for (const order of orders) if (order.fault_id && !visible.has(order.fault_id)) {
+    order.fault_id = null;
+    order.fault_title = null;
+  }
+}
+
 export async function listServiceOrders(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   filters: ServiceOrderFilters,
 ): Promise<ServiceOrderRow[]> {
   if (!can(actor.roles, "service.view")) return [];
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const conditions = ["so.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let index = 2;
+    conditions.push(equipmentScope(actor, params, "so", "order"));
+    let index = params.length + 1;
     if (filters.dashboardMine) {
       conditions.push(`so.assigned_mechanic_worker_id IN (SELECT w.id FROM public.workers w
         WHERE w.company_id=so.company_id AND w.user_id=$${index} AND w.is_active)`);
@@ -90,19 +107,24 @@ export async function listServiceOrders(
       params,
     );
     const today = await companyToday(client, toCompanyId(actor.companyId));
-    return result.rows.map((row) => toServiceOrderRow(row, today));
+    const orders = result.rows.map((row) => toServiceOrderRow(row, today));
+    await redactHiddenFaults(client, actor, orders);
+    return orders;
   });
 }
 
 export async function getServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
 ) {
   if (!can(actor.roles, "service.view")) return null;
-  return withCompany(pool, toCompanyId(actor.companyId), (client) =>
-    serviceOrderDetail(client, actor.companyId, orderId),
-  );
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return null;
+    const detail = await serviceOrderDetail(client, actor.companyId, orderId);
+    if (detail) await redactHiddenFaults(client, actor, [detail.order]);
+    return detail;
+  });
 }
 
 /* ------------------------------------------------------------------- upis */
@@ -155,13 +177,25 @@ function centsFromAmount(amount: string | null | undefined): bigint | null {
 
 export async function createServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   input: CreateServiceOrderInput,
 ) {
   if (!can(actor.roles, "service.manage")) {
     return { outcome: "FORBIDDEN" as const, code: "ROLE", message: "Nemate pravo na servisne naloge." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId)
+        || (actor.scope === "SELF" && !await isActorWorker(client, actor, input.assignedMechanicWorkerId))) {
+      return { outcome: "NOT_FOUND" as const, code: "NOT_FOUND", message: "Mašina ili projekat ne postoji." };
+    }
+    if (actor.scope !== "COMPANY" && input.faultId) {
+      if (!await equipmentRecordAllowed(client, actor, "fault", input.faultId)) {
+        return { outcome: "NOT_FOUND" as const, code: "NOT_FOUND", message: "Kvar ne postoji." };
+      }
+      const fault = await client.query("SELECT id FROM public.machine_faults WHERE company_id=$1 AND id=$2 AND machine_id=$3 AND project_id=$4",
+        [actor.companyId, input.faultId, input.machineId, input.projectId]);
+      if (!fault.rows[0]) return { outcome: "NOT_FOUND" as const, code: "NOT_FOUND", message: "Kvar ne postoji." };
+    }
     const machine = await client.query<{ id: string }>(
       "SELECT id FROM public.machines WHERE company_id = $1 AND id = $2",
       [actor.companyId, input.machineId],
@@ -198,12 +232,13 @@ export async function createServiceOrder(
     let warrantyClaim = false;
     let warrantySourceOrderId: string | null = null;
     if (input.origin === "FAULT") {
+      const warrantyParams: unknown[] = [actor.companyId, input.machineId, today];
+      const warrantyScope = equipmentScope(actor, warrantyParams, "so", "order");
       const warranty = await client.query<{ id: string; warranty_until: string }>(
-        `SELECT id, warranty_until::text FROM public.service_orders
-          WHERE company_id = $1 AND machine_id = $2 AND warranty_until IS NOT NULL
-            AND warranty_until >= $3::date AND status = 'DONE'
-          ORDER BY warranty_until DESC LIMIT 1`,
-        [actor.companyId, input.machineId, today],
+        `SELECT so.id, so.warranty_until::text FROM public.service_orders so
+          WHERE so.company_id = $1 AND so.machine_id = $2 AND so.warranty_until IS NOT NULL
+            AND so.warranty_until >= $3::date AND so.status = 'DONE' AND ${warrantyScope}
+          ORDER BY so.warranty_until DESC LIMIT 1`, warrantyParams,
       );
       const source = warranty.rows[0];
       if (source) {

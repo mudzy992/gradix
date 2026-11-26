@@ -39,7 +39,7 @@ export function isDiaryStatus(value: unknown): value is DiaryStatus {
 export type DiaryActor = { userId: string; companyId: string; roles: readonly string[] };
 export type ScopedDiaryActor = DiaryActor & { scope: Scope; projectIds: readonly string[] | null };
 
-function diaryProjectAllowed(actor: ScopedDiaryActor, projectId: string): boolean {
+export function diaryProjectAllowed(actor: Pick<ScopedDiaryActor, "scope" | "projectIds">, projectId: string): boolean {
   return actor.scope === "COMPANY" || (actor.scope === "PROJECTS" && (actor.projectIds ?? []).includes(projectId));
 }
 

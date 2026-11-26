@@ -30,7 +30,7 @@ const ORDER_B = `so_f8iso_b_${RUN}`;
 const ITEM_A = `stk_f8iso_a_${RUN}`;
 const ITEM_B = `stk_f8iso_b_${RUN}`;
 
-const actorA = { userId: USER_A, companyId: CO_A, roles: ["OWNER"] as Role[] };
+const actorA = { userId: USER_A, companyId: CO_A, roles: ["OWNER"] as Role[], scope: "COMPANY" as const, projectIds: null };
 
 describeDb("F8 izolacija: servis i zalihe ne prelaze granicu firme", () => {
   const admin = new Pool({ connectionString: adminUrl, max: 3 });

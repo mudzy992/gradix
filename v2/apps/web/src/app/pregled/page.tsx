@@ -119,7 +119,7 @@ export default async function PregledPage() {
    */
   const service = can(ctx.roles, "service.view")
     ? await withCompany(await getVerifiedPool(), ctx.companyId as CompanyId, (client) =>
-        serviceAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] }),
+        serviceAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[], scope: ctx.scope, projectIds: ctx.projectIds }),
       )
     : null;
 
@@ -129,7 +129,7 @@ export default async function PregledPage() {
    */
   const hse = can(ctx.roles, "hse.view")
     ? await withCompany(await getVerifiedPool(), ctx.companyId as CompanyId, (client) =>
-        hseAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] }),
+        hseAttention(client, { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[], scope: ctx.scope, projectIds: ctx.projectIds }),
       )
     : null;
 

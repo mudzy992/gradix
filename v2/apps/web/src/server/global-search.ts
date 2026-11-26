@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { companyId, withCompany } from "@gradix/db";
 import type { DashboardActor } from "./dashboard-aggregates";
 import { can } from "./permissions";
+import { equipmentScope } from "./equipment-scope";
 
 export type SearchHit = { type: "PROJECT" | "WORKER" | "MACHINE" | "PARTNER" | "TENDER" | "DOCUMENT" | "INVOICE" | "TASK" | "OBLIGATION" | "SERVICE_ORDER" | "INCIDENT"; title: string; href: string };
 export async function globalSearch(pool: Pool, actor: DashboardActor, q: string): Promise<SearchHit[]> {
@@ -85,11 +86,11 @@ export async function globalSearch(pool: Pool, actor: DashboardActor, q: string)
       results.push(...rows.rows.map(r=>({type:"OBLIGATION" as const,title:r.label,href:"/ured/rokovi"})));
     }
     if (can(actor.roles,"service.view")) {
+      const orderParams: unknown[] = [actor.companyId,pattern];
+      const orderScope = equipmentScope(actor,orderParams,"s","order");
       const rows=await client.query<{id:string;description:string}>(`SELECT s.id,s.description FROM public.service_orders s
-        WHERE s.company_id=$1 AND s.description ILIKE $3 AND ($2::text[] IS NULL OR
-          (NOT $4::boolean AND s.project_id=ANY($2::text[])) OR ($4::boolean AND EXISTS (
-            SELECT 1 FROM public.workers w WHERE w.company_id=s.company_id AND w.id=s.assigned_mechanic_worker_id AND w.user_id=$5)))
-        ORDER BY s.opened_at DESC,s.id LIMIT 8`,[actor.companyId,ids,pattern,actor.scope === "SELF",actor.userId]);
+        WHERE s.company_id=$1 AND s.description ILIKE $2 AND ${orderScope}
+        ORDER BY s.opened_at DESC,s.id LIMIT 8`,orderParams);
       results.push(...rows.rows.map(r=>({type:"SERVICE_ORDER" as const,title:r.description,href:`/ured/servis/${encodeURIComponent(r.id)}`})));
     }
     if (can(actor.roles,"hse.view")) {

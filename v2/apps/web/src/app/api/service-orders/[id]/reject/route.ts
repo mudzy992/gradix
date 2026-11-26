@@ -22,6 +22,8 @@ export async function POST(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
     }, id, body.reason);
     if (outcome.outcome === "FORBIDDEN") return fail("FORBIDDEN", outcome.message ?? "Nemate pravo.");
     if (outcome.outcome === "NOT_FOUND") return fail("NOT_FOUND", outcome.message);

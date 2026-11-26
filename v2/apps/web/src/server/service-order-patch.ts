@@ -1,3 +1,4 @@
+import { equipmentRecordAllowed, equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
 /**
  * F8 — izmjena naloga BEZ statusa.
  *
@@ -15,7 +16,7 @@ import { toHundredths } from "@gradix/domain";
 import { can } from "./permissions";
 import { writeAudit } from "./audit";
 import { insertServiceApprovalRequest } from "./service-order-service";
-import type { ServiceActor, ServiceOutcome } from "./service-order-types";
+import type { ServiceOutcome } from "./service-order-types";
 
 export type PatchServiceOrderInput = {
   priority?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -40,7 +41,7 @@ function cents(value: string | null | undefined): bigint | null {
 
 export async function updateServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
   input: PatchServiceOrderInput,
 ): Promise<ServiceOutcome> {
@@ -56,12 +57,17 @@ export async function updateServiceOrder(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const existing = await client.query<{ status: string; kind: string }>(
-      "SELECT status, kind FROM public.service_orders WHERE company_id = $1 AND id = $2 FOR UPDATE",
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
+    const existing = await client.query<{ status: string; kind: string; machine_id: string }>(
+      "SELECT status, kind, machine_id FROM public.service_orders WHERE company_id = $1 AND id = $2 FOR UPDATE",
       [actor.companyId, orderId],
     );
     const row = existing.rows[0];
     if (!row) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
+    if (input.projectId && !await equipmentTargetAllowed(client, actor, input.projectId, row.machine_id))
+      return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Projekat ne postoji." };
+    if (actor.scope === "SELF" && input.assignedMechanicWorkerId && !await isActorWorker(client, actor, input.assignedMechanicWorkerId))
+      return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Radnik ne postoji." };
     if (row.status === "DONE" || row.status === "CANCELLED") {
       /* Završen nalog je zapis: mijenjanje mehaničara ili projekta poslije završetka prepisalo bi
          ko je radio i gdje trošak pripada — a trošak je već proknjižen. */

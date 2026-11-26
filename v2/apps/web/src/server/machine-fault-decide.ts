@@ -1,12 +1,13 @@
+import { equipmentRecordAllowed, type EquipmentActor } from "./equipment-scope";
 /** R5.5: OWNER/ADMIN approve or reject fault cost approval_requests. */
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
-import type { FaultActor, MutationOutcome } from "./machine-fault-types";
+import type { MutationOutcome } from "./machine-fault-types";
 
 export async function approveMachineFault(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   faultId: string,
 ): Promise<MutationOutcome> {
   if (!can(actor.roles, "machines.fault.approve")) return { outcome: "FORBIDDEN", code: "ROLE" };
@@ -15,7 +16,7 @@ export async function approveMachineFault(
 
 export async function rejectMachineFault(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   faultId: string,
   reason?: string | null,
 ): Promise<MutationOutcome> {
@@ -29,13 +30,14 @@ export async function rejectMachineFault(
 
 async function decide(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   faultId: string,
   approvalStatus: "APPROVED" | "REJECTED",
   faultStatus: "APPROVED" | "CANCELLED",
   reason: string | null = null,
 ): Promise<MutationOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "fault", faultId)) return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
     const fault = await client.query<{ id: string; status: string }>(
       `SELECT id, status FROM public.machine_faults WHERE company_id = $1 AND id = $2`,
       [actor.companyId, faultId],

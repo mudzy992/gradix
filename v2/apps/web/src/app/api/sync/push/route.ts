@@ -108,6 +108,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       userId: auth.ctx.userId,
       companyId: auth.ctx.companyId,
       roles: auth.ctx.roles,
+      scope: auth.ctx.scope,
+      projectIds: auth.ctx.projectIds,
     };
     const results = await pushR4SyncItems(pool, actor, items);
     /* Trošak se knjiži poslije commit-a radnje — vidi `bookSyncFinishedOrders`. */

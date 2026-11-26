@@ -1,3 +1,4 @@
+import { equipmentRecordAllowed, linkedFaultAllowed, type EquipmentActor } from "./equipment-scope";
 /**
  * F8 — akcije na servisnom nalogu: početak, čekanje dijelova, završetak, utrošak, odobrenje.
  *
@@ -24,7 +25,7 @@ import { writeAudit } from "./audit";
 import { bookServiceOrderCostInCompany } from "./cost-entry-service";
 import { companyToday } from "./project-service";
 import { loadServiceOrder } from "./service-order-read";
-import type { ServiceActor, ServiceOutcome } from "./service-order-types";
+import type { ServiceOutcome } from "./service-order-types";
 import { orderStatus, parseExternalCost } from "./service-order-shared";
 import { preparePartStock } from "./service-part-stock";
 
@@ -61,11 +62,12 @@ export async function setStatus(
 
 export async function startServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
 ): Promise<ServiceOutcome> {
   if (!can(actor.roles, "service.manage")) return NO_ROLE;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
     const current = await orderStatus(client, actor.companyId, orderId);
     if (!current.ok) return current.result;
     try {
@@ -169,12 +171,13 @@ export function transitionFailed(error: unknown): ServiceOutcome {
 
 export async function waitServiceOrderParts(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
   note?: string | null,
 ): Promise<ServiceOutcome> {
   if (!can(actor.roles, "service.manage")) return NO_ROLE;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
     const current = await orderStatus(client, actor.companyId, orderId);
     if (!current.ok) return current.result;
     try {
@@ -230,7 +233,7 @@ export { finishOrderInTransaction };
 
 export async function finishServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
   input: FinishInput,
 ): Promise<ServiceOutcome> {
@@ -257,8 +260,10 @@ export async function finishServiceOrder(
     };
   }
 
-  const outcome = await withCompany(pool, toCompanyId(actor.companyId), async (client) =>
-    finishOrderInTransaction(client, {
+  const outcome = await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId) || !await linkedFaultAllowed(client, actor, orderId))
+      return { outcome: "NOT_FOUND" as const, code: "NOT_FOUND", message: "Nalog ne postoji." };
+    return finishOrderInTransaction(client, {
       companyId: actor.companyId,
       actorId: actor.userId,
       orderId,
@@ -268,8 +273,8 @@ export async function finishServiceOrder(
       warrantyUntil: input.warrantyUntil ?? null,
       downtimeMinutes: input.downtimeMinutes ?? null,
       downtimeReason: input.downtimeReason ?? null,
-    }),
-  );
+    });
+  });
 
   if (outcome.outcome !== "OK") return outcome as ServiceOutcome;
   /* Knjiženje NAKON commit-a naloga: `bookServiceOrderCostInCompany` otvara svoju transakciju, pa
@@ -291,12 +296,13 @@ export async function finishServiceOrder(
  */
 export async function addServiceOrderPart(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
   input: { itemId: string; quantity: string; unitCostAmount?: string | null; note?: string | null },
 ): Promise<ServiceOutcome> {
   if (!can(actor.roles, "service.manage")) return NO_ROLE;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
     const current = await orderStatus(client, actor.companyId, orderId);
     if (!current.ok) return current.result;
     if (current.status === "DONE" || current.status === "CANCELLED") {
@@ -446,11 +452,12 @@ export async function recordPartUsage(
 
 export async function approveServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
 ): Promise<ServiceOutcome> {
   if (!can(actor.roles, "service.approve")) return NO_ROLE;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
     const current = await orderStatus(client, actor.companyId, orderId);
     if (!current.ok) return current.result;
     const open = await client.query<{ id: string }>(
@@ -497,7 +504,7 @@ export async function approveServiceOrder(
 
 export async function rejectServiceOrder(
   pool: Pool,
-  actor: ServiceActor,
+  actor: EquipmentActor,
   orderId: string,
   reason: string,
 ): Promise<ServiceOutcome> {
@@ -511,6 +518,7 @@ export async function rejectServiceOrder(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "order", orderId)) return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Nalog ne postoji." };
     const current = await orderStatus(client, actor.companyId, orderId);
     if (!current.ok) return current.result;
     if (current.status === "DONE") {

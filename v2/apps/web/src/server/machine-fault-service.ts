@@ -1,3 +1,4 @@
+import { equipmentScope, equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
 /** R5.5: machine fault list and create. */
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
@@ -15,7 +16,7 @@ import {
   resolveFaultActorWorkerId,
   type DbFaultRow,
 } from "./machine-fault-db-helpers";
-import type { CreateInput, FaultActor, FaultRow, ListFilters, MutationOutcome } from "./machine-fault-types";
+import type { CreateInput, FaultRow, ListFilters, MutationOutcome } from "./machine-fault-types";
 
 export type { CreateInput, FaultActor, FaultRow, ListFilters, MutationOutcome } from "./machine-fault-types";
 export { reviseMachineFault } from "./machine-fault-revise";
@@ -35,7 +36,7 @@ const FAULT_SELECT = `f.id, f.machine_id, m.code AS machine_code, m.name AS mach
 
 export async function listMachineFaults(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   filters: ListFilters,
 ): Promise<FaultRow[]> {
   if (!can(actor.roles, "machines.fault.view")) return [];
@@ -45,7 +46,8 @@ export async function listMachineFaults(
       && !actor.roles.some((role) => [...OFFICE_ROLES, "ACCOUNTANT"].includes(role));
     const conditions = ["f.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let idx = 2;
+    conditions.push(equipmentScope(actor, params, "f", "fault"));
+    let idx = params.length + 1;
     if (isFieldOnly && !viewerWorkerId) return [];
     if (isFieldOnly) {
       conditions.push(`f.reporter_worker_id = $${idx}`);
@@ -100,7 +102,7 @@ export async function listMachineFaults(
 
 export async function createMachineFault(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   input: CreateInput,
 ): Promise<MutationOutcome> {
   if (!can(actor.roles, "machines.fault.create")) return { outcome: "FORBIDDEN", code: "ROLE" };
@@ -111,6 +113,8 @@ export async function createMachineFault(
     return { outcome: "VALIDATION_FAILED", code: "TITLE", message: "Naslov je obavezan." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId))
+      return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
     const isOffice = actor.roles.some((role) => OFFICE_ROLES.includes(role as typeof OFFICE_ROLES[number]));
     let reporterId: string | null = null;
     if (isOffice && input.reporterWorkerId) {
@@ -125,6 +129,8 @@ export async function createMachineFault(
     } else {
       reporterId = await resolveFaultActorWorkerId(client, actor);
     }
+    if (actor.scope === "SELF" && !await isActorWorker(client, actor, reporterId))
+      return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
     const machine = await client.query<{ id: string }>(
       `SELECT id FROM public.machines WHERE company_id = $1 AND id = $2 AND is_active`,
       [actor.companyId, input.machineId],

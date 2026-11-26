@@ -601,7 +601,7 @@ describeDb("F9 dnevnik i HSE — integraciono", () => {
       const inspectionId = String((await bodyOf(recorded)).data?.id ?? "");
 
       const attention = await withCompany(admin, companyId(CO_A), async (client) =>
-        hseAttention(client, { userId: USER_OWNER, companyId: CO_A, roles: ["OWNER"] }));
+        hseAttention(client, { userId: USER_OWNER, companyId: CO_A, roles: ["OWNER"], scope: "COMPANY", projectIds: null }));
       expect(attention?.prohibition?.authorityName).toBe("Inspektorat rada");
 
       const noReason = await inspectionsPatch(jsonRequest("http://t/api/hse/inspections", COOKIES.sup, {
@@ -616,7 +616,7 @@ describeDb("F9 dnevnik i HSE — integraciono", () => {
       expect(lifted.status).toBe(200);
 
       const after = await withCompany(admin, companyId(CO_A), async (client) =>
-        hseAttention(client, { userId: USER_OWNER, companyId: CO_A, roles: ["OWNER"] }));
+        hseAttention(client, { userId: USER_OWNER, companyId: CO_A, roles: ["OWNER"], scope: "COMPANY", projectIds: null }));
       expect(after?.prohibition).toBeNull();
       expect(after?.overdueActions).toBe(0);
     });

@@ -30,7 +30,7 @@ export default async function KvaroviPage({ searchParams }: { searchParams: Prom
   const projects = filtered ? await withCompany(pool, auth.ctx.companyId, client => dashboardAssignedProjects(client, auth.ctx)) : undefined;
   const faults = await listMachineFaults(
     pool,
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     { openAssignedProjectIds: projects },
   );
 

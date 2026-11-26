@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { companyId as toCompanyId } from "@gradix/db";
-import type { Role } from "./permissions";
+import type { EquipmentActor } from "./equipment-scope";
 import { companyToday } from "./project-service";
 import { dueMaintenancePlans } from "./maintenance-service";
 
@@ -35,8 +35,11 @@ export type ServiceAttention = {
 
 export async function serviceAttention(
   client: PoolClient,
-  actor: { userId: string; companyId: string; roles: Role[] },
+  actor: EquipmentActor,
 ): Promise<ServiceAttention | null> {
+  // The old aggregate combines company-wide maintenance plans and order counts.
+  // Hide it until the maintenance module has a scoped aggregate (Sweep 1B).
+  if (actor.scope !== "COMPANY") return null;
   const today = await companyToday(client, toCompanyId(actor.companyId));
 
   const plans = await dueMaintenancePlans(client, actor.companyId, today);

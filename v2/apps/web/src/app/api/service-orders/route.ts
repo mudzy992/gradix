@@ -21,6 +21,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       {
         status: status && isServiceOrderStatus(status) ? status : undefined,
@@ -49,6 +51,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       body,
     );

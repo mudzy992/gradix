@@ -36,7 +36,7 @@ describeDb("data health pod stvarnim RLS-om", () => {
   const root = new Client(rootUrl.toString());
   const admin = new Client(dbUrl.toString());
   const app = new Pool({ connectionString:runtimeUrl.toString() });
-  const actor = {userId:"dh-u",companyId:"dh-a",roles:["OWNER"],scope:"COMPANY",projectIds:null};
+  const actor = {userId:"dh-u",companyId:"dh-a",roles:["OWNER"],scope:"COMPANY" as const,projectIds:null};
   beforeAll(async () => {
     await root.connect(); await root.query(`CREATE DATABASE ${database}`); await admin.connect();
     await admin.query(readFileSync(fileURLToPath(new URL("../../../../packages/db/bootstrap/roles.sql", import.meta.url)),"utf8"));

@@ -299,6 +299,45 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect(row.rows[0]?.description).toBeTruthy();
   });
 
+  it("sync dnevnika poštuje PROJECTS i SELF i nakon promjene scopea, uključujući pull i ponovljeni receipt", async () => {
+    const otherProject = `prj_f9s_other_${RUN}`;
+    const assignId = `pa_f9s_scope_${RUN}`;
+    await withCompany(admin, companyId(CO), async (client) => {
+      await client.query("INSERT INTO projects (id,company_id,code,name) VALUES ($1,$2,'F9S-2','Drugi')", [otherProject, CO]);
+      await client.query("INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')", [assignId, CO, PROJECT, WORKER_SUP]);
+    });
+    const base = diaryItem({ diaryId: `sdr_f9s_other_${RUN}` });
+    if (base.entityType !== "site_diary") throw new Error("bad fixture");
+    const other = { ...base, diary: { ...base.diary, projectId: otherProject } };
+    expect((await pushOne(COOKIES.sup, other)).status).toBe("APPLIED");
+    try {
+      await withCompany(admin, companyId(CO), (client) => client.query("UPDATE memberships SET scope='PROJECTS' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]));
+      expect((await pushOne(COOKIES.sup, other)).status).toBe("REJECTED"); // replay after scope revocation
+      expect((await pushOne(COOKIES.sup, { ...other, localId: localId(), diaryId: `sdr_no_${RUN}` })).status).toBe("REJECTED");
+      const otherItem: R4SyncPushItem = { localId: localId(), entityType:"site_diary_item", diaryItemId:`sdi_scope_${RUN}`,
+        diaryProjectId:otherProject, diaryDate:DAY, deviceSentAt:`${DAY}T17:00:00+02:00`,
+        item:{boqItemId:null,description:"Forbidden",unit:"m",quantity:"1",source:"MANUAL"} };
+      expect((await pushOne(COOKIES.sup, otherItem)).status).toBe("REJECTED");
+      expect((await pushOne(COOKIES.sup, { ...other, localId: localId(), diary: { ...other.diary, projectId: PROJECT } })).status).toBe("REJECTED"); // forged ID
+      const pullResponse = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.sup } }));
+      const pulled = await pullResponse.json() as { data: { events: { entityType: string; entityId: string }[] } };
+      expect(pulled.data.events.some((event) => event.entityType === "site_diary" && event.entityId === other.diaryId)).toBe(false);
+      expect(pulled.data.events.some((event) => event.entityType === "site_diary" && event.entityId === `sdr_f9s_${RUN}`)).toBe(true);
+      await withCompany(admin, companyId(CO), (client) => client.query("UPDATE memberships SET scope='SELF' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]));
+      expect((await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}` }))).status).toBe("REJECTED");
+      expect((await pushOne(COOKIES.sup, {...otherItem, localId:localId(), diaryProjectId:PROJECT})).status).toBe("REJECTED");
+      const selfResponse = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.sup } }));
+      const selfPulled = await selfResponse.json() as { data: { events: { entityType: string }[] } };
+      expect(selfPulled.data.events.some((event) => event.entityType === "site_diary")).toBe(false);
+    } finally {
+      await withCompany(admin, companyId(CO), async (client) => {
+        await client.query("UPDATE memberships SET scope='COMPANY' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]);
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM project_assignments WHERE company_id=$1 AND id=$2", [CO, assignId]);
+      });
+    }
+  });
+
   it("različita ista sekcija ne biva odbačena ni kada je verzija aktuelna", async () => {
     const current = await withCompany(admin, companyId(CO), (client) => client.query<{ version: number }>(
       "SELECT version FROM site_diaries WHERE company_id = $1 AND project_id = $2 AND diary_date = $3", [CO, PROJECT, DAY],

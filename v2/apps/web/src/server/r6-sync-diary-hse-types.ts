@@ -1,3 +1,4 @@
+import type { Scope } from "@gradix/domain";
 /**
  * F9 — zajednički tipovi za offline sync dnevnika i HSE (spec 10 §1.8).
  *
@@ -9,7 +10,8 @@ import type { PoolClient } from "pg";
 import type { CompanyId } from "@gradix/db";
 import type { R4SyncPushItem, R4SyncPushItemResult } from "@gradix/domain";
 
-export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
+export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[];
+  scope: Scope; projectIds: readonly string[] | null };
 export type SyncReservation = { cursor_seq: string; reservation_token: string; already_committed: boolean };
 export type SyncWorker = { id: string; first_name: string; last_name: string };
 

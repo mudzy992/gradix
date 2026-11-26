@@ -34,7 +34,7 @@ export default async function ServisPage({ searchParams }: { searchParams: Promi
   const dashboardMine = filter === "moji" ? "active" : filter === "dijelovi" ? "waiting" : undefined;
   const orders = await listServiceOrders(
     await getVerifiedPool(),
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     { dashboardMine, dashboardProjectIds: auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds : null },
   );
 

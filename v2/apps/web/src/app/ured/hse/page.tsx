@@ -35,7 +35,7 @@ export default async function HsePage({searchParams}: {searchParams: Promise<{fi
   const params = await searchParams;
   if (params.filter === "bez-mjera") return healthPage(await getVerifiedPool(), {...auth.ctx, projectIds:auth.ctx.projectIds ?? null}, "incidents_without_actions", params.page);
 
-  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
+  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds };
   const pool = await getVerifiedPool();
   const today = await withCompany(pool, auth.ctx.companyId, (client) => companyToday(client, auth.ctx.companyId));
   const yearStart = `${today.slice(0, 4)}-01-01`;

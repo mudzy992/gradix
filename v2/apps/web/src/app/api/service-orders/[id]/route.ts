@@ -21,6 +21,8 @@ export async function GET(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
     }, id);
     if (!detail) return fail("NOT_FOUND", "Nalog ne postoji.");
     return ok(detail);
@@ -45,6 +47,8 @@ export async function PATCH(
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       id,
       body,

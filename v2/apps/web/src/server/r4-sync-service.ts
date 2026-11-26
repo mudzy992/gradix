@@ -1,3 +1,6 @@
+import type { Scope } from "@gradix/domain";
+import { equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
+import { diaryProjectAllowed } from "./diary-service";
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
 import { withCompany, type CompanyId } from "@gradix/db";
@@ -21,7 +24,8 @@ import { applySiteDiaryItemSyncItem, applySiteDiarySyncItem } from "./r6-sync-di
 import { applyHseActionSyncItem, applyHseIncidentSyncItem, applyHseTrainingSyncItem } from "./r6-sync-hse";
 import { can, type Permission } from "./permissions";
 
-export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
+export type SyncPushActor = { userId: string; companyId: CompanyId; roles: readonly string[];
+  scope: Scope; projectIds: readonly string[] | null };
 
 /**
  * A1: kontrolni znakovi (npr. NUL) bilo gdje u stavci — string kolone i jsonb u
@@ -1050,6 +1054,25 @@ export async function pushR4SyncItems(
       worker = actorWorker;
     }
 
+    // Apply scope before receipt replay too: an old receipt must not survive revocation.
+    if (item.entityType === "site_diary" || item.entityType === "site_diary_item") {
+      const projectId = item.entityType === "site_diary" ? item.diary.projectId : item.diaryProjectId;
+      if (!projectId || !diaryProjectAllowed(actor, projectId)) {
+        results.push(invalidItem(item, !projectId && actor.scope === "COMPANY" ? "DIARY_REFERENCE_REQUIRED" : "SYNC_ITEM_REJECTED"));
+        continue;
+      }
+    }
+
+    if (item.entityType === "machine_fault" || item.entityType === "service_order_action") {
+      const allowed = await withCompany(pool, actor.companyId, async (client) => {
+        if (item.entityType === "service_order_action") return equipmentRecordAllowed(client, actor, "order", item.serviceOrderId);
+        if (item.entityType !== "machine_fault") return false;
+        if (!await equipmentTargetAllowed(client, actor, item.fault.projectId, item.fault.machineId)) return false;
+        const existing = await client.query("SELECT id FROM public.machine_faults WHERE company_id=$1 AND id=$2", [actor.companyId, item.faultId]);
+        return !existing.rows[0] || equipmentRecordAllowed(client, actor, "fault", item.faultId);
+      });
+      if (!allowed) { results.push(invalidItem(item, "SYNC_ITEM_REJECTED")); continue; }
+    }
     const requestHash = sha256(canonical(item));
     const prior = await readReceipt(pool, actor, item, requestHash);
     if (prior) {

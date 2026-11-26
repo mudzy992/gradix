@@ -15,6 +15,7 @@
 import type { Pool, PoolClient } from "pg";
 import type { R4ServiceOrderActionPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { can } from "./permissions";
+import { equipmentRecordAllowed, linkedFaultAllowed } from "./equipment-scope";
 import { bookServiceOrderCost } from "./cost-entry-service";
 import { recordPartUsage } from "./service-order-actions";
 import { finishOrderFromSync, setOrderStatusFromSync } from "./service-order-sync-actions";
@@ -60,6 +61,8 @@ export async function applyServiceOrderAction(
   /* Dozvola se provjerava u ruti samo za tip stavke `service.manage`; ovdje je druga linija
      odbrane, jer batch može sadržati mješovite tipove. */
   if (!can(actor.roles, "service.manage")) return reject("FORBIDDEN");
+  if (!await equipmentRecordAllowed(client, actor, "order", item.serviceOrderId)) return reject("NOT_FOUND");
+  if (item.action.kind === "FINISH" && !await linkedFaultAllowed(client, actor, item.serviceOrderId)) return reject("NOT_FOUND");
 
   /* `FOR UPDATE` drži nalog zaključan kroz radnju: dva telefona ne smiju istovremeno „završiti“
      isti nalog i napraviti dva reda u ledgeru. */

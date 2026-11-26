@@ -1,3 +1,4 @@
+import { equipmentRecordAllowed, type EquipmentActor } from "./equipment-scope";
 /** R5.5: append-only revision + optional status progress with approval gate. */
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
@@ -6,13 +7,13 @@ import { can } from "./permissions";
 import { canProgressWithCost } from "./machine-fault-approval";
 import { faultApprovalThreshold } from "./machine-availability-service";
 import { isFaultStatus } from "./machine-fault-db-helpers";
-import type { FaultActor, FaultStatus, MutationOutcome } from "./machine-fault-types";
+import type { FaultStatus, MutationOutcome } from "./machine-fault-types";
 
 export type ReviseInput = { reason: string; payload: Record<string, unknown> };
 
 export async function reviseMachineFault(
   pool: Pool,
-  actor: FaultActor,
+  actor: EquipmentActor,
   faultId: string,
   input: ReviseInput,
 ): Promise<MutationOutcome> {
@@ -21,6 +22,7 @@ export async function reviseMachineFault(
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await equipmentRecordAllowed(client, actor, "fault", faultId)) return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
     const fault = await client.query<{
       id: string;
       version: number;
