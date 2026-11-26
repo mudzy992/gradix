@@ -67,6 +67,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
    * (vidi ih onaj ko vidi troškove), a ne `company.settings.view`.
    */
   { href: "/ured/postavke/kategorije-troska", label: "Kategorije troška", icon: "folder", description: "Šifarnik kategorija i mapiranje izvora", group: "Administracija", permission: "projects.costs.view" },
+  { href: "/ured/izvjestaji", label: "Izvještaji", icon: "list", description: "PDF i Excel izvještaji", group: "Rad / obračun", permission: "reports.view" },
   { href: "/ured/obavjestenja", label: "Obavještenja", icon: "bell", description: "Inbox: rok, budžet, izvještaj", group: "Administracija", permission: "authenticated" },
   { href: "/ured/korisnici", label: "Korisnici", icon: "users", description: "Ljudi, role, pristup", group: "Administracija", permission: "users.manage" },
   { href: "/ured/role", label: "Pristup i role", icon: "shield", description: "Ko šta smije", group: "Administracija", permission: "roles.view" },

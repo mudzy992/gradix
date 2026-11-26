@@ -71,9 +71,10 @@ export default async function SiromiSatiPage({
       </div>
       <PageHeader
         title="Izvoz sirovih sati"
-        subtitle="Potvrđeni i zaključani sati radnika po danu — pregled i CSV. Ovo NIJE obračun sa iznosima."
+        subtitle="Potvrđeni i zaključani sati radnika po danu — pregled i izvoz. Ovo NIJE obračun sa iznosima."
       />
-      <HoursExportClient initialFrom={range.from} initialTo={range.to} initialRows={rows} />
+      <HoursExportClient initialFrom={range.from} initialTo={range.to} initialRows={rows}
+        canReportExport={can(auth.ctx.roles, "reports.view") && can(auth.ctx.roles, "export.data")} />
     </main>
   );
 }

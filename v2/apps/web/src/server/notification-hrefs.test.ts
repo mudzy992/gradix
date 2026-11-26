@@ -23,7 +23,7 @@ const appDir = fileURLToPath(new URL("../app", import.meta.url));
 
 /** Putanja → fajl stranice, ili `null` kad ekran u webu ne postoji. */
 function pageFileFor(href: string): string | null {
-  const direct = join(appDir, href.replace(/^\//, ""), "page.tsx");
+  const direct = join(appDir, href.split("?")[0]!.replace(/^\//, ""), "page.tsx");
   return existsSync(direct) ? direct : null;
 }
 

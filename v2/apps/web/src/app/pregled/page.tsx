@@ -15,6 +15,7 @@ import { listObligations } from "@/server/obligation-service";
 import { countOpenConflicts } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 import { PregledBoard } from "./pregled-board";
+import { RoleDashboard } from "./role-dashboard";
 import { RiskyProjectsCard } from "./risky-projects-card";
 import { listRiskyProjects } from "@/server/pregled-risky";
 import { payrollReminder } from "@/server/payroll-reminder";
@@ -160,6 +161,7 @@ export default async function PregledPage() {
         <div>
           <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
           {reminder ? <PayrollReminderCard reminder={reminder} /> : null}
+          <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} />
           <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
           {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
           {service ? <ServiceAttentionCard data={service} /> : null}
@@ -200,6 +202,7 @@ export default async function PregledPage() {
       />
 
       <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
+      <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} />
 
       <div className="gx-cols">
         <Card>

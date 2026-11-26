@@ -4,7 +4,7 @@ import { companyId, withCompany } from "@gradix/db";
 import type { DashboardActor } from "./dashboard-aggregates";
 
 export const DATA_HEALTH_HREFS = {
-  unconfirmed_days: "/ured/radni-dani",
+  unconfirmed_days: "/ured/radni-dani?filter=bez-potvrde",
   projects_without_budget: "/ured/projekti",
   machines_without_rate: "/ured/masine",
   workers_without_rate: "/ured/radnici",

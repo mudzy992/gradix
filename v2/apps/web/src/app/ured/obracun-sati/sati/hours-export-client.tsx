@@ -11,10 +11,12 @@ export function HoursExportClient({
   initialFrom,
   initialTo,
   initialRows,
+  canReportExport = false,
 }: {
   initialFrom: string;
   initialTo: string;
   initialRows: HoursExportRow[];
+  canReportExport?: boolean;
 }) {
   const router = useRouter();
   const [from, setFrom] = useState(initialFrom);
@@ -45,7 +47,7 @@ export function HoursExportClient({
       return;
     }
     setNotice(null);
-    router.push(`/ured/obracun-sati?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    router.push(`/ured/obracun-sati/sati?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
   };
 
   const handleExport = async () => {
@@ -73,11 +75,31 @@ export function HoursExportClient({
       anchor.click();
       URL.revokeObjectURL(url);
       setNotice({ tone: "success", text: "CSV je preuzet." });
+    } catch {
+      setNotice({ tone: "error", text: "Nema veze sa serverom. Pokušajte ponovo." });
     } finally {
       setBusy(false);
     }
   };
 
+  const handleReportExport = async (format: "pdf" | "xlsx") => {
+    if (!from || !to || from > to) { setNotice({tone:"error",text:"Ispravite period prije izvoza."}); return; }
+    setBusy(true); setNotice(null);
+    try {
+      const query=new URLSearchParams({from,to,format});
+      const response=await fetch(`/api/reports/WORK_HOURS?${query}`,{credentials:"same-origin"});
+      if (!response.ok) {
+        const body=await response.json().catch(()=>null) as {error?:{message?:string}} | null;
+        setNotice({tone:"error",text:body?.error?.message ?? "Izvoz nije uspio."}); return;
+      }
+      const url=URL.createObjectURL(await response.blob());
+      const link=document.createElement("a"); link.href=url; link.download=`radni-sati-${from}-${to}.${format}`; link.click();
+      URL.revokeObjectURL(url); setNotice({tone:"success",text:`${format.toUpperCase()} je preuzet.`});
+    } catch { setNotice({tone:"error",text:"Nema veze sa serverom. Pokušajte ponovo."}); }
+    finally {setBusy(false);}
+  };
+
+  const filtersChanged = from !== initialFrom || to !== initialTo;
   return (
     <Stack gap="var(--space-5)">
       {notice ? <Alert tone={notice.tone} role="status">{notice.text}</Alert> : null}
@@ -85,10 +107,15 @@ export function HoursExportClient({
         <Input label="Od" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <Input label="Do" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         <Button variant="quiet" disabled={busy} onClick={handleApply}>Prikaži</Button>
-        <Button variant="primary" disabled={busy} onClick={() => void handleExport()}>
+        <Button variant="primary" disabled={busy || filtersChanged} onClick={() => void handleExport()}>
           Preuzmi CSV
         </Button>
+        {canReportExport ? <>
+          <Button disabled={busy || filtersChanged} onClick={()=>void handleReportExport("pdf")}>Preuzmi PDF</Button>
+          <Button disabled={busy || filtersChanged} onClick={()=>void handleReportExport("xlsx")}>Preuzmi XLSX</Button>
+        </> : null}
       </FilterBar>
+      {filtersChanged ? <p>Primijenite period prije izvoza prikazanih sati.</p> : null}
       {initialRows.length === 0 ? (
         <EmptyState
           title="Nema sati u periodu"

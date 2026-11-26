@@ -43,11 +43,13 @@ export default async function RadniDaniPage({
   const params = await searchParams;
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
   const onlyReview = first(params.filter) === "za-provjeru";
+  const onlyUnconfirmed = first(params.filter) === "bez-potvrde";
 
   const { days, weeks } = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
     const all = await listWorkdaysForReview(client, auth.ctx.companyId, workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId));
-    const filtered = onlyReview ? all.filter((day) => reviewLabel(day) !== null) : all;
+    const filtered = all.filter((day) => (!onlyReview || reviewLabel(day) !== null)
+      && (!onlyUnconfirmed || (day.status === "SUBMITTED" && day.approval_status === "SUBMITTED")));
     const weekStarts = [...new Set(filtered.map((day) => weekStartFromWorkDate(day.work_date)))];
     const weeks = await listWeekApprovals(client, auth.ctx.companyId, weekStarts);
     return { days: filtered, weeks };
@@ -65,7 +67,7 @@ export default async function RadniDaniPage({
         subtitle={
           onlyReview
             ? "Samo dani s oznakom „Za provjeru“ (otvoren segment ili kraj nepoznat)."
-            : "Pregled dana s terena. Šef potvrđuje dan; ured odobrava, odbija, zaključava ili ispravlja."
+            : onlyUnconfirmed ? "Samo predani dani bez potvrde." : "Pregled dana s terena. Šef potvrđuje dan; ured odobrava, odbija, zaključava ili ispravlja."
         }
       />
       {onlyReview && days.length === 0 ? (
