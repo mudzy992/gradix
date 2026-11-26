@@ -254,6 +254,7 @@ export interface DailyRollups {
   hours_total: Generated<Numeric>;
   id: string;
   machine_hours: Generated<Numeric>;
+  project_id: string | null;
   rollup_date: string;
   workday_count: Generated<number>;
 }
@@ -1455,16 +1456,21 @@ export interface PurchaseRequests {
 }
 
 export interface ReportJobs {
+  attachment_id: string | null;
   attempts: Generated<number>;
   company_id: string;
   completed_at: Timestamp | null;
   created_at: Generated<Timestamp>;
+  dedupe_key: string | null;
+  format: string | null;
   id: string;
   kind: string;
   last_error: string | null;
   object_key: string | null;
+  params: Generated<Json>;
   period_from: string;
   period_to: string;
+  report_key: string | null;
   requested_by: string | null;
   status: Generated<string>;
 }
