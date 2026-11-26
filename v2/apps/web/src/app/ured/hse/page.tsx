@@ -1,3 +1,4 @@
+import { healthPage } from "../_components/health-page";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
  * broj koji se ne može provjeriti. `activeProhibition` je prvo što ekran kaže, jer zabrana rada
  * zaustavlja gradilište.
  */
-export default async function HsePage() {
+export default async function HsePage({searchParams}: {searchParams: Promise<{filter?:string;page?:string;warehouse?:string}>}) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -31,6 +32,8 @@ export default async function HsePage() {
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
   if (!can(auth.ctx.roles, "hse.view")) redirect("/nemate-pristup");
+  const params = await searchParams;
+  if (params.filter === "bez-mjera") return healthPage(await getVerifiedPool(), {...auth.ctx, projectIds:auth.ctx.projectIds ?? null}, "incidents_without_actions", params.page);
 
   const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
   const pool = await getVerifiedPool();

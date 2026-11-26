@@ -52,6 +52,17 @@ describe("skladište", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/stock-transfers", expect.objectContaining({ method: "POST", body: expect.stringContaining('"quantity":"1.25"') })));
     expect(await screen.findByText(/izvor je ispod minimuma/)).toBeInTheDocument();
   });
+  it("link za skladište otvara unos minimuma i čuva postojeći maksimum", async () => {
+    const fetch=mockApi(); const user=userEvent.setup();
+    render(<WarehouseClient canManage canPurchase={false} initialWarehouse="central" />);
+    await screen.findByText("Ispod minimuma");
+    expect(screen.getByLabelText("Skladište")).toHaveValue("central");
+    await user.selectOptions(screen.getByLabelText("Artikal za minimum"),"i");
+    await user.type(screen.getByLabelText("Minimalna količina"),"10");
+    await user.click(screen.getByRole("button",{name:"Sačuvaj minimum"}));
+    await waitFor(()=>expect(fetch).toHaveBeenCalledWith("/api/stock-items/i/levels",expect.objectContaining({method:"POST",body:JSON.stringify({warehouseId:"central",minQuantity:"10",maxQuantity:null})})));
+    expect(await screen.findByText("Minimum je sačuvan.")).toBeInTheDocument();
+  });
   it("bez dozvole ne nudi transfer ili popis", async () => {
     const fetch = mockApi();
     render(<WarehouseClient canManage={false} canPurchase={false} />);

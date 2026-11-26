@@ -59,6 +59,7 @@ export async function listWorkdaysForReview(
   companyId: string,
   scope: WorkdayReviewScope,
   limit = 200,
+  filter?: { unconfirmed: boolean; projectIds: readonly string[] | null },
 ): Promise<WorkdayReviewRow[]> {
   const result = await client.query<WorkdayReviewRow>(
     `SELECT d.id,
@@ -77,6 +78,9 @@ export async function listWorkdaysForReview(
        LEFT JOIN public.sync_conflicts c ON c.company_id = e.company_id AND c.work_entry_id = e.id
        LEFT JOIN public.projects p ON p.company_id = d.company_id AND p.id = e.project_id
       WHERE d.company_id = $1
+        AND (NOT $5::boolean OR (d.status='SUBMITTED' AND d.approval_status='SUBMITTED'
+          AND ($6::text[] IS NULL OR EXISTS (SELECT 1 FROM public.work_entries se
+            WHERE se.company_id=d.company_id AND se.workday_id=d.id AND se.project_id=ANY($6::text[])))))
         AND (
           $2::text = 'company'
           OR (
@@ -99,7 +103,8 @@ export async function listWorkdaysForReview(
       GROUP BY d.id, d.work_date, d.status, d.approval_status, w.first_name, w.last_name
       ORDER BY d.work_date DESC, worker_name
       LIMIT $4`,
-    [companyId, scope.kind, scope.kind === "assignments" ? scope.viewerWorkerId : null, limit],
+    [companyId, scope.kind, scope.kind === "assignments" ? scope.viewerWorkerId : null, limit,
+      filter?.unconfirmed ?? false, filter?.projectIds ?? null],
   );
   return result.rows;
 }

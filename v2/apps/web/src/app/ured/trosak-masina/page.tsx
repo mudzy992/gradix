@@ -11,7 +11,7 @@ import { CostRatesClient } from "./cost-rates-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function TrosakMasinaPage() {
+export default async function TrosakMasinaPage({searchParams}: {searchParams: Promise<{masina?:string}>}) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -40,6 +40,7 @@ export default async function TrosakMasinaPage() {
       />
       <CostRatesClient
         initialRates={rates}
+        initialMachine={(await searchParams).masina ?? ""}
         caps={{ canManage: can(auth.ctx.roles, "machines.cost_rate.manage") }}
       />
     </main>

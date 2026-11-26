@@ -1,3 +1,5 @@
+import { getVerifiedPool } from "@/server/db";
+import { healthPage } from "../_components/health-page";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
  * `workers.view` je širi od `manage` (šef gradilišta vidi ljude, ali ih ne mijenja), pa ekran
  * dobija obje zastavice i sam odlučuje šta prikazuje.
  */
-export default async function WorkersPage() {
+export default async function WorkersPage({searchParams}: {searchParams: Promise<{filter?:string;page?:string;warehouse?:string}>}) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -24,6 +26,8 @@ export default async function WorkersPage() {
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
   if (!can(auth.ctx.roles, "workers.view")) redirect("/nemate-pristup");
+  const params = await searchParams;
+  if (params.filter === "bez-satnice") return healthPage(await getVerifiedPool(), {...auth.ctx, projectIds:auth.ctx.projectIds ?? null}, "workers_without_rate", params.page);
 
   return (
     <main className="mx-auto w-full max-w-6xl">

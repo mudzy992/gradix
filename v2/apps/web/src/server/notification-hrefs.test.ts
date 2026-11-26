@@ -97,7 +97,7 @@ describe("role dashboard href", () => {
   };
   for (const action of [...DASHBOARD_ACTIONS, {key:"preventive_due",role:"MECHANIC" as const,href:"/ured/servis/planovi"}]) {
     it(`${action.role}/${action.key} vodi na dostupnu stranicu`, () => {
-      const permission=pagePermission[action.href];
+      const permission=pagePermission[action.href.split("?")[0]!];
       expect(permission).toBeDefined();
       const file=pageFileFor(action.href);
       expect(file).not.toBeNull();

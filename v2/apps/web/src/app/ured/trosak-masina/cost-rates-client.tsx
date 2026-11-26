@@ -13,15 +13,17 @@ type MachineOption = { id: string; code: string; name: string };
 
 export function CostRatesClient({
   initialRates,
+  initialMachine = "",
   caps,
 }: {
   initialRates: CostRateRow[];
+  initialMachine?: string;
   caps: Caps;
 }) {
   const router = useRouter();
   const [rates, setRates] = useState(initialRates);
   const [machines, setMachines] = useState<MachineOption[]>([]);
-  const [machineFilter, setMachineFilter] = useState("");
+  const [machineFilter, setMachineFilter] = useState(initialMachine);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -101,6 +103,8 @@ export function CostRatesClient({
         {caps.canManage ? (
           <CostRateForm
             machines={machines}
+            initialMachine={machineFilter || undefined}
+            key={machineFilter}
             busy={busy}
             onBusy={setBusy}
             onDone={() => { setNotice({ tone: "success", text: "Stopa je sačuvana." }); refresh(); }}

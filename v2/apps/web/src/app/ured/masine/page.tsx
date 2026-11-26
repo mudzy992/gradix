@@ -1,3 +1,5 @@
+import { getVerifiedPool } from "@/server/db";
+import { healthPage } from "../_components/health-page";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
  * Rukovalac i mehaničar vide inventar i upisuju brojilo (PATCH traži `equipment.view`),
  * ali ne mijenjaju podatke o mašini.
  */
-export default async function EquipmentPage() {
+export default async function EquipmentPage({searchParams}: {searchParams: Promise<{filter?:string;page?:string;warehouse?:string}>}) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -24,6 +26,8 @@ export default async function EquipmentPage() {
   if (!auth.ok) redirect("/login");
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
   if (!can(auth.ctx.roles, "equipment.view")) redirect("/nemate-pristup");
+  const params = await searchParams;
+  if (params.filter === "bez-stope") return healthPage(await getVerifiedPool(), {...auth.ctx, projectIds:auth.ctx.projectIds ?? null}, "machines_without_rate", params.page);
 
   return (
     <main className="mx-auto w-full max-w-6xl">

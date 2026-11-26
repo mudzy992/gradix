@@ -10,15 +10,16 @@ type Warehouse = z.infer<typeof WarehousesResponse>["warehouses"][number];
 type Balance = z.infer<typeof StockBalanceResponse>["balances"][number];
 type Count = z.infer<typeof StockCountsResponse>["counts"][number];
 const today=()=>new Date().toISOString().slice(0,10);
-export function WarehouseClient({canManage,canPurchase}:{canManage:boolean;canPurchase:boolean}) {
+export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{canManage:boolean;canPurchase:boolean;initialWarehouse?:string}) {
   const [warehouses,setWarehouses]=useState<Warehouse[]>([]);
   const [balances,setBalances]=useState<Balance[]>([]);
   const [counts,setCounts]=useState<Count[]>([]);
   const [detail,setDetail]=useState<z.infer<typeof StockCountDetailResponse>|null>(null);
-  const [warehouse,setWarehouse]=useState("");
+  const [warehouse,setWarehouse]=useState(initialWarehouse);
   const [notice,setNotice]=useState<{tone:"success"|"error";text:string}|null>(null);
   const [busy,setBusy]=useState(false);
   const [transfer,setTransfer]=useState({from:"",to:"",item:"",quantity:"",date:today()});
+  const [level,setLevel]=useState({item:"",minimum:""});
   const [count,setCount]=useState({warehouse:"",item:"",quantity:"",reason:""});
   const load=useCallback(async()=>{
     const [w,b,c]=await Promise.all([
@@ -45,6 +46,17 @@ export function WarehouseClient({canManage,canPurchase}:{canManage:boolean;canPu
     if(!result.ok) {setNotice({tone:"error",text:result.message}); return;}
     setNotice({tone:"success",text:"Nacrt popisa je sačuvan. Primijenite ga nakon provjere."}); setCount({...count,quantity:""}); await load();
   }
+  async function saveLevel(event:React.FormEvent) {
+    event.preventDefault();
+    const item=balances.find(b=>b.warehouse_id===warehouse && b.item_id===level.item);
+    if (!item) {setNotice({tone:"error",text:"Odaberite skladište i artikal."});return;}
+    setBusy(true); setNotice(null);
+    try {
+      const result=await apiCall(`/api/stock-items/${encodeURIComponent(item.item_id)}/levels`,jsonBody({warehouseId:warehouse,minQuantity:level.minimum,maxQuantity:item.max_quantity}));
+      if (!result.ok) {setNotice({tone:"error",text:result.message});return;}
+      setNotice({tone:"success",text:"Minimum je sačuvan."}); setLevel({item:"",minimum:""}); await load();
+    } finally {setBusy(false);}
+  }
   async function showCount(row:Count) {
     setBusy(true); const result=await apiCall<z.infer<typeof StockCountDetailResponse>>(`/api/stock-counts/${encodeURIComponent(row.id)}`); setBusy(false);
     if (!result.ok) {setNotice({tone:"error",text:result.message}); return;}
@@ -70,6 +82,10 @@ export function WarehouseClient({canManage,canPurchase}:{canManage:boolean;canPu
       {key:"proposal",header:"Nabavka",cell:r=>r.below_minimum && canPurchase ? <Link href={`/ured/nabavka?item=${encodeURIComponent(r.item_id)}&warehouse=${encodeURIComponent(r.warehouse_id)}`}>Predloži nabavku</Link> : "—"},
     ]} />
     {canManage ? <>
+      {warehouse ? <Card><FormSection title="Minimum za odabrano skladište"><form onSubmit={saveLevel}><FormGrid>
+        <Select label="Artikal za minimum" required value={level.item} onChange={e=>setLevel({...level,item:e.target.value})}><option value="">Odaberite</option>{options(warehouse).map(b=><option key={b.item_id} value={b.item_id}>{b.code} · {b.name}</option>)}</Select>
+        <Input label="Minimalna količina" required inputMode="decimal" value={level.minimum} onChange={e=>setLevel({...level,minimum:e.target.value})} hint="Postojeći maksimum ostaje nepromijenjen." />
+      </FormGrid><Button type="submit" disabled={busy}>Sačuvaj minimum</Button></form></FormSection></Card> : null}
       <Card><FormSection title="Transfer između skladišta"><form onSubmit={sendTransfer}><FormGrid>
         <Select label="Iz skladišta" required value={transfer.from} onChange={e=>setTransfer({...transfer,from:e.target.value,item:""})}><option value="">Odaberite</option>{active.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
         <Select label="U skladište" required value={transfer.to} onChange={e=>setTransfer({...transfer,to:e.target.value})}><option value="">Odaberite</option>{active.filter(w=>w.id!==transfer.from).map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>

@@ -11,6 +11,7 @@ type Outcome = { outcome: string; message?: string; code?: string };
 
 export function CostRateForm({
   machines,
+  initialMachine,
   edit,
   busy,
   onBusy,
@@ -19,6 +20,7 @@ export function CostRateForm({
   triggerLabel,
 }: {
   machines: MachineOption[];
+  initialMachine?: string;
   edit?: CostRateRow | null;
   busy: boolean;
   onBusy: (value: boolean) => void;
@@ -28,7 +30,7 @@ export function CostRateForm({
 }) {
   const [open, setOpen] = useState(false);
   const today = calendarDateFromLocalDate(new Date());
-  const [machineId, setMachineId] = useState(edit?.machine_id ?? machines[0]?.id ?? "");
+  const [machineId, setMachineId] = useState(edit?.machine_id ?? initialMachine ?? machines[0]?.id ?? "");
   const [amount, setAmount] = useState(edit?.amount ?? "");
   const [validFrom, setValidFrom] = useState(edit?.valid_from ?? today);
   const [validTo, setValidTo] = useState(edit?.valid_to ?? "");

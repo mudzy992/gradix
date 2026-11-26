@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client, Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadDataHealth } from "./data-health";
+import { loadDataHealth, listDataHealth } from "./data-health";
+import type { HealthKey } from "./data-health-queries";
 import { loadDashboardActions } from "./dashboard-actions";
 import { globalSearch } from "./global-search";
 import { loadProjectCostReport } from "./report-project-costs";
@@ -58,6 +59,18 @@ describeDb("data health pod stvarnim RLS-om", () => {
     expect(result?.items).toHaveLength(6);
     const other=await loadDataHealth(app,{...actor,companyId:"dh-b"});
     expect(other?.items.find(x=>x.key==="projects_without_budget")?.count).toBe(1);
+  });
+  it("filtrirane liste dijele predikate i opseg s panelom, bez curenja i bez pristupa drugih rola", async () => {
+    for (const scopedActor of [actor, {...actor,scope:"PROJECTS",projectIds:["dh-pa"]}, {...actor,scope:"SELF",projectIds:null}]) {
+      const health=await loadDataHealth(app,scopedActor);
+      for (const key of ["projects_without_budget","machines_without_rate","workers_without_rate","warehouses_without_minimum","incidents_without_actions"] as HealthKey[]) {
+        const list=await listDataHealth(app,scopedActor,key,1);
+        expect(list?.rows.length).toBe(health?.items.find(item=>item.key===key)?.count ?? 0);
+        expect(list?.rows.every(row=>!row.id.endsWith("b"))).toBe(true);
+      }
+    }
+    expect(await listDataHealth(app,{...actor,roles:["PROJECT_MANAGER"]},"workers_without_rate",1)).toBeNull();
+    expect((await listDataHealth(app,actor,"projects_without_budget",-2))?.page).toBe(1);
   });
   it("dashboard bira role, dodijeljene projekte i vlastite naloge bez tenant curenja", async () => {
     await admin.query("UPDATE public.workers SET user_id='dh-u' WHERE id='dh-wa'");

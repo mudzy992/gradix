@@ -1,3 +1,4 @@
+import { healthPage } from "../_components/health-page";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ projekat?: string }>;
+  searchParams: Promise<{ projekat?: string; filter?: string; page?: string }>;
 }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
@@ -37,7 +38,8 @@ export default async function ProjectsPage({
    * redu. Lista bez marže je bila razlog što se u projekat ulazilo „da se vidi broj“ — a to je
    * tačno ono što spec 06 §4 traži da bude u listi.
    */
-  const { projekat } = await searchParams;
+  const { projekat, filter, page } = await searchParams;
+  if (filter === "bez-budzeta") return healthPage(await getVerifiedPool(), {...auth.ctx, projectIds:auth.ctx.projectIds ?? null}, "projects_without_budget", page);
   const initialProjectId = typeof projekat === "string" && projekat.length > 0 ? projekat : null;
 
   const pool = await getVerifiedPool();
