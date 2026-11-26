@@ -172,6 +172,7 @@ describeDb("F9 dnevnik i HSE — integraciono", () => {
         await client.query("DELETE FROM hse_inspections WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_investigations WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incident_updates WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_incident_workers WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incidents WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_revisions WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_delays WHERE company_id = $1", [company]);

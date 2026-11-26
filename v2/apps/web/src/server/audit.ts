@@ -207,6 +207,7 @@ export const AUDIT_ACTIONS = [
   "hse.training_created",
   "hse.certificate_renewed",
   "hse.report_exported",
+  "hse.photo_confirmed",
 ] as const;
 
 export const AUDIT_ENTITY_TYPES = [
@@ -439,6 +440,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "hse.training_created": "Obuka evidentirana",
   "hse.certificate_renewed": "Certifikat obnovljen obukom",
   "hse.report_exported": "HSE izvještaj izvezen",
+  "hse.photo_confirmed": "Fotografija incidenta potvrđena",
 };
 
 /** Tip je izveden iz spiska, pa se ne mogu razići: nova radnja se dodaje na JEDNO mjesto. */

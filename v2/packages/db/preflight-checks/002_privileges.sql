@@ -62,7 +62,8 @@ DECLARE
     'public.check_templates_items_guard()',
     'public.machine_daily_checks_checklist_guard()',
     'public.project_assignment_machine_global_guard()',
-    'public.machine_fault_open_service_order()'
+    'public.machine_fault_open_service_order()',
+    'public.hse_incident_workers_guard()'
   ];
   v_sync_function_unsafe TEXT;
 BEGIN

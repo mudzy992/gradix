@@ -7,7 +7,10 @@ const state = vi.hoisted(() => ({
   projects: [] as { id: string; code: string; name: string; status: string }[],
   workers: [] as { id: string; name: string }[],
 }));
-vi.mock("expo-crypto", () => ({ randomUUID: () => "11111111-1111-4111-8111-111111111111" }));
+vi.mock("expo-crypto", () => ({ randomUUID: () => "11111111-1111-4111-8111-111111111111",
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" }, digest: async () => new Uint8Array(32).fill(1).buffer }));
+vi.mock("expo-image-picker", () => ({ requestCameraPermissionsAsync: async () => ({ granted: true }),
+  launchCameraAsync: async () => ({ canceled: false, assets: [{ base64: "/9j/AA==", uri: "file://photo" }] }) }));
 vi.mock("expo-router", async () => {
   const React = await import("react");
   const { View } = await import("react-native");
@@ -19,7 +22,7 @@ vi.mock("../api/session-lifecycle", () => ({
   getLogoutSummary: async () => ({ pendingCount: 0, legacyR0Count: 0 }),
   logoutMobile: async () => ({ serverRevoked: true }),
 }));
-vi.mock("../api/client", () => ({ myProjects: async () => ({ projects: state.projects }), pullForemanWorkers: async () => { throw new Error("offline"); } }));
+vi.mock("../api/client", () => ({ myProjects: async () => ({ projects: state.projects }), pullHseWorkers: async () => { throw new Error("offline"); } }));
 vi.mock("../db/sqlite", () => ({ openDb: async () => ({}), readProjects: async () => ({ rows: state.projects, fetchedAt: null }), saveProjects: async () => undefined }));
 vi.mock("../db/r4-outbox", () => ({
   getActiveLocalAccount: async () => ({ companyId: "c1", userId: "u1" }),
@@ -31,6 +34,7 @@ vi.mock("../db/r4-outbox", () => ({
     state.entries = [{ localId: "one", workerId: null, status: "pending", lastError: null, createdAt: "2026-11-23" }];
   },
 }));
+vi.mock("../sync/hse-photo-sync", () => ({ countPendingHsePhotos: async () => 0 }));
 vi.mock("../sync/r4-sqlite", () => ({
   runSqliteR4Sync: async () => ({ applied: 0, duplicate: 0, conflict: 0, rejected: 0, retry: 1, error: "NETWORK_ERROR" }),
 }));
@@ -62,11 +66,25 @@ describe("HSE prijava na telefonu", () => {
     render(<HsePrijavaScreen />);
     fireEvent.click(await screen.findByText("Nesreća"));
     fireEvent.click(screen.getByText("P1 · Gradilište"));
-    fireEvent.click(await screen.findByText("Ana Anić"));
+    fireEvent.click(await screen.findByText("Uključen: Ana Anić"));
+    fireEvent.click(await screen.findByText("Povrijeđen: Ana Anić"));
     fireEvent.change(screen.getByLabelText("Šta se dogodilo?"), { target: { value: "Povreda na gradilištu" } });
     fireEvent.click(screen.getByText("Sačuvaj na telefon"));
     await screen.findByText("Prijava je sačuvana na telefonu, još nije poslana.");
-    expect(state.saved[0]).toMatchObject({ incident: { projectId: "p1", injuredWorkerId: "w1", kind: "ACCIDENT" } });
+    expect(state.saved[0]).toMatchObject({ incident: { projectId: "p1", injuredWorkerId: "w1", kind: "ACCIDENT",
+      involvedWorkers: [{ workerId: "w1", injured: true }] } });
+  });
+
+  it("veže bajtove i checksum fotografije uz offline prijavu", async () => {
+    render(<HsePrijavaScreen />);
+    fireEvent.change(await screen.findByLabelText("Šta se dogodilo?"), { target: { value: "Neosiguran rub" } });
+    fireEvent.click(screen.getByText("Uslikaj fotografiju"));
+    await screen.findByText("Fotografija je spremna za lokalno čuvanje uz prijavu.");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Sačuvaj na telefon" }).getAttribute("aria-disabled")).not.toBe("true"));
+    fireEvent.click(screen.getByText("Sačuvaj na telefon"));
+    await screen.findByText("Prijava je sačuvana na telefonu, još nije poslana.");
+    expect(state.saved[0]).toMatchObject({ photoData: [{ sha256: "01".repeat(32), base64: "/9j/AA==" }],
+      incident: { photos: [{ sha256: "01".repeat(32), sizeBytes: 4, contentType: "image/jpeg" }] } });
   });
 
   it("ne sprema prazan opis i ne predstavlja odbijeni zapis kao poslan", async () => {

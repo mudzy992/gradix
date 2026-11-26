@@ -66,6 +66,7 @@ export type IncidentInput = {
   immediateAction?: string | null;
   reporterWorkerId?: string | null;
   injuredWorkerId?: string | null;
+  involvedWorkers?: { workerId: string; injured: boolean }[];
   lostDays?: number;
   reportableToAuthority?: boolean;
   clientLocalId?: string | null;
@@ -94,8 +95,20 @@ export async function reportIncidentTx(
   if (!input.description || input.description.trim().length < 5) {
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Opis incidenta je obavezan." };
   }
+  const participants = input.involvedWorkers ?? [];
+  if (!Array.isArray(participants) || participants.length > 100 || participants.some((p) => !p ||
+      typeof p.workerId !== "string" || !p.workerId.trim() || p.workerId.length > 128 || typeof p.injured !== "boolean") ||
+      new Set(participants.map((p) => p.workerId)).size !== participants.length ||
+      (input.injuredWorkerId && input.involvedWorkers !== undefined && !participants.some((p) => p.workerId === input.injuredWorkerId && p.injured))) {
+    return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Spisak učesnika nije ispravan." };
+  }
+  const allParticipants = [...participants];
+  if (input.injuredWorkerId && !allParticipants.some((p) => p.workerId === input.injuredWorkerId)) {
+    allParticipants.push({ workerId: input.injuredWorkerId, injured: true });
+  }
+  const firstInjured = input.injuredWorkerId ?? allParticipants.find((p) => p.injured)?.workerId ?? null;
   const lostDays = input.lostDays ?? 0;
-  if (input.kind === "NEAR_MISS" && (lostDays > 0 || input.injuredWorkerId)) {
+  if (input.kind === "NEAR_MISS" && (lostDays > 0 || firstInjured)) {
     return {
       outcome: "VALIDATION_FAILED",
       code: "VALIDATION_FAILED",
@@ -109,6 +122,15 @@ export async function reportIncidentTx(
       ]);
       if (!project.rows[0]) {
         return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Projekat ne postoji." } as HseOutcome;
+      }
+    }
+    if (allParticipants.length) {
+      const workers = await client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM public.workers WHERE company_id = $1 AND id = ANY($2::text[])",
+        [actor.companyId, allParticipants.map((p) => p.workerId)],
+      );
+      if (Number(workers.rows[0]?.count ?? 0) !== allParticipants.length) {
+        return { outcome: "NOT_FOUND", code: "NOT_FOUND", message: "Neki od radnika ne postoji u ovoj firmi." };
       }
     }
     /* Offline prijava: isti telefonski `localId` drugi put vraća POSTOJEĆI incident, ne drugi. */
@@ -139,10 +161,18 @@ export async function reportIncidentTx(
         incidentId, actor.companyId, input.projectId ?? null, input.kind, input.severity,
         input.occurredAt, input.locationText ?? null, input.lat ?? null, input.lng ?? null,
         input.description.trim(), input.immediateAction ?? null, input.reporterWorkerId ?? null,
-        actor.userId, input.injuredWorkerId ?? null, lostDays,
+        actor.userId, firstInjured, lostDays,
         input.reportableToAuthority === true, input.clientLocalId ?? null, actor.userId,
       ],
     );
+
+    for (const participant of allParticipants) {
+      await client.query(
+        `INSERT INTO public.hse_incident_workers (id, company_id, incident_id, worker_id, injured)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [id("hiw"), actor.companyId, incidentId, participant.workerId, participant.injured],
+      );
+    }
 
     const obligationId = input.reportableToAuthority === true
       ? await ensureHseReportObligation(client, actor.companyId, incidentId, input.occurredAt)
@@ -1067,6 +1097,12 @@ export async function getIncident(pool: Pool, actor: DiaryActor, incidentId: str
     const row = header.rows[0];
     if (!row) return null;
 
+    const participants = await client.query<{ worker_id: string; name: string; injured: boolean }>(
+      `SELECT p.worker_id, btrim(w.first_name || ' ' || coalesce(w.last_name, '')) AS name, p.injured
+         FROM public.hse_incident_workers p JOIN public.workers w ON w.company_id = p.company_id AND w.id = p.worker_id
+        WHERE p.company_id = $1 AND p.incident_id = $2 ORDER BY name, p.worker_id`,
+      [actor.companyId, incidentId],
+    );
     const updates = await client.query<{ id: string; body: string; author_name: string; created_at: string }>(
       `SELECT u.id, u.body, coalesce(btrim(w.first_name || ' ' || coalesce(w.last_name, '')), 'sistem') AS author_name,
               u.created_at::text
@@ -1094,8 +1130,8 @@ export async function getIncident(pool: Pool, actor: DiaryActor, incidentId: str
         ORDER BY a.due_on`,
       [actor.companyId, incidentId],
     );
-    const attachments = await client.query<{ id: string; file_name: string; content_type: string; status: string }>(
-      "SELECT id, file_name, content_type, status FROM public.hse_attachments WHERE company_id = $1 AND entity_type = 'INCIDENT' AND entity_id = $2",
+    const attachments = await client.query<{ id: string; file_name: string; content_type: string; status: string; sha256: string }>(
+      "SELECT id, file_name, content_type, status, sha256 FROM public.hse_attachments WHERE company_id = $1 AND entity_type = 'INCIDENT' AND entity_id = $2",
       [actor.companyId, incidentId],
     );
 
@@ -1124,6 +1160,7 @@ export async function getIncident(pool: Pool, actor: DiaryActor, incidentId: str
         closedAt: row.closed_at,
         createdAt: row.created_at,
       },
+      involvedWorkers: participants.rows.map((participant) => ({ workerId: participant.worker_id, name: participant.name, injured: participant.injured })),
       updates: updates.rows.map((update) => ({
         id: update.id, body: update.body, authorName: update.author_name, createdAt: update.created_at,
       })),

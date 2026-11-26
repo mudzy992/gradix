@@ -84,6 +84,7 @@ export async function applyHseIncidentSyncItem(
     immediateAction: item.incident.immediateAction,
     reporterWorkerId: worker.id,
     injuredWorkerId: item.incident.injuredWorkerId,
+    involvedWorkers: item.incident.involvedWorkers,
     lostDays: item.incident.lostDays,
     reportableToAuthority: item.incident.reportableToAuthority,
     clientLocalId: item.localId,

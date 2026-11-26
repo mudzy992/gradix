@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { R4SyncPullPage, R4WorkEntryPayload } from "@gradix/domain";
+import type { SiteDiaryDetail } from "@gradix/contracts";
 import { getLogoutSummary, logoutMobile } from "../api/session-lifecycle";
 import { runSqliteR4Sync } from "../sync/r4-sqlite";
 import { createNodeSqlite } from "../test/node-sqlite";
 import { migrateLocalDatabase } from "./migrations";
 import {
   activateLocalAccount,
+  cacheDiaryDetail,
+  readDiaryDetailCache,
   createSqliteR4SyncStore,
   LocalOutboxError,
   pendingOutboxCount,
@@ -45,6 +48,18 @@ async function freshDb() {
 }
 
 describe("R4 SQLite outbox and account privacy", () => {
+  it("dnevnički presjek je vezan za aktivan nalog i čisti se pri promjeni naloga", async () => {
+    const db = await freshDb();
+    await activateLocalAccount(db, ACCOUNT_A);
+    const detail = { diary: { projectId: PROJECT, diaryDate: WORK_DATE }, auto: { workers: [] } } as unknown as SiteDiaryDetail;
+    await cacheDiaryDetail(db, ACCOUNT_A, detail);
+    expect((await readDiaryDetailCache(db, ACCOUNT_A, PROJECT, WORK_DATE))?.detail).toEqual(detail);
+    await activateLocalAccount(db, ACCOUNT_B);
+    expect(await readDiaryDetailCache(db, ACCOUNT_B, PROJECT, WORK_DATE)).toBeNull();
+    await expect(readDiaryDetailCache(db, ACCOUNT_A, PROJECT, WORK_DATE)).rejects.toMatchObject({ code: "LOCAL_ACCOUNT_SCOPE_MISMATCH" });
+    db.raw.close();
+  });
+
   it("queues a foreman group offline from only the cached R3 worker roster", async () => {
     const sqlite = await freshDb();
     const { raw } = sqlite;

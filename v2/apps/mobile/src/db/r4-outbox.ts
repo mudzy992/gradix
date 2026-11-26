@@ -18,6 +18,7 @@ import {
   type R4HseActionPayload,
   type R4HseTrainingPayload,
 } from "@gradix/domain";
+import type { SiteDiaryDetail } from "@gradix/contracts";
 import type { LocalSqlite } from "./migrations";
 import { resolutionsByLocalId, type ResolutionDisplay } from "../sync/r4-resolution";
 
@@ -57,6 +58,7 @@ async function clearCachedRows(db: LocalSqlite): Promise<void> {
     DELETE FROM obligations_cache;
     DELETE FROM projects_cache;
     DELETE FROM foreman_workers_cache;
+    DELETE FROM diary_detail_cache;
     -- Conflict payloads are not disposable cache: keep their original account-bound event rows.
     DELETE FROM sync_events WHERE entity_type <> 'sync_conflict';
     DELETE FROM sync_cursors;
@@ -152,6 +154,7 @@ export async function enqueueR4Items(
   account: LocalAccount,
   items: readonly R4SyncPushItem[],
   createdAt = new Date().toISOString(),
+  writeDependencies?: () => Promise<void>,
 ): Promise<number> {
   const validation = validateR4SyncPush(items);
   if (!validation.ok) throw new LocalOutboxError(validation.code, "Offline red nije ispravan; nije sačuvan.");
@@ -179,6 +182,7 @@ export async function enqueueR4Items(
       );
       inserted += 1;
     }
+    if (writeDependencies) await writeDependencies();
   });
   return inserted;
 }
@@ -236,6 +240,53 @@ export async function readForemanWorkerRoster(
     workers: rows.map((row) => ({ id: row.worker_id, name: row.worker_name })),
     fetchedAt: rows[0]?.fetched_at ?? null,
   };
+}
+/** Blokiraj novi nacrt istog dana dok prethodni još čeka ili traži razrješenje. */
+export async function hasUnresolvedDiaryEdit(db: LocalSqlite, account: LocalAccount, projectId: string, date: string): Promise<boolean> {
+  await assertActiveAccount(db, account);
+  const rows = await db.getAllAsync<{ payload_json: string }>(
+    `SELECT payload_json FROM outbox WHERE company_id = ? AND user_id = ? AND entity_type IN ('site_diary', 'site_diary_item')
+       AND status IN ('pending', 'failed', 'rejected', 'conflict')`, [account.companyId, account.userId],
+  );
+  return rows.some((row) => {
+    const item = JSON.parse(row.payload_json) as R4SyncPushItem;
+    return (item.entityType === "site_diary" && item.diary.projectId === projectId && item.diary.diaryDate === date) ||
+      (item.entityType === "site_diary_item" && item.diaryProjectId === projectId && item.diaryDate === date);
+  });
+}
+
+/** Keš dnevnika je strogo vezan za nalog i čuva samo zadnji potvrđeni server snapshot. */
+export async function cacheDiaryDetail(db: LocalSqlite, account: LocalAccount, detail: SiteDiaryDetail): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await assertActiveAccount(db, account);
+    await db.runAsync(
+      `INSERT INTO diary_detail_cache (company_id, user_id, project_id, diary_date, payload_json, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(company_id, user_id, project_id, diary_date)
+       DO UPDATE SET payload_json = excluded.payload_json, fetched_at = excluded.fetched_at`,
+      [account.companyId, account.userId, detail.diary.projectId, detail.diary.diaryDate,
+        JSON.stringify(detail), new Date().toISOString()],
+    );
+  });
+}
+
+export async function clearDiaryDetailCache(db: LocalSqlite, account: LocalAccount, projectId: string, date: string): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await assertActiveAccount(db, account);
+    await db.runAsync("DELETE FROM diary_detail_cache WHERE company_id = ? AND user_id = ? AND project_id = ? AND diary_date = ?",
+      [account.companyId, account.userId, projectId, date]);
+  });
+}
+
+export async function readDiaryDetailCache(db: LocalSqlite, account: LocalAccount, projectId: string, date: string):
+Promise<{ detail: SiteDiaryDetail; fetchedAt: string } | null> {
+  await assertActiveAccount(db, account);
+  const row = await db.getFirstAsync<{ payload_json: string; fetched_at: string }>(
+    `SELECT payload_json, fetched_at FROM diary_detail_cache
+      WHERE company_id = ? AND user_id = ? AND project_id = ? AND diary_date = ?`,
+    [account.companyId, account.userId, projectId, date],
+  );
+  if (!row) return null;
+  return { detail: JSON.parse(row.payload_json) as SiteDiaryDetail, fetchedAt: row.fetched_at };
 }
 
 /** Tipovi koje lokalna baza prima iz pull-a (ista lista kao `outbox` CHECK u v2). */
@@ -665,7 +716,7 @@ export async function queueSiteDiaryItem(
 export async function queueHseIncident(
   db: LocalSqlite,
   account: LocalAccount,
-  input: { incidentId: string; incident: R4HseIncidentPayload },
+  input: { incidentId: string; incident: R4HseIncidentPayload; photoData?: { sha256: string; base64: string }[] },
   deviceSentAt: string = new Date().toISOString(),
   makeId: () => string = uuid,
 ): Promise<R4SyncPushItem> {
@@ -676,7 +727,39 @@ export async function queueHseIncident(
     deviceSentAt,
     incident: input.incident,
   };
-  await enqueueR4Items(db, account, [item], deviceSentAt);
+  const files = input.photoData ?? [];
+  const photos = input.incident.photos;
+  if (files.length !== photos.length || new Set(files.map((file) => file.sha256)).size !== files.length) {
+    throw new LocalOutboxError("PHOTO_DATA_MISSING", "Svaka fotografija mora imati sačuvane lokalne bajtove.");
+  }
+  for (const photo of photos) {
+    const file = files.find((f) => f.sha256 === photo.sha256);
+    if (!file || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.base64)) {
+      throw new LocalOutboxError("PHOTO_DATA_INVALID", "Fotografija nije ispravno pročitana.");
+    }
+    const bytes = (file.base64.length / 4) * 3 - (file.base64.endsWith("==") ? 2 : file.base64.endsWith("=") ? 1 : 0);
+    if (bytes !== photo.sizeBytes) throw new LocalOutboxError("PHOTO_DATA_INVALID", "Veličina fotografije se ne poklapa.");
+  }
+  await enqueueR4Items(db, account, [item], deviceSentAt, async () => {
+    for (const photo of photos) {
+      const file = files.find((f) => f.sha256 === photo.sha256)!;
+      const existing = await db.getFirstAsync<{ data_base64: string; incident_id: string }>(
+        "SELECT data_base64, incident_id FROM hse_photo_queue WHERE company_id = ? AND user_id = ? AND local_id = ? AND sha256 = ?",
+        [account.companyId, account.userId, item.localId, photo.sha256],
+      );
+      if (existing) {
+        if (existing.incident_id !== input.incidentId || (existing.data_base64 !== "" && existing.data_base64 !== file.base64)) {
+          throw new LocalOutboxError("PHOTO_DATA_INVALID", "Fotografija već postoji sa drugim sadržajem.");
+        }
+        continue;
+      }
+      await db.runAsync(
+        `INSERT INTO hse_photo_queue (company_id, user_id, local_id, incident_id, sha256, content_type, data_base64)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [account.companyId, account.userId, item.localId, input.incidentId, photo.sha256, photo.contentType, file.base64],
+      );
+    }
+  });
   return item;
 }
 

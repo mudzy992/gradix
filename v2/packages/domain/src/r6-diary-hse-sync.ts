@@ -52,6 +52,8 @@ export type R4SiteDiaryPayload = {
   visitors: string | null;
   events: string | null;
   signedName: string | null;
+  /** Offline potpis vezan za prikazani automatski presjek i vrijeme na uređaju. */
+  signature?: { signedAt: string; autoSnapshotJson: string };
   delays: R4DiaryDelayPayload[];
 };
 
@@ -92,6 +94,9 @@ export function validSiteDiaryPayload(diary: R4SiteDiaryPayload): boolean {
   if (!isOptionalBounded(diary.visitors, 2000)) return false;
   if (!isOptionalBounded(diary.events, 4000)) return false;
   if (diary.signedName !== null && !isBounded(diary.signedName, 2, 200)) return false;
+  if (diary.signature !== undefined && (!diary.signature || !diary.signedName ||
+      !isOffsetDateTime(diary.signature.signedAt) || typeof diary.signature.autoSnapshotJson !== "string" ||
+      diary.signature.autoSnapshotJson.length < 2 || diary.signature.autoSnapshotJson.length > 200_000)) return false;
   if (!Array.isArray(diary.delays) || diary.delays.length > 20) return false;
   return diary.delays.every((delay) => {
     if (!delay || typeof delay !== "object") return false;
@@ -176,6 +181,8 @@ export type R4HseIncidentPayload = {
   description: string;
   immediateAction: string | null;
   injuredWorkerId: string | null;
+  /** Svaki učesnik najviše jednom; povrijeđeni su podskup učesnika. */
+  involvedWorkers?: { workerId: string; injured: boolean }[];
   lostDays: number;
   reportableToAuthority: boolean;
   /** Fotografije se šalju u drugom koraku (attachment-service), ali imena idu uz prijavu. */
@@ -230,6 +237,16 @@ export function validHseIncidentPayload(incident: R4HseIncidentPayload): boolean
      etiketom, a statistika bi lagala na obje strane. */
   if (incident.kind === "NEAR_MISS" && (incident.lostDays > 0 || incident.injuredWorkerId !== null)) return false;
   if (incident.injuredWorkerId !== null && !isBounded(incident.injuredWorkerId, 1, 128)) return false;
+  if (incident.involvedWorkers !== undefined) {
+    if (!Array.isArray(incident.involvedWorkers) || incident.involvedWorkers.length > 100) return false;
+    const ids = new Set<string>();
+    for (const participant of incident.involvedWorkers) {
+      if (!participant || !isBounded(participant.workerId, 1, 128) || typeof participant.injured !== "boolean" || ids.has(participant.workerId)) return false;
+      if (incident.kind === "NEAR_MISS" && participant.injured) return false;
+      ids.add(participant.workerId);
+    }
+    if (incident.injuredWorkerId !== null && !incident.involvedWorkers.some((p) => p.workerId === incident.injuredWorkerId && p.injured)) return false;
+  }
   if (!Array.isArray(incident.photos) || incident.photos.length > 10) return false;
   const photoOk = incident.photos.every(
     (photo) =>

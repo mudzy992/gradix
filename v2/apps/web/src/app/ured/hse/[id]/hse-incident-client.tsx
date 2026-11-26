@@ -102,6 +102,19 @@ export function HseIncidentClient({
       ...jsonBody({ id, kind: "DONE" }),
     }), "Mjera je završena.");
 
+  async function openPhoto(sha: string) {
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    const response = await apiCall<{ url: string }>(`/api/hse/incidents/${encodeURIComponent(incident.id)}/photos/${sha}`);
+    if (!response.ok) {
+      tab?.close();
+      setNotice({ tone: "error", text: response.message });
+      return;
+    }
+    if (tab) tab.location.href = response.data.url;
+    else window.location.assign(response.data.url);
+  }
+
   const overdue = detail.actions.filter((entry) => entry.overdue).length;
 
   return (
@@ -138,7 +151,8 @@ export function HseIncidentClient({
             { term: "Projekat", value: incident.projectName ?? "—" },
             { term: "Lokacija", value: incident.locationText ?? "—" },
             { term: "Prijavio", value: incident.reporterName ?? "—" },
-            { term: "Povrijeđeni", value: incident.injuredName ?? "—" },
+            { term: "Uključeni", value: detail.involvedWorkers.map((worker) => worker.name).join(", ") || "—" },
+            { term: "Povrijeđeni", value: detail.involvedWorkers.filter((worker) => worker.injured).map((worker) => worker.name).join(", ") || incident.injuredName || "—" },
             { term: "Izgubljeni dani", value: String(incident.lostDays) },
             { term: "Prijava inspekciji", value: incident.reportableToAuthority ? "da" : "ne" },
             { term: "Obaveza prijave", value: incident.reportObligationId ?? "nije otvorena" },
@@ -308,7 +322,8 @@ export function HseIncidentClient({
           <SectionTitle>Prilozi</SectionTitle>
           <ul>
             {detail.attachments.map((file) => (
-              <li key={file.id}>{file.file_name} — {file.status === "pending" ? "upload u toku" : "potvrđeno"}</li>
+              <li key={file.id}>{file.file_name} — {file.status === "pending" ? "upload u toku" :
+                <Button variant="secondary" onClick={() => void openPhoto(file.sha256)}>Otvori fotografiju</Button>}</li>
             ))}
           </ul>
         </Card>

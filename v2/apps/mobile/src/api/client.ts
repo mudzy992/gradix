@@ -20,6 +20,7 @@ import type {
   SyncPullResponse,
   SyncPushRequest,
   SyncPushResponse,
+  SiteDiaryDetail,
 } from "@gradix/contracts";
 import { deleteStore, readStore, writeStore } from "../lib/store";
 import { assertSyncAccount, type AccountIdentity } from "./account-binding";
@@ -182,6 +183,32 @@ export async function pullSyncChanges(
     query: cursor ? { cursor, limit: String(limit) } : { limit: String(limit) },
     accessToken: token,
   });
+  return data;
+}
+
+/** Nastavak incident fotografije koristi token vezan za vlasnika offline reda. */
+export async function resumeIncidentPhoto(account: AccountIdentity, incidentId: string, sha: string, action: "UPLOAD_URL" | "CONFIRM") {
+  const token = await tokenForAccount(account);
+  const response = await client.post("/api/hse/incidents/{id}/photos/{sha}", { action },
+    { id: incidentId, sha }, { accessToken: token });
+  return response.data;
+}
+
+/** Potvrđeni dnevnik po poslovnom ključu; token je vezan za isti nalog kao lokalni keš. */
+export async function fetchDiaryDetail(account: AccountIdentity, projectId: string, date: string): Promise<SiteDiaryDetail | null> {
+  const token = await tokenForAccount(account);
+  const list = await client.get("/api/site-diaries", undefined, {
+    query: { project: projectId, from: date, to: date }, accessToken: token,
+  });
+  const found = list.data.diaries.find((diary) => diary.projectId === projectId && diary.diaryDate === date);
+  if (!found) return null;
+  const detail = await client.get("/api/site-diaries/{id}", { id: found.id }, { accessToken: token });
+  return detail.data;
+}
+
+export async function pullHseWorkers(account: AccountIdentity, projectId: string, workDate: string): Promise<ForemanWorkersResponse> {
+  const token = await tokenForAccount(account);
+  const { data } = await client.get("/api/hse/roster", undefined, { query: { projectId, workDate }, accessToken: token });
   return data;
 }
 

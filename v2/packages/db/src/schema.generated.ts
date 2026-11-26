@@ -439,6 +439,15 @@ export interface HseIncidentUpdates {
   incident_id: string;
 }
 
+export interface HseIncidentWorkers {
+  company_id: string;
+  created_at: Generated<Timestamp>;
+  id: string;
+  incident_id: string;
+  injured: Generated<boolean>;
+  worker_id: string;
+}
+
 export interface HseInspections {
   authority_name: string | null;
   company_id: string;
@@ -2015,6 +2024,7 @@ export interface DB {
   hse_actions: HseActions;
   hse_attachments: HseAttachments;
   hse_incident_updates: HseIncidentUpdates;
+  hse_incident_workers: HseIncidentWorkers;
   hse_incidents: HseIncidents;
   hse_inspections: HseInspections;
   hse_investigations: HseInvestigations;

@@ -969,6 +969,7 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       visitors: SafeText.max(2000).nullable(),
       events: SafeText.max(4000).nullable(),
       signedName: SafeText.min(2).max(200).nullable(),
+      signature: z.object({ signedAt: OffsetDateTime, autoSnapshotJson: z.string().min(2).max(200_000) }).strict().optional(),
       delays: z.array(z.object({
         kind: z.enum(["RAIN", "SNOW", "WIND", "FROST", "SUBCONTRACTOR", "MATERIAL", "PERMIT", "OTHER"]),
         fromAt: OffsetDateTime,
@@ -1009,6 +1010,7 @@ export const SyncPushItem = z.discriminatedUnion("entityType", [
       description: SafeText.min(5).max(4000),
       immediateAction: SafeText.max(2000).nullable(),
       injuredWorkerId: z.string().min(1).max(128).nullable(),
+      involvedWorkers: z.array(z.object({ workerId: z.string().min(1).max(128), injured: z.boolean() }).strict()).max(100).optional(),
       lostDays: z.number().int().min(0).max(3650),
       reportableToAuthority: z.boolean(),
       photos: z.array(z.object({
@@ -4869,6 +4871,7 @@ export const HseIncidentInput = z.object({
   immediateAction: SafeText.max(2000).nullable().optional(),
   reporterWorkerId: SafeText.max(128).nullable().optional(),
   injuredWorkerId: SafeText.max(128).nullable().optional(),
+  involvedWorkers: z.array(z.object({ workerId: SafeText.min(1).max(128), injured: z.boolean() }).strict()).max(100).optional(),
   lostDays: z.number().int().min(0).max(3650).optional(),
   reportableToAuthority: z.boolean().optional(),
   clientLocalId: SafeText.max(128).nullable().optional(),
@@ -5049,6 +5052,7 @@ export const HseIncidentDetail = z.object({
     closedAt: z.string().nullable(),
     createdAt: z.string(),
   }),
+  involvedWorkers: z.array(z.object({ workerId: z.string(), name: z.string(), injured: z.boolean() })),
   updates: z.array(z.object({ id: z.string(), body: z.string(), authorName: z.string(), createdAt: z.string() })),
   investigation: z.object({
     id: z.string(), rootCause: z.string(), method: z.string(),
@@ -5058,7 +5062,7 @@ export const HseIncidentDetail = z.object({
     id: z.string(), description: z.string(), dueOn: z.string(), status: z.enum(["OPEN", "DONE", "CANCELLED"]),
     doneOn: z.string().nullable(), responsibleName: z.string().nullable(), overdue: z.boolean(),
   })),
-  attachments: z.array(z.object({ id: z.string(), file_name: z.string(), content_type: z.string(), status: z.string() })),
+  attachments: z.array(z.object({ id: z.string(), file_name: z.string(), content_type: z.string(), status: z.string(), sha256: z.string() })),
   /** `true` kad prijava tvrdi obavezu prijave, a veza na obavezu još ne postoji. */
   needsReportObligation: z.boolean(),
 });

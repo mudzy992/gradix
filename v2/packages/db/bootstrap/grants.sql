@@ -285,6 +285,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.site_diary_delays TO gradix
 GRANT SELECT, INSERT, UPDATE ON TABLE public.site_diary_templates TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.site_diary_attachments TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_incidents TO gradix_app;
+GRANT SELECT, INSERT ON TABLE public.hse_incident_workers TO gradix_app;
 GRANT SELECT, INSERT ON TABLE public.hse_incident_updates TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_investigations TO gradix_app;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.hse_actions TO gradix_app;

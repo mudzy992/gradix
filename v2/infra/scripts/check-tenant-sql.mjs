@@ -102,6 +102,7 @@ const TENANT_TABLES = [
   "site_diary_templates",
   "site_diary_attachments",
   "hse_incidents",
+  "hse_incident_workers",
   "hse_incident_updates",
   "hse_investigations",
   "hse_actions",

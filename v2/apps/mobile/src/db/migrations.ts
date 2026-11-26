@@ -5,7 +5,7 @@ export const DB_NAME = "gradix.db";
  * Verzija lokalne šeme. Podignuta na 2 u F8: `outbox`/`sync_events` su dobili šire skupove
  * `entity_type` (radioničke radnje i kvarovi), pa stara baza mora proći kroz `__v2` korak.
  */
-export const LOCAL_SCHEMA_VERSION = 3;
+export const LOCAL_SCHEMA_VERSION = 5;
 
 export type LocalSqlite = Pick<
   SQLite.SQLiteDatabase,
@@ -114,6 +114,28 @@ const R4_SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS sync_events_scope_cursor_idx
     ON sync_events (company_id, user_id, cursor_seq);
+  CREATE TABLE IF NOT EXISTS hse_photo_queue (
+    company_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    local_id TEXT NOT NULL,
+    incident_id TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    data_base64 TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent')),
+    last_error TEXT,
+    PRIMARY KEY (company_id, user_id, local_id, sha256),
+    FOREIGN KEY (company_id, user_id, local_id) REFERENCES outbox(company_id, user_id, local_id)
+  );
+  CREATE TABLE IF NOT EXISTS diary_detail_cache (
+    company_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    project_id TEXT NOT NULL,
+    diary_date TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (company_id, user_id, project_id, diary_date)
+  );
   CREATE TABLE IF NOT EXISTS foreman_workers_cache (
     company_id  TEXT NOT NULL,
     user_id     TEXT NOT NULL,
@@ -131,6 +153,8 @@ const CORE_TABLES = [
   "outbox",
   "sync_cursors",
   "sync_events",
+  "hse_photo_queue",
+  "diary_detail_cache",
   "foreman_workers_cache",
 ] as const;
 

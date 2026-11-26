@@ -15,7 +15,22 @@
  */
 import { NextRequest } from "next/server";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+
+const photoStorage = vi.hoisted(() => ({ staging: new Uint8Array(), permanent: new Uint8Array() }));
+vi.mock("./storage", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./storage")>();
+  const { Readable } = await import("node:stream");
+  const client = { send: async (command: { constructor: { name: string }; input: { Body?: Uint8Array } }) => {
+    if (command.constructor.name === "GetObjectCommand") return { ContentLength: photoStorage.staging.length, Body: Readable.from([photoStorage.staging]) };
+    if (command.constructor.name === "PutObjectCommand") { photoStorage.permanent = new Uint8Array(command.input.Body!); return {}; }
+    throw new Error("unexpected storage command");
+  } };
+  return { ...real, storageConfig: () => ({ configured: true, client, presignClient: client, bucket: "test", publicEndpoint: "https://example.test" }),
+    presignUpload: async () => ({ url: "https://example.test/upload", expiresAt: "2026-11-23T12:00:00Z" }),
+    presignDownload: async () => ({ url: "https://example.test/download", expiresAt: "2026-11-23T12:00:00Z" }) };
+});
 import { companyId, withCompany } from "@gradix/db";
 import type { R4SyncPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { ACCESS_COOKIE, issueAccessToken } from "./session";
@@ -201,6 +216,7 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         await client.query("DELETE FROM hse_investigations WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incident_updates WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_attachments WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_incident_workers WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incidents WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_revisions WHERE company_id = $1", [company]);
         await client.query("DELETE FROM site_diary_delays WHERE company_id = $1", [company]);
@@ -342,6 +358,68 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect(result.code).toBe("DIARY_REFERENCE_REQUIRED");
   });
 
+  it("čuva sve uključene i više povrijeđenih bez prepisivanja", async () => {
+    const incoming = incidentItem({ incidentId: `hsi_people_${RUN}` });
+    if (incoming.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+    incoming.incident.involvedWorkers = [
+      { workerId: WORKER_INJURED, injured: true }, { workerId: WORKER_REPORTER, injured: true },
+      { workerId: WORKER_SUP, injured: false },
+    ];
+    expect((await pushOne(COOKIES.sup, incoming)).status).toBe("APPLIED");
+    const people = await withCompany(admin, companyId(CO), (client) => client.query<{ worker_id: string; injured: boolean }>(
+      "SELECT worker_id, injured FROM hse_incident_workers WHERE company_id = $1 AND incident_id = $2 ORDER BY worker_id",
+      [CO, `hsi_people_${RUN}`],
+    ));
+    expect(people.rows).toHaveLength(3);
+    expect(people.rows.filter((p) => p.injured).map((p) => p.worker_id)).toEqual(expect.arrayContaining([WORKER_INJURED, WORKER_REPORTER]));
+    await expect(withCompany(admin, companyId(CO), (client) => client.query(
+      "UPDATE hse_incident_workers SET injured = false WHERE company_id = $1 AND incident_id = $2", [CO, `hsi_people_${RUN}`],
+    ))).rejects.toThrow(/HSE_INCIDENT_IMMUTABLE/);
+  });
+
+  it("radnik vidi minimalni roster samo za vlastitu dodjelu", async () => {
+    await withCompany(admin, companyId(CO), (client) => client.query(
+      `INSERT INTO project_assignments (id, company_id, project_id, worker_id, from_date, created_by)
+       VALUES ($1,$2,$3,$4,$6::date,$7), ($5,$2,$3,$8,$6::date,$7)`,
+      [`asg_f9s_1_${RUN}`, CO, PROJECT, WORKER_REPORTER, `asg_f9s_2_${RUN}`, DAY, USER_SUP, WORKER_INJURED],
+    ));
+    try {
+      const { GET } = await import("@/app/api/hse/roster/route");
+      const url = `http://t/api/hse/roster?projectId=${PROJECT}&workDate=${DAY}`;
+      const result = await GET(new NextRequest(url, { headers: { cookie: COOKIES.worker } }));
+      expect(result.status).toBe(200);
+      const body = await result.json();
+      expect(body.data.workers).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: WORKER_REPORTER }), expect.objectContaining({ id: WORKER_INJURED }),
+      ]));
+      expect((await GET(new NextRequest(url, { headers: { cookie: COOKIES.driver } }))).status).toBe(403);
+      expect((await GET(new NextRequest(url, { headers: { cookie: COOKIES.b } }))).status).toBe(403);
+    } finally {
+      await withCompany(admin, companyId(CO), async (client) => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM project_assignments WHERE company_id = $1 AND id = ANY($2)",
+          [CO, [`asg_f9s_1_${RUN}`, `asg_f9s_2_${RUN}`]]);
+      });
+    }
+  });
+
+  it("ne prihvata nepostojećeg ili tuđeg učesnika, a RLS štiti spisak", async () => {
+    const incoming = incidentItem({ incidentId: `hsi_foreign_person_${RUN}` });
+    if (incoming.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+    incoming.incident.involvedWorkers = [{ workerId: WORKER_INJURED, injured: true }, { workerId: "worker-not-in-company", injured: false }];
+    expect((await pushOne(COOKIES.sup, incoming)).status).toBe("REJECTED");
+    const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      const foreign = await withCompany(app, companyId(CO_B), (client) => client.query<{ n: string }>(
+        "SELECT count(*)::text AS n FROM hse_incident_workers WHERE company_id = $1", [CO],
+      ));
+      expect(foreign.rows[0]?.n).toBe("0");
+      await expect(withCompany(app, companyId(CO), (client) => client.query(
+        "UPDATE hse_incident_workers SET injured = false WHERE company_id = $1 AND incident_id = $2", [CO, `hsi_people_${RUN}`],
+      ))).rejects.toThrow(/permission denied/);
+    } finally { await app.end(); }
+  });
+
   it("ista fotografija na dva incidenta ne uzrokuje sudar ID-a", async () => {
     const photo = { fileName: "gradiliste.jpg", contentType: "image/jpeg" as const, sizeBytes: 123, sha256: "a".repeat(64) };
     for (const suffix of ["a", "b"]) {
@@ -355,6 +433,37 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       [CO, [`hsi_photo_a_${RUN}`, `hsi_photo_b_${RUN}`]],
     ));
     expect(found.rows[0]).toEqual({ count: "2", ids: "2" });
+  });
+
+  it("upload fotografije provjerava sadržaj, izoluje staging i potvrđuje idempotentno", async () => {
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x01]);
+    const sha = createHash("sha256").update(bytes).digest("hex");
+    const payload = incidentItem({ incidentId: `hsi_upload_${RUN}` });
+    if (payload.entityType !== "hse_incident") throw new Error("Pogrešan payload");
+    payload.incident.photos = [{ fileName: "test.jpg", contentType: "image/jpeg", sizeBytes: bytes.length, sha256: sha }];
+    expect((await pushOne(COOKIES.sup, payload)).status).toBe("APPLIED");
+    const { hsePhotoDownload, resumeHsePhoto } = await import("./hse-photo-service");
+    const actor = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"] };
+    const stranger = { companyId: CO, userId: USER_WORKER, roles: ["WORKER"] };
+    expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toBeNull();
+    expect((await resumeHsePhoto(admin, stranger, payload.incidentId, sha, "UPLOAD_URL")).outcome).toBe("FORBIDDEN");
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "UPLOAD_URL"))
+      .toMatchObject({ outcome: "OK", status: "pending", uploadUrl: "https://example.test/upload" });
+    photoStorage.staging = new Uint8Array(bytes.length).fill(0);
+    expect((await resumeHsePhoto(admin, actor, payload.incidentId, sha, "CONFIRM")).outcome).toBe("VALIDATION_FAILED");
+    photoStorage.staging = bytes;
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "CONFIRM")).toMatchObject({ outcome: "OK", status: "confirmed" });
+    expect(photoStorage.permanent).toEqual(new Uint8Array(bytes));
+    expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toMatchObject({ url: "https://example.test/download" });
+    expect(await hsePhotoDownload(admin, { ...actor, companyId: CO_B }, payload.incidentId, sha)).toBeNull();
+    photoStorage.staging = new Uint8Array(bytes.length).fill(3);
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "UPLOAD_URL")).toMatchObject({ outcome: "OK", status: "confirmed", uploadUrl: null });
+    expect(photoStorage.permanent).toEqual(new Uint8Array(bytes));
+    const audit = await withCompany(admin, companyId(CO), (client) => client.query<{ n: string }>(
+      "SELECT count(*)::text AS n FROM audit_events WHERE company_id = $1 AND entity_id = $2 AND action = 'hse.photo_confirmed'",
+      [CO, payload.incidentId],
+    ));
+    expect(audit.rows[0]?.n).toBe("1");
   });
 
   it("NEAR_MISS sa izgubljenim danima se odbija prije baze", async () => {
@@ -478,6 +587,36 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       "SELECT count(*)::text AS count FROM site_diaries WHERE company_id = $1 AND id = $2", [CO, `sdr_signed_new_${RUN}`],
     ));
     expect(row.rows[0]?.count).toBe("0");
+  });
+
+  it("offline potpis čuva prikazani presjek, vrijeme i audit, a promijenjeni presjek odbija", async () => {
+    const day = "2026-10-07";
+    const diaryId = `sdr_review_${RUN}`;
+    const base = diaryItem({ diaryId });
+    if (base.entityType !== "site_diary") throw new Error("Pogrešan payload");
+    expect((await pushOne(COOKIES.sup, { ...base, diary: { ...base.diary, diaryDate: day } })).status).toBe("APPLIED");
+    const { collectDiaryAutoData } = await import("./diary-service");
+    const auto = await withCompany(admin, companyId(CO), (client) => collectDiaryAutoData(client, CO, PROJECT, day));
+    const { generatedAt: _generatedAt, ...shown } = auto;
+    const signedAt = "2026-10-07T17:30:00+02:00";
+    const signatureItem = (snapshot: object): R4SyncPushItem => ({
+      localId: localId(), entityType: "site_diary", diaryId, baseVersion: 1, deviceSentAt: signedAt,
+      diary: { projectId: PROJECT, diaryDate: day, weather: null, temperatureC: null, workedHours: null,
+        description: null, visitors: null, events: null, delays: [], signedName: "Šef Gradilišta",
+        signature: { signedAt, autoSnapshotJson: JSON.stringify(snapshot) } },
+    });
+    const wrong = await pushOne(COOKIES.sup, signatureItem({ ...shown, workedHours: "999.00" }));
+    expect(wrong.status).toBe("CONFLICT");
+    const item = signatureItem(shown);
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("APPLIED");
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("DUPLICATE");
+    const state = await withCompany(admin, companyId(CO), (client) => client.query<{
+      status: string; signed_name: string; signed_by_worker_id: string; signed_at: string; audits: string;
+    }>(`SELECT d.status, d.signed_name, d.signed_by_worker_id, d.signed_at::text,
+        (SELECT count(*)::text FROM audit_events a WHERE a.company_id = d.company_id AND a.entity_id = d.id AND a.action = 'diary.sign') AS audits
+        FROM site_diaries d WHERE d.company_id = $1 AND d.id = $2`, [CO, diaryId]));
+    expect(state.rows[0]).toMatchObject({ status: "SIGNED", signed_name: "Šef Gradilišta", signed_by_worker_id: WORKER_SUP, audits: "1" });
+    expect(Date.parse(state.rows[0]!.signed_at)).toBe(Date.parse(signedAt));
   });
 
   it("radnik smije prijaviti incident, ali ne pisati dnevnik, mjere ili obuke kroz sync", async () => {

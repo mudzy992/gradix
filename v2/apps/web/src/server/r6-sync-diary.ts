@@ -23,12 +23,24 @@ import type {
 } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
 import { collectDiaryAutoData } from "./diary-service";
+import { writeAudit } from "./audit";
+import { can } from "./permissions";
 import { ensureDefaultDiaryTemplate } from "./diary-template-service";
 import type { SyncDiaryHseApplyDeps } from "./r6-sync-diary-hse-types";
 
 export type { SyncDiaryHseApplyDeps } from "./r6-sync-diary-hse-types";
 
 const newId = (prefix: string): string => `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
+
+/** JSON poređenje je nezavisno od redoslijeda ključeva, ali čuva redoslijed redova. */
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 
 type DiaryRow = {
   id: string;
@@ -54,9 +66,7 @@ export async function applySiteDiarySyncItem(
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
-  // Potpis ne smije biti tiho ignorisan, niti se smije potpisati snapshot koji korisnik nije vidio.
-  // Do vezivanja prikazanog snapshot-a na sync potpis odbija se cijeli zahtjev.
-  if (item.diary.signedName !== null) {
+  if (item.diary.signedName !== null && (!item.diary.signature || !can(actor.roles, "diary.sign"))) {
     return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   }
 
@@ -100,6 +110,36 @@ export async function applySiteDiarySyncItem(
     visitors: item.diary.visitors,
     events: item.diary.events,
   };
+
+  if (item.diary.signedName !== null) {
+    if (!current || current.id !== item.diaryId || current.version !== item.baseVersion ||
+        Object.values(incoming).some((value) => value !== null) || item.diary.delays.length > 0) {
+      return helpers.createConflict(client, actor, worker, item, item.diary.diaryDate, requestHash, reservation,
+        null, current?.version ?? null, "DIARY_VERSION_CONFLICT");
+    }
+    let shown: unknown;
+    try { shown = JSON.parse(item.diary.signature!.autoSnapshotJson); }
+    catch { return reject(helpers.invalidItem(item, "SYNC_ITEM_INVALID")); }
+    const auto = await collectDiaryAutoData(client, actor.companyId, item.diary.projectId, item.diary.diaryDate);
+    const { generatedAt: _generatedAt, ...comparable } = auto;
+    if (stableJson(shown) !== stableJson(comparable)) {
+      return helpers.createConflict(client, actor, worker, item, item.diary.diaryDate, requestHash, reservation,
+        null, current.version, "DIARY_VERSION_CONFLICT");
+    }
+    const signedAt = item.diary.signature!.signedAt;
+    const updated = await client.query<{ version: number }>(
+      `UPDATE public.site_diaries SET status = 'SIGNED', signed_name = $3, signed_by_worker_id = $4,
+              signed_at = $5::timestamptz, auto_snapshot = $6::jsonb, version = version + 1,
+              updated_by = $7, updated_at = clock_timestamp()
+        WHERE company_id = $1 AND id = $2 RETURNING version`,
+      [actor.companyId, current.id, item.diary.signedName.trim(), worker.id, signedAt, JSON.stringify(auto), actor.userId],
+    );
+    await writeAudit(client, { companyId: actor.companyId, actorId: actor.userId, actorEmail: null,
+      action: "diary.sign", entityType: "site_diary", entityId: current.id,
+      metadata: { signedName: item.diary.signedName.trim(), signedAt, workerId: worker.id, workedHours: auto.workedHours, offline: true },
+      retentionClass: "ACCESS" });
+    return finish(client, deps, item, current.id, updated.rows[0]!.version, item.diary.diaryDate, {}, "SIGNED");
+  }
 
   if (!current) {
     const diaryId = item.diaryId;
@@ -196,13 +236,14 @@ async function finish(
   version: number,
   workDate: string,
   diary: Record<string, unknown>,
+  status: "DRAFT" | "SIGNED" = "DRAFT",
 ): Promise<R4SyncPushItemResult> {
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const payload = {
     id: diaryId,
     projectId: item.diary.projectId,
     workDate,
-    status: "DRAFT",
+    status,
     answeredByWorkerId: worker.id,
     diary,
     delays: item.diary.delays,

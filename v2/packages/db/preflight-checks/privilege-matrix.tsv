@@ -111,6 +111,7 @@ table	site_diary_revisions	SELECT;INSERT	-		F9 revizija zaključanog dnevnika je
 table	site_diary_delays	SELECT;INSERT;UPDATE;DELETE	-		F9 strukturirani zastoji (kiša, materijal, dozvola) vezani na `TIME` aneks; DELETE samo u `DRAFT`-u, isti triger kao za stavke.
 table	site_diary_templates	SELECT;INSERT;UPDATE	-		F9 šablon dnevnika po firmi (zaglavlje, sekcije, potpisne linije); deaktivacija i potvrda obrasca su UPDATE (`is_active`, `format_confirmed_at`) — do potvrde izvoz nosi `DRAFT_FORMAT`.
 table	site_diary_attachments	SELECT;INSERT;UPDATE	-		F9 prilozi uz dnevnik, mirror `machine_daily_check_attachments`: `pending→confirmed` je UPDATE, fajl se ne briše (veza na `object_key`).
+table	hse_incident_workers	SELECT;INSERT	-		F9 učesnici i povrijeđeni incidenta; nepromjenjiv dokaz, FORCE RLS, bez UPDATE/DELETE.
 table	hse_incidents	SELECT;INSERT;UPDATE	-		F9 incident je činjenica: triger `hse_incidents_facts_guard()` brani prepisivanje vrste/težine/vremena/opisa/povrijeđenog, dopuna ide u `hse_incident_updates`. Stanje i izgubljeni dani su UPDATE. Bez DELETE.
 table	hse_incident_updates	SELECT;INSERT	-		F9 dopuna incidenta (drugi svjedok, naknadna saznanja); append-only, bez UPDATE i DELETE — izjava se ne prepisuje.
 table	hse_investigations	SELECT;INSERT;UPDATE	-		F9 istraga incidenta (uzrok, metod, nalazi), jedna po incidentu; `completed_at` je UPDATE.

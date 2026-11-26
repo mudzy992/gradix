@@ -1,14 +1,27 @@
 /** F9: prijava opasnosti ostaje na uređaju dok se ne pošalje, i bez mreže. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { randomUUID } from "expo-crypto";
-import { calendarDateFromLocalDate, type HseIncidentKindCode, type HseSeverityCode } from "@gradix/domain";
-import { myProjects, pullForemanWorkers } from "../../api/client";
+import * as Crypto from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
+import { calendarDateFromLocalDate, type HseIncidentKindCode, type HseSeverityCode, type R4HseIncidentPayload } from "@gradix/domain";
+import { myProjects, pullHseWorkers } from "../../api/client";
 import { getActiveLocalAccount, queueHseIncident, readForemanWorkerRoster, readOutboxEntries, saveForemanWorkerRoster,
   type LocalForemanWorker, type LocalOutboxEntry } from "../../db/r4-outbox";
 import { openDb, readProjects, saveProjects, type LocalProject } from "../../db/sqlite";
 import { runSqliteR4Sync } from "../../sync/r4-sqlite";
+import { countPendingHsePhotos } from "../../sync/hse-photo-sync";
 import { sendResultMessage, syncBannerText } from "../../teren/outcome";
 import { Banner, Button, CardView, CheckboxRow, ListItem, Screen, Segmented, Text, TextField } from "../../ui";
+
+type IncidentPhoto = R4HseIncidentPayload["photos"][number] & { base64: string };
+
+function photoType(bytes: Uint8Array): IncidentPhoto["contentType"] | null {
+  const at = (offset: number, values: number[]) => values.every((value, index) => bytes[offset + index] === value);
+  if (at(0, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50])) return "image/webp";
+  if (at(4, [0x66, 0x74, 0x79, 0x70]) && ["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(String.fromCharCode(...bytes.slice(8, 12)))) return "image/heic";
+  return null;
+}
 
 export default function HsePrijavaScreen() {
   const [loading, setLoading] = useState(true);
@@ -26,6 +39,10 @@ export default function HsePrijavaScreen() {
   const [action, setAction] = useState("");
   const [lostDays, setLostDays] = useState("0");
   const [injuredWorkerId, setInjuredWorkerId] = useState("");
+  const [involved, setInvolved] = useState<Record<string, boolean>>({});
+  const [injured, setInjured] = useState<Record<string, boolean>>({});
+  const [photos, setPhotos] = useState<IncidentPhoto[]>([]);
+  const [photosPending, setPhotosPending] = useState(0);
   const [reportable, setReportable] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,6 +56,7 @@ export default function HsePrijavaScreen() {
       const account = await getActiveLocalAccount(db);
       if (!account) throw new Error("Nema aktivnog naloga na uređaju. Prijavi se uz vezu.");
       setEntries(await readOutboxEntries(db, account));
+      setPhotosPending(await countPendingHsePhotos(db, account));
       setProjects((await readProjects(db)).rows);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Lokalni podaci nisu dostupni.");
@@ -70,6 +88,7 @@ export default function HsePrijavaScreen() {
     const request = ++rosterRequest.current;
     setWorkers([]);
     setInjuredWorkerId("");
+    setInvolved({}); setInjured({});
     if (!project) return;
     const eventDate = new Date(occurredAt);
     if (Number.isNaN(eventDate.getTime())) return;
@@ -80,7 +99,7 @@ export default function HsePrijavaScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       let offline = false;
       try {
-        const remote = await pullForemanWorkers(project, day);
+        const remote = await pullHseWorkers(account, project, day);
         await saveForemanWorkerRoster(db, account, project, day, remote.workers);
       } catch { offline = true; }
       const cached = await readForemanWorkerRoster(db, account, project, day);
@@ -89,6 +108,30 @@ export default function HsePrijavaScreen() {
       if (offline && cached.workers.length === 0) setMessage("Ekipa nije dostupna za ovaj projekat i datum. ID povrijeđenog se može unijeti ručno.");
       else if (offline) setMessage("Ekipa nije osvježena; prikazan je lokalni spisak za datum događaja.");
     } catch (caught) { if (request === rosterRequest.current) setMessage(caught instanceof Error ? caught.message : "Ekipa nije dostupna."); }
+  }
+
+  async function takePhoto(source: "camera" | "library") {
+    if (photos.length >= 10) { setMessage("Najviše 10 fotografija po prijavi."); return; }
+    setBusy(true);
+    try {
+      const permission = source === "camera" ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) { setMessage(source === "camera" ? "Kamera nije dozvoljena." : "Pristup fotografijama nije dozvoljen."); return; }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.6, base64: true };
+      const result = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      if (result.canceled) return;
+      const base64 = result.assets[0]?.base64;
+      if (!base64) throw new Error("Fotografija nije pročitana.");
+      const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+      const contentType = photoType(bytes);
+      if (!contentType || bytes.length === 0 || bytes.length > 10_485_760) throw new Error("Fotografija mora biti podržana slika do 10 MB.");
+      const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes);
+      const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      if (photos.some((photo) => photo.sha256 === sha256)) { setMessage("Ova fotografija je već dodana."); return; }
+      const ext = contentType === "image/jpeg" ? "jpg" : contentType.split("/")[1];
+      setPhotos((current) => [...current, { fileName: `incident-${sha256.slice(0, 12)}.${ext}`, contentType, sizeBytes: bytes.length, sha256, base64 }]);
+      setMessage("Fotografija je spremna za lokalno čuvanje uz prijavu.");
+    } catch (caught) { setMessage(caught instanceof Error ? caught.message : "Fotografija nije pročitana."); }
+    finally { setBusy(false); }
   }
 
   async function save() {
@@ -107,16 +150,24 @@ export default function HsePrijavaScreen() {
       const db = await openDb();
       const account = await getActiveLocalAccount(db);
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
+      const selected = workers.filter((worker) => involved[worker.id]).map((worker) => ({
+        workerId: worker.id, injured: kind !== "NEAR_MISS" && Boolean(injured[worker.id]),
+      }));
+      if (kind !== "NEAR_MISS" && injuredWorkerId.trim() && !selected.some((p) => p.workerId === injuredWorkerId.trim())) {
+        selected.push({ workerId: injuredWorkerId.trim(), injured: true });
+      }
       await queueHseIncident(db, account, {
-        incidentId: `hsi_${randomUUID()}`,
+        incidentId: `hsi_${Crypto.randomUUID()}`,
         incident: {
           kind, severity, occurredAt: occurredAt.trim(), projectId: projectId || null,
           locationText: location.trim() || null, lat: null, lng: null,
           description: description.trim(), immediateAction: action.trim() || null,
-          injuredWorkerId: kind === "NEAR_MISS" ? null : injuredWorkerId.trim() || null,
+          injuredWorkerId: selected.find((p) => p.injured)?.workerId ?? null,
+          involvedWorkers: selected,
           lostDays: kind === "NEAR_MISS" ? 0 : Number(lostDays), reportableToAuthority: reportable,
-          photos: [], updateBody: null,
+          photos: photos.map(({ base64: _base64, ...metadata }) => metadata), updateBody: null,
         },
+        photoData: photos.map((photo) => ({ sha256: photo.sha256, base64: photo.base64 })),
       });
       // Nakon trajnog upisa ne prijavljuj grešku kao da upis nije uspio: novi tap bi duplicirao prijavu.
       setDescription("");
@@ -124,6 +175,7 @@ export default function HsePrijavaScreen() {
       setAction("");
       setLostDays("0");
       setInjuredWorkerId("");
+      setInvolved({}); setInjured({}); setPhotos([]);
       setReportable(false);
       setOccurredAt(new Date().toISOString());
       setMessage("Prijava je sačuvana na telefonu, još nije poslana.");
@@ -144,7 +196,9 @@ export default function HsePrijavaScreen() {
       if (!account) throw new Error("Nema aktivnog naloga na uređaju.");
       const outcome = await runSqliteR4Sync(db, account);
       setSyncFailed(outcome.retry > 0);
-      setMessage(`${sendResultMessage(outcome)} Odbijeno: ${outcome.rejected}.`);
+      setMessage(outcome.error === "PHOTO_UPLOAD_FAILED"
+        ? "Prijava je obrađena, ali barem jedna fotografija još čeka upload. Pokušaj ponovo."
+        : `${sendResultMessage(outcome)} Odbijeno: ${outcome.rejected}.`);
       await load();
     } catch {
       setSyncFailed(true);
@@ -159,9 +213,11 @@ export default function HsePrijavaScreen() {
   return (
     <Screen title="Prijava opasnosti" subtitle="Prijavi događaj i bez mreže; slanje je odvojeni korak."
       loading={loading} error={error} empty={null} onRetry={load}>
-      <Banner>{syncBannerText({ pending, syncFailed })} {needsReview > 0 ? `${needsReview} zahtijeva provjeru.` : ""}</Banner>
+      <Banner>{syncBannerText({ pending: pending + photosPending, syncFailed })} {photosPending ? `Fotografije na čekanju: ${photosPending}.` : ""} {needsReview > 0 ? `${needsReview} zahtijeva provjeru.` : ""}</Banner>
       {!error ? <CardView>
-        <Segmented label="Vrsta događaja" value={kind} onChange={setKind} options={[
+        <Segmented label="Vrsta događaja" value={kind} onChange={(value) => {
+          setKind(value); if (value === "NEAR_MISS") { setInjured({}); setInjuredWorkerId(""); }
+        }} options={[
           { value: "NEAR_MISS", label: "Izbjegnuta nezgoda" }, { value: "ACCIDENT", label: "Nesreća" },
           { value: "PROPERTY_DAMAGE", label: "Materijalna šteta" }, { value: "ENVIRONMENTAL", label: "Okoliš" },
           { value: "OCCUPATIONAL_ILLNESS", label: "Profesionalno oboljenje" },
@@ -171,7 +227,7 @@ export default function HsePrijavaScreen() {
           { value: "SEVERE", label: "Teška" }, { value: "FATAL", label: "Smrtna" },
         ]} />
         <TextField label="Vrijeme događaja (ISO, s vremenskom zonom)" value={occurredAt} onChangeText={(value) => {
-          setOccurredAt(value); rosterRequest.current += 1; setWorkers([]); setInjuredWorkerId("");
+          setOccurredAt(value); rosterRequest.current += 1; setWorkers([]); setInjuredWorkerId(""); setInvolved({}); setInjured({});
         }} autoCapitalize="none" />
         <Button label="Osvježi projekte" variant="secondary" busy={busy} onPress={() => void refreshProjects()} />
         {projects.length ? <Segmented label="Projekat (opcionalno)" value={projectId} onChange={(value) => {
@@ -181,15 +237,28 @@ export default function HsePrijavaScreen() {
         <TextField label="Šta se dogodilo?" value={description} onChangeText={setDescription} multiline />
         <TextField label="Mjesto događaja (opcionalno)" value={location} onChangeText={setLocation} />
         <TextField label="Šta je odmah poduzeto? (opcionalno)" value={action} onChangeText={setAction} />
+        {projectId ? <Button label="Osvježi ekipu za datum događaja" variant="secondary" onPress={() => void loadRoster(projectId)} /> : null}
+        <Text variant="label">Uključeni radnici</Text>
+        {workers.map((worker) => <Button key={worker.id} variant={involved[worker.id] ? "primary" : "secondary"}
+          label={`${involved[worker.id] ? "✓ " : ""}Uključen: ${worker.name}`} onPress={() => {
+            setInvolved((previous) => ({ ...previous, [worker.id]: !previous[worker.id] }));
+            if (involved[worker.id]) setInjured((previous) => ({ ...previous, [worker.id]: false }));
+          }} />)}
         {kind !== "NEAR_MISS" ? <>
           <TextField label="Izgubljeni dani" value={lostDays} onChangeText={setLostDays} keyboardType="number-pad" />
-          {workers.length ? <Segmented label="Povrijeđeni radnik (opcionalno)" value={injuredWorkerId} onChange={setInjuredWorkerId}
-            options={[{ value: "", label: "Nije odabran" }, ...workers.map((worker) => ({ value: worker.id, label: worker.name }))]} />
-            : <TextField label="ID povrijeđenog radnika (opcionalno)" value={injuredWorkerId} onChangeText={setInjuredWorkerId} autoCapitalize="none" />}
-          {projectId ? <Button label="Osvježi ekipu za datum događaja" variant="secondary" onPress={() => void loadRoster(projectId)} /> : null}
+          <Text variant="label">Povrijeđeni radnici</Text>
+          {workers.filter((worker) => involved[worker.id]).map((worker) => <Button key={worker.id}
+            variant={injured[worker.id] ? "primary" : "secondary"}
+            label={`${injured[worker.id] ? "✓ " : ""}Povrijeđen: ${worker.name}`}
+            onPress={() => setInjured((previous) => ({ ...previous, [worker.id]: !previous[worker.id] }))} />)}
+          {!workers.length ? <TextField label="ID povrijeđenog radnika (opcionalno)" value={injuredWorkerId} onChangeText={setInjuredWorkerId} autoCapitalize="none" /> : null}
         </> : null}
         <CheckboxRow label="Potrebna prijava nadležnom organu" checked={reportable} onToggle={() => setReportable(!reportable)} />
-        <Text variant="muted">Fotografije još nisu podržane. Provjeri činjenice prije slanja jer se ne prepisuju.</Text>
+        <Button label="Uslikaj fotografiju" variant="secondary" busy={busy} onPress={() => void takePhoto("camera")} />
+        <Button label="Izaberi fotografiju" variant="secondary" busy={busy} onPress={() => void takePhoto("library")} />
+        {photos.map((photo) => <Button key={photo.sha256} variant="secondary" label={`Ukloni fotografiju ${photo.fileName}`}
+          onPress={() => setPhotos((current) => current.filter((item) => item.sha256 !== photo.sha256))} />)}
+        <Text variant="muted">Fotografije ostaju na telefonu do potvrđenog uploada. Provjeri činjenice prije slanja jer se ne prepisuju.</Text>
         <Button label="Sačuvaj na telefon" busy={busy} onPress={() => void save()} />
         <Button label="Pošalji sada" variant="secondary" busy={busy} onPress={() => void send()} />
       </CardView> : null}

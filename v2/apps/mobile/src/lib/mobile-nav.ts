@@ -26,6 +26,7 @@ export type MobileNavEntry = {
     | "/servisni-nalozi"
     | "/hse/prijava"
     | "/hse/toolbox"
+    | "/dnevnik"
     | "/rokovi"
     | "/projekti"
     | "/moji-zadaci"
@@ -87,6 +88,8 @@ export const MOBILE_NAV: readonly MobileNavEntry[] = [
       ["WORKER", "DRIVER", "MACHINE_OPERATOR", "MECHANIC", "SITE_SUPERVISOR"].includes(role)),
   },
   { href: "/hse/toolbox", label: "Toolbox razgovor", visible: (p) =>
+    p.workerId !== null && p.roles.includes("SITE_SUPERVISOR") },
+  { href: "/dnevnik", label: "Dnevnik građenja", visible: (p) =>
     p.workerId !== null && p.roles.includes("SITE_SUPERVISOR") },
   /*
    * F5: zadaci i trošak sa gradilišta.
