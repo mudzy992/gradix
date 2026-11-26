@@ -1,10 +1,17 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client, Pool } from "pg";
+import { companyId, withCompany } from "@gradix/db";
+import { dashboardAssignedProjects } from "./dashboard-scope";
+import { listWorkdaysForReview, resolveViewerWorkerId } from "./workday-review";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadDataHealth, listDataHealth } from "./data-health";
 import type { HealthKey } from "./data-health-queries";
-import { loadDashboardActions } from "./dashboard-actions";
+import { DASHBOARD_ACTIONS, loadDashboardActions } from "./dashboard-actions";
+import { loadDashboardActionList } from "./dashboard-action-lists";
+import { listMachineFaults } from "./machine-fault-service";
+import { listServiceOrders } from "./service-order-service";
+import { listTenders } from "./tender-service";
 import { globalSearch } from "./global-search";
 import { loadProjectCostReport } from "./report-project-costs";
 import { loadHseReport } from "./report-hse";
@@ -100,6 +107,37 @@ describeDb("data health pod stvarnim RLS-om", () => {
     const restricted=await loadDashboardActions(app,{...actor,roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["dh-pa2"]});
     expect(restricted?.items.find(x=>x.key==="overdue_tasks")?.count).toBe(1);
     expect((await loadDashboardActions(app,{...actor,roles:["PROJECT_MANAGER"],scope:"SELF"}))?.items).toEqual([]);
+  });
+  it("paginirane akcione liste dijele brojače, role i tenant scope", async () => {
+    await admin.query(`INSERT INTO public.purchase_requests(id,company_id,project_id,justification,status,total_estimated_cents,currency_code,created_by)
+      VALUES ('dh-pr1','dh-a','dh-pa','Tražena skela','SUBMITTED',100,'BAM','dh-u'),('dh-pr2','dh-a','dh-pa2','Drugi projekt','SUBMITTED',100,'BAM','dh-u'),('dh-prb','dh-b','dh-pb','Druga firma','SUBMITTED',100,'BAM','dh-u')`);
+    const cases=[actor,{...actor,scope:"PROJECTS",projectIds:["dh-pa"]},
+      {...actor,roles:["PROJECT_MANAGER"]},{...actor,roles:["SITE_SUPERVISOR"]},
+      {...actor,roles:["ACCOUNTANT"]},{...actor,roles:["MECHANIC"],scope:"SELF"}];
+    for (const scoped of cases) {
+      const dashboard=await loadDashboardActions(app,scoped);
+      for (const def of DASHBOARD_ACTIONS.filter(x=>x.href.startsWith("/ured/akcije?"))) {
+        const list=await loadDashboardActionList(app,scoped,def.key,1);
+        const expected=dashboard?.items.find(item=>item.key===def.key);
+        if (!list) { expect(expected).toBeUndefined(); continue; }
+        expect(list.items.length,`${scoped.roles[0]} ${def.key}`).toBe(expected?.count ?? 0);
+        expect(list.items.every(item=>!item.id.endsWith("b"))).toBe(true);
+      }
+      const plans=await loadDashboardActionList(app,scoped,"preventive_due",1);
+      if (plans) expect(plans.items.length).toBe(dashboard?.items.find(x=>x.key==="preventive_due")?.count ?? 0);
+    }
+    expect(await loadDashboardActionList(app,{...actor,roles:["PROJECT_MANAGER"]},"purchases_for_approval",1)).toBeNull();
+    expect(await loadDashboardActionList(app,{...actor,roles:["WORKER"]},"risky_projects",1)).toBeNull();
+    expect(await loadDashboardActionList(app,actor,"unknown",1)).toBeNull();
+    const limited=await loadDashboardActionList(app,{...actor,scope:"PROJECTS",projectIds:["dh-pa"]},"purchases_for_approval",1);
+    expect(limited?.items.map(x=>x.id)).toEqual(["dh-pr1"]);
+    await admin.query(`INSERT INTO public.purchase_requests(id,company_id,project_id,justification,status,total_estimated_cents,currency_code,created_by)
+      SELECT 'dh-page-' || n,'dh-a','dh-pa','Zahtjev ' || n,'SUBMITTED',100,'BAM','dh-u' FROM generate_series(1,101) n`);
+    const first=await loadDashboardActionList(app,actor,"purchases_for_approval",1);
+    const second=await loadDashboardActionList(app,actor,"purchases_for_approval",2);
+    expect(first?.items).toHaveLength(100); expect(first?.hasNext).toBe(true);
+    expect(second?.items).toHaveLength(3); expect(second?.hasNext).toBe(false);
+    expect(new Set([...first!.items,...second!.items].map(x=>x.id)).size).toBe(103);
   });
   it("PROJECTS isključuje nedodijeljene i globalne podatke, SELF je prazan", async () => {
     const scoped=await loadDataHealth(app,{...actor,scope:"PROJECTS",projectIds:["dh-pa"]});
@@ -316,6 +354,35 @@ describeDb("data health pod stvarnim RLS-om", () => {
     expect(accountant.columns).not.toContain("Marza %"); expect(JSON.stringify(accountant)).not.toContain("17.50");
     expect((await loadTendersReport(app, {...owner, scope:"PROJECTS", projectIds:["dh-pa"]}, filters)).rows).toEqual([]);
     expect((await loadTendersReport(app, {...owner, companyId:"dh-b"}, filters)).rows).toEqual([]);
+  });
+
+  it("filteri kvarova, servisa i tendera vraćaju iste stavke kao dashboard",async()=>{
+    await admin.query(`INSERT INTO public.work_entries(id,company_id,workday_id,worker_id,kind,started_at,ended_at,end_state,project_id,created_by,updated_by)
+      VALUES ('dh-entry','dh-a','dh-da','dh-wa','WORK','2026-01-01 08:00+00','2026-01-01 16:00+00','KNOWN_END','dh-pa','dh-u','dh-u')`);
+    const pmDays=await loadDashboardActions(app,{...actor,roles:["PROJECT_MANAGER"]});
+    const days=await withCompany(app,companyId("dh-a"),async client=>listWorkdaysForReview(client,"dh-a",
+      {kind:"assignments",viewerWorkerId:await resolveViewerWorkerId(client,"dh-a","dh-u")},200,
+      {unconfirmed:true,projectIds:await dashboardAssignedProjects(client,{...actor,roles:["PROJECT_MANAGER"]})}));
+    expect(pmDays?.items.find(x=>x.key==="unconfirmed_days")?.count).toBe(days.length);
+    expect(days.map(x=>x.id)).toEqual(["dh-da"]);
+    await admin.query(`INSERT INTO public.machine_faults(id,company_id,machine_id,project_id,reported_at,title,priority,status,created_by,updated_by)
+      VALUES ('dh-f1','dh-a','dh-ma','dh-pa',now(),'Kvar moj','HIGH','OPEN','dh-u','dh-u'),('dh-f2','dh-a','dh-ma','dh-pa2',now(),'Kvar tuđi','HIGH','OPEN','dh-u','dh-u')`);
+    const supervisor={...actor,roles:["SITE_SUPERVISOR"]};
+    const faults=await listMachineFaults(app,supervisor,{openAssignedProjectIds:["dh-pa"]});
+    expect(faults.map(x=>x.id)).toEqual(["dh-f1"]);
+    expect((await loadDashboardActions(app,supervisor))?.items.find(x=>x.key==="open_machine_faults")?.count).toBe(faults.length);
+    const mechanic={...actor,roles:["MECHANIC"]};
+    const waiting=await listServiceOrders(app,mechanic,{dashboardMine:"waiting",dashboardProjectIds:null});
+    expect(waiting.map(x=>x.id)).toEqual(["dh-so"]);
+    expect((await loadDashboardActions(app,{...mechanic,scope:"SELF"}))?.items.find(x=>x.key==="waiting_parts")?.count).toBe(waiting.length);
+    await admin.query("INSERT INTO public.partners(id,company_id,code,name,kind) VALUES ('dh-tp','dh-a','TP','Partner','CLIENT')");
+    await admin.query(`INSERT INTO public.tenders(id,company_id,title,partner_id,submitted_value_cents,currency_code,status,deadline_at,created_by,updated_by) VALUES
+      ('dh-tnd1','dh-a','Za sedmicu','dh-tp',100,'BAM','OPPORTUNITY',now()+interval '7 days','dh-u','dh-u'),
+      ('dh-tnd2','dh-a','Kasnije','dh-tp',100,'BAM','OPPORTUNITY',now()+interval '15 days','dh-u','dh-u')`);
+    const pm={...actor,roles:["PROJECT_MANAGER"] as const};
+    const tenders=await listTenders(app,{...pm,roles:["PROJECT_MANAGER"]},{dueIn14Days:true});
+    expect(tenders.map(x=>x.id)).toEqual(["dh-tnd1"]);
+    expect((await loadDashboardActions(app,pm))?.items.find(x=>x.key==="tender_deadlines")?.count).toBe(tenders.length);
   });
 
 });

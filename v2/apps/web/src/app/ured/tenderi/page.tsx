@@ -12,7 +12,7 @@ import { TendersClient } from "./tenders-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function TenderiPage() {
+export default async function TenderiPage({ searchParams }: { searchParams: Promise<{filter?:string}> }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -25,11 +25,12 @@ export default async function TenderiPage() {
   if (!can(auth.ctx.roles, "tenders.view")) redirect("/nemate-pristup");
 
   const pool = await getVerifiedPool();
+  const filtered = (await searchParams).filter === "rokovi";
   const tenders = await listTenders(pool, {
     userId: auth.ctx.userId,
     companyId: auth.ctx.companyId,
     roles: auth.ctx.roles as Role[],
-  });
+  }, {dueIn14Days:filtered});
 
   return (
     <main className="mx-auto w-full max-w-6xl">
@@ -45,8 +46,9 @@ export default async function TenderiPage() {
       />
       <TendersClient
         initialTenders={tenders}
+        dashboardFiltered={filtered}
         caps={{
-          canExport: auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data"),
+          canExport: !filtered && auth.ctx.scope === "COMPANY" && can(auth.ctx.roles, "export.data"),
           canManage: can(auth.ctx.roles, "tenders.manage"),
           canConvert: can(auth.ctx.roles, "tenders.convert"),
           canPrice: can(auth.ctx.roles, "tenders.price.manage"),

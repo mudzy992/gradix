@@ -14,8 +14,8 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
-import type { Scope } from "@gradix/domain";
-import { visibleProjectIds } from "@gradix/domain";
+import { allowedTaskProject, phaseMatchesProject, taskScope, type TaskActor } from "./task-scope";
+export type { TaskActor } from "./task-scope";
 import type {
   TaskCommentRow,
   TaskInput,
@@ -52,7 +52,7 @@ function toTask(row: Record<string, unknown>, today: string): TaskRow {
 
 const TASK_SELECT = `
   SELECT t.id, t.project_id, p.code AS project_code, p.name AS project_name,
-         t.phase_id, ph.name AS phase_name, t.title, t.description,
+         ph.id AS phase_id, ph.name AS phase_name, t.title, t.description,
          t.assignee_worker_id,
          COALESCE(w.first_name || ' ' || w.last_name, NULL) AS assignee_worker_name,
          t.assignee_user_id,
@@ -62,14 +62,14 @@ const TASK_SELECT = `
            WHERE c.company_id = t.company_id AND c.task_id = t.id) AS comment_count
     FROM public.project_tasks t
     LEFT JOIN public.projects p ON p.company_id = t.company_id AND p.id = t.project_id
-    LEFT JOIN public.project_phases ph ON ph.company_id = t.company_id AND ph.id = t.phase_id
+    LEFT JOIN public.project_phases ph ON ph.company_id = t.company_id AND ph.id = t.phase_id AND ph.project_id = t.project_id
     LEFT JOIN public.workers w ON w.company_id = t.company_id AND w.id = t.assignee_worker_id
     LEFT JOIN public.users u ON u.id = t.assignee_user_id
 `;
 
 export async function listTasks(
   pool: Pool,
-  actor: { userId: string; companyId: string; roles: Parameters<typeof can>[0] },
+  actor: TaskActor,
   query: TaskQuery,
 ): Promise<TaskListResult | TaskServiceError> {
   if (!can(actor.roles, "projects.view")) {
@@ -84,6 +84,7 @@ export async function listTasks(
      * bez `due` filtera — najčešći poziv — vraćala 500.
      */
     const params: unknown[] = [actor.companyId];
+    conditions.push(taskScope(actor, params));
     const todayIndex = () => {
       const index = params.indexOf(today);
       if (index >= 0) return index + 1;
@@ -94,6 +95,17 @@ export async function listTasks(
       params.push(query.projectId);
       conditions.push(`t.project_id = $${params.length}`);
     }
+    if (query.assignedProjects) {
+      params.push(actor.userId);
+      const user = `$${params.length}`;
+      const date = `$${todayIndex()}`;
+      conditions.push(`EXISTS (SELECT 1 FROM public.project_assignments a JOIN public.workers w
+        ON w.company_id=a.company_id AND w.id=a.worker_id
+        WHERE a.company_id=t.company_id AND a.project_id=t.project_id AND w.user_id=${user}
+          AND w.is_active AND a.voided_at IS NULL AND a.from_date<=${date}::date
+          AND (a.to_date IS NULL OR a.to_date>=${date}::date))`);
+    }
+    if (query.open) conditions.push("t.status IN ('OPEN','IN_PROGRESS','BLOCKED')");
     if (query.status) {
       params.push(query.status);
       conditions.push(`t.status = $${params.length}`);
@@ -125,6 +137,8 @@ export async function listTasks(
         LIMIT 500`,
       params,
     );
+    const countParams: unknown[] = [actor.companyId, today, actor.userId];
+    const countScope = taskScope(actor, countParams);
     const counts = await client.query<{ mine_today: string; overdue: string; open: string }>(
       `SELECT
          count(*) FILTER (WHERE t.status NOT IN ('DONE','CANCELLED') AND t.due_on = $2::date
@@ -133,8 +147,8 @@ export async function listTasks(
                                                               WHERE company_id = $1 AND user_id = $3)))::text AS mine_today,
          count(*) FILTER (WHERE t.status NOT IN ('DONE','CANCELLED') AND t.due_on < $2::date)::text AS overdue,
          count(*) FILTER (WHERE t.status NOT IN ('DONE','CANCELLED'))::text AS open
-       FROM public.project_tasks t WHERE t.company_id = $1`,
-      [actor.companyId, today, actor.userId],
+       FROM public.project_tasks t WHERE t.company_id = $1 AND ${countScope}`,
+      countParams,
     );
     return {
       tasks: result.rows.map((row) => toTask(row, today)),
@@ -146,19 +160,6 @@ export async function listTasks(
     };
   });
 }
-
-/**
- * Akter zadatka. `scope`/`projectIds` su OPCIONI: servis ih koristi da šefu gradilišta ograniči
- * radnju na projekte na koje je raspoređen. Bez njih se ponaša kao `COMPANY` — to je slučaj za
- * postojeće pozivaoce (worker poslovi, testovi) i za role koje ionako imaju `projects.manage`.
- */
-export type TaskActor = {
-  userId: string;
-  companyId: string;
-  roles: Parameters<typeof can>[0];
-  scope?: Scope;
-  projectIds?: string[] | null;
-};
 
 /**
  * Djelimična izmjena: `statusOnly` je jedina stvar koju smije šef gradilišta.
@@ -202,29 +203,20 @@ export async function saveTask(
     const today = await companyToday(client, toCompanyId(actor.companyId));
     if (isUpdate) {
       if (!input.id) return { code: "VALIDATION_FAILED", message: "Nedostaje id zadatka." };
-      const existing = await client.query<{ status: string; project_id: string | null }>(
-        "SELECT status, project_id FROM public.project_tasks WHERE company_id = $1 AND id = $2 FOR UPDATE",
-        [actor.companyId, input.id],
+      const lookupParams: unknown[] = [actor.companyId, input.id];
+      const scope = taskScope(actor, lookupParams);
+      const existing = await client.query<{ status: string; project_id: string | null; phase_id: string | null }>(
+        `SELECT t.status, t.project_id, t.phase_id FROM public.project_tasks t WHERE t.company_id = $1 AND t.id = $2 AND ${scope} FOR UPDATE`,
+        lookupParams,
       );
       if (!existing.rows[0]) return { code: "NOT_FOUND", message: "Zadatak nije pronađen." };
-      /*
-       * Opseg `PROJECTS`: šef mijenja status samo na projektima na koje je raspoređen. Zadatak bez
-       * projekta (opći zadatak firme) ostaje u redu ureda — nije „svačiji“.
-       */
-      if (!full) {
-        const visible = visibleProjectIds({
-          userId: actor.userId,
-          scope: actor.scope ?? "COMPANY",
-          projectIds: actor.projectIds ?? [],
-        });
-        const projectId = existing.rows[0].project_id;
-        if (visible !== null && (projectId === null || !visible.includes(projectId))) {
-          return {
-            code: "FORBIDDEN",
-            message: "Status mijenjate samo na projektima na koje ste raspoređeni.",
-          };
-        }
+      if (input.projectId !== undefined && !allowedTaskProject(actor, input.projectId)) {
+        return { code: "FORBIDDEN", message: "Zadatak možete premjestiti samo u dostupni projekat." };
       }
+      if ((input.phaseId !== undefined || input.projectId !== undefined) && !await phaseMatchesProject(client, actor.companyId,
+        input.projectId === undefined ? existing.rows[0].project_id : input.projectId,
+        input.phaseId === undefined ? existing.rows[0].phase_id : input.phaseId))
+        return { code: "VALIDATION_FAILED", message: "Faza ne pripada projektu zadatka." };
       const status = input.status ?? existing.rows[0].status;
       /*
        * `completed_at` slijedi status, u OBA smjera: vraćanje iz `DONE` mora ga očistiti, inače
@@ -278,6 +270,9 @@ export async function saveTask(
     }
 
     if (!input.title) return { code: "VALIDATION_FAILED", message: "Naslov zadatka je obavezan." };
+    if (!allowedTaskProject(actor, input.projectId ?? null)) return { code: "FORBIDDEN", message: "Zadatak možete kreirati samo u dostupnom projektu." };
+    if (!await phaseMatchesProject(client, actor.companyId, input.projectId ?? null, input.phaseId ?? null))
+      return { code: "VALIDATION_FAILED", message: "Faza ne pripada projektu zadatka." };
     const id = `tsk_${randomUUID().replace(/-/g, "").slice(0, 18)}`;
     const status = input.status ?? "OPEN";
     try {
@@ -328,22 +323,25 @@ export async function saveTask(
 
 export async function listTaskComments(
   pool: Pool,
-  actor: { userId: string; companyId: string; roles: Parameters<typeof can>[0] },
+  actor: TaskActor,
   taskId: string,
 ): Promise<TaskCommentRow[] | TaskServiceError> {
   if (!can(actor.roles, "projects.view")) {
     return { code: "FORBIDDEN", message: "Nemate pravo pregleda zadataka." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const params: unknown[] = [actor.companyId, taskId];
+    const scope = taskScope(actor, params);
     const rows = await client.query(
       `SELECT c.id, c.task_id, c.author_id,
               COALESCE(u.first_name || ' ' || u.last_name, u.email) AS author_name,
               c.body, c.created_at::text
          FROM public.task_comments c
          JOIN public.users u ON u.id = c.author_id
-        WHERE c.company_id = $1 AND c.task_id = $2
+         JOIN public.project_tasks t ON t.company_id = c.company_id AND t.id = c.task_id
+        WHERE c.company_id = $1 AND c.task_id = $2 AND ${scope}
         ORDER BY c.created_at, c.id`,
-      [actor.companyId, taskId],
+      params,
     );
     return rows.rows.map((row) => ({
       id: String(row.id),
@@ -358,7 +356,7 @@ export async function listTaskComments(
 
 export async function addTaskComment(
   pool: Pool,
-  actor: { userId: string; companyId: string; roles: Parameters<typeof can>[0] },
+  actor: TaskActor,
   taskId: string,
   body: string,
   attachmentId: string | null,
@@ -369,10 +367,9 @@ export async function addTaskComment(
     return { code: "FORBIDDEN", message: "Nemate pravo komentarisanja." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const task = await client.query("SELECT 1 FROM public.project_tasks WHERE company_id = $1 AND id = $2", [
-      actor.companyId,
-      taskId,
-    ]);
+    const params: unknown[] = [actor.companyId, taskId];
+    const scope = taskScope(actor, params);
+    const task = await client.query(`SELECT 1 FROM public.project_tasks t WHERE t.company_id = $1 AND t.id = $2 AND ${scope} FOR UPDATE`, params);
     if (!task.rows[0]) return { code: "NOT_FOUND", message: "Zadatak nije pronađen." };
     if (attachmentId) {
       const attachment = await client.query<{ status: string }>(

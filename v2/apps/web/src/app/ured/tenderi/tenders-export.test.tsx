@@ -18,4 +18,12 @@ describe("izvoz tendera",()=>{
     render(<TendersClient initialTenders={[]} caps={{...caps,canExport:false}} />);
     expect(screen.queryByRole("link",{name:"Preuzmi CSV prikazanih tendera"})).toBeNull();
   });
+  it("dashboard filter je vidljiv i ima povratak na kompletnu listu",async()=>{
+    const {container}=render(<TendersClient initialTenders={[]} dashboardFiltered caps={{...caps,canExport:false}} />);
+    expect(screen.getByText(/Tenderi s rokom u narednih 14 dana/)).toBeVisible();
+    expect(screen.getByRole("link",{name:"Prikaži sve tendere"})).toHaveAttribute("href","/ured/tenderi");
+    expect(screen.queryByRole("link",{name:"Preuzmi CSV prikazanih tendera"})).toBeNull();
+    await expectNoSeriousA11yViolations(container);
+  });
+
 });

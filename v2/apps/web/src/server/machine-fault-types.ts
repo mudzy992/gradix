@@ -42,6 +42,7 @@ export type FaultRow = {
 };
 
 export type ListFilters = {
+  openAssignedProjectIds?: readonly string[];
   machineId?: string;
   status?: FaultStatus;
   from?: string;

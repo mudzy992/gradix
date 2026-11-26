@@ -508,10 +508,13 @@ RLS-om · **bez** AI/vektorske pretrage i **bez** kvalifikovanog e-potpisa u MVP
 
 **Provjere i otvorena ograničenja:** vidjeti [IZVJESTAJ-FAZA-10.md](IZVJESTAJ-FAZA-10.md). Jedini puni lokalni prolaz nije bio zelen; naknadno je popravljena i ciljano provjerena mobilna regresija, ali kompletni prolaz nije ponovljen. Originalni `preflight` zahtijeva nedostajući `psql`; oba SQL fajla su zasebno prošla preko Node PostgreSQL klijenta. CI za završni commit treba provjeriti zasebno prije tvrdnje o spremnosti za Fazu 11.
 
-## Faza 11 — odluke koje se ne smiju izgubiti (rad u toku)
+## Faza 11 — odluke koje se ne smiju izgubiti
 
 - Worker koristi usku enumeraciju aktivnih ID-jeva firmi i odvojene tenant transakcije; dijeljena aplikacijska rola znači da i web može izvršiti enumeraciju ID-jeva, ne drugih podataka firmi. `report_jobs` koristi outbox i at-least-once relay; prava i opseg se provjeravaju pri obradi i preuzimanju, a potpisani URL vrijedi do 60 sekundi.
-- SMTP slanje i DB nisu atomski. Neizvjestan ishod zahtijeva ručnu provjeru; propušteni mjeseci se ne dopunjavaju automatski. PDF ne čuva dijakritiku. Worker izvještaji imaju granice veličine i odbijaju prekoračenje.
-- Health brojači i njihovih pet novih paginiranih lista dijele SQL predikate. Nepotvrđeni radni dani filtriraju se prema opsegu prije limita. Većina drugih akcionih linkova još nije filtrirana i ne smije se opisati kao dovršena.
-- CSV izvozi lista su lokalno pripremljeni, ali nisu commitovani: projekti po session scopeu, ostalih pet u COMPANY opsegu; postoje ograničenja broja redova i nema asinhronog izvoza tih lista. Stari izvoz rokova ostaje odvojen od novog snapshot izvoza.
-- Nalaz za nastavak: postojeći task servis ne primjenjuje session project scope; prije linkova PM/šefa gradilišta osigurati i testirati scope na serveru. Završni commit/tag i CI za ovaj presjek nisu napravljeni, Faza 11 nije zaključena. Detalji: [IZVJESTAJ-FAZA-11.md](IZVJESTAJ-FAZA-11.md).
+- SMTP slanje i DB nisu atomski. Neizvjestan ishod zahtijeva ručnu provjeru; propušteni mjeseci se ne dopunjavaju automatski. PDF dijakritika i asinhroni veliki CSV izvozi lista su, po odluci korisnika, poznate stavke za Fazu 12/kasnije. Worker izvještaji imaju granice veličine i odbijaju prekoračenje.
+- Task servis prima opseg iz sesije za liste, brojače, izmjene, kreiranje i komentare; `PROJECTS` ne smije do tuđeg niti premjestiti zadatak izvan svog projekta, `SELF` vidi dodijeljene zadatke. Fazna pripadnost se provjerava. Test koristi stvarni JWT, dodjele, PostgreSQL i RLS, uz zasebne API/UI testove.
+- Health brojači i njihovih pet paginiranih lista dijele SQL predikate. Akcione kartice koriste server-side filtre ili paginirane liste s istim predikatima i scopeom; dio zapisa iz tih lista vodi na opći modul, a ne direktno na konkretan zapis. Pojedine postojeće liste imaju granice 200 ili 500 redova.
+- CSV projekata poštuje session scope; ostalih pet izvoza zahtijeva COMPANY. Gorivo/tenderi i HSE izvoze samo ograničeni snapshot; stari izvoz rokova odvojen je od novog snapshot izvoza.
+- **Rizik prije pilota:** opći servisi/API-ji servisnih naloga, kvarova i dnevnika uočenim kodom ne primjenjuju session project scope; filtrirane dashboard liste ne popravljaju opće API-je. Potreban zaseban sigurnosni pregled, popravka i testovi prije pilota. Ovaj završni obim ne dokazuje da su ostali moduli bez sličnih nedostataka.
+
+Detalji i provjere: [IZVJESTAJ-FAZA-11.md](IZVJESTAJ-FAZA-11.md). Rezultat CI-ja za završni commit provjeriti nakon pusha; CI ranijeg checkpointa ne dokazuje novi commit.

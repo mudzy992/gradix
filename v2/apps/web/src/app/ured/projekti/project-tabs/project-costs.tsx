@@ -38,11 +38,13 @@ const STATUS_LABEL: Record<CostEntry["status"], string> = {
 
 export function ProjectCosts({
   projectId,
+  initialPending = false,
   canManage,
   canBook = canManage,
   canApproveManual = false,
 }: {
   projectId: string;
+  initialPending?: boolean;
   canManage: boolean;
   /** `projects.costs.book` — ručni unos i storno. ACCOUNTANT vidi, ali ne knjiži. */
   canBook?: boolean;
@@ -51,7 +53,7 @@ export function ProjectCosts({
   const [entries, setEntries] = useState<CostEntry[] | null>(null);
   const [totals, setTotals] = useState<CostTotals | null>(null);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialPending ? "PENDING" : "");
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<z.infer<typeof PendingManualCostsResponse>["requests"]>([]);

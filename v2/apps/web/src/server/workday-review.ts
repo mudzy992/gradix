@@ -8,6 +8,7 @@
  * Tenant izolacija: svaki upit je unutar withCompany i filtrira company_id.
  */
 import type { PoolClient } from "pg";
+import { sharedWorkdayAssignment } from "./workday-review-sql";
 
 export type WorkdayReviewRow = {
   id: string;
@@ -48,7 +49,7 @@ export async function resolveViewerWorkerId(
   userId: string,
 ): Promise<string | null> {
   const result = await client.query<{ id: string }>(
-    "SELECT id FROM public.workers WHERE company_id = $1 AND user_id = $2 AND is_active",
+    "SELECT id FROM public.workers WHERE company_id = $1 AND user_id = $2 AND is_active ORDER BY id LIMIT 1",
     [companyId, userId],
   );
   return result.rows[0]?.id ?? null;
@@ -85,19 +86,7 @@ export async function listWorkdaysForReview(
           $2::text = 'company'
           OR (
             $3::text IS NOT NULL
-            AND EXISTS (
-              SELECT 1
-                FROM public.project_assignments va
-                JOIN public.project_assignments ta
-                  ON ta.company_id = va.company_id AND ta.project_id = va.project_id
-               WHERE va.company_id = d.company_id
-                 AND ta.company_id = d.company_id
-                 AND va.worker_id = $3
-                 AND ta.worker_id = d.worker_id
-                 AND va.voided_at IS NULL AND ta.voided_at IS NULL
-                 AND va.from_date <= d.work_date AND (va.to_date IS NULL OR va.to_date >= d.work_date)
-                 AND ta.from_date <= d.work_date AND (ta.to_date IS NULL OR ta.to_date >= d.work_date)
-            )
+            AND ${sharedWorkdayAssignment("$3")}
           )
         )
       GROUP BY d.id, d.work_date, d.status, d.approval_status, w.first_name, w.last_name

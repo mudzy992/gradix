@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiCall } from "@/api-client";
 import { formatDateTime } from "@/format";
@@ -32,8 +33,10 @@ const PRIORITY_LABEL: Record<FaultRow["priority"], string> = {
 export function FaultsClient({
   initialFaults,
   caps,
+  dashboardFiltered = false,
 }: {
   initialFaults: FaultRow[];
+  dashboardFiltered?: boolean;
   caps: Caps;
 }) {
   const router = useRouter();
@@ -110,6 +113,7 @@ export function FaultsClient({
 
   return (
     <Stack gap="var(--space-5)">
+      {dashboardFiltered ? <p>Otvoreni kvarovi · dodijeljeni projekti · najviše 500 zapisa. <Link href="/ured/kvarovi">Prikaži sve kvarove</Link></p> : null}
       {busy ? <Skeleton rows={2} /> : null}
       {notice ? <Alert tone={notice.tone} role="status">{notice.text}</Alert> : null}
       <FilterBar>

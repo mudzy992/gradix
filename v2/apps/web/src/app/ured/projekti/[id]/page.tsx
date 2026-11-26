@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  * listi i čovjek bi opet tražio red. Isti `ProjectDetail` se koristi i ovdje, pa nema dva prikaza
  * koji se razilaze.
  */
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{tab?:string;status?:string}> }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -33,6 +33,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   if (!can(auth.ctx.roles, "projects.view")) redirect("/nemate-pristup");
 
   const { id } = await params;
+  const filters = await searchParams;
   const project = await getProject(await getVerifiedPool(), auth.ctx.companyId as CompanyId, {
     userId: auth.ctx.userId,
     roles: auth.ctx.roles,
@@ -51,6 +52,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     <main className="mx-auto w-full max-w-6xl">
       <ProjectPageClient
         project={dto}
+        initialCosts={filters.tab === "costs"}
+        initialPending={filters.status === "PENDING"}
         canManage={can(auth.ctx.roles, "projects.manage")}
         canBook={can(auth.ctx.roles, "projects.costs.book")}
         canApproveManual={can(auth.ctx.roles, "purchase.approve")}

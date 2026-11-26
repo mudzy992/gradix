@@ -3947,6 +3947,8 @@ export const TaskQuery = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "BLOCKED", "DONE", "CANCELLED"]).optional(),
   assignee: z.enum(["ME", "ALL"]).optional(),
   due: z.enum(["TODAY", "OVERDUE"]).optional(),
+  open: z.literal("1").optional(),
+  assignedProjects: z.literal("1").optional(),
 });
 export type TaskQuery = z.infer<typeof TaskQuery>;
 

@@ -40,6 +40,8 @@ type TabKey =
 
 export function ProjectDetail({
   project,
+  initialCosts = false,
+  initialPending = false,
   canManage,
   canBook = canManage,
   canApproveManual = false,
@@ -51,6 +53,8 @@ export function ProjectDetail({
   onEdit,
 }: {
   project: Project;
+  initialCosts?: boolean;
+  initialPending?: boolean;
   canManage: boolean;
   canBook?: boolean;
   canApproveManual?: boolean;
@@ -63,7 +67,7 @@ export function ProjectDetail({
   /** Izmjena se otvara iz detalja — inače bi čovjek morao zatvoriti detalj i tražiti red u listi. */
   onEdit: (project: Project) => void;
 }) {
-  const [tab, setTab] = useState<TabKey>(canSeeMoney ? "overview" : "team");
+  const [tab, setTab] = useState<TabKey>(canSeeMoney ? (initialCosts ? "costs" : "overview") : "team");
   const [assignments, setAssignments] = useState<ProjectAssignment[] | null>(null);
   const [today, setToday] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +159,7 @@ export function ProjectDetail({
           onOpenTab={(next) => setTab(next as TabKey)}
         />
       ) : tab === "costs" ? (
-        <ProjectCosts projectId={project.id} canManage={canManage} canBook={canBook} canApproveManual={canApproveManual} />
+        <ProjectCosts projectId={project.id} canManage={canManage} canBook={canBook} canApproveManual={canApproveManual} initialPending={initialPending} />
       ) : tab === "budget" ? (
         <ProjectBudget projectId={project.id} canManage={canManage} />
       ) : tab === "boq" ? (

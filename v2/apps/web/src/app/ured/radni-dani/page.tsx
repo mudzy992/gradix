@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { dashboardAssignedProjects } from "@/server/dashboard-scope";
 import { withCompany } from "@gradix/db";
 import { authenticate } from "@/server/tenant-context";
 import { getVerifiedPool } from "@/server/db";
@@ -44,11 +45,14 @@ export default async function RadniDaniPage({
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
   const onlyReview = first(params.filter) === "za-provjeru";
   const onlyUnconfirmed = first(params.filter) === "bez-potvrde";
+  const fromDashboard = onlyUnconfirmed && first(params.iz) === "dashboard";
 
   const { days, weeks } = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
-    const all = await listWorkdaysForReview(client, auth.ctx.companyId, workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId), 200,
-      onlyUnconfirmed ? {unconfirmed:true, projectIds:auth.ctx.scope === "COMPANY" ? null : auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds ?? [] : []} : undefined);
+    const scope = fromDashboard ? {kind:"assignments" as const, viewerWorkerId} : workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId);
+    const projectIds = fromDashboard ? await dashboardAssignedProjects(client, auth.ctx) : auth.ctx.scope === "COMPANY" ? null : auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds ?? [] : [];
+    const all = await listWorkdaysForReview(client, auth.ctx.companyId, scope, 200,
+      onlyUnconfirmed ? {unconfirmed:true, projectIds} : undefined);
     const filtered = all.filter((day) => (!onlyReview || reviewLabel(day) !== null)
       && (!onlyUnconfirmed || (day.status === "SUBMITTED" && day.approval_status === "SUBMITTED")));
     const weekStarts = [...new Set(filtered.map((day) => weekStartFromWorkDate(day.work_date)))];

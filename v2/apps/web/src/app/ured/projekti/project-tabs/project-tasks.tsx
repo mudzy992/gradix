@@ -50,14 +50,17 @@ export function ProjectTasks({
   projectId,
   canManage,
   today,
+  initialDashboardFilter = "",
 }: {
   projectId?: string;
   canManage: boolean;
   today?: boolean;
+  initialDashboardFilter?: "" | "kasni" | "otvoreni";
 }) {
   const [data, setData] = useState<TaskListResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<TaskForm | null>(null);
+  const [dashboardFilter, setDashboardFilter] = useState(initialDashboardFilter);
   const [statusFilter, setStatusFilter] = useState<"" | TaskRow["status"]>("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,6 +71,11 @@ export function ProjectTasks({
     const query = new URLSearchParams();
     if (projectId) query.set("projectId", projectId);
     if (statusFilter) query.set("status", statusFilter);
+    if (dashboardFilter) {
+      query.set("assignedProjects", "1");
+      query.set("open", "1");
+      if (dashboardFilter === "kasni") query.set("due", "OVERDUE");
+    }
     if (today) query.set("assignee", "ME");
     if (today) query.set("due", "TODAY");
     const result = await apiCall<TaskListResult>(`/api/tasks?${query.toString()}`);
@@ -77,7 +85,7 @@ export function ProjectTasks({
       return;
     }
     setData(result.data);
-  }, [projectId, statusFilter, today]);
+  }, [projectId, statusFilter, today, dashboardFilter]);
 
   useEffect(() => {
     void load();
@@ -133,6 +141,8 @@ export function ProjectTasks({
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       <div className="gx-inline-flex">
+        {dashboardFilter ? <Button onClick={() => setDashboardFilter("")}>Prikaži sve zadatke</Button> : null}
+        {dashboardFilter ? <span>{dashboardFilter === "kasni" ? "Zadaci koji kasne" : "Otvoreni zadaci"} · dodijeljeni projekti · najviše 500 zapisa</span> : null}
         <Select
           label="Status"
           value={statusFilter}

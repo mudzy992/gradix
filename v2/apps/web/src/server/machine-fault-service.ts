@@ -51,6 +51,11 @@ export async function listMachineFaults(
       params.push(viewerWorkerId);
       idx += 1;
     }
+    if (filters.openAssignedProjectIds) {
+      conditions.push(`f.project_id = ANY($${idx}::text[]) AND f.status NOT IN ('DONE','CANCELLED')`);
+      params.push(filters.openAssignedProjectIds);
+      idx += 1;
+    }
     if (filters.machineId) {
       conditions.push(`f.machine_id = $${idx}`);
       params.push(filters.machineId);

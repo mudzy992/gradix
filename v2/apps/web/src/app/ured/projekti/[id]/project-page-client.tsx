@@ -13,6 +13,8 @@ import { ProjectDetail } from "../project-detail";
 
 export function ProjectPageClient({
   project,
+  initialCosts = false,
+  initialPending = false,
   canManage,
   canBook = canManage,
   canApproveManual = false,
@@ -21,6 +23,8 @@ export function ProjectPageClient({
   canSeeMoney,
 }: {
   project: Project;
+  initialCosts?: boolean;
+  initialPending?: boolean;
   canManage: boolean;
   canBook?: boolean;
   canApproveManual?: boolean;
@@ -32,6 +36,8 @@ export function ProjectPageClient({
   return (
     <ProjectDetail
       project={project}
+      initialCosts={initialCosts}
+      initialPending={initialPending}
       canManage={canManage}
       canBook={canBook}
       canApproveManual={canApproveManual}

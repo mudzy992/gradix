@@ -39,8 +39,10 @@ type PartnerOpt = { id: string; code: string; name: string; kind: string };
 export function TendersClient({
   initialTenders,
   caps,
+  dashboardFiltered = false,
 }: {
   initialTenders: TenderRow[];
+  dashboardFiltered?: boolean;
   caps: Caps;
 }) {
   const router = useRouter();
@@ -132,6 +134,7 @@ export function TendersClient({
 
   return (
     <Stack>
+      {dashboardFiltered ? <p>Tenderi s rokom u narednih 14 dana · najviše 500 zapisa. <Link href="/ured/tenderi">Prikaži sve tendere</Link></p> : null}
       {notice ? <Alert tone={notice.tone} role="status">{notice.text}</Alert> : null}
 
       <FilterBar>

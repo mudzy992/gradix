@@ -85,6 +85,8 @@ export type ServiceOrderPartRow = {
 };
 
 export type ServiceOrderFilters = {
+  dashboardMine?: "active" | "waiting";
+  dashboardProjectIds?: readonly string[] | null;
   status?: ServiceOrderStatus;
   machineId?: string;
   /** „Samo ono što čeka dijelove“ — filter radionice. */

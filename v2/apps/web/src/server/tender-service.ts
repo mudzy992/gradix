@@ -108,7 +108,7 @@ function mapFor(actor: TenderActor, row: Record<string, unknown>): TenderRow {
 export async function listTenders(
   pool: Pool,
   actor: TenderActor,
-  filter: { status?: string; urgent?: boolean; from?: string; to?: string; projectIds?: readonly string[] | null;
+  filter: { status?: string; urgent?: boolean; dueIn14Days?: boolean; from?: string; to?: string; projectIds?: readonly string[] | null;
     projectId?: string; team?: string; limit?: number } = {},
 ): Promise<TenderRow[]> {
   if (!can(actor.roles, "tenders.view")) return [];
@@ -128,6 +128,7 @@ export async function listTenders(
           AND ($6::date IS NULL OR COALESCE(t.deadline_at,t.created_at) < ($6::date + 1))
           AND ($7::text[] IS NULL OR t.converted_project_id = ANY($7::text[]))
           AND ($8::text IS NULL OR t.converted_project_id = $8)
+          AND ($11::boolean IS NOT TRUE OR (t.status IN ('OPPORTUNITY','GO_NO_GO','PREPARATION') AND t.deadline_at >= clock_timestamp() AND t.deadline_at < clock_timestamp()+interval '14 days'))
           AND ($9::text IS NULL OR EXISTS (SELECT 1 FROM public.tender_team tt
             JOIN public.workers w ON w.company_id=tt.company_id AND w.id=tt.worker_id
             WHERE tt.company_id=t.company_id AND tt.tender_id=t.id AND w.team=$9))
@@ -139,7 +140,7 @@ export async function listTenders(
         filter.urgent === true,
         TENDER_UPCOMING_DAYS,
         filter.from ?? null, filter.to ?? null, filter.projectIds ?? null, filter.projectId ?? null,
-        filter.team ?? null, Math.min(Math.max(filter.limit ?? 500,1),10001),
+        filter.team ?? null, Math.min(Math.max(filter.limit ?? 500,1),10001), filter.dueIn14Days === true,
       ],
     );
     return rows.rows.map((row) => mapFor(actor, row));

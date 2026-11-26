@@ -49,6 +49,16 @@ export async function listServiceOrders(
     const conditions = ["so.company_id = $1"];
     const params: unknown[] = [actor.companyId];
     let index = 2;
+    if (filters.dashboardMine) {
+      conditions.push(`so.assigned_mechanic_worker_id IN (SELECT w.id FROM public.workers w
+        WHERE w.company_id=so.company_id AND w.user_id=$${index} AND w.is_active)`);
+      params.push(actor.userId); index += 1;
+      conditions.push(filters.dashboardMine === "waiting" ? "so.status='WAITING_PARTS'" : "so.status IN ('PLANNED','APPROVED','IN_PROGRESS')");
+      if (filters.dashboardProjectIds !== null) {
+        conditions.push(`so.project_id = ANY($${index}::text[])`);
+        params.push(filters.dashboardProjectIds ?? []); index += 1;
+      }
+    }
     if (filters.status) {
       conditions.push(`so.status = $${index}`);
       params.push(filters.status);

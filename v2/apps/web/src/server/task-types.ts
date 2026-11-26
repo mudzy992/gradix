@@ -31,6 +31,8 @@ export type TaskQuery = {
   status?: TaskRow["status"];
   assignee?: "ME" | "ALL";
   due?: "TODAY" | "OVERDUE";
+  open?: boolean;
+  assignedProjects?: boolean;
 };
 
 export type TaskInput = {

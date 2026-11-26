@@ -22,8 +22,10 @@ type Caps = { canManage: boolean; canApprove: boolean };
 export function ServisClient({
   initialOrders,
   caps,
+  dashboardFilter,
 }: {
   initialOrders: ServiceOrderRow[];
+  dashboardFilter?: "active" | "waiting";
   caps: Caps;
 }) {
   const router = useRouter();
@@ -178,6 +180,7 @@ export function ServisClient({
 
   return (
     <Stack gap="var(--space-4)">
+      {dashboardFilter ? <p>{dashboardFilter === "waiting" ? "Moji nalozi koji čekaju dijelove" : "Moji aktivni servisni nalozi"}. <TextLink href="/ured/servis">Prikaži sve naloge</TextLink></p> : null}
       {notice ? <Alert tone={notice.tone} role="status">{notice.text}</Alert> : null}
       <FilterBar>
         <Select label="Stanje" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>

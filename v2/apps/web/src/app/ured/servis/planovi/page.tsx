@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * važi za konkretnu mašinu. Zato su na istom ekranu: ko mijenja šablon mora vidjeti koliko
  * mašina ga koristi, inače izmjena izgleda bezopasno.
  */
-export default async function PlanoviPage() {
+export default async function PlanoviPage({ searchParams }: { searchParams: Promise<{machine?:string}> }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -45,6 +45,7 @@ export default async function PlanoviPage() {
       />
       <PlanoviClient
         initialTemplates={templates}
+        initialMachineId={(await searchParams).machine ?? ""}
         caps={{ canManage: can(auth.ctx.roles, "service.manage") }}
       />
     </main>

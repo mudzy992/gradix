@@ -29,6 +29,7 @@ const NAV_EXCEPTIONS: Record<string, string> = {
   "/lozinka/postavi": "dolazi se isključivo token-linkom iz pozivnice/reseta",
   "/lozinka/promjena": "korisnički meni u okviru + prisilna promjena poslije prijave",
   "/katalog": "U5 katalog UI komponenti — razvojni alat, otvara se direktnim URL-om",
+  "/ured/akcije": "filtrirani akcioni redovi dostupni su sa kartica pregleda; svaka vrsta dodatno provjerava rolu i opseg",
   "/ured/profil": "lični profil: ulaz iz korisničkog menija u okviru, nema dozvolu",
   "/ured/profil/sesije": "„Moje sesije“ — lično, ulaz sa profila i iz korisničkog menija",
   "/platform": "korijen platforme preusmjerava na /platform/firme",

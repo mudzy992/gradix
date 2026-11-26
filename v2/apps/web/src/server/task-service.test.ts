@@ -48,6 +48,7 @@ const ACTOR = {
   userId: "usr_test",
   companyId: "cmp_test",
   roles: ["OWNER"] as never,
+  scope: "COMPANY" as const, projectIds: null,
 };
 
 describe("zadaci — parametri liste", () => {
@@ -129,7 +130,7 @@ describe("zadaci — šef gradilišta mijenja samo status", () => {
           return { rows: [{ today: "2026-11-24" }], rowCount: 1 };
         }
         if (sql.includes("FOR UPDATE")) {
-          return { rows: [{ status: "OPEN", project_id: "prj_tudji" }], rowCount: 1 };
+          return { rows: [], rowCount: 0 };
         }
         return { rows: [], rowCount: 0 };
       },
@@ -137,8 +138,7 @@ describe("zadaci — šef gradilišta mijenja samo status", () => {
     };
     const limitedPool = { connect: async () => client } as never;
     const result = await saveTask(limitedPool, SUPERVISOR, { id: "tsk_1", status: "DONE" }, true);
-    expect(result).toMatchObject({ code: "FORBIDDEN" });
-    expect((result as { message: string }).message).toContain("raspoređeni");
+    expect(result).toMatchObject({ code: "NOT_FOUND" });
     // Status NIJE upisan: provjera opsega ide prije `UPDATE`.
     expect(calls.some((call) => call.sql.includes("UPDATE public.project_tasks"))).toBe(false);
   });

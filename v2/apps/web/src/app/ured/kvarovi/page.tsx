@@ -1,3 +1,5 @@
+import { withCompany } from "@gradix/db";
+import { dashboardAssignedProjects } from "@/server/dashboard-scope";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -11,7 +13,7 @@ import { FaultsClient } from "./faults-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function KvaroviPage() {
+export default async function KvaroviPage({ searchParams }: { searchParams: Promise<{filter?:string}> }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -24,10 +26,12 @@ export default async function KvaroviPage() {
   if (!can(auth.ctx.roles, "machines.fault.view")) redirect("/nemate-pristup");
 
   const pool = await getVerifiedPool();
+  const filtered = (await searchParams).filter === "otvoreni";
+  const projects = filtered ? await withCompany(pool, auth.ctx.companyId, client => dashboardAssignedProjects(client, auth.ctx)) : undefined;
   const faults = await listMachineFaults(
     pool,
     { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
-    {},
+    { openAssignedProjectIds: projects },
   );
 
   return (
@@ -38,6 +42,7 @@ export default async function KvaroviPage() {
       />
       <FaultsClient
         initialFaults={faults}
+        dashboardFiltered={filtered}
         caps={{
           canCreate: can(auth.ctx.roles, "machines.fault.create"),
           canRevise: can(auth.ctx.roles, "machines.fault.revise"),

@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * odluku), pa `IN_PROGRESS`, pa odobreni/planirani. Sortiranje je u servisu, a ne u ekranu, jer
  * isti redoslijed mora da važi i na mobilnom.
  */
-export default async function ServisPage() {
+export default async function ServisPage({ searchParams }: { searchParams: Promise<{filter?:string}> }) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!token) redirect("/login");
 
@@ -30,10 +30,12 @@ export default async function ServisPage() {
   if (auth.ctx.mustChangePassword) redirect("/lozinka/promjena");
   if (!can(auth.ctx.roles, "service.view")) redirect("/nemate-pristup");
 
+  const filter = (await searchParams).filter;
+  const dashboardMine = filter === "moji" ? "active" : filter === "dijelovi" ? "waiting" : undefined;
   const orders = await listServiceOrders(
     await getVerifiedPool(),
     { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
-    {},
+    { dashboardMine, dashboardProjectIds: auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds : null },
   );
 
   return (
@@ -50,6 +52,7 @@ export default async function ServisPage() {
       />
       <ServisClient
         initialOrders={orders}
+        dashboardFilter={dashboardMine}
         caps={{
           canManage: can(auth.ctx.roles, "service.manage"),
           canApprove: can(auth.ctx.roles, "service.approve"),

@@ -93,9 +93,9 @@ describe("role dashboard href", () => {
     "/ured/nabavka":"purchase.view", "/ured/podizvodjaci":"subcontractors.view", "/ured/zadaci":"projects.view",
     "/ured/radni-dani":"workdays.view", "/ured/tenderi":"tenders.view", "/ured/dnevnik":"diary.view",
     "/ured/kvarovi":"machines.fault.view", "/ured/hse":"hse.view", "/ured/obracun-sati":"payroll.view",
-    "/ured/servis":"service.view", "/ured/servis/planovi":"service.view",
+    "/ured/akcije":"dashboard.actions.view", "/ured/servis":"service.view", "/ured/servis/planovi":"service.view",
   };
-  for (const action of [...DASHBOARD_ACTIONS, {key:"preventive_due",role:"MECHANIC" as const,href:"/ured/servis/planovi"}]) {
+  for (const action of [...DASHBOARD_ACTIONS, {key:"preventive_due",role:"MECHANIC" as const,href:"/ured/akcije?key=preventive_due"}]) {
     it(`${action.role}/${action.key} vodi na dostupnu stranicu`, () => {
       const permission=pagePermission[action.href.split("?")[0]!];
       expect(permission).toBeDefined();

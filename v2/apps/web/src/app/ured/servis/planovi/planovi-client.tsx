@@ -55,14 +55,16 @@ type MachineOption = { id: string; code: string; name: string };
 export function PlanoviClient({
   initialTemplates,
   caps,
+  initialMachineId = "",
 }: {
   initialTemplates: TemplateRow[];
+  initialMachineId?: string;
   caps: { canManage: boolean };
 }) {
   const router = useRouter();
   const [templates, setTemplates] = useState(initialTemplates);
   const [machines, setMachines] = useState<MachineOption[]>([]);
-  const [machineId, setMachineId] = useState("");
+  const [machineId, setMachineId] = useState(initialMachineId);
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
