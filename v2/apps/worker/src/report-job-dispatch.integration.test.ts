@@ -31,7 +31,7 @@ run("report jobs — outbox relay", () => {
   it("nakon greške queue ponavlja slanje, deduplicira i obrađuje samo aktivne firme", async () => {
     const boss=new PgBoss({connectionString:dbUrl.toString(),schema:"pgboss"}); await boss.start();
     try {
-      await boss.createQueue(REPORT_JOB_QUEUE);
+      await boss.createQueue(REPORT_JOB_QUEUE,{name:REPORT_JOB_QUEUE,policy:"stately"});
       const send=(...args: Parameters<typeof dispatchReportJobs>[1] extends (...args: infer P) => unknown ? P : never) => boss.send(...args);
       let attempts=0;
       await expect(dispatchReportJobs(app,async (...args)=>{
@@ -45,6 +45,14 @@ run("report jobs — outbox relay", () => {
       expect(rows.rows).toEqual([{data:{companyId:"a",jobId:"job-a"}},{data:{companyId:"b",jobId:"job-b"}}]);
       const saved=await admin.query("SELECT status FROM public.report_jobs ORDER BY id");
       expect(saved.rows).toEqual([{status:"QUEUED"},{status:"QUEUED"},{status:"QUEUED"}]);
+      await admin.query("UPDATE public.report_jobs SET status='FAILED' WHERE id='job-a'");
+      await admin.query(`INSERT INTO public.report_jobs(id,company_id,kind,report_key,format,period_from,period_to)
+        VALUES ('job-c','a','REPORT','HSE','PDF','2026-01-01','2026-01-31'),
+        ('job-d','a','REPORT','HSE','PDF','2026-01-01','2026-01-31')`);
+      expect((await dispatchReportJobs(app,send,{onlyCompanyId:"a",limit:1})).sent).toBe(1);
+      expect((await dispatchReportJobs(app,send,{onlyCompanyId:"a",limit:1})).sent).toBe(1);
+      const rotated=await admin.query("SELECT data->>'jobId' AS id FROM pgboss.job WHERE name=$1 ORDER BY id",[REPORT_JOB_QUEUE]);
+      expect(rotated.rows.map(row=>row.id)).toEqual(["job-a","job-b","job-c","job-d"]);
     } finally { await boss.stop(); }
   },30_000);
 });

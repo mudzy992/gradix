@@ -23,6 +23,10 @@ import { refreshDailyRollups } from "./rollup-nightly";
 import { runScheduledReports } from "./reports-scheduled";
 import { createObjectRemover } from "./object-storage";
 import { grantQueueHealthRead } from "./queue-health-grants";
+import { dispatchReportJobs } from "./report-job-dispatch";
+import { executeReportJob } from "../../web/src/server/report-job-execution";
+import { createReportAttachmentStore } from "../../web/src/server/report-job-attachment-service";
+import { storageConfig } from "../../web/src/server/storage";
 
 const config = loadConfig();
 
@@ -121,6 +125,10 @@ async function runBudgetThresholds(): Promise<void> {
 async function main(): Promise<void> {
   boss.on("error", (error) => logger.error("pg-boss greška", { message: error.message }));
 
+  // A privileged pg-boss connection is separate; business queries must never bypass RLS.
+  const role = await pool.query<{safe:boolean}>(`SELECT NOT (rolsuper OR rolbypassrls) AS safe
+    FROM pg_roles WHERE rolname=current_user`);
+  if (role.rows[0]?.safe !== true) throw new Error("WORKER_DATABASE_ROLE_BYPASSES_RLS");
   await boss.start();
   try { await grantQueueHealthRead(boss.getDb()); }
   catch (error) { logger.warn("queue health: operativni pregled nije dostupan", { message: error instanceof Error ? error.message : String(error) }); }
@@ -133,6 +141,7 @@ async function main(): Promise<void> {
   await boss.createQueue(JOB_NAMES.budgetThresholds);
   await boss.createQueue(JOB_NAMES.rollupNightly);
   await boss.createQueue(JOB_NAMES.reportsScheduled);
+  await boss.createQueue(JOB_NAMES.reportJobs,{name:JOB_NAMES.reportJobs,policy:"stately"});
 
   await boss.work(JOB_NAMES.pingHealth, async () => runPing());
   // pg-boss 10 predaje NIZ poslova (batch), ne jedan — i kad je jedan, stiže kao niz.
@@ -148,6 +157,22 @@ async function main(): Promise<void> {
   await boss.work(JOB_NAMES.budgetThresholds, async () => runBudgetThresholds());
   await boss.work(JOB_NAMES.rollupNightly, async () => { await refreshDailyRollups(pool, { logger }); });
   await boss.work(JOB_NAMES.reportsScheduled, async () => { await runScheduledReports(pool, { logger }); });
+  await boss.work(JOB_NAMES.reportJobs, async jobs => {
+    for (const job of jobs) {
+      const data=job.data as {companyId?:unknown;jobId?:unknown} | null;
+      if (!data || (data.companyId === undefined && data.jobId === undefined)) {
+        await dispatchReportJobs(pool,(name,payload,options)=>boss.send(name,payload,options));
+        continue;
+      }
+      if (typeof data.companyId !== "string" || typeof data.jobId !== "string" ||
+          !/^[A-Za-z0-9_-]{1,64}$/.test(data.companyId) || !/^[A-Za-z0-9_-]{1,128}$/.test(data.jobId)) {
+        logger.warn("report_jobs: neispravan payload",{}); continue;
+      }
+      const storage=storageConfig();
+      const store=storage.configured ? createReportAttachmentStore(pool,storage) : async () => {throw new Error("REPORT_STORAGE_UNAVAILABLE");};
+      await executeReportJob(pool,data.companyId,data.jobId,store);
+    }
+  });
 
   // Canarinac: ako se ovaj posao ne izvrši, red je pokvaren i niko to ne bi primijetio.
   await boss.schedule(JOB_NAMES.pingHealth, `*/${Math.max(config.reminderIntervalMinutes, 1)} * * * *`);
@@ -166,6 +191,8 @@ async function main(): Promise<void> {
   await boss.schedule(JOB_NAMES.rollupNightly, "0 2 * * *");
   // Svaki sat, prethodni mjesec određuje se u vremenskoj zoni svake firme.
   await boss.schedule(JOB_NAMES.reportsScheduled, "0 * * * *");
+  // Durable DB outbox is periodically relayed; API never needs boss credentials.
+  await boss.schedule(JOB_NAMES.reportJobs, "* * * * *");
 
   logger.info("worker pokrenut", {
     poslovi: Object.values(JOB_NAMES),

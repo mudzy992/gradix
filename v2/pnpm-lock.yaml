@@ -220,12 +220,21 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1164.0
         version: 3.1164.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1164.0
+        version: 3.1164.0
+      '@gradix/contracts':
+        specifier: workspace:^
+        version: link:../../packages/contracts
       '@gradix/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@gradix/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      exceljs:
+        specifier: 4.4.0
+        version: 4.4.0
       nodemailer:
         specifier: ^7.0.11
         version: 7.0.13
@@ -235,6 +244,9 @@ importers:
       pg-boss:
         specifier: ^10.1.6
         version: 10.4.2
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@gradix/config':
         specifier: workspace:*

@@ -137,7 +137,7 @@ export const ReportJobRequest = ReportQuery.extend({
 export const ReportJob = z.object({
   id: z.string(), key: z.string(), format: z.enum(["pdf", "xlsx"]),
   from: z.string(), to: z.string(), status: z.enum(["QUEUED", "RUNNING", "DONE", "FAILED", "DEAD"]),
-  createdAt: IsoDate, completedAt: IsoDate.nullable(),
+  createdAt: IsoDate, completedAt: IsoDate.nullable(), error: z.string().nullable(),
 });
 export const ReportJobsResponse = z.object({ jobs: z.array(ReportJob) });
 

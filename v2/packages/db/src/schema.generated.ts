@@ -1465,6 +1465,7 @@ export interface ReportJobs {
   format: string | null;
   id: string;
   kind: string;
+  last_dispatched_at: Timestamp | null;
   last_error: string | null;
   object_key: string | null;
   params: Generated<Json>;

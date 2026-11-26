@@ -13,7 +13,11 @@
  * Zašto RLS pored ovoga: ako neko ipak napiše upit bez scope-a, baza ne vraća tuđe redove.
  * Dubinska zaštita, ne zamjena za disciplinu (ADR 0003).
  */
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { Pool, PoolClient } from "pg";
+
+type TransactionContext = { pool: Pool; company: CompanyId; client: PoolClient; active: boolean };
+const transactionContext = new AsyncLocalStorage<TransactionContext>();
 
 export type CompanyId = string & { readonly __brand: "CompanyId" };
 
@@ -45,6 +49,12 @@ export async function withCompany<T>(
   fn: (client: PoolClient) => Promise<T>,
   options: { savepoint?: boolean } = {},
 ): Promise<T> {
+  const enclosing = transactionContext.getStore();
+  if (enclosing) {
+    if (!enclosing.active || enclosing.pool !== pool || enclosing.company !== id || options.savepoint)
+      throw new Error("INVALID_COMPANY_TRANSACTION_CONTEXT");
+    return fn(enclosing.client);
+  }
   const client = await pool.connect();
   if (options.savepoint) {
     try {
@@ -80,4 +90,19 @@ export async function withCompany<T>(
   } finally {
     client.release();
   }
+}
+
+/**
+ * Explicit opt-in for a report job: existing readers using withCompany share one RLS-scoped
+ * transaction and snapshot. Cross-pool/tenant calls and nested savepoints fail closed. The
+ * context is invalidated before releasing the client, including for escaped async callbacks.
+ */
+export async function withCompanyTransactionContext<T>(pool: Pool, id: CompanyId,
+  fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  if (transactionContext.getStore()) throw new Error("NESTED_COMPANY_TRANSACTION_CONTEXT");
+  return withCompany(pool, id, async client => {
+    const context: TransactionContext = {pool,company:id,client,active:true};
+    try { return await transactionContext.run(context, () => fn(client)); }
+    finally { context.active=false; }
+  });
 }

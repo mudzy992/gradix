@@ -13,10 +13,13 @@ WORKDIR /app
 FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc turbo.json ./
 COPY packages/config/package.json packages/config/
+COPY packages/design/package.json packages/design/
 COPY packages/domain/package.json packages/domain/
+COPY packages/contracts/package.json packages/contracts/
+COPY apps/web/package.json apps/web/
 COPY packages/db/package.json packages/db/
 COPY apps/worker/package.json apps/worker/
-RUN pnpm install --frozen-lockfile --filter @gradix/worker...
+RUN pnpm install --frozen-lockfile --filter @gradix/worker... --filter @gradix/web...
 
 # 2) Build: esbuild bundle u `dist/main.js` (+ `.map`).
 #    Zašto NE goli `tsc`: emituje relativne uvoze bez `.js` (`./config`), što Node ESM ne
@@ -26,6 +29,8 @@ RUN pnpm install --frozen-lockfile --filter @gradix/worker...
 FROM deps AS builder
 COPY packages/config packages/config
 COPY packages/domain packages/domain
+COPY packages/contracts packages/contracts
+COPY apps/web/src/server apps/web/src/server
 COPY packages/db packages/db
 COPY apps/worker apps/worker
 # `@gradix/domain` i `@gradix/db` NE grade se odvojeno: njihov `exports` pokazuje na `src/*.ts`,

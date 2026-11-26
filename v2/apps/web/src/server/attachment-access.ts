@@ -100,7 +100,7 @@ export async function attachmentTarget(
   pool: Pool,
   companyId: string,
   attachmentId: string,
-): Promise<{ entityType: AttachmentEntityType; entityId: string } | null> {
+): Promise<{ entityType: AttachmentEntityType | "REPORT_JOB"; entityId: string } | null> {
   return withCompany(pool, toCompanyId(companyId), async (client) => {
     const found = await client.query<{ entity_type: string; entity_id: string }>(
       `SELECT entity_type, entity_id FROM public.attachments WHERE id = $1 AND company_id = $2`,
@@ -109,7 +109,7 @@ export async function attachmentTarget(
     const row = found.rows[0];
     if (!row) return null;
     return {
-      entityType: row.entity_type as AttachmentEntityType,
+      entityType: row.entity_type as AttachmentEntityType | "REPORT_JOB",
       entityId: row.entity_id,
     };
   });

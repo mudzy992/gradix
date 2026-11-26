@@ -25,7 +25,8 @@ export async function GET(
     const { id } = await context.params;
     const pool = await getVerifiedPool();
     const target = await attachmentTarget(pool, guardResult.ctx.companyId, id);
-    if (!target) return fail("NOT_FOUND", "Prilog nije pronađen.");
+    // Report files require requester, scope and current-permission checks, not this generic path.
+    if (!target || target.entityType === "REPORT_JOB") return fail("NOT_FOUND", "Prilog nije pronađen.");
 
     if (!can(guardResult.ctx.roles, ATTACHMENT_ACCESS[target.entityType].read)) {
       return fail("FORBIDDEN", "Nemate pravo za ovu radnju.");

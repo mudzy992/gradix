@@ -69,6 +69,7 @@ import { ROUTES } from "@gradix/contracts";
 import { GET as searchGet } from "@/app/api/search/route";
 import { GET as reportJobsGet, POST as reportJobsPost } from "@/app/api/report-jobs/route";
 import { GET as reportJobGet } from "@/app/api/report-jobs/[id]/route";
+import { GET as reportJobDownload } from "@/app/api/report-jobs/[id]/download/route";
 import { GET as reportGet } from "@/app/api/reports/[key]/route";
 import { GET as dashboardActionsGet } from "@/app/api/dashboard/route";
 import { GET as dataHealthGet } from "@/app/api/data-health/route";
@@ -408,6 +409,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/reports/{key}": { GET: reportGet },
   "/api/report-jobs": { GET: reportJobsGet, POST: reportJobsPost },
   "/api/report-jobs/{id}": { GET: reportJobGet },
+  "/api/report-jobs/{id}/download": { GET: reportJobDownload },
   "/api/auth/login": { POST: loginRoute },
   "/api/auth/refresh": { POST: refreshRoute },
   "/api/auth/change-password": { POST: changePasswordRoute },

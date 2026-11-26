@@ -281,7 +281,7 @@ export async function attachmentDownloadUrl(
     const found = await client.query<{
       object_key: string;
       file_name: string;
-      content_type: AllowedContentType;
+      content_type: AllowedContentType | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       status: string;
       entity_id: string;
     }>(

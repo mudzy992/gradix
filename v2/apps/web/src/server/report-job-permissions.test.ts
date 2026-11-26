@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canRunReport, coversGeneratedAccess, intersectReportAccess, type ReportJobAccess } from "./report-job-permissions";
 
 const original: ReportJobAccess={roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["a","b"]};
+const generated={...original,permissions:["reports.view","export.data"] as const};
 describe("report job opseg i promijenjene dozvole", () => {
   it("novo pravo ili projekat ne proširuje izvoz; gubitak se odmah primijeni", () => {
     expect(intersectReportAccess(original,{roles:["PROJECT_MANAGER","OWNER"],scope:"PROJECTS",projectIds:["b","c"]}))
@@ -17,16 +18,18 @@ describe("report job opseg i promijenjene dozvole", () => {
     expect(canRunReport({...original,roles:[]},"HSE")).toBe(false);
   });
   it("preuzimanje starog fajla odbija gubitak prava ili bilo kojeg projekta", () => {
-    expect(coversGeneratedAccess(original,{roles:["PROJECT_MANAGER","OWNER"],scope:"COMPANY",projectIds:null})).toBe(true);
-    expect(coversGeneratedAccess(original,{roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["b"]})).toBe(false);
-    expect(coversGeneratedAccess(original,{roles:["OWNER"],scope:"COMPANY",projectIds:null})).toBe(false);
-    expect(coversGeneratedAccess({roles:["OWNER"],scope:"COMPANY",projectIds:null},
+    expect(coversGeneratedAccess(generated,{roles:["PROJECT_MANAGER","OWNER"],scope:"COMPANY",projectIds:null})).toBe(true);
+    expect(coversGeneratedAccess(generated,{roles:["PROJECT_MANAGER"],scope:"PROJECTS",projectIds:["b"]})).toBe(false);
+    expect(coversGeneratedAccess(generated,{roles:["OWNER"],scope:"COMPANY",projectIds:null})).toBe(false);
+    expect(coversGeneratedAccess({...generated,permissions:["workers.rates.view"]},
+      {roles:["PROJECT_MANAGER"],scope:"COMPANY",projectIds:null})).toBe(false);
+    expect(coversGeneratedAccess({roles:["OWNER"],scope:"COMPANY",projectIds:null,permissions:["reports.view"]},
       {roles:["OWNER"],scope:"PROJECTS",projectIds:["a"]})).toBe(false);
-    expect(coversGeneratedAccess({roles:["OWNER"],scope:"PROJECTS",projectIds:null},
+    expect(coversGeneratedAccess({roles:["OWNER"],scope:"PROJECTS",projectIds:null,permissions:["reports.view"]},
       {roles:["OWNER"],scope:"PROJECTS",projectIds:[]})).toBe(false);
-    expect(coversGeneratedAccess({roles:["OWNER"],scope:"PROJECTS",projectIds:null},
+    expect(coversGeneratedAccess({roles:["OWNER"],scope:"PROJECTS",projectIds:null,permissions:["reports.view"]},
       {roles:["OWNER"],scope:"COMPANY",projectIds:null})).toBe(false);
-    expect(coversGeneratedAccess({roles:[],scope:"COMPANY",projectIds:null},
+    expect(coversGeneratedAccess({roles:[],scope:"COMPANY",projectIds:null,permissions:["reports.view"]},
       {roles:["OWNER"],scope:"COMPANY",projectIds:null})).toBe(false);
   });
 });

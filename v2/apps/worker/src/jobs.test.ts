@@ -95,6 +95,7 @@ describe("JOB_NAMES", () => {
       budgetThresholds: "budget.thresholds",
       rollupNightly: "rollup.nightly",
       reportsScheduled: "reports.scheduled",
+      reportJobs: "report_jobs",
     });
   });
 });

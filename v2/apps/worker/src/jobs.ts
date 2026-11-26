@@ -27,6 +27,7 @@ export const JOB_NAMES = {
   budgetThresholds: "budget.thresholds",
   rollupNightly: "rollup.nightly",
   reportsScheduled: "reports.scheduled",
+  reportJobs: "report_jobs",
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

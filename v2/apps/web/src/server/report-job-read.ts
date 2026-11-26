@@ -4,13 +4,21 @@ import { companyId, withCompany } from "@gradix/db";
 type JobRow = {
   id: string; report_key: string; format: "PDF" | "XLSX";
   from: string; to: string; status: "QUEUED" | "RUNNING" | "DONE" | "FAILED" | "DEAD";
-  created_at: Date; completed_at: Date | null;
+  created_at: Date; completed_at: Date | null; last_error: string | null;
 };
-const columns = `id,report_key,format,period_from::text AS "from",period_to::text AS "to",status,created_at,completed_at`;
+const columns = `id,report_key,format,period_from::text AS "from",period_to::text AS "to",status,created_at,completed_at,last_error`;
+const SAFE_ERRORS = new Set([
+  "Pravo pristupa izvještaju više nije dostupno.",
+  "Izvještaj prelazi trenutno dozvoljenu veličinu.",
+  "Izvještaj sadrži neusaglašene valute.",
+  "Izvještaj nije moguće generisati. Pokušajte ponovo ili kontaktirajte podršku.",
+]);
 function toPublic(row: JobRow) {
   return { id: row.id, key: row.report_key, format: row.format.toLowerCase() as "pdf" | "xlsx",
     from: row.from, to: row.to, status: row.status, createdAt: row.created_at.toISOString(),
-    completedAt: row.completed_at?.toISOString() ?? null };
+    completedAt: row.completed_at?.toISOString() ?? null,
+    error: row.status === "FAILED" || row.status === "DEAD"
+      ? (row.last_error && SAFE_ERRORS.has(row.last_error) ? row.last_error : "Izvještaj nije moguće generisati.") : null };
 }
 async function read(client: PoolClient, company: string, user: string, id: string | null) {
   const rows = await client.query<JobRow>(

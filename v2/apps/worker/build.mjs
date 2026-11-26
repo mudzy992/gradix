@@ -25,6 +25,7 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
 const WORKSPACE = {
   "@gradix/domain": new URL("../../packages/domain/", import.meta.url),
   "@gradix/db": new URL("../../packages/db/", import.meta.url),
+  "@gradix/contracts": new URL("../../packages/contracts/", import.meta.url),
 };
 
 const bundleWorkspace = {

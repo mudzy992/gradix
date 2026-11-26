@@ -22,4 +22,6 @@ export const NOTIFICATION_HREFS = {
    * jedina web stranica koju svaka rola otvara.
    */
   workdayConflictResolved: "/pregled",
+  /** Report job notice lands on an existing page until reports UI is implemented. */
+  reportJobReady: "/pregled",
 } as const;

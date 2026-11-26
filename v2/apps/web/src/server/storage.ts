@@ -180,7 +180,7 @@ export async function presignDownload(input: {
   config: Extract<StorageConfig, { configured: true }>;
   key: string;
   fileName: string;
-  contentType?: AllowedContentType;
+  contentType?: AllowedContentType | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 }): Promise<{ url: string; expiresAt: string }> {
   const url = await getSignedUrl(
     input.config.presignClient,

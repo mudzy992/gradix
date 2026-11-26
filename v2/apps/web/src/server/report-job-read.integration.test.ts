@@ -11,6 +11,9 @@ import { guard } from "./guard";
 import { getVerifiedPool } from "./db";
 import { GET, POST } from "../app/api/report-jobs/route";
 import { GET as GET_ID } from "../app/api/report-jobs/[id]/route";
+import { GET as attachmentUrl } from "../app/api/attachments/[id]/url/route";
+import { POST as attachmentConfirm } from "../app/api/attachments/[id]/confirm/route";
+import { DELETE as attachmentDelete } from "../app/api/attachments/[id]/route";
 
 vi.mock("./guard", () => ({guard:vi.fn()}));
 vi.mock("./db", () => ({getVerifiedPool:vi.fn()}));
@@ -54,6 +57,17 @@ run("report jobs — vlasništvo i tenant izolacija", () => {
     expect(other.status).toBe(404);
     const nul=await GET_ID(new NextRequest("http://localhost/api/report-jobs/x"),{params:Promise.resolve({id:"x\u0000"})});
     expect(nul.status).toBe(400);
+  });
+  it("report prilozi nisu dostupni kroz generičke attachment rute", async () => {
+    await admin.query(`INSERT INTO public.attachments(id,company_id,entity_type,entity_id,object_key,file_name,content_type,size_bytes,sha256,status,uploaded_at,created_by)
+      VALUES ('rj-att','rj-a','REPORT_JOB','rj-own','private-key','report.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',123,repeat('a',64),'ready',now(),'rj-u')`);
+    const context={params:Promise.resolve({id:"rj-att"})};
+    expect((await attachmentUrl(new NextRequest("http://localhost/api/attachments/rj-att/url"),context)).status).toBe(404);
+    expect((await attachmentConfirm(new NextRequest("http://localhost/api/attachments/rj-att/confirm",{method:"POST"}),context)).status).toBe(404);
+    expect((await attachmentDelete(new NextRequest("http://localhost/api/attachments/rj-att",{method:"DELETE"}),context)).status).toBe(404);
+    expect((await admin.query("SELECT status FROM public.attachments WHERE id='rj-att'")).rows[0]).toEqual({status:"ready"});
+    await expect(admin.query(`INSERT INTO public.attachments(id,company_id,entity_type,entity_id,object_key,file_name,content_type,size_bytes,sha256)
+      VALUES ('wrong-xlsx','rj-a','TENDER','a','key','x.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',1,repeat('b',64))`)).rejects.toMatchObject({code:"23514"});
   });
   it("kreiranje priprema trajni red sa sigurnim snapshotom i provjerava izvore i scope", async () => {
     const actor={companyId:"rj-a",userId:"rj-u",roles:["PROJECT_MANAGER"],scope:"PROJECTS" as const,projectIds:["rj-pa"]};
@@ -99,11 +113,13 @@ run("report jobs — vlasništvo i tenant izolacija", () => {
     expect((await POST(request)).status).toBe(403);
     expect(await listReportJobs(app,"rj-a","rj-u")).toHaveLength(2);
   });
-  it("POST ostaje zatvoren dok nema workera — ne stvara izgubljen posao", async () => {
+  it("POST validira zahtjev i upisuje trajni QUEUED posao", async () => {
     const body={key:"HSE",format:"pdf",from:"2026-01-01",to:"2026-01-31"};
     const request=new NextRequest("http://localhost/api/report-jobs",{method:"POST",body:JSON.stringify(body)});
-    expect((await POST(request)).status).toBe(409);
-    expect(await listReportJobs(app,"rj-a","rj-u")).toHaveLength(2);
+    const response=await POST(request);
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({key:"HSE",status:"QUEUED",format:"pdf"});
+    expect(await listReportJobs(app,"rj-a","rj-u")).toHaveLength(3);
     const invalid=new NextRequest("http://localhost/api/report-jobs",{method:"POST",body:JSON.stringify({...body,team:"x\u0000"})});
     expect((await POST(invalid)).status).toBe(400);
   });

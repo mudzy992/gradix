@@ -87,8 +87,16 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      # Poslovni upiti rade pod RLS aplikacijskom rolom; samo pg-boss koristi vlasničku.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
       DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:?Worker traži DATABASE_ADMIN_URL (vlasnik šeme za pgboss)}
       BOSS_DATABASE_URL: ${BOSS_DATABASE_URL:-}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
       REMINDER_INTERVAL_MINUTES: ${REMINDER_INTERVAL_MINUTES:-15}
       JOB_EXPIRE_MINUTES: ${JOB_EXPIRE_MINUTES:-15}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}

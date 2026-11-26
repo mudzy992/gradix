@@ -20,7 +20,7 @@ function day(value: string): number | null {
 /**
  * Write the durable request only. It is the transactional outbox for a dispatcher: sending a
  * pg-boss message inside this transaction would race commit and could lose or orphan the job.
- * Do not expose this function through POST until a recovering dispatcher and worker are active.
+ * A periodic pg-boss relay dispatches committed rows and retries after interruption.
  */
 export async function createReportJob(pool: Pool, actor: Actor, input: Input): Promise<ReportJobCreateResult> {
   if (!can(actor.roles,"reports.view") || !can(actor.roles,"export.data") || !can(actor.roles,SOURCE_PERMISSION[input.key]))

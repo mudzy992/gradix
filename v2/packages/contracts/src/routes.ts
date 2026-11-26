@@ -2963,12 +2963,16 @@ export const ROUTES = [
     auth: true, permission: "reports.view", request: null, response: ReportJobsResponse,
   },
   {
-    method: "POST", path: "/api/report-jobs", summary: "Kreiranje asinhronog izvještaja (trenutno nedostupno).",
+    method: "POST", path: "/api/report-jobs", summary: "Kreiranje asinhronog izvještaja.",
     auth: true, permission: "export.data", request: ReportJobRequest, response: ReportJob,
   },
   {
     method: "GET", path: "/api/report-jobs/{id}", summary: "Status vlastitog asinhronog izvještaja.",
     auth: true, permission: "reports.view", request: null, response: ReportJob,
+  },
+  {
+    method: "GET", path: "/api/report-jobs/{id}/download", summary: "Privremeni link za vlastiti gotovi izvještaj.",
+    auth: true, permission: "reports.view", request: null, response: AttachmentUrlResponse,
   },
   {
     method: "GET", path: "/api/reports/{key}", summary: "Sinhroni izvoz izvještaja (PDF ili XLSX).",
