@@ -1,14 +1,32 @@
+# Tajne i lokalno okruženje — nikad u repo
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Zavisnosti i build artefakti
 node_modules/
+.next/
 dist/
-generated/
-backend/generated/
-backend/dist/
-*.log
-.DS_Store
+dist-web/
+out/
+build/
 coverage/
+.turbo/
+.vitest/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Alat koji ne pripada repou
+node_modules/.pnpm-task-run-state-v1/
+.pnpm-store/
+
+# OS / editor
+.DS_Store
 .idea/
-upload-tmp/
-backups/
+
+# Stari v1 kod — ostaje u git historiji, ne u radnom stablu
+/v1/

@@ -1,0 +1,280 @@
+{
+  "outcomes": [
+    {
+      "id": "app.cost.book-once",
+      "slice": "R6",
+      "source": "v2/docs/PLAN-R6.md",
+      "summary": "PENDING stays PENDING without a price; a priced source books exactly once (idempotent per source)",
+      "group": "cost-book",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/project-cost.integration.test.ts",
+          "title": "sa stopom knjiži jednom (idempotentno po izvoru)",
+          "bodyIncludes": [
+            "posted: 1, pending: 0",
+            "posted: 0, skipped: 1",
+            "toHaveLength(1)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.cost.accountant-denied",
+      "slice": "R6",
+      "source": "v2/docs/PLAN-R6.md",
+      "summary": "ACCOUNTANT reads project costs but cannot book a manual cost",
+      "group": "cost-accountant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/project-cost.integration.test.ts",
+          "title": "ACCOUNTANT vidi troškove, ali ne smije knjižiti ručni trošak",
+          "bodyIncludes": [
+            "toBe(403)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.machine.overlap",
+      "slice": "R5",
+      "source": "MASTER_BRIEF.md#B5.8",
+      "summary": "Overlapping machine work intervals are rejected",
+      "group": "machine-overlap",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/src/r5-machine-work-log.integration.test.ts",
+          "title": "odbija preklapanje intervala na istoj mašini (MACHINE_WORK_LOG_OVERLAP)",
+          "bodyIncludes": [
+            "MACHINE_WORK_LOG_OVERLAP"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.obligation.cross-tenant",
+      "slice": "R2",
+      "source": "MASTER_BRIEF.md#B5.4",
+      "summary": "Another company's obligation detail is NOT_FOUND",
+      "group": "obligation-tenant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/obligation-isolation.integration.test.ts",
+          "title": "detalj tuđeg roka je NOT_FOUND, vlastiti dolazi",
+          "bodyIncludes": [
+            "NOT_FOUND"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.import.rollback",
+      "slice": "R3",
+      "source": "MASTER_BRIEF.md#B5.13",
+      "summary": "A database error during import rolls back the whole transaction",
+      "group": "import-rollback",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/import.integration.test.ts",
+          "title": "greška na bazi ruši CIJELU transakciju — nijedan red ne ostaje",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.import.worker-duplicate",
+      "slice": "R2",
+      "source": "MASTER_BRIEF.md#B5.5",
+      "summary": "The same worker twice in one file does not create two rows",
+      "group": "import-worker",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/import.integration.test.ts",
+          "title": "isti radnik dva puta u istom fajlu je greška, ne dva zapisa",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.dashboard.worker-denied",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.12",
+      "summary": "A worker does not receive the office overview",
+      "group": "dashboard-worker",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/pregled-service.integration.test.ts",
+          "title": "WORKER ne dobija novi pregled (null) — granica je dozvola, ne slučajnost ekrana",
+          "bodyIncludes": [
+            "null"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.dashboard.tenant",
+      "slice": "R6",
+      "source": "MASTER_BRIEF.md#B5.12",
+      "summary": "Another company's obligation is not counted in this company's overview",
+      "group": "dashboard-tenant",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/pregled-service.integration.test.ts",
+          "title": "tenant izolacija pod admin rolom: obaveza druge firme ne ulazi u broj prve",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.sync.duplicate-op",
+      "slice": "R4",
+      "source": "MASTER_BRIEF.md#B5.14",
+      "summary": "A sync batch with a duplicate local operation id is rejected before writes",
+      "group": "sync-duplicate",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/domain/src/r4-sync.test.ts",
+          "title": "rejects empty/oversized batches and duplicate local operation IDs before writes",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.mobile.account-switch",
+      "slice": "R4",
+      "source": "MASTER_BRIEF.md#B5.14",
+      "summary": "An account switch purges caches so a stale store cannot send the previous account's row",
+      "group": "mobile-switch",
+      "gate": "required",
+      "priority": "critical",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/mobile/src/db/r4-outbox.test.ts",
+          "title": "account switch purges caches, retains rows, and a stale store cannot send the prior account's row",
+          "bodyIncludes": [
+            "expect("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app.mobile.device-e2e",
+      "slice": "R4",
+      "source": ".github/workflows/mobilni-e2e.yml",
+      "summary": "Device-level Maestro flows for offline field entry",
+      "group": "mobile-maestro",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "integration",
+      "status": "CI-SKIP",
+      "owner": "mobilni-e2e.yml nightly, not a pull-request gate",
+      "review": "Promote a Maestro flow into ci-v2 only after a device runner is part of the pull-request job."
+    },
+    {
+      "id": "app.storage.minio-confirm",
+      "slice": "R2",
+      "source": "MASTER_BRIEF.md#B5.4",
+      "summary": "An attachment becomes ready only after storage confirm",
+      "group": "storage-confirm",
+      "gate": "required",
+      "priority": "high",
+      "assertion": "persistence",
+      "status": "CI-SKIP",
+      "owner": "MinIO decision 2026-11-20",
+      "review": "Remove when ci-v2.yml runs MinIO and a test asserts pending to ready. Unconfigured storage must still insert nothing."
+    },
+    {
+      "id": "app.payroll.net",
+      "slice": "R10",
+      "source": "MASTER_BRIEF.md#B11",
+      "summary": "Full gross-to-net payroll is a later release and is not implemented",
+      "implementation": "PLANNED_NOT_IMPLEMENTED",
+      "group": "payroll-net",
+      "gate": "track",
+      "priority": "later",
+      "assertion": "unit",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "app.platform.hse",
+      "slice": "R9",
+      "source": "MASTER_BRIEF.md#B11",
+      "summary": "Site diary and HSE are a later release and are not implemented",
+      "implementation": "PLANNED_NOT_IMPLEMENTED",
+      "group": "platform-hse",
+      "gate": "track",
+      "priority": "later",
+      "assertion": "integration",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "app.platform.warehouse",
+      "slice": "R8",
+      "source": "MASTER_BRIEF.md#B11",
+      "summary": "Warehouse, purchasing, and service planning are a later release",
+      "implementation": "PLANNED_NOT_IMPLEMENTED",
+      "group": "platform-warehouse",
+      "gate": "track",
+      "priority": "later",
+      "assertion": "integration",
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "app.platform.email",
+      "slice": "R2",
+      "source": "MASTER_BRIEF.md#B4",
+      "summary": "Email and push notification delivery are not an R7 requirement",
+      "implementation": "PLANNED_NOT_IMPLEMENTED",
+      "group": "platform-email",
+      "gate": "track",
+      "priority": "later",
+      "assertion": "integration",
+      "status": "NOT_IMPLEMENTED"
+    }
+  ]
+}

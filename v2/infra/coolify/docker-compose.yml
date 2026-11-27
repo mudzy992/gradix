@@ -1,0 +1,208 @@
+# Gradix v2 staging — Coolify Docker Compose resource.
+# Base Directory: /v2  |  Compose file: /infra/coolify/docker-compose.yml
+# Secrets are supplied in Coolify only; this file contains names/defaults, never secret values.
+services:
+  web:
+    build:
+      # Coolify resolves both paths against Base Directory (/v2), not the compose file directory.
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      SERVICE_FQDN_WEB: ${SERVICE_FQDN_WEB:-}
+      # Database: required app principal plus optional separate migrator.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
+      DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
+      # Reset provjerava da pg-boss ne koristi drugu bazu.
+      BOSS_DATABASE_URL: ${BOSS_DATABASE_URL:-}
+      APP_URL: ${APP_URL:-}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET mora biti postavljen u Coolifyju (min 32 znaka)}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      PGSSLMODE: ${PGSSLMODE:-verify-full}
+      TZ: ${TZ:-Europe/Sarajevo}
+      # Fixed same-stack S3 endpoint and isolated staging bucket; only the public URL is operator-configured.
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      # Web-origin target used by diagnostics and mapped to the MinIO server-wide CORS allowlist.
+      MINIO_CORS_ALLOWED_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
+      # Fixed to the existing ACL contract; only the password is supplied as a Coolify secret.
+      REDIS_HOST: ${REDIS_HOST:-redis-core}
+      REDIS_PORT: "${REDIS_PORT:-6380}"
+      REDIS_USER: ${REDIS_USER:-gradix_v2}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PREFIX: "${REDIS_PREFIX:-gradix:stg:}"
+      REDIS_TLS_CA_FILE: ${REDIS_TLS_CA_FILE:-/run/secrets/redis-ca.crt}
+      SEED_DEMO: ${SEED_DEMO:-false}
+    volumes:
+      # PostgreSQL CA: host source -> stable in-container path used in DATABASE_URL.
+      - type: bind
+        source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
+        target: /etc/ssl/certs/coolify-ca.crt
+        read_only: true
+        bind:
+          create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
+      # Bind the existing CA file as read-only; fail deploy if the host certificate is missing.
+      - type: bind
+        source: /data/coolify/ssl/redis-core/redis-ca.crt
+        target: /run/secrets/redis-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      - default
+      - db_net
+      - redis_net
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Worker: pg-boss poslovi (canarinac + isporuka obavještenja). Nema port i nema healthcheck
+  # rute — njegovo stanje se čita kroz web `GET /api/health/queue`, jer se healthcheck bez
+  # porta ne može provjeriti spolja. Restart politika je jedini signal koji Coolify vidi.
+  # Migracije NE pokreće: to radi `web` pri startu, pa dva procesa ne mijenjaju šemu paralelno.
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Poslovni upiti rade pod RLS aplikacijskom rolom; samo pg-boss koristi vlasničku.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
+      DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:?Worker traži DATABASE_ADMIN_URL (vlasnik šeme za pgboss)}
+      BOSS_DATABASE_URL: ${BOSS_DATABASE_URL:-}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      REMINDER_INTERVAL_MINUTES: ${REMINDER_INTERVAL_MINUTES:-15}
+      JOB_EXPIRE_MINUTES: ${JOB_EXPIRE_MINUTES:-15}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PGSSLMODE: ${PGSSLMODE:-verify-full}
+      TZ: ${TZ:-Europe/Sarajevo}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+    volumes:
+      # PostgreSQL CA — ISTI mount kao na `web`, i to bez alternative:
+      # `PGSSLMODE=verify-full` traži tačno ovaj fajl na tačno ovoj putanji, a worker se
+      # spaja na bazu kao vlasnik šeme (pgboss). Bez mounta Node padne pri pokretanju sa
+      # `ENOENT: no such file or directory, open '/etc/ssl/certs/coolify-ca.crt'` — i to
+      # TEK na deployu, jer lokalno taj fajl postoji (ili SSL nije verify-full).
+      # `read_only` jer sertifikat nije ništa što proces smije mijenjati.
+      - type: bind
+        source: ${POSTGRES_CA_FILE:-/data/coolify/ssl/coolify-ca.crt}
+        target: /etc/ssl/certs/coolify-ca.crt
+        read_only: true
+        bind:
+          create_host_path: ${POSTGRES_CA_MOUNT_CREATE_PATH:-false}
+    depends_on:
+      - web
+    networks:
+      - default
+      - db_net
+      - redis_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Staging-only MinIO; persistent host data stays isolated from v1 storage.
+  # Prepare the host directory and migrate any existing named-volume data before deploying.
+  minio:
+    image: ghcr.io/coollabsio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in Coolify}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
+      # The bundled MinIO server has global API CORS; bucket PUT-CORS is not implemented.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOWED_ORIGIN:-https://gradix.ba101.top}
+      # Coolify routes the S3 API on 9000; the Console is routed through the private proxy service below.
+      SERVICE_FQDN_MINIO: ${SERVICE_FQDN_MINIO:-}
+      SERVICE_FQDN_MINIO_9000: ${SERVICE_FQDN_MINIO_9000:-}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-https://minio-console.gradix.ba101.top}
+    volumes:
+      - type: bind
+        source: /mnt/shared-app-files/gradix-v2/minio
+        target: /data
+        bind:
+          create_host_path: false
+    networks:
+      - default
+    expose:
+      - "9000" # S3 API; Console stays private on the stack network at 9001.
+
+  # Give Coolify a single, stable route port for the Console; proxy to MinIO's private 9001.
+  minio-console-proxy:
+    build:
+      context: .
+      dockerfile: infra/minio/Dockerfile.console-proxy
+    image: gradix-v2-minio-console-proxy:nginx
+    restart: unless-stopped
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      SERVICE_FQDN_MINIO_CONSOLE_PROXY: ${SERVICE_FQDN_MINIO_CONSOLE_PROXY:-}
+    networks:
+      - default
+    expose:
+      - "8080"
+
+  # Shell-enabled wrapper around mc; the upstream mc image itself has mc as its entrypoint.
+  # Web does not depend on this one-shot bootstrap, so MinIO outages never gate app startup.
+  minio-init:
+    build:
+      context: .
+      dockerfile: infra/minio/Dockerfile.init
+    image: gradix-v2-minio-init:shell
+    restart: on-failure
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in Coolify}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in Coolify}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-gradix-stg}
+    networks:
+      - default
+
+networks:
+  # Keep Coolify's default stack network for proxy routing and minio service DNS.
+  default:
+  # Existing external infrastructure networks; Compose does not create them.
+  db_net:
+    external: true
+  redis_net:
+    external: true

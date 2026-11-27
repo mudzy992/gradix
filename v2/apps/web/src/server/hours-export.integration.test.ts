@@ -1,0 +1,211 @@
+/** R6.2: CSV export LOCKED/CONFIRMED only; ACCOUNTANT ok; WORKER 403. */
+import { NextRequest } from "next/server";
+import { Pool } from "pg";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { withCompany, companyId } from "@gradix/db";
+import { GET as hoursExportGet } from "@/app/api/workdays/hours-export/route";
+import { GET as reportGet } from "@/app/api/reports/[key]/route";
+import { issueAccessToken, ACCESS_COOKIE } from "./session";
+import ExcelJS from "exceljs";
+import { listHoursForExport } from "./hours-export-service";
+import { loadWorkHoursReport } from "./report-work-hours";
+import { renderReportPdf, renderReportXlsx } from "./report-render";
+
+const adminUrl = process.env.DATABASE_ADMIN_URL;
+const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
+const RUN = Date.now().toString(36);
+const COMPANY = `cmp_r62_${RUN}`;
+const USER_OWNER = `usr_r62_o_${RUN}`;
+const USER_ACCT = `usr_r62_a_${RUN}`;
+const USER_WORKER = `usr_r62_w_${RUN}`;
+const WORKER = `wrk_r62_${RUN}`;
+const PROJECT = `prj_r62_${RUN}`;
+const WD_LOCKED = `wd_r62_l_${RUN}`;
+const WD_SUB = `wd_r62_s_${RUN}`;
+const WE_LOCKED = `we_r62_l_${RUN}`;
+const WE_SUB = `we_r62_s_${RUN}`;
+
+async function signIn(userId: string): Promise<string> {
+  const sessionId = `ses_${userId}`;
+  const admin = new Pool({ connectionString: adminUrl, max: 1 });
+  await withCompany(admin, companyId(COMPANY), async (client) => {
+    await client.query(
+      `INSERT INTO sessions (id, company_id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4, now() + interval '1 day')
+       ON CONFLICT (id) DO UPDATE SET expires_at = EXCLUDED.expires_at`,
+      [sessionId, COMPANY, userId, `hash_${sessionId}`],
+    );
+  });
+  await admin.end();
+  return `${ACCESS_COOKIE}=${issueAccessToken({ sub: userId, sid: sessionId, companyId: COMPANY })}`;
+}
+
+describeDb("R6.2 hours export API", () => {
+  const admin = new Pool({ connectionString: adminUrl, max: 2 });
+  let cookieOwner = "";
+  let cookieAcct = "";
+  let cookieWorker = "";
+
+  beforeAll(async () => {
+    await admin.query(`INSERT INTO companies (id, name, slug) VALUES ($1, 'R62', $2)`, [COMPANY, `r62-${RUN}`]);
+    await admin.query(
+      `INSERT INTO users (id, email, first_name, last_name, password_hash, must_change_password)
+       VALUES ($1,$4,'O','wner','x',false), ($2,$5,'A','cct','x',false), ($3,$6,'W','ork','x',false)`,
+      [
+        USER_OWNER, USER_ACCT, USER_WORKER,
+        `owner-r62-${RUN}@test.example`, `acct-r62-${RUN}@test.example`, `wrk-r62-${RUN}@test.example`,
+      ],
+    );
+    await withCompany(admin, companyId(COMPANY), async (client) => {
+      await client.query(
+        `INSERT INTO memberships (id, user_id, company_id, roles, scope)
+         VALUES ($1,$2,$3,ARRAY['OWNER']::"Role"[],'COMPANY'),
+                ($4,$5,$3,ARRAY['ACCOUNTANT']::"Role"[],'COMPANY'),
+                ($6,$7,$3,ARRAY['WORKER']::"Role"[],'SELF')`,
+        [`mem_o_${RUN}`, USER_OWNER, COMPANY, `mem_a_${RUN}`, USER_ACCT, `mem_w_${RUN}`, USER_WORKER],
+      );
+      await client.query(
+        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, team)
+         VALUES ($1,$2,'Amar','Hadžić','2024-01-01'::date,'Sjever')`,
+        [WORKER, COMPANY],
+      );
+      await client.query(
+        `INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'R62','Projekat R62')`,
+        [PROJECT, COMPANY],
+      );
+      await client.query(
+        `INSERT INTO workdays
+           (id, company_id, worker_id, work_date, status, approval_status, created_by, updated_by)
+         VALUES ($1,$3,$4,'2026-11-10'::date,'SUBMITTED','LOCKED',$5,$5),
+                ($2,$3,$4,'2026-11-11'::date,'SUBMITTED','SUBMITTED',$5,$5)`,
+        [WD_LOCKED, WD_SUB, COMPANY, WORKER, USER_OWNER],
+      );
+      await client.query(
+        `INSERT INTO work_entries
+           (id, company_id, workday_id, worker_id, kind, started_at, ended_at, end_state, project_id, created_by, updated_by)
+         VALUES
+           ($1,$3,$4,$5,'WORK','2026-11-10T07:00:00Z','2026-11-10T15:00:00Z','KNOWN_END',$6,$7,$7),
+           ($2,$3,$8,$5,'WORK','2026-11-11T07:00:00Z','2026-11-11T15:00:00Z','KNOWN_END',$6,$7,$7)`,
+        [WE_LOCKED, WE_SUB, COMPANY, WD_LOCKED, WORKER, PROJECT, USER_OWNER, WD_SUB],
+      );
+    });
+    cookieOwner = await signIn(USER_OWNER);
+    cookieAcct = await signIn(USER_ACCT);
+    cookieWorker = await signIn(USER_WORKER);
+  }, 60_000);
+
+  afterAll(async () => {
+    await withCompany(admin, companyId(COMPANY), async (client) => {
+      await client.query("DELETE FROM work_entries WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM workdays WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM projects WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM workers WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM sessions WHERE company_id = $1", [COMPANY]);
+      await client.query("DELETE FROM memberships WHERE company_id = $1", [COMPANY]);
+    });
+    await admin.query("DELETE FROM users WHERE id = ANY($1::text[])", [[USER_OWNER, USER_ACCT, USER_WORKER]]);
+    await admin.query("DELETE FROM companies WHERE id = $1", [COMPANY]);
+    await admin.end();
+  }, 60_000);
+
+  it("OWNER CSV sadrži LOCKED, ne SUBMITTED", async () => {
+    const res = await hoursExportGet(
+      new NextRequest("http://localhost/api/workdays/hours-export?from=2026-11-01&to=2026-11-30", {
+        headers: { cookie: cookieOwner },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    const text = await res.text();
+    expect(text).toContain("LOCKED");
+    expect(text).toContain("Amar Hadžić");
+    expect(text).toContain("8.000");
+    expect(text).not.toContain("2026-11-11");
+  });
+
+  it("ACCOUNTANT smije izvoziti", async () => {
+    const res = await hoursExportGet(
+      new NextRequest("http://localhost/api/workdays/hours-export?from=2026-11-01&to=2026-11-30", {
+        headers: { cookie: cookieAcct },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("LOCKED");
+  });
+
+  it("report API vraća stvarni PDF/XLSX, odbija rolu, filtere i neispravan datum", async () => {
+    const base = "http://localhost/api/reports/WORK_HOURS?from=2026-11-01&to=2026-11-30";
+    const params = {params:Promise.resolve({key:"WORK_HOURS"})};
+    const pdf = await reportGet(new NextRequest(`${base}&format=pdf`, {headers:{cookie:cookieOwner}}), params);
+    expect(pdf.status).toBe(200); expect(pdf.headers.get("content-type")).toBe("application/pdf");
+    expect(Buffer.from(await pdf.arrayBuffer()).toString("latin1")).toContain("8.000");
+    const excel = await reportGet(new NextRequest(`${base}&format=xlsx&team=Sjever`, {headers:{cookie:cookieOwner}}), params);
+    expect(excel.status).toBe(200);
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(await excel.arrayBuffer()) as never);
+    expect(wb.getWorksheet("Izvještaj")!.getCell("D4").value).toBe("8.000");
+    expect((await reportGet(new NextRequest(`${base}&format=pdf`,{headers:{cookie:cookieWorker}}),params)).status).toBe(403);
+    expect((await reportGet(new NextRequest(`${base}&format=other`,{headers:{cookie:cookieOwner}}),params)).status).toBe(400);
+    expect((await reportGet(new NextRequest(`${base}&format=pdf`,{headers:{cookie:cookieOwner}}),{params:Promise.resolve({key:"NOPE"})})).status).toBe(400);
+    expect((await reportGet(new NextRequest("http://localhost/api/reports/WORK_HOURS?from=2026-02-30&to=2026-03-01&format=pdf",{headers:{cookie:cookieOwner}}),params)).status).toBe(400);
+    expect((await reportGet(new NextRequest(`${base}&format=pdf&team=Sjever`,{headers:{cookie:cookieOwner}}),{params:Promise.resolve({key:"PROJECT_COSTS"})})).status).toBe(400);
+  });
+
+  it("svih sedam ključeva prolazi kroz zajednički HTTP izvoz u oba formata", async () => {
+    const keys = ["PROJECT_COSTS", "MACHINE_UTILIZATION", "FUEL", "WORK_HOURS", "DEADLINES", "TENDERS", "HSE"];
+    for (const key of keys) {
+      const base = `http://localhost/api/reports/${key}?from=2026-11-01&to=2026-11-30`;
+      const params = {params:Promise.resolve({key})};
+      const pdf = await reportGet(new NextRequest(`${base}&format=pdf`, {headers:{cookie:cookieOwner}}), params);
+      expect(pdf.status, `${key} PDF`).toBe(200);
+      expect(Buffer.from(await pdf.arrayBuffer()).toString("latin1").startsWith("%PDF-")).toBe(true);
+      const excel = await reportGet(new NextRequest(`${base}&format=xlsx`, {headers:{cookie:cookieOwner}}), params);
+      expect(excel.status, `${key} XLSX`).toBe(200);
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(await excel.arrayBuffer()) as never);
+      expect(wb.getWorksheet("Izvještaj")).toBeDefined();
+    }
+  });
+
+  it("CSV filteri projekat i tim sužavaju iste redove, a neispravan datum daje 400", async () => {
+    const base = "http://localhost/api/workdays/hours-export?from=2026-11-01&to=2026-11-30";
+    const options = { headers: { cookie: cookieOwner } };
+    const selected = await hoursExportGet(new NextRequest(`${base}&projectId=${PROJECT}&team=Sjever`, options));
+    expect(selected.status).toBe(200);
+    expect(await selected.text()).toContain("8.000");
+    const other = await hoursExportGet(new NextRequest(`${base}&projectId=${PROJECT}&team=Jug`, options));
+    expect(await other.text()).not.toContain("8.000");
+    const invalid = await hoursExportGet(new NextRequest("http://localhost/api/workdays/hours-export?from=2026-02-31&to=2026-03-01", options));
+    expect(invalid.status).toBe(400);
+  });
+
+  it("WORK_HOURS izvještaj koristi stvarne redove CSV izvoza u oba formata i sužava opseg", async () => {
+    const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      const actor = { userId: USER_OWNER, companyId: COMPANY, roles: ["PROJECT_MANAGER" as const], scope: "PROJECTS", projectIds: [PROJECT] };
+      const filters = { from: "2026-11-01", to: "2026-11-30", team: "Sjever", projectId: PROJECT };
+      const screenRows = await listHoursForExport(app, actor, filters);
+      const doc = await loadWorkHoursReport(app, actor, filters, new Date("2026-12-01T12:00:00Z"));
+      expect(screenRows).toHaveLength(1);
+      expect(doc.rows).toEqual([[screenRows[0]!.worker, screenRows[0]!.date, screenRows[0]!.project, "8.000", "LOCKED"]]);
+      const pdf = Buffer.from(renderReportPdf(doc)).toString("latin1");
+      expect(pdf).toContain("8.000"); expect(pdf).toContain(USER_OWNER);
+      const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(await renderReportXlsx(doc) as never);
+      const sheet = workbook.getWorksheet("Izvještaj")!;
+      expect(sheet.getCell("A4").value).toBe("Amar Hadžić");
+      expect(sheet.getCell("D4").value).toBe("8.000");
+      expect(sheet.getCell("E4").value).toBe("LOCKED");
+      expect((await loadWorkHoursReport(app, actor, {...filters, team: "Jug"})).rows).toEqual([]);
+      expect((await loadWorkHoursReport(app, {...actor, projectIds: []}, filters)).rows).toEqual([]);
+      expect((await loadWorkHoursReport(app, actor, {...filters, projectId: "drugi"})).rows).toEqual([]);
+      await expect(loadWorkHoursReport(app, {...actor, roles: ["WORKER"]}, filters)).rejects.toThrow("REPORT_FORBIDDEN");
+    } finally { await app.end(); }
+  });
+
+  it("WORKER dobija 403", async () => {
+    const res = await hoursExportGet(
+      new NextRequest("http://localhost/api/workdays/hours-export?from=2026-11-01&to=2026-11-30", {
+        headers: { cookie: cookieWorker },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+});

@@ -1,0 +1,369 @@
+name: Mobilni E2E (Maestro)
+
+# Noćna regresija mobilne aplikacije protiv pravog API-ja + ručno pokretanje.
+# Zaseban workflow, a ne dio ci-v2.yml: emulator + APK gradnja dodaju značajno
+# vrijeme, što ne ide na svaki push (ci-v2.yml je to i najavio u svom zaglavlju).
+#
+# VAŽNO — noćni termin: GitHub `schedule` okidač radi SAMO s kopijom ovog fajla na
+# DEFAULT grani repozitorija. Dok god je fajl samo na radnoj grani, noćni run se ne
+# pokreće; ručno pokretanje (workflow_dispatch) s radne grane radi od spajanja u main.
+#
+# Arhitektura (modularno, po fazama):
+#   1. apk       — prebuild + gradnja release APK-a; APK se kešira po izvoru i
+#                  prosljeđuje sljedećem jobu kao artefakt (keš pogodak = preskočena
+#                  gradnja, noćni runovi su onda značajno kraći);
+#   2. mobilni-e2e — API s demo svijetom + Android emulator + Maestro tokovi.
+#                  Nezavisni timeout od gradnje: sporije gradnje ne smiju pojesti
+#                  budžet testiranja (prvi run je ovo platio otkazivanjem na 60 min).
+#
+# Šta pokriva: 5 autonomnih tokova iz v2/apps/mobile/maestro/ci/ (prijava + A1e
+# odjava→prijava, offline red, povratak mreže bez duplikata, grupni unos šefa).
+# Šta NE pokriva: ponašanje pravog uređaja (tipkovnica/autofill, promjena mreže,
+# OEM optimizacije) — to ostaje telefonski prolaz vlasnika (docs/MOBILNI-CHECKLISTA.md).
+
+on:
+  # NEMA push/PR okidača — namjerno.
+  #
+  # `IMPLEMENTATION_PLAN.md` traži da emulator NE blokira PR/push: APK gradnja
+  # (assembleRelease) + hladan boot emulatora + Maestro tokovi traju 30–40 min i
+  # padaju zbog okruženja (KVM, launcher fokus, mreža emulatora), a ne zbog koda.
+  # Zato je puni run samo ručno (`workflow_dispatch`) ili noću (`schedule`).
+  #
+  # Brza provjera koja IDE na svaki push je u `ci-v2.yml`: `pnpm check-maestro`
+  # validira YAML tokova, imena tokova i reference na fajlove (sekunde, bez emulatora).
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC = 03:00 po lokalnom vremenu (CET) — unutar 00–06
+  workflow_dispatch:
+    inputs:
+      scenarij:
+        description: "Šta pokrenuti"
+        type: choice
+        default: sve
+        options: [sve, snimci, offline, grupa]
+      pokusaja:
+        description: "Maksimalan broj pokušaja po toku (1 = bez retryja)"
+        type: string
+        default: "3"
+
+concurrency:
+  group: mobilni-e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: APK (prebuild + assembleRelease)
+    # Isti razlog kao glavni CI: `ubuntu-latest` je od 2026-11 = 26.04, gdje korisnik
+    # `runner` NIJE u grupi `kvm` (`crw-rw---- root kvm`), pa emulator padne na
+    # „Software CPU emulation (-accel off) is not supported" i boot nikad ne završi
+    # (runovi 45355091348, 45370246877). 24.04 je posljednji image na kojem emulator radi.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Peče se u JS bundle pri gradnji: emulator dolazi do hosta preko 10.0.2.2.
+      EXPO_PUBLIC_API_URL: http://10.0.2.2:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Gradle keš
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-v1-${{ hashFiles('v2/pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-v1-
+
+      - name: Instalacija (pnpm)
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      # APK keširan po sadržaju izvora (app.json, src, lock): dokle god se mobilna
+      # aplikacija ne mijenja, gradnja se preskače — u ključu je i URL API-ja jer
+      # se peče u bundle.
+      - name: Keš APK-a (po izvoru)
+        id: apk-cache
+        uses: actions/cache@v4
+        with:
+          path: v2/apps/mobile/.ci-apk
+          key: apk-v1-${{ hashFiles('v2/apps/mobile/app.json', 'v2/apps/mobile/src/**', 'v2/apps/mobile/package.json', 'v2/pnpm-lock.yaml') }}-10.0.2.2
+
+      - name: Expo prebuild + cleartext samo za CI APK
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile
+        run: |
+          npx expo prebuild -p android --no-install
+          # CI APK razgovara s API-jem preko čistog http://10.0.2.2:3000, a Android
+          # blokira nešifriran saobraćaj u release gradnji. Ovaj patch diruje SAMO
+          # generisani CI artefakt — app.json i produkcijske gradnje (https) ostaju čisti.
+          sed -i 's|<application |<application android:usesCleartextTraffic="true" |' android/app/src/main/AndroidManifest.xml
+          test "$(grep -c 'usesCleartextTraffic' android/app/src/main/AndroidManifest.xml)" = "1"
+          echo "EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL" > .env
+
+      - name: Gradnja APK-a (assembleRelease)
+        if: steps.apk-cache.outputs.cache-hit != 'true'
+        working-directory: v2/apps/mobile/android
+        run: |
+          ./gradlew assembleRelease --stacktrace
+          mkdir -p ../.ci-apk
+          cp app/build/outputs/apk/release/app-release.apk ../.ci-apk/
+
+      - name: Provjera APK-a
+        working-directory: v2/apps/mobile
+        run: |
+          ls -lh .ci-apk/app-release.apk
+          # JS bundle mora biti ugrađen — release APK nema Metro poslužitelja;
+          # bez bundle-a aplikacija se otvara u prazno/crno i odmah umire.
+          if unzip -l .ci-apk/app-release.apk | grep -q "index.android.bundle"; then
+            echo "::notice title=APK::JS bundle ugrađen"
+          else
+            echo "::error title=APK::nema index.android.bundle u APK-u — release se neće otvoriti"
+            exit 1
+          fi
+          # Emulator je x86_64 — APK mora nositi native biblioteke za tu arhitekturu.
+          if unzip -l .ci-apk/app-release.apk | grep -q "lib/x86_64"; then
+            echo "::notice title=APK::x86_64 biblioteke prisutne"
+          else
+            echo "::error title=APK::nema lib/x86_64 u APK-u — emulator ne može pokrenuti aplikaciju"
+            exit 1
+          fi
+          # Fontovi: _layout čeka useFonts — bez ugrađenih .ttf ostaje spinner zauvijek.
+          nttf=$(unzip -l .ci-apk/app-release.apk | grep -c "\.ttf" || true)
+          if [ "${nttf:-0}" -ge 5 ]; then
+            echo "::notice title=APK::fontovi ugrađeni ($nttf .ttf)"
+          else
+            echo "::error title=APK::samo $nttf .ttf u APK-u (očekivano 5) — useFonts se neće završiti"
+          fi
+
+      - name: APK za testni job (artefakt)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk/app-release.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  mobilni-e2e:
+    name: Emulator + Maestro tokovi
+    needs: apk
+    # Vidi objašnjenje iznad (job apk): 26.04 nema pristup /dev/kvm za `runner`.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+      DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+      AUTH_SECRET: ci-placeholder-secret-min-32-characters
+      # Lozinka demo svijeta: tajna DEMO_LOZINKA ako je postavljena, inače poznata CI
+      # demo lozinka (nije tajna — ista vrijednost stoji u ci-v2.yml za web E2E).
+      SEED_PASSWORD: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
+
+    services:
+      postgres:
+        image: postgres:18.6-trixie
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      # Maestro CLI keširan u ~/.maestro; ako je binarna tu iz keša, preskače se download.
+      - name: Keš Maestro CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-cli-v1
+      - name: Instalacija Maestro CLI
+        run: |
+          if [ ! -x "$HOME/.maestro/bin/maestro" ]; then
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+          fi
+          "$HOME/.maestro/bin/maestro" --version
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # Slika sistema za emulator (~1,3 GB) — bez keša bi se skidala pri svakom runu.
+      - name: Keš Android sistemskih slika
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images
+          key: emulator-img-${{ runner.os }}-api34-aosp_atd-x86_64-v1
+
+      - name: Instalacija (pnpm)
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Skidanje APK-a iz gradnje
+        uses: actions/download-artifact@v4
+        with:
+          name: mobilni-apk
+          path: v2/apps/mobile/.ci-apk
+
+      # ---------------- API s demo svijetom (recepta iz ci-v2.yml) ----------------
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+
+      - name: Seed + demo svijet
+        working-directory: v2
+        run: |
+          pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts || { echo "::error::SEED_PREGLED_FAILED"; exit 1; }
+
+      - name: Gradnja i start API-ja
+        working-directory: v2
+        run: |
+          pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
+          (pnpm --filter @gradix/web start > /tmp/api.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/api/ready >/dev/null && break || sleep 2; done
+          curl -sf http://127.0.0.1:3000/api/ready || { echo "::error::API_NOT_READY"; tail -n 40 /tmp/api.log; exit 1; }
+
+      # ---------------- Emulator + Maestro tokovi ----------------
+      # Dijagnostika okruženja prije emulacije: KVM, CPU, RAM — sve što odlučuje
+      # da li emulator uopšte ima šanse (bez KVM-a je x86_64 emulator praktično
+      # neupotrebljiv, a premali RAM guši system_server → ANR dijalozi).
+      - name: Okruženje runnera (KVM/CPU/RAM)
+        run: |
+          echo "::warning title=Runner::CPU jezgara: $(nproc)"
+          echo "::warning title=Runner::Disk: $(df -h / | awk 'NR==2{print $4 " slobodno od " $2}')"
+          echo "::warning title=Runner::RAM: $(free -h | awk '/^Mem:/{print $2 " ukupno, " $7 " slobodno"}')"
+          if [ ! -e /dev/kvm ]; then
+            echo "::error title=Runner::NEMA /dev/kvm — emulator bez hardverske virtualizacije; ovaj runner ne može pokretati x86_64 emulator prihvatljivom brzinom"
+            exit 1
+          fi
+          echo "::warning title=Runner::KVM čvor: $(ls -l /dev/kvm | awk '{print $1, $3, $4}')"
+          # POSTOJANJE NIJE DOSTUPNOST. Na GitHub runnerima (24.04 i 26.04) čvor je
+          # `crw-rw---- root kvm`, a `runner` nije u grupi `kvm` — emulator tada padne na
+          # „Software CPU emulation (-accel off) is not supported" i boot nikad ne završi
+          # (runovi 45355091348, 45370246877). `chmod` sam nije dovoljan jer udev vrati
+          # dozvole; zato se piše trajno pravilo i primjenjuje na čvor.
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            echo "::warning title=Runner::KVM nije dostupan korisniku $(id -un) — postavljam udev pravilo (MODE=0666)"
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+              | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+            sudo udevadm control --reload-rules || true
+            sudo udevadm trigger --name-match=kvm || true
+            sudo chmod 666 /dev/kvm || true
+          fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            echo "::error title=Runner::KVM postoji ali nije dostupan korisniku $(id -un) — emulator bi pao na softversku emulaciju (bez -accel)"
+            exit 1
+          fi
+          echo "::warning title=Runner::KVM dostupan za čitanje i pisanje korisniku $(id -un)"
+
+      - name: Maestro tokovi (emulator)
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          DEMO_LOZINKA: ${{ secrets.DEMO_LOZINKA || 'E2eDemoLozinka-123' }}
+          SCENARIJ: ${{ inputs.scenarij || 'sve' }}
+          POKUSAJA: ${{ inputs.pokusaja || '3' }}
+        with:
+          # aosp_atd (podvlaka!) - sdkmanager tag; s crticom paket ne postoji i
+          # sdkmanager umire sutke (run d004919). Galaxy Nexus = manji ekran,
+          # laksi swiftshader. Kanal STABILAN: canary emulator (37.3.9, gfxstream)
+          # se zaglavi na "Checking system compatibility" i boot nikad ne zavrsi
+          # (runovi b16cda4/bbda46d); stabilni je dokazano bootovao ovim
+          # runnerima (raniji google_apis-31 runovi).
+          api-level: 34
+          target: aosp_atd
+          arch: x86_64
+          profile: Galaxy Nexus
+          cores: 2
+          ram-size: 2048M
+          # Hladan start zna potrajati (skidanje slike pri prvom runu + boot) —
+          # default od 600s je nedovoljan, pa je budžet 900s.
+          emulator-boot-timeout: 900
+          # Animacije gasi naša skripta (s retryjem) — disable-animations input
+          # bi pao na restriktivnim slikama prije nego skripta uopšte krene.
+          disable-animations: false
+          sdcard-path-or-size: 100M
+          # OPCIJE SU PRESLIKANE 1:1 iz CI-ja same akcije za aosp_atd — bez
+          # -no-snapshot i bez -camera-front none (run 7e68fce: uz njih se
+          # hladan boot uopšte nije završio u 900s; njihova kombinacija boota).
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
+          # Emulatorov izlaz se presreće u /tmp/emu.log (logovi koraka su nam
+          # nedostupni izvan Actions UI-ja) — korak ispod ga objavljuje u
+          # anotacije i kao artefakt.
+          pre-emulator-launch-script: |
+            mkdir -p /tmp/emuwrap
+            mv "$ANDROID_HOME/emulator/emulator" "$ANDROID_HOME/emulator/emulator.real"
+            printf '#!/bin/sh\nexec "$(dirname "$0")/emulator.real" "$@" > /tmp/emu.log 2>&1\n' > "$ANDROID_HOME/emulator/emulator"
+            chmod +x "$ANDROID_HOME/emulator/emulator"
+          # JEDAN red — akcija razbija script po redovima (svaki red = zaseban
+          # `sh -c`), pa višeredne konstrukcije puću sintaksom. Sva logika je u
+          # scripts/emulator-ci.sh.
+          script: bash v2/apps/mobile/scripts/emulator-ci.sh
+
+      # ---------------- Dokazi (uvijek, i pri padu) ----------------
+      - name: Emulator boot log — dijagnostika (uvijek)
+        if: always()
+        run: |
+          if [ -f /tmp/emu.log ]; then
+            echo "::warning title=EmuLog pocetak::$(head -c 1600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+            echo "::warning title=EmuLog kraj::$(tail -c 2600 /tmp/emu.log | tr '\n' '|' | cut -c1-1500)"
+          else
+            echo "::warning title=EmuLog::nema ga — emulator možda nije ni pokrenut"
+          fi
+      - name: Emulator boot log — artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-boot-log
+          path: /tmp/emu.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Maestro dokazi — artefakt (video, screenshotovi, junit, logcat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-dokazi
+          path: v2/apps/mobile/maestro-artifacts
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: API log — artefakt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobilni-e2e-api-log
+          path: /tmp/api.log
+          retention-days: 14
+          if-no-files-found: ignore

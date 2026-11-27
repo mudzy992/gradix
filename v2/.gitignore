@@ -1,0 +1,44 @@
+# zavisnosti i build
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# okruženja — nikad u repo
+.env
+.env.*
+!.env.example
+
+# testovi i alat
+coverage/
+.turbo/
+.vitest/
+playwright-report/
+test-results/
+quality/report.json
+quality/application-report.json
+
+# baza i lokalni podaci
+pgdata/
+*.sqlite
+*.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# generisano (Prisma klijent, OpenAPI)
+packages/**/src/generated/
+
+# mobilni web izvoz i Turborepo keš
+apps/mobile/dist-web/
+
+# Lokalni alati za razvoj (PG server, pomoćne skripte) — nikad u repo
+.local-tools/
+.local-pg/
+
+# lokalni alat za podizanje embedded Postgresa (nije dio repoa)
+.pg/

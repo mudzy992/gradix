@@ -1,0 +1,60 @@
+# CI tok 5/5 — šef gradilišta: grupni unos za ekipu, ishod po radniku.
+#
+# Mreža mora biti UKLJUČENA (skripta emulator-net.sh on prije ovog toka).
+# Bira se Nedim Softić — NE Amar (radnik iz offline scenarija) — da grupni
+# unos i radnikov sopstveni unos za isti dan ne naprave sukob u scenariju „sve".
+# Vrijeme ostaje na defaultu (07:30–15:30).
+#
+# LAYOUT činjenice: grupna forma ima dvije kartice (polja, pa roster s redom
+# po radniku + dugmad na dnu) — cijela je duža od ekrana, pa se do radnika i
+# dugmadi skrola. „Pošalji sada" ostaje u vidiku jer je pored „Sačuvaj za N
+# radnika"; za ishod „Poslano" uz Nedimov red se forma nanovo otvara od vrha
+# (re-mount čita stanje iz SQLite, pa ništa ne gubimo).
+appId: ba.gradix.teren
+name: sef-grupa
+---
+- assertVisible: "Prijava za teren."
+# Email i lozinku je unio orkestrator (adb_login u maestro-ci.sh) —
+# Maestro inputText na sporom emulatoru nondeterministički duplira/gubi
+# znakove, pa unos ide pouzdanim adb putem, a ovdje ostaje samo submit.
+- tapOn: "Prijavi se"
+- assertVisible: "Grupa — unos za ekipu"
+- tapOn: "Grupa — unos za ekipu"
+- assertVisible: "Zajednički projekat"
+# Roster (ekipa na prvom projektu za današnji datum) dolazi s API-ja —
+# sačekaj ga i skrolaj do Nedima: njegov red je poslije polja prve kartice,
+# često izvan vidljivog dijela ekrana.
+- scrollUntilVisible:
+    element:
+      text: "Nedim Softić"
+    timeout: 20000
+- tapOn: "Nedim Softić"
+# Dugmad su na DNU kartice rostera (poslije svih radnika) — skrolamo do njih.
+# Label dugmeta je „Sačuvaj za N radnika" — s jednim izabranim radnikom: 1.
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj za 1 radnika"
+    timeout: 20000
+- tapOn:
+    text: "Sačuvaj za 1 radnika"
+- takeScreenshot: grupa-sacuvao
+- tapOn: "Pošalji sada"
+# takeScreenshot je pauza da slanje završi prije provjere poruke.
+- takeScreenshot: grupa-poslao
+- assertVisible:
+    text: "poslano 1, za provjeru 0"
+# Ishod po radniku: „Poslano" uz Nedimov red. Forma se nanovo otvara od vrha
+# (banner „Sve je poslano." ne smeta — malo „poslano" ne matcha veliko
+# „Poslano"), pa skrolamo do Nedimovog ishoda.
+- back
+- tapOn: "Grupa — unos za ekipu"
+- scrollUntilVisible:
+    element:
+      text: "Poslano"
+    timeout: 20000
+- assertVisible: "Poslano"
+# Riječ „odbijeno" ne postoji u UI-ju po dizajnu (van opsega ≠ odbijeno) —
+# ovo je straža da se ne vrati.
+- assertNotVisible:
+    text: ".*[Oo]dbijen.*"
+- takeScreenshot: grupa-poslano

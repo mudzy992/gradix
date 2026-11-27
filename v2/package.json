@@ -1,0 +1,40 @@
+{
+  "name": "gradix",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "eslint .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:a11y": "pnpm --filter @gradix/web test:a11y",
+    "db:migrate": "pnpm --filter @gradix/db migrate",
+    "db:seed": "pnpm --filter @gradix/db seed",
+    "db:reset:pilot": "pnpm --filter @gradix/web exec tsx scripts/reset-pilot-clean.ts",
+    "db:reset": "pnpm --filter @gradix/db reset",
+    "check-expo": "pnpm --filter @gradix/mobile check-expo",
+    "check-maestro": "node infra/scripts/check-maestro.mjs .",
+    "check-privacy": "node infra/scripts/check-privacy.mjs .",
+    "check-contrast": "node infra/scripts/check-contrast.mjs",
+    "check-ui": "node infra/scripts/check-ui-hardcode.mjs",
+    "check-cycles": "node infra/scripts/check-cycles.mjs",
+    "check-tenant-sql": "node infra/scripts/check-tenant-sql.mjs",
+    "check-matrix-parity": "node quality/check-matrix-parity.mjs",
+    "check-application-coverage": "node quality/check-application-coverage.mjs",
+    "db:types": "pnpm --filter @gradix/db generate",
+    "db:types:check": "pnpm --filter @gradix/db types:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "eslint": "9.39.1",
+    "madge": "^8.0.0",
+    "turbo": "2.11.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.4"
+  },
+  "type": "module"
+}

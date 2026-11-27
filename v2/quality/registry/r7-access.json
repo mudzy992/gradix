@@ -1,0 +1,191 @@
+{
+  "outcomes": [
+    {
+      "id": "R7.tender.same-status.noop",
+      "slice": "R7",
+      "source": "apps/web/src/server/tender-status.ts",
+      "summary": "Same status is a no-op in the transition function",
+      "group": "tender-matrix",
+      "gate": "track",
+      "section": "Statusi",
+      "assertion": "unit",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-status.test.ts",
+          "title": "svaki par statusa slijedi matricu",
+          "bodyIncludes": [
+            "from === to",
+            "not.toThrow"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.convert.once",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Convert WON",
+      "summary": "WON convert creates one project and sets converted_project_id",
+      "group": "tender-convert",
+      "gate": "required",
+      "section": "Convert WON",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "WON convert upisuje jedan projekat i converted_project_id",
+          "bodyIncludes": [
+            "converted_project_id",
+            "tender.converted"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.convert.already",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Convert WON",
+      "summary": "A second convert returns 409 ALREADY_CONVERTED and does not create another project",
+      "group": "tender-convert",
+      "gate": "required",
+      "section": "Convert WON",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "drugi convert je ALREADY_CONVERTED i ne pravi drugi projekat",
+          "bodyIncludes": [
+            "ALREADY_CONVERTED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.convert.not-won",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Convert WON",
+      "summary": "Convert of a non-WON tender returns 409 TENDER_INVALID_STATUS",
+      "group": "tender-convert",
+      "gate": "required",
+      "section": "Convert WON",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "convert iz OPPORTUNITY je TENDER_INVALID_STATUS",
+          "bodyIncludes": [
+            "TENDER_INVALID_STATUS",
+            "converted_project_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.permission.accountant",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Dozvole",
+      "summary": "ACCOUNTANT may view and may not manage or convert",
+      "group": "tender-authz",
+      "gate": "required",
+      "section": "Dozvole",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "ACCOUNTANT i WORKER ne smiju manage",
+          "bodyIncludes": [
+            "FORBIDDEN",
+            "tenders.manage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.permission.worker",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Dozvole",
+      "summary": "WORKER is denied tender manage and the office route",
+      "group": "tender-authz",
+      "gate": "required",
+      "section": "Dozvole",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "ACCOUNTANT i WORKER ne smiju manage",
+          "bodyIncludes": [
+            "FORBIDDEN"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.permission.no-delete",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Dozvole",
+      "summary": "gradix_app has no DELETE on tenders",
+      "group": "tender-grant",
+      "gate": "required",
+      "section": "Dozvole",
+      "assertion": "grant-matrix",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "packages/db/preflight-checks/privilege-matrix.tsv",
+          "bodyIncludes": [
+            "table\ttenders\tSELECT;INSERT;UPDATE"
+          ],
+          "workflowIncludes": [
+            "preflight-checks/run.sh"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.partner.client-listed",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Partneri (R7.1)",
+      "summary": "A created CLIENT partner is visible in the office list",
+      "group": "tender-partner-list",
+      "gate": "required",
+      "section": "Partneri (R7.1)",
+      "assertion": "ui-entity",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/e2e/evidencija-deep.spec.ts",
+          "title": "partneri UI: self-owned CLIENT u listi",
+          "bodyIncludes": [
+            "getByText(partner.code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.partner.deactivate",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Partneri (R7.1)",
+      "summary": "PATCH deactivate hides the partner from active use",
+      "group": "tender-partner",
+      "gate": "required",
+      "section": "Partneri (R7.1)",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "deaktiviran partner ne može na novi tender",
+          "bodyIncludes": [
+            "active",
+            "toBeNull"
+          ]
+        }
+      ]
+    }
+  ]
+}

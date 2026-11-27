@@ -1,0 +1,59 @@
+/**
+ * R4a-2/B E2E: ured sa liste (filteri u adresi) otvori zasebnu stranicu
+ * sukoba, razriješi ga, vrati se na listu sa sačuvanim filterima; drugi
+ * korisnik (vlasnik) na istoj stranici vidi „već razriješeno" (ko/kada/šta)
+ * i ugašene akcije. Demo seed ima 3 sukoba; svako pokretanje u CI-ju kreće
+ * od resetovane baze (mjerenje stabilnosti) ili svježeg seeda.
+ */
+import { expect } from "@playwright/test";
+import { test } from "./helpers/annotate";
+import { loginUi, requireE2ePassword } from "./helpers/auth";
+
+
+
+test.beforeAll(() => {
+  requireE2ePassword();
+});
+
+test("ured razrješava sukob na zasebnoj stranici, vlasnik vidi već razriješeno", { tag: ["@deep", "@deep-rad"] }, async ({ page, browser }) => {
+  await loginUi(page, "ured@demo.test");
+  await page.goto("/ured/sukobi?stanje=OPEN");
+  await expect(page.getByRole("heading", { name: "Sukobi radnih dana" })).toBeVisible();
+  await expect(page.getByText("Nerazriješeni sukobi")).toBeVisible();
+
+  // Sa liste na zasebnu stranicu detalja; filteri ostaju u adresi.
+  await page.getByRole("link", { name: "Otvori" }).first().click();
+  await page.waitForURL(/\/ured\/sukobi\/[^?]+\?stanje=OPEN/);
+  const detailUrl = page.url();
+  await expect(page.getByRole("heading", { name: "Detalj sukoba" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Unos sa servera" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Unos s telefona" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Nazad na listu/ })).toBeVisible();
+
+  // Prihvati server unos uz obavezni razlog (>= 10 znakova; dugme je prije toga zaključano).
+  await page.getByRole("button", { name: /Prihvati unos sa servera/ }).click();
+  const confirm = page.getByRole("button", { name: "Prihvati ovaj unos" }).last();
+  await expect(confirm).toBeDisabled();
+  await page.getByLabel(/Razlog \(vidi ga autor/).fill("Server unos je potvrđen s terena.");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+
+  await expect(page.getByText(/Sukob je razriješen/)).toBeVisible();
+  await expect(page.getByText(/Razriješio\/la/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Odbaci uz razlog" })).toBeDisabled();
+
+  // Nazad na listu — filteri iz adrese su sačuvani.
+  await page.getByRole("link", { name: /Nazad na listu/ }).click();
+  await page.waitForURL(/\/ured\/sukobi\?stanje=OPEN/);
+  await expect(page.getByRole("heading", { name: "Sukobi radnih dana" })).toBeVisible();
+
+  // Drugi korisnik (vlasnik) direktnim linkom vidi isto stanje, bez akcija.
+  const ctx = await browser.newContext();
+  const owner = await ctx.newPage();
+  await loginUi(owner, "vlasnik@demo.test");
+  await owner.goto(detailUrl);
+  await expect(owner.getByText(/Razriješio\/la Amina Karić/).first()).toBeVisible();
+  await expect(owner.getByRole("button", { name: /Prihvati unos sa servera/ })).toBeDisabled();
+  await expect(owner.getByRole("button", { name: "Odbaci uz razlog" })).toBeDisabled();
+  await ctx.close();
+});

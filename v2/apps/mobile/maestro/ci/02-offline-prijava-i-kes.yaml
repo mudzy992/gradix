@@ -1,0 +1,82 @@
+# CI tok 2/5 — prijava radnika ONLINE + keširanje rokova i projekata za offline čitanje.
+#
+# Ovo je PRVA faza offline scenarija. Mreža mora biti UKLJUČENA prije ovog toka
+# (skripta emulator-net.sh). Ekran „Moj dan" se otvara DOK JE MREŽA TU — njegova
+# forma se ne učitava bez veze (load vuče projekte/mašine s API-ja), pa tok
+# završava NA tom ekranu i tok 03 preuzima nastavak iz istog stanja.
+appId: ba.gradix.teren
+name: offline-prijava-i-kes
+---
+- assertVisible: "Prijava za teren."
+# Email i lozinku je unio orkestrator (adb_login u maestro-ci.sh) —
+# Maestro inputText na sporom emulatoru nondeterministički duplira/gubi
+# znakove, pa unos ide pouzdanim adb putem, a ovdje ostaje samo submit.
+- tapOn: "Prijavi se"
+- assertVisible: "Moj dan"
+# Osvježi oba spiska DOK JE mreža uključena — offline čitanje (tok 03) onda
+# pokazuje zadnje preuzeto, a ne prazan spisak.
+# „Osvježi" je na DNU spiska (poslije kartica) — na sporom emulatoru
+# s puno kartica je izvan vidljivog dijela, pa assertVisible pada. Skrolamo
+# do dugmeta; povratak ide `back` (‹ Nazad je poslije skrola izvan vidika).
+- tapOn: "Moji rokovi"
+- assertVisible: "Moji rokovi"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- tapOn: "Osvježi"
+# Refresh traje nepredvidljivo (API + SQLite + re-render na sporom emulatoru);
+# dok traje, dugme je „Osvježavam…". takeScreenshot daje RN vremena da uđe u
+# busy stanje (nema sleep komande), pa čekamo da busy nestane. Poslije
+# re-rendera s punim spiskom dugme zna ispasti iz vidika — ponovo skrolamo.
+- takeScreenshot: 02-rokovi-osvjezava
+- extendedWaitUntil:
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-rokovi-osvjezeno
+- back
+- tapOn: "Moji projekti"
+- assertVisible: "Moji projekti"
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- tapOn: "Osvježi"
+- takeScreenshot: 02-projekti-osvjezava
+- extendedWaitUntil:
+    notVisible: "Osvježavam…"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "Osvježi"
+    timeout: 20000
+- takeScreenshot: 02-projekti-osvjezeno
+- back
+- tapOn: "Moj dan"
+# Forma „Moj dan" je DUŽA od ekrana: polja → „Sačuvaj na telefon"/„Pošalji
+# sada" (dno prve kartice) → poruka → kartica „Moji zapisi". Dugme je van
+# folda i assertVisible pada (run 43756628616) — skrol do dugmeta je dokaz
+# da je forma (i projekti s API-ja) učitana; tok 03 nastavlja odatle.
+- scrollUntilVisible:
+    element:
+      text: "Sačuvaj na telefon"
+    timeout: 20000
+- takeScreenshot: 02-moj-dan-spreman
+# VAŽNO za tok 03: vrati se NA HOME, ne ostaj formu otvorenu.
+#
+# Forma „Moj dan" je duža od ekrana i ovdje je skrolovana do dna (do dugmadi). Ako tok 03
+# nastavi s te pozicije, naslov „Moj dan" je izvan vidika — a tok 03 čeka upravo njega
+# (padovi 3/3 u runovima 45386796819, 45390927195, iako je aplikacija radila ispravno).
+# Navigacija u app-u ide SAMO sa home ekrana (nema tab-trake: `_layout.tsx` skriva header,
+# a stavke su `Link` dugmad na home-u), pa se tok 03 ne može „vratiti" sam.
+# Zato tok 02 završava na home-u — u istom procesu, bez restarta (mreža je već isključena
+# u toku 03, a hladan start bez mreže vodi na prijavu).
+- back
+- extendedWaitUntil:
+    visible: "Moj dan"
+    timeout: 20000
+- takeScreenshot: 02-home-spreman

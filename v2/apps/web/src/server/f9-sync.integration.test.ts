@@ -1,0 +1,879 @@
+/**
+ * F9 — mobilni sync dnevnika i HSE, kroz PRAVU rutu i PRAVU bazu.
+ *
+ * Dokazuje ono što servisni test ne može: da telefon šalje ISTI ugovor koji web koristi, i da
+ * ponovni push ne pravi drugi zapis. Spec 10 §1.8:
+ *
+ *  1. `site_diary` po `(projekt, dan)`: prvi push pravi dan, drugi (isti sadržaj) ne pravi drugi;
+ *  2. `baseVersion` koji je šef vidio: starija verzija je `DIARY_VERSION_CONFLICT`, ne tihi prepis;
+ *  3. sekcijsko spajanje: telefon popunjava PRAZNO polje, ne gazi tuđi tekst;
+ *  4. `site_diary_item` sa `BOQ` uvećava `quantity_executed` u ISTOJ transakciji;
+ *  5. `hse_incident` je bez konflikta (činjenice se ne prepisuju) i isti klijentski ID daje `DUPLICATE`;
+ *  6. `hse_incident` sa `reportableToAuthority` pravi obavezu `HSE_REPORT` u istoj transakciji;
+ *  7. `hse_action` i `hse_training` ulaze kroz isti push; obuka nosi potpise prisutnih;
+ *  8. pull vraća `site_diary`/`hse_incident` događaje u isti kursor feed.
+ */
+import { NextRequest } from "next/server";
+import { Pool } from "pg";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import type * as StorageModule from "./storage";
+
+const photoStorage = vi.hoisted(() => ({ staging: new Uint8Array(), permanent: new Uint8Array() }));
+vi.mock("./storage", async (importOriginal) => {
+  const real = await importOriginal<typeof StorageModule>();
+  const { Readable } = await import("node:stream");
+  const client = { send: async (command: { constructor: { name: string }; input: { Body?: Uint8Array } }) => {
+    if (command.constructor.name === "GetObjectCommand") return { ContentLength: photoStorage.staging.length, Body: Readable.from([photoStorage.staging]) };
+    if (command.constructor.name === "PutObjectCommand") { photoStorage.permanent = new Uint8Array(command.input.Body!); return {}; }
+    throw new Error("unexpected storage command");
+  } };
+  return { ...real, storageConfig: () => ({ configured: true, client, presignClient: client, bucket: "test", publicEndpoint: "https://example.test" }),
+    presignUpload: async () => ({ url: "https://example.test/upload", expiresAt: "2026-11-23T12:00:00Z" }),
+    presignDownload: async () => ({ url: "https://example.test/download", expiresAt: "2026-11-23T12:00:00Z" }) };
+});
+import { companyId, withCompany } from "@gradix/db";
+import type { R4SyncPushItem, R4SyncPushItemResult } from "@gradix/domain";
+import { ACCESS_COOKIE, issueAccessToken } from "./session";
+
+const adminUrl = process.env.DATABASE_ADMIN_URL;
+const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
+const RUN = Date.now().toString(36);
+const CO = `cmp_f9s_${RUN}`;
+const CO_B = `cmp_f9sb_${RUN}`;
+const USER_SUP = `usr_f9s_sup_${RUN}`;
+const USER_WORKER = `usr_f9s_wrk_${RUN}`;
+const USER_DRIVER = `usr_f9s_driver_${RUN}`;
+const USER_B = `usr_f9s_b_${RUN}`;
+const WORKER_SUP = `wrk_f9s_sup_${RUN}`;
+const WORKER_REPORTER = `wrk_f9s_reporter_${RUN}`;
+const WORKER_DRIVER = `wrk_f9s_driver_${RUN}`;
+const WORKER_INJURED = `wrk_f9s_inj_${RUN}`;
+const PROJECT = `prj_f9s_${RUN}`;
+const BOQ_ITEM = `boq_f9s_${RUN}`;
+const DAY = "2026-10-05";
+
+const COOKIES = { sup: "", worker: "", driver: "", b: "" };
+type CookieKey = keyof typeof COOKIES;
+
+/** `localId` mora biti uuid; brojač drži jedinstvenost — isti ID uz drugi sadržaj se odbija. */
+let localSeq = 0;
+const localId = (): string => {
+  localSeq += 1;
+  return `ffffffff-0000-4000-8000-${String(localSeq).padStart(12, "0")}`;
+};
+
+async function signIn(pool: Pool, userId: string, company: string, key: CookieKey): Promise<void> {
+  const sessionId = `ses_${userId}`;
+  await withCompany(pool, companyId(company), async (client) => {
+    await client.query(
+      `INSERT INTO sessions (id, company_id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4, now() + interval '1 day')
+       ON CONFLICT (id) DO UPDATE SET expires_at = EXCLUDED.expires_at`,
+      [sessionId, company, userId, `hash_${sessionId}`],
+    );
+  });
+  COOKIES[key] = `${ACCESS_COOKIE}=${issueAccessToken({ sub: userId, sid: sessionId, companyId: company })}`;
+}
+
+function pushRequest(cookie: string, items: unknown[]): NextRequest {
+  return new NextRequest("http://t/api/sync/push", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+}
+
+/** Dnevnik kakav telefon pravi: samo ono što šef tipka na terenu. */
+function diaryItem(input: {
+  diaryId: string;
+  baseVersion?: number;
+  delays?: R4SyncPushItem extends never ? never : unknown[];
+  overrides?: Partial<{ description: string; weather: string; workedHours: string }>;
+}): R4SyncPushItem {
+  return {
+    localId: localId(),
+    entityType: "site_diary",
+    diaryId: input.diaryId,
+    deviceSentAt: `${DAY}T16:00:00+02:00`,
+    baseVersion: input.baseVersion ?? 1,
+    diary: {
+      projectId: PROJECT,
+      diaryDate: DAY,
+      weather: "CLEAR",
+      temperatureC: "18.0",
+      workedHours: "8.00",
+      description: "Iskop i betoniranje temeljne ploče.",
+      visitors: null,
+      events: null,
+      signedName: null,
+      delays: (input.delays ?? []) as never[],
+      ...input.overrides,
+    },
+  } as R4SyncPushItem;
+}
+
+function incidentItem(input: { incidentId: string; reportable?: boolean; description?: string }): R4SyncPushItem {
+  return {
+    localId: localId(),
+    entityType: "hse_incident",
+    incidentId: input.incidentId,
+    deviceSentAt: `${DAY}T11:00:00+02:00`,
+    incident: {
+      kind: "ACCIDENT",
+      severity: "MODERATE",
+      occurredAt: `${DAY}T10:00:00+02:00`,
+      projectId: PROJECT,
+      locationText: "Kota 1",
+      lat: null,
+      lng: null,
+      description: input.description ?? "Radnik posjekao prst na testeri.",
+      immediateAction: "Prva pomoć na gradilištu.",
+      injuredWorkerId: WORKER_INJURED,
+      lostDays: 2,
+      reportableToAuthority: input.reportable === true,
+      photos: [],
+      updateBody: null,
+    },
+  } as R4SyncPushItem;
+}
+
+describeDb("F9 mobilni sync dnevnika i HSE", () => {
+  const admin = new Pool({ connectionString: adminUrl, max: 3 });
+  let push: (request: NextRequest) => Promise<Response>;
+  let pull: (request: NextRequest) => Promise<Response>;
+  const at = (results: R4SyncPushItemResult[]) => results[0]!;
+
+  async function pushOne(cookie: string, item: R4SyncPushItem): Promise<R4SyncPushItemResult> {
+    const response = await push(pushRequest(cookie, [item]));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: { results: R4SyncPushItemResult[] } };
+    return at(body.data.results);
+  }
+
+  beforeAll(async () => {
+    ({ POST: push } = await import("@/app/api/sync/push/route"));
+    ({ GET: pull } = await import("@/app/api/sync/pull/route"));
+    await admin.query(`INSERT INTO companies (id, name, slug) VALUES ($1,'F9 Sync',$2), ($3,'F9 Sync B',$4)`, [
+      CO, `f9s-${RUN}`, CO_B, `f9sb-${RUN}`,
+    ]);
+    await admin.query(
+      `INSERT INTO users (id, email, first_name, last_name, password_hash, must_change_password)
+       VALUES ($1,$2,'S','Šef','x',false), ($3,$4,'R','Radnik','x',false), ($5,$6,'B','Firma','x',false),
+              ($7,$8,'V','Vozač','x',false)`,
+      [
+        USER_SUP, `sef-f9s-${RUN}@test.example`,
+        USER_WORKER, `radnik-f9s-${RUN}@test.example`,
+        USER_B, `b-f9s-${RUN}@test.example`,
+        USER_DRIVER, `vozac-f9s-${RUN}@test.example`,
+      ],
+    );
+    await withCompany(admin, companyId(CO), async (client) => {
+      await client.query(
+        `INSERT INTO memberships (id, user_id, company_id, roles, scope)
+         VALUES ($1,$2,$3,ARRAY['SITE_SUPERVISOR']::"Role"[],'COMPANY'),
+                ($4,$5,$3,ARRAY['WORKER']::"Role"[],'SELF'),
+                ($6,$7,$3,ARRAY['DRIVER']::"Role"[],'SELF')`,
+        [`mem_f9s_sup_${RUN}`, USER_SUP, CO, `mem_f9s_wrk_${RUN}`, USER_WORKER, `mem_f9s_drv_${RUN}`, USER_DRIVER],
+      );
+      await client.query(
+        `INSERT INTO workers (id, company_id, first_name, last_name, hired_at, user_id)
+         VALUES ($1,$2,'S','Šef','2024-01-01'::date,$3), ($4,$2,'P','Povrijeđeni','2024-01-01'::date,NULL),
+                ($5,$2,'R','Radnik','2024-01-01'::date,$6), ($7,$2,'V','Vozač','2024-01-01'::date,$8)`,
+        [WORKER_SUP, CO, USER_SUP, WORKER_INJURED, WORKER_REPORTER, USER_WORKER, WORKER_DRIVER, USER_DRIVER],
+      );
+      await client.query(
+        "INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'F9S-1','F9 sync gradilište')",
+        [PROJECT, CO],
+      );
+      await client.query(
+        `INSERT INTO project_boq_items
+           (id, company_id, project_id, code, description, unit, quantity_planned, unit_price_cents,
+            sort_order, created_by, updated_by)
+         VALUES ($1,$2,$3,'B-1','Beton C25/30','m3',100,15000,1,$4,$4)`,
+        [BOQ_ITEM, CO, PROJECT, USER_SUP],
+      );
+    });
+    await withCompany(admin, companyId(CO_B), async (client) => {
+      await client.query(
+        `INSERT INTO memberships (id, user_id, company_id, roles, scope)
+         VALUES ($1,$2,$3,ARRAY['OWNER']::"Role"[],'COMPANY')`,
+        [`mem_f9s_b_${RUN}`, USER_B, CO_B],
+      );
+    });
+    await signIn(admin, USER_SUP, CO, "sup");
+    await signIn(admin, USER_WORKER, CO, "worker");
+    await signIn(admin, USER_DRIVER, CO, "driver");
+    await signIn(admin, USER_B, CO_B, "b");
+  }, 60_000);
+
+  afterAll(async () => {
+    for (const company of [CO, CO_B]) {
+      await withCompany(admin, companyId(company), async (client) => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM hse_training_attendees WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_trainings WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_actions WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_inspections WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM project_assignments WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_investigations WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_incident_updates WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_attachments WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_incident_workers WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_incidents WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM site_diary_revisions WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM site_diary_delays WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM site_diary_items WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM site_diaries WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM site_diary_templates WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM project_boq_items WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sync_receipts WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sync_conflicts WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sync_change_log WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sync_cursor_slots WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sync_cursor_allocators WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM notification_deliveries WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM notifications WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM audit_events WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM obligations WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM obligation_types WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM sessions WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM projects WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM workers WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM memberships WHERE company_id = $1", [company]);
+      });
+    }
+    await admin.query("DELETE FROM companies WHERE id = ANY($1)", [[CO, CO_B]]);
+    await admin.query("DELETE FROM users WHERE id = ANY($1)", [[USER_SUP, USER_WORKER, USER_DRIVER, USER_B]]);
+    await admin.end();
+  }, 60_000);
+
+  it("dnevnik se šalje jednom po (projekt, dan); drugi push ne pravi drugi red", async () => {
+    const diaryId = `sdr_f9s_${RUN}`;
+    const first = await pushOne(COOKIES.sup, diaryItem({ diaryId }));
+    expect(first.status).toBe("APPLIED");
+
+    const count = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM site_diaries WHERE company_id = $1 AND project_id = $2 AND diary_date = $3::date",
+        [CO, PROJECT, DAY],
+      ));
+    expect(count.rows[0]?.count).toBe("1");
+
+    /* Zastoj iz istog push-a je upisan uz dan; zbir sati je dokaz za produženje roka. */
+    const second = await pushOne(COOKIES.sup, diaryItem({
+      diaryId,
+      baseVersion: 2,
+      delays: [{
+        kind: "RAIN",
+        fromAt: `${DAY}T12:00:00+02:00`,
+        toAt: `${DAY}T15:00:00+02:00`,
+        hours: "3.00",
+        note: "Pljusak",
+      }],
+    }));
+    expect(second.status).toBe("APPLIED");
+
+    const delays = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM site_diary_delays WHERE company_id = $1",
+        [CO],
+      ));
+    expect(delays.rows[0]?.count).toBe("1");
+  });
+
+  it("zastarjela baseVersion je sukob, ne tihi prepis tuđeg teksta", async () => {
+    /* Prvi push je podigao verziju dana; telefon koji je vidio v1 sada mora dobiti konflikt. */
+    const stale = await pushOne(COOKIES.sup, diaryItem({
+      diaryId: `sdr_f9s_${RUN}`,
+      baseVersion: 1,
+      overrides: { description: "Telefon sa starim ekranom." },
+    }));
+    expect(stale.status).toBe("CONFLICT");
+    expect(stale.code).toBe("DIARY_VERSION_CONFLICT");
+
+    const row = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ description: string | null; version: number }>(
+        "SELECT description, version FROM site_diaries WHERE company_id = $1 AND project_id = $2 AND diary_date = $3::date",
+        [CO, PROJECT, DAY],
+      ));
+    /* Nijedan push ne smije ostaviti dnevnik bez opisa — prazan dan je izgubljen rad. */
+    expect(row.rows[0]?.description).toBeTruthy();
+  });
+
+  it("sync dnevnika poštuje PROJECTS i SELF i nakon promjene scopea, uključujući pull i ponovljeni receipt", async () => {
+    const otherProject = `prj_f9s_other_${RUN}`;
+    const assignId = `pa_f9s_scope_${RUN}`;
+    await withCompany(admin, companyId(CO), async (client) => {
+      await client.query("INSERT INTO projects (id,company_id,code,name) VALUES ($1,$2,'F9S-2','Drugi')", [otherProject, CO]);
+      await client.query("INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')", [assignId, CO, PROJECT, WORKER_SUP]);
+    });
+    const base = diaryItem({ diaryId: `sdr_f9s_other_${RUN}` });
+    if (base.entityType !== "site_diary") throw new Error("bad fixture");
+    const other = { ...base, diary: { ...base.diary, projectId: otherProject } };
+    expect((await pushOne(COOKIES.sup, other)).status).toBe("APPLIED");
+    try {
+      await withCompany(admin, companyId(CO), (client) => client.query("UPDATE memberships SET scope='PROJECTS' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]));
+      expect((await pushOne(COOKIES.sup, other)).status).toBe("REJECTED"); // replay after scope revocation
+      expect((await pushOne(COOKIES.sup, { ...other, localId: localId(), diaryId: `sdr_no_${RUN}` })).status).toBe("REJECTED");
+      const otherItem: R4SyncPushItem = { localId: localId(), entityType:"site_diary_item", diaryItemId:`sdi_scope_${RUN}`,
+        diaryProjectId:otherProject, diaryDate:DAY, deviceSentAt:`${DAY}T17:00:00+02:00`,
+        item:{boqItemId:null,description:"Forbidden",unit:"m",quantity:"1",source:"MANUAL"} };
+      expect((await pushOne(COOKIES.sup, otherItem)).status).toBe("REJECTED");
+      expect((await pushOne(COOKIES.sup, { ...other, localId: localId(), diary: { ...other.diary, projectId: PROJECT } })).status).toBe("REJECTED"); // forged ID
+      const pullResponse = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.sup } }));
+      const pulled = await pullResponse.json() as { data: { events: { entityType: string; entityId: string }[] } };
+      expect(pulled.data.events.some((event) => event.entityType === "site_diary" && event.entityId === other.diaryId)).toBe(false);
+      expect(pulled.data.events.some((event) => event.entityType === "site_diary" && event.entityId === `sdr_f9s_${RUN}`)).toBe(true);
+      await withCompany(admin, companyId(CO), (client) => client.query("UPDATE memberships SET scope='SELF' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]));
+      expect((await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}` }))).status).toBe("REJECTED");
+      expect((await pushOne(COOKIES.sup, {...otherItem, localId:localId(), diaryProjectId:PROJECT})).status).toBe("REJECTED");
+      const selfResponse = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.sup } }));
+      const selfPulled = await selfResponse.json() as { data: { events: { entityType: string }[] } };
+      expect(selfPulled.data.events.some((event) => event.entityType === "site_diary")).toBe(false);
+    } finally {
+      await withCompany(admin, companyId(CO), async (client) => {
+        await client.query("UPDATE memberships SET scope='COMPANY' WHERE company_id=$1 AND user_id=$2", [CO, USER_SUP]);
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM project_assignments WHERE company_id=$1 AND id=$2", [CO, assignId]);
+      });
+    }
+  });
+
+  it("različita ista sekcija ne biva odbačena ni kada je verzija aktuelna", async () => {
+    const current = await withCompany(admin, companyId(CO), (client) => client.query<{ version: number }>(
+      "SELECT version FROM site_diaries WHERE company_id = $1 AND project_id = $2 AND diary_date = $3", [CO, PROJECT, DAY],
+    ));
+    const result = await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}`,
+      baseVersion: current.rows[0]!.version, overrides: { description: "Promjena koja ne smije nestati." } }));
+    expect(result.status).toBe("CONFLICT");
+    expect(result.code).toBe("DIARY_VERSION_CONFLICT");
+  });
+
+  it("količina sa BOQ stavkom uvećava quantity_executed u istoj transakciji", async () => {
+    const result = await pushOne(COOKIES.sup, {
+      localId: localId(),
+      entityType: "site_diary_item",
+      diaryItemId: `sdi_f9s_${RUN}`, diaryProjectId: PROJECT, diaryDate: DAY,
+      deviceSentAt: `2026-10-08T17:00:00+02:00`,
+      item: {
+        boqItemId: BOQ_ITEM,
+        description: "Beton C25/30",
+        unit: "m3",
+        quantity: "24.500",
+        source: "BOQ",
+      },
+    } as R4SyncPushItem);
+    expect(result.status).toBe("APPLIED");
+
+    const boq = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ quantity_executed: string }>(
+        "SELECT quantity_executed::text FROM project_boq_items WHERE company_id = $1 AND id = $2",
+        [CO, BOQ_ITEM],
+      ));
+    expect(Number(boq.rows[0]?.quantity_executed)).toBe(24.5);
+  });
+
+  it("ručna količina čuva se na odabrani dan i pri kasnijem slanju", async () => {
+    const item: R4SyncPushItem = {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_manual_${RUN}`,
+      diaryProjectId: PROJECT, diaryDate: DAY, deviceSentAt: "2026-11-01T10:00:00Z",
+      item: { boqItemId: null, description: "Ručni rad", unit: "m", quantity: "3", source: "MANUAL" },
+    };
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("APPLIED");
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("DUPLICATE");
+    const rows = await withCompany(admin, companyId(CO), (client) => client.query<{ diary_date: string; count: string }>(
+      `SELECT d.diary_date::text, count(*)::text FROM site_diary_items i JOIN site_diaries d
+         ON d.company_id = i.company_id AND d.id = i.diary_id
+        WHERE i.company_id = $1 AND i.id = $2 GROUP BY d.diary_date`, [CO, `sdi_manual_${RUN}`],
+    ));
+    expect(rows.rows).toEqual([{ diary_date: DAY, count: "1" }]);
+  });
+
+  it("stari red bez dana ne pogađa datum slanja", async () => {
+    const result = await pushOne(COOKIES.sup, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_legacy_${RUN}`,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    expect(result.status).toBe("REJECTED");
+    expect(result.code).toBe("DIARY_REFERENCE_REQUIRED");
+  });
+
+  it("čuva sve uključene i više povrijeđenih bez prepisivanja", async () => {
+    const incoming = incidentItem({ incidentId: `hsi_people_${RUN}` });
+    if (incoming.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+    incoming.incident.involvedWorkers = [
+      { workerId: WORKER_INJURED, injured: true }, { workerId: WORKER_REPORTER, injured: true },
+      { workerId: WORKER_SUP, injured: false },
+    ];
+    expect((await pushOne(COOKIES.sup, incoming)).status).toBe("APPLIED");
+    const people = await withCompany(admin, companyId(CO), (client) => client.query<{ worker_id: string; injured: boolean }>(
+      "SELECT worker_id, injured FROM hse_incident_workers WHERE company_id = $1 AND incident_id = $2 ORDER BY worker_id",
+      [CO, `hsi_people_${RUN}`],
+    ));
+    expect(people.rows).toHaveLength(3);
+    expect(people.rows.filter((p) => p.injured).map((p) => p.worker_id)).toEqual(expect.arrayContaining([WORKER_INJURED, WORKER_REPORTER]));
+    await expect(withCompany(admin, companyId(CO), (client) => client.query(
+      "UPDATE hse_incident_workers SET injured = false WHERE company_id = $1 AND incident_id = $2", [CO, `hsi_people_${RUN}`],
+    ))).rejects.toThrow(/HSE_INCIDENT_IMMUTABLE/);
+  });
+
+  it("radnik vidi minimalni roster samo za vlastitu dodjelu", async () => {
+    await withCompany(admin, companyId(CO), (client) => client.query(
+      `INSERT INTO project_assignments (id, company_id, project_id, worker_id, from_date, created_by)
+       VALUES ($1,$2,$3,$4,$6::date,$7), ($5,$2,$3,$8,$6::date,$7)`,
+      [`asg_f9s_1_${RUN}`, CO, PROJECT, WORKER_REPORTER, `asg_f9s_2_${RUN}`, DAY, USER_SUP, WORKER_INJURED],
+    ));
+    try {
+      const { GET } = await import("@/app/api/hse/roster/route");
+      const url = `http://t/api/hse/roster?projectId=${PROJECT}&workDate=${DAY}`;
+      const result = await GET(new NextRequest(url, { headers: { cookie: COOKIES.worker } }));
+      expect(result.status).toBe(200);
+      const body = await result.json();
+      expect(body.data.workers).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: WORKER_REPORTER }), expect.objectContaining({ id: WORKER_INJURED }),
+      ]));
+      expect((await GET(new NextRequest(url, { headers: { cookie: COOKIES.driver } }))).status).toBe(403);
+      expect((await GET(new NextRequest(url, { headers: { cookie: COOKIES.b } }))).status).toBe(403);
+    } finally {
+      await withCompany(admin, companyId(CO), async (client) => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM project_assignments WHERE company_id = $1 AND id = ANY($2)",
+          [CO, [`asg_f9s_1_${RUN}`, `asg_f9s_2_${RUN}`]]);
+      });
+    }
+  });
+
+  it("ne prihvata nepostojećeg ili tuđeg učesnika, a RLS štiti spisak", async () => {
+    const incoming = incidentItem({ incidentId: `hsi_foreign_person_${RUN}` });
+    if (incoming.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+    incoming.incident.involvedWorkers = [{ workerId: WORKER_INJURED, injured: true }, { workerId: "worker-not-in-company", injured: false }];
+    expect((await pushOne(COOKIES.sup, incoming)).status).toBe("REJECTED");
+    const app = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+    try {
+      const foreign = await withCompany(app, companyId(CO_B), (client) => client.query<{ n: string }>(
+        "SELECT count(*)::text AS n FROM hse_incident_workers WHERE company_id = $1", [CO],
+      ));
+      expect(foreign.rows[0]?.n).toBe("0");
+      await expect(withCompany(app, companyId(CO), (client) => client.query(
+        "UPDATE hse_incident_workers SET injured = false WHERE company_id = $1 AND incident_id = $2", [CO, `hsi_people_${RUN}`],
+      ))).rejects.toThrow(/permission denied/);
+    } finally { await app.end(); }
+  });
+
+  it("ista fotografija na dva incidenta ne uzrokuje sudar ID-a", async () => {
+    const photo = { fileName: "gradiliste.jpg", contentType: "image/jpeg" as const, sizeBytes: 123, sha256: "a".repeat(64) };
+    for (const suffix of ["a", "b"]) {
+      const incident = incidentItem({ incidentId: `hsi_photo_${suffix}_${RUN}` });
+      if (incident.entityType !== "hse_incident") throw new Error("Pogrešan testni payload");
+      expect((await pushOne(COOKIES.sup, { ...incident, incident: { ...incident.incident, photos: [photo] } })).status).toBe("APPLIED");
+    }
+    const found = await withCompany(admin, companyId(CO), (client) => client.query<{ count: string; ids: string }>(
+      `SELECT count(*)::text AS count, count(DISTINCT id)::text AS ids FROM hse_attachments
+        WHERE company_id = $1 AND entity_id = ANY($2)`,
+      [CO, [`hsi_photo_a_${RUN}`, `hsi_photo_b_${RUN}`]],
+    ));
+    expect(found.rows[0]).toEqual({ count: "2", ids: "2" });
+  });
+
+  it("upload fotografije provjerava sadržaj, izoluje staging i potvrđuje idempotentno", async () => {
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x01]);
+    const sha = createHash("sha256").update(bytes).digest("hex");
+    const payload = incidentItem({ incidentId: `hsi_upload_${RUN}` });
+    if (payload.entityType !== "hse_incident") throw new Error("Pogrešan payload");
+    payload.incident.photos = [{ fileName: "test.jpg", contentType: "image/jpeg", sizeBytes: bytes.length, sha256: sha }];
+    expect((await pushOne(COOKIES.sup, payload)).status).toBe("APPLIED");
+    const { hsePhotoDownload, resumeHsePhoto } = await import("./hse-photo-service");
+    const route = await import("@/app/api/hse/incidents/[id]/photos/[sha]/route");
+    const context = { params: Promise.resolve({ id: payload.incidentId, sha }) };
+    const photoRequest = (cookie?: string) => new NextRequest(`http://t/api/hse/incidents/${payload.incidentId}/photos/${sha}`, {
+      method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+      body: JSON.stringify({ action: "UPLOAD_URL" }),
+    });
+    expect((await route.POST(photoRequest(), context)).status).toBe(401);
+    expect((await route.POST(photoRequest(COOKIES.worker), context)).status).toBe(404);
+    expect((await route.POST(photoRequest(COOKIES.b), context)).status).toBe(404);
+    expect((await route.GET(new NextRequest("http://t/photo"), context)).status).toBe(401);
+    const actor = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"], scope: "COMPANY" as const, projectIds: null };
+    const stranger = { companyId: CO, userId: USER_WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null };
+    expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toBeNull();
+    expect((await resumeHsePhoto(admin, stranger, payload.incidentId, sha, "UPLOAD_URL")).outcome).toBe("FORBIDDEN");
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "UPLOAD_URL"))
+      .toMatchObject({ outcome: "OK", status: "pending", uploadUrl: "https://example.test/upload" });
+    photoStorage.staging = new Uint8Array(bytes.length).fill(0);
+    expect((await resumeHsePhoto(admin, actor, payload.incidentId, sha, "CONFIRM")).outcome).toBe("VALIDATION_FAILED");
+    photoStorage.staging = bytes;
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "CONFIRM")).toMatchObject({ outcome: "OK", status: "confirmed" });
+    expect(photoStorage.permanent).toEqual(new Uint8Array(bytes));
+    expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toMatchObject({ url: "https://example.test/download" });
+    expect(await hsePhotoDownload(admin, { ...actor, companyId: CO_B }, payload.incidentId, sha)).toBeNull();
+    photoStorage.staging = new Uint8Array(bytes.length).fill(3);
+    expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "UPLOAD_URL")).toMatchObject({ outcome: "OK", status: "confirmed", uploadUrl: null });
+    expect(photoStorage.permanent).toEqual(new Uint8Array(bytes));
+    const audit = await withCompany(admin, companyId(CO), (client) => client.query<{ n: string }>(
+      "SELECT count(*)::text AS n FROM audit_events WHERE company_id = $1 AND entity_id = $2 AND action = 'hse.photo_confirmed'",
+      [CO, payload.incidentId],
+    ));
+    expect(audit.rows[0]?.n).toBe("1");
+  });
+
+  it("NEAR_MISS sa izgubljenim danima se odbija prije baze", async () => {
+    const invalid = {
+      ...incidentItem({ incidentId: `hsi_bad_${RUN}` }),
+      incident: {
+        ...(incidentItem({ incidentId: `hsi_bad2_${RUN}` }) as { incident: Record<string, unknown> }).incident,
+        kind: "NEAR_MISS",
+        lostDays: 4,
+      },
+    } as R4SyncPushItem;
+    const response = await push(pushRequest(COOKIES.sup, [invalid]));
+    /* Blok sa neispravnom stavkom se odbija ili po stavci (`REJECTED`) ili prije obrade (400). */
+    if (response.status === 200) {
+      const body = (await response.json()) as { data: { results: R4SyncPushItemResult[] } };
+      expect(["REJECTED", "INVALID"]).toContain(at(body.data.results).status);
+    } else {
+      expect(response.status).toBeLessThan(500);
+    }
+  });
+
+  it("incident sa prijavom inspekciji pravi HSE_REPORT obavezu; isti klijentski ID je DUPLICATE", async () => {
+    const incidentId = `hsi_f9s_${RUN}`;
+    const first = await pushOne(COOKIES.sup, incidentItem({ incidentId, reportable: true }));
+    expect(first.status).toBe("APPLIED");
+
+    const row = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ report_obligation_id: string | null; kind: string }>(
+        "SELECT report_obligation_id, kind FROM hse_incidents WHERE company_id = $1 AND id = $2",
+        [CO, incidentId],
+      ));
+    expect(row.rows[0]?.kind).toBe("ACCIDENT");
+    expect(row.rows[0]?.report_obligation_id).toBeTruthy();
+
+    /* Istim klijentskim ID-em drugi put: `DUPLICATE`, ne druga prijava. */
+    const again = await pushOne(COOKIES.sup, incidentItem({ incidentId, reportable: true }));
+    expect(["DUPLICATE", "APPLIED"]).toContain(again.status);
+    const count = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM hse_incidents WHERE company_id = $1 AND id = $2",
+        [CO, incidentId],
+      ));
+    expect(count.rows[0]?.count).toBe("1");
+  });
+
+  it("mjera i toolbox obuka ulaze kroz isti push, a obuka nosi potpise", async () => {
+    const action = await pushOne(COOKIES.sup, {
+      localId: localId(),
+      entityType: "hse_action",
+      actionId: `hsa_f9s_${RUN}`,
+      deviceSentAt: `${DAY}T12:00:00+02:00`,
+      action: {
+        incidentId: `hsi_f9s_${RUN}`,
+        inspectionId: null,
+        description: "Zamijeniti list testere i provjeriti štitnik",
+        responsibleWorkerId: WORKER_SUP,
+        dueOn: DAY,
+      },
+    } as R4SyncPushItem);
+    expect(action.status).toBe("APPLIED");
+
+    const training = await pushOne(COOKIES.sup, {
+      localId: localId(),
+      entityType: "hse_training",
+      trainingId: `hst_f9s_${RUN}`,
+      deviceSentAt: `${DAY}T07:30:00+02:00`,
+      training: {
+        kind: "TOOLBOX",
+        title: "Toolbox: rad na testeri",
+        topic: "Štitnik i lična zaštita",
+        heldAt: `${DAY}T07:00:00+02:00`,
+        projectId: PROJECT,
+        location: "Radionica",
+        durationMinutes: 15,
+        attendees: [
+          { workerId: WORKER_SUP, signatureName: "S. Šef", signedAt: `${DAY}T07:15:00+02:00` },
+          { workerId: WORKER_INJURED, signatureName: "P. Povrijeđeni", signedAt: `${DAY}T07:16:00+02:00` },
+        ],
+      },
+    } as R4SyncPushItem);
+    expect(training.status).toBe("APPLIED");
+
+    const attendees = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM hse_training_attendees WHERE company_id = $1",
+        [CO],
+      ));
+    expect(attendees.rows[0]?.count).toBe("2");
+    const audit = await withCompany(admin, companyId(CO), (client) => client.query<{ metadata: { signatures: { workerId: string; signedAt: string }[] } }>(
+      "SELECT metadata FROM audit_events WHERE company_id = $1 AND entity_id = $2 AND action = 'hse.training_created'",
+      [CO, `hst_f9s_${RUN}`],
+    ));
+    expect(audit.rows[0]?.metadata.signatures).toEqual([
+      { workerId: WORKER_SUP, signedAt: `${DAY}T07:15:00+02:00` },
+      { workerId: WORKER_INJURED, signedAt: `${DAY}T07:16:00+02:00` },
+    ]);
+  });
+
+  it("pull vraća F9 događaje (site_diary, hse_incident) u isti feed", async () => {
+    const response = await pull(new NextRequest("http://t/api/sync/pull?limit=200", {
+      headers: { cookie: COOKIES.sup },
+    }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      data: { events: { entityType: string }[]; cursor: string };
+    };
+    const types = new Set(body.data.events.map((event) => event.entityType));
+    expect(types.has("site_diary")).toBe(true);
+    expect(types.has("hse_incident")).toBe(true);
+    expect(body.data.cursor).not.toBe("");
+  });
+
+  it("sync potpis bez potvrde prikazanog snapshot-a odbija se bez upisa", async () => {
+    const base = diaryItem({ diaryId: `sdr_signed_new_${RUN}` });
+    if (base.entityType !== "site_diary") throw new Error("Pogrešan testni payload");
+    const signed: R4SyncPushItem = { ...base, diary: { ...base.diary, diaryDate: "2026-10-06", signedName: "Šef Gradilišta" } };
+    const result = await pushOne(COOKIES.sup, signed);
+    expect(result.status).toBe("REJECTED");
+    expect(result.code).toBe("SYNC_ITEM_REJECTED");
+    const row = await withCompany(admin, companyId(CO), (client) => client.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM site_diaries WHERE company_id = $1 AND id = $2", [CO, `sdr_signed_new_${RUN}`],
+    ));
+    expect(row.rows[0]?.count).toBe("0");
+  });
+
+  it("offline potpis čuva prikazani presjek, vrijeme i audit, a promijenjeni presjek odbija", async () => {
+    const day = "2026-10-07";
+    const diaryId = `sdr_review_${RUN}`;
+    const base = diaryItem({ diaryId });
+    if (base.entityType !== "site_diary") throw new Error("Pogrešan payload");
+    expect((await pushOne(COOKIES.sup, { ...base, diary: { ...base.diary, diaryDate: day } })).status).toBe("APPLIED");
+    const { collectDiaryAutoData } = await import("./diary-service");
+    const auto = await withCompany(admin, companyId(CO), (client) => collectDiaryAutoData(client, CO, PROJECT, day));
+    const { generatedAt: _generatedAt, ...shown } = auto;
+    const signedAt = "2026-10-07T17:30:00+02:00";
+    const signatureItem = (snapshot: object): R4SyncPushItem => ({
+      localId: localId(), entityType: "site_diary", diaryId, baseVersion: 1, deviceSentAt: signedAt,
+      diary: { projectId: PROJECT, diaryDate: day, weather: null, temperatureC: null, workedHours: null,
+        description: null, visitors: null, events: null, delays: [], signedName: "Šef Gradilišta",
+        signature: { signedAt, autoSnapshotJson: JSON.stringify(snapshot) } },
+    });
+    const unauthenticated = await push(pushRequest("", [signatureItem(shown)]));
+    expect(unauthenticated.status).toBe(401);
+    const unauthorized = await pushOne(COOKIES.worker, signatureItem(shown));
+    expect(unauthorized.status).toBe("REJECTED");
+    expect(unauthorized.code).toBe("SYNC_ITEM_REJECTED");
+    const wrong = await pushOne(COOKIES.sup, signatureItem({ ...shown, workedHours: "999.00" }));
+    expect(wrong.status).toBe("CONFLICT");
+    const item = signatureItem(shown);
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("APPLIED");
+    expect((await pushOne(COOKIES.sup, item)).status).toBe("DUPLICATE");
+    const state = await withCompany(admin, companyId(CO), (client) => client.query<{
+      status: string; signed_name: string; signed_by_worker_id: string; signed_at: string; audits: string;
+    }>(`SELECT d.status, d.signed_name, d.signed_by_worker_id, d.signed_at::text,
+        (SELECT count(*)::text FROM audit_events a WHERE a.company_id = d.company_id AND a.entity_id = d.id AND a.action = 'diary.sign') AS audits
+        FROM site_diaries d WHERE d.company_id = $1 AND d.id = $2`, [CO, diaryId]));
+    expect(state.rows[0]).toMatchObject({ status: "SIGNED", signed_name: "Šef Gradilišta", signed_by_worker_id: WORKER_SUP, audits: "1" });
+    expect(Date.parse(state.rows[0]!.signed_at)).toBe(Date.parse(signedAt));
+  });
+
+  it("radnik smije prijaviti incident, ali ne pisati dnevnik, mjere ili obuke kroz sync", async () => {
+    const incidentId = `hsi_worker_${RUN}`;
+    expect((await pushOne(COOKIES.worker, incidentItem({ incidentId }))).status).toBe("APPLIED");
+    const diary = await pushOne(COOKIES.worker, diaryItem({ diaryId: `sdr_worker_${RUN}` }));
+    const item = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_worker_${RUN}`,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    const action = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "hse_action", actionId: `hsa_worker_${RUN}`,
+      deviceSentAt: `${DAY}T12:00:00+02:00`,
+      action: { incidentId, inspectionId: null, description: "Provjeriti štitnik", responsibleWorkerId: WORKER_REPORTER, dueOn: DAY },
+    });
+    const training = await pushOne(COOKIES.worker, {
+      localId: localId(), entityType: "hse_training", trainingId: `hst_worker_${RUN}`,
+      deviceSentAt: `${DAY}T12:00:00+02:00`,
+      training: { kind: "TOOLBOX", title: "Sigurnost", topic: "Zaštita", heldAt: `${DAY}T12:00:00+02:00`,
+        projectId: PROJECT, location: null, durationMinutes: 15,
+        attendees: [{ workerId: WORKER_REPORTER, signatureName: "R. Radnik", signedAt: `${DAY}T12:15:00+02:00` }] },
+    });
+    for (const denied of [diary, item, action, training]) {
+      expect(denied.status).toBe("REJECTED");
+      expect(denied.code).toBe("SYNC_ITEM_REJECTED");
+    }
+    const counts = await withCompany(admin, companyId(CO), (client) => client.query<{ actions: string; trainings: string }>(
+      `SELECT (SELECT count(*) FROM hse_actions WHERE id = $1)::text AS actions,
+              (SELECT count(*) FROM hse_trainings WHERE id = $2)::text AS trainings`,
+      [`hsa_worker_${RUN}`, `hst_worker_${RUN}`],
+    ));
+    expect(counts.rows[0]).toEqual({ actions: "0", trainings: "0" });
+  });
+
+  it("vozač može prijaviti opasnost i čita samo svoj sync opseg", async () => {
+    expect((await pushOne(COOKIES.driver, incidentItem({ incidentId: `hsi_driver_${RUN}` }))).status).toBe("APPLIED");
+    const response = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.driver } }));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: { events: { entityType: string; entityId: string }[] } };
+    expect(body.data.events.some((event) => event.entityType === "site_diary")).toBe(false);
+    expect(body.data.events.some((event) => event.entityId === `hsi_driver_${RUN}`)).toBe(true);
+    expect(body.data.events.some((event) => event.entityId === `hsi_worker_${RUN}`)).toBe(false);
+  });
+
+  it("potpisan dnevnik ne prima sync dopune ni BOQ stavke bez revizije", async () => {
+    await withCompany(admin, companyId(CO), (client) => client.query(
+      `UPDATE site_diaries SET status = 'SIGNED', signed_name = 'Šef', signed_at = now()
+       WHERE company_id = $1 AND id = $2`, [CO, `sdr_f9s_${RUN}`],
+    ));
+    const diary = await pushOne(COOKIES.sup, diaryItem({ diaryId: `sdr_f9s_${RUN}` }));
+    const item = await pushOne(COOKIES.sup, {
+      localId: localId(), entityType: "site_diary_item", diaryItemId: `sdi_signed_${RUN}`, diaryProjectId: PROJECT, diaryDate: DAY,
+      deviceSentAt: `${DAY}T17:00:00+02:00`,
+      item: { boqItemId: BOQ_ITEM, description: "Beton", unit: "m3", quantity: "1", source: "BOQ" },
+    });
+    expect(diary.status).toBe("REJECTED");
+    expect(diary.code).toBe("DIARY_ALREADY_LOCKED");
+    expect(item.status).toBe("REJECTED");
+    expect(item.code).toBe("DIARY_ALREADY_LOCKED");
+  });
+
+  it("tuđa firma ne može pisati dnevnik ni incident u ovu firmu", async () => {
+    const response = await push(pushRequest(COOKIES.b, [diaryItem({ diaryId: `sdr_foreign_${RUN}` })]));
+    /* Vlasnik firme B nema radnički zapis, pa push pada prije obrade stavke (kao u R4 granici). */
+    if (response.status === 200) {
+      const body = (await response.json()) as { data: { results: R4SyncPushItemResult[] } };
+      expect(["REJECTED", "INVALID"]).toContain(at(body.data.results).status);
+    } else {
+      expect([403, 404]).toContain(response.status);
+    }
+    const foreign = await withCompany(admin, companyId(CO), async (client) =>
+      client.query<{ count: string }>(
+        "SELECT count(*)::text AS count FROM site_diaries WHERE company_id = $1 AND id = $2",
+        [CO, `sdr_foreign_${RUN}`],
+      ));
+    expect(foreign.rows[0]?.count).toBe("0");
+  });
+  it("HSE PROJECTS i SELF štite servis, liste, statistiku, mjere i offline push/retry/pull", async () => {
+    const { getVerifiedPool } = await import("./db");
+    const service = await import("./hse-service");
+    const pool = await getVerifiedPool();
+    const other = `prj_f9_hidden_${RUN}`;
+    await admin.query("INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'OUT','Van opsega')", [other, CO]);
+    await admin.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date)
+      VALUES ($1,$2,$3,$4,'2020-01-01')`, [`asg_scope_${RUN}`,CO,PROJECT,WORKER_SUP]);
+    const owner = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"], scope: "COMPANY" as const, projectIds: null };
+    const otherAuthor = { ...owner, userId: USER_WORKER };
+    const incidentInput = (projectId: string, id: string) => ({ id, projectId, kind:"NEAR_MISS", severity:"MODERATE",
+      occurredAt:`${DAY}T10:00:00Z`, description:"Opis opasnog događaja" });
+    const allowedId = `hsi_scope_yes_${RUN}`, deniedId = `hsi_scope_no_${RUN}`;
+    expect((await service.reportIncident(pool, owner, incidentInput(PROJECT, allowedId))).outcome).toBe("OK");
+    expect((await service.reportIncident(pool, otherAuthor, incidentInput(other, deniedId))).outcome).toBe("OK");
+    const inspectionInput = (projectId:string) => ({kind:"INTERNAL" as const, inspectedAt:`${DAY}T10:00:00Z`, result:"PROHIBITION" as const, projectId});
+    const inInspection = await service.recordInspection(pool, owner, inspectionInput(PROJECT));
+    const outInspection = await service.recordInspection(pool, otherAuthor, inspectionInput(other));
+    if (inInspection.outcome !== "OK" || outInspection.outcome !== "OK") throw new Error("inspection fixture");
+    const actionInput = (incidentId:string) => ({incidentId,description:"Spriječiti opasnost",responsibleWorkerId:WORKER_SUP,dueOn:DAY});
+    const inAction = await service.createAction(pool, owner, actionInput(allowedId));
+    const outAction = await service.createAction(pool, owner, actionInput(deniedId));
+    if (inAction.outcome !== "OK" || outAction.outcome !== "OK") throw new Error("action fixture");
+    const trainingInput = (projectId:string, id:string) => ({id,projectId,kind:"TOOLBOX" as const,title:"Sigurnost",topic:"Zaštita",heldAt:`${DAY}T10:00:00Z`,durationMinutes:10,
+      attendees:[{workerId:WORKER_SUP,signatureName:"Šef",signedAt:`${DAY}T10:10:00Z`}]});
+    const trainingA = `hst_scope_yes_${RUN}`, trainingB = `hst_scope_no_${RUN}`;
+    expect((await service.createTraining(pool, owner, trainingInput(PROJECT, trainingA))).outcome).toBe("OK");
+    expect((await service.createTraining(pool, otherAuthor, trainingInput(other, trainingB))).outcome).toBe("OK");
+    // Generate event and receipt while scope is still COMPANY, then revoke project access.
+    const foreignItem = incidentItem({ incidentId:`hsi_sync_hidden_${RUN}` });
+    if (foreignItem.entityType !== "hse_incident") throw new Error("fixture");
+    foreignItem.incident.projectId = other;
+    expect((await pushOne(COOKIES.sup, foreignItem)).status).toBe("APPLIED");
+    try {
+      await admin.query("UPDATE memberships SET scope='PROJECTS' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+      const scoped = { ...owner, scope:"PROJECTS" as const, projectIds:[PROJECT] };
+      expect(await service.getIncident(pool, scoped, deniedId)).toBeNull();
+      expect(await service.getIncident(pool, scoped, allowedId)).not.toBeNull();
+      expect((await service.reportIncident(pool, scoped, incidentInput(other, `hsi_denied_${RUN}`))).outcome).toBe("NOT_FOUND");
+      expect((await service.saveInvestigation(pool, scoped, deniedId, {rootCause:"Opasan uzrok"})).outcome).toBe("NOT_FOUND");
+      expect((await service.createAction(pool, scoped, actionInput(deniedId))).outcome).toBe("NOT_FOUND");
+      expect((await service.completeAction(pool, scoped, outAction.id)).outcome).toBe("NOT_FOUND");
+      expect((await service.liftProhibition(pool, scoped, outInspection.id, "Zabrana otklonjena")).outcome).toBe("NOT_FOUND");
+      expect((await service.recordInspection(pool, scoped, inspectionInput(other))).outcome).toBe("NOT_FOUND");
+      expect((await service.createTraining(pool, scoped, trainingInput(other, `hst_denied_${RUN}`))).outcome).toBe("NOT_FOUND");
+      const wrongWorkerTraining = trainingInput(PROJECT, `hst_wrong_worker_${RUN}`);
+      wrongWorkerTraining.attendees[0]!.workerId = WORKER_INJURED;
+      expect((await service.createTraining(pool, scoped, wrongWorkerTraining)).outcome).toBe("NOT_FOUND");
+      expect((await service.createAction(pool, scoped, {...actionInput(allowedId),responsibleWorkerId:WORKER_INJURED})).outcome).toBe("NOT_FOUND");
+      expect((await pushOne(COOKIES.sup, foreignItem)).status).toBe("REJECTED");
+      const hiddenNew = incidentItem({incidentId:`hsi_sync_new_denied_${RUN}`});
+      if (hiddenNew.entityType !== "hse_incident") throw new Error("fixture");
+      hiddenNew.incident.projectId = other;
+      expect((await pushOne(COOKIES.sup, hiddenNew)).status).toBe("REJECTED");
+      const toolbox: R4SyncPushItem = {
+        localId: localId(), entityType: "hse_training", trainingId: `hst_sync_scoped_${RUN}`,
+        deviceSentAt:`${DAY}T12:00:00Z`, training: {kind:"TOOLBOX",title:"Sigurnost",topic:"Zaštita",
+          heldAt:`${DAY}T12:00:00Z`,projectId:PROJECT,location:null,durationMinutes:15,
+          attendees:[{workerId:WORKER_SUP,signatureName:"Šef",signedAt:`${DAY}T12:15:00Z`}]},
+      };
+      expect((await pushOne(COOKIES.sup, toolbox)).status).toBe("APPLIED");
+      const badToolbox = structuredClone(toolbox);
+      if (badToolbox.entityType !== "hse_training") throw new Error("fixture");
+      badToolbox.localId = localId(); badToolbox.trainingId = `hst_sync_bad_${RUN}`; badToolbox.training.projectId = other;
+      expect((await pushOne(COOKIES.sup, badToolbox)).status).toBe("REJECTED");
+      const forgedExisting = structuredClone(toolbox);
+      if (forgedExisting.entityType !== "hse_training") throw new Error("fixture");
+      forgedExisting.localId = localId(); forgedExisting.trainingId = trainingB;
+      expect((await pushOne(COOKIES.sup, forgedExisting)).status).toBe("REJECTED");
+      const badAction: R4SyncPushItem = {localId:localId(),entityType:"hse_action",actionId:`hsa_sync_bad_${RUN}`,
+        deviceSentAt:`${DAY}T12:00:00Z`,action:{incidentId:deniedId,inspectionId:null,description:"Strana mjera",responsibleWorkerId:WORKER_SUP,dueOn:DAY}};
+      expect((await pushOne(COOKIES.sup, badAction)).status).toBe("REJECTED");
+      await withCompany(admin, companyId(CO), async client => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("UPDATE project_assignments SET to_date='2020-01-02' WHERE id=$1", [`asg_scope_${RUN}`]);
+      });
+      expect((await pushOne(COOKIES.sup, toolbox)).status).toBe("REJECTED");
+      await withCompany(admin, companyId(CO), async client => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("UPDATE project_assignments SET to_date=NULL WHERE id=$1", [`asg_scope_${RUN}`]);
+      });
+      const page = await pull(new NextRequest("http://t/api/sync/pull?limit=200",{headers:{cookie:COOKIES.sup}}));
+      expect(JSON.stringify(await page.json())).not.toContain(foreignItem.incidentId);
+      const incidentList = await import("@/app/api/hse/incidents/route");
+      const actions = await import("@/app/api/hse/actions/route");
+      const trainings = await import("@/app/api/hse/trainings/route");
+      const inspections = await import("@/app/api/hse/inspections/route");
+      const attendees = await import("@/app/api/hse/trainings/[id]/attendees/route");
+      const req = () => new NextRequest("http://t/api/hse/test",{headers:{cookie:COOKIES.sup}});
+      const listed = JSON.stringify(await (await incidentList.GET(req())).json());
+      expect(listed).toContain(allowedId); expect(listed).not.toContain(deniedId);
+      const listedActions = JSON.stringify(await (await actions.GET(req())).json());
+      expect(listedActions).toContain(inAction.id); expect(listedActions).not.toContain(outAction.id);
+      const listedTrainings = JSON.stringify(await (await trainings.GET(req())).json());
+      expect(listedTrainings).toContain(trainingA); expect(listedTrainings).not.toContain(trainingB);
+      const listedInspections = JSON.stringify(await (await inspections.GET(req())).json());
+      expect(listedInspections).toContain(inInspection.id); expect(listedInspections).not.toContain(outInspection.id);
+      expect((await attendees.GET(req(),{params:Promise.resolve({id:trainingB})})).status).toBe(404);
+      expect((await service.hseStats(pool, scoped, {from:DAY,to:DAY,projectId:other})).incidents).toBe(0);
+      const notifications = await import("./notification-service");
+      const inbox = await notifications.listNotifications(pool, {...scoped,roles:["OWNER"]});
+      const sourceNotifications = await admin.query<{id:string;source_id:string}>("SELECT id,source_id FROM public.notifications WHERE company_id=$1 AND source_id=ANY($2::text[])",[CO,[inInspection.id,outInspection.id]]);
+      const visibleNotice = sourceNotifications.rows.find(row => row.source_id === inInspection.id)!;
+      const hiddenNotice = sourceNotifications.rows.find(row => row.source_id === outInspection.id)!;
+      expect(inbox.some(row => row.id === visibleNotice.id)).toBe(true);
+      expect(inbox.some(row => row.id === hiddenNotice.id)).toBe(false);
+      expect(await notifications.markRead(pool, {...scoped,roles:["OWNER"],notificationId:hiddenNotice.id})).toBe(0);
+      await admin.query("UPDATE memberships SET scope='SELF' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+      const self = {...owner, scope:"SELF" as const};
+      expect(await service.getIncident(pool,self,deniedId)).toBeNull();
+      expect(await service.getIncident(pool,self,allowedId)).not.toBeNull();
+      expect((await service.completeAction(pool,self,outAction.id)).outcome).toBe("NOT_FOUND");
+      const forgedSelf = incidentItem({incidentId:deniedId});
+      expect((await pushOne(COOKIES.sup, forgedSelf)).status).toBe("REJECTED");
+      const selfList = JSON.stringify(await (await incidentList.GET(req())).json());
+      expect(selfList).toContain(allowedId); expect(selfList).not.toContain(deniedId);
+      const selfTrainings = JSON.stringify(await (await trainings.GET(req())).json());
+      expect(selfTrainings).toContain(trainingA); expect(selfTrainings).not.toContain(trainingB);
+      expect((await attendees.GET(req(),{params:Promise.resolve({id:trainingB})})).status).toBe(404);
+    } finally {
+      await admin.query("UPDATE memberships SET scope='COMPANY' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+    }
+  });
+
+});

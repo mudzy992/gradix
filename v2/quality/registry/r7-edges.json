@@ -1,0 +1,619 @@
+{
+  "edgeDefaults": {
+    "status": "COVERED",
+    "group": "tender-matrix",
+    "assertion": "unit",
+    "file": "apps/web/src/server/tender-status.test.ts",
+    "title": "svaki par statusa slijedi matricu"
+  },
+  "edges": [
+    {
+      "edge": "OPPORTUNITY>GO_NO_GO",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>CANCELLED",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>PREPARATION",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>CANCELLED",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>SUBMITTED",
+      "bodyIncludes": [
+        "PREPARATION",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>CANCELLED",
+      "bodyIncludes": [
+        "PREPARATION",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>EVALUATION",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>WON",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>LOST",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>WITHDRAWN",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>WON",
+      "bodyIncludes": [
+        "EVALUATION",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>LOST",
+      "bodyIncludes": [
+        "EVALUATION",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>WITHDRAWN",
+      "bodyIncludes": [
+        "EVALUATION",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>terminal",
+      "bodyIncludes": [
+        "WON",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>terminal",
+      "bodyIncludes": [
+        "LOST",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>terminal",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>terminal",
+      "bodyIncludes": [
+        "CANCELLED",
+        "(terminal)",
+        "toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>PREPARATION",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>SUBMITTED",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>EVALUATION",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>WON",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>LOST",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "OPPORTUNITY>WITHDRAWN",
+      "bodyIncludes": [
+        "OPPORTUNITY",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>OPPORTUNITY",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>SUBMITTED",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>EVALUATION",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>WON",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>LOST",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "GO_NO_GO>WITHDRAWN",
+      "bodyIncludes": [
+        "GO_NO_GO",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>OPPORTUNITY",
+      "bodyIncludes": [
+        "PREPARATION",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>GO_NO_GO",
+      "bodyIncludes": [
+        "PREPARATION",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>EVALUATION",
+      "bodyIncludes": [
+        "PREPARATION",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>WON",
+      "bodyIncludes": [
+        "PREPARATION",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>LOST",
+      "bodyIncludes": [
+        "PREPARATION",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "PREPARATION>WITHDRAWN",
+      "bodyIncludes": [
+        "PREPARATION",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>OPPORTUNITY",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>GO_NO_GO",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>PREPARATION",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "SUBMITTED>CANCELLED",
+      "bodyIncludes": [
+        "SUBMITTED",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>OPPORTUNITY",
+      "bodyIncludes": [
+        "EVALUATION",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>GO_NO_GO",
+      "bodyIncludes": [
+        "EVALUATION",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>PREPARATION",
+      "bodyIncludes": [
+        "EVALUATION",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>SUBMITTED",
+      "bodyIncludes": [
+        "EVALUATION",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "EVALUATION>CANCELLED",
+      "bodyIncludes": [
+        "EVALUATION",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>OPPORTUNITY",
+      "bodyIncludes": [
+        "WON",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>GO_NO_GO",
+      "bodyIncludes": [
+        "WON",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>PREPARATION",
+      "bodyIncludes": [
+        "WON",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>SUBMITTED",
+      "bodyIncludes": [
+        "WON",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>EVALUATION",
+      "bodyIncludes": [
+        "WON",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>LOST",
+      "bodyIncludes": [
+        "WON",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>WITHDRAWN",
+      "bodyIncludes": [
+        "WON",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WON>CANCELLED",
+      "bodyIncludes": [
+        "WON",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>OPPORTUNITY",
+      "bodyIncludes": [
+        "LOST",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>GO_NO_GO",
+      "bodyIncludes": [
+        "LOST",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>PREPARATION",
+      "bodyIncludes": [
+        "LOST",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>SUBMITTED",
+      "bodyIncludes": [
+        "LOST",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>EVALUATION",
+      "bodyIncludes": [
+        "LOST",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>WON",
+      "bodyIncludes": [
+        "LOST",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>WITHDRAWN",
+      "bodyIncludes": [
+        "LOST",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "LOST>CANCELLED",
+      "bodyIncludes": [
+        "LOST",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>OPPORTUNITY",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>GO_NO_GO",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>PREPARATION",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>SUBMITTED",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>EVALUATION",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>WON",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>LOST",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "WITHDRAWN>CANCELLED",
+      "bodyIncludes": [
+        "WITHDRAWN",
+        "CANCELLED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>OPPORTUNITY",
+      "bodyIncludes": [
+        "CANCELLED",
+        "OPPORTUNITY",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>GO_NO_GO",
+      "bodyIncludes": [
+        "CANCELLED",
+        "GO_NO_GO",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>PREPARATION",
+      "bodyIncludes": [
+        "CANCELLED",
+        "PREPARATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>SUBMITTED",
+      "bodyIncludes": [
+        "CANCELLED",
+        "SUBMITTED",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>EVALUATION",
+      "bodyIncludes": [
+        "CANCELLED",
+        "EVALUATION",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>WON",
+      "bodyIncludes": [
+        "CANCELLED",
+        "WON",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>LOST",
+      "bodyIncludes": [
+        "CANCELLED",
+        "LOST",
+        "not.toThrow"
+      ]
+    },
+    {
+      "edge": "CANCELLED>WITHDRAWN",
+      "bodyIncludes": [
+        "CANCELLED",
+        "WITHDRAWN",
+        "not.toThrow"
+      ]
+    }
+  ]
+}

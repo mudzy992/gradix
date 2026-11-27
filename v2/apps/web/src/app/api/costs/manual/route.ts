@@ -1,0 +1,50 @@
+/** POST /api/costs/manual — ručni trošak sa gradilišta (fotografija računa uz unos). */
+import type { NextRequest } from "next/server";
+import { ManualCostInput, ManualCostListQuery } from "@gradix/contracts";
+import { fail, internal, ok } from "@/server/api";
+import { getVerifiedPool } from "@/server/db";
+import { guard } from "@/server/guard";
+import type { Role } from "@/server/permissions";
+import { listPendingManualCosts } from "@/server/phase-10b-list-service";
+import { purchaseResponse } from "@/server/purchase-response";
+import { createManualCost } from "@/server/cost-entry-service";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest): Promise<Response> {
+  try {
+    const auth=await guard(request,"projects.costs.view"); if(!auth.ok) return auth.response;
+    const query=ManualCostListQuery.safeParse(Object.fromEntries(request.nextUrl.searchParams));
+    if(!query.success) return fail("VALIDATION_FAILED","Filter nije validan.");
+    const result=await listPendingManualCosts(await getVerifiedPool(),auth.ctx,query.data.projectId);
+    return purchaseResponse(result.outcome==="OK" ? {outcome:"OK",data:{requests:result.data}} : result);
+  } catch(error) { return internal(error,"costs.manual.list"); }
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  try {
+    const guardResult = await guard(request, "projects.costs.book");
+    if (!guardResult.ok) return guardResult.response;
+    const parsed = ManualCostInput.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return fail("VALIDATION_FAILED", "Neispravan unos troška.");
+    const result = await createManualCost(
+      await getVerifiedPool(),
+      {
+        userId: guardResult.ctx.userId,
+        companyId: guardResult.ctx.companyId,
+        roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
+      },
+      parsed.data,
+    );
+    if (result.outcome === "FORBIDDEN") return fail("FORBIDDEN", result.message ?? "Nemate pravo.");
+    if (result.outcome === "VALIDATION_FAILED") {
+      return fail("VALIDATION_FAILED", result.message ?? "Trošak nije moguće upisati.");
+    }
+    if (result.outcome === "CONFLICT") return fail("CONFLICT", result.message ?? "Konflikt.");
+    return ok(result);
+  } catch (error) {
+    return internal(error, "costs.manual");
+  }
+}

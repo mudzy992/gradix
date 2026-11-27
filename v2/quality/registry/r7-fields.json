@@ -1,0 +1,385 @@
+{
+  "outcomes": [
+    {
+      "id": "R7.tender.field.title-listed",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Created tender title is visible in the office list",
+      "group": "tender-list",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "ui-entity",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/e2e/evidencija-deep.spec.ts",
+          "title": "partner + tender OPPORTUNITY→…→WON→convert; UI vidi tender",
+          "bodyIncludes": [
+            "getByText(tender.title"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.submitted-at",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "submitted_at is set only when the tender becomes SUBMITTED",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "submitted_at se postavlja tek na prelasku u SUBMITTED",
+          "bodyIncludes": [
+            "submitted_at",
+            "SUBMITTED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.money",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Negative money or a bad currency is rejected",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "negativan iznos ne pravi tender",
+          "bodyIncludes": [
+            "-5.00",
+            "VALIDATION_FAILED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.field.partner-fk",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Partner must belong to the same company",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "nepoznat partner se odbija",
+          "bodyIncludes": [
+            "VALIDATION_FAILED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.attachment.pending-ready",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Attachment moves pending to ready only after confirm",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "CI-SKIP",
+      "owner": "Phase D, MinIO is not a ci-v2 service",
+      "review": "Cover when ci-v2.yml runs MinIO and a test confirms pending to ready. The unconfigured path is R7.tender.attachment.unconfigured."
+    },
+    {
+      "id": "R7.tender.attachment.browser-upload",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/e2e-coverage/MATRIX.md",
+      "summary": "Browser upload through MinIO",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "ui-entity",
+      "status": "CI-SKIP",
+      "owner": "e2e-coverage MATRIX, MinIO decision 2026-11-20",
+      "review": "Remove when ci-v2.yml runs a MinIO service and a Playwright upload asserts pending to ready"
+    },
+    {
+      "id": "R7.tender.attachment.not-copied",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Convert does not copy attachments onto the project",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "convert ne prebacuje prilog na projekat",
+          "bodyIncludes": [
+            "entity_id",
+            "PROJECT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.obligation.one-scope",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Obligations × TENDER",
+      "summary": "A TENDER obligation has exactly one scope target",
+      "group": "tender-obligation",
+      "gate": "required",
+      "section": "Obligations × TENDER",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "obaveza na tenderu ima jedan opseg; dva opsega padaju",
+          "bodyIncludes": [
+            "obligations_one_scope"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R7.tender.attachment.unconfigured",
+      "slice": "R7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Prilozi",
+      "summary": "Registering an attachment without storage inserts no row",
+      "group": "tender-attachment",
+      "gate": "required",
+      "section": "Prilozi",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-convert.integration.test.ts",
+          "title": "prilog bez skladišta ne upisuje red",
+          "bodyIncludes": [
+            "CONFLICT",
+            "entity_type = 'TENDER'"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.field.no-draft",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "New tender starts in OPPORTUNITY; the frozen nine-status flow has no DRAFT",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "novi tender je OPPORTUNITY, a ne DRAFT",
+          "bodyIncludes": [
+            "OPPORTUNITY",
+            "SELECT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.field.deadline-existing",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Polja",
+      "summary": "Deadline, questions deadline and site visit are stored on the tender",
+      "group": "tender-fields",
+      "gate": "required",
+      "section": "Polja",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-lifecycle.integration.test.ts",
+          "title": "priprema bez odluke o učešću je TENDER_DECISION_REQUIRED",
+          "bodyIncludes": [
+            "deadlineAt",
+            "SELECT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.calc.direct-cost",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Kalkulacija × revizije",
+      "summary": "Calculation sums BOQ and resources into direct cost (10 m3 x 100 = 1000.00)",
+      "group": "tender-pricing",
+      "gate": "required",
+      "section": "Kalkulacija × revizije",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "kalkulacija sabira predmjer i daje maržu",
+          "bodyIncludes": [
+            "directCostAmount",
+            "1000.00"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.calc.approval-threshold",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Kalkulacija × revizije",
+      "summary": "A revision changing the price by more than 5 % needs approval; the first one does not",
+      "group": "tender-pricing",
+      "gate": "required",
+      "section": "Kalkulacija × revizije",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "prva revizija ne traži odobrenje, veliki popust traži",
+          "bodyIncludes": [
+            "needsApproval",
+            "true",
+            "false"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.calc.append-only",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Kalkulacija × revizije",
+      "summary": "A price revision is append-only: UPDATE on a stored revision is rejected by the database",
+      "group": "tender-pricing",
+      "gate": "required",
+      "section": "Kalkulacija × revizije",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "revizija je append-only: UPDATE na odobrenoj reviziji pada",
+          "bodyIncludes": [
+            "TENDER_PRICE_REVISION_IMMUTABLE",
+            "admin.query"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.calc.approve-rights",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Kalkulacija × revizije",
+      "summary": "Only an approver (OWNER/ADMIN) approves; approving twice is a conflict",
+      "group": "tender-pricing",
+      "gate": "required",
+      "section": "Kalkulacija × revizije",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "samo vlasnik odobrava reviziju",
+          "bodyIncludes": [
+            "FORBIDDEN",
+            "CONFLICT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.calc.accountant-hidden",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Kalkulacija × revizije",
+      "summary": "ACCOUNTANT gets FORBIDDEN for the calculation: margin is not in the response at all",
+      "group": "tender-pricing",
+      "gate": "required",
+      "section": "Kalkulacija × revizije",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "ACCOUNTANT ne dobija kalkulaciju (FORBIDDEN)",
+          "bodyIncludes": [
+            "FORBIDDEN"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.checklist.blocks-submit",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Ishod i uspješnost",
+      "summary": "Submission is blocked until every required checklist item is attached or waived with a reason",
+      "group": "tender-checklist",
+      "gate": "required",
+      "section": "Ishod i uspješnost",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "kontrolna lista blokira predaju dok stavke nijesu riješene",
+          "bodyIncludes": [
+            "TENDER_CHECKLIST_INCOMPLETE",
+            "SUBMITTED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.checklist.seed-idempotent",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Ishod i uspješnost",
+      "summary": "Checklist seeding from templates runs twice without duplicating items",
+      "group": "tender-checklist",
+      "gate": "required",
+      "section": "Ishod i uspješnost",
+      "assertion": "persistence",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "seed kontrole liste je idempotentan",
+          "bodyIncludes": [
+            "count(*)",
+            "tender_checklist_items"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F7.tender.outcome.performance",
+      "slice": "F7",
+      "source": ".cursor/docs/matrices/tenders/MATRIX.md#Ishod i uspješnost",
+      "summary": "Win rate counts WON tenders; margin percentages appear only for roles with price.manage",
+      "group": "tender-outcome",
+      "gate": "required",
+      "section": "Ishod i uspješnost",
+      "assertion": "integration",
+      "status": "COVERED",
+      "evidence": [
+        {
+          "file": "apps/web/src/server/tender-pricing.integration.test.ts",
+          "title": "uspješnost broji dobijene i marže samo uz pravo cijene",
+          "bodyIncludes": [
+            "wonCount",
+            "avgMarginWonPct",
+            "toBeNull"
+          ]
+        }
+      ]
+    }
+  ]
+}

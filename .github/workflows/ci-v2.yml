@@ -1,0 +1,514 @@
+name: CI (v2)
+
+# Zašto je ovaj fajl u KORIJENU repoa: GitHub Actions čita isključivo
+# `.github/workflows/` u korijenu. Dok je bio u `v2/.github/workflows/`, v2 CI se
+# NIKAD nije pokrenuo (391 run je bio v1). Radni direktorij v2 zato stoji u svakom koraku.
+#
+# Brzina je uslov: cilj je pregled svake promjene ispod 10 minuta.
+# Teški testovi (mobilni E2E na emulatoru) idu u noćni pokret kad budu postojali.
+on:
+  push:
+    branches: [main, v2-bootstrap, "arena/**"]
+    paths:
+      - "v2/**"
+      - ".github/workflows/ci-v2.yml"
+      - ".cursor/docs/matrices/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "v2/**"
+      - ".github/workflows/ci-v2.yml"
+      - ".cursor/docs/matrices/**"
+  workflow_dispatch:
+    inputs:
+      e2e_stabilnost:
+        description: "Mjerenje stabilnosti E2E (20x bez retryja) umjesto redovne provjere"
+        type: boolean
+        default: false
+      broj_pokretanja:
+        description: "Broj E2E pokretanja u mjerenju stabilnosti"
+        required: false
+        default: "20"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+  DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/gradix
+  AUTH_SECRET: ci-placeholder-secret-min-32-characters
+
+jobs:
+  verify:
+    if: ${{ !inputs.e2e_stabilnost }}
+    # Playwright Chromium još nema build za ubuntu 26.04 (ubuntu-latest od 2026-11).
+    runs-on: ubuntu-24.04
+    # E2E lanac (@smoke + 6 @deep shardova + @snimci) traje ~7 min kad prijava radi; 30 min je
+    # bilo dovoljno sve do F1, kada je drugi korak prijave počeo da troši cijeli budžet.
+    # 45 min daje prostor za taj lanac, a i dalje hvata stvarno zaglavljivanje.
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        # Produkcija: postgres:18.6-trixie. Alpine 16 nije zamjena za tu sliku.
+        image: postgres:18.6-trixie
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+
+      - name: Opcionalna dijagnostika — fault injection i Coolify env contract
+        working-directory: v2
+        run: |
+          node infra/diagnostics/ci-smoke.mjs
+          node infra/scripts/check-runtime-env.mjs
+          node infra/docker/entrypoint-env.test.mjs
+
+      - name: Lint
+        working-directory: v2
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: v2
+        run: pnpm typecheck
+
+      # Ugovor: `openapi.json` je generisan iz šema. Ako se šema promijeni a dokument ne,
+      # klijent se zakuca na stari ugovor i to se vidi tek na uređaju.
+      # Vlasnička odluka: repo sadrži samo sintetičke podatke. Provjera ide prije testova —
+      # JMBG ili strani email u seedu bi prošao testove i otišao u repo.
+      - name: Nema stvarnih ličnih podataka
+        working-directory: v2
+        # Samoprovjera prvo: pravilo koje ne padne na stvarni JMBG izgleda kao zaštita, a nije.
+        run: |
+          node infra/scripts/check-privacy.mjs --self-test
+          pnpm check-privacy
+
+      # U: kontrast tokena (AA, obje teme) i zabrana hardkodiranja u UI sistemu — pad = crven build.
+      - name: UI kontrast i hardkodiranje (U)
+        working-directory: v2
+        run: |
+          pnpm check-contrast
+          pnpm check-ui
+
+      # A2: nula ciklusa uvozâ u mobilnom i webu (madge čita stvarne import grafove).
+      # Novi ciklus = crven build; popravlja se *-shared datotekom ili uvozom iz konkretne datoteke.
+      - name: Ciklusi uvozâ (A2)
+        working-directory: v2
+        run: pnpm check-cycles
+
+      - name: OpenAPI je ažuran
+        working-directory: v2
+        run: pnpm --filter @gradix/contracts check
+
+      - name: Expo verzije (native bundle ne pada tek na telefonu)
+        working-directory: v2
+        # Bez mreže: čita bundledNativeModules.json iz instaliranog `expo`.
+        # Hvata slučaj react-native !== ono što SDK traži — `expo export -p web` to propusti.
+        run: pnpm check-expo
+
+      # Maestro tokovi: samo YAML i reference (sekunde, bez emulatora).
+      # Puni emulator run je odvojen workflow i ide SAMO na workflow_dispatch/noćni —
+      # `IMPLEMENTATION_PLAN.md` traži da emulator ne blokira PR/push (30–40 min po runu,
+      # padovi zbog KVM-a i launcher fokusa, a ne zbog koda).
+      - name: Maestro tokovi (YAML, bez emulatora)
+        working-directory: v2
+        run: pnpm check-maestro
+
+      # Pravi Android bundle: jedini dokaz da Metro ne povuče test/dev kod u aplikaciju.
+      # (Regresija 2026-11-07: render test u src/app/ je kao ruta povukao vitest->vite
+      # i `expo start` za Android je padao na `import(filepath)` u vite modulu.)
+      - name: Android bundle (Metro)
+        working-directory: v2
+        run: pnpm --filter @gradix/mobile exec expo export --platform android --output-dir /tmp/export-android
+
+      # Dio 1e: produkcijski paket ne smije sadržati kod kataloga komponenti.
+      - name: Produkcijski bundle bez kataloga (Dio 1e)
+        run: |
+          if grep -rqs "Katalog komponenti" /tmp/export-android; then
+            echo "Katalog je u produkcijskom bundle-u!" && exit 1
+          fi
+          echo "OK: katalog nije u produkcijskom bundle-u"
+
+      - name: Migracije i role
+        id: migracije
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+
+      # B1: svaki SQL upit nad tenant tabelom mora nositi company_id (vidljiva druga
+      # linija odbrane pored RLS-a). Katalog baze je upravo primijenjen migracijama,
+      # pa skripta unakrsno provjerava i svoju listu tenant tabela.
+      - name: Izolacija tenanata (B1)
+        working-directory: v2
+        run: pnpm check-tenant-sql
+
+      # Isti runtime preflight, kao DATABASE_URL aplikacijska rola (gradix_app), prije testova.
+      # Time CI čita isti skup katalogâ kao staging, a ne administratorsku DATABASE_ADMIN_URL.
+      - name: Runtime preflight (RLS, aplikacijska rola, preklapanje, scope default)
+        working-directory: v2
+        run: ./packages/db/preflight-checks/run.sh
+
+      # Negativan dokaz: namjerno proširi ACL, potvrdi da matrix preflight pada BAŠ na tom
+      # dodatnom pravu, pa odmah vrati ACL. Trap uklanja testni grant i ako korak bude prekinut.
+      - name: Preflight odbija grant izvan matrice
+        working-directory: v2
+        run: |
+          set -eu
+          output="$(mktemp)"
+          revoke_test_grant() {
+            psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -q -c \
+              "REVOKE DELETE ON TABLE public.companies FROM gradix_app" || true
+            rm -f "$output"
+          }
+          trap revoke_test_grant EXIT
+          psql "$DATABASE_ADMIN_URL" -X -v ON_ERROR_STOP=1 -q -c \
+            "GRANT DELETE ON TABLE public.companies TO gradix_app"
+          if ./packages/db/preflight-checks/run.sh >"$output" 2>&1; then
+            cat "$output"
+            echo "ERROR: preflight accepted an unreviewed DELETE grant on companies." >&2
+            exit 1
+          fi
+          cat "$output"
+          if ! grep -Fq "unexpected DELETE" "$output"; then
+            echo "ERROR: preflight failed, but did not identify the extra DELETE grant." >&2
+            exit 1
+          fi
+          revoke_test_grant
+          trap - EXIT
+          ./packages/db/preflight-checks/run.sh
+
+      - name: Testovi (jedinični + integracijski na pravoj bazi)
+        working-directory: v2
+        env:
+          REQUIRE_DB_TESTS: "1"
+        run: pnpm test
+
+      # E2E A3/B2: ephemeral DB + seed + build/start; @smoke pa @deep-* shardovi (desktop+mobile).
+      # MinIO: CI-SKIP za attachment deep (vidi e2e-coverage MATRIX + 00_ci-harness.md).
+      - name: E2E Playwright (@smoke + @deep shards)
+        working-directory: v2
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
+          # E2E prijavljuje iste demo naloge desetinama puta u minuti, a replay zaštita
+          # (`user_totp.last_used_step`) dozvoljava tri prijave po 30-s periodu. Helper zato
+          # resetuje brojač sintetičkog naloga; zaštita se time ne gasi — testira je
+          # `f1-access.integration.test.ts` protiv pravog servera.
+          E2E_RESET_TOTP_STEP: "1"
+        run: |
+          pnpm --filter @gradix/web exec playwright install --with-deps chromium
+          test -d "$HOME/.cache/ms-playwright" || { echo "::error::PW_CACHE_EMPTY"; exit 1; }
+          find "$HOME/.cache/ms-playwright" -mindepth 1 -maxdepth 1 -printf '::warning::PW_CACHE %f\n'
+          pnpm --filter @gradix/web seed || { echo "::error::SEED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts || { echo "::error::SEED_DEMO_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts || { echo "::error::SEED_SUKOBI_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts || { echo "::error::SEED_PREGLED_FAILED"; exit 1; }
+          pnpm --filter @gradix/web exec tsx scripts/demo-r4b-approval.ts || { echo "::error::SEED_R4B_FAILED"; exit 1; }
+          pnpm --filter @gradix/web build || { echo "::error::BUILD_FAILED"; exit 1; }
+          (pnpm --filter @gradix/web start > /tmp/e2e-server.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
+          run_shard() {
+            local grep="$1"
+            local project="${2:-}"
+            echo "::group::E2E shard $grep ${project:-all-projects}"
+            local pocetak; pocetak=$(date +%s)
+            if [ -n "$project" ]; then
+              E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test --workers=1 --project="$project" \
+                || {
+                  echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log
+                  # LOGOVI SU NEDOSTUPNI preko API-ja (blob host vraća EOF), a anotacije prolaze.
+                  # Zato se ime sharda i posljednje linije objavljuju kao anotacija — bez toga
+                  # pad E2E-a izgleda kao „job je potrošio budžet", bez ijednog traga o testu.
+                  echo "::error title=E2E pad ($grep ${project:-all})::$(grep -E '✘|Error:|expect|Timeout' /tmp/e2e-server.log 2>/dev/null | head -3 | tr '\n' '|' | cut -c1-380)"
+                  exit 1
+                }
+            else
+              E2E_GREP="$grep" pnpm --filter @gradix/web exec playwright test --workers=1 \
+                || {
+                  echo "--- e2e server log ---"; tail -n 60 /tmp/e2e-server.log
+                  echo "::error title=E2E pad ($grep all)::$(grep -E '✘|Error:|expect|Timeout' /tmp/e2e-server.log 2>/dev/null | head -3 | tr '\n' '|' | cut -c1-380)"
+                  exit 1
+                }
+            fi
+            echo "::notice title=E2E shard ($grep ${project:-all})::prošao za $(( $(date +%s) - pocetak )) s"
+            echo "::endgroup::"
+          }
+          # @smoke prvi i ODVOJENO: ako osnovna prijava ne radi, padne za ~1 min i vidi se
+          # odmah, umjesto da šest @deep shardova troši budžet joba redom.
+          run_shard "@smoke"
+          run_shard "@deep-auth"
+          run_shard "@deep-evidencija"
+          run_shard "@deep-mehanizacija"
+          run_shard "@deep-rad"
+          run_shard "@deep-admin"
+          run_shard "@snimci" "desktop"
+
+      # Dio 3c: snimci se objavljuju uvijek (i kad E2E padne) — nisu kapija, nego materijal za pregled.
+      - name: Snimci ekrana kao artefakt (Dio 3c)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradix-snimci
+          path: v2/apps/web/snimci
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Playwright artefakti pri padu E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: v2/apps/web/test-results
+          retention-days: 3
+
+      # Dijagnostika pri padu: anotacije su jedini kanal koji pouzdano stiže iz CI-ja
+      # (turbo prefiksira `::error::`, artefakti/logovi nisu uvijek dostupni).
+      - name: Dijagnostika — novi scope suite s anotacijama
+        # Samo ako su migracije stigle: kad padne raniji korak (npr. lint), baza je
+        # prazna i scope suite bi samo proizveo šum „relation companies does not exist".
+        if: failure() && steps.migracije.outcome == 'success'
+        working-directory: v2/apps/web
+        env:
+          REQUIRE_DB_TESTS: "1"
+        run: pnpm exec vitest run src/server/workday-review.integration.test.ts src/server/scope-roles.integration.test.ts src/server/workday-resolve-pull.integration.test.ts src/server/workday-resolve.integration.test.ts --reporter=github-actions
+
+      - name: Web test padovi kao artefakt (imena i poruke)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-test-failures
+          path: v2/apps/web/web-test-failures.txt
+          retention-days: 3
+
+      # Testovi ostavljaju tenant fixtures u bazi; provjera nakon njih dokazuje da matrix i dalje
+      # prolazi na već popunjenoj šemi, ne samo odmah nakon prazne migracije.
+      - name: Runtime preflight nakon integracijskih testova (baza popunjena)
+        working-directory: v2
+        run: ./packages/db/preflight-checks/run.sh
+
+      # Zaštita preklapanja dodjela ima DVA nosioca i biraju se pri migraciji (ima li btree_gist).
+      # Jedan test zato ne može pokriti oba: ovaj korak vrti oba puta (prinudni fallback i stvarni)
+      # i tvrdi koji je mehanizam ostao aktivan. Bez njega fallback put nikad nije izvršen u CI-ju.
+      - name: Preklapanje dodjela — oba mehanizma (triger i EXCLUDE)
+        working-directory: v2
+        env:
+          DATABASE_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          DATABASE_URL_APP: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+        run: pnpm --filter @gradix/web check-preklapanje
+
+      # R1c kapija: pristupačnost i tastatura nisu ručna provjera. Isti testovi su dio
+      # `pnpm test`; ovaj korak ih imenuje da u CI-ju bude VIDLJIV zelen a11y, a ne skriven
+      # u zbirnom broju. Pad ovdje znači: ekran ili okvir ima serious/critical nalaz.
+      - name: Pristupačnost i tastatura (axe, WCAG 2.1 AA)
+        working-directory: v2
+        run: pnpm test:a11y
+
+      # ADR 0015: baza je izvor istine. Generisani tipovi MORAJU biti sinhroni sa
+      # migracijama; razlika znači da je migracija dodata bez `pnpm db:types`.
+      - name: Generisani tipovi sinhroni sa bazom
+        working-directory: v2
+        env:
+          DATABASE_URL: postgresql://gradix_app:app@127.0.0.1:5432/gradix
+        run: pnpm --filter @gradix/db types:check
+
+      - name: Migracije na praznoj i popunjenoj prethodnoj bazi
+        working-directory: v2
+        run: ./infra/scripts/check-migrations.sh
+
+      # Sandbox nema lokalni Docker daemon; hosted runner ipak mora dokazati da runtime slika gradi.
+      # Ne objavljujemo je u registryju — ovaj korak samo izgradi image i provjeri Dockerfile/COPY.
+      - name: Izgradi web Docker image
+        working-directory: v2
+        run: docker build --tag gradix-web:ci --file infra/docker/Dockerfile.web .
+
+      # Dijagnostika mora raditi iz IZGRAĐENE slike, ne iz repoa: staging je pao sa
+      # ERR_MODULE_NOT_FOUND jer runtime slika nema @aws-sdk pored /app/diagnostics.
+      # Ovaj korak pokreće baš /app/diagnostics/run.mjs unutar image-a, sa namjerno
+      # pokvarenim S3/Redis podešavanjima, i pada ako se greška modula ikad vrati.
+      - name: Dijagnostika unutar izgrađene slike (bez ERR_MODULE_NOT_FOUND)
+        working-directory: v2
+        run: |
+          set -eu
+          docker run --rm --entrypoint node \
+            -e MINIO_ENDPOINT=http://gradix-minio-ci-probe-does-not-exist.invalid:9000 \
+            -e MINIO_PUBLIC_ENDPOINT=https://minio.example.test \
+            -e MINIO_ACCESS_KEY=ci-diagnostic-access-key \
+            -e MINIO_SECRET_KEY=ci-diagnostic-secret-key-value \
+            -e MINIO_BUCKET=gradix-stg -e MINIO_REGION=us-east-1 \
+            -e MINIO_CORS_ALLOWED_ORIGIN=https://gradix.example.test \
+            gradix-web:ci /app/diagnostics/run.mjs > /tmp/diag-image.log 2>&1
+          cat /tmp/diag-image.log
+          ! grep -q "ERR_MODULE_NOT_FOUND" /tmp/diag-image.log
+          grep -q "phase=s3.connection status=FAIL" /tmp/diag-image.log
+          grep -q "phase=redis.config" /tmp/diag-image.log
+          # Dostupni lokalni lažni S3 natjera SDK da stvarno izvede HEAD i PUT iz image-a.
+          # DNS greška sama po sebi ne izvršava bundlovani SDK i nije dovoljna regresija.
+          docker run --rm --entrypoint node \
+            -v "$PWD/infra/diagnostics/ci-smoke.mjs:/tmp/ci-smoke.mjs:ro" \
+            gradix-web:ci /tmp/ci-smoke.mjs /app/diagnostics/run.mjs
+          docker run --rm --entrypoint node \
+            -v "$PWD/infra/diagnostics/standalone-s3-smoke.mjs:/tmp/standalone-s3-smoke.mjs:ro" \
+            gradix-web:ci /tmp/standalone-s3-smoke.mjs /app/apps/web/server.js
+
+      - name: Matrix parity (required gaps and false coverage fail)
+        if: always() && !cancelled()
+        working-directory: v2
+        run: node quality/check-matrix-parity.mjs
+
+      - name: Application coverage (false coverage and required gaps fail)
+        if: always() && !cancelled()
+        working-directory: v2
+        run: node quality/check-application-coverage.mjs
+
+      - name: Application coverage report
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-coverage-report
+          path: v2/quality/application-report.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Matrix parity report
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-parity-report
+          path: v2/quality/report.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  # E2E stabilnost (R4a-2/A): 20 pokretanja BEZ retryja, raspoređeno kao
+  # matrica 5 jobova x 4 pokretanja (izolacija: pad/istek jednog joba ne
+  # gubi ostala mjerenja; svaki job javlja svoje rezultate anotacijama).
+  # Preglednik ide iz cachea ključanog zaključanom verzijom Playwrighta
+  # (@playwright/test 1.57.0), pa instalacija ne može biti uzrok padova.
+  e2e-stabilnost:
+    if: ${{ inputs.e2e_stabilnost }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        dio: [1, 2, 3, 4, 5]
+    services:
+      postgres:
+        # Produkcija: postgres:18.6-trixie. Alpine 16 nije zamjena za tu sliku.
+        image: postgres:18.6-trixie
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gradix
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: v2/pnpm-lock.yaml
+      - name: Instalacija
+        working-directory: v2
+        run: pnpm install --frozen-lockfile
+      - name: Cache Playwright preglednika (pinovana verzija iz lockfilea)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('v2/pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - name: Instalacija preglednika (samo ako cache promaši)
+        working-directory: v2/apps/web
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Migracije i role
+        working-directory: v2
+        run: |
+          psql "$DATABASE_ADMIN_URL" -q -c "CREATE ROLE gradix_app LOGIN PASSWORD 'app' NOSUPERUSER NOBYPASSRLS" || true
+          ./infra/scripts/db-apply.sh
+      - name: Seed i build
+        working-directory: v2
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+          PLATFORM_ADMIN_EMAILS: vlasnik@demo.test
+        run: |
+          pnpm --filter @gradix/web seed
+          pnpm --filter @gradix/web build
+      - name: Mjerenje — 4 pokretanja bez retryja (dio ${{ matrix.dio }}/5)
+        working-directory: v2/apps/web
+        env:
+          E2E_PASSWORD: E2eDemoLozinka-123
+          SEED_PASSWORD: E2eDemoLozinka-123
+          E2E_RESET_TOTP_STEP: "1"
+          DIO: ${{ matrix.dio }}
+        run: |
+          set -u
+          mkdir -p /tmp/e2e-stabilnost
+          (pnpm start > /tmp/e2e-stabilnost/server.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/login >/dev/null && break || sleep 2; done
+          curl -sf http://127.0.0.1:3000/login >/dev/null || { echo "::error::STAB dio=$DIO server se nije digao"; tail -n 20 /tmp/e2e-stabilnost/server.log; exit 1; }
+          proslo=0
+          palo=0
+          pocetak=$(( (DIO - 1) * 4 + 1 ))
+          for n in $(seq "$pocetak" $((pocetak + 3))); do
+            # Svako pokretanje krece od prazne baze + svjeze demo fiksture:
+            # test razrjesenja trosi demo sukobe (3 u seedu), pa bez reset-a
+            # cetvrto pokretanje na istoj bazi nema sta otvoriti (izmjereni
+            # uzrok padova, R4a-2/A). Baza je testna u CI-ju; produkcijski
+            # seed i guard nepromjenjivosti sukoba se ne diraju.
+            psql "$DATABASE_ADMIN_URL" -q -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" > /tmp/e2e-stabilnost/reset-$n.log 2>&1 \
+              && (cd ../.. && ./infra/scripts/db-apply.sh >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web seed >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/seed-demo-podaci.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-sukobi.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-pregled.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              && (cd ../.. && pnpm --filter @gradix/web exec tsx scripts/demo-r4b-approval.ts >> /tmp/e2e-stabilnost/reset-$n.log 2>&1) \
+              || echo "::error::STAB dio=$DIO run $n: reset baze nije uspio"
+            log="/tmp/e2e-stabilnost/run-$n.log"
+            if pnpm exec playwright test --retries=0 --reporter=list > "$log" 2>&1; then
+              echo "::notice::STAB dio=$DIO run $n: PASS"
+              proslo=$((proslo+1))
+            else
+              echo "::error::STAB dio=$DIO run $n: FAIL"
+              grep -E "^ +[0-9]+\) \[chromium\]" "$log" | head -3 | while IFS= read -r l; do echo "::error::STAB palitest: $l"; done || true
+              grep -E "Error:" "$log" | head -2 | while IFS= read -r l; do echo "::error::STAB greska: $l"; done || true
+              palo=$((palo+1))
+            fi
+            rm -rf test-results
+          done
+          echo "::notice::STAB dio=$DIO proslo=$proslo palo=$palo"
+          [ "$palo" -eq 0 ]
