@@ -5,7 +5,7 @@ import { useState } from "react";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import { formatDateTime, formatNumber, meterUnit } from "@/format";
 import {
-  Alert, Button, Dialog, Input, Mono, Select,
+  Alert, Button, Dialog, Input, Mono, SelectField as Select,
 } from "@/components/ui/index";
 import type { CategoryRow, MachineRow } from "./equipment-shared";
 

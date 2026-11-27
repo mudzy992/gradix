@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 /**
  * Projekti (R3): lista, blokada PRIJE upisa i iznimka.
@@ -126,8 +127,8 @@ describe("projekti", () => {
   it("izvoz prati stanje i rizičnost", async () => {
     mockApi(); const {container}=render(<ProjectsClient canManage canAssign canOverride canSeeMoney canExport />);
     await screen.findByText("Dionica Visoko–Kiseljak");
-    await userEvent.selectOptions(screen.getByLabelText("Stanje projekta"),"ACTIVE");
-    await userEvent.selectOptions(screen.getByLabelText("Rizičnost"),"risky");
+    await chooseSelect(userEvent, screen.getByLabelText("Stanje projekta"),"ACTIVE");
+    await chooseSelect(userEvent, screen.getByLabelText("Rizičnost"),"risky");
     expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih projekata"})).toHaveAttribute("href","/api/projects/export?status=ACTIVE&risky=1");
     await expectNoSeriousA11yViolations(container);
   });
@@ -235,7 +236,7 @@ describe("projekti", () => {
     await screen.findByText("Dionica Visoko–Kiseljak");
     const before = calls.length;
 
-    await userEvent.selectOptions(screen.getByLabelText("Stanje projekta"), "PAUSED");
+    await chooseSelect(userEvent, screen.getByLabelText("Stanje projekta"), "PAUSED");
 
     expect(screen.queryByText("Dionica Visoko–Kiseljak")).toBeNull();
     expect(screen.getByText("Most preko Bosne")).toBeInTheDocument();
@@ -263,7 +264,7 @@ describe("projekti", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
 
-    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await chooseSelect(userEvent, screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-01");
 
     // Blokada se vidi odmah, sa imenom tipa — a ne poslije odbijenog upisa.
@@ -288,7 +289,7 @@ describe("projekti", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
-    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await chooseSelect(userEvent, screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-01");
     await screen.findByText(/Ne može bez iznimke/);
 
@@ -322,7 +323,7 @@ describe("projekti", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
-    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await chooseSelect(userEvent, screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-01");
 
     // Blokada se mora slegnuti PRIJE upisa — inače je dugme zaključano i klikne se u prazno.
@@ -347,7 +348,7 @@ describe("projekti", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
-    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await chooseSelect(userEvent, screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-10");
 
     // Blokada se vidi PRIJE upisa, i poruka imenuje ko odobrava.
@@ -377,7 +378,7 @@ describe("projekti", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /Otvori projekat Dionica/ }));
     await userEvent.click(await screen.findByRole("button", { name: /Dodaj na projekat/ }));
-    await userEvent.selectOptions(screen.getByLabelText("Radnik"), "wrk_1");
+    await chooseSelect(userEvent, screen.getByLabelText("Radnik"), "wrk_1");
     await userEvent.type(screen.getByLabelText("Od"), "2026-11-10");
 
     // Vlasnik vidi polje roka — iznimka bez roka ne postoji.
@@ -447,7 +448,7 @@ describe("projekti — marža, procenat i rizični (F5)", () => {
     render(<ProjectsClient canManage canAssign canOverride canSeeMoney financials={financials} />);
 
     await screen.findByText("Dionica Visoko–Kiseljak");
-    await user.selectOptions(screen.getByLabelText("Rizičnost"), "risky");
+    await chooseSelect(user, screen.getByLabelText("Rizičnost"), "risky");
 
     expect(screen.getByText("Dionica Visoko–Kiseljak")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("Most preko Bosne")).not.toBeInTheDocument());

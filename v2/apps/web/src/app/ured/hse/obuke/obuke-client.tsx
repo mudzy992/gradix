@@ -14,7 +14,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
-  Alert, Button, Card, Checkbox, DataTable, Field, FormGrid, Inline, Input, SectionTitle, Select,
+  Alert, Button, Card, Checkbox, DataTable, Field, FormGrid, Inline, Input, SectionTitle, SelectField as Select,
   Stack, StatusDot, Textarea,
 } from "@/components/ui/index";
 

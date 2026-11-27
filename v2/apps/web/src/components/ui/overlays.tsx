@@ -4,7 +4,7 @@
  * U1 — preklopi i meniji: Dialog/ConfirmDialog (oko postojećeg Dialog primitiva),
  * Tabs i RowActions (jedna vidljiva akcija + „⋯“ meni, kao u referenci).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@/components/dialog";
 import { Button } from "./primitives";
 import { Textarea } from "./controls";
@@ -74,18 +74,36 @@ export function Tabs({
   active,
   onChange,
   label,
+  id,
 }: {
   tabs: { key: string; label: string }[];
   active: string;
   onChange: (key: string) => void;
   label: string;
+  /** Isti id proslijediti svakom pripadajućem TabPanelu. */
+  id?: string;
 }) {
   return (
-    <div className="gx-tabs" role="tablist" aria-label={label}>
+    <div className="gx-tabs" role="tablist" aria-label={label} onKeyDown={(event) => {
+      const current=tabs.findIndex(tab=>tab.key===active);
+      let next=current;
+      if(event.key === "ArrowRight") next=(current+1)%tabs.length;
+      else if(event.key === "ArrowLeft") next=(current-1+tabs.length)%tabs.length;
+      else if(event.key === "Home") next=0;
+      else if(event.key === "End") next=tabs.length-1;
+      else return;
+      if (!tabs[next]) return;
+      event.preventDefault();onChange(tabs[next]!.key);
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+    }}>
       {tabs.map((tab) => (
         <button
           key={tab.key}
+          type="button"
           role="tab"
+          id={id ? `${id}-${tab.key}-tab` : undefined}
+          aria-controls={id ? `${id}-${tab.key}-panel` : undefined}
+          tabIndex={tab.key === active ? 0 : -1}
           aria-selected={tab.key === active}
           className={`gx-tab${tab.key === active ? " gx-tab--active" : ""}`}
           onClick={() => onChange(tab.key)}
@@ -95,6 +113,11 @@ export function Tabs({
       ))}
     </div>
   );
+}
+
+/** Jedinstveni unutrašnji razmak i veza panela s pripadajućim tabom. */
+export function TabPanel({groupId, tabKey, active, children}: {groupId:string;tabKey:string;active:boolean;children:ReactNode}) {
+  return <section role="tabpanel" id={`${groupId}-${tabKey}-panel`} aria-labelledby={`${groupId}-${tabKey}-tab`} hidden={!active} className="gx-tab-panel">{children}</section>;
 }
 
 export type RowAction = { key: string; label: string; danger?: boolean; onSelect: (returnTo?: HTMLElement | null) => void };

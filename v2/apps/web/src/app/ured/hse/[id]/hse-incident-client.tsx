@@ -10,27 +10,17 @@
  */
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { HSE_KIND_NAMES as KIND_LABEL, HSE_STATUS_NAMES as STATUS_LABEL, labelFor } from "@/lib/labels";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Card, Checkbox, DataTable, DescriptionList, Field, FormGrid, Inline, Input,
-  SectionTitle, Select, Stack, StatusDot, Textarea,
+  SectionTitle, SelectField as Select, Stack, StatusDot, Textarea,
 } from "@/components/ui/index";
 import type { HseIncidentDetail } from "@gradix/contracts";
 
-const KIND_LABEL: Record<string, string> = {
-  ACCIDENT: "Nesreća",
-  NEAR_MISS: "NEAR_MISS (skoro pa)",
-  PROPERTY_DAMAGE: "Šteta na imovini",
-  ENVIRONMENTAL: "Okoliš",
-  OCCUPATIONAL_ILLNESS: "Bolest u vezi s radom",
-};
 
-const STATUS_LABEL: Record<string, string> = {
-  REPORTED: "Prijavljen",
-  INVESTIGATING: "U istrazi",
-  ACTIONS_OPEN: "Otvorene mjere",
-  CLOSED: "Zatvoren",
-};
+
+
 
 export function HseIncidentClient({
   detail,
@@ -137,7 +127,7 @@ export function HseIncidentClient({
           action={
             <StatusDot
               tone={incident.status === "CLOSED" ? "ok" : incident.status === "REPORTED" ? "warn" : "danger"}
-              label={STATUS_LABEL[incident.status] ?? incident.status}
+              label={labelFor(STATUS_LABEL, incident.status)}
             />
           }
         >
@@ -145,7 +135,7 @@ export function HseIncidentClient({
         </SectionTitle>
         <DescriptionList
           items={[
-            { term: "Vrsta", value: KIND_LABEL[incident.kind] ?? incident.kind },
+            { term: "Vrsta", value: labelFor(KIND_LABEL, incident.kind) },
             { term: "Težina", value: incident.severity },
             { term: "Kada", value: incident.occurredAt.slice(0, 16).replace("T", " ") },
             { term: "Projekat", value: incident.projectName ?? "—" },

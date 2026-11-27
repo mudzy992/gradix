@@ -14,14 +14,7 @@ type Caps = { canCreate: boolean; canRevise: boolean; canApprove: boolean };
 type MachineOption = { id: string; code: string; name: string };
 type PartnerOption = { id: string; code: string; name: string };
 
-const STATUS_LABEL: Record<FaultRow["status"], string> = {
-  OPEN: "Otvoren",
-  WAITING_APPROVAL: "Čeka odobrenje",
-  APPROVED: "Odobren",
-  IN_PROGRESS: "U toku",
-  DONE: "Završen",
-  CANCELLED: "Otkazan",
-};
+import { FAULT_STATUS_NAMES as STATUS_LABEL } from "@/lib/labels";
 
 const PRIORITY_LABEL: Record<FaultRow["priority"], string> = {
   LOW: "Nizak",

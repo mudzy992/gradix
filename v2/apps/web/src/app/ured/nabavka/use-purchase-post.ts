@@ -24,7 +24,7 @@ export function usePurchasePost(onDone:(message:string)=>Promise<void>) {
     } else {
       payload.current=null;setLocked(false);
       const warnings=result.data.warnings ?? [];
-      await onDone(warnings.includes("PURCHASE_INVOICE_MISMATCH") ? `${message} PURCHASE_INVOICE_MISMATCH: račun se ne slaže s prijemom.` : warnings.length ? `${message} Upozorenje: ${warnings.join(", ")}` : message);
+      await onDone(warnings.includes("PURCHASE_INVOICE_MISMATCH") ? `${message} Račun se ne slaže s prijemom.` : warnings.length ? `${message} Upozorenje: provjerite podatke.` : message);
     }
     sending.current=false;setBusy(false);
   }

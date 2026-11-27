@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -46,9 +47,9 @@ describe("skladište", () => {
     render(<WarehouseClient canManage canPurchase={false} />);
     await screen.findByText("Ispod minimuma");
     await user.click(screen.getByRole("button", { name: "+ Novi transfer" }));
-    await user.selectOptions(screen.getByLabelText("Iz skladišta"), "central");
-    await user.selectOptions(screen.getByLabelText("U skladište"), "site");
-    await user.selectOptions(screen.getByLabelText("Artikal za transfer"), "i");
+    await chooseSelect(user, screen.getByLabelText("Iz skladišta"), "central");
+    await chooseSelect(user, screen.getByLabelText("U skladište"), "site");
+    await chooseSelect(user, screen.getByLabelText("Artikal za transfer"), "i");
     await user.type(screen.getByLabelText("Količina za transfer"), "1.25");
     await user.click(screen.getByRole("button", { name: "Izvrši transfer" }));
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/stock-transfers", expect.objectContaining({ method: "POST", body: expect.stringContaining('"quantity":"1.25"') })));
@@ -58,8 +59,8 @@ describe("skladište", () => {
     const fetch=mockApi(); const user=userEvent.setup();
     render(<WarehouseClient canManage canPurchase={false} initialWarehouse="central" />);
     await screen.findByText("Ispod minimuma");
-    expect(screen.getByLabelText("Skladište")).toHaveValue("central");
-    await user.selectOptions(screen.getByLabelText("Artikal za minimum"),"i");
+    expect(screen.getByLabelText("Skladište")).toHaveTextContent("Centralno");
+    await chooseSelect(user, screen.getByLabelText("Artikal za minimum"),"i");
     await user.type(screen.getByLabelText("Minimalna količina"),"10");
     await user.click(screen.getByRole("button",{name:"Sačuvaj minimum"}));
     await waitFor(()=>expect(fetch).toHaveBeenCalledWith("/api/stock-items/i/levels",expect.objectContaining({method:"POST",body:JSON.stringify({warehouseId:"central",minQuantity:"10",maxQuantity:null})})));

@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import type { ManualCostInput } from "@gradix/contracts";
 import { apiCall, jsonBody } from "@/api-client";
-import { Alert, Button, Dialog, Input, Select, Textarea } from "@/components/ui";
+import { Alert, Button, Dialog, Input, SelectField as Select, Textarea } from "@/components/ui";
 import type { CategoryRow } from "@/server/project-budget-types";
 
 async function upload(projectId:string,file:File):Promise<string> {

@@ -1725,3 +1725,40 @@ select.gx-input option, select.gx-input optgroup {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 2px 12px;
 }
+
+/* Samo ilustracija predloženog UI-3A standarda u katalogu; nije aktivni kontrolni element. */
+.gx-ui3-preview { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:var(--space-5); }
+.gx-ui3-preview__label { display:block; font-weight:700; margin-bottom:var(--space-2); }
+.gx-ui3-preview__trigger,.gx-ui3-preview__search { border:1px solid var(--line); border-radius:var(--radius-field); background:var(--panel); padding:var(--space-3); }
+.gx-ui3-preview__trigger { display:flex; justify-content:space-between; border-color:var(--link); box-shadow:0 0 0 3px color-mix(in srgb,var(--link) 25%,transparent); }
+.gx-ui3-preview__menu { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-panel); padding:var(--space-2); margin-top:var(--space-1); box-shadow:var(--shadow); }
+.gx-ui3-preview__option { padding:var(--space-3); border-radius:var(--radius-field); }
+.gx-ui3-preview__option--active { background:var(--raise); color:var(--link); font-weight:700; }
+.gx-ui3-preview__tabs { display:flex; gap:var(--space-5); border-bottom:1px solid var(--line); }
+.gx-ui3-preview__tab { padding:var(--space-3) 0; border-bottom:2px solid var(--link); font-weight:700; }
+.gx-ui3-preview__panel { display:grid; gap:var(--space-4); padding:var(--space-5) var(--space-4); background:var(--raise); }
+.gx-ui3-preview__card { padding:var(--space-4); border:1px solid var(--line); border-radius:var(--radius-field); background:var(--panel); }
+
+/* UI-3A: selektor koristi iste tokene kao polja i ploče u obje teme. */
+.gx-select-field { position:relative; min-width:0; }
+.gx-select-field__trigger { display:flex; width:100%; align-items:center; justify-content:space-between; gap:var(--space-2); text-align:left; cursor:pointer; }
+.gx-select-field__trigger span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gx-select-field__native { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.gx-select-field__menu { display:flex; flex-direction:column; gap:var(--space-1); overflow:hidden; padding:var(--space-2); border:1px solid var(--line); border-radius:var(--radius-field); background:var(--panel); box-shadow:var(--shadow-lift); color:var(--text); }
+.gx-select-field__options { overflow-y:auto; overscroll-behavior:contain; }
+.gx-select-field__search { flex:none; width:100%; }
+.gx-select-field__option { display:flex; justify-content:space-between; gap:var(--space-2); padding:var(--space-2) var(--space-3); border-radius:var(--radius-field); cursor:pointer; }
+.gx-select-field__option--active { background:var(--raise); color:var(--link); }
+.gx-select-field__option[aria-selected="true"] { font-weight:700; }
+.gx-select-field__option[aria-disabled="true"] { opacity:.5; cursor:not-allowed; }
+.gx-select-field__error { color:var(--danger); }
+
+/* Jedinstveni prostor sadržaja unutar taba. hidden uvijek ima prednost nad gridom. */
+.gx-tab-panel { display:grid; gap:var(--space-4); padding:var(--space-5) var(--space-4); min-width:0; }
+.gx-tab-panel[hidden] { display:none; }
+/* Portal ostaje u dijalogu radi aria-modal i focus-trapa, ali ne smije biti odsječen rubom panela. */
+.gx-dialog:has(> .gx-select-field__menu) { overflow:visible; }
+
+.gx-catalog { width:100%; max-width:100vw; overflow-x:clip; }
+.gx-catalog > div { grid-template-columns:minmax(0,1fr); }
+.gx-catalog > div > * { min-width:0; }

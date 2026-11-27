@@ -17,7 +17,7 @@ import type { Project, ProjectAssignment } from "@gradix/contracts";
 import { apiCall, patchBody } from "@/api-client";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Chip, DataTable, Dialog, EmptyState, Mono, Skeleton, Tabs, Textarea,
+  Alert, Button, Chip, DataTable, Dialog, EmptyState, Mono, Skeleton, Tabs, TabPanel, Textarea,
 } from "@/components/ui/index";
 import { AssignmentDialog } from "./assignment-dialog";
 import { ProjectObligations } from "./project-obligations";
@@ -137,6 +137,7 @@ export function ProjectDetail({
       ) : null}
 
       <Tabs
+        id="projekt-detalj"
         label="Dijelovi projekta"
         active={tab}
         onChange={(key) => setTab(key as TabKey)}
@@ -152,6 +153,8 @@ export function ProjectDetail({
         ]}
       />
 
+      {(canSeeMoney ? ["overview", "costs", "budget", "boq", "amendments", "tasks", "team", "obligations"] : ["amendments", "tasks", "team", "obligations"]).filter(key => key !== tab).map(key => <TabPanel key={key} groupId="projekt-detalj" tabKey={key} active={false}>{null}</TabPanel>)}
+      <TabPanel groupId="projekt-detalj" tabKey={tab} active>
       {tab === "overview" ? (
         <ProjectOverview
           projectId={project.id}
@@ -306,6 +309,7 @@ export function ProjectDetail({
       ) : (
         <ProjectObligations projectId={project.id} />
       )}
+      </TabPanel>
     </Dialog>
   );
 }

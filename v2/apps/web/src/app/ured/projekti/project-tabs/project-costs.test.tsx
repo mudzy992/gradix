@@ -95,7 +95,7 @@ describe("troškovi projekta — ledger", () => {
     mockApi();
     render(<ProjectCosts projectId="prj_1" canManage />);
 
-    const link = await screen.findByRole("link", { name: "Radni dan" });
+    const link = await screen.findByRole("link", { name: "Dan rada" });
     expect(link).toHaveAttribute("href", "/ured/radni-dani?workdayId=wd_1");
   });
 

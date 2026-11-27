@@ -216,7 +216,7 @@ export function DailyChecksClient({
               variant="quiet"
               onClick={() => void openAttachment(selectedId, att.id)}
             >
-              {att.fileName} ({att.status})
+              {att.fileName} ({att.status === "confirmed" ? "potvrđen" : "čeka potvrdu"})
             </Button>
           ))}
         </Stack>

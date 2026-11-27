@@ -27,9 +27,9 @@ export function Field({
         {label}
       </label>
       {children}
-      {hint && !error ? <p className="gx-field__hint">{hint}</p> : null}
+      {hint && !error ? <p id={htmlFor ? `${htmlFor}-hint` : undefined} className="gx-field__hint">{hint}</p> : null}
       {error ? (
-        <p className="gx-field__hint" role="alert" style={{ color: "var(--danger)" }}>
+        <p id={htmlFor ? `${htmlFor}-hint` : undefined} className="gx-field__hint" role="alert" style={{ color: "var(--danger)" }}>
           {error}
         </p>
       ) : null}

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { ORDER_STATUS_NAMES, WAREHOUSE_KIND_NAMES, labelFor } from "@/lib/labels";
 import { apiCall } from "@/api-client";
-import { Alert, Button, Card, FormGrid, FormSection, Input, Select } from "@/components/ui";
+import { Alert, Button, Card, FormGrid, FormSection, Input, SelectField as Select } from "@/components/ui";
 import type { Options, RequestDetail, OrderDetail } from "./purchase-types";
 import { usePurchasePost } from "./use-purchase-post";
 
@@ -56,9 +57,9 @@ export function ReceiptForm({options,onDone,initialWarehouse}:{initialWarehouse:
   const line=detail?.items.find(i=>i.id===f.line);
   return <Card><FormSection title="Prijem robe"><Failure error={sender.error || loadError}/><form onSubmit={e=>{e.preventDefault();if(!line || !detail)return;void sender.post("/api/goods-receipts",{clientGeneratedId:uid(),orderId:f.order,partnerId:detail.order.partner_id,warehouseId:f.warehouse,receivedAt:new Date().toISOString(),currencyCode:detail.order.currency_code,items:[{orderItemId:line.id,itemId:line.item_id,quantity:f.quantity,unitPriceCents:f.price}]},"Prijem robe je evidentiran.");}}>
     <fieldset className="gx-stack" disabled={sender.busy || sender.locked}><FormGrid>
-      <Select label="Poslana narudžbenica" required value={f.order} onChange={e=>set({...f,order:e.target.value,line:""})}><option value="">Odaberite</option>{options.orders.filter(o=>["SENT","PARTIALLY_RECEIVED"].includes(o.status)).map(o=><option key={o.id} value={o.id}>{o.id} · {o.status}</option>)}</Select>
+      <Select label="Poslana narudžbenica" required value={f.order} onChange={e=>set({...f,order:e.target.value,line:""})}><option value="">Odaberite</option>{options.orders.filter(o=>["SENT","PARTIALLY_RECEIVED"].includes(o.status)).map(o=><option key={o.id} value={o.id}>{o.id} · {labelFor(ORDER_STATUS_NAMES,o.status)}</option>)}</Select>
       <Select label="Stavka narudžbenice" required value={f.line} onChange={e=>set({...f,line:e.target.value})}><option value="">Odaberite</option>{detail?.items.map(i=><option key={i.id} value={i.id}>{i.description} · primljeno {i.received_quantity} od {i.quantity}</option>)}</Select>
-      <Select label="Skladište prijema" required value={f.warehouse} onChange={e=>set({...f,warehouse:e.target.value})}><option value="">Odaberite</option>{options.warehouses.filter(w=>w.is_active).map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
+      <Select label="Skladište prijema" required value={f.warehouse} onChange={e=>set({...f,warehouse:e.target.value})}><option value="">Odaberite</option>{options.warehouses.filter(w=>w.is_active).map(w=><option key={w.id} value={w.id}>{w.name} · {labelFor(WAREHOUSE_KIND_NAMES,w.kind)}</option>)}</Select>
       <Input label="Količina prijema" required inputMode="decimal" value={f.quantity} onChange={e=>set({...f,quantity:e.target.value})}/>
       <Input label="Cijena prijema (feninga po jedinici)" required inputMode="numeric" pattern="[0-9]+" value={f.price} onChange={e=>set({...f,price:e.target.value})}/>
     </FormGrid></fieldset><Button type="submit" variant="primary" disabled={sender.busy}>{sender.locked ? "Ponovi prijem" : "Evidentiraj prijem"}</Button>
@@ -69,7 +70,7 @@ export function InvoiceForm({options,onDone}:Props) {
   const [f,set]=useState({receipt:"",number:"",date:new Date().toISOString().slice(0,10),due:"",quantity:"",amount:"",project:""});
   const sender=usePurchasePost(onDone);
   const receipt=options.receipts.find(r=>r.item_id===f.receipt);
-  return <Card><FormSection title="Račun dobavljača"><p>Prilikom neslaganja s prijemom prikazuje se PURCHASE_INVOICE_MISMATCH.</p><Failure error={sender.error}/><form onSubmit={e=>{e.preventDefault();if(!receipt)return;void sender.post("/api/purchase-invoices",{partnerId:receipt.partner_id,orderId:receipt.order_id,projectId:f.project || null,invoiceNumber:f.number,invoiceDate:f.date,dueDate:f.due || null,amountCents:f.amount,currencyCode:receipt.currency_code,items:[{receiptItemId:receipt.item_id,quantity:f.quantity,amountCents:f.amount}]},"Račun je evidentiran.");}}>
+  return <Card><FormSection title="Račun dobavljača"><p>Prilikom neslaganja računa s prijemom prikazuje se upozorenje.</p><Failure error={sender.error}/><form onSubmit={e=>{e.preventDefault();if(!receipt)return;void sender.post("/api/purchase-invoices",{partnerId:receipt.partner_id,orderId:receipt.order_id,projectId:f.project || null,invoiceNumber:f.number,invoiceDate:f.date,dueDate:f.due || null,amountCents:f.amount,currencyCode:receipt.currency_code,items:[{receiptItemId:receipt.item_id,quantity:f.quantity,amountCents:f.amount}]},"Račun je evidentiran.");}}>
     <fieldset className="gx-stack" disabled={sender.busy || sender.locked}><FormGrid>
       <Select label="Stavka prijema za račun" required value={f.receipt} onChange={e=>set({...f,receipt:e.target.value})}><option value="">Odaberite</option>{options.receipts.map(r=><option key={r.item_id} value={r.item_id}>{r.item_name} · {r.quantity} {r.unit} · {r.id}</option>)}</Select>
       <Input label="Broj računa" required maxLength={120} value={f.number} onChange={e=>set({...f,number:e.target.value})}/>

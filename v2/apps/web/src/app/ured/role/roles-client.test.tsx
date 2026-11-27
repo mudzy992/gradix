@@ -40,9 +40,7 @@ describe("matrica rola", () => {
     expect(screen.getByText(/Ovo je pregled/)).toBeInTheDocument();
     // Matrica se ne može uređivati: nema dugmeta za izmjenu.
     expect(screen.queryByRole("button", { name: /Izmijeni|Uredi|Sačuvaj/ })).toBeNull();
-    // Tehnički ključ (`OWNER`) je za podršku — mono, uz naziv; nikad kao jedina etiketa.
-    const keys = screen.getAllByText("OWNER");
-    expect(keys.every((key) => key.className.includes("gx-mono"))).toBe(true);
+    expect(screen.queryByText("OWNER")).toBeNull();
   });
 
   it("greška: poruka i „Pokušaj ponovo“ koji ponovo zove server", async () => {

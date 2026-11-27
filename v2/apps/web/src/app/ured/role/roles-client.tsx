@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { apiCall } from "@/api-client";
-import { Alert, Button, Card, DataTable, Mono, PageHeader, Skeleton, Stack } from "@/components/ui/index";
+import { Alert, Button, Card, DataTable, PageHeader, Skeleton, Stack } from "@/components/ui/index";
 
 type Permission = { key: string; label: string; description: string };
 type RoleRow = {
@@ -81,7 +81,6 @@ export default function RolesClient() {
                   cell: (role) => (
                     <Stack>
                       <strong>{role.label}</strong>
-                      <Mono>{role.role}</Mono>
                       <span className="gx-page-sub">{role.description}</span>
                       <span className="gx-page-sub">
                         Dodjeljuje: {role.assignableBy.map((r) => (r === "OWNER" ? "vlasnik" : "administrator")).join(", ")}

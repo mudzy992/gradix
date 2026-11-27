@@ -59,12 +59,8 @@ export type LineSource = {
   note: string | null;
 };
 
-export const STATUS_LABEL: Record<PeriodStatus, string> = {
-  OPEN: "Otvoren",
-  CALCULATED: "Izračunat",
-  APPROVED: "Odobren",
-  LOCKED: "Zaključan",
-};
+import { PAYROLL_STATUS_NAMES as STATUS_LABEL } from "@/lib/labels";
+export { STATUS_LABEL };
 
 /** Novac iz centi; `null` je crtica, nikad „0,00“ — vidi odluku 1 u zaglavlju fajla. */
 export function money(cents: number | null): string {

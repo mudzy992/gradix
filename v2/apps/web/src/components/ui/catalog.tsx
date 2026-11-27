@@ -14,8 +14,8 @@ import {
   Accordion, ActionCard, Alert, Avatar, Badge, Breadcrumbs, Button, Card, Checkbox, Chip,
   ConfirmDialog, DataTable, DescriptionList, Dialog, EmptyState, FigureImage, FileUpload,
   FilterBar, FormGrid, FormSection, Icon, IconButton, Inline, Input, Mono, PageHeader,
-  Pagination, QuantityStepper, Radio, RowActions, SectionTitle, Segmented, Select, Skeleton,
-  SpeedDial, Stack, Stat, StatusDot, Stepper, Switch, Tabs, TextLink, Textarea, ToastStack,
+  Pagination, QuantityStepper, Radio, RowActions, SectionTitle, Segmented, Select, SelectField, Skeleton,
+  SpeedDial, Stack, Stat, StatusDot, Stepper, Switch, TabPanel, Tabs, TextLink, Textarea, ToastStack,
   useToasts,
 } from "./index";
 
@@ -62,7 +62,7 @@ export function ComponentCatalog() {
   const [qty, setQty] = useState(8);
   const { toasts, push, dismiss } = useToasts();
   return (
-    <Stack>
+    <div className="gx-catalog"><Stack>
       <PageHeader title="Katalog komponenti" subtitle="UI sistem (Dio U) — sve komponente i stanja, web i mobilni isti inventar. Obje teme: prekidač u zaglavlju. Ispod 640 px tabela postaje kartice — suzi prozor i provjeri." />
 
       <Section title="Tokeni i tipografija" hint="Šest boja palete + semantički tokeni; nijansa van palete je color-mix.">
@@ -80,6 +80,18 @@ export function ComponentCatalog() {
           <p>Tijelo teksta (body) — rečenice, opisi i sadržaj. <Mono>Mono 061 111 222 · 2026-11-07</Mono> za brojeve, šifre i datume.</p>
           <p className="gx-page-sub">Pomoćni/tihi tekst (muted) za objašnjenja i meta podatke.</p>
         </Card>
+      </Section>
+
+      <Section id="ui3-standard" title="UI-3A — jedinstveni standard" hint="Odobrena vizuelna referenca; interaktivni SelectField i TabPanel nalaze se u primjerima ispod.">
+        <div className="gx-ui3-preview" aria-hidden="true">
+          <Card><span className="gx-ui3-preview__label">Skladište</span>
+            <div className="gx-ui3-preview__trigger"><span>Centralno skladište</span><span>⌄</span></div>
+            <div className="gx-ui3-preview__menu"><div className="gx-ui3-preview__search">Traži skladište…</div><div className="gx-ui3-preview__option gx-ui3-preview__option--active">Centralno skladište ✓</div><div className="gx-ui3-preview__option">Gradilišno skladište</div><div className="gx-ui3-preview__option">Rezervoar</div></div>
+          </Card>
+          <Card><div className="gx-ui3-preview__tabs"><span className="gx-ui3-preview__tab">Podaci</span><span>Historija</span></div>
+            <div className="gx-ui3-preview__panel"><div className="gx-ui3-preview__card"><strong>Kontakt</strong><br />Telefon i adresa</div><div className="gx-ui3-preview__card"><strong>Angažman</strong><br />Stalno zaposlenje</div></div>
+          </Card>
+        </div>
       </Section>
 
       <Section title="Kontrole" hint="Labela, pomoć i greška idu kroz Field — uvijek povezani (htmlFor/aria).">
@@ -101,6 +113,10 @@ export function ComponentCatalog() {
               <option value="cetvrta">Četvrta opcija — duži naziv opcije</option>
               <option value="peta">Peta opcija</option>
             </Select>
+            <SelectField label="Stilizovani izbor" id="cat-custom-select" defaultValue="druga" hint="Tastatura i pretraga za duže liste.">
+              <option value="prva">Prva opcija</option><option value="druga">Druga opcija</option><option value="treca">Treća opcija</option>
+              <option value="cetvrta">Četvrta opcija</option><option value="peta">Peta opcija</option><option value="sesta">Šesta opcija</option><option value="sedma">Sedma opcija</option><option value="osma">Osma opcija</option>
+            </SelectField>
             <Select label="Select onemogućen" id="cat-sel-dis" disabled>
               <option>Zaključano</option>
             </Select>
@@ -234,23 +250,26 @@ export function ComponentCatalog() {
       <Section title="Preklopi: modali, potvrde, kartice (tabs)" hint="Modal: X u zaglavlju, akcije u podnožju, tijelo skrola bez vidljivog scrollbar-a.">
         <Card>
           <Tabs
+            id="katalog-primjer"
             label="Primjer kartica"
             active={tab}
             onChange={setTab}
             tabs={[{ key: "preklopi", label: "Preklopi" }, { key: "druga", label: "Druga kartica" }]}
           />
-          {tab === "preklopi" ? (
+          <TabPanel groupId="katalog-primjer" tabKey="preklopi" active={tab === "preklopi"}>
             <Inline>
               <Button onClick={() => setDialog(true)}>Obični modal</Button>
               <Button onClick={() => setLongDialog(true)}>Dugi modal (skrol bez scrollbar-a)</Button>
               <Button variant="danger" onClick={() => setConfirm(true)}>Potvrda (ConfirmDialog)</Button>
             </Inline>
-          ) : (
-            <p>Sadržaj druge kartice — Tabs drže stanje, ekran samo mijenja sadržaj.</p>
-          )}
+          </TabPanel>
+          <TabPanel groupId="katalog-primjer" tabKey="druga" active={tab === "druga"}>
+            <p>Sadržaj druge kartice — TabPanel čuva stanje i propisuje razmake.</p>
+          </TabPanel>
           {dialog ? (
             <Dialog title="Obični modal" hint="X gore desno zatvara; Escape takođe." onClose={() => setDialog(false)} footer={<div className="gx-dialog__actions"><Button variant="quiet" onClick={() => setDialog(false)}>Otkaži</Button><Button variant="primary" onClick={() => setDialog(false)}>Sačuvaj</Button></div>}>
               <p>Sadržaj modala. Akcije su u podnožju i ne miču se.</p>
+              <SelectField label="Izbor u dijalogu" defaultValue="a" searchThreshold={3}><option value="a">Prva</option><option value="b">Druga</option><option value="c">Treća</option></SelectField>
             </Dialog>
           ) : null}
           {longDialog ? (
@@ -722,6 +741,6 @@ export function ComponentCatalog() {
           </p>
         </Card>
       </Section>
-    </Stack>
+    </Stack></div>
   );
 }

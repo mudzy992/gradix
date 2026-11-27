@@ -5,13 +5,7 @@
  */
 import type { Project } from "@gradix/contracts";
 
-export const STATUS_LABEL: Record<string, string> = {
-  PLANNED: "U planu",
-  ACTIVE: "Aktivan",
-  PAUSED: "Pauziran",
-  FINISHED: "Završen",
-  CANCELLED: "Otkazan",
-};
+export { PROJECT_STATUS_NAMES as STATUS_LABEL } from "@/lib/labels";
 
 export type WorkerOption = { id: string; firstName: string; lastName: string; isActive: boolean };
 export type MachineOption = { id: string; code: string; name: string; isActive: boolean };

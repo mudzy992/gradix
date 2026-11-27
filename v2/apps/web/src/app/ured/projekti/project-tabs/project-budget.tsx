@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody } from "@/api-client";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Card, Chip, DataTable, Dialog, EmptyState, Input, Select, Skeleton, Stat, Textarea,
+  Alert, Button, Card, Chip, DataTable, Dialog, EmptyState, Input, SelectField as Select, Skeleton, Stat, Textarea,
 } from "@/components/ui/index";
 import type { BudgetResult, CategoryRow, PhaseRowLite } from "./budget-types";
 
@@ -111,7 +111,7 @@ export function ProjectBudget({ projectId, canManage }: { projectId: string; can
         />
         <Stat label="Potrošeno (POSTED)" value={budget.totals.spent} hint={`Valuta: ${budget.totals.currency_code}`} />
         <Stat
-          label="Bez cijene (PENDING)"
+          label="Čeka cijenu"
           value={String(budget.totals.pending_count)}
           hint={
             budget.totals.pending_amount === null

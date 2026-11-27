@@ -11,6 +11,7 @@
  * Pravilo koje ide uz tabelu: **ADMIN ne dira OWNER-a i ne dira sebe.** To nije dozvola nego
  * zaštita od zaključavanja firme bez vlasnika — zato se provjerava u servisu, ne u UI-u.
  */
+import { ROLE_NAMES } from "@/lib/labels";
 /** Opseg članstva — izvor je `@gradix/domain`, ovdje se samo re-izvozi za rute i servis. */
 export type { Scope } from "@gradix/domain";
 export { SCOPES, SCOPE_LABELS, isScope } from "@gradix/domain";
@@ -777,15 +778,15 @@ export function permissionsFor(role: Role): Permission[] {
 
 /** Bosanski nazivi rola. Jedan izvor za listu, matricu i dijalog. */
 export const ROLE_LABELS: Record<Role, { label: string; description: string }> = {
-  OWNER: { label: "Vlasnik", description: "Puna kontrola nad firmom; ne može se ukloniti iz firme." },
-  ADMIN: { label: "Administrator", description: "Upravlja ljudima i pregleda trag; ne dira vlasnika." },
-  PROJECT_MANAGER: { label: "Vođa projekta", description: "Vodi posao na projektima koji su mu dodijeljeni." },
-  SITE_SUPERVISOR: { label: "Šef gradilišta", description: "Raspoređuje ljude i mašine na gradilištu." },
-  WORKER: { label: "Radnik", description: "Svakodnevni terenski rad i svoji zapisi." },
-  DRIVER: { label: "Vozač", description: "Ture, gorivo i vozilo." },
-  MACHINE_OPERATOR: { label: "Rukovalac mašine", description: "Radni sati i stanje mašine." },
-  MECHANIC: { label: "Mehaničar", description: "Servisi i popravke mašina." },
-  ACCOUNTANT: { label: "Računovođa", description: "Finansije, fakture i obračuni." },
+  OWNER: { label: ROLE_NAMES.OWNER, description: "Puna kontrola nad firmom; ne može se ukloniti iz firme." },
+  ADMIN: { label: ROLE_NAMES.ADMIN, description: "Upravlja ljudima i pregleda trag; ne dira vlasnika." },
+  PROJECT_MANAGER: { label: ROLE_NAMES.PROJECT_MANAGER, description: "Vodi posao na projektima koji su mu dodijeljeni." },
+  SITE_SUPERVISOR: { label: ROLE_NAMES.SITE_SUPERVISOR, description: "Raspoređuje ljude i mašine na gradilištu." },
+  WORKER: { label: ROLE_NAMES.WORKER, description: "Svakodnevni terenski rad i svoji zapisi." },
+  DRIVER: { label: ROLE_NAMES.DRIVER, description: "Ture, gorivo i vozilo." },
+  MACHINE_OPERATOR: { label: ROLE_NAMES.MACHINE_OPERATOR, description: "Radni sati i stanje mašine." },
+  MECHANIC: { label: ROLE_NAMES.MECHANIC, description: "Servisi i popravke mašina." },
+  ACCOUNTANT: { label: ROLE_NAMES.ACCOUNTANT, description: "Finansije, fakture i obračuni." },
 };
 
 /** Role koje smije dodijeliti akter: `OWNER` daje samo `OWNER`, ostalo svako sa `users.manage`. */

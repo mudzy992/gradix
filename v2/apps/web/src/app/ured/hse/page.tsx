@@ -49,7 +49,7 @@ export default async function HsePage({searchParams}: {searchParams: Promise<{fi
     <main className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Zaštita na radu (HSE)"
-        subtitle="Incidenti, istrage, korektivne mjere, obuke i inspekcije. NEAR_MISS je ravnopravna kategorija, ne manji incident."
+        subtitle="Incidenti, istrage, korektivne mjere, obuke i inspekcije. Izbjegnuti incident je ravnopravna kategorija, ne manji incident."
         actions={
           <>
             <TextLink href="/ured/hse/inspekcije">Inspekcije</TextLink>

@@ -6,14 +6,7 @@
  * bi na jednom mjestu bio „Čeka dijelove“, a na drugom „Na čekanju“ — i korisnik ne bi znao da je
  * to isto stanje.
  */
-export const STATUS_LABEL: Record<string, string> = {
-  PLANNED: "Planiran",
-  APPROVED: "Odobren",
-  IN_PROGRESS: "U radu",
-  WAITING_PARTS: "Čeka dijelove",
-  DONE: "Završen",
-  CANCELLED: "Otkazan",
-};
+export { SERVICE_STATUS_NAMES as STATUS_LABEL } from "@/lib/labels";
 
 export const STATUS_TONE: Record<string, "ok" | "warn" | "danger" | "muted"> = {
   PLANNED: "muted",

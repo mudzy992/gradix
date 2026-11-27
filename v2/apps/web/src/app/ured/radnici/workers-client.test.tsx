@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 /**
  * Radnici (R2a): lista, veza na nalog kao podatak (ne status), dijalog kroz tastaturu.
@@ -145,7 +146,7 @@ describe("radnici", () => {
     // Lista naloga se učitava tek u dijalogu i tek kad je veza dozvoljena.
     const linkSelect = await within(dialog).findByLabelText("Poveži sa nalogom");
     await waitFor(() => expect(linkSelect).toBeEnabled());
-    await userEvent.selectOptions(linkSelect, "usr_2");
+    await chooseSelect(userEvent, linkSelect, "usr_2");
 
     await waitFor(() => expect(calls.some((call) => call.url.includes("/link-user"))).toBe(true));
     expect(calls.find((call) => call.url.includes("/link-user"))!.body).toEqual({ userId: "usr_2" });

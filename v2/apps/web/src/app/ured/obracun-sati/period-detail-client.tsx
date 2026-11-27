@@ -14,6 +14,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PAYROLL_LINE_STATUS_NAMES, labelFor } from "@/lib/labels";
 import { apiCall } from "@/api-client";
 import {
   groupByWorker,
@@ -28,7 +29,7 @@ import {
   type PeriodStatus,
 } from "./payroll-view-model";
 import {
-  Alert, Button, DataTable, Dialog, EmptyState, Inline, Select, Skeleton, Stack, StatusDot, Tabs,
+  Alert, Button, DataTable, Dialog, EmptyState, Inline, SelectField as Select, Skeleton, Stack, StatusDot, TabPanel, Tabs,
 } from "@/components/ui/index";
 
 export function PeriodDetailClient({
@@ -217,8 +218,8 @@ export function PeriodDetailClient({
         />
       ) : (
         <>
-          <Tabs label="Linije obračuna" active={tab} onChange={setTab} tabs={[{key:"workers",label:"Po radnicima"},{key:"lines",label:"Pojedinačne linije"}]} />
-          {tab === "workers" ? <>
+          <Tabs id="obracun-linije" label="Linije obračuna" active={tab} onChange={setTab} tabs={[{key:"workers",label:"Po radnicima"},{key:"lines",label:"Pojedinačne linije"}]} />
+          <TabPanel groupId="obracun-linije" tabKey="workers" active={tab === "workers"}>
           <Inline>
             <Select
               label="Komponenta"
@@ -255,7 +256,7 @@ export function PeriodDetailClient({
                         <strong>{component.code}</strong>{" "}
                         {component.hours > 0 ? `${hours(component.hours)} h` : null}
                         {component.days > 0 ? `${component.days} d` : null}{" "}
-                        {component.status === "OK" ? money(component.amount) : `— (${component.status})`}
+                        {component.status === "OK" ? money(component.amount) : `— (${labelFor(PAYROLL_LINE_STATUS_NAMES,component.status)})`}
                       </span>
                     ))}
                   </Stack>
@@ -274,8 +275,8 @@ export function PeriodDetailClient({
             }}
           />
 
-          </> : null}
-          {tab === "lines" ? <section>
+          </TabPanel>
+          <TabPanel groupId="obracun-linije" tabKey="lines" active={tab === "lines"}>
             <p className="gx-page-sub">Linije pojedinačno ({lines?.lines.length ?? 0}) — klik na „Izvori“ otvara raspis</p>
             <DataTable
               caption="Linije obračuna"
@@ -297,7 +298,7 @@ export function PeriodDetailClient({
                   header: "Iznos",
                   numeric: true,
                   cell: (row) =>
-                    row.status === "OK" ? money(row.amount_cents) : <StatusDot tone="danger" label={row.status} />,
+                    row.status === "OK" ? money(row.amount_cents) : <StatusDot tone="danger" label={labelFor(PAYROLL_LINE_STATUS_NAMES,row.status)} />,
                 },
                 { key: "note", header: "Napomena", cell: (row) => row.calc_note ?? "—" },
               ]}
@@ -305,7 +306,7 @@ export function PeriodDetailClient({
                 { key: "sources", label: "Izvori", onSelect: () => void openSources(row) },
               ]}
             />
-          </section> : null}
+          </TabPanel>
         </>
       )}
 
@@ -320,7 +321,7 @@ export function PeriodDetailClient({
           <Stack>
             <p className="gx-page-sub">
               {sources.line.worker_name} · {hours(sources.line.hours)} h ·{" "}
-              {sources.line.status === "OK" ? money(sources.line.amount_cents) : sources.line.status}
+              {sources.line.status === "OK" ? money(sources.line.amount_cents) : labelFor(PAYROLL_LINE_STATUS_NAMES,sources.line.status)}
             </p>
             <DataTable
               caption="Izvori linije"

@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 import { render,screen,waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -25,7 +26,7 @@ describe("Podizvođači",()=>{
     expect(table).toHaveTextContent("120.00 BAM");expect(table).toHaveTextContent("10.00% · 12.00 BAM");expect(table).toHaveTextContent("5.00% · 6.00 BAM");expect(table).toHaveTextContent("102.00 BAM");expect(table).toHaveTextContent("Prekoračenje ugovora");
     await expectNoSeriousA11yViolations(container);
     await user.click(screen.getByRole("tab",{name:"Aneksi"}));
-    await user.selectOptions(screen.getByLabelText("Pregled aneksa za ugovor"),"c");
+    await chooseSelect(user, screen.getByLabelText("Pregled aneksa za ugovor"),"c");
     expect(await screen.findByText("Dodatni radovi")).toBeInTheDocument();
     await user.click(screen.getByRole("tab",{name:"Situacije"}));
     await user.click(screen.getByRole("button",{name:"Odobri situaciju"}));
@@ -36,12 +37,12 @@ describe("Podizvođači",()=>{
     const fetch=mockApi();const user=userEvent.setup();render(<SubcontractClient canManage partners={partners}/>);
     await screen.findByRole("table",{name:"Ugovori podizvođača"});
     await user.click(screen.getByRole("tab",{name:"Aneksi"}));await user.click(screen.getByRole("button",{name:"+ Novi aneks"}));
-    await user.selectOptions(screen.getByLabelText("Ugovor za aneks"),"c");await user.type(screen.getByLabelText("Povećanje vrijednosti (feninga)"),"5000");await user.type(screen.getByLabelText("Razlog aneksa"),"Dodatni radovi");
+    await chooseSelect(user, screen.getByLabelText("Ugovor za aneks"),"c");await user.type(screen.getByLabelText("Povećanje vrijednosti (feninga)"),"5000");await user.type(screen.getByLabelText("Razlog aneksa"),"Dodatni radovi");
     await user.click(screen.getByRole("button",{name:"Sačuvaj aneks"}));await screen.findByText("Aneks je sačuvan.");
     const amend=fetch.mock.calls.find(([u,i])=>u==="/api/subcontractor-contracts/c/amend" && i?.method==="POST");
     expect(JSON.parse(amend![1]!.body as string)).toMatchObject({valueAmendmentCents:"5000",reason:"Dodatni radovi",clientGeneratedId:expect.stringMatching(/^[0-9a-f-]{36}$/)});
     await user.click(screen.getByRole("tab",{name:"Situacije"}));await user.click(screen.getByRole("button",{name:"+ Nova situacija"}));
-    await user.selectOptions(screen.getByLabelText("Ugovor za situaciju"),"c");await screen.findByRole("option",{name:"Faza"});await user.selectOptions(screen.getByLabelText("Faza situacije"),"f");
+    await chooseSelect(user, screen.getByLabelText("Ugovor za situaciju"),"c");await chooseSelect(user, screen.getByLabelText("Faza situacije"),"f");
     await user.type(screen.getByLabelText("Broj situacije"),"S-2");await user.type(screen.getByLabelText("Period od"),"2026-01-01");await user.type(screen.getByLabelText("Period do"),"2026-01-31");
     await user.type(screen.getByLabelText("Opis radova"),"Radovi");await user.type(screen.getByLabelText("Bruto iznos situacije (feninga)"),"1000");
     await user.click(screen.getByRole("button",{name:"Predaj situaciju"}));await screen.findByText("Situacija je predana.");

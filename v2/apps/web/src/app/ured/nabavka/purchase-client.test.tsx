@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,12 +24,12 @@ afterEach(()=>vi.unstubAllGlobals());
 describe("Nabavka",()=>{
   it("prikazuje izlaze, prag i upozorenje o neslaganju te prolazi axe",async()=>{
     mockApi();const user=userEvent.setup();const {container}=render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
-    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveTextContent("Cement"));
     await expectNoSeriousA11yViolations(container);
     await user.click(screen.getByRole("button",{name:"Zatvori"}));
     expect(screen.getByRole("table",{name:"Zahtjevi nabavke"})).toHaveTextContent("Određuje se pri predaji");
     await user.click(screen.getByRole("tab",{name:"Računi"}));
-    expect(screen.getByText(/PURCHASE_INVOICE_MISMATCH: račun se ne slaže/)).toBeInTheDocument();
+    expect(screen.getByText(/Račun se ne slaže/)).toBeInTheDocument();
     await user.click(screen.getByRole("tab",{name:"Izlazi"}));
     expect(screen.getByRole("table",{name:"Izlazi materijala"})).toHaveTextContent("Centralno");
     await expectNoSeriousA11yViolations(container);
@@ -36,8 +37,8 @@ describe("Nabavka",()=>{
   it("kreira nacrt s odabranim artiklom i UUID-om te predaje postojeći zahtjev",async()=>{
     const fetch=mockApi(); const user=userEvent.setup();
     render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
-    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
-    await user.selectOptions(screen.getByLabelText("Projekat zahtjeva"),"p");
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveTextContent("Cement"));
+    await chooseSelect(user, screen.getByLabelText("Projekat zahtjeva"),"p");
     await user.type(screen.getByLabelText("Količina zahtjeva"),"2.5");
     await user.type(screen.getByLabelText("Procjena po jedinici (feninga)"),"300");
     await user.type(screen.getByLabelText("Obrazloženje"),"Materijal");
@@ -61,8 +62,8 @@ describe("Nabavka",()=>{
       return base(url,init);
     }));
     const user=userEvent.setup();render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
-    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
-    await user.selectOptions(screen.getByLabelText("Projekat zahtjeva"),"p");
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveTextContent("Cement"));
+    await chooseSelect(user, screen.getByLabelText("Projekat zahtjeva"),"p");
     await user.type(screen.getByLabelText("Količina zahtjeva"),"2");
     await user.type(screen.getByLabelText("Procjena po jedinici (feninga)"),"300");
     await user.type(screen.getByLabelText("Obrazloženje"),"Materijal");

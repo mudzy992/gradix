@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 import { render,screen,waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,9 +25,9 @@ function mockApi(){
 describe("Obrasci nabavke",()=>{
   it("narudžbenica povezuje odobrenu stavku i dobavljača",async()=>{
     const fetch=mockApi();const done=vi.fn();const user=userEvent.setup();render(<OrderForm options={options} onDone={done}/>);
-    await user.selectOptions(screen.getByLabelText("Odobreni zahtjev"),"r");
-    await screen.findByRole("option",{name:/Cement · 2 kg/});
-    await user.selectOptions(screen.getByLabelText("Stavka zahtjeva"),"ri");await user.selectOptions(screen.getByLabelText("Dobavljač narudžbenice"),"partner");
+    await chooseSelect(user, screen.getByLabelText("Odobreni zahtjev"),"r");
+
+    await chooseSelect(user, screen.getByLabelText("Stavka zahtjeva"),"ri");await chooseSelect(user, screen.getByLabelText("Dobavljač narudžbenice"),"partner");
     await user.type(screen.getByLabelText("Količina narudžbe"),"2");await user.type(screen.getByLabelText("Cijena po jedinici (feninga)"),"100");
     await user.click(screen.getByRole("button",{name:"Sačuvaj narudžbenicu"}));await waitFor(()=>expect(done).toHaveBeenCalled());
     const call=fetch.mock.calls.find(([url,init])=>url==="/api/purchase-orders" && init?.method==="POST");
@@ -34,16 +35,16 @@ describe("Obrasci nabavke",()=>{
   });
   it("prijem upućuje na stvarnu stavku narudžbenice",async()=>{
     const fetch=mockApi();const done=vi.fn();const user=userEvent.setup();render(<ReceiptForm options={options} onDone={done} initialWarehouse="w"/>);
-    await user.selectOptions(screen.getByLabelText("Poslana narudžbenica"),"o");await screen.findByRole("option",{name:/Cement · primljeno/});
-    await user.selectOptions(screen.getByLabelText("Stavka narudžbenice"),"oi");await user.type(screen.getByLabelText("Količina prijema"),"2");await user.type(screen.getByLabelText("Cijena prijema (feninga po jedinici)"),"100");
+    await chooseSelect(user, screen.getByLabelText("Poslana narudžbenica"),"o");
+    await chooseSelect(user, screen.getByLabelText("Stavka narudžbenice"),"oi");await user.type(screen.getByLabelText("Količina prijema"),"2");await user.type(screen.getByLabelText("Cijena prijema (feninga po jedinici)"),"100");
     await user.click(screen.getByRole("button",{name:"Evidentiraj prijem"}));await waitFor(()=>expect(done).toHaveBeenCalled());
     const call=fetch.mock.calls.find(([url])=>url==="/api/goods-receipts");expect(JSON.parse(call![1]!.body as string)).toMatchObject({orderId:"o",partnerId:"partner",warehouseId:"w",items:[{orderItemId:"oi",itemId:"i",quantity:"2"}]});
   });
   it("račun povezuje stavku prijema i prikazuje mismatch",async()=>{
     const fetch=mockApi();const done=vi.fn();const user=userEvent.setup();render(<InvoiceForm options={options} onDone={done}/>);
-    await user.selectOptions(screen.getByLabelText("Stavka prijema za račun"),"receipt-item");await user.type(screen.getByLabelText("Broj računa"),"R-1");
+    await chooseSelect(user, screen.getByLabelText("Stavka prijema za račun"),"receipt-item");await user.type(screen.getByLabelText("Broj računa"),"R-1");
     await user.type(screen.getByLabelText("Količina na računu"),"2");await user.type(screen.getByLabelText("Iznos računa (feninga)"),"201");
-    await user.click(screen.getByRole("button",{name:"Evidentiraj račun"}));await waitFor(()=>expect(done).toHaveBeenCalledWith(expect.stringContaining("PURCHASE_INVOICE_MISMATCH")));
+    await user.click(screen.getByRole("button",{name:"Evidentiraj račun"}));await waitFor(()=>expect(done).toHaveBeenCalledWith(expect.stringContaining("Račun se ne slaže")));
     const call=fetch.mock.calls.find(([url])=>url==="/api/purchase-invoices");expect(JSON.parse(call![1]!.body as string)).toMatchObject({partnerId:"partner",amountCents:"201",items:[{receiptItemId:"receipt-item",quantity:"2",amountCents:"201"}]});
   });
 });

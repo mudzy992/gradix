@@ -12,6 +12,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { SERVICE_EVENT_NAMES, COST_ENTRY_STATUS_LABELS, labelFor } from "@/lib/labels";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert,
@@ -283,7 +284,7 @@ export function OrderDetailClient({
           emptyText="Nema zapisa toka."
           columns={[
             { key: "at", header: "Kada", cell: (row) => row.at.slice(0, 16).replace("T", " ") },
-            { key: "kind", header: "Događaj", cell: (row) => row.kind },
+            { key: "kind", header: "Događaj", cell: (row) => labelFor(SERVICE_EVENT_NAMES, row.kind) },
             { key: "actor", header: "Ko", cell: (row) => row.actor_name ?? "—" },
             { key: "note", header: "Napomena", cell: (row) => row.note ?? "—" },
           ]}
@@ -299,10 +300,10 @@ export function OrderDetailClient({
                 term: "Iznos",
                 value: detail.costEntry.amount_amount
                   ? money(detail.costEntry.amount_amount, order.currency_code)
-                  : "Nepoznat (PENDING)",
+                  : "Čeka cijenu",
               },
               { term: "Nosilac", value: detail.costEntry.project_id ? "Projekat" : "Samo mašina" },
-              { term: "Status", value: detail.costEntry.status },
+              { term: "Status", value: labelFor(COST_ENTRY_STATUS_LABELS, detail.costEntry.status) },
             ]}
           />
         ) : (

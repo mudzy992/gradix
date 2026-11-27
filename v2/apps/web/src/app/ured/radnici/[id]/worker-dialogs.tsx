@@ -8,7 +8,7 @@
  * ali korisnik ne treba da to otkrije iz greške.
  */
 import { useState } from "react";
-import { Alert, Button, Dialog, Inline, Input, Select, Textarea } from "@/components/ui/index";
+import { Alert, Button, Dialog, Inline, Input, SelectField as Select, Textarea } from "@/components/ui/index";
 import { RATE_KIND } from "./worker-labels";
 
 const CONDITION: Record<string, string> = { NEW: "Novo", USED: "Korišteno", DAMAGED: "Oštećeno" };

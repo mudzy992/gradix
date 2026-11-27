@@ -9,10 +9,11 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { HSE_KIND_NAMES as KIND_LABEL, HSE_STATUS_NAMES as STATUS_LABEL, labelFor } from "@/lib/labels";
 import { apiCall, jsonBody } from "@/api-client";
 import {
-  Alert, Button, Card, Checkbox, DataTable, Field, FilterBar, FormGrid, Inline, Input, Select,
-  SectionTitle, Stack, Stat, StatusDot, Tabs, Dialog, Textarea,
+  Alert, Button, Card, Checkbox, DataTable, Field, FilterBar, FormGrid, Inline, Input, SelectField as Select,
+  SectionTitle, Stack, Stat, StatusDot, TabPanel, Tabs, Dialog, Textarea,
 } from "@/components/ui/index";
 import type { HseStats } from "@gradix/contracts";
 import { filterIncidents } from "./hse-filter";
@@ -40,13 +41,7 @@ export type HseAttention = {
   unsignedDiaries: number;
 };
 
-const KIND_LABEL: Record<string, string> = {
-  ACCIDENT: "Nesreća",
-  NEAR_MISS: "NEAR_MISS (skoro pa)",
-  PROPERTY_DAMAGE: "Šteta na imovini",
-  ENVIRONMENTAL: "Okoliš",
-  OCCUPATIONAL_ILLNESS: "Bolest u vezi s radom",
-};
+
 
 const SEVERITY_LABEL: Record<string, string> = {
   MINOR: "Laka",
@@ -55,12 +50,7 @@ const SEVERITY_LABEL: Record<string, string> = {
   FATAL: "Smrtna",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  REPORTED: "Prijavljen",
-  INVESTIGATING: "U istrazi",
-  ACTIONS_OPEN: "Otvorene mjere",
-  CLOSED: "Zatvoren",
-};
+
 
 const percent = (value: number | null): string => (value === null ? "—" : `${value.toFixed(1)}%`);
 
@@ -149,25 +139,25 @@ export function HseClient({
         />
       </Inline>
 
-      <Tabs label="HSE pregled" active={tab} onChange={setTab} tabs={[{key:"incidents",label:"Incidenti"},{key:"statistics",label:"Statistika"}]} />
-      {tab === "statistics" ? <Card>
+      <Tabs id="hse" label="HSE pregled" active={tab} onChange={setTab} tabs={[{key:"incidents",label:"Incidenti"},{key:"statistics",label:"Statistika"}]} />
+      <TabPanel groupId="hse" tabKey="statistics" active={tab === "statistics"}><Card>
         <SectionTitle hint="Sve je izračun iz incidenta i sati — nijedan broj nije upisan rukom">
           Statistika {stats.from} — {stats.to}
         </SectionTitle>
         <Inline>
           <StatusDot tone="muted" label={`Incidenti: ${stats.incidents}`} />
-          <StatusDot tone="warn" label={`NEAR_MISS: ${stats.nearMisses}`} />
+          <StatusDot tone="warn" label={`Izbjegnuti incidenti: ${stats.nearMisses}`} />
           <StatusDot tone="danger" label={`Izgubljeni dani: ${stats.lostDays}`} />
           <StatusDot tone="muted" label={`Mjere na vrijeme: ${percent(stats.actions.onTimeRate)}`} />
           <StatusDot tone="muted" label={`Obuke: ${stats.trainings.count} (toolbox ${stats.trainings.toolbox})`} />
           <StatusDot tone="muted" label={`Prisustva: ${stats.trainings.attendees}`} />
         </Inline>
         <p className="gx-page-sub">
-          LTIFR = (ozljede sa izgubljenim danima × 1 000 000) / odrađeni sati. NEAR_MISS se broji odvojeno —
+          LTIFR = (ozljede sa izgubljenim danima × 1 000 000) / odrađeni sati. Izbjegnuti incidenti se broje odvojeno —
           sabran sa nesrećama izgubi preventivni signal.
         </p>
         <a className="gx-link" href={`/api/hse/report/pdf?from=${stats.from}&to=${stats.to}`}>Preuzmi HSE izvještaj (PDF)</a>
-      </Card> : null}
+      </Card></TabPanel>
 
       {caps.canReport && reportOpen ? (
         <Dialog title="Prijavi incident" trapFocus onClose={()=>{if(!busy)setReportOpen(false);}}>
@@ -248,7 +238,7 @@ export function HseClient({
         </Dialog>
       ) : null}
 
-      {tab === "incidents" ? <>
+      <TabPanel groupId="hse" tabKey="incidents" active={tab === "incidents"}>
       {caps.canReport ? <Button variant="primary" onClick={()=>setReportOpen(true)}>+ Prijavi incident</Button> : null}
       <FilterBar>
         <Field label="Vrsta" htmlFor="filter-vrsta">
@@ -274,14 +264,14 @@ export function HseClient({
         rows={rows}
         rowKey={(row) => row.id}
         caption="Incidenti"
-        emptyText="Nema incidenata za taj filter. NEAR_MISS se takođe prijavljuje — to je najkorisniji preventivni signal."
+        emptyText="Nema incidenata za taj filter. Izbjegnuti incident se takođe prijavljuje — to je najkorisniji preventivni signal."
         columns={[
           {
             key: "događaj",
             header: "Događaj",
             cell: (row) => (
               <Stack gap="var(--space-1)">
-                <strong>{KIND_LABEL[row.kind] ?? row.kind}</strong>
+                <strong>{labelFor(KIND_LABEL, row.kind)}</strong>
                 <span className="gx-page-sub">{row.occurredAt.slice(0, 16).replace("T", " ")}</span>
               </Stack>
             ),
@@ -296,7 +286,7 @@ export function HseClient({
               />
             ),
           },
-          { key: "stanje", header: "Stanje", cell: (row) => STATUS_LABEL[row.status] ?? row.status },
+          { key: "stanje", header: "Stanje", cell: (row) => labelFor(STATUS_LABEL, row.status) },
           { key: "projekat", header: "Projekat", cell: (row) => row.projectName ?? "—" },
           {
             key: "mjere",
@@ -324,7 +314,7 @@ export function HseClient({
         ]}
       />
 
-      </> : null}
+      </TabPanel>
       {!caps.canInvestigate ? (
         <Alert tone="info">
           Istraga, mjere i zatvaranje incidenta traže dozvolu `hse.investigate` — prijava je pravo svakoga.

@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Chip, DataTable, Dialog, EmptyState, Input, Select, Skeleton, Stat, Textarea,
+  Alert, Button, Chip, DataTable, Dialog, EmptyState, Input, SelectField as Select, Skeleton, Stat, Textarea,
 } from "@/components/ui/index";
 import type { AmendmentRow, AmendmentsResult } from "@/server/project-finance-types";
 

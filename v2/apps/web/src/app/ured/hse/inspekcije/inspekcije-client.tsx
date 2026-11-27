@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Card, DataTable, Field, FilterBar, FormGrid, Inline, Input, SectionTitle,
-  Select, Stack, StatusDot, Textarea,
+  SelectField as Select, Stack, StatusDot, Textarea,
 } from "@/components/ui/index";
 
 export type InspectionRow = {

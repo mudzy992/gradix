@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody } from "@/api-client";
 import {
-  Alert, Button, Card, DataTable, Dialog, EmptyState, FormField, Input, Inline, Select, SectionTitle, Skeleton, Stack,
+  Alert, Button, Card, DataTable, Dialog, EmptyState, FormField, Input, Inline, SelectField as Select, SectionTitle, Skeleton, Stack,
 } from "@/components/ui/index";
 
 type Advance = {

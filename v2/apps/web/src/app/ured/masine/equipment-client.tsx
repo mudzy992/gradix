@@ -20,7 +20,7 @@ import { apiCall, patchBody } from "@/api-client";
 import { formatDateTime, formatNumber, meterUnit, ownershipLabel } from "@/format";
 import {
   Alert, Button, Card, Checkbox, Chip, DataTable, EmptyState, FilterBar, Input, Mono,
-  PageHeader, Select, Skeleton,
+  PageHeader, SelectField as Select, Skeleton,
 } from "@/components/ui/index";
 import { MachineDialog, MeterDialog } from "./equipment-dialogs";
 import { CategoriesDialog } from "./equipment-categories";

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiCall } from "@/api-client";
-import { Alert, Button, Card, FormGrid, FormSection, Input, Select } from "@/components/ui";
+import { Alert, Button, Card, FormGrid, FormSection, Input, SelectField as Select } from "@/components/ui";
 import { usePurchasePost } from "../nabavka/use-purchase-post";
 import type { Contract, Partner, Project } from "./subcontract-types";
 

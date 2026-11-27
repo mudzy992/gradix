@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import { Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Inline, Select, Stack } from "@/components/ui/index";
 import type { WeekView } from "@/server/workday-timer-service";
+import { labelFor } from "@/lib/labels";
 import { ABSENCE_KINDS, DAY_KIND_LABEL, dayName, dayNumber, minutesLabel, weekDays } from "./week-labels";
 import { downloadCsv } from "./week-csv";
 
@@ -146,7 +147,7 @@ export function WeekClient({
             .filter(([, minutes]) => minutes > 0)
             .map(([kind, minutes]) => (
               <Chip key={kind} tone="hollow">
-                {DAY_KIND_LABEL[kind] ?? kind}: {minutesLabel(minutes)}
+                {labelFor(DAY_KIND_LABEL,kind)}: {minutesLabel(minutes)}
               </Chip>
             ))}
         </Inline>

@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import {
-  Alert, Badge, Button, DataTable, Dialog, FormField, Input, Inline, Select, Skeleton, Stack, Switch,
+  Alert, Badge, Button, DataTable, Dialog, FormField, Input, Inline, SelectField as Select, Skeleton, Stack, Switch,
 } from "@/components/ui/index";
 
 type Component = {

@@ -13,7 +13,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
-import { Alert, Button, Card, DataTable, EmptyState, Field, FilterBar, Inline, Input, Select, Stack, StatusDot } from "@/components/ui/index";
+import { Alert, Button, Card, DataTable, EmptyState, Field, FilterBar, Inline, Input, SelectField as Select, Stack, StatusDot } from "@/components/ui/index";
 import type { SiteDiaryListItem } from "@gradix/contracts";
 
 const STATUS_LABEL: Record<string, string> = {

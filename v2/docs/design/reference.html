@@ -399,6 +399,21 @@ body[data-ui1-preview] > :not(#ui1-reference):not(script):not(svg){display:none}
 body[data-ui1-preview] #ui1-reference{max-width:none;margin:0;padding:16px}
 @media(max-width:850px){.ui1-preview{grid-template-columns:1fr}.ui1-side{border-right:0;border-bottom:1px solid var(--line)}.ui1-side strong{margin-bottom:12px}.ui1-side span{display:inline-block}.ui1-main{padding:20px}.ui1-cols{grid-template-columns:1fr}}
 @media(max-width:520px){.ui1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ui1-side span:not(:first-of-type){display:none}.ui1-top{margin-bottom:20px}}
+
+/* UI-3A: odobrena vizuelna referenca za SelectField i TabPanel. */
+body[data-ui3-preview] > :not(#ui3-reference):not(script):not(svg){display:none}
+body[data-ui3-preview] #ui3-reference{max-width:1040px;margin:0 auto;padding:32px 20px}
+.ui3-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px;margin-top:24px}
+.ui3-demo{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;min-width:0}
+.ui3-demo h2{margin-bottom:8px}.ui3-demo p{color:var(--muted);margin-bottom:20px}
+.ui3-label{font-size:13px;font-weight:700;display:block;margin-bottom:8px}
+.ui3-trigger,.ui3-search{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);padding:0 14px;text-align:left;font:inherit}
+.ui3-trigger{display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 0 3px color-mix(in srgb,var(--link) 25%,transparent);border-color:var(--link)}
+.ui3-menu{margin-top:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);padding:8px}
+.ui3-search{height:38px;margin-bottom:6px}.ui3-option{padding:10px 12px;border-radius:8px}.ui3-option.active{background:var(--raise);font-weight:700;color:var(--link)}
+.ui3-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:0}.ui3-tabs span{padding:12px 2px;color:var(--muted)}.ui3-tabs .active{color:var(--text);border-bottom:2px solid var(--link);font-weight:700}
+.ui3-panel{display:grid;gap:16px;padding:20px 16px;background:var(--raise);border-radius:0 0 12px 12px}.ui3-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}.ui3-card strong{display:block;margin-bottom:4px}
+
 </style>
 </head>
 <body>
@@ -1491,6 +1506,22 @@ body[data-ui1-preview] #ui1-reference{max-width:none;margin:0;padding:16px}
   </div>
 </section>
 
+<section id="ui3-reference" aria-labelledby="ui3-heading">
+  <p class="sub">UI-3A · DIZAJNERSKI PRIJEDLOG · primjer, ne stvarni podaci</p>
+  <h1 id="ui3-heading">Select i razmak tabova</h1>
+  <p class="sub">Prijedlog koristi postojeću paletu, polja i tokene. Pregledajte i svijetlu i tamnu temu prije implementacije.</p>
+  <div class="ui3-grid">
+    <section class="ui3-demo"><h2>Pretraživi izbor</h2><p>Za duže liste, jasna selekcija i fokus.</p>
+      <span class="ui3-label">Skladište</span><div class="ui3-trigger"><span>Centralno skladište</span><span>⌄</span></div>
+      <div class="ui3-menu"><div class="ui3-search">Traži skladište…</div><div class="ui3-option active">Centralno skladište &nbsp; ✓</div><div class="ui3-option">Gradilišno skladište</div><div class="ui3-option">Rezervoar</div></div>
+    </section>
+    <section class="ui3-demo"><h2>Dosljedan tab-panel</h2><p>Isti unutrašnji razmak i razmak između kartica.</p>
+      <div class="ui3-tabs"><span class="active">Podaci</span><span>Historija</span></div><div class="ui3-panel"><div class="ui3-card"><strong>Kontakt</strong>Telefon i adresa</div><div class="ui3-card"><strong>Angažman</strong>Stalno zaposlenje</div></div>
+    </section>
+  </div>
+  <p class="sub" style="margin-top:20px">Plan ponašanja: tastatura ↑/↓, Enter i Esc; povezane labele, fokus prsten, pretraga za duže liste i podrška za obje teme.</p>
+</section>
+
 <script>
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),params=new URLSearchParams(location.search);
 const requestedTheme=params.get("theme");
@@ -1499,6 +1530,7 @@ if(params.get("preview")==="r4a1"&&(params.get("screen")==="worker"||params.get(
 if(params.get("preview")==="r4b-approval"&&["office","foreman"].includes(params.get("screen")))document.body.dataset.r4bApprovalPreview=params.get("screen");
 if(params.get("preview")==="c1"&&["ured","mob","prazno"].includes(params.get("screen")))document.body.dataset.c1Preview=params.get("screen");
 if(params.get("preview")==="ui1")document.body.dataset.ui1Preview="true";
+if(params.get("preview")==="ui3")document.body.dataset.ui3Preview="true";
 const toggleTheme=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
 document.getElementById("theme").onclick=toggleTheme;
 document.getElementById("r4a-mobile-theme").onclick=toggleTheme;

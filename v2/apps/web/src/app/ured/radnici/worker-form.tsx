@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import type { Worker } from "@gradix/contracts";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
-import { Alert, Button, Dialog, FormField, FormGrid, Input, Select } from "@/components/ui/index";
+import { Alert, Button, Dialog, FormField, FormGrid, Input, SelectField as Select } from "@/components/ui/index";
 
 export type LinkableUser = { id: string; firstName: string; lastName: string; email: string; isActive: boolean };
 

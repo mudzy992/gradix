@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import type { Project } from "@gradix/contracts";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
-import { Alert, Button, Dialog, Input, Select, Textarea } from "@/components/ui/index";
+import { Alert, Button, Dialog, Input, SelectField as Select, Textarea } from "@/components/ui/index";
 import {
   PROJECT_EMPTY_FORM, STATUS_LABEL, fromProject, toProjectPayload,
   type ProjectFormState, type WorkerOption,

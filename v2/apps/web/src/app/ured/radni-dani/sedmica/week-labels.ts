@@ -4,15 +4,7 @@
  * Jedan spisak, jer se isti pojmovi pojavljuju i na mobilnom i u uredu — dva spiska bi se
  * razišla u roku od jedne izmjene.
  */
-export const DAY_KIND_LABEL: Record<string, string> = {
-  WORK: "Rad",
-  VACATION: "Godišnji",
-  SICK: "Bolovanje",
-  PAID_LEAVE: "Plaćeni dopust",
-  UNPAID_LEAVE: "Neplaćeni dopust",
-  HOLIDAY: "Praznik",
-  NO_SHOW: "Nedolazak",
-};
+export { DAY_KIND_NAMES as DAY_KIND_LABEL } from "@/lib/labels";
 
 /** Izostanak se u tabeli vidi i kad nema nijedan minut — zato je oznaka, ne prazna ćelija. */
 export const ABSENCE_KINDS = new Set(["VACATION", "SICK", "PAID_LEAVE", "UNPAID_LEAVE", "HOLIDAY", "NO_SHOW"]);

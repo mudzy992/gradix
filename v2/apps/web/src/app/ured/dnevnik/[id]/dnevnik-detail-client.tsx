@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Card, DescriptionList, Field, Inline, Input,
-  SectionTitle, Stack, StatusDot, Tabs, Textarea, TextLink,
+  SectionTitle, Stack, StatusDot, TabPanel, Tabs, Textarea, TextLink,
 } from "@/components/ui/index";
 import type { SiteDiaryDetail } from "@gradix/contracts";
 import { DnevnikForm } from "./dnevnik-form";
@@ -125,11 +125,11 @@ export function DnevnikDetailClient({
         ) : null}
       </Card>
 
-      <Tabs label="Dnevnik" active={tab} onChange={setTab} tabs={[
+      <Tabs id="dnevnik" label="Dnevnik" active={tab} onChange={setTab} tabs={[
         {key:"automatic",label:"Podaci s terena"},{key:"entries",label:"Unosi"},
         ...(caps.canSign ? [{key:"sign",label:"Potpis i zaključavanje"}] : []),{key:"attachments",label:"Prilozi"},
       ]} />
-      {tab === "automatic" ? <Card>
+      <TabPanel groupId="dnevnik" tabKey="automatic" active={tab === "automatic"}><Card>
         <SectionTitle hint="Sistem, ne prepisivanje — ispravka se radi u evidenciji">Automatski iz terena</SectionTitle>
         <Inline>
           {autoSummary.map((entry) => (
@@ -190,11 +190,11 @@ export function DnevnikDetailClient({
             </div>
           ) : null}
         </Stack>
-      </Card> : null}
+      </Card></TabPanel>
 
-      <section hidden={tab !== "entries"}><DnevnikForm detail={detail} editable={editable} onNotice={setNotice} /></section>
+      <TabPanel groupId="dnevnik" tabKey="entries" active={tab === "entries"}><DnevnikForm detail={detail} editable={editable} onNotice={setNotice} /></TabPanel>
 
-      {tab === "sign" && caps.canSign ? (
+      {caps.canSign ? <TabPanel groupId="dnevnik" tabKey="sign" active={tab === "sign"}>
         <Card>
           <SectionTitle hint="Potpis zamrzava automatske podatke">Potpis i zaključavanje</SectionTitle>
           {diary.status === "DRAFT" ? (
@@ -238,9 +238,9 @@ export function DnevnikDetailClient({
             </Stack>
           ) : null}
         </Card>
-      ) : null}
+      </TabPanel> : null}
 
-      {tab === "attachments" ? <Card>
+      <TabPanel groupId="dnevnik" tabKey="attachments" active={tab === "attachments"}><Card>
         <SectionTitle action={<TextLink href="/ured/dnevnik">Nazad na listu</TextLink>}>Prilozi</SectionTitle>
         {detail.attachments.length === 0 ? (
           <p className="gx-page-sub">Nema priloga uz ovaj dan.</p>
@@ -253,7 +253,7 @@ export function DnevnikDetailClient({
             ))}
           </ul>
         )}
-      </Card> : null}
+      </Card></TabPanel>
     </Stack>
   );
 }

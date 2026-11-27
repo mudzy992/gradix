@@ -1,5 +1,7 @@
 "use client";
 
+import { COST_SOURCE_LABELS, COST_ENTRY_STATUS_LABELS } from "@/lib/labels";
+
 /**
  * Troškovi projekta (tab 2): jedinstveni ledger, sa stornom umjesto brisanja.
  *
@@ -14,7 +16,7 @@ import { apiCall, jsonBody } from "@/api-client";
 import Link from "next/link";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Chip, DataTable, Dialog, EmptyState, FilterBar, Select, Skeleton, Stat, Textarea,
+  Alert, Button, Chip, DataTable, Dialog, EmptyState, FilterBar, SelectField as Select, Skeleton, Stat, Textarea,
 } from "@/components/ui/index";
 
 import type { CostEntryRow as CostEntry } from "@/server/cost-entry-types";
@@ -30,11 +32,7 @@ type CostTotals = {
   pending_quantity_by_unit: Array<{ unit: string; quantity: string }>;
 };
 
-const STATUS_LABEL: Record<CostEntry["status"], string> = {
-  POSTED: "Knjiženo",
-  PENDING: "Bez cijene",
-  REVERSED: "Stornirano",
-};
+const STATUS_LABEL = COST_ENTRY_STATUS_LABELS;
 
 export function ProjectCosts({
   projectId,
@@ -135,12 +133,12 @@ export function ProjectCosts({
 
       <div className="gx-cols">
         <Stat
-          label="Knjiženo (POSTED)"
+          label="Proknjiženo"
           value={totals ? totals.posted : "—"}
           hint={totals ? `Valuta: ${totals.currency_code}` : undefined}
         />
         <Stat
-          label="Bez cijene (PENDING)"
+          label="Čeka cijenu"
           value={totals ? String(totals.pending_count) : "—"}
           hint={
             totals && totals.pending_count > 0
@@ -168,8 +166,8 @@ export function ProjectCosts({
           onChange={(event) => setStatusFilter(event.target.value)}
         >
           <option value="">Svi</option>
-          <option value="POSTED">Knjiženo</option>
-          <option value="PENDING">Bez cijene</option>
+          <option value="POSTED">{STATUS_LABEL.POSTED}</option>
+          <option value="PENDING">{STATUS_LABEL.PENDING}</option>
           <option value="REVERSED">Stornirano</option>
         </Select>
       </FilterBar>
@@ -310,16 +308,7 @@ export function ProjectCosts({
   );
 }
 
-const SOURCE_LABEL: Record<CostEntry["source_type"], string> = {
-  WORKDAY: "Radni dan",
-  MACHINE_WORK_LOG: "Rad mašine",
-  FUEL_ENTRY: "Gorivo",
-  HAUL: "Prevoz",
-  SERVICE_ORDER: "Servis",
-  PURCHASE: "Nabavka",
-  SUBCONTRACTOR: "Podizvođač",
-  MANUAL: "Ručni unos",
-};
+const SOURCE_LABEL = COST_SOURCE_LABELS;
 
 function sourceLabel(entry: CostEntry): string {
   if (entry.reverses_id) return `Storno · ${SOURCE_LABEL[entry.source_type]}`;

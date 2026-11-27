@@ -8,7 +8,7 @@
  * smisla (nema radnih sati, nema kvarova), prikazuje se „—“, a ne 0 — nula bi bila tvrdnja.
  */
 import { useMemo, useState } from "react";
-import { Card, DataTable, DescriptionList, FormSection, Stack, Stat, StatusDot, Tabs, TextLink } from "@/components/ui/index";
+import { Card, DataTable, DescriptionList, FormSection, Stack, Stat, StatusDot, TabPanel, Tabs, TextLink } from "@/components/ui/index";
 import type { ServiceOrderRow } from "@/server/service-order-types";
 import {
   MAINTENANCE_STATUS_LABEL,
@@ -122,9 +122,9 @@ export function MasinaOdrzavanjeClient({
         </FormSection>
       </Card>
 
-      <Tabs label="Održavanje mašine" active={tab} onChange={setTab} tabs={[{key:"plans",label:"Planovi održavanja"},{key:"orders",label:"Historija servisa"}]} />
-      {tab === "plans" ? <Card>
-        <FormSection title="Planovi održavanja">
+      <Tabs id="masina-odrzavanje" label="Održavanje mašine" active={tab} onChange={setTab} tabs={[{key:"plans",label:"Planovi održavanja"},{key:"orders",label:"Historija servisa"}]} />
+      <TabPanel groupId="masina-odrzavanje" tabKey="plans" active={tab === "plans"}><Card>
+        <FormSection>
           <DataTable
             caption="Planovi preventivnog održavanja"
             rows={plans}
@@ -153,10 +153,10 @@ export function MasinaOdrzavanjeClient({
           />
           <TextLink href="/ured/servis/planovi">Otvori planove servisa</TextLink>
         </FormSection>
-      </Card> : null}
+      </Card></TabPanel>
 
-      {tab === "orders" ? <Card>
-        <FormSection title="Historija servisa">
+      <TabPanel groupId="masina-odrzavanje" tabKey="orders" active={tab === "orders"}><Card>
+        <FormSection>
           <DataTable
             caption="Servisni nalozi mašine"
             columns={columns}
@@ -166,7 +166,7 @@ export function MasinaOdrzavanjeClient({
           />
           <TextLink href={`/ured/servis?machine=${machineId}`}>Otvori u radionici</TextLink>
         </FormSection>
-      </Card> : null}
+      </Card></TabPanel>
     </Stack>
   );
 }

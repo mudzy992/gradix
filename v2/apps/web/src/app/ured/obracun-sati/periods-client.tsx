@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
-  Alert, Button, DataTable, EmptyState, Inline, Select, Stack, StatusDot,
+  Alert, Button, DataTable, EmptyState, Inline, SelectField as Select, Stack, StatusDot,
 } from "@/components/ui/index";
 
 type PeriodStatus = "OPEN" | "CALCULATED" | "APPROVED" | "LOCKED";
@@ -43,12 +43,7 @@ const MONTHS = [
   "jul", "avgust", "septembar", "oktobar", "novembar", "decembar",
 ] as const;
 
-const STATUS_LABEL: Record<PeriodStatus, string> = {
-  OPEN: "Otvoren",
-  CALCULATED: "Izračunat",
-  APPROVED: "Odobren",
-  LOCKED: "Zaključan",
-};
+import { PAYROLL_STATUS_NAMES as STATUS_LABEL } from "@/lib/labels";
 
 /** Status perioda je chip sa tekstom, nikad samo boja. */
 export function statusTone(status: PeriodStatus): "ok" | "warn" | "danger" | "muted" {

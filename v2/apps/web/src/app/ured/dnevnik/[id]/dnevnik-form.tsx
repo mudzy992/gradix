@@ -11,7 +11,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
-  Button, Card, DataTable, Field, FormGrid, Input, SectionTitle, Select, Stack, Textarea,
+  Button, Card, DataTable, Field, FormGrid, Input, SectionTitle, SelectField as Select, Stack, Textarea,
 } from "@/components/ui/index";
 import type { SiteDiaryDetail } from "@gradix/contracts";
 

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import { formatDate, formatDateTime } from "@/format";
 import {
-  Alert, Button, Chip, DataTable, Dialog, EmptyState, Input, Select, Skeleton, Textarea,
+  Alert, Button, Chip, DataTable, Dialog, EmptyState, Input, SelectField as Select, Skeleton, Textarea,
 } from "@/components/ui/index";
 import type { TaskCommentRow, TaskListResult, TaskRow } from "@/server/task-types";
 

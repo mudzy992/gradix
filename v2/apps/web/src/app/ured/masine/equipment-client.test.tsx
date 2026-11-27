@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 /**
  * Mašine (R2a): kategorija nosi vrstu brojila, upis brojila traži izričitu ispravku kad je
@@ -76,7 +77,7 @@ describe("mašine", () => {
     mockApi(); const {container}=render(<EquipmentClient canManage canExport />);
     await screen.findByText("Bager CAT 320");
     await userEvent.type(screen.getByLabelText("Traži mašinu"),"CAT");
-    await userEvent.selectOptions(screen.getByLabelText("Kategorija"),"cat_bager");
+    await chooseSelect(userEvent, screen.getByLabelText("Kategorija"),"cat_bager");
     await userEvent.click(screen.getByLabelText(/Prikaži i neaktivne/));
     expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih mašina"})).toHaveAttribute("href","/api/equipment/export?q=CAT&categoryId=cat_bager&inactive=1");
     await expectNoSeriousA11yViolations(container);
@@ -151,7 +152,7 @@ describe("mašine", () => {
     const dialog = await screen.findByRole("dialog", { name: "Nova mašina" });
     await userEvent.type(within(dialog).getByLabelText("Inventarska oznaka"), "kam-02");
     await userEvent.type(within(dialog).getByLabelText("Naziv"), "Kamion MAN");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Kategorija"), "cat_kamion");
+    await chooseSelect(userEvent, within(dialog).getByLabelText("Kategorija"), "cat_kamion");
     expect(within(dialog).getByText("Brojilo: km")).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText("Početno stanje brojila"), "55000");
     await userEvent.click(within(dialog).getByRole("button", { name: "Dodaj mašinu" }));
@@ -183,7 +184,7 @@ describe("mašine", () => {
     expect(within(dialog).getByText("EXCAVATOR")).toBeInTheDocument();
     await userEvent.type(within(dialog).getByLabelText("Naziv"), "Tegljač");
     await userEvent.type(within(dialog).getByLabelText("Oznaka"), "teg");
-    await userEvent.selectOptions(within(dialog).getByLabelText("Brojilo"), "KM");
+    await chooseSelect(userEvent, within(dialog).getByLabelText("Brojilo"), "KM");
     await userEvent.click(within(dialog).getByRole("button", { name: "Dodaj kategoriju" }));
 
     await waitFor(() => expect(calls.some((call) => call.method === "POST")).toBe(true));

@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import { formatDate } from "@/format";
 import {
-  Alert, Button, Card, Chip, DataTable, Dialog, EmptyState, Input, Select, Skeleton, Stat,
+  Alert, Button, Card, Chip, DataTable, Dialog, EmptyState, Input, SelectField as Select, Skeleton, Stat,
 } from "@/components/ui/index";
 import type { PhasesResult } from "@/server/project-phase-types";
 

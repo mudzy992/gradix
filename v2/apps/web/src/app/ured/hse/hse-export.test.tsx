@@ -1,3 +1,4 @@
+import { chooseSelect } from "@/test/select-field";
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,8 +11,8 @@ const caps={canExport:true,canReport:false,canInvestigate:false,canManageTrainin
 describe("izvoz incidenata",()=>{
   it("prenosi vrstu i stanje; axe",async()=>{
     const {container}=render(<HseClient initialIncidents={[]} stats={stats} attention={null} today="2026-01-01" caps={caps} />);
-    await userEvent.selectOptions(screen.getByLabelText("Vrsta"),"NEAR_MISS");
-    await userEvent.selectOptions(screen.getByLabelText("Stanje"),"REPORTED");
+    await chooseSelect(userEvent, screen.getByLabelText("Vrsta"),"NEAR_MISS");
+    await chooseSelect(userEvent, screen.getByLabelText("Stanje"),"REPORTED");
     expect(screen.getByRole("link",{name:"Preuzmi CSV prikazanih incidenata"})).toHaveAttribute("href","/api/hse/incidents/export?kind=NEAR_MISS&status=REPORTED");
     await expectNoSeriousA11yViolations(container);
   });

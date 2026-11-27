@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "@gradix/contracts";
 import { apiCall } from "@/api-client";
 import {
-  Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Mono, PageHeader, Select, Skeleton,
+  Alert, Button, Card, Chip, DataTable, EmptyState, FilterBar, Mono, PageHeader, SelectField as Select, Skeleton,
 } from "@/components/ui/index";
 import { ProjectDialog } from "./project-dialog";
 export {
