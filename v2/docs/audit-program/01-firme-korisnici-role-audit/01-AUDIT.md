@@ -51,7 +51,7 @@ Dodatno, ekran ima tri koraka naspram pet u §1.10/§4.2. Nema izbora PDV/adrese
 
 ### F1-03 · Platform MFA i support pristup nisu dovršeni kao operativni tokovi
 
-Vlasnik je 2026-11-27 potvrdio da **TOTP mora biti obavezan za sve operatore platforme**. Ovo je zasebna vlasnička politika za platform naloge, ne zaključak izveden iz tenant MFA. Migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` dodaje samo `platform_users.totp_enabled` (default `false`) i komentar o TOTP-u. Ipak, `platformLogin()` u `v2/apps/web/src/server/platform-service.ts` provjerava lozinku pa direktno izdaje osmosatnu sesiju; ne čita `totp_enabled` niti traži kod. Nije pronađena platform tajna/secret pohrana, enrollment, pre-auth challenge ili recovery tok. `platformAuthSecret()` samo vraća `AUTH_SECRET` i nema pronađenog pozivaoca. **Vlasnik je potvrdio F1-03b kao S1 2026-11-27**; statički dokaz ne potvrđuje runtime ponašanje.
+Vlasnik je 2026-11-27 potvrdio da **TOTP mora biti obavezan za sve operatore platforme**; odluka je unesena kao datirani dodatak u normativni spec 01 §1.8. Ovo je zasebna vlasnička politika za platform naloge, ne zaključak izveden iz tenant MFA. Migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` dodaje samo `platform_users.totp_enabled` (default `false`) i komentar o TOTP-u. Ipak, `platformLogin()` u `v2/apps/web/src/server/platform-service.ts` provjerava lozinku pa direktno izdaje osmosatnu sesiju; ne čita `totp_enabled` niti traži kod. Nije pronađena platform tajna/secret pohrana, enrollment, pre-auth challenge ili recovery tok. `platformAuthSecret()` samo vraća `AUTH_SECRET` i nema pronađenog pozivaoca. **Vlasnik je potvrdio F1-03b kao S1 2026-11-27**; statički dokaz ne potvrđuje runtime ponašanje.
 
 `grantSupportAccess()` u `v2/apps/web/src/server/platform-service.ts` upisuje razlog i rok i poziva se iz `v2/apps/web/src/app/api/platform/companies/[id]/support-access/route.ts`; `activeSupportAccess()` čita važeći zapis, ali nema pronađenog pozivaoca. Nije pronađen scoped support kontekst koji koristi grant za pristup podacima niti firmni banner koji prikazuje aktivan pristup. Evidentiran grant zato nije dokaz da je operativni support data-plane isporučen.
 
@@ -108,7 +108,7 @@ Vlasnik je 2026-11-27 potvrdio S1/S2/S3 mapu, uključujući S1 za F1-03b, tenant
 
 - **Težine:** potvrđeni su S1 za F1-01/F1-02/F1-03b/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za položaj taba u F1-08.
 - **Tenant MFA:** TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT; passkey nije zamjena. F1-04c je zato potvrđen kao S1.
-- **Platform MFA:** vlasnik je odredio obavezni TOTP za sve platform operatore i potvrdio F1-03b kao S1; taj tok još nije implementiran ni runtime-provjeren.
+- **Platform MFA:** vlasnik je odredio obavezni TOTP za sve platform operatore i potvrdio F1-03b kao S1; politika je unesena u spec 01 §1.8 datiranim dodatkom 2026-11-27, ali tok još nije implementiran ni runtime-provjeren.
 - **Platform DB:** potvrđen je zaseban runtime principal bez superusera, `BYPASSRLS`, vlasništva i `CREATE`, s uskim grantovima, eksplicitnim RLS politikama i zasebnim preflightom. Tačne kolone/politike još nisu izvedene ni testirane; `DATABASE_ADMIN_URL` ne ostaje u web runtime-u.
 - **Retencija:** vlasnik je potvrdio pravnu/računovodstvenu saglasnost po spec rokovima STANDARD 2 g., ACCESS 5 g., FINANCIAL 10 g. uz agregatni audit zapis. Dokument saglasnosti nije nezavisno pregledan; implementacija/purge nisu pokrenuti.
 - **Lokalizacija:** bez širenja izvan spec 01 — firma `currency/timezone/locale`; korisnik `locale/timezone` s firmnim defaultima.
@@ -118,7 +118,7 @@ Vlasnik je 2026-11-27 potvrdio S1/S2/S3 mapu, uključujući S1 za F1-03b, tenant
 
 1. F1-03b je S1 potvrđen 2026-11-27: `platformLogin()` i dalje izdaje osmosatnu sesiju samo lozinkom. Nalaz je statički; nema runtime/pilot dokaza.
 2. Dovršiti tačne per-table/column grants, ograničene RLS politike i poseban preflight za odobreni non-BYPASSRLS principal; prijedlog nije primijenjen ni testiran.
-3. Prije koda uskladiti vlasnički potvrđeni platform TOTP zahtjev s normativnim spec 01 §1.8; zatim dizajnirati zasebno secret/enrollment/pre-auth/recovery i prvi operator provisioning. Migracija sadrži samo `totp_enabled`, a ti tokovi nisu pronađeni.
+3. Politika platform TOTP sada je normativno unesena u spec 01 §1.8; prije koda još dizajnirati secret/enrollment/pre-auth/recovery i first-operator provisioning. Migracija sadrži samo `totp_enabled`, a ti tokovi nisu pronađeni.
 4. Purge sign-off je vlasnik potvrdio po rokovima iz speca; destruktivni posao i dalje nije implementiran niti odobren kodom bez fraze kapije.
 5. Višefirmski izbor ostaje `ODLOŽENO` prema MVP specifikaciji; „Modul 1 od 11“ naspram programa od 12 modula je dokumentacijsko pitanje, ne kodni blocker.
 

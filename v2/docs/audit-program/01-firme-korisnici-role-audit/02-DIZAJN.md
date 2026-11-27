@@ -21,7 +21,7 @@ Vlasnik je potvrdio podjelu: Modul 1 emituje invite/reset događaje; Modul 12 vl
 
 Vlasnik je izabrao zasebnu, najmanje privilegovanu platform runtime rolu s tačnim grantovima. Uske DB funkcije više nisu primarna opcija bez nove odluke. Grantovi moraju proći ACL matricu, preflight i sigurnosni pregled; migratorska/vlasnička veza ne ulazi u Node proces.
 
-Vlasnik je potvrdio da tenant TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT i da passkey nije zamjena. Zasebno, 2026-11-27 je odlučio da TOTP bude obavezan i za sve platform operatore; nijedna platform sesija ne smije nastati prije provjere valjanog TOTP koda. Ovo je izričita vlasnička odluka koja dopunjava §1.8; ne zaključujemo je iz komentara/migracije. Za tenant passkey prijavu, `twoFactorGate()` mora potvrditi TOTP prije sesije za obavezne role. Platform MFA secret, enrollment, recovery i bootstrap još nemaju dizajn. Support pristup ostaje dio Modula 1: mora stvoriti stvarni, vremenski ograničen i minimalno dozvoljen kontekst; samo red u `platform_support_sessions` nije pristup podacima. Firma mora vidjeti operatora, razlog i rok u auditu i zaglavlju dok pristup traje.
+Vlasnik je potvrdio da tenant TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT i da passkey nije zamjena. Zasebno, 2026-11-27 je odlučio da TOTP bude obavezan i za sve platform operatore; nijedna platform sesija ne smije nastati prije provjere valjanog TOTP koda. Ovo je izričita vlasnička odluka, unesena datiranim dodatkom u spec 01 §1.8; ne zaključujemo je iz komentara/migracije. Za tenant passkey prijavu, `twoFactorGate()` mora potvrditi TOTP prije sesije za obavezne role. Platform MFA secret, enrollment, recovery i bootstrap još nemaju dizajn. Support pristup ostaje dio Modula 1: mora stvoriti stvarni, vremenski ograničen i minimalno dozvoljen kontekst; samo red u `platform_support_sessions` nije pristup podacima. Firma mora vidjeti operatora, razlog i rok u auditu i zaglavlju dok pristup traje.
 
 ### 2.1 Platform runtime ACL — smjer vlasnički potvrđen; grantovi su kandidatski
 
@@ -49,7 +49,7 @@ Posebna platform matrica i preflight moraju provjeriti atribute/vlasništvo role
 
 ### 2.2 Platform TOTP — politika potvrđena, lifecycle otvoren
 
-Obavezni TOTP za sve platform operatore je vlasnički potvrđen. Trenutno postoji samo `platform_users.totp_enabled` boolean; nema pronađene platform tajne, enrollment/bootstrap, pre-auth challenge ili recovery toka. Preporuka je odvojeno šifrovano platform-secret pohraniti od tenant `user_totp`, ne izdavati platform sesiju dok password + TOTP nisu potvrđeni i koristiti jednokratni pre-auth dokaz. Prije implementacije treba dizajnirati first-operator provisioning, oporavak/reset s auditom, rate-limit i kratki challenge TTL. Ovo je prijedlog za naredni dizajnerski korak, ne već odobren schema/lifecycle.
+Obavezni TOTP za sve platform operatore je vlasnički potvrđen i normativno unesen u spec 01 §1.8 dodatkom od 2026-11-27. Trenutno postoji samo `platform_users.totp_enabled` boolean; nema pronađene platform tajne, enrollment/bootstrap, pre-auth challenge ili recovery toka. Preporuka je odvojeno šifrovano platform-secret pohraniti od tenant `user_totp`, ne izdavati platform sesiju dok password + TOTP nisu potvrđeni i koristiti jednokratni pre-auth dokaz. Prije implementacije treba dizajnirati first-operator provisioning, oporavak/reset s auditom, rate-limit i kratki challenge TTL. Ovo je prijedlog za naredni dizajnerski korak, ne već odobren schema/lifecycle.
 
 ## 3. Identitet, prijava i sesije
 
@@ -77,7 +77,7 @@ Matrica ostaje kodom definisana i read-only: jedna lista prava hrani rute, meni 
 
 ## 7. Odluke i preostali dizajn prije koda
 
-1. F1-03b obavezni TOTP i S1 težina potvrđeni su od vlasnika; normativni spec 01 §1.8 treba sinhronizovati prije koda. Secret store, enrollment/bootstrap prvog operatora, pre-auth TTL i recovery/reset ostaju za dizajn/odobrenje.
+1. F1-03b obavezni TOTP i S1 težina potvrđeni su od vlasnika, a politika je normativno unesena u spec 01 §1.8 dodatkom 2026-11-27. Secret store, enrollment/bootstrap prvog operatora, pre-auth TTL i recovery/reset ostaju za dizajn/odobrenje prije koda.
 2. Purge sign-off je vlasnik potvrdio po rokovima iz speca; detalji izvršivog, idempotentnog lifecycle-a i audit dokaza i dalje se dizajniraju. Višefirmski login ostaje izvan MVP UI-ja.
 3. Vlasnik je odobrio non-BYPASSRLS platform role smjer; tačan column grant set, RLS politika i zaseban preflight još treba izvesti i provjeriti. Lokalizacijski obim je potvrđen samo prema spec 01.
 4. Dokumentacijska razlika „Modul 1 od 11“ naspram programa od 12; nije kodni blocker.

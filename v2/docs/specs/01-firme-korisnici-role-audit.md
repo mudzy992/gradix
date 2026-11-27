@@ -65,6 +65,10 @@ Postojeće stanje: matrica dozvola je kod (`apps/web/src/server/permissions.ts`)
 37. Support pristup: vremenski ograničen (max 60 min), veže se za **obavezan razlog** i firmu, upisuje u audit firme (`platform.support_access_granted`), a firma ga vidi u svom audit tragu i u zaglavlju UI-a dok traje. Nikad „tihi“ pristup.
 38. Operator ne vidi šifrovane tajne, ne mijenja lozinke korisnika, ne može obrisati firmu.
 
+#### Vlasnički dodatak — F1-03b (2026-11-27)
+
+Svi operatori platforme (`platform_users`) moraju uspješno potvrditi TOTP prije izdavanja platform sesije. Ovo važi za svaku putanju prijave; passkey/WebAuthn nije zamjena za TOTP, a sama lozinka ili passkey nisu dovoljni za sesiju. Ovaj dodatak normira obavezni faktor, ali ne odobrava konkretan lifecycle niti implementaciju: secret storage, enrollment i first-operator bootstrap, pre-auth challenge te recovery/reset ostaju za dizajn prije koda.
+
 ### 1.9 Audit
 39. `audit_events` je append-only. Upis u **istoj transakciji** kao poslovna izmjena (postojeće); za novac i dozvole obavezno.
 40. **Novo:** standardizovan `metadata`: `{ before: {...}, after: {...}, changed: ["field"] }` kroz jedan helper. Slobodne strukture se odbacuju; ključevi koji liče na tajne padaju (postojeća zaštita ostaje).

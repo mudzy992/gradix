@@ -6,13 +6,13 @@
 
 ## Kapija
 
-Vlasnik je potvrdio S1/S2/S3 mapu, uključujući F1-03b i F1-04c kao S1, te obavezni platform TOTP, purge sign-off po spec rokovima, non-BYPASSRLS ACL smjer i lokalizaciju samo po specu. F1-03b platform policy još treba prenijeti u normativni spec 01 §1.8; TOTP lifecycle i konačni column ACL, RLS politike i zasebni preflight ostaju otvoreni. Kod i dalje čeka zasebnu frazu.
+Vlasnik je potvrdio S1/S2/S3 mapu, uključujući F1-03b i F1-04c kao S1, te obavezni platform TOTP, purge sign-off po spec rokovima, non-BYPASSRLS ACL smjer i lokalizaciju samo po specu. Platform TOTP politika unesena je u normativni spec 01 §1.8 dodatkom 2026-11-27; lifecycle i konačni column ACL, RLS politike i zasebni preflight ostaju otvoreni. Kod i dalje čeka zasebnu frazu.
 
 ## Redoslijed predloženog rada
 
 ### A. Zatvoriti preostale sigurnosne i ugovorne odluke
 
-Vlasnik je potvrdio S1 za F1-01/F1-02/F1-03b/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant i platform TOTP, zaseban non-BYPASSRLS principal, podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry), purge sign-off po spec rokovima i lokalizacijski obim samo po specu su potvrđeni. Statički SQL inventar je urađen; prije koda treba sinhronizovati novu TOTP odluku u spec 01 §1.8 i dovršiti TOTP lifecycle te tačan column ACL + RLS/preflight model. Kod nije odobren.
+Vlasnik je potvrdio S1 za F1-01/F1-02/F1-03b/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant i platform TOTP, zaseban non-BYPASSRLS principal, podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry), purge sign-off po spec rokovima i lokalizacijski obim samo po specu su potvrđeni. Platform TOTP politika unesena je u normativni spec 01 §1.8 dodatkom 2026-11-27; prije koda ostaje dovršiti TOTP lifecycle i tačan column ACL + RLS/preflight model. Kod nije odobren.
 
 **Izlaz:** odobreni dizajn i testabilni acceptance kriteriji; bez koda dok nema fraze iz kapije.
 
