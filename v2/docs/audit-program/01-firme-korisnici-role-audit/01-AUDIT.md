@@ -2,7 +2,7 @@
 
 **Snimak:** 2026-11-27 · **Grana:** `arena/7b5ea9bf-gradix` · **Pregledani kodni commit:** `e7a37910a9c0a651d3d77a059592d755330b399c`
 
-**Status:** vlasnik je potvrdio težinsku mapu i odluke o tenant MFA, platform DB granici i podjeli obavještenja. Nakon dodatne potvrde, F1-04c je S1. Platform operator MFA i purge sign-off ostaju otvoreni; nema runtime/pilot verifikacije.
+**Status:** vlasnik je potvrdio težinsku mapu i odluke o tenant MFA, platform DB granici i podjeli obavještenja; F1-04c je S1. Platform SQL površina je dodatno statički inventarisana, ali konačni ACL/RLS/preflight nisu definisani. Platform operator MFA i purge sign-off ostaju otvoreni; nema runtime/pilot verifikacije.
 
 ## Sažetak i granice dokaza
 
@@ -18,7 +18,28 @@ Vlasnik je potvrdio mapu: S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1
 
 `v2/apps/web/src/server/platform-service.ts#getPlatformPool()` traži `DATABASE_ADMIN_URL` za login i sve platform operacije. `v2/infra/docker/entrypoint-web.sh` tu varijablu uklanja prije `exec node`; `v2/infra/coolify/docker-compose.yml` je navodi kao opcionalnu, iako je potrebna za migracije kad su uključene. U web procesu pokrenutom tim entrypointom platform login, lista firmi, onboarding, suspend/activate i support endpointi zato nemaju potrebnu konekciju. Ovo je nalaz o putanji koda/deploy konfiguraciji, ne rezultat probe produkcije.
 
-Ne preporučuje se „popravka“ ostavljanjem migratorske/vlasničke `DATABASE_ADMIN_URL` u Node procesu: to bi poništilo granicu iz ADR 0013 i suprotstavilo se ACL-u za `platform_users`/`platform_sessions` iz `v2/packages/db/preflight-checks/privilege-matrix.tsv` i `v2/packages/db/bootstrap/grants.sql`, gdje `gradix_app` nema te pristupe. Potrebna je zasebna, najmanje privilegovana platform granica ili usko recenzirane DB operacije; vlasnik treba potvrditi dizajn prije koda.
+Ne preporučuje se „popravka“ ostavljanjem migratorske/vlasničke `DATABASE_ADMIN_URL` u Node procesu: to bi poništilo granicu iz ADR 0013 i suprotstavilo se ACL-u za `platform_users`/`platform_sessions` iz `v2/packages/db/preflight-checks/privilege-matrix.tsv` i `v2/packages/db/bootstrap/grants.sql`, gdje `gradix_app` nema te pristupe. Vlasnik je potvrdio zasebnu runtime rolu; tačan ACL, RLS politika i zasebni runtime preflight još nisu definisani.
+
+#### Statički inventar SQL površine platform-servisa (nije grant odobrenje)
+
+Pregled `v2/apps/web/src/server/platform-service.ts` upita daje sljedeći trenutni minimum operacija po tabeli. Ovo je inventar koda na baselineu, ne konačan ACL: stvarne column grants, RLS pravila i preflight treba provjeriti kao zasebnu granicu.
+
+| Tabela | Trenutne platform-operacije pronađene u kodu |
+|---|---|
+| `platform_users` | `platformLogin()` čita `id/email/password_hash/display_name/is_active`; uspješan login ažurira `last_login_at`. Nije pronađen app put za kreiranje/brisanje operatora. |
+| `platform_sessions` | `platformLogin()` upisuje sesiju; `authenticatePlatform()` je čita; `platformLogout()` ažurira `revoked_at`. Nema hard-delete puta. |
+| `companies` | `listCompanies()`/slug lookup čitaju redove; `onboardCompany()` radi INSERT i UPDATE podataka/`seeded_at`; `setCompanyActive()` ažurira `is_active/updated_at`. Brisanje nije predviđeno. |
+| `memberships`, `users` | `listCompanies()` računa aktivna članstva i zadnju prijavu; `onboardCompany()` traži postojećeg vlasnika po emailu i eventualno INSERT-a OWNER članstvo. Za `users` nema platform UPDATE-a. |
+| `equipment_categories` | `onboardCompany()` broji seed kategorije za novoformiranu firmu; ne nalazi druge platform radnje nad tom tenant tabelom. |
+| `invitations` | `onboardCompany()` INSERT-a jednokratnu OWNER pozivnicu za novog identiteta; nema platform čitanja/izmjene nakon upisa. |
+| `audit_events` | `onboardCompany()`, `setCompanyActive()` i `grantSupportAccess()` samo INSERT-aju `platform.company_created`, `platform.company_activated`, `platform.company_suspended` i `platform.support_access_granted`; nema platform SELECT/UPDATE/DELETE. |
+| `platform_support_sessions` | `grantSupportAccess()` INSERT-a grant; `activeSupportAccess()` radi SELECT, ali pretraga nije našla nijednog pozivaoca. Taj helper ne opravdava globalni SELECT platform role: firmni banner treba čitati kroz tenant RLS putanju. |
+
+Nisu pronađeni platform upiti prema proizvoljnim operativnim poslovnim tabelama; jedini tenant seed lookup je brojanje `equipment_categories`. Nisu pronađene direktne sequence potrebe, niti platform korisničko provisioniranje iz web koda (osim fixture/test upisa). To ne dokazuje kako su operatori ručno provisionirani.
+
+RLS je dodatni blocker koji se ne rješava samo GRANT-ovima: `platform_sessions` je FORCE RLS bez politike; `platform_support_sessions` ima samo tenant SELECT politiku; `memberships`, `invitations`, `equipment_categories` i `audit_events` imaju tenant pravila; `companies/users` imaju pre-login/tenant politike koje ne daju novi platform kontekst. Zato obična nova rola bez RLS zaobilaženja neće raditi s trenutnim SQL-om samo zato što dobije tabelne privilegije. Dizajn mora dati eksplicitne, ograničene platform politike/kontekst i zaseban preflight, a ne dodijeliti široki poslovni ACL. `privilege-matrix.tsv` i trenutni preflight opisuju `gradix_app`, ne novu platform rolu.
+
+`platformPool()` u `platform-service.ts` trenutno čita `DATABASE_ADMIN_URL`; `entrypoint-web.sh` briše tu varijablu prije `exec node`, iako je može koristiti za migracije. Dakle trenutni poziv platform servisa iz web runtime-a nema predviđenu konekciju; stvarno okruženje nije testirano. ADR 0013 navodi da platform tokova tada nije bilo; sadašnji kod je kasniji dodatak i ne mijenja osnovno pravilo da `gradix_app` ne dobija platform ACL. I obrazloženje reda `platform_users` u `privilege-matrix.tsv` još kaže da nema trenutnog web puta; taj tekst je zastario, iako `needed = -` za `gradix_app` i dalje odgovara granici. Ažurirati obrazloženje tek uz zaseban, odobreni platform ACL/preflight rad.
 
 ### F1-02 · Onboarding API i ekran nisu usklađeni · statički dokaz jak
 
@@ -90,7 +111,10 @@ Vlasnik je 2026-11-27 potvrdio mapu S1/S2/S3, tenant TOTP politiku, zasebnu runt
 
 ## Preostalo prije zatvaranja trijaže
 
-1. Platform operator MFA ostaje otvoreno; odluka o tenant TOTP-u ne proširuje se prešutno na platform naloge.
-2. Pravna/računovodstvena potvrda arhiviranja/brisanja audita i tačni grantovi/preflight za izabranu runtime rolu.
-3. Višefirmski izbor ostaje `ODLOŽENO` prema MVP specifikaciji; „Modul 1 od 11“ naspram programa od 12 modula je dokumentacijsko pitanje, ne kodni blocker.
+1. Platform operator MFA ostaje otvoreno i bez težine; odluka o tenant TOTP-u ne proširuje se prešutno na platform naloge.
+2. Zasebna platform runtime rola je potvrđena, ali tačan grant set, ograničene RLS politike i poseban preflight nisu odobreni ni runtime-provjereni. Statički SQL inventar iznad je osnova za taj prijedlog, ne primijenjeni ACL.
+3. Pravna/računovodstvena potvrda pravila i dokaznog traga prije arhiviranja/brisanja audita.
+4. Lokalizacijski obim treba ostati unutar zaključane spec 01 (firmni `currency/timezone/locale`, korisnički `locale/timezone` uz firmne defaulte), osim ako vlasnik odobri širenje.
+5. Višefirmski izbor ostaje `ODLOŽENO` prema MVP specifikaciji; „Modul 1 od 11“ naspram programa od 12 modula je dokumentacijsko pitanje, ne kodni blocker.
+
 Prihvaćena težina ne odobrava implementaciju. Za svaki poslovni kod/migraciju/UI i dalje je potrebna fraza **`KREĆEMO U KODIRANJE: 1`**.

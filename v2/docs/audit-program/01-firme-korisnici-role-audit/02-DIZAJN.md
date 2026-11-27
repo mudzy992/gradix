@@ -23,6 +23,14 @@ Vlasnik je izabrao zasebnu, najmanje privilegovanu platform runtime rolu s tačn
 
 Vlasnik je potvrdio da tenant TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT i da passkey nije zamjena; ova odluka ne definiše MFA operatora platforme, koja ostaje otvorena. Kodni komentar/migracija sami po sebi nisu vlasnička politika. Za tenant passkey prijavu, `twoFactorGate()` mora potvrditi TOTP prije sesije za obavezne role. Support pristup ostaje dio Modula 1: mora stvoriti stvarni, vremenski ograničen i minimalno dozvoljen kontekst; samo red u `platform_support_sessions` nije pristup podacima. Firma mora vidjeti operatora, razlog i rok u auditu i zaglavlju dok pristup traje.
 
+### 2.1 Platform runtime ACL — tehnički prijedlog, nije odobren
+
+Statički inventar SQL poziva nalazi se u `01-AUDIT.md`. Predlaže se zasebni runtime principal (radni naziv `gradix_platform`) i `PLATFORM_DATABASE_URL`; `DATABASE_ADMIN_URL` ostaje samo za migracije/seed i nikad se ne izlaže Node procesu. Kandidatske osobine role su `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`, bez vlasništva nad tabelama, bez `CREATE` i bez članstva/`SET ROLE` prema `gradix_app` ili migratoru. Ne kreirati podrazumijevane grants.
+
+Po trenutnom SQL-u treba izvesti poseban, column-aware allowlist za `platform_users` (login i `last_login_at`), `platform_sessions` (create/read/revoke), `companies` (read/create/update), `memberships` (read/create OWNER), `users` (samo lookup/pregledani `last_login_at`), `equipment_categories` (brojanje seed redova), `invitations` (create) i `audit_events` (INSERT platform događaja). `platform_support_sessions` traži INSERT za grant; `activeSupportAccess()` nema pozivaoca i ne opravdava globalni SELECT na toj tabeli. SELECT firme na banneru treba ostati tenant-scopovan pod `gradix_app`. Nema hard-delete prava ni pristupa drugim poslovnim tabelama.
+
+Sami GRANT-ovi nisu dovoljni: novi principal bez `BYPASSRLS` traži eksplicitne platform RLS politike za odobrene redove/radnje. Trenutni `platform_sessions` je FORCE RLS bez politike, a `platform_support_sessions` ima samo tenant SELECT; onboarding takođe dodiruje tenant RLS tabele. Treba definisati transakcijski platform kontekst i ograničiti child-row/audit upise; ne širiti platform role na proizvoljan tenant `SELECT`. Odvojena platform ACL matrica i preflight moraju provjeriti atribute role, efektivna prava bez viška, RLS politike i odsustvo članstva/vlasništva. Tačne kolone/politike još nisu potvrđene i moraju proći PostgreSQL preflight/integracijski test prije prihvatanja.
+
 ## 3. Identitet, prijava i sesije
 
 - Jedan server-side auth tok provjerava aktivnost korisnika/firme, članstvo i trenutno važeće role/opseg. Uspješna provjera faktora izdaje sesiju; prije toga postoji samo kratkotrajni pre-auth dokaz.

@@ -6,19 +6,19 @@
 
 ## Kapija
 
-Vlasnik je potvrdio prvobitnu težinsku mapu i sve težine, uključujući F1-04c kao S1, kako je zabilježeno u `01-AUDIT.md`. Platform operator MFA i purge sign-off ostaju otvoreni; kod i dalje čeka zasebnu frazu.
+Vlasnik je potvrdio težinsku mapu i sve težine, uključujući F1-04c kao S1, kako je zabilježeno u `01-AUDIT.md`. Statička SQL površina platform-servisa je sada inventarisana, ali konačni column ACL, role-specific RLS i zasebni preflight nisu zaključani. Platform operator MFA i pravna/računovodstvena purge potvrda ostaju otvoreni; kod i dalje čeka zasebnu frazu.
 
 ## Redoslijed predloženog rada
 
 ### A. Zatvoriti preostale sigurnosne i ugovorne odluke
 
-Vlasnik je potvrdio S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant TOTP bez passkey zamjene, zasebna runtime rola i podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry) su potvrđeni. Preostaje platform operator MFA, pravna/računovodstvena potvrda purgea i tačan ACL grant set.
+Vlasnik je potvrdio S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant TOTP bez passkey zamjene, zasebna runtime rola i podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry) su potvrđeni. Statički SQL inventar platform-servisa je urađen; preostaju platform operator MFA, pravna/računovodstvena potvrda purgea, odobrenje tačnog column ACL + RLS/preflight modela i potvrda lokalizacijskog obima prema specu.
 
 **Izlaz:** odobreni dizajn i testabilni acceptance kriteriji; bez koda dok nema fraze iz kapije.
 
 ### B. Učiniti platform tok bezbjednim i upotrebljivim
 
-1. Implementirati vlasnički izabranu zasebnu, najmanje privilegovanu platform runtime rolu s tačnim grantovima; dodati je u ACL matricu i preflight. Migratorski kredencijali ostaju van Node procesa.
+1. Nakon odobrenja dizajna, implementirati zasebnu platform runtime rolu (ne `DATABASE_ADMIN_URL`) sa tačnim, po mogućnosti column-level grantovima prema inventaru u `01-AUDIT.md`; bez vlasništva, `BYPASSRLS`, članstva u app/migrator roli, `CREATE` ili podrazumijevanih grants. Dodati zasebnu platform ACL matricu i preflight koji provjerava i efektivni ACL i RLS politike; `gradix_app` matrica sama nije dovoljna. Migratorski kredencijali ostaju van Node procesa.
 2. Uskladiti onboarding request/response između `PlatformCompanyCreateInput`, rute, servisa i ekrana; dovršiti specifikacijskih pet koraka, vlasničke podatke i seed zahtjeve; osigurati da se konflikt sluga vraća kao kontrolisan `CONFLICT`, uključujući konkurentni pokušaj.
 3. Platform operator MFA ne implementirati dok politika ne bude potvrđena. Dovršiti support tok prema specu: scoped pristup, obavezan razlog, rok ≤60 min i vidljivi tenant banner; ne otvarati opći tenant pristup.
 
