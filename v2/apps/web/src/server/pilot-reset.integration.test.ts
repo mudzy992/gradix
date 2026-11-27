@@ -70,4 +70,41 @@ describeDb('čisti pilot reset na izolovanoj bazi',()=>{
     const roles=await db.query("SELECT unnest(roles)::text AS role FROM memberships ORDER BY role");
     expect(roles.rows.map(r=>r.role)).toEqual(['ACCOUNTANT','MECHANIC','OWNER','PROJECT_MANAGER','SITE_SUPERVISOR','WORKER']);
   },120_000);
+
+  it('ne-pilot baza traži izričiti flag i sve ostale zaštite, a potvrđeni reset uspijeva',async()=>{
+    // The exact-name mode is used ONLY against a fresh isolated cluster: CREATE fails rather
+    // than touching an existing gradix database, and cleanup drops only what this test created.
+    const nonPilotName=process.env.PILOT_RESET_TEST_EXACT_GRADIX === '1' ? 'gradix' : `gradix_reset_${process.pid}_${Date.now()}`;
+    const nonPilotUrl=new URL(rootUrl);nonPilotUrl.pathname=`/${nonPilotName}`;
+    const nonPilot=new Client(nonPilotUrl.toString());
+    let created=false;
+    const executeNonPilot=(args:string[], env:Record<string,string>={})=>run(process.execPath,process.env.PILOT_RESET_BUNDLE
+      ? [process.env.PILOT_RESET_BUNDLE,...args]
+      : ['--import','tsx','scripts/reset-pilot-clean.ts',...args],{
+      cwd:fileURLToPath(new URL('../..',import.meta.url)),
+      env:{...process.env,DATABASE_ADMIN_URL:nonPilotUrl.toString(),BOSS_DATABASE_URL:'',PILOT_TEST_PASSWORD:password,...env},
+    });
+    try {
+      await root.query(`CREATE DATABASE "${nonPilotName}"`);created=true;await nonPilot.connect();
+      await nonPilot.query(readFileSync(`${bootstrap}/roles.sql`,'utf8'));
+      for(const dir of readdirSync(migrations).sort()) await nonPilot.query(readFileSync(`${migrations}/${dir}/migration.sql`,'utf8'));
+      await nonPilot.query(readFileSync(`${bootstrap}/grants.sql`,'utf8'));
+      await nonPilot.query("INSERT INTO companies(id,name,slug) VALUES('old_nonpilot','Old staging','old-staging')");
+      const confirm=`--confirm-db=${nonPilotName}`;
+      const flags=['--delete-all-pilot-data','--allow-non-pilot-db',confirm];
+      await expect(executeNonPilot(['--delete-all-pilot-data',confirm])).rejects.toThrow(/--allow-non-pilot-db/);
+      await expect(executeNonPilot(['--allow-non-pilot-db',confirm])).rejects.toThrow();
+      await expect(executeNonPilot(['--delete-all-pilot-data','--allow-non-pilot-db','--confirm-db=wrong'])).rejects.toThrow();
+      await expect(executeNonPilot(flags,{PILOT_TEST_PASSWORD:'short'})).rejects.toThrow();
+      await expect(executeNonPilot(['--delete-all-pilot-data','--allow-non-pilot-db','--confirm-db=postgres'],{DATABASE_ADMIN_URL:rootUrl.toString()})).rejects.toThrow(/sistemske baze/);
+      await expect(executeNonPilot(flags,{BOSS_DATABASE_URL:rootUrl.toString()})).rejects.toThrow(/Zasebna baza reda/);
+      expect((await nonPilot.query("SELECT id FROM companies")).rows).toEqual([{id:'old_nonpilot'}]);
+      await executeNonPilot(flags);
+      expect((await nonPilot.query("SELECT id FROM companies")).rows).toEqual([{id:'cmp_pilot'}]);
+      expect((await nonPilot.query("SELECT count(*)::int AS n FROM users")).rows[0].n).toBe(6);
+    } finally {
+      await nonPilot.end();
+      if(created) await root.query(`DROP DATABASE "${nonPilotName}" WITH (FORCE)`);
+    }
+  },120_000);
 });

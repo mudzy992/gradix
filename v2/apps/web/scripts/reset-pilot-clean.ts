@@ -1,4 +1,4 @@
-/** DESTRUCTIVE: dedicated pilot database only; a single transaction or no change. */
+/** DESTRUCTIVE: dedicated test database only; a single transaction or no change. */
 import { Pool } from "pg";
 import argon2 from "argon2";
 
@@ -9,8 +9,10 @@ if (!url || !password || password.length < 12 || !process.argv.includes("--delet
   throw new Error("Potrebni su DATABASE_ADMIN_URL, PILOT_TEST_PASSWORD (min. 12 znakova), --delete-all-pilot-data i --confirm-db=IME_BAZE. Operacija briše SVE podatke baze!");
 const parsed=new URL(url);
 const expected=decodeURIComponent(parsed.pathname.slice(1));
-if (!expected || confirm!==expected || !/pilot/i.test(expected) || ["postgres","template0","template1"].includes(expected))
-  throw new Error("Potvrda mora odgovarati imenu namjenske baze koje sadrži 'pilot'.");
+if (!expected || confirm!==expected || ["postgres","template0","template1"].includes(expected))
+  throw new Error("Potvrda mora tačno odgovarati imenu namjenske testne baze; sistemske baze nisu dopuštene.");
+if (!/pilot/i.test(expected) && !process.argv.includes("--allow-non-pilot-db"))
+  throw new Error("Ime baze ne sadrži 'pilot'; za namjensku testnu bazu potrebna je dodatna potvrda --allow-non-pilot-db.");
 if (process.env.BOSS_DATABASE_URL) {
   const boss=new URL(process.env.BOSS_DATABASE_URL);
   if (boss.hostname!==parsed.hostname || (boss.port || '5432')!==(parsed.port || '5432') || boss.pathname!==parsed.pathname)

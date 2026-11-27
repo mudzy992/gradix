@@ -10,7 +10,8 @@ vlasnik mora proći scenarije i odobriti pilot. Reset je samo za namjensku testn
 ## Reset (administrator servera)
 
 1. Napraviti i **provjeriti restore** backupa baze i objekata. Baza mora biti isključivo za pilot,
-   ime baze mora sadržavati `pilot`, migracije moraju biti primijenjene. Provjeriti da URL za
+   migracije moraju biti primijenjene. Naziv bez `pilot` dopušten je samo uz eksplicitni
+   `--allow-non-pilot-db`; to ne čini bazu sigurnom za brisanje. Provjeriti da URL za
    aplikaciju, migratora i pg-boss pokazuje na istu namjensku bazu. Ugasiti web i worker, onemogućiti
    promet i zakazane poslove; na svim mobilnim uređajima ukloniti stari lokalni outbox/podatke.
    Reset ne čisti S3/MinIO fajlove ni Redis; za pilot koristiti zaseban prazan bucket/prefiks.
@@ -23,8 +24,15 @@ vlasnik mora proći scenarije i odobriti pilot. Reset je samo za namjensku testn
    pnpm db:reset:pilot --delete-all-pilot-data --confirm-db=ime_pilot_baze
    ```
 
-   `ime_pilot_baze` zamijeniti **tačnim** imenom baze iz URL-a. Bez oba argumenta, lozinke ili ako
-   se ime ne podudara, nema reseta. `BOSS_DATABASE_URL`, ako je postavljen, mora označavati istu
+   `ime_pilot_baze` zamijeniti **tačnim** imenom baze iz URL-a. Za izolovanu testnu bazu nazvanu
+   `gradix`, nakon provjere backupa i cilja, komanda je:
+
+   ```sh
+   pnpm db:reset:pilot --delete-all-pilot-data --allow-non-pilot-db --confirm-db=gradix
+   ```
+
+   Bez potvrde brisanja, tačnog imena i lozinke nema reseta; flag uklanja samo zahtjev za riječ
+   `pilot`, ne ostale sigurnosne provjere. Sistemske baze i dalje nisu dopuštene. `BOSS_DATABASE_URL`, ako je postavljen, mora označavati istu
    bazu. Poznata `pgboss` šema se čisti od poslova, arhive i rasporeda; worker pri startu ponovo
    prijavljuje svoje rasporede. Skripta ne koristi `CASCADE`; neočekivane zavisnosti prekidaju
    transakciju. Ne pokretati dok je bilo koji proces spojen i upisuje.
@@ -34,17 +42,19 @@ vlasnik mora proći scenarije i odobriti pilot. Reset je samo za namjensku testn
    garantovati, zaustaviti i web i pokrenuti jednokratni kontejner iz iste slike sa istim mrežama,
    CA i varijablama. Izolovana baza i odobren restore su obavezni.
 
-   U Coolify **web** terminalu pokrenuti `bash`, pa (zamijeniti `ime_pilot_baze` stvarnim tačnim
-   imenom; to je jedini placeholder):
+   U Coolify **web** terminalu pokrenuti `bash`, pa za bazu koja je stvarno nazvana `gradix`:
+   **SVE firme i podaci u toj bazi bit će izbrisani**, iako se zove dev/staging. Ne izvršavati
+   bez vlasnikovog odobrenja, ispravne izolacije i provjerenog backupa:
 
    ```bash
    read -rs -p 'Privremena pilot lozinka (najmanje 12 znakova): ' PILOT_TEST_PASSWORD; echo
    export PILOT_TEST_PASSWORD
-   node /app/reset-pilot-clean.mjs --delete-all-pilot-data --confirm-db=ime_pilot_baze
+   node /app/reset-pilot-clean.mjs --delete-all-pilot-data --allow-non-pilot-db --confirm-db=gradix
    unset PILOT_TEST_PASSWORD
    ```
 
-   Lozinka nije prikazana niti zapisana u historiji komandi. `DATABASE_ADMIN_URL` mora u web
+   Za drugo ime baze zamijeniti `gradix` **tačnim** imenom. Ako ime sadrži `pilot`, dodatni
+   flag nije potreban. Lozinka nije prikazana niti zapisana u historiji komandi. `DATABASE_ADMIN_URL` mora u web
    kontejneru već pokazivati na namjensku bazu, korisnik imati BYPASSRLS, a `BOSS_DATABASE_URL`
    mora odgovarati stvarnoj konfiguraciji workera i istoj bazi. Skripta ne može otkriti dodatni
    red koji joj nije prijavljen. Ako nije ista baza, prekinuti postupak. Slika se bundluje u
