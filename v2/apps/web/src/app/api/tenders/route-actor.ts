@@ -8,5 +8,7 @@ export function tenderActor(ctx: AuthContext): TenderActor {
     userId: ctx.userId,
     companyId: ctx.companyId,
     roles: ctx.roles as Role[],
+    scope: ctx.scope,
+    projectIds: ctx.projectIds,
   };
 }

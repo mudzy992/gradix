@@ -14,6 +14,7 @@
  *  - **Ishod je uslov za izlazak iz toka.** `LOST`/`WITHDRAWN`/`CANCELLED` traže razlog
  *    (§1.5/20) — bez njega statistika uspješnosti uči ništa.
  */
+import { tenderScope, tenderRecordAllowed, tenderDenied, type TenderScopeActor } from "./tender-scope";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
@@ -30,7 +31,7 @@ import { mapTenderRow, TENDER_SELECT, type TenderRow } from "./tender-map";
 import { blockingChecklistItems } from "@gradix/domain";
 
 export type { TenderRow } from "./tender-map";
-export type TenderActor = { userId: string; companyId: string; roles: Role[] };
+export type TenderActor = TenderScopeActor & { roles: readonly Role[] };
 
 /** Izvor tendera (§1.2/7). */
 export const TENDER_SOURCES = ["PORTAL", "INVITATION", "DIRECT", "OTHER"] as const;
@@ -113,9 +114,13 @@ export async function listTenders(
 ): Promise<TenderRow[]> {
   if (!can(actor.roles, "tenders.view")) return [];
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const values: unknown[] = [actor.companyId, filter.status && isTenderStatus(filter.status) ? filter.status : null,
+      filter.urgent === true, TENDER_UPCOMING_DAYS, filter.from ?? null, filter.to ?? null, filter.projectIds ?? null,
+      filter.projectId ?? null, filter.team ?? null, Math.min(Math.max(filter.limit ?? 500,1),10001), filter.dueIn14Days === true];
+    const scope = tenderScope(actor, values, "t");
     const rows = await client.query(
       `${TENDER_SELECT}
-        WHERE t.company_id = $1
+        WHERE t.company_id = $1 AND ${scope}
           AND ($2::text IS NULL OR t.status = $2)
           AND ($3::boolean IS NOT TRUE OR (
             t.deadline_at IS NOT NULL
@@ -134,14 +139,7 @@ export async function listTenders(
             WHERE tt.company_id=t.company_id AND tt.tender_id=t.id AND w.team=$9))
         ORDER BY COALESCE(t.deadline_at, t.created_at) ASC, t.created_at DESC
         LIMIT $10`,
-      [
-        actor.companyId,
-        filter.status && isTenderStatus(filter.status) ? filter.status : null,
-        filter.urgent === true,
-        TENDER_UPCOMING_DAYS,
-        filter.from ?? null, filter.to ?? null, filter.projectIds ?? null, filter.projectId ?? null,
-        filter.team ?? null, Math.min(Math.max(filter.limit ?? 500,1),10001), filter.dueIn14Days === true,
-      ],
+      values,
     );
     return rows.rows.map((row) => mapFor(actor, row));
   });
@@ -150,6 +148,7 @@ export async function listTenders(
 export async function getTender(pool: Pool, actor: TenderActor, id: string): Promise<TenderRow | null> {
   if (!can(actor.roles, "tenders.view")) return null;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, id)) return null;
     const result = await client.query(`${TENDER_SELECT} WHERE t.company_id = $1 AND t.id = $2`, [
       actor.companyId,
       id,
@@ -163,6 +162,8 @@ export async function createTender(
   actor: TenderActor,
   input: TenderCreateInput,
 ): Promise<TenderOutcome> {
+  // New tenders have no linked project and cannot be created in restricted scope.
+  if (actor.scope !== "COMPANY") return tenderDenied(actor);
   if (!can(actor.roles, "tenders.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   if (!input.title?.trim() || !input.partnerId) {
     return { outcome: "VALIDATION_FAILED", message: "Naslov i naručilac su obavezni." };
@@ -452,6 +453,7 @@ export async function patchTender(
 ): Promise<TenderOutcome> {
   if (!can(actor.roles, "tenders.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, id, true)) return tenderDenied(actor);
     const current = await client.query<{ status: string }>(
       `SELECT status FROM public.tenders WHERE id = $1 AND company_id = $2 FOR UPDATE`,
       [id, actor.companyId],
@@ -608,6 +610,7 @@ export async function decideTenderParticipation(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, id, true)) return tenderDenied(actor);
     const current = await client.query<{ status: string }>(
       `SELECT status FROM public.tenders WHERE id = $1 AND company_id = $2 FOR UPDATE`,
       [id, actor.companyId],

@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /**
  * F7 — kopiranje iz sličnog tendera (spec 08 §1.3/14).
  *
@@ -35,6 +36,9 @@ export async function copyTenderContent(
     return { outcome: "VALIDATION_FAILED", message: "Ne možete kopirati tender u sam sebe." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    for (const id of [sourceTenderId, targetTenderId].sort()) {
+      if (!await tenderRecordAllowed(client, actor, id, true)) return tenderDenied(actor);
+    }
     const target = await client.query<{ status: string }>(
       `SELECT status FROM public.tenders WHERE id = $1 AND company_id = $2`,
       [targetTenderId, actor.companyId],
@@ -143,6 +147,7 @@ export async function createTenderFromSimilar(
   actor: TenderActor,
   input: { sourceTenderId: string },
 ): Promise<{ outcome: "OK"; id: string; copied: { boq: number; resources: number; checklist: number } } | CopyError> {
+  if (actor.scope !== "COMPANY") return tenderDenied(actor);
   if (!can(actor.roles, "tenders.manage")) {
     return { outcome: "FORBIDDEN", message: "Nemate pravo unosa." };
   }

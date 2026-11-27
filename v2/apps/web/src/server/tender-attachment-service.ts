@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /** R7.3 → F0.2: prilozi tendera kroz zajednički `attachment-service`. */
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
@@ -28,14 +29,12 @@ export async function listTenderAttachments(
 ): Promise<TenderAttachmentRow[] | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   const exists = await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const tender = await client.query(`SELECT 1 FROM public.tenders WHERE id = $1 AND company_id = $2`, [
-      tenderId,
-      actor.companyId,
-    ]);
-    return tender.rowCount !== 0;
+    if (!await tenderRecordAllowed(client, actor, tenderId)) return false;
+    const tender = await client.query("SELECT 1 FROM public.tenders WHERE company_id=$1 AND id=$2", [actor.companyId, tenderId]);
+    return Boolean(tender.rowCount);
   });
-  if (!exists) return { code: "NOT_FOUND", message: "Tender nije pronađen." };
-  const rows = await listAttachments(pool, actor.companyId, "TENDER", tenderId);
+  if (!exists) return tenderDenied(actor);
+  const rows = await listAttachments(pool, actor.companyId, "TENDER", tenderId, actor);
   return rows.map(toTenderAttachmentRow);
 }
 
@@ -49,18 +48,16 @@ export async function registerTenderAttachment(
     return { code: "FORBIDDEN", message: "Nemate pravo unosa priloga." };
   }
   const exists = await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const tender = await client.query(`SELECT 1 FROM public.tenders WHERE id = $1 AND company_id = $2`, [
-      tenderId,
-      actor.companyId,
-    ]);
-    return tender.rowCount !== 0;
+    if (!await tenderRecordAllowed(client, actor, tenderId)) return false;
+    const tender = await client.query("SELECT 1 FROM public.tenders WHERE company_id=$1 AND id=$2", [actor.companyId, tenderId]);
+    return Boolean(tender.rowCount);
   });
-  if (!exists) return { code: "NOT_FOUND", message: "Tender nije pronađen." };
+  if (!exists) return tenderDenied(actor);
 
   const result = await registerAttachmentShared(
     pool,
     actor.companyId,
-    { userId: actor.userId },
+    actor,
     "TENDER",
     tenderId,
     input,
@@ -73,8 +70,10 @@ export async function registerTenderAttachment(
   };
 }
 
-async function belongsToTender(pool: Pool, companyId: string, tenderId: string, attachmentId: string) {
+async function belongsToTender(pool: Pool, actor: TenderActor, tenderId: string, attachmentId: string) {
+  const companyId = actor.companyId;
   return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId)) return false;
     const found = await client.query(
       `SELECT 1 FROM public.attachments
         WHERE id = $1 AND company_id = $2 AND entity_type = 'TENDER' AND entity_id = $3`,
@@ -93,13 +92,13 @@ export async function confirmTenderAttachment(
   if (!can(actor.roles, "tenders.manage")) {
     return { code: "FORBIDDEN", message: "Nemate pravo potvrde priloga." };
   }
-  if (!(await belongsToTender(pool, actor.companyId, tenderId, attachmentId))) {
-    return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
+  if (!(await belongsToTender(pool, actor, tenderId, attachmentId))) {
+    return tenderDenied(actor);
   }
   const result = await confirmAttachmentShared(
     pool,
     actor.companyId,
-    { userId: actor.userId },
+    actor,
     attachmentId,
     { action: "tender.attachment.registered", entityType: "tender", entityId: tenderId },
   );
@@ -114,10 +113,10 @@ export async function tenderAttachmentDownloadUrl(
   attachmentId: string,
 ): Promise<{ url: string; expiresAt: string } | TenderAttachmentError> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
-  if (!(await belongsToTender(pool, actor.companyId, tenderId, attachmentId))) {
-    return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
+  if (!(await belongsToTender(pool, actor, tenderId, attachmentId))) {
+    return tenderDenied(actor);
   }
-  const result = await attachmentDownloadUrlShared(pool, actor.companyId, attachmentId);
+  const result = await attachmentDownloadUrlShared(pool, actor.companyId, attachmentId, actor);
   if (isAttachmentServiceError(result)) return result;
   return result;
 }

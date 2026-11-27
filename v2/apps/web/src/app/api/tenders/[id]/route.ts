@@ -23,10 +23,12 @@ export async function GET(request: NextRequest, context: Ctx): Promise<Response>
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       id,
     );
-    if (!tender) return fail("NOT_FOUND", "Tender nije pronađen.");
+    if (!tender) return fail(guardResult.ctx.scope === "SELF" ? "FORBIDDEN" : "NOT_FOUND", "Tender nije dostupan.");
     return ok(tender);
   } catch (error) {
     return internal(error, "tenders.get");
@@ -48,6 +50,8 @@ export async function PATCH(request: NextRequest, context: Ctx): Promise<Respons
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope,
+        projectIds: guardResult.ctx.projectIds,
       },
       id,
       body,

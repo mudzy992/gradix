@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /**
  * F7 — kontrolna lista dokumenata i bankarske garancije (spec 08 §1.4).
  *
@@ -141,6 +142,7 @@ export async function listTenderChecklist(
     return { outcome: "FORBIDDEN", message: "Nemate pravo pregleda." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." } as ChecklistError;
     const rows = await client.query(
@@ -208,6 +210,7 @@ export async function patchTenderChecklistItem(
     return { outcome: "FORBIDDEN", message: "Nemate pravo izmjene kontrolne liste." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." } as ChecklistError;
 
@@ -361,6 +364,7 @@ export async function createTenderGuarantee(
     amountCents = (BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"))).toString();
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     if (!(await tenderCurrency(client, actor.companyId, tenderId))) {
       return { outcome: "NOT_FOUND", message: "Tender nije pronađen." } as ChecklistError;
     }
@@ -409,6 +413,7 @@ export async function returnTenderGuarantee(
     return { outcome: "FORBIDDEN", message: "Nemate pravo evidentiranja povrata." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const found = await client.query<{ guarantee_type: string | null; returned_at: string | null }>(
       `SELECT guarantee_type, returned_at FROM public.tender_checklist_items
         WHERE id = $1 AND company_id = $2 AND tender_id = $3`,
@@ -446,6 +451,7 @@ export async function listChecklistTemplates(
   pool: Pool,
   actor: TenderActor,
 ): Promise<Array<{ id: string; code: string; label: string; required: boolean; sortOrder: number; isActive: boolean }> | ChecklistError> {
+  if (actor.scope !== "COMPANY") return tenderDenied(actor);
   if (!can(actor.roles, "tenders.manage")) {
     return { outcome: "FORBIDDEN", message: "Nemate pravo pregleda šifarnika." };
   }
@@ -473,6 +479,7 @@ export async function upsertChecklistTemplate(
   actor: TenderActor,
   input: { code: string; label: string; required?: boolean; sortOrder?: number; isActive?: boolean },
 ): Promise<{ outcome: "OK"; id: string } | ChecklistError> {
+  if (actor.scope !== "COMPANY") return tenderDenied(actor);
   if (!can(actor.roles, "tenders.manage")) {
     return { outcome: "FORBIDDEN", message: "Nemate pravo izmjene šifarnika." };
   }

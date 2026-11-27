@@ -1,5 +1,6 @@
 /** GET/POST /api/tender-checklist-templates — šifarnik kontrolne liste (F7, §1.4/15) */
 import type { NextRequest } from "next/server";
+import type { AuthContext } from "@/server/tenant-context";
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
@@ -10,8 +11,8 @@ import type { TenderChecklistTemplateInput } from "@gradix/contracts";
 
 export const dynamic = "force-dynamic";
 
-function actorOf(ctx: { userId: string; companyId: string; roles: string[] }) {
-  return { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] };
+function actorOf(ctx: AuthContext) {
+  return { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[], scope: ctx.scope, projectIds: ctx.projectIds };
 }
 
 export async function GET(request: NextRequest): Promise<Response> {

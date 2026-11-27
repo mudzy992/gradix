@@ -20,7 +20,7 @@ export async function GET(request:NextRequest):Promise<Response> {
     const urgent=request.nextUrl.searchParams.get("urgent") ?? "0";
     if ((status && !isTenderStatus(status)) || !["0","1"].includes(urgent)) return fail("VALIDATION_FAILED","Neispravni filteri tendera.");
     const pool=await getVerifiedPool();
-    const all=await listTenders(pool,{userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles as Role[]});
+    const all=await listTenders(pool,{userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles as Role[],scope:auth.ctx.scope,projectIds:auth.ctx.projectIds});
     const rows=filterTenderList(all,status,urgent === "1");
     const margin=can(auth.ctx.roles,"tenders.price.manage");
     const header=["Predmet","Naručilac","Rok","Vrijednost","Valuta",...(margin ? ["Marža %"] : []),"Status"];

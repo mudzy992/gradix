@@ -40,7 +40,7 @@ export default async function TenderUspjesnostPage({
 
   const result = await tenderPerformance(
     await getVerifiedPool(),
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles as Role[] },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles as Role[], scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     { from: query.from ?? null, to: query.to ?? null, partnerId: query.partnerId ?? null },
   );
 

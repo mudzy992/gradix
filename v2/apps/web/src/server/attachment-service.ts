@@ -1,3 +1,4 @@
+import { tenderRecordAllowed } from "./tender-scope";
 /**
  * F0.2 — JEDAN servis priloga za sve module.
  *
@@ -113,8 +114,9 @@ async function purgeStalePending(client: PoolClient, companyId: string, entityTy
 }
 
 async function attachmentScopeAllowed(client: PoolClient, companyId: string, entityType: string, entityId: string, actor?: ObligationViewer): Promise<boolean> {
-  if (entityType !== "OBLIGATION") return true;
-  return !!actor && obligationRecordAllowed(client, companyId, actor, entityId);
+  if (entityType === "TENDER") return !!actor && tenderRecordAllowed(client, {...actor, companyId}, entityId, true);
+  if (entityType === "OBLIGATION") return !!actor && obligationRecordAllowed(client, companyId, actor, entityId);
+  return true;
 }
 
 export async function listAttachments(

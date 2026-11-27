@@ -24,10 +24,10 @@ export function createTenderWorld(): TenderWorld {
   const userA = `usr_tnd_a_${run}`;
   const partnerA = `ptr_tnd_a_${run}`;
   const companies = [companyA, companyB];
-  const owner: TenderActor = { userId: userA, companyId: companyA, roles: ["OWNER"] };
-  const accountant: TenderActor = { userId: userA, companyId: companyA, roles: ["ACCOUNTANT"] };
-  const worker: TenderActor = { userId: userA, companyId: companyA, roles: ["WORKER"] };
-  const otherCompany: TenderActor = { userId: userA, companyId: companyB, roles: ["OWNER"] };
+  const owner: TenderActor = { userId: userA, companyId: companyA, roles: ["OWNER"], scope: "COMPANY", projectIds: null };
+  const accountant: TenderActor = { userId: userA, companyId: companyA, roles: ["ACCOUNTANT"], scope: "COMPANY", projectIds: null };
+  const worker: TenderActor = { userId: userA, companyId: companyA, roles: ["WORKER"], scope: "SELF", projectIds: [] };
+  const otherCompany: TenderActor = { userId: userA, companyId: companyB, roles: ["OWNER"], scope: "COMPANY", projectIds: null };
   return {
     run,
     companyA,

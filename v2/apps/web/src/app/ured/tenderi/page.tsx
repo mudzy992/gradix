@@ -30,6 +30,8 @@ export default async function TenderiPage({ searchParams }: { searchParams: Prom
     userId: auth.ctx.userId,
     companyId: auth.ctx.companyId,
     roles: auth.ctx.roles as Role[],
+    scope: auth.ctx.scope,
+    projectIds: auth.ctx.projectIds,
   }, {dueIn14Days:filtered});
 
   return (

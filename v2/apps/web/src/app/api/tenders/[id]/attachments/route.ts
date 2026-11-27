@@ -1,5 +1,6 @@
 /** GET/POST /api/tenders/:id/attachments — R7.3 */
 import type { NextRequest } from "next/server";
+import type { AuthContext } from "@/server/tenant-context";
 import { fail, internal, ok } from "@/server/api";
 import { AttachmentRegisterRequest } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
@@ -15,11 +16,13 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-function actorFrom(guardResult: { ctx: { userId: string; companyId: string; roles: readonly string[] } }) {
+function actorFrom(guardResult: { ctx: AuthContext }) {
   return {
     userId: guardResult.ctx.userId,
     companyId: guardResult.ctx.companyId,
     roles: guardResult.ctx.roles as Role[],
+    scope: guardResult.ctx.scope,
+    projectIds: guardResult.ctx.projectIds,
   };
 }
 

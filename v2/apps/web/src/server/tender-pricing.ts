@@ -1,3 +1,5 @@
+import { obligationTargetAllowed } from "./obligation-scope";
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /**
  * F7 — kalkulacija ponude: predmjer, resursi, obračun i revizije cijene (spec 08 §1.3).
  *
@@ -123,6 +125,7 @@ export async function listTenderBoq(
 ): Promise<TenderBoqItemRow[] | { code: "FORBIDDEN" | "NOT_FOUND"; message: string }> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     if (!(await tenderExists(client, actor.companyId, tenderId))) {
       return { code: "NOT_FOUND" as const, message: "Tender nije pronađen." };
     }
@@ -191,6 +194,7 @@ export async function createTenderBoqItem(
   const invalid = validateBoq(input);
   if (invalid) return { outcome: "VALIDATION_FAILED", message: invalid };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." };
     const id = `tbi_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
@@ -242,6 +246,7 @@ export async function updateTenderBoqItem(
     return { outcome: "VALIDATION_FAILED", message: "Količina mora biti broj (do tri decimale)." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const cost = input.unitCostAmount === undefined ? null : parseMoneyOrNull(input.unitCostAmount);
     const price = input.unitPriceAmount === undefined ? null : parseMoneyOrNull(input.unitPriceAmount);
     if (input.unitCostAmount !== undefined && cost === null) {
@@ -286,6 +291,7 @@ export async function deleteTenderBoqItem(
 ): Promise<PricingOutcome<{ id?: string }>> {
   if (!can(actor.roles, "tenders.price.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const deleted = await client.query(
       `DELETE FROM public.tender_boq_items WHERE id = $1 AND company_id = $2 AND tender_id = $3`,
       [itemId, actor.companyId, tenderId],
@@ -329,6 +335,7 @@ export async function listTenderResources(
     return { code: "FORBIDDEN", message: "Nemate pravo pregleda kalkulacije." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     if (!(await tenderExists(client, actor.companyId, tenderId))) {
       return { code: "NOT_FOUND" as const, message: "Tender nije pronađen." };
     }
@@ -390,6 +397,7 @@ export async function createTenderResource(
   if (cost === null) return { outcome: "VALIDATION_FAILED", message: "Neispravna jedinična cijena resursa." };
 
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." };
     if (input.machineId) {
@@ -425,6 +433,7 @@ export async function deleteTenderResource(
 ): Promise<PricingOutcome<{ id?: string }>> {
   if (!can(actor.roles, "tenders.price.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const deleted = await client.query(
       `DELETE FROM public.tender_resources WHERE id = $1 AND company_id = $2 AND tender_id = $3`,
       [resourceId, actor.companyId, tenderId],
@@ -447,6 +456,9 @@ export async function suggestResourceCost(
 ): Promise<PricingOutcome<{ unitCostAmount: string | null }>> {
   if (!can(actor.roles, "tenders.price.manage")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
+    if (actor.scope !== "COMPANY" && (input.workerId || input.machineId) &&
+        !await obligationTargetAllowed(client, actor.companyId, actor, {workerId:input.workerId, machineId:input.machineId})) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." };
     if (input.kind === "LABOR" && input.workerId) {
@@ -548,6 +560,7 @@ export async function calculateTenderOffer(
     return { outcome: "FORBIDDEN", code: "ROLE", message: "Kalkulacija nije dostupna vašoj roli." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     const currency = await tenderCurrency(client, actor.companyId, tenderId);
     if (!currency) return { outcome: "NOT_FOUND", message: "Tender nije pronađen." };
     const params = await loadCalculationParams(client, actor.companyId, tenderId);
@@ -628,6 +641,7 @@ export async function listTenderPriceRevisions(
     return { code: "FORBIDDEN", message: "Revizije cijene nijesu dostupne vašoj roli." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     if (!(await tenderExists(client, actor.companyId, tenderId))) {
       return { code: "NOT_FOUND" as const, message: "Tender nije pronađen." };
     }
@@ -689,6 +703,7 @@ export async function createTenderPriceRevision(
   }
 
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const tender = await client.query<{ status: string; currency_code: string }>(
       `SELECT status, currency_code FROM public.tenders WHERE id = $1 AND company_id = $2 FOR UPDATE`,
       [tenderId, actor.companyId],
@@ -805,6 +820,7 @@ export async function approveTenderPriceRevision(
     return { outcome: "FORBIDDEN", code: "ROLE", message: "Odobrenje cijene traži vlasnika ili administratora." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const found = await client.query<{ approved_at: string | null }>(
       `SELECT approved_at FROM public.tender_price_revisions
         WHERE company_id = $1 AND tender_id = $2 AND revision = $3`,

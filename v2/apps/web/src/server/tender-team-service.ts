@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /**
  * F7 — predloženi tim i faze tendera (spec 08 §1.6/22.6).
  *
@@ -30,6 +31,7 @@ export async function listTenderTeam(
 ): Promise<{ team: TenderTeamMember[]; phases: TenderPhaseRow[] } | TeamError> {
   if (!can(actor.roles, "tenders.view")) return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     const tender = await client.query(`SELECT 1 FROM public.tenders WHERE id = $1 AND company_id = $2`, [
       tenderId,
       actor.companyId,
@@ -81,6 +83,7 @@ export async function addTenderTeamMember(
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Nepoznata uloga u timu." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const worker = await client.query(`SELECT 1 FROM public.workers WHERE id = $1 AND company_id = $2`, [
       input.workerId,
       actor.companyId,
@@ -127,6 +130,7 @@ export async function removeTenderTeamMember(
 ): Promise<{ outcome: "OK" } | (TeamError & { outcome: "FORBIDDEN" | "NOT_FOUND" })> {
   if (!can(actor.roles, "tenders.manage")) return { outcome: "FORBIDDEN", code: "FORBIDDEN", message: "Nemate pravo." };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const deleted = await client.query(
       `DELETE FROM public.tender_team WHERE company_id = $1 AND tender_id = $2 AND worker_id = $3`,
       [actor.companyId, tenderId, workerId],
@@ -153,6 +157,7 @@ export async function addTenderPhase(
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Težina faze mora biti cijeli broj ≥ 1." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const sort = await client.query<{ next: string }>(
       `SELECT (COALESCE(MAX(sort_order), 0) + 10)::text AS next FROM public.tender_phases
         WHERE company_id = $1 AND tender_id = $2`,

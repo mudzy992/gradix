@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied, tenderScope } from "./tender-scope";
 /**
  * F7 — ishod tendera i uspješnost (spec 08 §1.5).
  *
@@ -81,6 +82,7 @@ export async function putTenderOutcome(
   }
 
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
     const tender = await client.query<{ status: string }>(
       `SELECT status FROM public.tenders WHERE id = $1 AND company_id = $2`,
       [tenderId, actor.companyId],
@@ -163,6 +165,7 @@ export async function getTenderOutcome(
     return { ok: false, outcome: "FORBIDDEN", message: "Nemate pravo pregleda." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await tenderRecordAllowed(client, actor, tenderId, false)) return tenderDenied(actor);
     const tender = await client.query(`SELECT 1 FROM public.tenders WHERE id = $1 AND company_id = $2`, [
       tenderId,
       actor.companyId,
@@ -248,6 +251,7 @@ export async function tenderPerformance(
   actor: TenderActor,
   filter: { from?: string | null; to?: string | null; partnerId?: string | null } = {},
 ): Promise<TenderPerformance | OutcomeError> {
+  if (actor.scope === "SELF") return tenderDenied(actor);
   if (!can(actor.roles, "tenders.view")) {
     return { outcome: "FORBIDDEN", message: "Nemate pravo pregleda." };
   }
@@ -263,6 +267,8 @@ export async function tenderPerformance(
     const safeCurrency = isCurrency(currency) ? currency : "BAM";
     const includeMargin = can(actor.roles, "tenders.price.manage");
 
+    const values: unknown[] = [actor.companyId, from, to, filter.partnerId ?? null];
+    const scope = tenderScope(actor, values, "t");
     const rows = await client.query<{
       status: string;
       submitted_value_cents: string;
@@ -276,11 +282,11 @@ export async function tenderPerformance(
                 ORDER BY r.revision DESC LIMIT 1) AS markup_pct
          FROM public.tenders t
          JOIN public.partners p ON p.company_id = t.company_id AND p.id = t.partner_id
-        WHERE t.company_id = $1
+        WHERE t.company_id = $1 AND ${scope}
           AND ($2::date IS NULL OR (t.created_at AT TIME ZONE 'Europe/Sarajevo')::date >= $2::date)
           AND ($3::date IS NULL OR (t.created_at AT TIME ZONE 'Europe/Sarajevo')::date <= $3::date)
           AND ($4::text IS NULL OR t.partner_id = $4)`,
-      [actor.companyId, from, to, filter.partnerId ?? null],
+      values,
     );
 
     let wonCount = 0;

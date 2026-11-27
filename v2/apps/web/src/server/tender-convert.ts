@@ -1,3 +1,4 @@
+import { tenderRecordAllowed, tenderDenied } from "./tender-scope";
 /**
  * F7 — atomska konverzija WON tender → projekat (spec 08 §1.6).
  *
@@ -76,9 +77,10 @@ export async function convertTenderToProject(
     return { outcome: "FORBIDDEN", code: "ROLE", message: "Nemate pravo konverzije." };
   }
   try {
-    return await withCompany(pool, toCompanyId(actor.companyId), (client) =>
-      convertLocked(client, actor, tenderId),
-    );
+    return await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+      if (!await tenderRecordAllowed(client, actor, tenderId, true)) return tenderDenied(actor);
+      return convertLocked(client, actor, tenderId);
+    });
   } catch (error) {
     if (error instanceof ConvertClaimLost) {
       return {

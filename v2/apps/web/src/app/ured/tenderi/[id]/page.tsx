@@ -38,6 +38,8 @@ export default async function TenderDetailPage({ params }: Ctx) {
     userId: auth.ctx.userId,
     companyId: auth.ctx.companyId,
     roles: auth.ctx.roles as Role[],
+    scope: auth.ctx.scope,
+    projectIds: auth.ctx.projectIds,
   };
   const tender = await getTender(pool, actor, id);
   if (!tender) notFound();

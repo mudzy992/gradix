@@ -8,12 +8,24 @@ import { companyId, withCompany } from "@gradix/db";
 import { loadTenderCalendar } from "./tender-calendar-service";
 import { changeAssignment, createAssignment, isServiceError, listAssignments } from "./project-service";
 import { createTraining } from "./hse-service";
+import { GET as listApi } from "../app/api/tenders/route";
+import { GET as calculationApi } from "../app/api/tenders/[id]/calculation/route";
+import { GET as detailApi } from "../app/api/tenders/[id]/route";
+import { listTenders, patchTender, createTender } from "./tender-service";
+import { listTenderBoq, createTenderBoqItem, calculateTenderOffer } from "./tender-pricing";
+import { listTenderChecklist, returnTenderGuarantee } from "./tender-checklist-service";
+import { listTenderTeam } from "./tender-team-service";
+import { tenderPerformance, getTenderOutcome } from "./tender-outcome-service";
+import { listTenderAttachments } from "./tender-attachment-service";
+import { listAttachments, softDeleteAttachment } from "./attachment-service";
+import { copyTenderContent, createTenderFromSimilar } from "./tender-copy";
+import { convertTenderToProject } from "./tender-convert";
 
 const db = process.env.DATABASE_URL && process.env.DATABASE_ADMIN_URL ? describe : describe.skip;
 const run=randomUUID().slice(0,8), co=`cmp_b4_${run}`, user=`usr_b4_${run}`, w=`wrk_b4_${run}`, peer=`wrk_peer_${run}`, outsider=`wrk_out_${run}`;
 const p1=`prj1_${run}`, p2=`prj2_${run}`, partner=`partner_${run}`, own=`asn_own_${run}`, peerAsn=`asn_peer_${run}`, oldAsn=`asn_old_${run}`;
 const t1=`tnd1_${run}`, t2=`tnd2_${run}`, t3=`tnd3_${run}`, ob=`ob_${run}`, med=`med_${run}`, selfOb=`self_ob_${run}`, att=`att_${run}`;
-const projects={userId:user,companyId:co,roles:["OWNER"],scope:"PROJECTS" as const,projectIds:[p1]};
+const projects={userId:user,companyId:co,roles:["OWNER" as const],scope:"PROJECTS" as const,projectIds:[p1]};
 const self={...projects,scope:"SELF" as const,projectIds:null};
 const company={...projects,scope:"COMPANY" as const,projectIds:null};
 
@@ -38,6 +50,8 @@ db("Sweep 1B-4 session scope",()=>{
         await c.query(`INSERT INTO tender_checklist_items(id,company_id,tender_id,code,label,guarantee_type,valid_until,bank,created_by,updated_by)
           VALUES($1,$2,$3,'G','Garancija','BID','2030-02-01','Test banka',$4,$4)`,[`g_${id}`,co,id,user]);
       }
+      for (const id of [t1,t2,t3]) await c.query(`INSERT INTO attachments(id,company_id,entity_type,entity_id,object_key,file_name,content_type,size_bytes,sha256,status,uploaded_at,created_by)
+        VALUES($1,$2,'TENDER',$3,$4,'offer.pdf','application/pdf',12,$5,'ready',now(),$6)`,[`att_${id}`,co,id,`tender/${id}`,"b".repeat(64),user]);
       for (const [id,type,subject] of [[ob,`${co}_obt_safety`,peer],[med,`${co}_obt_medical`,peer],[selfOb,`${co}_obt_safety`,w]] as const) {
         await c.query("INSERT INTO obligations(id,company_id,type_id,worker_id,expires_at,created_by) VALUES($1,$2,$3,$4,'2030-01-01',$5)",[id,co,type,subject,user]);
         await c.query("INSERT INTO obligation_versions(id,company_id,obligation_id,version,expires_at,created_by) VALUES($1,$2,$3,1,'2030-01-01',$4)",[`ver_${id}`,co,id,user]);
@@ -69,6 +83,61 @@ db("Sweep 1B-4 session scope",()=>{
     if (!selfAuth.ok) throw new Error("session auth failed");
     expect(await loadTenderCalendar(app,selfAuth.ctx)).toEqual([]);
     await admin.query("UPDATE memberships SET scope='PROJECTS' WHERE id=$1",[`mem_${run}`]);
+  });
+  it("tenderi štite API, povezane tokove i živu dodjelu", async()=>{
+    const cookie=`${ACCESS_COOKIE}=${issueAccessToken({sub:user,sid:`ses_${run}`,companyId:co})}`;
+    const req=(url:string)=>new NextRequest(`http://local${url}`,{headers:{cookie}});
+    const response=await listApi(req("/api/tenders"));
+    expect(response.status).toBe(200);
+    const body=await response.json();
+    expect(body.data.tenders.map((x:{id:string})=>x.id).sort()).toEqual([t1,t2].sort());
+    expect((await detailApi(req(`/api/tenders/${t3}`),{params:Promise.resolve({id:t3})})).status).toBe(404);
+    expect((await calculationApi(req(`/api/tenders/${t1}/calculation`),{params:Promise.resolve({id:t1})})).status).toBe(200);
+    expect((await calculationApi(req(`/api/tenders/${t3}/calculation`),{params:Promise.resolve({id:t3})})).status).toBe(403);
+    expect(await patchTender(app,projects,t1,{note:"visible project"})).toMatchObject({outcome:"OK"});
+    expect((await listTenders(app,projects)).map(x=>x.id)).toEqual([t1]);
+    expect((await listTenders(app,company)).length).toBe(3);
+    expect(await listTenders(app,self)).toEqual([]);
+    expect(await listTenderBoq(app,projects,t1)).toEqual([]);
+    expect(await listTenderBoq(app,projects,t2)).toMatchObject({code:"FORBIDDEN"});
+    expect(await calculateTenderOffer(app,projects,t3)).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await createTenderBoqItem(app,projects,t3,{code:"A",description:"X",unit:"m",quantity:"1",unitCostAmount:"1",unitPriceAmount:"1"})).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await listTenderChecklist(app,projects,t1)).toHaveProperty("items");
+    expect(await returnTenderGuarantee(app,projects,t2,`g_${t2}`)).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await listTenderTeam(app,projects,t2)).toMatchObject({code:"FORBIDDEN"});
+    expect(await getTenderOutcome(app,projects,t2)).toMatchObject({ok:false,outcome:"FORBIDDEN"});
+    expect(await tenderPerformance(app,projects)).toMatchObject({totalCount:1});
+    expect(await listTenderAttachments(app,projects,t2)).toMatchObject({code:"FORBIDDEN"});
+    expect((await listAttachments(app,co,"TENDER",t1,projects)).map(x=>x.id)).toEqual([`att_${t1}`]);
+    expect(await listAttachments(app,co,"TENDER",t2,projects)).toEqual([]);
+    expect(await softDeleteAttachment(app,co,projects,`att_${t2}`,{action:"tender.attachment.registered",entityType:"tender",entityId:t2})).toMatchObject({code:"NOT_FOUND"});
+    expect(await patchTender(app,self,t1,{})).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await copyTenderContent(app,projects,t1,t2)).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await createTenderFromSimilar(app,projects,{sourceTenderId:t1})).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await convertTenderToProject(app,projects,t3)).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await createTender(app,projects,{title:"X",partnerId:partner,submittedValueAmount:"1",currencyCode:"BAM"})).toMatchObject({outcome:"FORBIDDEN"});
+    await admin.query("UPDATE memberships SET scope='SELF' WHERE id=$1",[`mem_${run}`]);
+    expect((await (await listApi(req("/api/tenders"))).json()).data.tenders).toEqual([]);
+    expect((await detailApi(req(`/api/tenders/${t1}`),{params:Promise.resolve({id:t1})})).status).toBe(403);
+    expect((await calculationApi(req(`/api/tenders/${t1}/calculation`),{params:Promise.resolve({id:t1})})).status).toBe(403);
+    await admin.query("UPDATE memberships SET scope='PROJECTS' WHERE id=$1",[`mem_${run}`]);
+    const conn=await admin.connect();
+    try {
+      await conn.query("BEGIN"); await conn.query("SET LOCAL session_replication_role=replica");
+      await conn.query("UPDATE project_assignments SET to_date='2020-02-01' WHERE id=$1",[own]);
+      const pending=patchTender(app,projects,t1,{note:"must not persist"});
+      let blocked=false;
+      for(let i=0;i<100 && !blocked;i++) {
+        blocked=!!(await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%project_assignments pa%'")).rowCount;
+        if(!blocked) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(blocked).toBe(true);
+      await conn.query("COMMIT");
+      expect(await pending).toMatchObject({outcome:"FORBIDDEN"});
+    } finally { await conn.query("ROLLBACK"); conn.release(); }
+    expect(await listTenders(app,projects)).toEqual([]);
+    expect(await listTenderBoq(app,projects,t1)).toMatchObject({code:"FORBIDDEN"});
+    await withCompany(admin,companyId(co),async c=>{await c.query("SET LOCAL session_replication_role=replica");await c.query("UPDATE project_assignments SET to_date=NULL WHERE id=$1",[own]);});
   });
   it("dodjele filtriraju historiju i cilj; SELF vidi i mijenja samo vlastito",async()=>{
     const visible=await listAssignments(app,companyId(co),projects,p1);
