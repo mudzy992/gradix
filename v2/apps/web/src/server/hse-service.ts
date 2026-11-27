@@ -37,9 +37,10 @@ import {
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
+import { can } from "./permissions";
 import { notify } from "./notification-service";
 import { hseRecordAllowed, hseScope, hseTargetAllowed, hseWorkersAllowed, type HseActor } from "./hse-scope";
-import { obligationRecordAllowed } from "./obligation-scope";
+import { obligationRecordAllowed, obligationTargetAllowed } from "./obligation-scope";
 
 export type HseOutcome =
   | { outcome: "OK"; id: string; version?: number; obligationId?: string | null }
@@ -731,6 +732,13 @@ export async function createTrainingTx(
   if (!await hseWorkersAllowed(client, actor, [input.heldByWorkerId, ...input.attendees.map(a => a.workerId)])) return NOT_FOUND;
   let certificateVersion: number | null = null;
   if (input.renewObligationId) {
+    if (!can(actor.roles, "obligations.manage")) return { outcome: "FORBIDDEN", code: "ROLE", message: "Za obnovu obaveze potrebna je dozvola za upravljanje rokovima." };
+    if (actor.scope === "PROJECTS") {
+      if (!input.projectId || !await obligationTargetAllowed(client, actor.companyId, actor, {projectId:input.projectId})) return NOT_FOUND;
+      for (const workerId of new Set([input.heldByWorkerId, ...input.attendees.map(a => a.workerId)].filter((v): v is string => !!v))) {
+        if (!await obligationTargetAllowed(client, actor.companyId, actor, {workerId})) return NOT_FOUND;
+      }
+    }
     const date = input.renewExpiresAt;
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0,10) !== date) {
       return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Novi rok certifikata je obavezan (YYYY-MM-DD)." };
@@ -739,11 +747,17 @@ export async function createTrainingTx(
       return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Obavezu može potvrditi samo certifikacijska obuka sa prisutnim radnikom." };
     }
     if (!await obligationRecordAllowed(client, actor.companyId, actor, input.renewObligationId)) return NOT_FOUND;
-    const subject = await client.query<{ worker_id: string | null; current_version: number; expires_at: string | null }>(
-      "SELECT worker_id,current_version,expires_at::text FROM public.obligations WHERE company_id=$1 AND id=$2 AND superseded_by IS NULL",
+    const subject = await client.query<{ worker_id: string | null; current_version: number; expires_at: string | null; type_code: string }>(
+      `SELECT o.worker_id,o.current_version,o.expires_at::text,t.code AS type_code FROM public.obligations o
+        JOIN public.obligation_types t ON t.company_id=o.company_id AND t.id=o.type_id
+        WHERE o.company_id=$1 AND o.id=$2 AND o.superseded_by IS NULL`,
       [actor.companyId, input.renewObligationId],
     );
     if (!subject.rows[0]?.worker_id || !input.attendees.some(a => a.workerId === subject.rows[0]!.worker_id)) return NOT_FOUND;
+    // Until custom types have an explicit certificate classification, only known training certificates qualify.
+    if (!["SAFETY_TRAINING", "WORK_AT_HEIGHT", "EXCAVATION", "CONFINED_SPACE", "MACHINE_LICENCE", "FIRST_AID"].includes(subject.rows[0].type_code)) {
+      return { outcome: "VALIDATION_FAILED", code: "OBLIGATION_TYPE", message: "Obuka ne može obnoviti ovu vrstu obaveze." };
+    }
     const certificate = await client.query(`SELECT id FROM public.attachments WHERE company_id=$1 AND id=$2
       AND entity_type='OBLIGATION' AND entity_id=$3 AND status='ready' FOR SHARE`,
       [actor.companyId, input.renewAttachmentId ?? null, input.renewObligationId]);

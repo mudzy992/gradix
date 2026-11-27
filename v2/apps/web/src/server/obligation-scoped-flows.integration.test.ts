@@ -43,7 +43,7 @@ db("scope preostalih tokova obaveza (PostgreSQL)", () => {
     await admin.query(`INSERT INTO obligation_types(id,company_id,code,label,entity_kind,requires_attachment) VALUES
       ($1,$2,'SCOPE_CERT','Scoped certificate','WORKER',false),($3,$2,'SCOPE_MISSING','Scoped missing','WORKER',false)`, [type,co,requirementType]);
     for (const [id, worker] of [[ownOb,own],[outOb,outsider]] as const) {
-      await admin.query("INSERT INTO obligations(id,company_id,type_id,worker_id,expires_at,created_by,responsible_user_id) VALUES ($1,$2,$3,$4,'2030-01-01',$5,$6)", [id,co,type,worker,user,selfUser]);
+      await admin.query("INSERT INTO obligations(id,company_id,type_id,worker_id,expires_at,created_by,responsible_user_id) VALUES ($1,$2,$3,$4,'2030-01-01',$5,$6)", [id,co,`${co}_obt_safety`,worker,user,selfUser]);
       await admin.query("INSERT INTO obligation_versions(id,company_id,obligation_id,version,expires_at,created_by) VALUES ($1,$2,$3,1,'2030-01-01',$4)", [`obv_${id}`,co,id,user]);
     }
     await admin.query("INSERT INTO obligations(id,company_id,type_id,machine_id,expires_at,created_by) VALUES ($1,$2,$2 || '_obt_registration',$3,'2030-01-01',$4)", [machineOb,co,machine,user]);

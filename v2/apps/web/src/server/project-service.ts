@@ -605,6 +605,12 @@ export async function createAssignment(
       return { code: "FORBIDDEN", message: "Nisi dodijeljen ovom projektu." } as ServiceError;
     }
 
+    // A session's cached IDs are an upper bound; lock the live grant and the subject's grant.
+    if (!await obligationTargetAllowed(client, companyId, actor, {projectId}) ||
+        !await obligationTargetAllowed(client, companyId, actor, {workerId:input.workerId, machineId:input.machineId})) {
+      return { code: "NOT_FOUND", message: "Projekat ili entitet nije u opsegu." } as ServiceError;
+    }
+
     const project = await client.query("SELECT 1 FROM projects WHERE id = $1 AND company_id = $2", [projectId, companyId]);
     if (project.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
@@ -761,19 +767,26 @@ export async function listAssignments(
   projectId: string,
 ): Promise<{ assignments: AssignmentRow[]; today: string } | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
-    const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
-    if (ids !== null && !ids.includes(projectId)) {
-      return { code: "FORBIDDEN", message: "Nisi dodijeljen ovom projektu." } as ServiceError;
+    if (actor.scope === "PROJECTS" && !await obligationTargetAllowed(client, companyId, actor, {projectId})) {
+      return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
     }
-
+    if (actor.scope !== "COMPANY" && actor.scope !== "PROJECTS" && actor.scope !== "SELF") {
+      return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
+    }
     const today = await companyToday(client, companyId);
+    const params: unknown[] = [projectId, companyId];
+    // Use the entity scope, not the assignment's project_id: historical subjects may have left all allowed projects.
+    const scoped = obligationScope(actor, params, "subject_scope");
     const result = await client.query(
-      `${ASSIGNMENT_SELECT} WHERE a.project_id = $1 AND a.company_id = $2 ORDER BY a.from_date DESC`,
-      [projectId, companyId],
+      `${ASSIGNMENT_SELECT} WHERE a.project_id = $1 AND a.company_id = $2
+        AND EXISTS (SELECT 1 FROM (SELECT a.company_id, a.worker_id, a.machine_id, NULL::text AS project_id) subject_scope WHERE ${scoped})
+        ORDER BY a.from_date DESC`, params,
     );
 
     const assignments: AssignmentRow[] = [];
     for (const row of result.rows) {
+      // Revalidate and lock the subject before disclosing its current obligations and overrides.
+      if (!await obligationTargetAllowed(client, companyId, actor, {workerId:row.worker_id, machineId:row.machine_id})) continue;
       const obligations = await entityObligations(client, companyId, today, {
         workerId: row.worker_id ? String(row.worker_id) : null,
         machineId: row.machine_id ? String(row.machine_id) : null,
@@ -799,9 +812,11 @@ export async function changeAssignment(
   }
 
   return withCompany(pool, companyId, async (client) => {
-    const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
-    if (ids !== null && !ids.includes(projectId)) {
-      return { code: "FORBIDDEN", message: "Nisi dodijeljen ovom projektu." } as ServiceError;
+    if (actor.scope === "PROJECTS" && !await obligationTargetAllowed(client, companyId, actor, {projectId})) {
+      return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
+    }
+    if (actor.scope !== "COMPANY" && actor.scope !== "PROJECTS" && actor.scope !== "SELF") {
+      return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
     }
 
     const today = await companyToday(client, companyId);
@@ -820,6 +835,9 @@ export async function changeAssignment(
     );
     const row = existing.rows[0];
     if (!row) return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
+    if (!await obligationTargetAllowed(client, companyId, actor, {workerId:row.worker_id, machineId:row.machine_id})) {
+      return { code: "NOT_FOUND", message: "Dodjela nije pronađena." } as ServiceError;
+    }
     if (row.voided_at) return { code: "CONFLICT", message: "Dodjela je već poništena; historijski red je zaključan." } as ServiceError;
 
     const actorIdentity = await client.query<{ email: string }>(
@@ -1036,6 +1054,7 @@ export async function requestOverride(
   projectId: string,
   input: OverrideRequestInput,
 ): Promise<OverrideRequestRow | ServiceError> {
+  if (actor.scope === "SELF") return { code: "FORBIDDEN", message: "Opseg samo svoje ne dozvoljava nove dodjele." };
   if (!input.obligationId) {
     return { code: "VALIDATION_FAILED", message: "Nedostaje obaveza na koju se iznimka odnosi." };
   }
@@ -1182,6 +1201,7 @@ export async function approveOverride(
   requestId: string,
   input: { validUntil: string; fromDate?: string; toDate?: string | null; projectId?: string },
 ): Promise<AssignmentRow | ServiceError> {
+  if (actor.scope === "SELF") return { code: "FORBIDDEN", message: "Opseg samo svoje ne dozvoljava nove dodjele." };
   if (!can(actor.roles, "projects.override")) {
     return {
       code: "FORBIDDEN",
