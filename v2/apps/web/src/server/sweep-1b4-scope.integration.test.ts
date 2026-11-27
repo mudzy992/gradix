@@ -159,19 +159,24 @@ db("Sweep 1B-4 session scope",()=>{
   it("HSE obnavlja samo certifikat i samo uz dozvolu i žive dodjele",async()=>{
     const base={kind:"CERTIFICATION" as const,title:"Certifikacija",heldAt:"2029-01-01T10:00:00Z",projectId:p1,
       attendees:[{workerId:peer,signatureName:"Peer Worker",signedAt:"2029-01-01T10:00:00Z"}],renewObligationId:ob,renewAttachmentId:att,renewExpiresAt:"2032-01-01"};
-    expect(await createTraining(app,{...projects,roles:["SITE_SUPERVISOR"]},base)).toMatchObject({outcome:"FORBIDDEN"});
+    const supervisor={...projects,roles:["SITE_SUPERVISOR"]};
+    expect(await createTraining(app,{...projects,roles:["WORKER"]},base)).toMatchObject({outcome:"FORBIDDEN"});
+    expect(await createTraining(app,supervisor,{...base,renewAttachmentId:undefined})).toMatchObject({outcome:"VALIDATION_FAILED"});
+    expect(await createTraining(app,supervisor,{...base,attendees:[{workerId:peer,signatureName:" ",signedAt:base.heldAt}]})).toMatchObject({outcome:"VALIDATION_FAILED"});
+    expect(await createTraining(app,{...supervisor,projectIds:[p1,p2]},{...base,projectId:p2})).toMatchObject({outcome:"NOT_FOUND"});
+    expect((await createTraining(app,supervisor,base)).outcome).toBe("OK");
     expect(await createTraining(app,projects,{...base,renewObligationId:med,renewAttachmentId:`att_med_${run}`})).toMatchObject({outcome:"VALIDATION_FAILED",code:"OBLIGATION_TYPE"});
     expect(await createTraining(app,self,base)).toMatchObject({outcome:"NOT_FOUND"});
     const selfInput={...base,attendees:[{workerId:w,signatureName:"Own Worker",signedAt:base.heldAt}],renewObligationId:selfOb,renewAttachmentId:`att_self_${run}`};
     expect((await createTraining(app,self,selfInput)).outcome).toBe("OK");
-    expect((await createTraining(app,projects,base)).outcome).toBe("OK");
-    expect((await admin.query("SELECT current_version,expires_at::text,review_state FROM obligations WHERE company_id=$1 AND id=$2",[co,ob])).rows[0]).toEqual({current_version:2,expires_at:"2032-01-01",review_state:"pending_review"});
+    expect((await createTraining(app,projects,{...base,renewExpiresAt:"2033-01-01"})).outcome).toBe("OK");
+    expect((await admin.query("SELECT current_version,expires_at::text,review_state FROM obligations WHERE company_id=$1 AND id=$2",[co,ob])).rows[0]).toEqual({current_version:3,expires_at:"2033-01-01",review_state:"pending_review"});
     // A committed revocation which holds the grant lock first must beat a concurrent renewal.
     const conn=await admin.connect();
     try {
       await conn.query("BEGIN"); await conn.query("SET LOCAL session_replication_role=replica");
       await conn.query("UPDATE project_assignments SET to_date='2020-02-01' WHERE id=$1",[own]);
-      const pending=createTraining(app,projects,{...base,renewExpiresAt:"2033-01-01"});
+      const pending=createTraining(app,projects,{...base,renewExpiresAt:"2034-01-01"});
       let blocked=false;
       for(let i=0;i<100 && !blocked;i++) {
         blocked=!!(await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%project_assignments pa%'")).rowCount;
@@ -185,6 +190,6 @@ db("Sweep 1B-4 session scope",()=>{
     expect(await listAssignments(app,companyId(co),projects,p1)).toMatchObject({code:"NOT_FOUND"});
     expect(await createAssignment(app,companyId(co),projects,p1,{workerId:peer,fromDate:"2098-01-01"})).toMatchObject({code:"NOT_FOUND"});
     expect(await changeAssignment(app,companyId(co),projects,p1,peerAsn,{action:"END"})).toMatchObject({code:"NOT_FOUND"});
-    expect(await createTraining(app,projects,{...base,renewExpiresAt:"2033-01-01"})).toMatchObject({outcome:"NOT_FOUND"});
+    expect(await createTraining(app,projects,{...base,renewExpiresAt:"2034-01-01"})).toMatchObject({outcome:"NOT_FOUND"});
   });
 });

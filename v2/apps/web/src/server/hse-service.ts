@@ -732,11 +732,14 @@ export async function createTrainingTx(
   if (!await hseWorkersAllowed(client, actor, [input.heldByWorkerId, ...input.attendees.map(a => a.workerId)])) return NOT_FOUND;
   let certificateVersion: number | null = null;
   if (input.renewObligationId) {
-    if (!can(actor.roles, "obligations.manage")) return { outcome: "FORBIDDEN", code: "ROLE", message: "Za obnovu obaveze potrebna je dozvola za upravljanje rokovima." };
+    if (!can(actor.roles, "hse.training.manage")) return { outcome: "FORBIDDEN", code: "ROLE", message: "Za obnovu je potrebna dozvola za evidenciju obuke." };
     if (actor.scope === "PROJECTS") {
       if (!input.projectId || !await obligationTargetAllowed(client, actor.companyId, actor, {projectId:input.projectId})) return NOT_FOUND;
+      // The attendee must be assigned to this training's project, not just another
+      // project in the session. Hold both actor and attendee grants until commit.
+      const trainingActor = { ...actor, projectIds: [input.projectId] };
       for (const workerId of new Set([input.heldByWorkerId, ...input.attendees.map(a => a.workerId)].filter((v): v is string => !!v))) {
-        if (!await obligationTargetAllowed(client, actor.companyId, actor, {workerId})) return NOT_FOUND;
+        if (!await obligationTargetAllowed(client, actor.companyId, trainingActor, {workerId})) return NOT_FOUND;
       }
     }
     const date = input.renewExpiresAt;
@@ -745,6 +748,10 @@ export async function createTrainingTx(
     }
     if (!trainingCanRenewCertificate(input.kind, input.attendees.length)) {
       return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Obavezu može potvrditi samo certifikacijska obuka sa prisutnim radnikom." };
+    }
+    if (input.attendees.some(a => typeof a.signatureName !== "string" || a.signatureName.trim().length < 2 || a.signatureName.trim().length > 200 ||
+        typeof a.signedAt !== "string" || !a.signedAt.trim() || Number.isNaN(Date.parse(a.signedAt)))) {
+      return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Potrebni su ime i valjano vrijeme potpisa svakog prisutnog radnika." };
     }
     if (!await obligationRecordAllowed(client, actor.companyId, actor, input.renewObligationId)) return NOT_FOUND;
     const subject = await client.query<{ worker_id: string | null; current_version: number; expires_at: string | null; type_code: string }>(
