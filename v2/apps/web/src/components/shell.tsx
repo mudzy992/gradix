@@ -16,11 +16,10 @@ import { ModuleNavigation, ModuleTabs } from "./module-nav";
 import type { NavModule } from "./nav";
 import { ShellUserMenu } from "./shell-user-menu";
 import { ShellBell } from "./shell-bell";
-import type { NavItem } from "./shell-types";
+import type { NavGroup } from "./shell-types";
 
 export { initialsOf };
-export type { NavItem } from "./shell-types";
-export type NavGroup = { label: string; items: NavItem[] };
+export type { NavItem, NavGroup } from "./shell-types";
 export type ShellUser = { displayName: string; email: string; companyName: string; roles: string[] };
 
 export default function Shell({

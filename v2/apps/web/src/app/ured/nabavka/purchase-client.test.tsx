@@ -22,17 +22,21 @@ function mockApi() {
 afterEach(()=>vi.unstubAllGlobals());
 describe("Nabavka",()=>{
   it("prikazuje izlaze, prag i upozorenje o neslaganju te prolazi axe",async()=>{
-    mockApi();const {container}=render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
-    expect(await screen.findByText(/PURCHASE_INVOICE_MISMATCH: račun se ne slaže/)).toBeInTheDocument();
-    expect(screen.getByRole("table",{name:"Izlazi materijala"})).toHaveTextContent("Centralno");
+    mockApi();const user=userEvent.setup();const {container}=render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
+    await expectNoSeriousA11yViolations(container);
+    await user.click(screen.getByRole("button",{name:"Zatvori"}));
     expect(screen.getByRole("table",{name:"Zahtjevi nabavke"})).toHaveTextContent("Određuje se pri predaji");
-    expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i");
+    await user.click(screen.getByRole("tab",{name:"Računi"}));
+    expect(screen.getByText(/PURCHASE_INVOICE_MISMATCH: račun se ne slaže/)).toBeInTheDocument();
+    await user.click(screen.getByRole("tab",{name:"Izlazi"}));
+    expect(screen.getByRole("table",{name:"Izlazi materijala"})).toHaveTextContent("Centralno");
     await expectNoSeriousA11yViolations(container);
   });
   it("kreira nacrt s odabranim artiklom i UUID-om te predaje postojeći zahtjev",async()=>{
     const fetch=mockApi(); const user=userEvent.setup();
     render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
-    await screen.findByText(/PURCHASE_INVOICE_MISMATCH: račun se ne slaže/);
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
     await user.selectOptions(screen.getByLabelText("Projekat zahtjeva"),"p");
     await user.type(screen.getByLabelText("Količina zahtjeva"),"2.5");
     await user.type(screen.getByLabelText("Procjena po jedinici (feninga)"),"300");
@@ -47,9 +51,34 @@ describe("Nabavka",()=>{
     await waitFor(()=>expect(fetch).toHaveBeenCalledWith("/api/purchase-requests/req/submit",expect.objectContaining({method:"POST"})));
     expect(await screen.findByText(/potrebna je odluka vlasnika/)).toBeInTheDocument();
   });
+  it("nakon nepoznatog ishoda zatvaranje dijaloga čuva isti UUID i payload za retry",async()=>{
+    const base=mockApi();let posts=0;const bodies:string[]=[];
+    vi.stubGlobal("fetch",vi.fn(async(url:string,init?:RequestInit)=>{
+      if(url === "/api/purchase-requests" && init?.method === "POST"){
+        posts++;bodies.push(init.body as string);
+        if(posts===1) throw new Error("connection lost");
+      }
+      return base(url,init);
+    }));
+    const user=userEvent.setup();render(<PurchaseClient canManage initialItem="i" initialWarehouse="w"/>);
+    await waitFor(()=>expect(screen.getByLabelText("Artikal zahtjeva")).toHaveValue("i"));
+    await user.selectOptions(screen.getByLabelText("Projekat zahtjeva"),"p");
+    await user.type(screen.getByLabelText("Količina zahtjeva"),"2");
+    await user.type(screen.getByLabelText("Procjena po jedinici (feninga)"),"300");
+    await user.type(screen.getByLabelText("Obrazloženje"),"Materijal");
+    await user.click(screen.getByRole("button",{name:"Sačuvaj nacrt zahtjeva"}));
+    expect(await screen.findByText(/Ponovite s istim podacima/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button",{name:"Zatvori"}));
+    await user.click(screen.getByRole("tab",{name:"Narudžbenice"}));
+    await user.click(screen.getByRole("tab",{name:"Zahtjevi"}));
+    await user.click(screen.getByRole("button",{name:"+ Novi zahtjev"}));
+    await user.click(screen.getByRole("button",{name:"Ponovi zahtjev"}));
+    await waitFor(()=>expect(posts).toBe(2));
+    expect(bodies[1]).toBe(bodies[0]);
+  });
   it("ne nudi unos korisniku bez purchase.manage",async()=>{
     mockApi();render(<PurchaseClient canManage={false} initialItem="" initialWarehouse=""/>);
-    await screen.findByText(/PURCHASE_INVOICE_MISMATCH: račun se ne slaže/);
+    await screen.findByRole("table", {name:"Zahtjevi nabavke"});
     expect(screen.queryByRole("button",{name:"Sačuvaj nacrt zahtjeva"})).not.toBeInTheDocument();
   });
 });

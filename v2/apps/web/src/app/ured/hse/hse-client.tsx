@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Card, Checkbox, DataTable, Field, FilterBar, FormGrid, Inline, Input, Select,
-  SectionTitle, Stack, Stat, StatusDot, Textarea,
+  SectionTitle, Stack, Stat, StatusDot, Tabs, Dialog, Textarea,
 } from "@/components/ui/index";
 import type { HseStats } from "@gradix/contracts";
 import { filterIncidents } from "./hse-filter";
@@ -78,6 +78,8 @@ export function HseClient({
   caps: { canReport: boolean; canInvestigate: boolean; canManageTrainings: boolean; canExport?: boolean };
 }) {
   const router = useRouter();
+  const [tab,setTab] = useState("incidents");
+  const [reportOpen,setReportOpen] = useState(false);
   const [kindFilter, setKindFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [report, setReport] = useState({
@@ -120,6 +122,7 @@ export function HseClient({
         ? "Incident je prijavljen i otvorena je obaveza prijave inspekciji (rok 3 dana)."
         : "Incident je prijavljen.",
     });
+    setReportOpen(false);
     setReport((current) => ({ ...current, description: "", immediateAction: "", lostDays: "0" }));
     router.refresh();
   }, [report, router]);
@@ -136,9 +139,9 @@ export function HseClient({
       ) : null}
 
       <Inline>
-        <Stat label="Otvoreni incidenti" value={String(attention?.openIncidents ?? 0)} hint="Svi osim CLOSED" />
-        <Stat label="Mjere koje kasne" value={String(attention?.overdueActions ?? 0)} hint="due_on < danas, status OPEN" />
-        <Stat label="Dnevnik bez potpisa" value={String(attention?.unsignedDiaries ?? 0)} hint="stariji od 2 dana" />
+        <Stat label="Otvoreni incidenti" value={attention ? String(attention.openIncidents) : "—"} hint="Svi osim CLOSED" />
+        <Stat label="Mjere koje kasne" value={attention ? String(attention.overdueActions) : "—"} hint="due_on < danas, status OPEN" />
+        <Stat label="Dnevnik bez potpisa" value={attention ? String(attention.unsignedDiaries) : "—"} hint="stariji od 2 dana" />
         <Stat
           label="LTIFR (godina)"
           value={stats.ltifr === null ? "—" : stats.ltifr.toFixed(2)}
@@ -146,7 +149,8 @@ export function HseClient({
         />
       </Inline>
 
-      <Card>
+      <Tabs label="HSE pregled" active={tab} onChange={setTab} tabs={[{key:"incidents",label:"Incidenti"},{key:"statistics",label:"Statistika"}]} />
+      {tab === "statistics" ? <Card>
         <SectionTitle hint="Sve je izračun iz incidenta i sati — nijedan broj nije upisan rukom">
           Statistika {stats.from} — {stats.to}
         </SectionTitle>
@@ -163,9 +167,11 @@ export function HseClient({
           sabran sa nesrećama izgubi preventivni signal.
         </p>
         <a className="gx-link" href={`/api/hse/report/pdf?from=${stats.from}&to=${stats.to}`}>Preuzmi HSE izvještaj (PDF)</a>
-      </Card>
+      </Card> : null}
 
-      {caps.canReport ? (
+      {caps.canReport && reportOpen ? (
+        <Dialog title="Prijavi incident" trapFocus onClose={()=>{if(!busy)setReportOpen(false);}}>
+        {notice?.tone === "error" ? <Alert tone="error" role="alert">{notice.text}</Alert> : null}
         <Card>
           <SectionTitle hint="Prijava ne blokira ništa — evidentira i pokreće mjere">Prijavi incident</SectionTitle>
           <FormGrid>
@@ -239,8 +245,11 @@ export function HseClient({
             </Button>
           </Inline>
         </Card>
+        </Dialog>
       ) : null}
 
+      {tab === "incidents" ? <>
+      {caps.canReport ? <Button variant="primary" onClick={()=>setReportOpen(true)}>+ Prijavi incident</Button> : null}
       <FilterBar>
         <Field label="Vrsta" htmlFor="filter-vrsta">
           <Select id="filter-vrsta" value={kindFilter} onChange={(event) => setKindFilter(event.target.value)}>
@@ -315,6 +324,7 @@ export function HseClient({
         ]}
       />
 
+      </> : null}
       {!caps.canInvestigate ? (
         <Alert tone="info">
           Istraga, mjere i zatvaranje incidenta traže dozvolu `hse.investigate` — prijava je pravo svakoga.

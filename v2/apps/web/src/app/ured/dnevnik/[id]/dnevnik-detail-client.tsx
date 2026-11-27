@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { apiCall, jsonBody } from "@/api-client";
 import {
   Alert, Button, Card, DescriptionList, Field, Inline, Input,
-  SectionTitle, Stack, StatusDot, Textarea, TextLink,
+  SectionTitle, Stack, StatusDot, Tabs, Textarea, TextLink,
 } from "@/components/ui/index";
 import type { SiteDiaryDetail } from "@gradix/contracts";
 import { DnevnikForm } from "./dnevnik-form";
@@ -41,6 +41,7 @@ export function DnevnikDetailClient({
   const router = useRouter();
   const diary = detail.diary;
   const editable = caps.canManage && diary.status !== "LOCKED";
+  const [tab, setTab] = useState("automatic");
   const [signedName, setSignedName] = useState(diary.signedName ?? "");
   const [revision, setRevision] = useState({ reason: "", description: "" });
   const [notice, setNotice] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(null);
@@ -124,7 +125,11 @@ export function DnevnikDetailClient({
         ) : null}
       </Card>
 
-      <Card>
+      <Tabs label="Dnevnik" active={tab} onChange={setTab} tabs={[
+        {key:"automatic",label:"Podaci s terena"},{key:"entries",label:"Unosi"},
+        ...(caps.canSign ? [{key:"sign",label:"Potpis i zaključavanje"}] : []),{key:"attachments",label:"Prilozi"},
+      ]} />
+      {tab === "automatic" ? <Card>
         <SectionTitle hint="Sistem, ne prepisivanje — ispravka se radi u evidenciji">Automatski iz terena</SectionTitle>
         <Inline>
           {autoSummary.map((entry) => (
@@ -185,11 +190,11 @@ export function DnevnikDetailClient({
             </div>
           ) : null}
         </Stack>
-      </Card>
+      </Card> : null}
 
-      <DnevnikForm detail={detail} editable={editable} onNotice={setNotice} />
+      <section hidden={tab !== "entries"}><DnevnikForm detail={detail} editable={editable} onNotice={setNotice} /></section>
 
-      {caps.canSign ? (
+      {tab === "sign" && caps.canSign ? (
         <Card>
           <SectionTitle hint="Potpis zamrzava automatske podatke">Potpis i zaključavanje</SectionTitle>
           {diary.status === "DRAFT" ? (
@@ -235,7 +240,7 @@ export function DnevnikDetailClient({
         </Card>
       ) : null}
 
-      <Card>
+      {tab === "attachments" ? <Card>
         <SectionTitle action={<TextLink href="/ured/dnevnik">Nazad na listu</TextLink>}>Prilozi</SectionTitle>
         {detail.attachments.length === 0 ? (
           <p className="gx-page-sub">Nema priloga uz ovaj dan.</p>
@@ -248,7 +253,7 @@ export function DnevnikDetailClient({
             ))}
           </ul>
         )}
-      </Card>
+      </Card> : null}
     </Stack>
   );
 }

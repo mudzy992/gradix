@@ -11,3 +11,5 @@ export type NavItem = {
   description?: string;
   badge?: { count: number; older: number };
 };
+
+export type NavGroup = { label: string; items: NavItem[] };

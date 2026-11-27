@@ -7,7 +7,7 @@
  * da re-render roditelja (npr. tipkanje u kontrolisanom polju) ne bi ponovo fokusirao
  * prvo polje — bug Partneri/Tenderi (2026-11-20).
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Icon } from "@/components/ui/index";
 
 export function Dialog({
@@ -19,6 +19,7 @@ export function Dialog({
   onClose,
   wide = false,
   trapFocus = false,
+  open = true,
 }: {
   title: string;
   hint?: ReactNode;
@@ -28,7 +29,10 @@ export function Dialog({
   onClose: () => void;
   wide?: boolean;
   trapFocus?: boolean;
+  /** Ostavlja obrazac montiran radi sigurnog ponavljanja zahtjeva. */
+  open?: boolean;
 }) {
+  const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const firstField = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -37,6 +41,7 @@ export function Dialog({
   returnFocusToRef.current = returnFocusTo;
 
   useEffect(() => {
+    if (!open) return;
     const target = firstField.current?.querySelector<HTMLElement>(
       "input, select, textarea, button, [href]",
     );
@@ -65,22 +70,22 @@ export function Dialog({
       document.removeEventListener("keydown", onKeyDown);
       returnFocusToRef.current?.focus?.();
     };
-  }, []);
+  }, [open, trapFocus]);
 
   return (
-    <div className="gx-overlay" role="presentation">
+    <div className="gx-overlay" role="presentation" hidden={!open}>
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="gx-dialog-title"
+        aria-labelledby={titleId}
         tabIndex={-1}
         className="gx-dialog"
         style={wide ? { maxWidth: 880 } : undefined}
       >
         <div className="gx-dialog__header">
           <div>
-            <h2 id="gx-dialog-title" className="gx-dialog__title">
+            <h2 id={titleId} className="gx-dialog__title">
               {title}
             </h2>
             {hint ? <p className="gx-dialog__hint">{hint}</p> : null}

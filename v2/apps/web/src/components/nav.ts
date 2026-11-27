@@ -9,7 +9,7 @@
  */
 import { can, type Permission } from "@/server/permissions";
 import type { IconName } from "./ui";
-import type { NavGroup } from "./shell";
+import type { NavGroup } from "./shell-types";
 
 export type NavEntry = {
   href: string;

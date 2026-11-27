@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiCall, jsonBody, patchBody } from "@/api-client";
 import {
-  Alert, Button, Card, Chip, DataTable, DescriptionList, EmptyState, Inline, SectionTitle, Stack,
+  Alert, Button, Card, Chip, DataTable, DescriptionList, EmptyState, Inline, SectionTitle, Stack, Tabs,
 } from "@/components/ui/index";
 import {
   IssuanceDialog,
@@ -74,6 +74,7 @@ export function WorkerDetailClient({
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [dialog, setDialog] = useState<"rate" | "leave" | "issuance" | "offboard" | "return" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("profile");
   const [returningId, setReturningId] = useState<string | null>(null);
 
   async function submit(action: () => Promise<{ ok: boolean; message?: string }>, success: string) {
@@ -117,6 +118,15 @@ export function WorkerDetailClient({
 
       {message ? <Alert tone={message.tone}>{message.text}</Alert> : null}
 
+      <Tabs label="Kartica radnika" active={tab} onChange={setTab} tabs={[
+        {key:"profile",label:"Podaci"},
+        ...(caps.canSeeRates ? [{key:"rates",label:"Cijene rada"}] : []),
+        ...(leave ? [{key:"leave",label:"Godišnji odmor"}] : []),
+        ...(issuances ? [{key:"issuances",label:"Zaduženja"}] : []),
+        ...(caps.canSeePayroll ? [{key:"payroll",label:"Obračun"}] : []),
+        {key:"history",label:"Historija"},
+      ]} />
+      {tab === "profile" ? <>
       <Card>
         <SectionTitle>Podaci</SectionTitle>
         <DescriptionList
@@ -159,7 +169,8 @@ export function WorkerDetailClient({
         </Card>
       ) : null}
 
-      {caps.canSeeRates ? (
+      </> : null}
+      {tab === "rates" && caps.canSeeRates ? (
         <Card>
           <SectionTitle
             hint={rates?.current ? `Važi od ${formatDate(rates.current.validFrom)}` : "Nema važeće cijene"}
@@ -193,7 +204,7 @@ export function WorkerDetailClient({
         </Card>
       ) : null}
 
-      {leave ? (
+      {tab === "leave" && leave ? (
         <Card>
           <SectionTitle
             action={caps.canManageLeave ? <Button onClick={() => setDialog("leave")}>Upiši pravo</Button> : null}
@@ -224,7 +235,7 @@ export function WorkerDetailClient({
         </Card>
       ) : null}
 
-      {issuances ? (
+      {tab === "issuances" && issuances ? (
         <Card>
           <SectionTitle
             hint={`${issuances.activeCount} kod radnika`}
@@ -283,11 +294,11 @@ export function WorkerDetailClient({
 
       {/* F6: obračun živi na kartici radnika, jer se pitanje „koliko mu je ostatak duga“ postavlja
           tu, a ne u mjesečnom periodu. Tab se ne renderuje bez `payroll.view`. */}
-      {caps.canSeePayroll ? (
+      {tab === "payroll" && caps.canSeePayroll ? (
         <WorkerPayrollPanel workerId={worker.id} canManage={caps.canManagePayroll} />
       ) : null}
 
-      <Card>
+      {tab === "history" ? <Card>
         <SectionTitle hint="Čitljiva linija, ne pravni trag">Historija izmjena</SectionTitle>
         {history.length > 0 ? (
           <ul className="gx-timeline text-sm">
@@ -307,7 +318,7 @@ export function WorkerDetailClient({
         ) : (
           <EmptyState title="Nema izmjena" description="Kartica nije mijenjana od kreiranja." />
         )}
-      </Card>
+      </Card> : null}
 
       {dialog === "rate" ? (
         <RateDialog busy={busy} onClose={() => setDialog(null)} onSubmit={(body) => submit(() => apiCall(`/api/workers/${worker.id}/rates`, jsonBody(body)), "Cijena je upisana.")} />

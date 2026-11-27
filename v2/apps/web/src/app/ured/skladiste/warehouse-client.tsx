@@ -1,16 +1,19 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { z } from "zod";
 import type { WarehousesResponse, StockBalanceResponse, StockCountsResponse, StockCountDetailResponse } from "@gradix/contracts";
 import { apiCall, jsonBody } from "@/api-client";
-import { Alert, Button, Card, DataTable, FormGrid, FormSection, Input, Select, Stack } from "@/components/ui";
+import { Alert, Button, Card, DataTable, Dialog, FormGrid, FormSection, Input, Select, Stack, Tabs } from "@/components/ui";
 
 type Warehouse = z.infer<typeof WarehousesResponse>["warehouses"][number];
 type Balance = z.infer<typeof StockBalanceResponse>["balances"][number];
 type Count = z.infer<typeof StockCountsResponse>["counts"][number];
 const today=()=>new Date().toISOString().slice(0,10);
 export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{canManage:boolean;canPurchase:boolean;initialWarehouse?:string}) {
+  const [tab,setTab]=useState("balance");
+  const [dialog,setDialog]=useState<string | null>(canManage && initialWarehouse ? "minimum" : null);
+  const trigger=useRef<HTMLElement | null>(null);
   const [warehouses,setWarehouses]=useState<Warehouse[]>([]);
   const [balances,setBalances]=useState<Balance[]>([]);
   const [counts,setCounts]=useState<Count[]>([]);
@@ -37,14 +40,14 @@ export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{can
     setBusy(false);
     if(!result.ok) {setNotice({tone:"error",text:`${result.message} Ako je veza prekinuta, provjerite stanje prije ponavljanja transfera.`}); return;}
     setNotice({tone:"success",text:result.data.belowMinimum ? "Transfer je izvršen; izvor je ispod minimuma." : "Transfer je izvršen."});
-    setTransfer({...transfer,quantity:""}); await load();
+    setTransfer({...transfer,quantity:""}); setDialog(null); await load();
   }
   async function createCount(event:React.FormEvent) {
     event.preventDefault(); setBusy(true); setNotice(null);
     const result=await apiCall<{id:string}>("/api/stock-counts",jsonBody({warehouseId:count.warehouse,reason:count.reason.trim() || null,items:[{itemId:count.item,countedQuantity:count.quantity}]}));
     setBusy(false);
     if(!result.ok) {setNotice({tone:"error",text:result.message}); return;}
-    setNotice({tone:"success",text:"Nacrt popisa je sačuvan. Primijenite ga nakon provjere."}); setCount({...count,quantity:""}); await load();
+    setNotice({tone:"success",text:"Nacrt popisa je sačuvan. Primijenite ga nakon provjere."}); setCount({...count,quantity:""}); setDialog(null); await load();
   }
   async function saveLevel(event:React.FormEvent) {
     event.preventDefault();
@@ -54,7 +57,7 @@ export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{can
     try {
       const result=await apiCall(`/api/stock-items/${encodeURIComponent(item.item_id)}/levels`,jsonBody({warehouseId:warehouse,minQuantity:level.minimum,maxQuantity:item.max_quantity}));
       if (!result.ok) {setNotice({tone:"error",text:result.message});return;}
-      setNotice({tone:"success",text:"Minimum je sačuvan."}); setLevel({item:"",minimum:""}); await load();
+      setNotice({tone:"success",text:"Minimum je sačuvan."}); setLevel({item:"",minimum:""}); setDialog(null); await load();
     } finally {setBusy(false);}
   }
   async function showCount(row:Count) {
@@ -73,6 +76,8 @@ export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{can
   const shown=warehouse ? options(warehouse) : balances;
   return <Stack>
     {notice ? <Alert tone={notice.tone} role={notice.tone==="error" ? "alert":"status"}>{notice.text}</Alert>:null}
+    <Tabs label="Pregled skladišta" active={tab} onChange={setTab} tabs={[{key:"balance",label:"Zalihe"}, ...(canManage ? [{key:"counts",label:"Popisi"}] : [])]} />
+    <section hidden={tab !== "balance"}>
     <Select label="Skladište" value={warehouse} onChange={e=>setWarehouse(e.target.value)}><option value="">Sva skladišta</option>{warehouses.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}{w.is_active ? "" : " · neaktivno"}</option>)}</Select>
     <p className="gx-page-sub">Prikaz i izbor artikala u obrascima ograničeni su na prvih 1000 kombinacija skladišta i artikala.</p>
     <DataTable caption="Zalihe po skladištu" rows={shown} rowKey={r=>`${r.warehouse_id}:${r.item_id}`} emptyText="Nema zaliha za prikaz." columns={[
@@ -82,24 +87,15 @@ export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{can
       {key:"proposal",header:"Nabavka",cell:r=>r.below_minimum && canPurchase ? <Link href={`/ured/nabavka?item=${encodeURIComponent(r.item_id)}&warehouse=${encodeURIComponent(r.warehouse_id)}`}>Predloži nabavku</Link> : "—"},
     ]} />
     {canManage ? <>
-      {warehouse ? <Card><FormSection title="Minimum za odabrano skladište"><form onSubmit={saveLevel}><FormGrid>
-        <Select label="Artikal za minimum" required value={level.item} onChange={e=>setLevel({...level,item:e.target.value})}><option value="">Odaberite</option>{options(warehouse).map(b=><option key={b.item_id} value={b.item_id}>{b.code} · {b.name}</option>)}</Select>
-        <Input label="Minimalna količina" required inputMode="decimal" value={level.minimum} onChange={e=>setLevel({...level,minimum:e.target.value})} hint="Postojeći maksimum ostaje nepromijenjen." />
-      </FormGrid><Button type="submit" disabled={busy}>Sačuvaj minimum</Button></form></FormSection></Card> : null}
-      <Card><FormSection title="Transfer između skladišta"><form onSubmit={sendTransfer}><FormGrid>
-        <Select label="Iz skladišta" required value={transfer.from} onChange={e=>setTransfer({...transfer,from:e.target.value,item:""})}><option value="">Odaberite</option>{active.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
-        <Select label="U skladište" required value={transfer.to} onChange={e=>setTransfer({...transfer,to:e.target.value})}><option value="">Odaberite</option>{active.filter(w=>w.id!==transfer.from).map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
-        <Select label="Artikal za transfer" required value={transfer.item} onChange={e=>setTransfer({...transfer,item:e.target.value})}><option value="">Odaberite</option>{options(transfer.from).map(b=><option key={b.item_id} value={b.item_id}>{b.name} · {b.on_hand} {b.unit}</option>)}</Select>
-        <Input label="Količina za transfer" required inputMode="decimal" value={transfer.quantity} onChange={e=>setTransfer({...transfer,quantity:e.target.value})} />
-        <Input label="Datum transfera" type="date" required value={transfer.date} onChange={e=>setTransfer({...transfer,date:e.target.value})} />
-      </FormGrid><Button type="submit" variant="primary" disabled={busy}>Izvrši transfer</Button></form></FormSection></Card>
-      <Card><FormSection title="Popis / inventura"><p>Unesite izbrojano stanje; primjena će dodati samo razliku.</p><form onSubmit={createCount}><FormGrid>
-        <Select label="Skladište popisa" required value={count.warehouse} onChange={e=>setCount({...count,warehouse:e.target.value,item:""})}><option value="">Odaberite</option>{active.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
-        <Select label="Artikal za popis" required value={count.item} onChange={e=>setCount({...count,item:e.target.value})}><option value="">Odaberite</option>{options(count.warehouse).map(b=><option key={b.item_id} value={b.item_id}>{b.name} · stanje {b.on_hand} {b.unit}</option>)}</Select>
-        <Input label="Izbrojana količina" required inputMode="decimal" value={count.quantity} onChange={e=>setCount({...count,quantity:e.target.value})} />
-        <Input label="Razlog razlike (opciono)" value={count.reason} onChange={e=>setCount({...count,reason:e.target.value})} hint="Obavezan kod razlike iznad tolerancije ili nepoznate cijene." />
-      </FormGrid><Button type="submit" variant="primary" disabled={busy}>Sačuvaj nacrt popisa</Button></form></FormSection></Card>
-      <DataTable caption="Popisi" rows={counts} rowKey={r=>r.id} emptyText="Nema popisa." columns={[
+      {warehouse ? <Button onClick={event=>{trigger.current=event.currentTarget;setDialog("minimum");}}>Postavi minimum</Button> : null}{" "}
+      <Button variant="primary" onClick={event=>{trigger.current=event.currentTarget;setDialog("transfer");}}>+ Novi transfer</Button>
+    </> : null}
+    </section>
+    {canManage ? <section hidden={tab !== "counts"}>
+      <h2>Popisi / inventura</h2>
+      <p>Provjerite izbrojano stanje prije primjene razlike.</p>
+      <Button variant="primary" onClick={event=>{trigger.current=event.currentTarget;setDialog("count");}}>+ Novi popis</Button>
+      <DataTable caption="Popisi" rows={counts} rowKey={r=>r.id} emptyText="Nema popisa. Napravite prvi popis za odabrano skladište." columns={[
         {key:"warehouse",header:"Skladište",cell:r=>warehouses.find(w=>w.id===r.warehouse_id)?.name ?? r.warehouse_id},
         {key:"status",header:"Status",cell:r=>r.status==="DRAFT" ? "Nacrt" : "Primijenjen"}, {key:"reason",header:"Razlog",cell:r=>r.reason ?? "—"},
         {key:"action",header:"Radnja",cell:r=><Button disabled={busy} onClick={()=>void showCount(r)}>Pregledaj popis</Button>},
@@ -112,6 +108,27 @@ export function WarehouseClient({canManage,canPurchase,initialWarehouse=""}:{can
         ]} />
         {detail.count.status==="DRAFT" ? <Button disabled={busy} onClick={()=>void applyCount(detail.count)}>Primijeni ovaj popis</Button> : null}
       </FormSection></Card> : null}
-    </>:null}
+    </section> : null}
+    {canManage && dialog ? <Dialog title={dialog === "minimum" ? "Minimum za skladište" : dialog === "transfer" ? "Novi transfer" : "Novi popis"} trapFocus returnFocusTo={trigger.current} onClose={()=>{if(!busy)setDialog(null);}}>
+      {notice?.tone === "error" ? <Alert tone="error" role="alert">{notice.text}</Alert> : null}
+      {dialog === "minimum" && warehouse ? <Card><FormSection title="Minimum za odabrano skladište"><form onSubmit={saveLevel}><FormGrid>
+        <Select label="Artikal za minimum" required value={level.item} onChange={e=>setLevel({...level,item:e.target.value})}><option value="">Odaberite</option>{options(warehouse).map(b=><option key={b.item_id} value={b.item_id}>{b.code} · {b.name}</option>)}</Select>
+        <Input label="Minimalna količina" required inputMode="decimal" value={level.minimum} onChange={e=>setLevel({...level,minimum:e.target.value})} hint="Postojeći maksimum ostaje nepromijenjen." />
+      </FormGrid><Button type="submit" disabled={busy}>Sačuvaj minimum</Button></form></FormSection></Card> : null}
+      {dialog === "transfer" ? <Card><FormSection title="Transfer između skladišta"><form onSubmit={sendTransfer}><FormGrid>
+        <Select label="Iz skladišta" required value={transfer.from} onChange={e=>setTransfer({...transfer,from:e.target.value,item:""})}><option value="">Odaberite</option>{active.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
+        <Select label="U skladište" required value={transfer.to} onChange={e=>setTransfer({...transfer,to:e.target.value})}><option value="">Odaberite</option>{active.filter(w=>w.id!==transfer.from).map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
+        <Select label="Artikal za transfer" required value={transfer.item} onChange={e=>setTransfer({...transfer,item:e.target.value})}><option value="">Odaberite</option>{options(transfer.from).map(b=><option key={b.item_id} value={b.item_id}>{b.name} · {b.on_hand} {b.unit}</option>)}</Select>
+        <Input label="Količina za transfer" required inputMode="decimal" value={transfer.quantity} onChange={e=>setTransfer({...transfer,quantity:e.target.value})} />
+        <Input label="Datum transfera" type="date" required value={transfer.date} onChange={e=>setTransfer({...transfer,date:e.target.value})} />
+      </FormGrid><Button type="submit" variant="primary" disabled={busy}>Izvrši transfer</Button></form></FormSection></Card> : null}
+      {dialog === "count" ? <Card><FormSection title="Popis / inventura"><p>Unesite izbrojano stanje; primjena će dodati samo razliku.</p><form onSubmit={createCount}><FormGrid>
+        <Select label="Skladište popisa" required value={count.warehouse} onChange={e=>setCount({...count,warehouse:e.target.value,item:""})}><option value="">Odaberite</option>{active.map(w=><option key={w.id} value={w.id}>{w.name} · {w.kind}</option>)}</Select>
+        <Select label="Artikal za popis" required value={count.item} onChange={e=>setCount({...count,item:e.target.value})}><option value="">Odaberite</option>{options(count.warehouse).map(b=><option key={b.item_id} value={b.item_id}>{b.name} · stanje {b.on_hand} {b.unit}</option>)}</Select>
+        <Input label="Izbrojana količina" required inputMode="decimal" value={count.quantity} onChange={e=>setCount({...count,quantity:e.target.value})} />
+        <Input label="Razlog razlike (opciono)" value={count.reason} onChange={e=>setCount({...count,reason:e.target.value})} hint="Obavezan kod razlike iznad tolerancije ili nepoznate cijene." />
+      </FormGrid><Button type="submit" variant="primary" disabled={busy}>Sačuvaj nacrt popisa</Button></form></FormSection></Card> : null}
+    </Dialog> : null}
+
   </Stack>;
 }

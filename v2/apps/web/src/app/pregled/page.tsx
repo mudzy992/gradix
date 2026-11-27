@@ -16,6 +16,8 @@ import { countOpenConflicts } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 import { PregledBoard } from "./pregled-board";
 import { GettingStarted } from "./onboarding";
+import { WorkerOverviewPanel } from "./worker-overview";
+import { workerOverview } from "@/server/worker-overview";
 import { RoleDashboard } from "./role-dashboard";
 import { RiskyProjectsCard } from "./risky-projects-card";
 import { listRiskyProjects } from "@/server/pregled-risky";
@@ -197,6 +199,9 @@ export default async function PregledPage() {
     : null;
 
   const machineCount = data.machines.length;
+  const workerData = ctx.roles.includes("WORKER") ? await workerOverview(await getVerifiedPool(), {
+    companyId: ctx.companyId as CompanyId, userId: ctx.userId, roles: ctx.roles,
+  }) : null;
 
   return (
     <div>
@@ -209,7 +214,7 @@ export default async function PregledPage() {
       />
 
       <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
-      {machineCount === 0 ? <GettingStarted roles={ctx.roles} /> : null}
+      {workerData ? <WorkerOverviewPanel data={workerData} /> : machineCount === 0 ? <GettingStarted roles={ctx.roles} /> : null}
       <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} showKpis />
 
       <div className="gx-cols">
@@ -224,7 +229,7 @@ export default async function PregledPage() {
           {machineCount === 0 ? (
             <EmptyState
               title="Nema mašina"
-              description="Mašine se dodaju u bazi; ekran ih samo prikazuje dok ne dođe unos iz interfejsa."
+              description="Kada se mašine dodaju u evidenciju, pojavit će se ovdje."
             />
           ) : (
 <MachinesTable machines={data.machines} />
@@ -234,8 +239,7 @@ export default async function PregledPage() {
         <Card>
           <h2 className="gx-section-title">Radni zapisi</h2>
           <p className="gx-page-sub">
-            R4 push/pull API je tenant-scoped. Mobilni unos će se uključiti nakon lokalnog SQLite outbox koraka;
-            stari R0 notes sync je isključen.
+            Radne zapise možete pregledati i unositi u mobilnoj aplikaciji.
           </p>
         </Card>
       </div>

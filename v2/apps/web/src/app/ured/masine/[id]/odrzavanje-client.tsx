@@ -7,8 +7,8 @@
  * upravo jedinice: MTTR je u MINUTAMA, MTBF i trošak po satu u satima i KM/h. Kad imenilac nema
  * smisla (nema radnih sati, nema kvarova), prikazuje se „—“, a ne 0 — nula bi bila tvrdnja.
  */
-import { useMemo } from "react";
-import { Card, DataTable, DescriptionList, FormSection, Stack, Stat, StatusDot, TextLink } from "@/components/ui/index";
+import { useMemo, useState } from "react";
+import { Card, DataTable, DescriptionList, FormSection, Stack, Stat, StatusDot, Tabs, TextLink } from "@/components/ui/index";
 import type { ServiceOrderRow } from "@/server/service-order-types";
 import {
   MAINTENANCE_STATUS_LABEL,
@@ -57,6 +57,7 @@ export function MasinaOdrzavanjeClient({
   orders: ServiceOrderRow[];
   reliability: Reliability;
 }) {
+  const [tab,setTab]=useState("plans");
   const columns = useMemo(
     () => [
       { key: "opened", header: "Otvoren", cell: (row: ServiceOrderRow) => row.opened_at.slice(0, 10) },
@@ -86,7 +87,7 @@ export function MasinaOdrzavanjeClient({
     <Stack gap="var(--space-5)">
       <Card>
         <FormSection title={`Pouzdanost ${reliability.from} — ${reliability.to}`}>
-          <Stack gap="var(--space-4)">
+          <div className="gx-dashboard-kpis">
             <Stat label="MTTR" value={formatDuration(reliability.mttrMinutes)} hint={`Prosjek na ${reliability.finishedCount} završenih naloga`} />
             <Stat
               label="MTBF"
@@ -106,7 +107,7 @@ export function MasinaOdrzavanjeClient({
               }
               hint={`Ukupno ${money(reliability.maintenanceCostAmount, reliability.currencyCode)} na ${reliability.workHours} h`}
             />
-          </Stack>
+          </div>
           <DescriptionList
             items={[
               { term: "Broj kvarova", value: String(reliability.faultCount) },
@@ -121,7 +122,8 @@ export function MasinaOdrzavanjeClient({
         </FormSection>
       </Card>
 
-      <Card>
+      <Tabs label="Održavanje mašine" active={tab} onChange={setTab} tabs={[{key:"plans",label:"Planovi održavanja"},{key:"orders",label:"Historija servisa"}]} />
+      {tab === "plans" ? <Card>
         <FormSection title="Planovi održavanja">
           <DataTable
             caption="Planovi preventivnog održavanja"
@@ -149,11 +151,11 @@ export function MasinaOdrzavanjeClient({
               { key: "remaining", header: "Ostalo", numeric: true, cell: (row) => row.remaining ?? "—" },
             ]}
           />
-          <TextLink href="/ured/servis/planovi">Uredi planove</TextLink>
+          <TextLink href="/ured/servis/planovi">Otvori planove servisa</TextLink>
         </FormSection>
-      </Card>
+      </Card> : null}
 
-      <Card>
+      {tab === "orders" ? <Card>
         <FormSection title="Historija servisa">
           <DataTable
             caption="Servisni nalozi mašine"
@@ -164,7 +166,7 @@ export function MasinaOdrzavanjeClient({
           />
           <TextLink href={`/ured/servis?machine=${machineId}`}>Otvori u radionici</TextLink>
         </FormSection>
-      </Card>
+      </Card> : null}
     </Stack>
   );
 }

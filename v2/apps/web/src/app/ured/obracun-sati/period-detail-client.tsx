@@ -28,7 +28,7 @@ import {
   type PeriodStatus,
 } from "./payroll-view-model";
 import {
-  Alert, Button, DataTable, Dialog, EmptyState, Inline, Select, Skeleton, Stack, StatusDot,
+  Alert, Button, DataTable, Dialog, EmptyState, Inline, Select, Skeleton, Stack, StatusDot, Tabs,
 } from "@/components/ui/index";
 
 export function PeriodDetailClient({
@@ -46,6 +46,7 @@ export function PeriodDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [tab, setTab] = useState("workers");
   const [componentFilter, setComponentFilter] = useState("");
   const [sources, setSources] = useState<{ line: PayrollLine; sources: LineSource[] } | null>(null);
   const [sourcesBusy, setSourcesBusy] = useState(false);
@@ -216,6 +217,8 @@ export function PeriodDetailClient({
         />
       ) : (
         <>
+          <Tabs label="Linije obračuna" active={tab} onChange={setTab} tabs={[{key:"workers",label:"Po radnicima"},{key:"lines",label:"Pojedinačne linije"}]} />
+          {tab === "workers" ? <>
           <Inline>
             <Select
               label="Komponenta"
@@ -271,10 +274,9 @@ export function PeriodDetailClient({
             }}
           />
 
-          <details>
-            <summary className="gx-page-sub">
-              Linije pojedinačno ({lines?.lines.length ?? 0}) — klik na „Izvori“ otvara raspis
-            </summary>
+          </> : null}
+          {tab === "lines" ? <section>
+            <p className="gx-page-sub">Linije pojedinačno ({lines?.lines.length ?? 0}) — klik na „Izvori“ otvara raspis</p>
             <DataTable
               caption="Linije obračuna"
               rows={lines?.lines ?? []}
@@ -303,7 +305,7 @@ export function PeriodDetailClient({
                 { key: "sources", label: "Izvori", onSelect: () => void openSources(row) },
               ]}
             />
-          </details>
+          </section> : null}
         </>
       )}
 

@@ -33,6 +33,7 @@ describe("skladište", () => {
     const { container } = render(<WarehouseClient canManage canPurchase />);
     expect(await screen.findByText("Ispod minimuma")).toBeInTheDocument();
     expect(screen.getByRole("link", {name:"Predloži nabavku"})).toHaveAttribute("href", "/ured/nabavka?item=i&warehouse=central");
+    await user.click(screen.getByRole("tab", { name: "Popisi" }));
     await user.click(screen.getByRole("button", { name: "Pregledaj popis" }));
     expect(await screen.findByRole("table", { name: "Stavke odabranog popisa" })).toHaveTextContent("2");
     await user.click(screen.getByRole("button", { name: "Primijeni ovaj popis" }));
@@ -44,6 +45,7 @@ describe("skladište", () => {
     const user = userEvent.setup();
     render(<WarehouseClient canManage canPurchase={false} />);
     await screen.findByText("Ispod minimuma");
+    await user.click(screen.getByRole("button", { name: "+ Novi transfer" }));
     await user.selectOptions(screen.getByLabelText("Iz skladišta"), "central");
     await user.selectOptions(screen.getByLabelText("U skladište"), "site");
     await user.selectOptions(screen.getByLabelText("Artikal za transfer"), "i");

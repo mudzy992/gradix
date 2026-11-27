@@ -421,6 +421,8 @@
   background: var(--backdrop);
 }
 
+.gx-overlay[hidden] { display: none; }
+
 .gx-dialog {
   width: 100%;
   max-width: 480px;

@@ -36,6 +36,7 @@ import { POST as bulkWorkersRoute } from "@/app/api/workers/bulk/route";
 import { GET as profileRoute, PATCH as profilePatchRoute } from "@/app/api/workers/[id]/profile/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 import { isRateOverlapError } from "./worker-service";
+import { workerOverview } from "./worker-overview";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appUrl = process.env.DATABASE_URL;
@@ -384,6 +385,57 @@ describeDb("F3 — radno vrijeme i radnici (HTTP)", () => {
     expect(year.daysUsed).toBe(1);
     expect(year.balance).toBe(22);
     expect(year.usedDates).toEqual([DAY2]);
+    const app = new Pool({ connectionString: appUrl, max: 1 });
+    try {
+      const own = await workerOverview(app, {companyId:companyId(COMPANY),userId:U_RADNIK,roles:["WORKER"]}, new Date("2026-11-18T12:00:00Z"));
+      expect(own).toMatchObject({linked:true,leaveBalance:22});
+      const other = await workerOverview(app, {companyId:companyId(COMPANY),userId:U_SEF,roles:["WORKER"]}, new Date("2026-11-18T12:00:00Z"));
+      expect(other).toMatchObject({linked:true,leaveBalance:null});
+      expect(await workerOverview(app, {companyId:companyId(OTHER_COMPANY),userId:U_RADNIK,roles:["WORKER"]})).toEqual({linked:false,ambiguous:false});
+      expect(await workerOverview(app, {companyId:companyId(COMPANY),userId:U_RADNIK,roles:["ACCOUNTANT"]})).toBeNull();
+    } finally { await app.end(); }
+  });
+
+  it("lični KPI koristi zonu firme, zaokruživanje po segmentu i samo aktivne radne sate", async () => {
+    await admin.query("UPDATE companies SET timezone='Europe/Sarajevo', rounding_minutes=15, rounding_mode='NEAREST' WHERE id=$1", [COMPANY]);
+    const day = `day_kpi_${RUN}`;
+    await withCompany(admin, companyId(COMPANY), async client => {
+      await client.query(`INSERT INTO workdays (id,company_id,worker_id,work_date,created_by,updated_by)
+        VALUES ($1,$2,$3,'2027-01-01',$4,$4)`, [day,COMPANY,W_RADNIK,U_OWNER]);
+      await client.query(`INSERT INTO work_entries (id,company_id,workday_id,worker_id,kind,started_at,ended_at,end_state,project_id,created_by,updated_by)
+        VALUES ($1,$2,$3,$4,'WORK','2027-01-01 08:00Z','2027-01-01 08:08Z','KNOWN_END',$5,$6,$6),
+               ($7,$2,$3,$4,'WORK','2027-01-01 08:10Z','2027-01-01 08:17Z','KNOWN_END',$5,$6,$6),
+               ($8,$2,$3,$4,'BREAK','2027-01-01 08:20Z','2027-01-01 09:20Z','KNOWN_END',NULL,$6,$6),
+               ($9,$2,$3,$4,'WORK','2027-01-01 10:00Z',NULL,'OPEN',$5,$6,$6)`,
+        [`a_${RUN}`,COMPANY,day,W_RADNIK,PROJECT,U_OWNER,`b_${RUN}`,`break_${RUN}`,`open_${RUN}`]);
+      await client.query(`INSERT INTO work_entries (id,company_id,workday_id,worker_id,kind,started_at,ended_at,end_state,project_id,created_by,updated_by,resolution_state,rejected_at,rejected_by,rejection_reason)
+        VALUES ($1,$2,$3,$4,'WORK','2027-01-01 09:30Z','2027-01-01 10:30Z','KNOWN_END',$5,$6,$6,'REJECTED',now(),$6,'pogrešan segment')`, [`rejected_${RUN}`,COMPANY,day,W_RADNIK,PROJECT,U_OWNER]);
+    });
+    await withCompany(admin,companyId(COMPANY),async client=>{
+      await client.query(`INSERT INTO obligation_types (id,company_id,code,label,entity_kind) VALUES
+        ($1,$2,'KPI_MED','Ljekarski','WORKER'),($3,$2,'KPI_OLD','Istekli dokument','WORKER')`,[`type1_${RUN}`,COMPANY,`type2_${RUN}`]);
+      await client.query(`INSERT INTO obligations (id,company_id,type_id,worker_id) VALUES ($1,$2,$3,$4),($5,$2,$6,$4),($7,$2,$3,$8)`,[`ob1_${RUN}`,COMPANY,`type1_${RUN}`,W_RADNIK,`ob2_${RUN}`,`type2_${RUN}`,`ob3_${RUN}`,W_SEF]);
+      await client.query(`INSERT INTO obligation_versions (id,company_id,obligation_id,version,expires_at) VALUES
+        ($1,$2,$3,1,'2028-01-01'),($4,$2,$5,1,'2026-12-31'),($6,$2,$7,1,'2028-01-01')`,[`v1_${RUN}`,COMPANY,`ob1_${RUN}`,`v2_${RUN}`,`ob2_${RUN}`,`v3_${RUN}`,`ob3_${RUN}`]);
+    });
+    const app = new Pool({connectionString:appUrl,max:1});
+    try {
+      const actor={companyId:companyId(COMPANY),userId:U_RADNIK,roles:["WORKER"]};
+      const overview=await workerOverview(app,actor,new Date("2026-12-31T23:30:00Z"));
+      expect(overview).toMatchObject({linked:true,today:"2027-01-01",minutes:15,dayCount:1,current:{openSegments:1}});
+      if (!overview?.linked) throw new Error("Radnik nije povezan");
+      expect(overview.obligations).toEqual(expect.arrayContaining([{label:"Ljekarski",expiresAt:"2028-01-01",state:"valid"},{label:"Istekli dokument",expiresAt:"2026-12-31",state:"expired"}]));
+      expect(overview.obligations).toHaveLength(2);
+      await admin.query("UPDATE work_entries SET end_state='UNKNOWN_END' WHERE id=$1", [`open_${RUN}`]);
+      const unknown=await workerOverview(app,actor,new Date("2026-12-31T23:30:00Z"));
+      expect(unknown).toMatchObject({linked:true,minutes:15,current:{reviewState:"UNKNOWN_END"}});
+      const previousMonth=await workerOverview(app,actor,new Date("2026-12-31T21:30:00Z"));
+      expect(previousMonth).toMatchObject({linked:true,today:"2026-12-31",minutes:0});
+      expect(await workerOverview(app,{...actor,userId:U_SEF},new Date("2026-12-31T23:30:00Z"))).toMatchObject({linked:true,minutes:0});
+      const mixed=await workerOverview(app,{...actor,roles:["WORKER","ACCOUNTANT"]},new Date("2026-12-31T23:30:00Z"));
+      expect(mixed).toMatchObject({linked:true,minutes:15});
+      await expect(withCompany(admin,companyId(COMPANY),async client=>{await client.query("UPDATE workers SET user_id=$1 WHERE id=$2",[U_RADNIK,W_DRUGI]);})).rejects.toMatchObject({code:"23505"});
+    } finally { await app.end(); }
   });
 
   it("zaduženje se vraća, nikad ne briše", async () => {

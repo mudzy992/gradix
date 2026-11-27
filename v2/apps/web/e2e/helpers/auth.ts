@@ -171,7 +171,12 @@ export async function loginUi(page: Page, email: string): Promise<void> {
     if (response.status() !== 200) {
       throw new Error(`POST /api/auth/login → ${response.status()} ${(await response.text()).slice(0, 200)}`);
     }
-    needsCode = await codeField.isVisible({ timeout: 3_000 }).catch(() => false);
+    const body = await response.json() as { data?: { twoFactor?: { required?: boolean; gate?: string } } };
+    needsCode = body.data?.twoFactor?.required === true;
+    if (needsCode) {
+      if (body.data?.twoFactor?.gate !== "VERIFY") throw new Error("Demo nalog treba završiti 2FA uparivanje prije E2E prijave.");
+      await codeField.waitFor({ state: "visible", timeout: 10_000 });
+    }
   } catch (error) {
     // Dijagnostika: URL i vidljivi tekst. Anotacije prolaze tamo gdje logovi ne prolaze.
     const text = await page
