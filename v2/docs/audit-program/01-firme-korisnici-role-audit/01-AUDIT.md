@@ -2,7 +2,7 @@
 
 **Snimak:** 2026-11-27 · **Grana:** `arena/7b5ea9bf-gradix` · **Pregledani kodni commit:** `e7a37910a9c0a651d3d77a059592d755330b399c`
 
-**Status:** vlasnik je potvrdio težinsku mapu i odluke o tenant MFA, platform DB granici i podjeli obavještenja; F1-04c je S1. Platform SQL površina je dodatno statički inventarisana, ali konačni ACL/RLS/preflight nisu definisani. Platform operator MFA i purge sign-off ostaju otvoreni; nema runtime/pilot verifikacije.
+**Status:** vlasnik je potvrdio težine, tenant TOTP, obavezni platform TOTP, NOBYPASSRLS ACL smjer, purge sign-off po specu i lokalizacijski obim; F1-04c i F1-03b su S1. Platform SQL površina je statički inventarisana, ali tačan ACL/RLS/preflight i platform TOTP lifecycle ostaju otvoreni. Nema runtime/pilot verifikacije.
 
 ## Sažetak i granice dokaza
 
@@ -39,6 +39,8 @@ Nisu pronađeni platform upiti prema proizvoljnim operativnim poslovnim tabelama
 
 RLS je dodatni blocker koji se ne rješava samo GRANT-ovima: `platform_sessions` je FORCE RLS bez politike; `platform_support_sessions` ima samo tenant SELECT politiku; `memberships`, `invitations`, `equipment_categories` i `audit_events` imaju tenant pravila; `companies/users` imaju pre-login/tenant politike koje ne daju novi platform kontekst. Zato obična nova rola bez RLS zaobilaženja neće raditi s trenutnim SQL-om samo zato što dobije tabelne privilegije. Dizajn mora dati eksplicitne, ograničene platform politike/kontekst i zaseban preflight, a ne dodijeliti široki poslovni ACL. `privilege-matrix.tsv` i trenutni preflight opisuju `gradix_app`, ne novu platform rolu.
 
+Dodatna neprovjerena zavisnost za odobreni NOBYPASSRLS smjer: `companies_seed_equipment_categories` u `v2/packages/db/migrations/20261108160000_r2a_radnici_masine/migration.sql` je `SECURITY DEFINER` trigger i poziva seed INSERT u `equipment_categories`, koja ima FORCE RLS; funkcija ne postavlja `app.company_id`. Funkcija se izvršava kao njen vlasnik: ako vlasnik nema `BYPASSRLS`, tenant politika bez konteksta može odbiti trigger INSERT; ako radi zbog vlasničkog `BYPASSRLS` atributa, to je privilegijska zavisnost koju treba izričito evidentirati. Migracioni kod ne dokazuje atribute function ownera; create+seed treba provjeriti pod ciljanom runtime konfiguracijom prije ACL prihvatanja.
+
 `platformPool()` u `platform-service.ts` trenutno čita `DATABASE_ADMIN_URL`; `entrypoint-web.sh` briše tu varijablu prije `exec node`, iako je može koristiti za migracije. Dakle trenutni poziv platform servisa iz web runtime-a nema predviđenu konekciju; stvarno okruženje nije testirano. ADR 0013 navodi da platform tokova tada nije bilo; sadašnji kod je kasniji dodatak i ne mijenja osnovno pravilo da `gradix_app` ne dobija platform ACL. I obrazloženje reda `platform_users` u `privilege-matrix.tsv` još kaže da nema trenutnog web puta; taj tekst je zastario, iako `needed = -` za `gradix_app` i dalje odgovara granici. Ažurirati obrazloženje tek uz zaseban, odobreni platform ACL/preflight rad.
 
 ### F1-02 · Onboarding API i ekran nisu usklađeni · statički dokaz jak
@@ -47,9 +49,9 @@ RLS je dodatni blocker koji se ne rješava samo GRANT-ovima: `platform_sessions`
 
 Dodatno, ekran ima tri koraka naspram pet u §1.10/§4.2. Nema izbora PDV/adrese/valute/zone/radnog početka ni zadanih šifarnika; šalje `email`, `phone`, `note` koje ugovor ne prima, a servis ih ne upisuje. `v2/apps/web/src/server/platform-service.ts` inicijalizira samo kategorije mehanizacije kroz trigger; tipovi obaveza i jedinice nisu dio onboarding transakcije. `v2/apps/web/src/server/f1-access.integration.test.ts` pokriva servisnu transakciju, ne ovaj API–klijent tok.
 
-### F1-03 · Platform MFA i support pristup nisu dovršeni kao operativni tokovi · odluka vlasnika potrebna
+### F1-03 · Platform MFA i support pristup nisu dovršeni kao operativni tokovi
 
-Migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` dodaje `platform_users.totp_enabled` uz komentar da je TOTP obavezan, a komentar uz `platformLogin()` u `v2/apps/web/src/server/platform-service.ts` tvrdi da svaka nova sesija zahtijeva 2FA. Ipak, login čita samo lozinku i zatim direktno kreira osmosatnu sesiju; u pregledanim platform API rutama nema 2FA izazova. Spec 01 §1.8 traži odvojenu prijavu, ali ne propisuje izričito platform TOTP, pa prvo treba potvrditi da li je komentar/migracija namjerna politika.
+Vlasnik je 2026-11-27 potvrdio da **TOTP mora biti obavezan za sve operatore platforme**. Ovo je zasebna vlasnička politika za platform naloge, ne zaključak izveden iz tenant MFA. Migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` dodaje samo `platform_users.totp_enabled` (default `false`) i komentar o TOTP-u. Ipak, `platformLogin()` u `v2/apps/web/src/server/platform-service.ts` provjerava lozinku pa direktno izdaje osmosatnu sesiju; ne čita `totp_enabled` niti traži kod. Nije pronađena platform tajna/secret pohrana, enrollment, pre-auth challenge ili recovery tok. `platformAuthSecret()` samo vraća `AUTH_SECRET` i nema pronađenog pozivaoca. **Vlasnik je potvrdio F1-03b kao S1 2026-11-27**; statički dokaz ne potvrđuje runtime ponašanje.
 
 `grantSupportAccess()` u `v2/apps/web/src/server/platform-service.ts` upisuje razlog i rok i poziva se iz `v2/apps/web/src/app/api/platform/companies/[id]/support-access/route.ts`; `activeSupportAccess()` čita važeći zapis, ali nema pronađenog pozivaoca. Nije pronađen scoped support kontekst koji koristi grant za pristup podacima niti firmni banner koji prikazuje aktivan pristup. Evidentiran grant zato nije dokaz da je operativni support data-plane isporučen.
 
@@ -83,14 +85,14 @@ Spec §1.2.12 traži korisnički `locale` i `timezone`, naslijeđene od firme i 
 
 ## Vlasnička trijaža — potvrđeno i otvoreno
 
-Vlasnik je 2026-11-27 potvrdio mapu S1/S2/S3, tenant TOTP politiku, zasebnu runtime rolu i podjelu outboxa. Nakon potvrde težine F1-04c, navedene težine su vlasnički zaključene. Klasifikacija se zasniva na statičkim dokazima; nema runtime/pilot potvrde ni osnova za S0. S1 blokira prihvatanje Modula 1 dok se ne zatvori; S2 se planira, a S3 ide u `ODLOŽENO`.
+Vlasnik je 2026-11-27 potvrdio S1/S2/S3 mapu, uključujući S1 za F1-03b, tenant TOTP, obavezni platform TOTP, zaseban runtime principal bez `BYPASSRLS`/vlasništva/`CREATE`, podjelu outboxa, purge sign-off prema rokovima iz speca i lokalizaciju samo u opsegu spec 01. Purge sign-off je vlasnička potvrda; prateći pravni/računovodstveni dokument nije nezavisno pregledan. Klasifikacija se zasniva na statičkim dokazima; nema runtime/pilot potvrde ni osnova za S0. S1 blokira prihvatanje Modula 1 dok se ne zatvori; S2 se planira, a S3 ide u `ODLOŽENO`.
 
 | Stavka | Preporuka | Obrazloženje i predloženo postupanje |
 |---|---|---|
 | F1-01 — platform runtime veza | **S1** | Platform login, onboarding i upravljanje firmama ovise o vezi koju web entrypoint uklanja. Zatvoriti prije prihvatanja Modula 1; runtime potvrdu uraditi tek na odobrenom okruženju i bez migratorske veze u Node procesu. |
 | F1-02 — onboarding ugovor | **S1** | Trenutni UI zahtjev pada na validaciji, a odgovor se ne poklapa s klijentskim oblikom. Zatvoriti API–UI ugovor i dodati e2e dokaz onboarding toka. |
 | F1-03a — support data-plane | **S2** | Spec traži ograničen, obrazložen i firmi vidljiv pristup; trenutno je potvrđen zapis/grant, ne potrošač konteksta. Do zatvaranja ostati deny-by-default; ne stvarati tihi pristup podacima. |
-| F1-03b — platform MFA | **ODLUKA; bez težine** | Spec §1.8 traži odvojenu prijavu, ali ne definiše operatorov faktor; migracija/komentar sugerišu TOTP. Vlasnik treba zaključati politiku prije ocjene ili koda. |
+| F1-03b — platform MFA | **S1 potvrđen 2026-11-27** | Vlasnik je odredio obavezni TOTP za sve platform operatore. `platformLogin()` ipak izdaje sesiju nakon same lozinke; secret/enrollment/recovery tok nije pronađen. Statički dokaz; nema runtime potvrde. |
 | F1-04a — istek lozinke | **S2** | Zahtjev od 180 dana postoji, ali nije primijenjen u prijavi; nema dokaza o kompromitaciji. Ipak, zatvoriti eksplicitni sigurnosni zahtjev i testirati uredske/terenske role. |
 | F1-04b — opoziv nakon promjene role | **S2** | Spec traži opoziv svih sesija. Ponovna provjera članstva po zahtjevu ublažava zastarjele dozvole, pa statički pregled ne pokazuje role-bypass; dodati atomski opoziv i servisni test. |
 | F1-04c — TOTP gate u passkey prijavi | **S1 potvrđen 2026-11-27** | Vlasnik je potvrdio da passkey nije zamjena za TOTP i odredio S1. `passkeyLogin()` ipak izdaje sesiju bez `twoFactorGate()`; zatvoriti prije prihvatanja Modula 1. |
@@ -104,17 +106,20 @@ Vlasnik je 2026-11-27 potvrdio mapu S1/S2/S3, tenant TOTP politiku, zasebnu runt
 
 ## Vlasničke odluke zabilježene
 
-- **Težine:** potvrđeni su S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za položaj taba u F1-08.
+- **Težine:** potvrđeni su S1 za F1-01/F1-02/F1-03b/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za položaj taba u F1-08.
 - **Tenant MFA:** TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT; passkey nije zamjena. F1-04c je zato potvrđen kao S1.
-- **Platform DB:** izabrana je zasebna runtime rola s tačnim grantovima; `DATABASE_ADMIN_URL` ne ostaje u web runtime-u.
-- **Podjela:** Modul 1 emituje invite/reset događaje i zadržava scoped, vidljiv support pristup; Modul 12 vodi outbox, dostavu i retry UI. Audit purge čeka pravnu/računovodstvenu potvrdu.
+- **Platform MFA:** vlasnik je odredio obavezni TOTP za sve platform operatore i potvrdio F1-03b kao S1; taj tok još nije implementiran ni runtime-provjeren.
+- **Platform DB:** potvrđen je zaseban runtime principal bez superusera, `BYPASSRLS`, vlasništva i `CREATE`, s uskim grantovima, eksplicitnim RLS politikama i zasebnim preflightom. Tačne kolone/politike još nisu izvedene ni testirane; `DATABASE_ADMIN_URL` ne ostaje u web runtime-u.
+- **Retencija:** vlasnik je potvrdio pravnu/računovodstvenu saglasnost po spec rokovima STANDARD 2 g., ACCESS 5 g., FINANCIAL 10 g. uz agregatni audit zapis. Dokument saglasnosti nije nezavisno pregledan; implementacija/purge nisu pokrenuti.
+- **Lokalizacija:** bez širenja izvan spec 01 — firma `currency/timezone/locale`; korisnik `locale/timezone` s firmnim defaultima.
+- **Podjela:** Modul 1 emituje invite/reset događaje i zadržava scoped, vidljiv support pristup; Modul 12 vodi outbox, dostavu i retry UI.
 
 ## Preostalo prije zatvaranja trijaže
 
-1. Platform operator MFA ostaje otvoreno i bez težine; odluka o tenant TOTP-u ne proširuje se prešutno na platform naloge.
-2. Zasebna platform runtime rola je potvrđena, ali tačan grant set, ograničene RLS politike i poseban preflight nisu odobreni ni runtime-provjereni. Statički SQL inventar iznad je osnova za taj prijedlog, ne primijenjeni ACL.
-3. Pravna/računovodstvena potvrda pravila i dokaznog traga prije arhiviranja/brisanja audita.
-4. Lokalizacijski obim treba ostati unutar zaključane spec 01 (firmni `currency/timezone/locale`, korisnički `locale/timezone` uz firmne defaulte), osim ako vlasnik odobri širenje.
+1. F1-03b je S1 potvrđen 2026-11-27: `platformLogin()` i dalje izdaje osmosatnu sesiju samo lozinkom. Nalaz je statički; nema runtime/pilot dokaza.
+2. Dovršiti tačne per-table/column grants, ograničene RLS politike i poseban preflight za odobreni non-BYPASSRLS principal; prijedlog nije primijenjen ni testiran.
+3. Prije koda uskladiti vlasnički potvrđeni platform TOTP zahtjev s normativnim spec 01 §1.8; zatim dizajnirati zasebno secret/enrollment/pre-auth/recovery i prvi operator provisioning. Migracija sadrži samo `totp_enabled`, a ti tokovi nisu pronađeni.
+4. Purge sign-off je vlasnik potvrdio po rokovima iz speca; destruktivni posao i dalje nije implementiran niti odobren kodom bez fraze kapije.
 5. Višefirmski izbor ostaje `ODLOŽENO` prema MVP specifikaciji; „Modul 1 od 11“ naspram programa od 12 modula je dokumentacijsko pitanje, ne kodni blocker.
 
 Prihvaćena težina ne odobrava implementaciju. Za svaki poslovni kod/migraciju/UI i dalje je potrebna fraza **`KREĆEMO U KODIRANJE: 1`**.

@@ -6,23 +6,23 @@
 
 ## Kapija
 
-Vlasnik je potvrdio težinsku mapu i sve težine, uključujući F1-04c kao S1, kako je zabilježeno u `01-AUDIT.md`. Statička SQL površina platform-servisa je sada inventarisana, ali konačni column ACL, role-specific RLS i zasebni preflight nisu zaključani. Platform operator MFA i pravna/računovodstvena purge potvrda ostaju otvoreni; kod i dalje čeka zasebnu frazu.
+Vlasnik je potvrdio S1/S2/S3 mapu, uključujući F1-03b i F1-04c kao S1, te obavezni platform TOTP, purge sign-off po spec rokovima, non-BYPASSRLS ACL smjer i lokalizaciju samo po specu. F1-03b platform policy još treba prenijeti u normativni spec 01 §1.8; TOTP lifecycle i konačni column ACL, RLS politike i zasebni preflight ostaju otvoreni. Kod i dalje čeka zasebnu frazu.
 
 ## Redoslijed predloženog rada
 
 ### A. Zatvoriti preostale sigurnosne i ugovorne odluke
 
-Vlasnik je potvrdio S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant TOTP bez passkey zamjene, zasebna runtime rola i podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry) su potvrđeni. Statički SQL inventar platform-servisa je urađen; preostaju platform operator MFA, pravna/računovodstvena potvrda purgea, odobrenje tačnog column ACL + RLS/preflight modela i potvrda lokalizacijskog obima prema specu.
+Vlasnik je potvrdio S1 za F1-01/F1-02/F1-03b/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant i platform TOTP, zaseban non-BYPASSRLS principal, podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry), purge sign-off po spec rokovima i lokalizacijski obim samo po specu su potvrđeni. Statički SQL inventar je urađen; prije koda treba sinhronizovati novu TOTP odluku u spec 01 §1.8 i dovršiti TOTP lifecycle te tačan column ACL + RLS/preflight model. Kod nije odobren.
 
 **Izlaz:** odobreni dizajn i testabilni acceptance kriteriji; bez koda dok nema fraze iz kapije.
 
 ### B. Učiniti platform tok bezbjednim i upotrebljivim
 
-1. Nakon odobrenja dizajna, implementirati zasebnu platform runtime rolu (ne `DATABASE_ADMIN_URL`) sa tačnim, po mogućnosti column-level grantovima prema inventaru u `01-AUDIT.md`; bez vlasništva, `BYPASSRLS`, članstva u app/migrator roli, `CREATE` ili podrazumijevanih grants. Dodati zasebnu platform ACL matricu i preflight koji provjerava i efektivni ACL i RLS politike; `gradix_app` matrica sama nije dovoljna. Migratorski kredencijali ostaju van Node procesa.
+1. Nakon odobrenja dizajna, implementirati zasebnu platform runtime rolu (ne `DATABASE_ADMIN_URL`) sa tačnim, po mogućnosti column-level grantovima prema inventaru u `01-AUDIT.md`; bez vlasništva, `BYPASSRLS`, članstva u app/migrator roli, `CREATE` ili podrazumijevanih grants. Dodati zasebnu platform ACL matricu i preflight koji provjerava efektivni ACL i RLS politike; `gradix_app` matrica sama nije dovoljna. PostgreSQL test mora kreirati firmu i seed kategorije pod ciljnom no-BYPASS konfiguracijom, posebno provjeriti `companies_seed_equipment_categories` trigger. Migratorski kredencijali ostaju van Node procesa.
 2. Uskladiti onboarding request/response između `PlatformCompanyCreateInput`, rute, servisa i ekrana; dovršiti specifikacijskih pet koraka, vlasničke podatke i seed zahtjeve; osigurati da se konflikt sluga vraća kao kontrolisan `CONFLICT`, uključujući konkurentni pokušaj.
-3. Platform operator MFA ne implementirati dok politika ne bude potvrđena. Dovršiti support tok prema specu: scoped pristup, obavezan razlog, rok ≤60 min i vidljivi tenant banner; ne otvarati opći tenant pristup.
+3. Provesti vlasnički potvrđeni obavezni TOTP za svaki platform login tek nakon što su odobreni secret storage, enrollment/first-operator bootstrap, pre-auth challenge i recovery/reset tok; sesija ne smije nastati prije TOTP-a. F1-03b je S1 i blokira prihvatanje do zatvaranja. Dovršiti support tok prema specu: scoped pristup, obavezan razlog, rok ≤60 min i vidljivi tenant banner; ne otvarati opći tenant pristup.
 
-**Prihvat:** API i UI e2e kreiraju firmu tačno jednom, pozivnica se prikazuje jednom, invalidan payload ne stvara podatke; runtime platform rola ne može čitati proizvoljne poslovne zapise; support pristup ističe i ostavlja provjerljiv trag.
+**Prihvat:** API i UI e2e kreiraju firmu tačno jednom, pozivnica se prikazuje jednom, invalidan payload ne stvara podatke; onboarding seed trigger radi pod ciljanom no-BYPASS rolom; runtime platform rola ne može čitati proizvoljne poslovne zapise; support pristup ističe i ostavlja provjerljiv trag.
 
 ### C. Zatvoriti identitetske i sesijske invarijante
 
@@ -41,7 +41,7 @@ Modul 1 emituje invite/reset događaje; Modul 12 isporučuje ih kroz zajednički
 
 ### E. Završiti audit i matrice
 
-Klasifikovati svaku audit akciju i dodati izvršivu retenciju/read writers. Destruktivni purge/archive čeka pravnu/računovodstvenu potvrdu; dodati audit događaje za obračun i osjetljive priloge. Standardizovati metadata i rekurzivnu zabranu tajni; dodati oznake osjetljivosti i test matrice.
+Klasifikovati svaku audit akciju i dodati izvršivu retenciju/read writers. Vlasnik je potvrdio pravnu/računovodstvenu saglasnost za rokove iz speca; implementacija mora biti idempotentna i bilježiti samo klasu/broj/raspon u `audit.retention_purged`. Dodati audit događaje za obračun i osjetljive priloge. Standardizovati metadata i rekurzivnu zabranu tajni; dodati oznake osjetljivosti i test matrice. Bez destruktivnog izvršavanja prije zasebne kodne kapije i DB testa.
 
 **Prihvat:** finansijski i pristupni događaji imaju očekivane klase; osjetljiva čitanja su provjerljiva; purge je idempotentan, tenant-siguran i ostavlja sažeti dokaz.
 
