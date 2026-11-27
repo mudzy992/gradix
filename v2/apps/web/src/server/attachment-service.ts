@@ -20,6 +20,7 @@
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { writeAudit, type AuditAction } from "./audit";
+import { obligationRecordAllowed, type ObligationViewer } from "./obligation-scope";
 import {
   ATTACHMENT_ENTITY_TYPES as DOMAIN_ENTITY_TYPES,
   MAX_ATTACHMENTS_PER_ENTITY,
@@ -111,13 +112,20 @@ async function purgeStalePending(client: PoolClient, companyId: string, entityTy
   );
 }
 
+async function attachmentScopeAllowed(client: PoolClient, companyId: string, entityType: string, entityId: string, actor?: ObligationViewer): Promise<boolean> {
+  if (entityType !== "OBLIGATION") return true;
+  return !!actor && obligationRecordAllowed(client, companyId, actor, entityId);
+}
+
 export async function listAttachments(
   pool: Pool,
   companyId: string,
   entityType: AttachmentEntityType,
   entityId: string,
+  actor?: ObligationViewer,
 ): Promise<AttachmentRow[]> {
   return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentScopeAllowed(client, companyId, entityType, entityId, actor)) return [];
     const rows = await client.query(
       `SELECT ${COLS} FROM public.attachments
         WHERE company_id = $1 AND entity_type = $2 AND entity_id = $3 AND status <> 'deleted'
@@ -135,7 +143,7 @@ export type RegisterAttachmentResult =
 export async function registerAttachment(
   pool: Pool,
   companyId: string,
-  actor: { userId: string },
+  actor: { userId: string } & Partial<ObligationViewer>,
   entityType: AttachmentEntityType,
   entityId: string,
   input: AttachmentRequest,
@@ -143,6 +151,7 @@ export async function registerAttachment(
 ): Promise<RegisterAttachmentResult> {
   const maxPerEntity = options.maxPerEntity ?? MAX_ATTACHMENTS_PER_ENTITY;
   return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentScopeAllowed(client, companyId, entityType, entityId, actor.scope && actor.projectIds !== undefined ? actor as ObligationViewer : undefined)) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
     await purgeStalePending(client, companyId, entityType, entityId);
 
     const invalid = validateAttachmentInput(input);
@@ -206,6 +215,11 @@ export async function registerAttachment(
   });
 }
 
+async function attachmentIdAllowed(client: PoolClient, companyId: string, attachmentId: string, actor?: ObligationViewer): Promise<boolean> {
+  const target = await client.query<{entity_type:string;entity_id:string}>("SELECT entity_type,entity_id FROM public.attachments WHERE company_id=$1 AND id=$2", [companyId,attachmentId]);
+  return !!target.rows[0] && attachmentScopeAllowed(client, companyId, target.rows[0].entity_type, target.rows[0].entity_id, actor);
+}
+
 /**
  * Potvrda: prilog postaje `ready` tek kad objekat STVARNO postoji i kad se veličina
  * poklapa. Bez ovoga bi u bazi stajao prilog koji se ne može otvoriti.
@@ -213,7 +227,7 @@ export async function registerAttachment(
 export async function confirmAttachment(
   pool: Pool,
   companyId: string,
-  actor: { userId: string },
+  actor: { userId: string } & Partial<ObligationViewer>,
   attachmentId: string,
   audit: { action: AuditAction; entityType: string; entityId: string },
 ): Promise<{ attachment: AttachmentRow } | AttachmentServiceError> {
@@ -221,6 +235,7 @@ export async function confirmAttachment(
   if (!config.configured) return { code: "CONFLICT", message: config.reason };
 
   const row = await withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentIdAllowed(client, companyId, attachmentId, actor.scope && actor.projectIds !== undefined ? actor as ObligationViewer : undefined)) return null;
     const found = await client.query<{ object_key: string; size_bytes: string; status: string }>(
       `SELECT object_key, size_bytes, status FROM public.attachments
         WHERE id = $1 AND company_id = $2`,
@@ -245,6 +260,7 @@ export async function confirmAttachment(
   }
 
   return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentIdAllowed(client, companyId, attachmentId, actor.scope && actor.projectIds !== undefined ? actor as ObligationViewer : undefined)) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
     await client.query(
       `UPDATE public.attachments SET status = 'ready', uploaded_at = clock_timestamp()
         WHERE id = $1 AND company_id = $2 AND status = 'pending'`,
@@ -273,11 +289,13 @@ export async function attachmentDownloadUrl(
   pool: Pool,
   companyId: string,
   attachmentId: string,
+  actor?: ObligationViewer,
 ): Promise<{ url: string; expiresAt: string } | AttachmentServiceError> {
   const config = storageConfig();
   if (!config.configured) return { code: "CONFLICT", message: config.reason };
 
-  const row = await withCompany(pool, toCompanyId(companyId), async (client) => {
+  return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentIdAllowed(client, companyId, attachmentId, actor)) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
     const found = await client.query<{
       object_key: string;
       file_name: string;
@@ -289,16 +307,16 @@ export async function attachmentDownloadUrl(
         WHERE id = $1 AND company_id = $2`,
       [attachmentId, companyId],
     );
-    return found.rows[0] ?? null;
-  });
-  if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
-  if (row.status !== "ready") return { code: "NOT_FOUND", message: "Prilog još nije uploadovan." };
+    const row = found.rows[0];
+    if (!row) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
+    if (row.status !== "ready") return { code: "NOT_FOUND", message: "Prilog još nije uploadovan." };
 
-  return presignDownload({
-    config,
-    key: row.object_key,
-    fileName: row.file_name,
-    contentType: row.content_type,
+    return presignDownload({
+      config,
+      key: row.object_key,
+      fileName: row.file_name,
+      contentType: row.content_type,
+    });
   });
 }
 
@@ -309,11 +327,12 @@ export async function attachmentDownloadUrl(
 export async function softDeleteAttachment(
   pool: Pool,
   companyId: string,
-  actor: { userId: string },
+  actor: { userId: string } & Partial<ObligationViewer>,
   attachmentId: string,
   audit: { action: AuditAction; entityType: string; entityId: string },
 ): Promise<{ ok: true } | AttachmentServiceError> {
   return withCompany(pool, toCompanyId(companyId), async (client) => {
+    if (!await attachmentIdAllowed(client, companyId, attachmentId, actor.scope && actor.projectIds !== undefined ? actor as ObligationViewer : undefined)) return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
     const found = await client.query<{ status: string; entity_id: string }>(
       `SELECT status, entity_id FROM public.attachments WHERE id = $1 AND company_id = $2`,
       [attachmentId, companyId],

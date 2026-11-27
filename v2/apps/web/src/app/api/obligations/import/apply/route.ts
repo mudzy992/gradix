@@ -21,7 +21,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
-    if (guardResult.ctx.scope !== "COMPANY") return fail("FORBIDDEN", "Ova radnja trenutno zahtijeva opseg firme.");
 
     const form = await request.formData().catch(() => null);
     const file = form?.get("file");
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Form polja su uvijek stringovi: `"1"` je jedina istinita vrijednost.
         replaceExisting: form?.get("replaceExisting") === "1",
       },
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
     );
     if ("code" in result) {
       if (result.code === "EMPTY_FILE") return fail("OBLIGATION_IMPORT_INVALID", "Fajl je prazan.");

@@ -5031,6 +5031,8 @@ export const HseTrainingInput = z.object({
   })).min(1).max(100),
   /** Certifikacijska obuka jednim pozivom obnavlja obavezu iz Modula 2. */
   renewObligationId: SafeText.max(128).nullable().optional(),
+  renewExpiresAt: SafeText.regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  renewAttachmentId: SafeText.max(128).nullable().optional(),
 });
 export type HseTrainingInput = z.infer<typeof HseTrainingInput>;
 

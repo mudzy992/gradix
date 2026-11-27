@@ -27,14 +27,12 @@ export async function GET(
     const target = await attachmentTarget(pool, guardResult.ctx.companyId, id);
     // Report files require requester, scope and current-permission checks, not this generic path.
     if (!target || target.entityType === "REPORT_JOB") return fail("NOT_FOUND", "Prilog nije pronađen.");
-    // Fail closed until generic attachment mutations enforce scope inside their transaction.
-    if (target.entityType === "OBLIGATION" && guardResult.ctx.scope !== "COMPANY") return fail("NOT_FOUND", "Prilog nije pronađen.");
 
     if (!can(guardResult.ctx.roles, ATTACHMENT_ACCESS[target.entityType].read)) {
       return fail("FORBIDDEN", "Nemate pravo za ovu radnju.");
     }
 
-    const result = await attachmentDownloadUrl(pool, guardResult.ctx.companyId, id);
+    const result = await attachmentDownloadUrl(pool, guardResult.ctx.companyId, id, guardResult.ctx);
     if (isAttachmentServiceError(result)) return fail(result.code, result.message);
     return ok(result);
   } catch (error) {

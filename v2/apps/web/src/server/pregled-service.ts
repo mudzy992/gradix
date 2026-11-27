@@ -30,6 +30,7 @@ import type {
   PregledSyncRow,
 } from "@gradix/contracts";
 import { can } from "./permissions";
+import { obligationScope } from "./obligation-scope";
 import type { Actor } from "./rbac-service";
 import { computeDashboardAggregates } from "./dashboard-aggregates";
 import { countOpenConflicts, listConflicts, type ConflictListItem } from "./workday-resolve";
@@ -84,24 +85,8 @@ export async function buildPregled(
     const scopeBase = scoped ? [companyIdValue, projectIds] : [companyIdValue];
     const scopeParam = scoped ? "$2" : null;
 
-    /*
-     * Obaveza je „u opsegu“ kad je vezana na projekat iz opsega ILI na radnika/mašinu
-     * koje je neko dodijelio na projekat iz opsega. Datum dodjele se NE gleda: rok
-     * postoji i kad je čovjek juče skinut s projekta — pitanje pregleda je „šta je
-     * isteklo“, a ne „ko je danas tu“.
-     */
-    const scopePredicate = scoped
-      ? `(o.project_id = ANY(${scopeParam})
-         OR EXISTS (
-              SELECT 1
-                FROM public.project_assignments pa
-               WHERE pa.company_id = o.company_id
-                 AND pa.voided_at IS NULL
-                 AND pa.project_id = ANY(${scopeParam})
-                 AND ((o.worker_id IS NOT NULL AND pa.worker_id = o.worker_id)
-                   OR (o.machine_id IS NOT NULL AND pa.machine_id = o.machine_id))
-            ))`
-      : "TRUE";
+    const obligationParams: unknown[] = [companyIdValue];
+    const scopePredicate = obligationScope({userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? []}, obligationParams, "o");
 
     // --- 1. Rokovi: jedan prolaz, bucketi (isteklo / do 30 / 31–90) u JS. ---
     const obligations = await client.query<{
@@ -123,7 +108,7 @@ export async function buildPregled(
           AND o.expires_at IS NOT NULL
           AND ${scopePredicate}
         ORDER BY o.expires_at`,
-      scopeBase,
+      obligationParams,
     );
 
     type ObligationRow = (typeof obligations.rows)[number];
@@ -181,8 +166,10 @@ export async function buildPregled(
 
     // --- 4. Blokirane dodjele: ista definicija blokade kao provjera dodjele ---
     //    (aktivna obaveza tipa koji blokuje + istekla + nema važeće iznimke).
-    const blockedParams = freshParams(scopeBase);
+    const blockedParams = freshParams([companyIdValue]);
     const blockedToday = blockedParams.mark(today);
+    const blockedScope = obligationScope({userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? []}, blockedParams.values, "o");
+    const blockedProjects = actor.scope === "PROJECTS" ? `AND a.project_id = ANY(${blockedParams.mark(actor.projectIds ?? [])}::text[])` : "";
     const blocked = await client.query<{ target: string; type_label: string }>(
       `SELECT COALESCE(m.code, (w.first_name || ' ' || w.last_name)) AS target,
               t.label AS type_label
@@ -197,7 +184,8 @@ export async function buildPregled(
          JOIN public.obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
         WHERE a.company_id = $1
           AND a.voided_at IS NULL
-          ${scoped ? `AND a.project_id = ANY(${scopeParam})` : ""}
+          AND a.from_date <= ${blockedToday}::date AND (a.to_date IS NULL OR a.to_date >= ${blockedToday}::date)
+          ${blockedProjects} AND ${blockedScope}
           AND t.blocks_assignment
           AND o.expires_at < ${blockedToday}::date
           AND NOT EXISTS (

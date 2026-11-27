@@ -22,7 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "obligations.view");
     if (!guardResult.ok) return guardResult.response;
-    return ok({ types: await listObligationTypes(await getVerifiedPool(), guardResult.ctx.companyId) });
+    return ok({ types: await listObligationTypes(await getVerifiedPool(), guardResult.ctx.companyId, guardResult.ctx) });
   } catch (error) {
     return internal(error, "obligation-types.list");
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const result = await createObligationType(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       input,
     );
     if (isServiceError(result)) return fail(result.code, result.message);

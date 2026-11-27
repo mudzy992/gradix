@@ -155,6 +155,8 @@ describeDb("journey D documents", () => {
     await dbAdmin.query("INSERT INTO projects (id,company_id,code,name) VALUES ($1,$2,'SCOPE','Scope')", [project, CO]);
     await dbAdmin.query("INSERT INTO workers (id,company_id,first_name,last_name,hired_at) VALUES ($1,$2,'Van','Opsega','2020-01-01')", [outsider, CO]);
     await dbAdmin.query("INSERT INTO machines (id,company_id,code,name,category_id) VALUES ($1,$2,'SCOPE','Mašina',$2 || '_cat_excavator')", [machine, CO]);
+    await dbAdmin.query("INSERT INTO workers(id,company_id,user_id,first_name,last_name,hired_at) VALUES ($1,$2,$3,'Owner','Linked','2020-01-01')", [`wrk_owner_${RUN}`,CO,ownerId]);
+    await dbAdmin.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')`, [`${assignment}_owner`, CO, project, `wrk_owner_${RUN}`]);
     await dbAdmin.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')`, [assignment, CO, project, workerId]);
     await dbAdmin.query(`INSERT INTO project_assignments (id,company_id,project_id,machine_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')`, [`${assignment}_m`, CO, project, machine]);
     const pm = {userId: ownerId, roles: ["OWNER"], scope: "PROJECTS" as const, projectIds: [project]};

@@ -384616,6 +384616,28 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "renewExpiresAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "renewAttachmentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [

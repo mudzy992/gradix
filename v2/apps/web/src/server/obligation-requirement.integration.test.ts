@@ -31,7 +31,7 @@ const WORKER_A = `wrk_f2a_${RUN}`;
 const WORKER_B = `wrk_f2b_${RUN}`;
 const MEDICAL = `obt_f2m_${RUN}`;
 const SAFETY = `obt_f2s_${RUN}`;
-const ACTOR = { userId: USER, roles: ["OWNER"] as never };
+const ACTOR = { userId: USER, roles: ["OWNER"] as never, scope: "COMPANY" as const, projectIds: null };
 
 describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", () => {
   const admin = new Pool({ connectionString: adminUrl, max: 2 });
@@ -155,7 +155,7 @@ describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", 
     // Filtrira se na SOPSTVENE tipove: svaka nova firma dobija i standardna pravila
     // (MEDICAL, SAFETY_TRAINING), pa bi apsolutan broj zavisio od seeda, a ne od logike.
     const own = { typeId: MEDICAL };
-    const before = await listMissing(app, CO as never, own);
+    const before = await listMissing(app, CO as never, own, ACTOR);
     expect(before.items).toHaveLength(2);
     expect(before.items.every((item) => item.state === "missing")).toBe(true);
     expect(before.items.every((item) => item.typeId === MEDICAL)).toBe(true);
@@ -166,13 +166,13 @@ describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", 
       [`obl_f2_${RUN}`, CO, MEDICAL, WORKER_A, USER],
     );
 
-    const after = await listMissing(app, CO as never, own);
+    const after = await listMissing(app, CO as never, own, ACTOR);
     // Amar ima ljekarski — nedostatak ostaje samo za Behu.
     expect(after.items).toHaveLength(1);
     expect(after.items[0]!.entityId).toBe(WORKER_B);
 
     // A obuka nedostaje obojici — obaveza jednog tipa ne pokriva drugi.
-    const safety = await listMissing(app, CO as never, { typeId: SAFETY });
+    const safety = await listMissing(app, CO as never, { typeId: SAFETY }, ACTOR);
     expect(safety.items.map((item) => item.entityId).sort()).toEqual([WORKER_A, WORKER_B].sort());
   });
 
@@ -189,11 +189,11 @@ describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", 
     );
     expect(deactivated.ok).toBe(true);
 
-    const afterRule = await listMissing(app, CO as never, { typeId: SAFETY });
+    const afterRule = await listMissing(app, CO as never, { typeId: SAFETY }, ACTOR);
     expect(afterRule.items).toEqual([]);
 
     await admin.query("UPDATE public.workers SET is_active = false WHERE id = $1", [WORKER_B]);
-    const afterWorker = await listMissing(app, CO as never, { typeId: MEDICAL });
+    const afterWorker = await listMissing(app, CO as never, { typeId: MEDICAL }, ACTOR);
     expect(afterWorker.items.some((item) => item.entityId === WORKER_B)).toBe(false);
 
     // Vraćanje stanja za sljedeći test.
@@ -222,7 +222,7 @@ describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", 
     // Sopstveni tipovi su pokriveni; standardna pravila su i dalje nedostatak jer za njih
     // obaveze nisu unesene — to je tačno, a ne propust.
     for (const typeId of [MEDICAL, SAFETY]) {
-      const final = await listMissing(app, CO as never, { typeId });
+      const final = await listMissing(app, CO as never, { typeId }, ACTOR);
       expect(final.items).toEqual([]);
     }
   });
@@ -286,7 +286,7 @@ describeDb("F2 — pravila, nedostajuće obaveze i grupne radnje (PostgreSQL)", 
     const requirements = await listRequirements(app, OTHER as never);
     expect(requirements.every((rule) => rule.typeId !== MEDICAL && rule.typeId !== SAFETY)).toBe(true);
 
-    const missing = await listMissing(app, OTHER as never);
+    const missing = await listMissing(app, OTHER as never, {}, ACTOR);
     expect(missing.items).toEqual([]);
     expect(missing.counts.workers).toBe(0);
   });

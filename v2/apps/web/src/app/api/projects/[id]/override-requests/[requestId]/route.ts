@@ -24,7 +24,7 @@ export async function POST(
     if (!parsed.success) return fail("VALIDATION_FAILED", "Nedostaje rok do kojeg iznimka važi.");
     const input = parsed.data;
 
-    const { requestId } = await context.params;
+    const { id, requestId } = await context.params;
     const result = await approveOverride(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
@@ -35,7 +35,7 @@ export async function POST(
         projectIds: guardResult.ctx.projectIds,
       },
       requestId,
-      { validUntil: input.validUntil, fromDate: input.fromDate, toDate: input.toDate ?? null },
+      { validUntil: input.validUntil, fromDate: input.fromDate, toDate: input.toDate ?? null, projectId: id },
     );
     if (isServiceError(result)) return fail(result.code, result.message);
     return ok({ assignment: result });

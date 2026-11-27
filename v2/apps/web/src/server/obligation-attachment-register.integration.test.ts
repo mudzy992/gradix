@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { companyId } from "@gradix/db";
+import { companyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 
 type StoredObject = { sizeBytes: number; contentType: string };
@@ -80,6 +80,7 @@ const { GET: attachmentUrlRoute } = await import(
   "@/app/api/obligations/[id]/attachments/[attachmentId]/url/route"
 );
 
+const shared = await import("./attachment-service");
 const appUrl = process.env.DATABASE_URL;
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = appUrl && adminUrl ? describe : describe.skip;
@@ -125,6 +126,11 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
   }, 60_000);
 
   afterAll(async () => {
+    await withCompany(admin, companyId(CO), async client => {
+      await client.query("SET LOCAL session_replication_role = replica");
+      await client.query("DELETE FROM public.project_assignments WHERE company_id = $1", [CO]);
+      await client.query("DELETE FROM public.projects WHERE company_id = $1", [CO]);
+    });
     await admin.query("DELETE FROM public.attachments WHERE company_id = $1", [CO]);
     await admin.query("DELETE FROM public.obligations WHERE company_id = $1", [CO]);
     await admin.query("DELETE FROM public.obligation_types WHERE company_id = $1", [CO]);
@@ -199,4 +205,34 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
     );
     expect(allowed.status).toBe(200);
   });
+  it("PROJECTS/SELF scoped generic and obligation attachments", async () => {
+    const project = `prj_att_${RUN}`;
+    await admin.query("INSERT INTO projects(id,company_id,code,name) VALUES ($1,$2,'P','Project')", [project,CO]);
+    await admin.query("UPDATE workers SET user_id=$1 WHERE id=$2 AND company_id=$3",[USER,WRK,CO]);
+    await admin.query("INSERT INTO project_assignments(id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')",[`pas_att_${RUN}`,CO,project,WRK]);
+    const pm = {userId:USER,roles:["OWNER"],scope:"PROJECTS" as const,projectIds:[project]};
+    const out = {...pm,projectIds:[]};
+    const self = {...pm,scope:"SELF" as const,projectIds:null};
+    const input = {fileName:"project.pdf",sizeBytes:12,sha256:"d".repeat(64),head:new TextEncoder().encode("%PDF-1.7\nxxx")};
+    const denied = await shared.registerAttachment(app,CO,out,"OBLIGATION",OBL,input);
+    expect(shared.isAttachmentServiceError(denied) && denied.code).toBe("NOT_FOUND");
+    const registered = await shared.registerAttachment(app,CO,pm,"OBLIGATION",OBL,input);
+    expect(shared.isAttachmentServiceError(registered)).toBe(false);
+    if (shared.isAttachmentServiceError(registered)) return;
+    const attachment = registered.attachment.id;
+    const row = await admin.query<{object_key:string}>("SELECT object_key FROM attachments WHERE company_id=$1 AND id=$2",[CO,attachment]);
+    objectStore.set(row.rows[0]!.object_key,{sizeBytes:12,contentType:"application/pdf"});
+    const audit = {action:"attachment.confirmed" as const,entityType:"obligation",entityId:OBL};
+    const unauthorized = await shared.confirmAttachment(app,CO,out,attachment,audit);
+    expect(shared.isAttachmentServiceError(unauthorized) && unauthorized.code).toBe("NOT_FOUND");
+    const confirmed = await shared.confirmAttachment(app,CO,pm,attachment,audit);
+    expect(shared.isAttachmentServiceError(confirmed)).toBe(false);
+    expect(shared.isAttachmentServiceError(await shared.attachmentDownloadUrl(app,CO,attachment,out))).toBe(true);
+    expect(shared.isAttachmentServiceError(await shared.attachmentDownloadUrl(app,CO,attachment,self))).toBe(false);
+    const deniedDelete = await shared.softDeleteAttachment(app,CO,out,attachment,{...audit,action:"attachment.deleted"});
+    expect(shared.isAttachmentServiceError(deniedDelete) && deniedDelete.code).toBe("NOT_FOUND");
+    expect((await shared.listAttachments(app,CO,"OBLIGATION",OBL,out))).toEqual([]);
+    expect((await shared.listAttachments(app,CO,"OBLIGATION",OBL,pm)).map(a=>a.id)).toContain(attachment);
+  });
+
 });

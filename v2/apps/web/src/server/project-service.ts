@@ -26,6 +26,7 @@ import {
   type Scope,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { obligationRecordAllowed, obligationScope, obligationTargetAllowed } from "./obligation-scope";
 import { can } from "./permissions";
 import type { Actor } from "./rbac-service";
 
@@ -1046,6 +1047,8 @@ export async function requestOverride(
   }
 
   return withCompany(pool, companyId, async (client) => {
+    if (actor.scope === "PROJECTS" && !await obligationTargetAllowed(client, companyId, actor, {projectId})) return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
+    if (!await obligationRecordAllowed(client, companyId, actor, input.obligationId)) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     const project = await client.query("SELECT 1 FROM projects WHERE id = $1 AND company_id = $2", [projectId, companyId]);
     if (project.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Projekat nije pronađen." } as ServiceError;
@@ -1055,8 +1058,9 @@ export async function requestOverride(
       `SELECT t.label AS type_label
          FROM obligations o
          JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-        WHERE o.id = $1 AND o.company_id = $2`,
-      [input.obligationId, companyId],
+        WHERE o.id = $1 AND o.company_id = $2 AND o.superseded_by IS NULL
+          AND (($3::text IS NOT NULL AND o.worker_id=$3) OR ($4::text IS NOT NULL AND o.machine_id=$4))`,
+      [input.obligationId, companyId, input.workerId ?? null, input.machineId ?? null],
     );
     if (obligation.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
@@ -1176,7 +1180,7 @@ export async function approveOverride(
   companyId: CompanyId,
   actor: ProjectActor,
   requestId: string,
-  input: { validUntil: string; fromDate?: string; toDate?: string | null },
+  input: { validUntil: string; fromDate?: string; toDate?: string | null; projectId?: string },
 ): Promise<AssignmentRow | ServiceError> {
   if (!can(actor.roles, "projects.override")) {
     return {
@@ -1195,13 +1199,23 @@ export async function approveOverride(
          FROM project_assignment_overrides r
          JOIN obligations o ON o.company_id = r.company_id AND o.id = r.obligation_id
          JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
-        WHERE r.id = $1 AND r.company_id = $2 AND r.assignment_id IS NULL`,
+        WHERE r.id = $1 AND r.company_id = $2 AND r.assignment_id IS NULL FOR UPDATE OF r`,
       [requestId, companyId],
     );
     const row = request.rows[0];
     if (!row) {
       return { code: "NOT_FOUND", message: "Zahtjev nije pronađen ili je već obrađen." } as ServiceError;
     }
+
+    if ((input.projectId && row.project_id !== input.projectId) ||
+        (actor.scope === "PROJECTS" && !await obligationTargetAllowed(client, companyId, actor, {projectId:String(row.project_id)})) ||
+        !await obligationRecordAllowed(client, companyId, actor, String(row.obligation_id))) {
+      return { code: "NOT_FOUND", message: "Zahtjev nije pronađen ili je već obrađen." } as ServiceError;
+    }
+    const sameTarget = await client.query(`SELECT id FROM public.obligations WHERE company_id=$1 AND id=$2 AND superseded_by IS NULL
+      AND (($3::text IS NOT NULL AND worker_id=$3) OR ($4::text IS NOT NULL AND machine_id=$4))`,
+      [companyId, row.obligation_id, row.worker_id, row.machine_id]);
+    if (!sameTarget.rowCount) return { code: "NOT_FOUND", message: "Zahtjev nije pronađen ili je već obrađen." } as ServiceError;
 
     const id = `pas_${crypto.randomUUID()}`;
     const today = await companyToday(client, companyId);
@@ -1302,11 +1316,15 @@ export async function listOverrideRequests(
 
     // Opseg: zahtjevi se vide samo za projekte koje osoba vidi.
     const ids = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
-    if (ids !== null) {
+    if (actor.scope === "PROJECTS" && ids !== null) {
       if (ids.length === 0) return [];
       conditions.push(cond("r.project_id = ANY($::text[])", ids));
     }
     const { where, params } = buildWhere(conditions);
+    const scoped = obligationScope(actor, params, "o");
+    const projectScoped = actor.scope === "PROJECTS"
+      ? `EXISTS (SELECT 1 FROM (SELECT r.company_id, r.project_id, NULL::text worker_id, NULL::text machine_id) scoped_project WHERE ${obligationScope(actor, params, "scoped_project")})`
+      : "TRUE";
 
     const result = await client.query(
       `SELECT r.id, r.project_id, r.obligation_id, r.reason, r.created_at, r.requested_by,
@@ -1320,7 +1338,8 @@ export async function listOverrideRequests(
          LEFT JOIN workers w ON w.company_id = r.company_id AND w.id = r.worker_id
          LEFT JOIN machines m ON m.company_id = r.company_id AND m.id = r.machine_id
          LEFT JOIN users ru ON ru.id = r.requested_by
-        ${where}
+        ${where} AND ${scoped} AND ${projectScoped}
+          AND ((r.worker_id IS NOT NULL AND r.worker_id=o.worker_id) OR (r.machine_id IS NOT NULL AND r.machine_id=o.machine_id))
         ORDER BY r.created_at`,
       params,
     );

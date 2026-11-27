@@ -35,7 +35,7 @@ export async function PATCH(
       guardResult.ctx.companyId,
       id,
       body,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
     );
     if (!result.ok) return fail(requirementErrorCode(result.code), result.message);
     return ok({ requirement: result.requirement });
@@ -57,7 +57,7 @@ export async function DELETE(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
       id,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
     );
     if (!result.ok) return fail(requirementErrorCode(result.code), result.message);
     return ok({ deleted: true });

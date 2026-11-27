@@ -14,6 +14,7 @@ import { fail, internal, ok } from "@/server/api";
 import { AttachmentEntityType, AttachmentRegisterBody } from "@gradix/contracts";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
+import { getObligation, isServiceError } from "@/server/obligation-service";
 import { ATTACHMENT_ACCESS, attachmentEntityExists } from "@/server/attachment-access";
 import {
   isAttachmentServiceError,
@@ -35,13 +36,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, ATTACHMENT_ACCESS[entityType].read);
     if (!guardResult.ok) return guardResult.response;
 
-    // Fail closed until the generic attachment service enforces obligation scope in its transaction.
-    if (entityType === "OBLIGATION" && guardResult.ctx.scope !== "COMPANY") return fail("NOT_FOUND", "Obaveza nije pronađena.");
     const pool = await getVerifiedPool();
+    if (entityType === "OBLIGATION" && isServiceError(await getObligation(pool, guardResult.ctx.companyId, entityId, {...guardResult.ctx, includeAttachments:false}))) return fail("NOT_FOUND", "Obaveza nije pronađena.");
     if (!(await attachmentEntityExists(pool, guardResult.ctx.companyId, entityType, entityId))) {
       return fail("NOT_FOUND", `${ATTACHMENT_ACCESS[entityType].label} nije pronađen.`);
     }
-    return ok({ attachments: await listAttachments(pool, guardResult.ctx.companyId, entityType, entityId) });
+    return ok({ attachments: await listAttachments(pool, guardResult.ctx.companyId, entityType, entityId, guardResult.ctx) });
   } catch (error) {
     return internal(error, "attachments.list");
   }
@@ -58,9 +58,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, ATTACHMENT_ACCESS[entityType].write);
     if (!guardResult.ok) return guardResult.response;
 
-    // Fail closed until the generic attachment service enforces obligation scope in its transaction.
-    if (entityType === "OBLIGATION" && guardResult.ctx.scope !== "COMPANY") return fail("NOT_FOUND", "Obaveza nije pronađena.");
     const pool = await getVerifiedPool();
+    if (entityType === "OBLIGATION" && isServiceError(await getObligation(pool, guardResult.ctx.companyId, entityId, {...guardResult.ctx, includeAttachments:false}))) return fail("NOT_FOUND", "Obaveza nije pronađena.");
     if (!(await attachmentEntityExists(pool, guardResult.ctx.companyId, entityType, entityId))) {
       return fail("NOT_FOUND", `${ATTACHMENT_ACCESS[entityType].label} nije pronađen.`);
     }
@@ -68,7 +67,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const result = await registerAttachment(
       pool,
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId },
+      guardResult.ctx,
       entityType,
       entityId,
       {

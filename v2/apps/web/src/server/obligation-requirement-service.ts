@@ -22,6 +22,7 @@ import {
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
 import type { Actor } from "./rbac-service";
+import { obligationScope, obligationTargetAllowed, type ObligationActor, type ObligationViewer } from "./obligation-scope";
 
 export type RequirementRow = ObligationRequirement & {
   typeLabel: string;
@@ -100,8 +101,9 @@ export async function createRequirement(
   pool: Pool,
   companyId: CompanyId,
   input: RequirementInput,
-  actor: Actor,
+  actor: ObligationActor,
 ): Promise<RequirementMutationResult> {
+  if (actor.scope !== "COMPANY") return { ok: false, status: 403, code: "FORBIDDEN", message: "Pravila firme zahtijevaju opseg firme." };
   const invalid = validateRequirement(input);
   if (invalid) return { ok: false, status: 400, code: "INVALID_REQUIREMENT", message: invalid };
 
@@ -177,8 +179,9 @@ export async function updateRequirement(
   companyId: CompanyId,
   id: string,
   patch: Partial<RequirementInput>,
-  actor: Actor,
+  actor: ObligationActor,
 ): Promise<RequirementMutationResult> {
+  if (actor.scope !== "COMPANY") return { ok: false, status: 403, code: "FORBIDDEN", message: "Pravila firme zahtijevaju opseg firme." };
   return withCompany(pool, companyId, async (client) => {
     const current = await client.query(`${REQUIREMENTS_SELECT} AND r.id = $2`, [companyId, id]);
     if (current.rowCount === 0) {
@@ -229,8 +232,9 @@ export async function deleteRequirement(
   pool: Pool,
   companyId: CompanyId,
   id: string,
-  actor: Actor,
+  actor: ObligationActor,
 ): Promise<{ ok: true } | { ok: false; status: number; code: string; message: string }> {
+  if (actor.scope !== "COMPANY") return { ok: false, status: 403, code: "FORBIDDEN", message: "Pravila firme zahtijevaju opseg firme." };
   return withCompany(pool, companyId, async (client) => {
     const result = await client.query(
       "DELETE FROM obligation_requirements WHERE company_id = $1 AND id = $2",
@@ -290,6 +294,7 @@ async function loadMissing(
   companyId: CompanyId,
   today: string,
   options: MissingListOptions,
+  actor: ObligationViewer,
 ): Promise<MissingItem[]> {
   const requirements = await client.query(`${REQUIREMENTS_SELECT} AND r.is_active`, [companyId]);
   const rules = requirements.rows.map(toRequirement);
@@ -328,11 +333,12 @@ async function loadMissing(
                 WHERE pa.company_id = w.company_id AND pa.worker_id = w.id
                   -- Dodjela je aktivna dok nije ponistena i dok joj nije prosao to_date.
                   AND pa.voided_at IS NULL
-                  AND (pa.to_date IS NULL OR pa.to_date >= CURRENT_DATE)
+                  AND pa.from_date <= $2::date AND (pa.to_date IS NULL OR pa.to_date >= $2::date)
+                  AND ($3::text[] IS NULL OR pa.project_id=ANY($3::text[])) AND ($4::text IS NULL OR pa.project_id=$4)
                 ORDER BY pa.from_date DESC LIMIT 1) AS project_id
          FROM workers w
         WHERE w.company_id = $1 AND w.is_active`,
-      [companyId],
+      [companyId, today, actor.scope === "PROJECTS" ? actor.projectIds ?? [] : null, options.projectId ?? null],
     );
     for (const row of workers.rows) {
       subjects.push({
@@ -359,11 +365,12 @@ async function loadMissing(
               (SELECT pa.project_id FROM project_assignments pa
                 WHERE pa.company_id = m.company_id AND pa.machine_id = m.id
                   AND pa.voided_at IS NULL
-                  AND (pa.to_date IS NULL OR pa.to_date >= CURRENT_DATE)
+                  AND pa.from_date <= $2::date AND (pa.to_date IS NULL OR pa.to_date >= $2::date)
+                  AND ($3::text[] IS NULL OR pa.project_id=ANY($3::text[])) AND ($4::text IS NULL OR pa.project_id=$4)
                 ORDER BY pa.from_date DESC LIMIT 1) AS project_id
          FROM machines m
         WHERE m.company_id = $1 AND m.is_active`,
-      [companyId],
+      [companyId, today, actor.scope === "PROJECTS" ? actor.projectIds ?? [] : null, options.projectId ?? null],
     );
     for (const row of machines.rows) {
       subjects.push({
@@ -397,10 +404,20 @@ async function loadMissing(
     }
   }
 
+  // Do not return or calculate missing counts for subjects outside the session scope.
+  if (actor.scope !== "COMPANY") {
+    for (let i = subjects.length - 1; i >= 0; i--) {
+      const subject = subjects[i]!;
+      const target = subject.kind === "WORKER" ? {workerId:subject.id} : subject.kind === "MACHINE" ? {machineId:subject.id} : {projectId:subject.id};
+      if (!await obligationTargetAllowed(client, companyId, actor, target)) subjects.splice(i, 1);
+    }
+  }
   if (subjects.length === 0) return [];
 
   // Postojeće obaveze za SVE entitete jednim upitom — bez ovoga bi lista od 80 radnika
   // napravila 80 upita.
+  const existingParams: unknown[] = [companyId];
+  const existingScope = obligationScope(actor, existingParams, "o");
   const existing = await client.query<{
     type_id: string;
     worker_id: string | null;
@@ -411,9 +428,9 @@ async function loadMissing(
   }>(
     `SELECT type_id, worker_id, machine_id, project_id,
             to_char(expires_at, 'YYYY-MM-DD') AS expires_at, superseded_by
-       FROM obligations
-      WHERE company_id = $1`,
-    [companyId],
+       FROM obligations o
+      WHERE company_id = $1 AND ${existingScope}`,
+    existingParams,
   );
   const bySubject = new Map<string, ExistingObligation[]>();
   for (const row of existing.rows) {
@@ -469,11 +486,12 @@ async function loadMissing(
 export async function listMissing(
   pool: Pool,
   companyId: CompanyId,
-  options: MissingListOptions = {},
+  options: MissingListOptions,
+  actor: ObligationViewer,
 ): Promise<MissingPage> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyDate(client, companyId);
-    const items = await loadMissing(client, companyId, today, options);
+    const items = await loadMissing(client, companyId, today, options, actor);
     const counts = {
       total: items.length,
       workers: items.filter((item) => item.entityKind === "WORKER").length,
@@ -521,11 +539,11 @@ export async function createMissingObligations(
   pool: Pool,
   companyId: CompanyId,
   options: MissingListOptions & { reviewAt: string; responsibleUserId?: string | null },
-  actor: Actor,
+  actor: ObligationActor,
 ): Promise<CreateMissingResult> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyDate(client, companyId);
-    const items = await loadMissing(client, companyId, today, options);
+    const items = await loadMissing(client, companyId, today, options, actor);
     const result: CreateMissingResult = { created: 0, skipped: [], ids: [] };
 
     for (const item of items) {
@@ -659,8 +677,9 @@ export async function bulkRenewObligations(
  */
 export function requirementErrorCode(
   code: string,
-): "VALIDATION_FAILED" | "NOT_FOUND" | "OBLIGATION_REQUIREMENT_EXISTS" {
+): "VALIDATION_FAILED" | "NOT_FOUND" | "FORBIDDEN" | "OBLIGATION_REQUIREMENT_EXISTS" {
   switch (code) {
+    case "FORBIDDEN": return "FORBIDDEN";
     case "NOT_FOUND":
     case "TYPE_NOT_FOUND":
       return "NOT_FOUND";

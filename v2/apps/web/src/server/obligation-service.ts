@@ -29,7 +29,6 @@ import {
   type ObligationState,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
-import type { Actor } from "./rbac-service";
 import { obligationRecordAllowed, obligationScope, obligationTargetAllowed, type ObligationActor, type ObligationViewer } from "./obligation-scope";
 import {
   attachmentDownloadUrl as attachmentDownloadUrlShared,
@@ -87,11 +86,12 @@ const toType = (row: Record<string, unknown>): ObligationTypeRow => ({
   obligationCount: Number(row.obligation_count),
 });
 
-export async function listObligationTypes(pool: Pool, companyId: CompanyId): Promise<ObligationTypeRow[]> {
+export async function listObligationTypes(pool: Pool, companyId: CompanyId, actor: ObligationViewer): Promise<ObligationTypeRow[]> {
   return withCompany(pool, companyId, async (client) => {
-    const result = await client.query(`${TYPE_SELECT} ORDER BY t.entity_kind, t.sort_order, t.label`, [
-      companyId,
-    ]);
+    const params: unknown[] = [companyId];
+    const scope = obligationScope(actor, params, "o");
+    const select = TYPE_SELECT.replace("o.type_id = t.id)", `o.type_id = t.id AND ${scope})`);
+    const result = await client.query(`${select} ORDER BY t.entity_kind, t.sort_order, t.label`, params);
     return result.rows.map(toType);
   });
 }
@@ -131,9 +131,10 @@ function validateTypeInput(input: Partial<ObligationTypeInput>): ServiceError | 
 export async function createObligationType(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   input: ObligationTypeInput,
 ): Promise<ObligationTypeRow | ServiceError> {
+  if (actor.scope !== "COMPANY") return { code: "FORBIDDEN", message: "Pravila firme zahtijevaju opseg firme." };
   const invalid = validateTypeInput(input);
   if (invalid) return invalid;
 
@@ -181,10 +182,11 @@ export async function createObligationType(
 export async function updateObligationType(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   typeId: string,
   input: Partial<ObligationTypeInput>,
 ): Promise<ObligationTypeRow | ServiceError> {
+  if (actor.scope !== "COMPANY") return { code: "FORBIDDEN", message: "Pravila firme zahtijevaju opseg firme." };
   const invalid = validateTypeInput(input);
   if (invalid) return invalid;
 
@@ -1216,7 +1218,7 @@ export async function registerAttachment(
   const result = await registerAttachmentShared(
     pool,
     companyId,
-    { userId: actor.userId },
+    actor,
     "OBLIGATION",
     obligationId,
     input,
@@ -1250,7 +1252,7 @@ export async function confirmAttachment(
   const result = await confirmAttachmentShared(
     pool,
     companyId,
-    { userId: actor.userId },
+    actor,
     attachmentId,
     { action: "obligation.attachment_added", entityType: "obligation_attachment", entityId: attachmentId },
   );
@@ -1275,7 +1277,7 @@ export async function attachmentDownloadUrl(
     return found.rowCount !== 0;
   });
   if (!belongs) return { code: "NOT_FOUND", message: "Prilog nije pronađen." } as ServiceError;
-  const result = await attachmentDownloadUrlShared(pool, companyId, attachmentId);
+  const result = await attachmentDownloadUrlShared(pool, companyId, attachmentId, actor);
   if (isAttachmentServiceError(result)) return result as ServiceError;
   return result;
 }

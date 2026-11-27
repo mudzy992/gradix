@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const result = await updateObligationType(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       input,
     );

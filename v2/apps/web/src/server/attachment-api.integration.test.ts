@@ -64,7 +64,7 @@ vi.mock("./guard", () => ({
       };
     }
     void request;
-    return { ok: true as const, ctx: { userId, companyId: company, roles: [role], email: "a@t.example" } };
+    return { ok: true as const, ctx: { userId, companyId: company, roles: [role], scope: "COMPANY", projectIds: null, email: "a@t.example" } };
   },
 }));
 

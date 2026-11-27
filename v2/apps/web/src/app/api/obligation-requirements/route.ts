@@ -69,7 +69,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         isRequired: body.isRequired ?? true,
         isActive: body.isActive ?? true,
       },
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
     );
     if (!result.ok) return fail(requirementErrorCode(result.code), result.message);
     return ok({ requirement: result.requirement });

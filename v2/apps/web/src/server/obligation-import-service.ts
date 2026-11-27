@@ -17,7 +17,7 @@ import type { Pool, PoolClient } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { businessDate, safeTimezone } from "@gradix/domain";
 import { writeAudit } from "./audit";
-import type { Actor } from "./rbac-service";
+import { obligationRecordAllowed, obligationTargetAllowed, type ObligationActor, type ObligationViewer } from "./obligation-scope";
 import {
   MAX_BYTES,
   MAX_ROWS,
@@ -109,6 +109,7 @@ function cell(row: RawRow, header: string | undefined): string | number | Date |
 async function loadLookups(
   client: PoolClient,
   companyId: CompanyId,
+  actor: ObligationViewer,
 ): Promise<{
   types: Map<string, { id: string; entityKind: string }>;
   workers: Map<string, string>;
@@ -135,7 +136,8 @@ async function loadLookups(
   );
   const workerMap = new Map<string, string>();
   for (const row of workers.rows) {
-    workerMap.set(normaliseHeader(`${row.first_name} ${row.last_name}`), String(row.id));
+    if (await obligationTargetAllowed(client, companyId, actor, {workerId: row.id}))
+      workerMap.set(normaliseHeader(`${row.first_name} ${row.last_name}`), String(row.id));
   }
 
   const machines = await client.query<{ id: string; code: string }>(
@@ -143,7 +145,7 @@ async function loadLookups(
     [companyId],
   );
   const machineMap = new Map<string, string>();
-  for (const row of machines.rows) machineMap.set(normaliseHeader(String(row.code)), String(row.id));
+  for (const row of machines.rows) if (await obligationTargetAllowed(client, companyId, actor, {machineId: row.id})) machineMap.set(normaliseHeader(String(row.code)), String(row.id));
 
   const projects = await client.query<{ id: string; code: string; name: string }>(
     "SELECT id, code, name FROM projects WHERE company_id = $1 AND status <> 'CANCELLED'",
@@ -151,6 +153,7 @@ async function loadLookups(
   );
   const projectMap = new Map<string, string>();
   for (const row of projects.rows) {
+    if (!await obligationTargetAllowed(client, companyId, actor, {projectId: row.id})) continue;
     projectMap.set(normaliseHeader(String(row.code)), String(row.id));
     projectMap.set(normaliseHeader(String(row.name)), String(row.id));
   }
@@ -163,9 +166,10 @@ async function previewRows(
   companyId: CompanyId,
   sheet: ParsedSheet,
   today: string,
+  actor: ObligationViewer,
 ): Promise<{ rows: ImportRow[]; missingColumns: string[] }> {
   const headers = mapHeaders(sheet);
-  const lookups = await loadLookups(client, companyId);
+  const lookups = await loadLookups(client, companyId, actor);
 
   const missingColumns: string[] = [];
   if (!headers.has("entityKind")) missingColumns.push("Vrsta");
@@ -335,6 +339,7 @@ export async function previewImport(
   companyId: CompanyId,
   bytes: Buffer,
   fileName: string,
+  actor: ObligationViewer,
 ): Promise<ImportPreview | ImportFailure> {
   if (bytes.byteLength === 0) return { code: "EMPTY_FILE" };
   if (bytes.byteLength > MAX_BYTES) {
@@ -355,7 +360,7 @@ export async function previewImport(
 
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
-    const { rows, missingColumns } = await previewRows(client, companyId, sheet, today);
+    const { rows, missingColumns } = await previewRows(client, companyId, sheet, today, actor);
     return {
       rows,
       summary: {
@@ -393,9 +398,9 @@ export async function applyImport(
   bytes: Buffer,
   fileName: string,
   options: { replaceExisting: boolean; responsibleUserId?: string | null },
-  actor: Actor,
+  actor: ObligationActor,
 ): Promise<ImportApplyResult | ImportFailure> {
-  const preview = await previewImport(pool, companyId, bytes, fileName);
+  const preview = await previewImport(pool, companyId, bytes, fileName, actor);
   if ("code" in preview) return preview;
 
   return withCompany(pool, companyId, async (client) => {
@@ -408,6 +413,14 @@ export async function applyImport(
         continue;
       }
 
+      const target = row.entityKind === "WORKER" ? {workerId:row.entityId} : row.entityKind === "MACHINE" ? {machineId:row.entityId} : {projectId:row.entityId};
+      if ((row.conflictsWith && !await obligationRecordAllowed(client, companyId, actor, row.conflictsWith.obligationId)) ||
+          !await obligationTargetAllowed(client, companyId, actor, target)) {
+        result.skipped += 1;
+        result.errors.push({ rowNumber: row.rowNumber, field: "Entitet", message: "Entitet nije pronađen." });
+        continue;
+      }
+      await client.query("SAVEPOINT obligation_import_row");
       try {
         if (row.conflictsWith) {
           if (!options.replaceExisting) {
@@ -417,24 +430,36 @@ export async function applyImport(
               field: "Entitet",
               message: "Obaveza tog tipa već postoji — izaberite zamjenu ili preskočite red.",
             });
+            await client.query("RELEASE SAVEPOINT obligation_import_row");
             continue;
           }
           // Stara obaveza NIJE obrisana: označena je kao zamijenjena, pa ostaje u historiji.
           const newId = `obl_${randomId()}`;
-          await client.query(
+          const replaced = await client.query(
             `UPDATE obligations SET superseded_by = $3, updated_at = now()
-              WHERE company_id = $1 AND id = $2`,
-            [companyId, row.conflictsWith.obligationId, newId],
+              WHERE company_id = $1 AND id = $2 AND type_id=$4 AND superseded_by IS NULL
+                AND (($5::text='WORKER' AND worker_id=$6) OR ($5='MACHINE' AND machine_id=$6) OR ($5='PROJECT' AND project_id=$6))`,
+            [companyId, row.conflictsWith.obligationId, newId, row.typeId, row.entityKind, row.entityId],
           );
-          await insertObligation(client, companyId, newId, row, options.responsibleUserId ?? actor.userId);
+          if (!replaced.rowCount) {
+            result.skipped += 1;
+            result.errors.push({rowNumber:row.rowNumber,field:"Entitet",message:"Obaveza je promijenjena; ponovite pregled."});
+            await client.query("RELEASE SAVEPOINT obligation_import_row");
+            continue;
+          }
+          await insertObligation(client, companyId, newId, row, options.responsibleUserId ?? actor.userId, actor.userId);
           result.replaced += 1;
+          await client.query("RELEASE SAVEPOINT obligation_import_row");
           continue;
         }
 
         const id = `obl_${randomId()}`;
-        await insertObligation(client, companyId, id, row, options.responsibleUserId ?? actor.userId);
+        await insertObligation(client, companyId, id, row, options.responsibleUserId ?? actor.userId, actor.userId);
         result.created += 1;
+        await client.query("RELEASE SAVEPOINT obligation_import_row");
       } catch (error) {
+        await client.query("ROLLBACK TO SAVEPOINT obligation_import_row");
+        await client.query("RELEASE SAVEPOINT obligation_import_row");
         result.skipped += 1;
         result.errors.push({
           rowNumber: row.rowNumber,
@@ -469,29 +494,22 @@ async function insertObligation(
   id: string,
   row: ImportRow,
   responsibleUserId: string | null,
+  createdBy: string,
 ): Promise<void> {
   await client.query(
     `INSERT INTO obligations
-       (id, company_id, type_id, worker_id, machine_id, project_id,
-        number, issuer, issued_at, expires_at, review_at, note, responsible_user_id, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-    [
-      id,
-      companyId,
-      row.typeId,
+       (id, company_id, type_id, worker_id, machine_id, project_id, review_at, note, responsible_user_id, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [id,companyId,row.typeId,
       row.entityKind === "WORKER" ? row.entityId : null,
       row.entityKind === "MACHINE" ? row.entityId : null,
       row.entityKind === "PROJECT" ? row.entityId : null,
-      row.number,
-      row.issuer,
-      row.issuedAt,
-      row.expiresAt,
-      row.reviewAt,
-      row.note,
-      responsibleUserId,
-      id,
-    ],
+      row.reviewAt,row.note,responsibleUserId,createdBy],
   );
+  await client.query(`INSERT INTO obligation_versions
+    (id,company_id,obligation_id,version,number,issuer,issued_at,expires_at,note,created_by)
+    VALUES ($1,$2,$3,1,$4,$5,$6,$7,$8,$9)`,
+    [`obv_${randomId()}`,companyId,id,row.number,row.issuer,row.issuedAt,row.expiresAt,row.note,createdBy]);
 }
 
 async function companyToday(client: PoolClient, companyId: CompanyId): Promise<string> {

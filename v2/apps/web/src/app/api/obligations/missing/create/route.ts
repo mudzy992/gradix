@@ -20,7 +20,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
-    if (guardResult.ctx.scope !== "COMPANY") return fail("FORBIDDEN", "Ova radnja trenutno zahtijeva opseg firme.");
 
     const body = (await request.json().catch(() => null)) as {
       reviewAt?: unknown;
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         typeId: typeof body.typeId === "string" ? body.typeId : undefined,
         projectId: typeof body.projectId === "string" ? body.projectId : undefined,
       },
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
     );
     return ok(result);
   } catch (error) {

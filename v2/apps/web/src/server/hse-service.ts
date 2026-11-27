@@ -39,6 +39,7 @@ import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
 import { notify } from "./notification-service";
 import { hseRecordAllowed, hseScope, hseTargetAllowed, hseWorkersAllowed, type HseActor } from "./hse-scope";
+import { obligationRecordAllowed } from "./obligation-scope";
 
 export type HseOutcome =
   | { outcome: "OK"; id: string; version?: number; obligationId?: string | null }
@@ -704,6 +705,10 @@ export type TrainingInput = {
   clientLocalId?: string | null;
   /** Za `CERTIFICATION`: obaveza (Modul 2) koja se obnavlja ovom obukom. */
   renewObligationId?: string | null;
+  /** Novi rok certifikata — nikad se ne izmišlja iz trajanja obuke. */
+  renewExpiresAt?: string | null;
+  /** Potvrđen prilog certifikata, vezan na istu obavezu. */
+  renewAttachmentId?: string | null;
 };
 
 /**
@@ -724,8 +729,30 @@ export async function createTrainingTx(
 ): Promise<HseOutcome> {
   if (!hseTargetAllowed(actor, input.projectId)) return NOT_FOUND;
   if (!await hseWorkersAllowed(client, actor, [input.heldByWorkerId, ...input.attendees.map(a => a.workerId)])) return NOT_FOUND;
-  // Renewal is a separate obligations write; defer restricted renewal until it is scoped.
-  if (input.renewObligationId && actor.scope !== "COMPANY") return NOT_FOUND;
+  let certificateVersion: number | null = null;
+  if (input.renewObligationId) {
+    const date = input.renewExpiresAt;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0,10) !== date) {
+      return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Novi rok certifikata je obavezan (YYYY-MM-DD)." };
+    }
+    if (!trainingCanRenewCertificate(input.kind, input.attendees.length)) {
+      return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Obavezu može potvrditi samo certifikacijska obuka sa prisutnim radnikom." };
+    }
+    if (!await obligationRecordAllowed(client, actor.companyId, actor, input.renewObligationId)) return NOT_FOUND;
+    const subject = await client.query<{ worker_id: string | null; current_version: number; expires_at: string | null }>(
+      "SELECT worker_id,current_version,expires_at::text FROM public.obligations WHERE company_id=$1 AND id=$2 AND superseded_by IS NULL",
+      [actor.companyId, input.renewObligationId],
+    );
+    if (!subject.rows[0]?.worker_id || !input.attendees.some(a => a.workerId === subject.rows[0]!.worker_id)) return NOT_FOUND;
+    const certificate = await client.query(`SELECT id FROM public.attachments WHERE company_id=$1 AND id=$2
+      AND entity_type='OBLIGATION' AND entity_id=$3 AND status='ready' FOR SHARE`,
+      [actor.companyId, input.renewAttachmentId ?? null, input.renewObligationId]);
+    if (!certificate.rowCount) return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Za obnovu je potrebna potvrđena isprava uz ovu obavezu." };
+    if (subject.rows[0].expires_at && date <= subject.rows[0].expires_at) {
+      return { outcome: "CONFLICT", code: "OBLIGATION_CONFLICT", message: "Novi rok mora biti poslije postojećeg roka." };
+    }
+    certificateVersion = Number(subject.rows[0].current_version) + 1;
+  }
   if (input.kind === "TOOLBOX") {
     if (!validToolboxInput({ topic: input.topic ?? input.title, attendees: input.attendees.map((a) => a.workerId), durationMinutes: input.durationMinutes })) {
       return {
@@ -781,30 +808,22 @@ export async function createTrainingTx(
       );
     }
 
-    /* Certifikacijska obuka obnavlja obavezu iz Modula 2 (§1.4/21) — samo ona i samo uz prisutne. */
+    /* Nova verzija i obuka nastaju u istoj transakciji; prethodni rok ostaje dokaz. */
     let renewed = false;
-    if (input.renewObligationId && trainingCanRenewCertificate(input.kind, input.attendees.length)) {
-      const obligation = await client.query<{ id: string }>(
-        `UPDATE public.obligations
-            SET reviewed_at = clock_timestamp(), reviewed_by = $3, review_state = 'reviewed',
-                updated_at = clock_timestamp()
-          WHERE company_id = $1 AND id = $2
-          RETURNING id`,
-        [actor.companyId, input.renewObligationId, actor.userId],
-      );
-      renewed = Boolean(obligation.rows[0]);
-      if (renewed) {
-        await writeAudit(client, {
-          companyId: actor.companyId,
-          actorId: actor.userId,
-          actorEmail: null,
-          action: "hse.certificate_renewed",
-          entityType: "obligation",
-          entityId: input.renewObligationId!,
-          metadata: { trainingId },
-          retentionClass: "ACCESS",
-        });
-      }
+    if (input.renewObligationId && certificateVersion !== null) {
+      await client.query(`INSERT INTO public.obligation_versions
+        (id,company_id,obligation_id,version,expires_at,created_by,attachment_id)
+        VALUES ($1,$2,$3,$4,$5::date,$6,$7)`,
+        [id("obv"), actor.companyId, input.renewObligationId, certificateVersion, input.renewExpiresAt, actor.userId, input.renewAttachmentId]);
+      await client.query(`UPDATE public.obligations SET review_state='pending_review', review_note=NULL,
+        reviewed_at=NULL, reviewed_by=NULL, updated_at=clock_timestamp() WHERE company_id=$1 AND id=$2`,
+        [actor.companyId, input.renewObligationId]);
+      renewed = true;
+      await writeAudit(client, {
+        companyId: actor.companyId, actorId: actor.userId, actorEmail: null,
+        action: "hse.certificate_renewed", entityType: "obligation", entityId: input.renewObligationId,
+        metadata: { trainingId, version: certificateVersion, expiresAt: input.renewExpiresAt }, retentionClass: "ACCESS",
+      });
     }
 
     await writeAudit(client, {
