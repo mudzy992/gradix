@@ -17,7 +17,7 @@ import { withCompany, companyId } from "@gradix/db";
 import { POST as reopenRoute } from "@/app/api/projects/[id]/reopen/route";
 import { issueAccessToken, ACCESS_COOKIE } from "./session";
 import { POST as reverseRoute } from "@/app/api/costs/[id]/reverse/route";
-import { postCost, reverseSourceCost } from "./cost-entry-service";
+import { ensureCostCategories, postCost, reverseCost, reverseSourceCost } from "./cost-entry-service";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const describeDb = process.env.DATABASE_URL && adminUrl ? describe : describe.skip;
@@ -42,6 +42,7 @@ async function signIn(): Promise<string> {
 
 describeDb("F5 zatvaranje projekta — knjiga se ne dira dok se projekat ne otvori", () => {
   let cookie = "";
+  const app = new Pool({connectionString:process.env.DATABASE_URL, max:4});
 
   beforeAll(async () => {
     await admin.query(`INSERT INTO public.companies (id, name, slug) VALUES ($1, 'R61 Close', $2)`, [
@@ -106,6 +107,49 @@ describeDb("F5 zatvaranje projekta — knjiga se ne dira dok se projekat ne otvo
     await admin.query("DELETE FROM public.users WHERE id = $1", [USER]);
     await admin.query("DELETE FROM public.companies WHERE id = $1", [COMPANY]);
     await admin.end();
+    await app.end();
+  });
+
+  it("istovremeno knjiženje svakog tipa izvora stvara samo jedan aktivni red", async () => {
+    await withCompany(app, companyId(COMPANY), c => ensureCostCategories(c, COMPANY, USER));
+    for (const type of ["WORKDAY", "MACHINE_WORK_LOG", "FUEL_ENTRY", "HAUL", "SERVICE_ORDER", "PURCHASE", "SUBCONTRACTOR", "MANUAL"] as const) {
+      const draft={companyId:COMPANY,projectId:PROJECT,sourceType:type,sourceId:`race_${type}_${RUN}`,occurredOn:"2026-11-19",amountCents:100n,currency:"BAM" as const,actorId:USER};
+      const results=await Promise.all(Array.from({length:4},()=>withCompany(app,companyId(COMPANY),c=>postCost(c,draft))));
+      expect(results.filter(r=>r.created)).toHaveLength(1);
+      expect(new Set(results.map(r=>r.id)).size).toBe(1);
+    }
+  });
+
+  it("retry izvora nakon storna ne vraća poništeni trošak u knjigu", async () => {
+    const draft={companyId:COMPANY,projectId:PROJECT,sourceType:"FUEL_ENTRY" as const,sourceId:`reversed_${RUN}`,occurredOn:"2026-11-19",amountCents:100n,currency:"BAM" as const,actorId:USER};
+    const posted=await withCompany(app,companyId(COMPANY),c=>postCost(c,draft));
+    const reversal=await reverseCost(app,{companyId:COMPANY,userId:USER,roles:["OWNER"]},posted.id,{reason:"Pogrešan originalni iznos",replacement:{amount:"2.00"}});
+    expect(reversal.outcome).toBe("OK");
+    const retries=await Promise.all(Array.from({length:4},()=>withCompany(app,companyId(COMPANY),c=>postCost(c,draft))));
+    expect(retries.every(r=>!r.created && r.status==="REVERSED")).toBe(true);
+    const rows=await admin.query<{status:string;amount:string}>("SELECT status,amount_cents::text AS amount FROM cost_entries WHERE company_id=$1 AND (source_id=$2 OR reverses_id=$3) ORDER BY status",[COMPANY,draft.sourceId,posted.id]);
+    expect(rows.rows).toEqual([{status:"POSTED",amount:"200"},{status:"REVERSED",amount:"100"}]);
+  });
+
+  it("knjiženje čeka zatvaranje projekta i vidi FINISHED, ne stari snapshot", async () => {
+    await withCompany(app, companyId(COMPANY), c => ensureCostCategories(c, COMPANY, USER));
+    const connection=await admin.connect();
+    try {
+      await connection.query("BEGIN");
+      await connection.query("SELECT set_config('app.company_id',$1,true)",[COMPANY]);
+      await connection.query("UPDATE public.projects SET status='FINISHED',closed_at=clock_timestamp(),closed_by=$3 WHERE company_id=$1 AND id=$2",[COMPANY,PROJECT,USER]);
+      const pending=withCompany(app,companyId(COMPANY),c=>postCost(c,{companyId:COMPANY,projectId:PROJECT,sourceType:"FUEL_ENTRY",sourceId:`close_race_${RUN}`,occurredOn:"2026-11-19",amountCents:100n,currency:"BAM",actorId:USER}));
+      let blocked=false;
+      for(let i=0;i<100 && !blocked;i++) {
+        blocked=Boolean((await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%INSERT INTO public.cost_entries%'")).rowCount);
+        if(!blocked) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(blocked).toBe(true);
+      await connection.query("COMMIT");
+      await expect(pending).rejects.toThrow(/PROJECT_CLOSED/);
+    } finally {await connection.query("ROLLBACK");connection.release();}
+    const rows=await admin.query("SELECT id FROM public.cost_entries WHERE company_id=$1 AND source_id=$2",[COMPANY,`close_race_${RUN}`]);
+    expect(rows.rowCount).toBe(0);
   });
 
   it("knjiženje na zatvoren projekat je odbijeno, storno vraća reversed=false", async () => {
@@ -165,15 +209,19 @@ describeDb("F5 zatvaranje projekta — knjiga se ne dira dok se projekat ne otvo
     ).rejects.toThrow(/PROJECT_CLOSED/);
 
     // 2. Storno iz revizije izvora NE baca — revizija izvora ne smije pasti zbog knjige.
-    const reversed = await withCompany(admin, companyId(COMPANY), (client) =>
-      reverseSourceCost(client, {
+    const reversed = await withCompany(admin, companyId(COMPANY), async (client) => {
+      const result = await reverseSourceCost(client, {
         companyId: COMPANY,
         actorId: USER,
         sourceType: "MANUAL",
         sourceId: `src_open_${RUN}`,
         reason: "Pogrešan iznos na terenu.",
-      }),
-    );
+      });
+      // The caught database exception must not leave the outer transaction aborted.
+      const stillUsable = await client.query("SELECT 1");
+      expect(stillUsable.rowCount).toBe(1);
+      return result;
+    });
     expect(reversed.reversed).toBe(false);
 
     // 3. Ni storno kroz API ne prolazi: guard brani `INSERT` zamjenskog reda. Storno NIJE tiho

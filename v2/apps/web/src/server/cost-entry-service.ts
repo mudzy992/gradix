@@ -185,10 +185,21 @@ export type CostPostDraft = {
  * (baza ga CHECK-om veže na `amount IS NULL AND currency IS NULL`, pa „PENDING sa nulom“ ne
  * prolazi ni kroz direktan INSERT).
  */
+/** Serialize retries with reversals, including when the only historical row is REVERSED. */
+async function lockCostSource(client: PoolClient, companyId: string, sourceType: string, sourceId: string): Promise<void> {
+  await client.query("SELECT pg_advisory_xact_lock(hashtextextended(json_build_array($1::text,$2::text,$3::text)::text, 0))", [companyId, sourceType, sourceId]);
+}
+
 export async function postCost(
   client: PoolClient,
   draft: CostPostDraft,
-): Promise<{ id: string; created: boolean; status: "POSTED" | "PENDING" }> {
+): Promise<{ id: string; created: boolean; status: "POSTED" | "PENDING" | "REVERSED" }> {
+  await lockCostSource(client, draft.companyId, draft.sourceType, draft.sourceId);
+  const prior = await client.query<{id:string;status:"POSTED" | "PENDING" | "REVERSED"}>(
+    `SELECT id,status FROM public.cost_entries WHERE company_id=$1 AND source_type=$2 AND source_id=$3
+      ORDER BY (status <> 'REVERSED') DESC, booked_at DESC LIMIT 1`,
+    [draft.companyId,draft.sourceType,draft.sourceId]);
+  if (prior.rows[0]) return {id:prior.rows[0].id, status:prior.rows[0].status, created:false};
   await ensureCostCategories(client, draft.companyId, draft.actorId);
   const categoryId = await resolveCostCategory(
     client,
@@ -288,7 +299,7 @@ export async function settlePendingCost(
 ): Promise<{ id: string; settled: boolean } | null> {
   const row = await client.query<{ id: string; status: string }>(
     `SELECT id, status FROM public.cost_entries
-      WHERE company_id = $1 AND source_type = $2 AND source_id = $3 AND status <> 'REVERSED'`,
+      WHERE company_id = $1 AND source_type = $2 AND source_id = $3 AND status <> 'REVERSED' FOR UPDATE`,
     [params.companyId, params.sourceType, params.sourceId],
   );
   const entry = row.rows[0];
@@ -850,6 +861,9 @@ export async function reverseCost(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    const source = await client.query<{source_type:string;source_id:string}>(
+      "SELECT source_type,source_id FROM public.cost_entries WHERE company_id=$1 AND id=$2", [actor.companyId,costId]);
+    if (source.rows[0]) await lockCostSource(client, actor.companyId, source.rows[0].source_type, source.rows[0].source_id);
     const found = await client.query<{
       id: string;
       project_id: string;
@@ -987,6 +1001,7 @@ async function reverseCostWithClient(
     note: string;
   },
 ): Promise<{ id: string; replacementId: string } | null> {
+  await lockCostSource(client, params.companyId, params.sourceType, params.sourceId);
   const found = await client.query<{
     id: string;
     project_id: string;
@@ -1066,8 +1081,8 @@ async function reverseCostWithClient(
 /**
  * Javni ulaz za servise revizije (`*-revise.ts`): storniraj trošak nastao iz izvora.
  *
- * NIKAD ne baca: revizija izvornog zapisa je poslovna radnja i ne smije pasti zbog knjige troškova
- * (isto pravilo kao `book*`). Vraća `{reversed:false}` kad nema šta stornirati.
+ * Zatvoren projekat ne prima storno; savepoint čuva ostatak transakcije u tom slučaju.
+ * Neočekivane greške se propagiraju kako se ne bi tiho izgubio storno.
  */
 export async function reverseSourceCost(
   client: PoolClient,
@@ -1079,14 +1094,19 @@ export async function reverseSourceCost(
     reason: string;
   },
 ): Promise<{ reversed: boolean }> {
+  await client.query("SAVEPOINT reverse_source_cost");
   try {
     const result = await reverseCostWithClient(client, {
       ...params,
       note: `Storno zbog ispravke izvornog zapisa: ${params.reason.trim()}`,
     });
+    await client.query("RELEASE SAVEPOINT reverse_source_cost");
     return { reversed: result !== null };
-  } catch {
-    return { reversed: false };
+  } catch (error) {
+    await client.query("ROLLBACK TO SAVEPOINT reverse_source_cost");
+    await client.query("RELEASE SAVEPOINT reverse_source_cost");
+    if (error instanceof Error && error.message.includes("PROJECT_CLOSED")) return { reversed: false };
+    throw error;
   }
 }
 

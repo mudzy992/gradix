@@ -489,6 +489,16 @@ async function periodBlockers(
     });
   }
 
+  // Corrections are reviewable but are not yet applied to runs. Never silently
+  // approve or pay a period while an incoming correction remains unapplied.
+  const corrections = await client.query<{n:string}>(
+    "SELECT count(*)::text AS n FROM public.pay_corrections WHERE company_id=$1 AND target_period_id=$2 AND status='OPEN'",
+    [company,periodId],
+  );
+  if (Number(corrections.rows[0]?.n ?? 0) > 0) blockers.push({
+    code:"PENDING_CORRECTIONS",count:Number(corrections.rows[0]!.n),message:"Postoje neobrađene korekcije iz zaključanog perioda.",
+  });
+
   const run = await client.query<{ id: string }>(
     "SELECT id FROM public.payroll_runs WHERE company_id = $1 AND period_id = $2 ORDER BY revision DESC LIMIT 1",
     [company, periodId],
@@ -1601,7 +1611,7 @@ export async function approvePeriod(
         LIMIT 1`,
       [actor.companyId, periodId, actor.userId],
     );
-    if ((selfLine.rowCount ?? 0) > 0 && !actor.system) {
+    if ((selfLine.rowCount ?? 0) > 0) {
       return {
         code: "SELF_APPROVAL_FORBIDDEN",
         message: "Ne možete odobriti obračun u kojem ste i sami radnik.",
@@ -1610,7 +1620,7 @@ export async function approvePeriod(
 
     const bounds = periodBounds(found.year, found.month);
     const blockers = await periodBlockers(client, actor.companyId, periodId, bounds);
-    const hard = blockers.filter((blocker) => blocker.code !== "NO_RUN");
+    const hard = blockers;
     if (hard.length > 0) {
       return {
         code: "PERIOD_NOT_READY",
@@ -1676,6 +1686,10 @@ export async function lockPeriod(
         message: "Zaključiti se može samo odobren period.",
       } as PayrollError;
     }
+    // Approval is not a permanent waiver: reject a missing run/rate/parameter
+    // or newly opened day/conflict before the irreversible transition.
+    const blockers = await periodBlockers(client, actor.companyId, periodId, periodBounds(found.year, found.month));
+    if (blockers.length) return {code:"PERIOD_NOT_READY", message:"Period nije spreman za zaključavanje.", detail:{blockers}} as PayrollError;
     await client.query(
       `UPDATE public.pay_periods
           SET status = 'LOCKED', locked_at = clock_timestamp(), locked_by = $3,

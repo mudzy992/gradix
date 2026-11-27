@@ -410,6 +410,19 @@ describeDb("F8 servis i održavanje — integraciono", () => {
 
   /* ------------------------------------------------------------ 5. knjiženje troška */
 
+  it("paralelna ugradnja dijelova ne može preći raspoloživu zalihu",async()=>{
+    const itemResponse=await stockItemsPost(jsonRequest("http://t/api/stock-items",COOKIES.mech,{code:"RACE-PART",name:"Dio",unit:"kom"}));
+    expect(itemResponse.status).toBe(200);
+    const itemId=((await itemResponse.json()) as {data:{id:string}}).data.id;
+    expect((await movementsPost(jsonRequest("http://t/api/stock-movements",COOKIES.mech,{itemId,kind:"IN",quantity:"10",unitCostAmount:"1.00"}))).status).toBe(200);
+    const order=await createOrder(COOKIES.mech,{machineId:MACHINE,origin:"MANUAL",kind:"INTERNAL",priority:"LOW",description:"Paralelna ugradnja",assignedMechanicWorkerId:WORKER_MECH});
+    const send=()=>partsPost(jsonRequest(`http://t/api/service-orders/${order.id}/parts`,COOKIES.mech,{itemId,quantity:"7",unitCostAmount:"1.00"}),{params:Promise.resolve({id:order.id})});
+    const responses=await Promise.all([send(),send()]);
+    expect(responses.map(r=>r.status).sort()).toEqual([200,409]);
+    const balance=await admin.query<{balance:string}>(`SELECT sum(CASE WHEN kind='IN' THEN quantity WHEN kind='OUT' THEN -quantity ELSE 0 END)::text AS balance FROM public.stock_movements WHERE company_id=$1 AND item_id=$2`,[CO_A,itemId]);
+    expect(balance.rows[0]?.balance).toBe("3.000");
+  });
+
   it("trošak sa projektom ide na projekat; bez projekta SAMO na mašinu — nikad oboje", async () => {
     const projectId = `prj_f8_${RUN}`;
     /* Projekat se upisuje u SVOJOJ transakciji prije kreiranja naloga: rute rade nad drugom

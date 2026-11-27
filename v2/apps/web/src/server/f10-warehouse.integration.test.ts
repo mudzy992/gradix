@@ -12,7 +12,8 @@ import { companyId, withCompany } from "@gradix/db";
 import { applyStockCount, createStockCount } from "./stock-count-service";
 import { createWarehouse, setStockLevel, stockBalance, transferStock } from "./warehouse-service";
 import { createFuelTank, listFuelTanks } from "./fuel-price-service";
-import { listStockItems, saveStockItem } from "./stock-service";
+import { listStockItems, recordStockMovement, saveStockItem } from "./stock-service";
+import { createFuelEntry } from "./fuel-entry-service";
 import type { Role } from "./permissions";
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
@@ -51,7 +52,7 @@ describeDb("F10A-1 skladišni ledger", () => {
   afterAll(async () => {
     await withCompany(admin, companyId(company), async (client) => {
       await client.query("SET LOCAL session_replication_role=replica");
-      for (const table of ["stock_count_items","stock_counts","stock_item_levels","stock_movements","fuel_tanks","stock_items","warehouses","projects","sessions","memberships"]) await client.query(`DELETE FROM ${table} WHERE company_id=$1`,[company]);
+      for (const table of ["cost_entries","fuel_entries","stock_count_items","stock_counts","stock_item_levels","stock_movements","fuel_tanks","stock_items","warehouses","machines","workers","projects","audit_events","sessions","memberships"]) await client.query(`DELETE FROM ${table} WHERE company_id=$1`,[company]);
     });
     await admin.query("DELETE FROM companies WHERE id=ANY($1::text[])",[[company,other]]);
     await admin.query("DELETE FROM users WHERE id=$1",[user]);
@@ -76,6 +77,22 @@ describeDb("F10A-1 skladišni ledger", () => {
     expect((await countApply(new NextRequest("http://t/api/stock-counts/id/apply",{method:"POST",headers:{cookie,"content-type":"application/json"},body:JSON.stringify({reason:"Provjereno"})}),ctx)).status).toBe(200);
     const badTransfer=await transferPost(new NextRequest("http://t/api/stock-transfers",{method:"POST",headers:{cookie,"content-type":"application/json"},body:JSON.stringify({fromWarehouseId:central,toWarehouseId:site,itemId:item,quantity:"1",occurredOn:"2026-02-30"})}));
     expect(badTransfer.status).toBe(400);
+  });
+  it("konkurentni izlaz i transfer ne mogu potrošiti istu zalihu",async()=>{
+    const raceItem=`race_${run}`;
+    await withCompany(admin,companyId(company),async client=>{
+      await client.query("INSERT INTO stock_items(id,company_id,code,name,unit,created_by,updated_by) VALUES($1,$2,'RACE','Race','kom',$3,$3)",[raceItem,company,user]);
+      await client.query("INSERT INTO stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,unit_cost_cents,occurred_on,created_by) VALUES($1,$2,$3,$4,'IN',10,100,current_date,$5)",[`race_in_${run}`,company,raceItem,central,user]);
+    });
+    const [out,transfer]=await Promise.all([
+      recordStockMovement(app,actor,{itemId:raceItem,warehouseId:central,kind:"OUT",quantity:"7"}),
+      transferStock(app,actor,{itemId:raceItem,fromWarehouseId:central,toWarehouseId:site,quantity:"7",occurredOn:"2026-11-23"}),
+    ]);
+    expect([out,transfer].filter(r=>r.outcome==="OK")).toHaveLength(1);
+    const balances=await stockBalance(app,actor,{itemId:raceItem});
+    if(balances.outcome!=="OK") throw Error(balances.message);
+    expect((balances.data as {warehouse_id:string;on_hand:string}[]).find(r=>r.warehouse_id===central)?.on_hand).toBe("3.000");
+    await expect(withCompany(app,companyId(company),client=>client.query("INSERT INTO public.stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,occurred_on,created_by) VALUES($1,$2,$3,$4,'OUT',4,current_date,$5)",[`race_invalid_${run}`,company,raceItem,central,user]))).rejects.toThrow(/STOCK_INSUFFICIENT/);
   });
   it("transfer pravi dvije kretnje i ne mijenja zbir", async () => {
     const result=await transferStock(app,actor,{fromWarehouseId:central,toWarehouseId:site,itemId:item,quantity:"3.000",occurredOn:"2026-11-23"});
@@ -146,6 +163,23 @@ describeDb("F10A-1 skladišni ledger", () => {
     expect(tanks.find((entry)=>entry.id===created.data.id)?.last_count_at).toBeTruthy();
     const amount=await withCompany(admin,companyId(company),(client)=>client.query<{quantity:string}>("SELECT quantity::text FROM stock_movements WHERE company_id=$1 AND source_id=$2 AND kind='COUNT'",[company,draft.data.id]));
     expect(amount.rows).toEqual([{quantity:"-20.000"}]);
+  });
+  it("dva paralelna točenja ne mogu isprazniti cisternu ispod nule",async()=>{
+    const worker=`race_worker_${run}`,machine=`race_machine_${run}`;
+    await admin.query("UPDATE public.companies SET fuel_tank_enabled=true WHERE id=$1",[company]);
+    await withCompany(admin,companyId(company),async client=>{
+      await client.query("INSERT INTO public.workers(id,company_id,first_name,last_name,hired_at) VALUES($1,$2,'Test','Driver','2020-01-01')",[worker,company]);
+      await client.query("INSERT INTO public.machines(id,company_id,code,name,category_id) VALUES($1,$2,'TANK-RACE','Bager',$2 || '_cat_excavator')",[machine,company]);
+    });
+    const tank=await createFuelTank(app,actor,{name:"Race tank",capacityL:20,currentL:10});
+    if(tank.outcome!=="OK") throw Error("tank creation failed");
+    const scopedActor={...actor,scope:"COMPANY" as const,projectIds:null};
+    const input={machineId:machine,driverWorkerId:worker,projectId:project,filledAt:"2026-11-23T12:00:00Z",liters:7,totalAmount:"7.00",tankId:tank.data.id};
+    const results=await Promise.all([createFuelEntry(app,scopedActor,input),createFuelEntry(app,scopedActor,input)]);
+    expect(results.filter(r=>r.outcome==="OK")).toHaveLength(1);
+    expect((await listFuelTanks(app,actor)).find(t=>t.id===tank.data.id)?.current_l).toBe(3);
+    const costs=await admin.query("SELECT id FROM public.cost_entries WHERE company_id=$1 AND source_type='FUEL_ENTRY' AND status='POSTED'",[company]);
+    expect(costs.rowCount).toBe(1);
   });
   it("baza na kraju transakcije odbija nepotpun transfer", async () => {
     await expect(withCompany(app,companyId(company),async (client) => {

@@ -279,6 +279,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     const approved = await approvePeriod(app, actor, periodId);
     expect(isPayrollError(approved)).toBe(true);
     if (isPayrollError(approved)) expect(approved.code).toBe("PERIOD_NOT_READY");
+    expect(await lockPeriod(app,actor,periodId)).toMatchObject({code:"CONFLICT"});
   });
 
   it("RATE_MISSING: nema satnice → linija bez iznosa i blokirano odobrenje", async () => {
@@ -299,6 +300,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     const approved = await approvePeriod(app, actor, periodId);
     if (isPayrollError(approved)) expect(approved.code).toBe("PERIOD_NOT_READY");
     else throw new Error("odobrenje je prošlo uprkos RATE_MISSING");
+    expect(await lockPeriod(app,actor,periodId)).toMatchObject({code:"CONFLICT"});
   });
 
   it("satnica se čita NA DAN RADA, ne trenutna", async () => {
@@ -323,6 +325,17 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
 
     // Isti dan sa „trenutnom“ satnicom dao bi 320,00 — zato se ovo mjeri.
     expect(regular?.amount_cents).not.toBe(32000);
+  });
+
+  it("paralelno zaključavanje odobrenog perioda uspijeva tačno jednom", async () => {
+    await addRate(WORKER, 1000);
+    await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    const periodId=await openPeriod(2026,3);
+    expect(isPayrollError(await calculatePeriod(app,actor,periodId))).toBe(false);
+    expect(isPayrollError(await approvePeriod(app,actor,periodId))).toBe(false);
+    const results=await Promise.all([lockPeriod(app,actor,periodId),lockPeriod(app,actor,periodId)]);
+    expect(results.filter(r=>!isPayrollError(r))).toHaveLength(1);
+    expect(results.filter(r=>isPayrollError(r))).toMatchObject([{code:"PAYROLL_ALREADY_LOCKED"}]);
   });
 
   it("pay_corrections: izmjena dana u LOCKED periodu NE prepisuje obračun", async () => {
@@ -366,6 +379,30 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     if (isPayrollError(afterLock)) throw new Error(afterLock.message);
     const afterAmount = afterLock.lines.find((line) => line.component_code === "REDOVNI")?.amount_cents;
     expect(afterAmount).toBe(originalAmount);
+  });
+
+  it("zaključen dan i izmjena segmenta kreiraju korekcije i bez unaprijed otvorenog idućeg mjeseca",async()=>{
+    await addRate(WORKER,1000);
+    const day=await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    const period=await openPeriod(2026,3);
+    const calc=await calculatePeriod(app,actor,period); if(isPayrollError(calc)) throw Error(calc.message);
+    expect(isPayrollError(await approvePeriod(app,actor,period))).toBe(false);
+    expect(isPayrollError(await lockPeriod(app,actor,period))).toBe(false);
+    const before=await listLines(app,actor,period);
+    await withCompany(app,toCompanyId(CO),async client=>{
+      await client.query("UPDATE public.workdays SET day_kind='SICK',absence_note='Bolovanje' WHERE company_id=$1 AND id=$2",[CO,day]);
+      await client.query("UPDATE public.work_entries SET ended_at=ended_at-interval '1 hour' WHERE company_id=$1 AND workday_id=$2",[CO,day]);
+    });
+    const found=await admin.query<{delta:string;target_month:number;status:string}>(`SELECT c.delta_hours::text AS delta,p.month AS target_month,c.status
+      FROM public.pay_corrections c JOIN public.pay_periods p ON p.company_id=c.company_id AND p.id=c.target_period_id
+      WHERE c.company_id=$1 AND c.workday_id=$2 ORDER BY c.created_at`,[CO,day]);
+    expect(found.rows).toEqual([{delta:"0.000",target_month:4,status:"OPEN"},{delta:"-1.000",target_month:4,status:"OPEN"}]);
+    expect(await listLines(app,actor,period)).toEqual(before);
+    const target=await admin.query<{id:string}>("SELECT id FROM public.pay_periods WHERE company_id=$1 AND year=2026 AND month=4",[CO]);
+    const targetId=target.rows[0]!.id;
+    expect(isPayrollError(await calculatePeriod(app,actor,targetId))).toBe(false);
+    const approval=await approvePeriod(app,actor,targetId);
+    expect(approval).toMatchObject({code:"PERIOD_NOT_READY",detail:{blockers:expect.arrayContaining([expect.objectContaining({code:"PENDING_CORRECTIONS",count:2})])}});
   });
 
   it("terenski dodatak: dan van sjedišta firme traži parametar, pa daje dodatak po danu", async () => {
@@ -495,6 +532,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     );
     expect(isPayrollError(selfApprove)).toBe(true);
     if (isPayrollError(selfApprove)) expect(selfApprove.code).toBe("SELF_APPROVAL_FORBIDDEN");
+    expect(await approvePeriod(app,{userId:ACCT,companyId:CO,roles:["ACCOUNTANT"],system:true},periodId)).toMatchObject({code:"SELF_APPROVAL_FORBIDDEN"});
 
     // Neko drugi (vlasnik nije radnik) odobrava normalno.
     const approved = await approvePeriod(app, actor, periodId);

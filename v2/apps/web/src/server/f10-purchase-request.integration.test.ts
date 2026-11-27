@@ -156,6 +156,24 @@ describeDb("F10A-2 zahtjevi nabavke",()=>{
     const unique=await withCompany(admin,companyId(company),client=>client.query("SELECT id FROM material_issues WHERE company_id=$1 AND client_generated_id=$2",[company,concurrent.clientGeneratedId]));
     expect(unique.rowCount).toBe(1);
   });
+  it("konkurentni izlazi iz iste zalihe ne knjiže više od dostupnog",async()=>{
+    const raceItem=`race_item_${run}`;
+    const warehouse=await withCompany(admin,companyId(company),async client=>{
+      const row=await client.query<{id:string}>("SELECT id FROM public.warehouses WHERE company_id=$1 AND kind='CENTRAL'",[company]);
+      await client.query("INSERT INTO public.stock_items(id,company_id,code,name,unit,created_by,updated_by) VALUES($1,$2,'RACE','Race','kom',$3,$3)",[raceItem,company,user]);
+      await client.query("INSERT INTO public.stock_movements(id,company_id,item_id,warehouse_id,kind,quantity,unit_cost_cents,occurred_on,created_by) VALUES($1,$2,$3,$4,'IN',10,101,current_date,$5)",[ `race_in_${run}`,company,raceItem,row.rows[0]!.id,user]);
+      return row.rows[0]!.id;
+    });
+    const input={warehouseId:warehouse,projectId:project,issuedAt:"2026-11-23T12:00:00Z",items:[{itemId:raceItem,quantity:"7"}]};
+    const results=await Promise.all([issueMaterial(app,owner,{...input,clientGeneratedId:randomUUID()}),issueMaterial(app,owner,{...input,clientGeneratedId:randomUUID()})]);
+    const ok=results.filter(r=>r.outcome==="OK"); expect(ok).toHaveLength(1);
+    if(ok[0]?.outcome!=="OK") throw Error("issue failed");
+    expect(ok[0].data.amountCents).toBe("707");
+    const row=await admin.query<{balance:string;cost:string}>(`SELECT
+      (SELECT sum(CASE WHEN kind='IN' THEN quantity WHEN kind='OUT' THEN -quantity ELSE 0 END)::text FROM public.stock_movements WHERE company_id=$1 AND item_id=$2) AS balance,
+      (SELECT amount_cents::text FROM public.cost_entries WHERE company_id=$1 AND source_type='PURCHASE' AND source_id=$3) AS cost`,[company,raceItem,ok[0].data.id]);
+    expect(row.rows[0]).toEqual({balance:"3.000",cost:"707"});
+  });
   it("nema predaje bez ovlasti, niti pozitivne stavke od nule",async()=>{
     expect((await createPurchaseRequest(app,{...owner,roles:["ACCOUNTANT"]},input("10"))).outcome).toBe("FORBIDDEN");
     expect((await createPurchaseRequest(app,owner,{...input("10"),items:[{...input("10").items[0]!,quantity:"0"}]})).outcome).toBe("VALIDATION_FAILED");
