@@ -8,7 +8,9 @@ import { listServiceOrders, getServiceOrder, createServiceOrder } from "./servic
 import { startServiceOrder, waitServiceOrderParts, finishServiceOrder, addServiceOrderPart, approveServiceOrder, rejectServiceOrder } from "./service-order-actions";
 import { updateServiceOrder } from "./service-order-patch";
 import { listMachineFaults, createMachineFault } from "./machine-fault-service";
-import { createDailyCheck } from "./daily-check-service";
+import { createDailyCheck, listDailyChecks, reviseDailyCheck } from "./daily-check-service";
+import { createHaul, listHauls, reviseHaul } from "./haul-service";
+import { getWorkerProfile, listRates, addRate, workerHistory } from "./worker-service";
 import { checkUse, checkUseBatch, meBlockers, withMessages } from "./usage-service";
 import { reviseMachineFault } from "./machine-fault-revise";
 import { approveMachineFault, rejectMachineFault } from "./machine-fault-decide";
@@ -66,7 +68,7 @@ describeDb("equipment PROJECTS/SELF boundaries", () => {
   afterAll(async () => {
     await withCompany(admin, companyId(co), async (c) => {
       await c.query("SET LOCAL session_replication_role = replica");
-      for (const table of ["sync_receipts","sync_conflicts","sync_change_log","sync_cursor_slots","sync_cursor_allocators","service_order_events","service_order_parts","approval_requests","service_orders","machine_fault_revisions","machine_faults","machine_daily_checks","check_templates","audit_events","project_assignments","sessions","projects","machines","workers","memberships"]) {
+      for (const table of ["sync_receipts","sync_conflicts","sync_change_log","sync_cursor_slots","sync_cursor_allocators","cost_entries","haul_revisions","hauls","machine_daily_check_revisions","worker_rates","worker_history","service_order_events","service_order_parts","approval_requests","service_orders","machine_fault_revisions","machine_faults","machine_daily_checks","check_templates","audit_events","project_assignments","sessions","projects","machines","workers","memberships"]) {
         await c.query(`DELETE FROM public.${table} WHERE company_id=$1`, [co]);
       }
     });
@@ -158,6 +160,54 @@ describeDb("equipment PROJECTS/SELF boundaries", () => {
     }
   });
 
+  it("ture i pregledi: čitanje, unos i revizija po PROJECTS/SELF opsegu", async () => {
+    const h = { machineId:m2, projectId:p2, driverWorkerId:otherWorker, hauledAt:"2026-11-20T08:00:00Z",
+      originText:"A",destinationText:"B",materialText:"C",quantity:1,quantityUnit:"M3" as const };
+    const c = { machineId:m2, projectId:p2, workerId:otherWorker, checkedAt:"2026-11-20T08:00:00Z", result:"PASS" as const };
+    const otherHaul = await createHaul(app, company, h);
+    const otherCheck = await createDailyCheck(app, company, c);
+    if (otherHaul.outcome !== "OK" || otherCheck.outcome !== "OK") throw new Error("activity fixture");
+    for (const actor of [projects, self]) {
+      expect((await listHauls(app, actor, {})).map(x=>x.id)).not.toContain(otherHaul.id);
+      expect((await listDailyChecks(app, actor, {})).map(x=>x.id)).not.toContain(otherCheck.id);
+      expect((await createHaul(app, actor, h)).outcome).toBe("FORBIDDEN");
+      expect((await createDailyCheck(app, actor, c)).outcome).toBe("FORBIDDEN");
+      expect((await reviseHaul(app, actor, otherHaul.id, {reason:"Dovoljno dug razlog",payload:{}})).outcome).toBe("FORBIDDEN");
+      expect((await reviseDailyCheck(app, actor, otherCheck.id, {reason:"Dovoljno dug razlog",payload:{}})).outcome).toBe("FORBIDDEN");
+      expect((await createHaul(app, actor, {...h,machineId:m1,projectId:p1,driverWorkerId:worker})).outcome).toBe("OK");
+      expect((await createDailyCheck(app, actor, {...c,machineId:m1,projectId:p1,workerId:worker})).outcome).toBe("OK");
+    }
+  });
+
+  it("profil i satnice: session scope, dozvole i ACCESS audit", async () => {
+    await withCompany(admin, companyId(co), async c => {
+      await c.query("UPDATE public.workers SET birth_date='1990-01-01' WHERE company_id=$1 AND id=$2", [co,worker]);
+      await c.query("INSERT INTO worker_history (id,company_id,worker_id,field,new_value,changed_by) VALUES ($1,$2,$3,'birthDate','1990-01-01',$4)", [`wh_${suffix}`,co,worker,user]);
+      await c.query("INSERT INTO public.project_assignments(id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')", [`pa_ow_${suffix}`,co,p2,otherWorker]);
+    });
+    const actor = {...projects, companyId:companyId(co)};
+    const ownProfile = await getWorkerProfile(app, actor, worker, {canSeeSensitive:true});
+    expect(ownProfile.ok && ownProfile.worker.sensitive?.birthDate).toBe("1990-01-01");
+    expect((await getWorkerProfile(app, actor, otherWorker, {canSeeSensitive:true})).ok).toBe(false);
+    const selfActor = {...actor, scope:"SELF" as const};
+    expect((await getWorkerProfile(app, selfActor, otherWorker, {canSeeSensitive:true})).ok).toBe(false);
+    expect((await getWorkerProfile(app, selfActor, worker, {canSeeSensitive:true})).ok).toBe(true);
+    const pm = {...actor, roles:["PROJECT_MANAGER"]};
+    const limited = await getWorkerProfile(app, pm, worker, {canSeeSensitive:true});
+    expect(limited.ok && limited.worker.sensitive).toBeNull();
+    expect((await listRates(app, pm, worker, "2026-11-23")).ok).toBe(false);
+    expect((await addRate(app, actor, worker, {kind:"HOURLY",amountCents:1000,currencyCode:"BAM",validFrom:"2020-01-01"})).ok).toBe(true);
+    expect((await listRates(app, actor, worker, "2026-11-23")).ok).toBe(true);
+    expect((await listRates(app, actor, otherWorker, "2026-11-23")).ok).toBe(false);
+    const history = await workerHistory(app, pm, worker);
+    expect(history.ok).toBe(true);
+    expect(history.ok && history.entries.some(e=>e.field === "birthDate")).toBe(false);
+    const ownerHistory = await workerHistory(app,actor,worker);
+    expect(ownerHistory.ok && ownerHistory.entries.some(e=>e.field === "birthDate")).toBe(true);
+    const audit = await admin.query("SELECT id FROM public.audit_events WHERE company_id=$1 AND entity_id=$2 AND action='worker.sensitive_viewed' AND retention_class='ACCESS'", [co,worker]);
+    expect(audit.rows.length).toBeGreaterThan(0);
+  });
+
   it("kritičan dnevni pregled ne smije zaobići scope pri automatskom otvaranju kvara", async () => {
     const templateId = `ckt_${suffix}`;
     await withCompany(admin, companyId(co), c => c.query(
@@ -167,6 +217,41 @@ describeDb("equipment PROJECTS/SELF boundaries", () => {
     expect((await createDailyCheck(app, projects, base)).outcome).toBe("FORBIDDEN");
     expect((await createDailyCheck(app, self, base)).outcome).toBe("FORBIDDEN");
     expect((await createDailyCheck(app, self, {...base,machineId:m1,projectId:p1})).outcome).toBe("OK");
+  });
+
+  it("offline ture i pregledi: ograničen sync push, retry i pull", async () => {
+    async function send(item: unknown) {
+      const response = await syncPush(new NextRequest("http://t/api/sync/push", {method:"POST",headers:{cookie,"content-type":"application/json"},body:JSON.stringify({items:[item]})}));
+      expect(response.status).toBe(200);
+      return ((await response.json()) as {data:{results:{status:string}[]}}).data.results[0]!.status;
+    }
+    const haul = (machineId:string, projectId:string) => ({localId:randomUUID(), entityType:"haul", haulId:randomUUID(),deviceSentAt:"2026-11-20T08:00:00Z",
+      haul:{machineId,projectId,segmentId:null,hauledAt:"2026-11-20T08:00:00Z",originText:"A",destinationText:"B",materialText:"C",quantity:1,quantityUnit:"M3",scaleTicketText:null,tripCount:1,note:null}});
+    const check = (machineId:string, projectId:string) => ({localId:randomUUID(),entityType:"machine_daily_check",checkId:randomUUID(),deviceSentAt:"2026-11-20T08:00:00Z",
+      check:{machineId,projectId,checkedAt:"2026-11-20T08:00:00Z",result:"PASS",checklistJson:{},note:null}});
+    await withCompany(admin, companyId(co), c => c.query(`UPDATE memberships SET roles=ARRAY['OWNER','MECHANIC','DRIVER']::"Role"[],scope='COMPANY' WHERE company_id=$1 AND user_id=$2`,[co,user]));
+    const h = haul(m2,p2), c = check(m2,p2);
+    try {
+      expect(await send(h)).toBe("APPLIED");
+      expect(await send(c)).toBe("APPLIED");
+      for (const scope of ["PROJECTS","SELF"]) {
+        await withCompany(admin, companyId(co), db => db.query("UPDATE memberships SET scope=$3 WHERE company_id=$1 AND user_id=$2", [co,user,scope]));
+        expect(await send(h)).toBe("REJECTED");
+        expect(await send(c)).toBe("REJECTED");
+        expect(await send(haul(m2,p2))).toBe("REJECTED");
+        expect(await send(check(m2,p2))).toBe("REJECTED");
+        expect(await send(haul(m1,p1))).toBe("APPLIED");
+        expect(await send(check(m1,p1))).toBe("APPLIED");
+        const response = await syncPull(new NextRequest("http://t/api/sync/pull?limit=200", {headers:{cookie}}));
+        expect(response.status).toBe(200);
+        const data = await response.json() as {data:{events:{entityType:string;entityId:string}[]}};
+        // SELF owns these historical records; PROJECTS must not see them.
+        expect(data.data.events.some(e=>e.entityType === "haul" && e.entityId === h.haulId)).toBe(scope === "SELF");
+        expect(data.data.events.some(e=>e.entityType === "machine_daily_check" && e.entityId === c.checkId)).toBe(scope === "SELF");
+      }
+    } finally {
+      await withCompany(admin, companyId(co), db => db.query(`UPDATE memberships SET roles=ARRAY['OWNER','MECHANIC']::"Role"[],scope='COMPANY' WHERE company_id=$1 AND user_id=$2`,[co,user]));
+    }
   });
 
   it("sync odbija tuđe naloge i kvarove, ali prihvata vlastite", async () => {

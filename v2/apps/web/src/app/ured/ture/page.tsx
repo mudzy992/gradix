@@ -26,7 +26,7 @@ export default async function TurePage() {
   const pool = await getVerifiedPool();
   const hauls = await listHauls(
     pool,
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    auth.ctx,
     {},
   );
 

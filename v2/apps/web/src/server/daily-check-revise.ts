@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { activityRecordAllowed } from "./equipment-scope";
 import type { DailyCheckActor, MutationOutcome } from "./daily-check-types";
 
 export type ReviseInput = { reason: string; payload: Record<string, unknown> };
@@ -18,6 +19,9 @@ export async function reviseDailyCheck(
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await activityRecordAllowed(client, actor, "check", checkId)) {
+      return { outcome: "FORBIDDEN", code: "SCOPE" };
+    }
     const check = await client.query<{
       id: string;
       version: number;

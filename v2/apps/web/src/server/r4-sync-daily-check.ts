@@ -2,6 +2,7 @@
 import type { PoolClient } from "pg";
 import type { R4DailyCheckPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
+import { activityRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
 import type { SyncDailyCheckApplyDeps } from "./r4-sync-daily-check-types";
 
 export type { SyncDailyCheckApplyDeps } from "./r4-sync-daily-check-types";
@@ -14,6 +15,12 @@ export async function applyDailyCheckSyncItem(
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
+
+  if (!await equipmentTargetAllowed(client, actor, item.check.projectId, item.check.machineId))
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
+  const existing = await client.query("SELECT id FROM public.machine_daily_checks WHERE company_id=$1 AND id=$2", [actor.companyId, item.checkId]);
+  if (existing.rows[0] && !await activityRecordAllowed(client, actor, "check", item.checkId))
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
 
   const machine = await client.query<{ id: string }>(
     "SELECT id FROM public.machines WHERE company_id = $1 AND id = $2 AND is_active",

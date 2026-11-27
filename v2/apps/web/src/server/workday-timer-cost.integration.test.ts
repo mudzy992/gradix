@@ -28,7 +28,7 @@ const WORKER = `wrk_tmr_${RUN}`;
 const WORKDAY = `wd_tmr_${RUN}`;
 const SUPERVISOR = `usr_tmr_ss_${RUN}`;
 
-const ss = { userId: SUPERVISOR, companyId: companyId(CO), roles: ["SITE_SUPERVISOR"] as const };
+const ss = { userId: SUPERVISOR, companyId: companyId(CO), roles: ["SITE_SUPERVISOR"] as const, scope: "COMPANY" as const, projectIds: null };
 
 describeDb("timer → potvrda šefa → jedna knjiga troška rada (PostgreSQL)", () => {
   const dbAdmin = new Pool({ connectionString: adminUrl, max: 2 });

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const result = await bulkWorkers(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       parsed.data,
     );
     if (!result.ok) return fail(result.code as never, result.message);

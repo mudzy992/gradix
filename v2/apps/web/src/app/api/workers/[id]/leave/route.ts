@@ -19,7 +19,7 @@ export async function GET(
     const { id } = await context.params;
     const result = await workerLeave(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
     );
     if (!result.ok) return fail(result.code as never, result.message);
@@ -43,7 +43,7 @@ export async function POST(
     const { id } = await context.params;
     const result = await setLeaveEntitlement(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       parsed.data,
     );

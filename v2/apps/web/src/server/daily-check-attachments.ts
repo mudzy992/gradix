@@ -2,6 +2,7 @@
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany, type CompanyId } from "@gradix/db";
 import { can } from "./permissions";
+import { activityRecordAllowed } from "./equipment-scope";
 import type { DailyCheckActor, DailyCheckAttachmentRow } from "./daily-check-types";
 import { attachmentObjectKey, isAttachmentServiceError, listAttachments, registerAttachment } from "./attachment-service";
 
@@ -39,13 +40,7 @@ export async function listDailyCheckAttachments(
   if (!can(actor.roles, "machines.check.view")) {
     return fail("FORBIDDEN", "Nemate pravo pregleda.");
   }
-  const exists = await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
-    const check = await client.query(
-      "SELECT id FROM public.machine_daily_checks WHERE company_id = $1 AND id = $2",
-      [actor.companyId, checkId],
-    );
-    return check.rowCount !== 0;
-  });
+  const exists = await withCompany(pool, toCompanyId(actor.companyId), client => activityRecordAllowed(client, actor, "check", checkId));
   if (!exists) return fail("NOT_FOUND", "Pregled nije pronađen.");
   const rows = await listAttachments(pool, actor.companyId, "MACHINE_DAILY_CHECK", checkId);
   return rows.map(toRow);
@@ -64,13 +59,8 @@ export async function registerDailyCheckAttachment(
   if (!can(actor.roles, "machines.check.create")) {
     return fail("FORBIDDEN", "Nemate pravo unosa priloga.");
   }
-  const exists = await withCompany(pool, companyIdValue, async (client) => {
-    const check = await client.query(
-      "SELECT id FROM public.machine_daily_checks WHERE company_id = $1 AND id = $2",
-      [companyIdValue, checkId],
-    );
-    return check.rowCount !== 0;
-  });
+  if (companyIdValue !== actor.companyId) return fail("NOT_FOUND", "Pregled nije pronađen.");
+  const exists = await withCompany(pool, companyIdValue, client => activityRecordAllowed(client, actor, "check", checkId));
   if (!exists) return fail("NOT_FOUND", "Pregled nije pronađen.");
 
   const result = await registerAttachment(

@@ -17,9 +17,9 @@ const OTHER = `cmp_jbx_${RUN}`;
 const WEEK = "2026-11-16";
 const DATE = "2026-11-18";
 const OPEN_DATE = "2026-11-19";
-const ss = { userId: `usr_jb_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const };
-const owner = { userId: `usr_jb_own_${RUN}`, companyId: CO, roles: ["OWNER"] as const };
-const adminActor = { userId: `usr_jb_adm_${RUN}`, companyId: CO, roles: ["ADMIN"] as const };
+const ss = { userId: `usr_jb_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const, scope: "COMPANY" as const, projectIds: null };
+const owner = { userId: `usr_jb_own_${RUN}`, companyId: CO, roles: ["OWNER"] as const, scope: "COMPANY" as const, projectIds: null };
+const adminActor = { userId: `usr_jb_adm_${RUN}`, companyId: CO, roles: ["ADMIN"] as const, scope: "COMPANY" as const, projectIds: null };
 const acct: HoursExportActor = { userId: `usr_jb_acc_${RUN}`, companyId: CO, roles: ["ACCOUNTANT"] };
 const workerUser: HoursExportActor = { userId: `usr_jb_wrk_${RUN}`, companyId: CO, roles: ["WORKER"] };
 

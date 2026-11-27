@@ -19,6 +19,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, {
       machineId: params.get("machineId") ?? undefined,
       from: params.get("from") ?? undefined,

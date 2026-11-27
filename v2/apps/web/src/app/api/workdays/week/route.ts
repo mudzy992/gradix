@@ -19,7 +19,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const result = await weekView(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       weekStart,
       { workerIds: workerIds.length > 0 ? workerIds : null },
     );

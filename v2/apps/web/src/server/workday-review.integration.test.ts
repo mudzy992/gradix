@@ -7,6 +7,9 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId, withCompany } from "@gradix/db";
+import { weekView } from "./workday-timer-service";
+import { confirmWorkday } from "./workday-approval";
+import { decideWeek, lockWeek, reviseWorkday } from "./workday-week-actions";
 import { canResolveConflict, listWorkdaysForReview, resolveViewerWorkerId, workdayResolveScopeFor, workdayReviewScopeFor } from "./workday-review";
 
 const appUrl = process.env.DATABASE_URL;
@@ -73,7 +76,7 @@ describeDb("workday review scope (PostgreSQL)", () => {
   it("OWNER i ACCOUNTANT vide cijelu firmu, nikad drugu firmu", async () => {
     for (const roles of [["OWNER"], ["ACCOUNTANT"]] as const) {
       const rows = await withCompany(app, companyId(CO), (client) =>
-        listWorkdaysForReview(client, CO, workdayReviewScopeFor(roles, null)));
+        listWorkdaysForReview(client, CO, workdayReviewScopeFor(roles, null, {scope:"COMPANY",projectIds:null})));
       expect(rows.map((row) => row.id).sort()).toEqual([`wd_wdr_in_${RUN}`, `wd_wdr_out_${RUN}`].sort());
     }
   });
@@ -88,7 +91,7 @@ describeDb("workday review scope (PostgreSQL)", () => {
     for (const userId of [`usr_wdr_pm_${RUN}`, `usr_wdr_ss_${RUN}`]) {
       const rows = await withCompany(app, companyId(CO), async (client) => {
         const viewer = await resolveViewerWorkerId(client, CO, userId);
-        return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer));
+        return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer, {scope:"COMPANY", projectIds:null}));
       });
       expect(rows.map((row) => row.id)).toEqual([`wd_wdr_in_${RUN}`]);
     }
@@ -101,7 +104,7 @@ describeDb("workday review scope (PostgreSQL)", () => {
       const viewer = await resolveViewerWorkerId(client, CO, `usr_wdr_pm_${RUN}`);
       const scope = workdayResolveScopeFor(["PROJECT_MANAGER"], viewer, { scope: "COMPANY", projectIds: null });
       expect(scope.kind).toBe("assignments");
-      return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer));
+      return listWorkdaysForReview(client, CO, workdayReviewScopeFor(["PROJECT_MANAGER"], viewer, {scope:"COMPANY", projectIds:null}));
     });
     expect(scoped.map((row) => row.id)).toEqual([`wd_wdr_in_${RUN}`]);
 
@@ -127,7 +130,39 @@ describeDb("workday review scope (PostgreSQL)", () => {
 
   it("PM/šef bez povezanog radnika vide prazno", async () => {
     const rows = await withCompany(app, companyId(CO), (client) =>
-      listWorkdaysForReview(client, CO, workdayReviewScopeFor(["SITE_SUPERVISOR"], null)));
+      listWorkdaysForReview(client, CO, workdayReviewScopeFor(["SITE_SUPERVISOR"], null, {scope:"COMPANY",projectIds:null})));
     expect(rows).toEqual([]);
   });
+  it("PROJECTS/SELF ograničavaju pregled, sedmicu i odluke cijelog dana", async () => {
+    const p1 = `prj_wdr_a_${RUN}`, p2 = `prj_wdr_b_${RUN}`;
+    const uid = `usr_wdr_pm_${RUN}`, selfWorker = `wrk_wdr_pm_${RUN}`;
+    const dayOwn = `wd_wdr_self_${RUN}`;
+    await admin.query(`INSERT INTO public.workdays (id,company_id,worker_id,work_date,status,created_by,updated_by)
+      VALUES ($1,$2,$3,$4,'SUBMITTED',$5,$5)`, [dayOwn,CO,selfWorker,DATE,uid]);
+    for (const [n,day,worker,project] of [["in",`wd_wdr_in_${RUN}`,`wrk_wdr_in_${RUN}`,p1],["out",`wd_wdr_out_${RUN}`,`wrk_wdr_out_${RUN}`,p2],["self",dayOwn,selfWorker,p1]]) {
+      await admin.query(`INSERT INTO public.work_entries (id,company_id,workday_id,worker_id,kind,started_at,ended_at,end_state,project_id,created_by,updated_by)
+        VALUES ($1,$2,$3,$4,'WORK','2026-11-10T08:00:00Z','2026-11-10T16:00:00Z','KNOWN_END',$5,$6,$6)`, [`we_wdr_${n}_${RUN}`,CO,day,worker,project,uid]);
+    }
+    const actor = {userId:uid, companyId:companyId(CO), roles:["OWNER"] as const, scope:"PROJECTS" as const,projectIds:[p1]};
+    const selfActor = {...actor,scope:"SELF" as const,projectIds:[]};
+    await withCompany(app,companyId(CO),async client => {
+      const scoped = await listWorkdaysForReview(client,CO,workdayReviewScopeFor(actor.roles,selfWorker,actor));
+      expect(scoped.map(r=>r.id)).toContain(`wd_wdr_in_${RUN}`);
+      expect(scoped.map(r=>r.id)).not.toContain(`wd_wdr_out_${RUN}`);
+      const own = await listWorkdaysForReview(client,CO,workdayReviewScopeFor(selfActor.roles,selfWorker,selfActor));
+      expect(own.map(r=>r.id)).toEqual([dayOwn]);
+    });
+    const week = await weekView(app,actor,"2026-11-09");
+    expect(week.ok && week.week.rows.map(r=>r.workerId)).not.toContain(`wrk_wdr_out_${RUN}`);
+    const ownWeek = await weekView(app,selfActor,"2026-11-09");
+    expect(ownWeek.ok && ownWeek.week.rows.map(r=>r.workerId)).toEqual([selfWorker]);
+    expect((await reviseWorkday(app,actor,{workdayId:`wd_wdr_out_${RUN}`,reason:"Dovoljno dug razlog",payload:{}})).outcome).toBe("NOT_FOUND");
+    expect((await reviseWorkday(app,selfActor,{workdayId:`wd_wdr_in_${RUN}`,reason:"Dovoljno dug razlog",payload:{}})).outcome).toBe("NOT_FOUND");
+    expect((await confirmWorkday(app,{...actor,roles:["SITE_SUPERVISOR"]},`wd_wdr_out_${RUN}`)).outcome).toBe("NOT_FOUND");
+    for (const restricted of [actor,selfActor]) {
+      expect((await decideWeek(app,restricted,{weekStart:"2026-11-09",decision:"APPROVE"})).outcome).toBe("FORBIDDEN");
+      expect((await lockWeek(app,restricted,"2026-11-09")).outcome).toBe("FORBIDDEN");
+    }
+  });
+
 });

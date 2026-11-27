@@ -2,7 +2,10 @@
 import type { PoolClient } from "pg";
 import type { R4HaulPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
+import { activityRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
 import { bookHaulCost } from "./cost-entry-service";
+import { checkUse } from "./usage-service";
+import { companyToday } from "./project-service";
 import type { SyncHaulApplyDeps } from "./r4-sync-haul-types";
 
 export type { SyncHaulApplyDeps } from "./r4-sync-haul-types";
@@ -15,6 +18,12 @@ export async function applyHaulSyncItem(
   const { actor, worker, requestHash, reservation, helpers } = deps;
   const reject = (result = helpers.invalidItem(item)) =>
     helpers.rejectInTransaction(client, actor, item, requestHash, reservation, result);
+
+  if (!await equipmentTargetAllowed(client, actor, item.haul.projectId, item.haul.machineId))
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
+  const existing = await client.query("SELECT id FROM public.hauls WHERE company_id=$1 AND id=$2", [actor.companyId, item.haulId]);
+  if (existing.rows[0] && !await activityRecordAllowed(client, actor, "haul", item.haulId))
+    return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
 
   const machine = await client.query<{ id: string }>(
     "SELECT id FROM public.machines WHERE company_id = $1 AND id = $2 AND is_active",
@@ -30,8 +39,8 @@ export async function applyHaulSyncItem(
   }
   if (item.haul.segmentId) {
     const segment = await client.query<{ id: string }>(
-      "SELECT id FROM public.route_segments WHERE company_id = $1 AND id = $2",
-      [actor.companyId, item.haul.segmentId],
+      "SELECT id FROM public.route_segments WHERE company_id = $1 AND id = $2 AND ($3::boolean OR project_id = $4)",
+      [actor.companyId, item.haul.segmentId, actor.scope === "COMPANY", item.haul.projectId],
     );
     if (!segment.rows[0]) return reject();
   }
@@ -46,6 +55,9 @@ export async function applyHaulSyncItem(
       version: duplicate.rows[0].version,
     });
   }
+  const decision = await checkUse(client, actor.companyId, { entityKind: "MACHINE", entityId: item.haul.machineId,
+    action: "haul", today: await companyToday(client, actor.companyId), viewer: actor });
+  if (!decision.allowed) return reject(helpers.invalidItem(item, "SYNC_ITEM_REJECTED"));
   const workDate = await helpers.businessDate(client, item.haul.hauledAt);
   if (!workDate) return reject();
   const inserted = await client.query<{ id: string; version: number }>(

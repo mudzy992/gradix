@@ -26,7 +26,7 @@ export default async function DnevniPregledPage() {
   const pool = await getVerifiedPool();
   const checks = await listDailyChecks(
     pool,
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    auth.ctx,
     {},
   );
 

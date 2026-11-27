@@ -18,7 +18,7 @@ export async function GET(
     const { id } = await context.params;
     const result = await workerHistory(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
     );
     if (!result.ok) return fail(result.code as never, result.message);

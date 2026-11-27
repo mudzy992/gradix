@@ -85,3 +85,26 @@ export async function linkedFaultAllowed(client: PoolClient, actor: EquipmentAct
   const faultId = result.rows[0]?.fault_id;
   return !faultId || equipmentRecordAllowed(client, actor, "fault", faultId);
 }
+
+/** Historical activity is visible by project or its worker, not by an unrelated machine assignment. */
+export function activityScope(actor: EquipmentActor, params: unknown[], alias: string, workerColumn: string): string {
+  if (actor.scope === "COMPANY") return "TRUE";
+  if (actor.scope === "PROJECTS") {
+    params.push(actor.projectIds ?? []);
+    return `${alias}.project_id = ANY($${params.length}::text[])`;
+  }
+  if (actor.scope === "SELF") {
+    params.push(actor.userId);
+    return `${alias}.${workerColumn} IN (SELECT w.id FROM public.workers w WHERE w.company_id=${alias}.company_id AND w.user_id=$${params.length} AND w.is_active)`;
+  }
+  return "FALSE";
+}
+
+export async function activityRecordAllowed(client: PoolClient, actor: EquipmentActor, kind: "haul" | "check", id: string): Promise<boolean> {
+  const table = kind === "haul" ? "hauls" : "machine_daily_checks";
+  const workerColumn = kind === "haul" ? "driver_worker_id" : "worker_id";
+  const params: unknown[] = [actor.companyId, id];
+  const predicate = activityScope(actor, params, "a", workerColumn);
+  const result = await client.query(`SELECT a.id FROM public.${table} a WHERE a.company_id=$1 AND a.id=$2 AND ${predicate} FOR UPDATE`, params);
+  return (result.rowCount ?? 0) > 0;
+}

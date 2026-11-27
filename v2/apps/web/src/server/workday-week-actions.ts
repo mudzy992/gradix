@@ -5,6 +5,7 @@ import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
 import {
   loadWorkday,
+  workdayAllowed,
   type ApprovalActor,
   type ApprovalOutcome,
 } from "./workday-approval";
@@ -17,12 +18,14 @@ export async function decideWeek(
   input: { weekStart: string; decision: "APPROVE" | "REJECT"; reason?: string },
 ): Promise<ApprovalOutcome> {
   if (!can(actor.roles, "workdays.week_decide")) return { outcome: "FORBIDDEN", code: "ROLE" };
+  // A week decision is company-wide, not scoped to individual projects.
+  if (actor.scope !== "COMPANY") return { outcome: "FORBIDDEN", code: "SCOPE" };
   if (input.decision === "REJECT" && (input.reason?.trim().length ?? 0) < 10) {
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, actor.companyId, actor.userId);
-    const scope = workdayReviewScopeFor(actor.roles, viewerWorkerId);
+    const scope = workdayReviewScopeFor(actor.roles, viewerWorkerId, actor);
     if (scope.kind === "assignments") {
       if (!scope.viewerWorkerId) return { outcome: "FORBIDDEN", code: "SCOPE" };
       const inScope = await client.query(
@@ -37,7 +40,7 @@ export async function decideWeek(
             AND ta.worker_id = d.worker_id
             AND ta.from_date <= d.work_date
             AND (ta.to_date IS NULL OR ta.to_date >= d.work_date)
-          WHERE d.company_id = $1
+          WHERE d.company_id = $1 AND va.voided_at IS NULL AND ta.voided_at IS NULL
             AND d.work_date >= $3::date AND d.work_date < ($3::date + 7)
           LIMIT 1`,
         [actor.companyId, scope.viewerWorkerId, input.weekStart],
@@ -104,6 +107,7 @@ export async function lockWeek(
   weekStart: string,
 ): Promise<ApprovalOutcome> {
   if (!can(actor.roles, "workdays.lock")) return { outcome: "FORBIDDEN", code: "ROLE" };
+  if (actor.scope !== "COMPANY") return { outcome: "FORBIDDEN", code: "SCOPE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const week = await client.query<{ id: string; status: string }>(
       `SELECT id, status FROM public.work_week_approvals
@@ -163,7 +167,7 @@ export async function reviseWorkday(
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const day = await loadWorkday(client, actor.companyId, input.workdayId);
-    if (!day) return { outcome: "NOT_FOUND" };
+    if (!day || !await workdayAllowed(client, actor, day)) return { outcome: "NOT_FOUND" };
     if (day.approval_status === "LOCKED") {
       // Append-only revision still allowed as audit trail? Plan: "ne dira LOCKED original"
       // — insert revision is OK; we do NOT update workdays row.

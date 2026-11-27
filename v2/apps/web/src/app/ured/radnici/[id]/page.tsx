@@ -32,7 +32,7 @@ export default async function WorkerDetailPage({ params }: { params: Promise<{ i
 
   const { id } = await params;
   const pool = await getVerifiedPool();
-  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
+  const actor = auth.ctx;
 
   const sawSensitive = can(auth.ctx.roles, "workers.sensitive.view");
   const profile = await getWorkerProfile(pool, actor, id, { canSeeSensitive: sawSensitive });

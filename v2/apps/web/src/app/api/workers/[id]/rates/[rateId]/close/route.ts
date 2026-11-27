@@ -25,6 +25,7 @@ export async function PATCH(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles,
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     };
     const closed = await closeRate(pool, actor, id, rateId, parsed.data.validTo);
     if (!closed.ok) return fail(closed.code as never, closed.message);

@@ -10,7 +10,7 @@ const describeDb = appUrl && adminUrl ? describe : describe.skip;
 const RUN = randomUUID().replace(/-/g, "").slice(0, 10);
 const CO = `cmp_r4bg_${RUN}`;
 const DATE = "2026-11-18";
-const ss = { userId: `usr_r4bg_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const };
+const ss = { userId: `usr_r4bg_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const, scope: "COMPANY" as const, projectIds: null };
 
 describeDb("R4b confirm gates (PostgreSQL)", () => {
   const dbAdmin = new Pool({ connectionString: adminUrl, max: 2 });

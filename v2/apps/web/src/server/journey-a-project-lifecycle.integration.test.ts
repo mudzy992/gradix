@@ -35,10 +35,10 @@ const workerId = `wrk_ja_${RUN}`;
 const foremanWorkerId = `wrk_ja_ss_${RUN}`;
 const machineId = `mch_ja_${RUN}`;
 const office = { userId: ownerId, roles: ["OWNER"] as Role[], scope: "COMPANY" as const, projectIds: null };
-const foreman = { userId: foremanUserId, companyId: companyId(CO), roles: ["SITE_SUPERVISOR"] as Role[] };
-const ownerAct = { userId: ownerId, companyId: CO, roles: ["OWNER"] as Role[] };
-const workerAct = { userId: workerUserId, companyId: CO, roles: ["WORKER"] as Role[] };
-const accountant = { userId: accountantId, companyId: CO, roles: ["ACCOUNTANT"] as Role[] };
+const foreman = { userId: foremanUserId, companyId: companyId(CO), roles: ["SITE_SUPERVISOR"] as Role[], scope: "COMPANY" as const, projectIds: null };
+const ownerAct = { userId: ownerId, companyId: CO, roles: ["OWNER"] as Role[], scope: "COMPANY" as const, projectIds: null };
+const workerAct = { userId: workerUserId, companyId: CO, roles: ["WORKER"] as Role[], scope:"COMPANY" as const, projectIds:null };
+const accountant = { userId: accountantId, companyId: CO, roles: ["ACCOUNTANT"] as Role[], scope:"COMPANY" as const, projectIds:null };
 const otherAct = { userId: otherId, companyId: OTHER, roles: ["OWNER"] as Role[], scope: "COMPANY" as const, projectIds: null };
 
 describeDb("journey A project lifecycle", () => {
@@ -166,7 +166,7 @@ describeDb("journey A project lifecycle", () => {
     expect(await lockWeek(dbApp, ownerAct, WEEK)).toMatchObject({ outcome: "NOT_FOUND" });
     expect(await rows(CO, `SELECT approval_status AS n FROM public.workdays WHERE company_id = $1 AND id = $2`, [CO, workdayId])).toBe("SUBMITTED");
     expect(await confirmWorkday(dbApp, { ...ownerAct, roles: ["SITE_SUPERVISOR"] as Role[] }, workdayId)).toMatchObject({ outcome: "FORBIDDEN", code: "SCOPE" });
-    expect(await confirmWorkday(dbApp, { userId: foremanUserId, companyId: CO, roles: ["SITE_SUPERVISOR"] as Role[] }, workdayId))
+    expect(await confirmWorkday(dbApp, { userId: foremanUserId, companyId: CO, roles: ["SITE_SUPERVISOR"] as Role[], scope:"COMPANY", projectIds:null }, workdayId))
       .toMatchObject({ outcome: "OK", status: "FOREMAN_CONFIRMED" });
     expect(await decideWeek(dbApp, accountant, { weekStart: WEEK, decision: "APPROVE" })).toMatchObject({ outcome: "FORBIDDEN" });
     expect(await decideWeek(dbApp, ownerAct, { weekStart: WEEK, decision: "APPROVE" })).toMatchObject({ outcome: "OK", status: "WEEK_APPROVED" });

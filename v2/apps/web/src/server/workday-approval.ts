@@ -2,6 +2,7 @@
  * R4b: potvrda dana + sync gate. Sedmica/revizija → workday-week-actions.ts.
  */
 import type { Pool, PoolClient } from "pg";
+import type { Scope } from "@gradix/domain";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can, type Role } from "./permissions";
 import { weekStartFromWorkDate } from "./workday-week";
@@ -12,6 +13,8 @@ export type ApprovalActor = {
   userId: string;
   companyId: string;
   roles: readonly Role[];
+  scope: Scope;
+  projectIds: readonly string[] | null;
 };
 
 export type ApprovalOutcome =
@@ -43,6 +46,22 @@ export async function loadWorkday(
   return result.rows[0] ?? null;
 }
 
+/** A day-level mutation affects every entry, so mixed-project days fail closed. */
+export async function workdayAllowed(client: PoolClient, actor: ApprovalActor, day: DayRow): Promise<boolean> {
+  if (actor.scope === "COMPANY") return true;
+  if (actor.scope === "SELF") {
+    const own = await client.query("SELECT 1 FROM public.workers WHERE company_id=$1 AND id=$2 AND user_id=$3 AND is_active", [actor.companyId, day.worker_id, actor.userId]);
+    return !!own.rowCount;
+  }
+  if (actor.scope !== "PROJECTS") return false;
+  const result = await client.query<{allowed: boolean}>(`SELECT EXISTS (SELECT 1 FROM public.work_entries e
+    WHERE e.company_id=$1 AND e.workday_id=$2 AND e.project_id=ANY($3::text[]))
+    AND NOT EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=$1 AND e.workday_id=$2
+      AND (e.project_id IS NULL OR NOT e.project_id=ANY($3::text[]))) AS allowed`,
+    [actor.companyId, day.id, actor.projectIds ?? []]);
+  return result.rows[0]?.allowed ?? false;
+}
+
 export async function inForemanScope(
   client: PoolClient,
   companyId: string,
@@ -56,6 +75,7 @@ export async function inForemanScope(
        JOIN public.project_assignments ta
          ON ta.company_id = va.company_id AND ta.project_id = va.project_id
       WHERE va.company_id = $1 AND va.worker_id = $2 AND ta.worker_id = $3
+        AND va.voided_at IS NULL AND ta.voided_at IS NULL
         AND va.from_date <= $4::date AND (va.to_date IS NULL OR va.to_date >= $4::date)
         AND ta.from_date <= $4::date AND (ta.to_date IS NULL OR ta.to_date >= $4::date)
       LIMIT 1`,
@@ -72,7 +92,7 @@ export async function confirmWorkday(
   if (!can(actor.roles, "workdays.confirm")) return { outcome: "FORBIDDEN", code: "ROLE" };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const day = await loadWorkday(client, actor.companyId, workdayId);
-    if (!day) return { outcome: "NOT_FOUND" };
+    if (!day || !await workdayAllowed(client, actor, day)) return { outcome: "NOT_FOUND" };
     if (day.status !== "SUBMITTED") {
       return { outcome: "VALIDATION_FAILED", code: "NOT_SUBMITTED", message: "Dan mora biti predan." };
     }

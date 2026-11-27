@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { activityScope, equipmentTargetAllowed, isActorWorker } from "./equipment-scope";
 import { bookHaulCost } from "./cost-entry-service";
 import { checkUse } from "./usage-service";
 import { companyToday } from "./project-service";
@@ -28,7 +29,9 @@ export async function listHauls(
       );
     const conditions = ["h.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let idx = 2;
+    conditions.push(activityScope(actor, params, "h", "driver_worker_id"));
+    let idx = params.length + 1;
+    if (isFieldOnly && !viewerWorkerId) conditions.push("FALSE");
     if (isFieldOnly && viewerWorkerId) {
       conditions.push(`h.driver_worker_id = $${idx}`);
       params.push(viewerWorkerId);
@@ -120,10 +123,15 @@ export async function createHaul(
         message: isOffice ? "Izaberi vozača za unos." : "Nalog nije povezan s radnikom.",
       };
     }
+    if (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId)
+      || (actor.scope === "SELF" && !await isActorWorker(client, actor, driverId))) {
+      return { outcome: "FORBIDDEN", code: "SCOPE" };
+    }
     if (input.segmentId) {
       const segment = await client.query<{ id: string }>(
-        `SELECT id FROM public.route_segments WHERE company_id = $1 AND id = $2`,
-        [actor.companyId, input.segmentId],
+        `SELECT id FROM public.route_segments WHERE company_id = $1 AND id = $2
+          AND ($3::boolean OR project_id = $4)`,
+        [actor.companyId, input.segmentId, actor.scope === "COMPANY", input.projectId ?? null],
       );
       if (!segment.rows[0]) {
         return { outcome: "VALIDATION_FAILED", code: "SEGMENT", message: "Dionica nije pronađena." };
@@ -134,6 +142,7 @@ export async function createHaul(
       entityKind: "MACHINE",
       entityId: input.machineId,
       action: "haul",
+      viewer: actor,
       today: await companyToday(client, toCompanyId(actor.companyId)),
     });
     if (!decision.allowed) {

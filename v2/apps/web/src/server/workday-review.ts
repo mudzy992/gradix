@@ -31,16 +31,24 @@ export type WeekApprovalRow = {
 
 export type WorkdayReviewScope =
   | { kind: "company" }
-  | { kind: "assignments"; viewerWorkerId: string | null };
+  | { kind: "assignments"; viewerWorkerId: string | null; projectIds?: readonly string[] | null }
+  | { kind: "projects"; projectIds: readonly string[] }
+  | { kind: "self"; viewerWorkerId: string | null }
+  | { kind: "none" };
 
 export function workdayReviewScopeFor(
   roles: readonly string[],
   viewerWorkerId: string | null,
+  session: { scope: string; projectIds: readonly string[] | null },
 ): WorkdayReviewScope {
-  if (roles.includes("OWNER") || roles.includes("ADMIN") || roles.includes("ACCOUNTANT")) {
-    return { kind: "company" };
+  if (session.scope === "SELF") return { kind: "self", viewerWorkerId };
+  if (session.scope !== "PROJECTS" && session.scope !== "COMPANY") return { kind: "none" };
+  const office = roles.some(role => ["OWNER", "ADMIN", "ACCOUNTANT"].includes(role));
+  if (session.scope === "PROJECTS") {
+    const projectIds = session.projectIds ?? [];
+    return office ? { kind: "projects", projectIds } : { kind: "assignments", viewerWorkerId, projectIds };
   }
-  return { kind: "assignments", viewerWorkerId };
+  return office ? { kind: "company" } : { kind: "assignments", viewerWorkerId, projectIds: null };
 }
 
 export async function resolveViewerWorkerId(
@@ -76,7 +84,9 @@ export async function listWorkdaysForReview(
        FROM public.workdays d
        JOIN public.workers w ON w.company_id = d.company_id AND w.id = d.worker_id
        LEFT JOIN public.work_entries e ON e.company_id = d.company_id AND e.workday_id = d.id
+         AND ($7::text[] IS NULL OR e.project_id = ANY($7::text[]))
        LEFT JOIN public.sync_conflicts c ON c.company_id = e.company_id AND c.work_entry_id = e.id
+         AND ($7::text[] IS NULL OR c.received_payload->>'projectId' IS NULL OR c.received_payload->>'projectId'=ANY($7::text[]))
        LEFT JOIN public.projects p ON p.company_id = d.company_id AND p.id = e.project_id
       WHERE d.company_id = $1
         AND (NOT $5::boolean OR (d.status='SUBMITTED' AND d.approval_status='SUBMITTED'
@@ -84,16 +94,17 @@ export async function listWorkdaysForReview(
             WHERE se.company_id=d.company_id AND se.workday_id=d.id AND se.project_id=ANY($6::text[])))))
         AND (
           $2::text = 'company'
-          OR (
-            $3::text IS NOT NULL
-            AND ${sharedWorkdayAssignment("$3")}
-          )
+          OR ($2::text = 'projects' AND e.id IS NOT NULL)
+          OR ($2::text = 'self' AND $3::text IS NOT NULL AND d.worker_id = $3)
+          OR ($2::text = 'assignments' AND $3::text IS NOT NULL
+            AND ${sharedWorkdayAssignment("$3")} AND ($7::text[] IS NULL OR e.id IS NOT NULL))
         )
       GROUP BY d.id, d.work_date, d.status, d.approval_status, w.first_name, w.last_name
       ORDER BY d.work_date DESC, worker_name
       LIMIT $4`,
-    [companyId, scope.kind, scope.kind === "assignments" ? scope.viewerWorkerId : null, limit,
-      filter?.unconfirmed ?? false, filter?.projectIds ?? null],
+    [companyId, scope.kind, scope.kind === "assignments" || scope.kind === "self" ? scope.viewerWorkerId : null, limit,
+      filter?.unconfirmed ?? false, filter?.projectIds ?? null,
+      scope.kind === "projects" ? scope.projectIds : scope.kind === "assignments" ? scope.projectIds ?? null : null],
   );
   return result.rows;
 }

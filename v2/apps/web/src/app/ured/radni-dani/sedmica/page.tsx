@@ -41,15 +41,15 @@ export default async function SedmicaPage({
   const weekStart = first(params.weekStart) ?? weekStartFromWorkDate(new Date().toISOString().slice(0, 10));
 
   const pool = await getVerifiedPool();
-  const actor = { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles };
+  const actor = auth.ctx;
   const result = await weekView(pool, actor, weekStart);
 
   const projects = await withCompany(pool, auth.ctx.companyId, async (client) => {
     const rows = await client.query<{ id: string; code: string; name: string }>(
       `SELECT id, code, name FROM projects
-        WHERE company_id = $1 AND is_active
+        WHERE company_id = $1 AND is_active AND ($2::boolean OR id=ANY($3::text[]))
         ORDER BY code`,
-      [auth.ctx.companyId],
+      [auth.ctx.companyId, auth.ctx.scope === "COMPANY", auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds ?? [] : []],
     );
     return rows.rows;
   });

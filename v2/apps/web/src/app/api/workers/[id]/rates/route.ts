@@ -20,7 +20,7 @@ export async function GET(
     const pool = await getVerifiedPool();
     const result = await listRates(
       pool,
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       await businessToday(pool, guardResult.ctx.companyId),
     );
@@ -48,6 +48,7 @@ export async function POST(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles,
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     };
     const added = await addRate(pool, actor, id, parsed.data);
     if (!added.ok) return fail(added.code as never, added.message);

@@ -20,6 +20,7 @@ export async function POST(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, id);
     if (result.outcome === "NOT_FOUND") return fail("NOT_FOUND", "Radni dan nije pronađen.");
     if (result.outcome === "FORBIDDEN") return fail("FORBIDDEN", "Nemate pravo potvrditi ovaj dan.");

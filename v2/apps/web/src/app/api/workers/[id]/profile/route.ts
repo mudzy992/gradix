@@ -26,7 +26,7 @@ export async function GET(
     const { id } = await context.params;
     const result = await getWorkerProfile(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       { canSeeSensitive: can(guardResult.ctx.roles, "workers.sensitive.view") },
     );
@@ -51,7 +51,7 @@ export async function PATCH(
     const { id } = await context.params;
     const result = await patchWorkerProfile(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       parsed.data as Record<string, unknown>,
       { canEditSensitive: can(guardResult.ctx.roles, "workers.sensitive.view") },

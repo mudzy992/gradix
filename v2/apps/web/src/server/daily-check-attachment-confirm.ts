@@ -2,6 +2,7 @@
 import type { Pool } from "pg";
 import { withCompany, type CompanyId } from "@gradix/db";
 import { can } from "./permissions";
+import { activityRecordAllowed } from "./equipment-scope";
 import type { DailyCheckActor, DailyCheckAttachmentRow } from "./daily-check-types";
 import type { AttachmentServiceError } from "./daily-check-attachment-helpers";
 import {
@@ -28,8 +29,10 @@ function toRow(row: {
   };
 }
 
-async function belongs(pool: Pool, companyId: string, checkId: string, attachmentId: string): Promise<boolean> {
+async function belongs(pool: Pool, actor: DailyCheckActor, companyId: string, checkId: string, attachmentId: string): Promise<boolean> {
+  if (actor.companyId !== companyId) return false;
   return withCompany(pool, companyId as CompanyId, async (client) => {
+    if (!await activityRecordAllowed(client, actor, "check", checkId)) return false;
     const found = await client.query(
       `SELECT 1 FROM public.attachments
         WHERE id = $1 AND company_id = $2 AND entity_type = 'MACHINE_DAILY_CHECK' AND entity_id = $3`,
@@ -49,7 +52,7 @@ export async function confirmDailyCheckAttachment(
   if (!can(actor.roles, "machines.check.create")) {
     return { code: "FORBIDDEN", message: "Nemate pravo potvrde priloga." };
   }
-  if (!(await belongs(pool, companyIdValue, checkId, attachmentId))) {
+  if (!(await belongs(pool, actor, companyIdValue, checkId, attachmentId))) {
     return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
   }
   const result = await confirmAttachment(
@@ -73,7 +76,7 @@ export async function dailyCheckAttachmentDownloadUrl(
   if (!can(actor.roles, "machines.check.view")) {
     return { code: "FORBIDDEN", message: "Nemate pravo pregleda." };
   }
-  if (!(await belongs(pool, companyIdValue, checkId, attachmentId))) {
+  if (!(await belongs(pool, actor, companyIdValue, checkId, attachmentId))) {
     return { code: "NOT_FOUND", message: "Prilog nije pronađen." };
   }
   const result = await attachmentDownloadUrl(pool, companyIdValue, attachmentId);

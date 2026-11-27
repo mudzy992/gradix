@@ -1,9 +1,6 @@
+import type { EquipmentActor } from "./equipment-scope";
 /** R5.3 shared types for haul service. */
-export type HaulActor = {
-  userId: string;
-  companyId: string;
-  roles: readonly string[];
-};
+export type HaulActor = EquipmentActor;
 
 export type QuantityUnit = "M3" | "T";
 

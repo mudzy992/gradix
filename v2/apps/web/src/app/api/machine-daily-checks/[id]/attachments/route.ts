@@ -25,6 +25,7 @@ export async function GET(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, id);
     if (isAttachmentServiceError(result)) return fail(result.code, result.message);
     return ok({ attachments: result });
@@ -53,6 +54,7 @@ export async function POST(
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       id,
       {

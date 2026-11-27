@@ -22,7 +22,7 @@ export async function PATCH(
     const { id } = await context.params;
     const result = await setDayKind(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       parsed.data,
     );

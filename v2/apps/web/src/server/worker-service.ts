@@ -16,12 +16,29 @@
 import type { Pool, PoolClient } from "pg";
 import { withCompany } from "@gradix/db";
 import type { CompanyId } from "@gradix/db";
-import { safeTimezone } from "@gradix/domain";
+import { safeTimezone, type Scope } from "@gradix/domain";
+import { can } from "./permissions";
 import { writeAudit } from "./audit";
 // `import type` je obavezan: `workday-timer-service` je veliki modul, a ovdje se koriste samo tipovi.
 import type { ServiceActor, ServiceResult } from "./workday-timer-service";
 
 export type { ServiceActor, ServiceResult };
+
+type WorkerScopedActor = ServiceActor & { scope: Scope; projectIds: readonly string[] | null };
+const hiddenWorker = { ok: false as const, status: 404, code: "NOT_FOUND", message: "Radnik ne postoji." };
+
+async function workerVisible(client: PoolClient, actor: WorkerScopedActor, workerId: string): Promise<boolean> {
+  const result = await client.query(`SELECT w.id FROM public.workers w
+    JOIN public.companies c ON c.id=w.company_id
+    WHERE w.company_id=$1 AND w.id=$2 AND (
+      $3::text='COMPANY' OR ($3::text='SELF' AND w.user_id=$4 AND w.is_active)
+      OR ($3::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.project_assignments a
+        WHERE a.company_id=w.company_id AND a.worker_id=w.id AND a.project_id=ANY($5::text[])
+          AND a.voided_at IS NULL AND a.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date
+          AND (a.to_date IS NULL OR a.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date))))`,
+    [actor.companyId, workerId, actor.scope, actor.userId, actor.projectIds ?? []]);
+  return !!result.rowCount;
+}
 
 const SENSITIVE_FIELDS = [
   "birthDate",
@@ -113,7 +130,7 @@ export type WorkerProfileView = {
 
 export async function getWorkerProfile(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   options: { canSeeSensitive: boolean },
 ): Promise<ServiceResult<{ worker: WorkerProfileView }>> {
@@ -128,11 +145,13 @@ export async function getWorkerProfile(
  */
 async function loadProfile(
   client: PoolClient,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   options: { canSeeSensitive: boolean },
 ): Promise<ServiceResult<{ worker: WorkerProfileView }>> {
   {
+    if (!can(actor.roles, "workers.view") || !await workerVisible(client, actor, workerId)) return hiddenWorker;
+    const canSeeSensitive = options.canSeeSensitive && can(actor.roles, "workers.sensitive.view");
     const rows = await client.query(
       `SELECT w.*, (s.first_name || ' ' || s.last_name) AS supervisor_name
          FROM workers w
@@ -169,7 +188,7 @@ async function loadProfile(
       photoObjectKey: (row.photo_object_key as string | null) ?? null,
       notes: (row.notes as string | null) ?? null,
       // `null`, ne prazan objekat: korisnik bez prava ne smije ni znati da polja postoje.
-      sensitive: options.canSeeSensitive
+      sensitive: canSeeSensitive
         ? {
             birthDate: dateOnly(row.birth_date),
             address: (row.address as string | null) ?? null,
@@ -180,13 +199,14 @@ async function loadProfile(
         : null,
     };
 
-    if (options.canSeeSensitive) {
+    if (canSeeSensitive) {
       // ACCESS trag: čitanje osjetljivih podataka se pamti, ne samo izmjena (spec 01 §1.9.42).
       await writeAudit(client, {
         companyId: actor.companyId,
         actorId: actor.userId,
         actorEmail: null,
         action: "worker.sensitive_viewed",
+        retentionClass: "ACCESS",
         entityType: "worker",
         entityId: workerId,
         metadata: { fields: SENSITIVE_FIELDS },
@@ -203,11 +223,12 @@ async function loadProfile(
  */
 export async function patchWorkerProfile(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   patch: Record<string, unknown>,
   options: { canEditSensitive: boolean },
 ): Promise<ServiceResult<{ worker: WorkerProfileView }>> {
+  if (!can(actor.roles, "workers.manage")) return { ok: false, status: 403, code: "FORBIDDEN", message: "Nemate pravo izmjene." };
   const reason = typeof patch.reason === "string" ? patch.reason.trim() : "";
   const fields = Object.keys(patch).filter((key) => key !== "reason");
   if (fields.length === 0) {
@@ -215,7 +236,7 @@ export async function patchWorkerProfile(
   }
 
   const touchesSensitive = fields.some((field) => (SENSITIVE_FIELDS as readonly string[]).includes(field));
-  if (touchesSensitive && !options.canEditSensitive) {
+  if (touchesSensitive && (!options.canEditSensitive || !can(actor.roles, "workers.sensitive.view"))) {
     return {
       ok: false as const,
       status: 403,
@@ -233,6 +254,7 @@ export async function patchWorkerProfile(
   }
 
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const before = await client.query<Record<string, unknown>>(
       "SELECT * FROM workers WHERE company_id = $1 AND id = $2",
       [actor.companyId, workerId],
@@ -331,7 +353,7 @@ function mapRate(row: Record<string, unknown>): RateRow {
 
 export async function listRates(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   today: string,
 ): Promise<ServiceResult<{ rates: RateRow[]; current: RateRow | null }>> {
@@ -340,11 +362,13 @@ export async function listRates(
 
 async function loadRates(
   client: PoolClient,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   today: string,
 ): Promise<ServiceResult<{ rates: RateRow[]; current: RateRow | null }>> {
   {
+    if (!can(actor.roles, "workers.rates.view")) return { ok: false, status: 403, code: "FORBIDDEN", message: "Nemate pravo pregleda satnica." };
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const rows = await client.query(
       `SELECT * FROM worker_rates
         WHERE company_id = $1 AND worker_id = $2
@@ -384,7 +408,7 @@ export function isRateOverlapError(error: unknown): boolean {
  */
 export async function addRate(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   input: {
     kind: string;
@@ -407,7 +431,9 @@ export async function addRate(
     return { ok: false as const, status: 400, code: "VALIDATION_FAILED", message: "Cijena traži iznos." };
   }
 
+  if (!can(actor.roles, "workers.rates.manage")) return { ok: false, status: 403, code: "FORBIDDEN", message: "Nemate pravo izmjene satnica." };
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const existing = await client.query<{ id: string; valid_from: string }>(
       `SELECT id, valid_from::text AS valid_from FROM worker_rates
         WHERE company_id = $1 AND worker_id = $2 AND rate_kind = $3 AND valid_to IS NULL`,
@@ -483,12 +509,14 @@ export async function addRate(
 
 export async function closeRate(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   rateId: string,
   validTo: string,
 ): Promise<ServiceResult<{ rate: RateRow }>> {
+  if (!can(actor.roles, "workers.rates.manage")) return { ok: false, status: 403, code: "FORBIDDEN", message: "Nemate pravo izmjene satnica." };
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const rows = await client.query<Record<string, unknown>>(
       "SELECT * FROM worker_rates WHERE company_id = $1 AND id = $2 AND worker_id = $3",
       [actor.companyId, rateId, workerId],
@@ -534,7 +562,7 @@ export async function closeRate(
  */
 export async function workerLeave(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
 ): Promise<
   ServiceResult<{
@@ -555,7 +583,7 @@ export async function workerLeave(
 
 async function loadLeave(
   client: PoolClient,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
 ): Promise<
   ServiceResult<{
@@ -572,6 +600,8 @@ async function loadLeave(
   }>
 > {
   {
+    if (!can(actor.roles, "workers.leave.view")) return {ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo pregleda."};
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const entitlements = await client.query<Record<string, unknown>>(
       `SELECT * FROM worker_leave_entitlements
         WHERE company_id = $1 AND worker_id = $2
@@ -627,11 +657,13 @@ async function loadLeave(
 
 export async function setLeaveEntitlement(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   input: { year: number; daysEntitled: number; daysCarryover?: number; note?: string | null },
 ): Promise<ServiceResult<{ years: Awaited<ReturnType<typeof workerLeave>> extends never ? never : unknown }>> {
+  if (!can(actor.roles, "workers.leave.manage")) return {ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo izmjene."};
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     await client.query(
       `INSERT INTO worker_leave_entitlements
          (id, company_id, worker_id, year, days_entitled, days_carryover, note, created_by)
@@ -698,7 +730,7 @@ function mapIssuance(row: Record<string, unknown>): IssuanceRow {
 
 export async function listIssuances(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   includeReturned: boolean,
 ): Promise<ServiceResult<{ issuances: IssuanceRow[]; activeCount: number }>> {
@@ -709,11 +741,13 @@ export async function listIssuances(
 
 async function loadIssuances(
   client: PoolClient,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   includeReturned: boolean,
 ): Promise<ServiceResult<{ issuances: IssuanceRow[]; activeCount: number }>> {
   {
+    if (!can(actor.roles, "workers.issuances.view")) return {ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo pregleda."};
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const rows = await client.query(
       `SELECT * FROM worker_issuances
         WHERE company_id = $1 AND worker_id = $2
@@ -736,7 +770,7 @@ async function loadIssuances(
  */
 export async function addIssuance(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   input: {
     itemKind: string;
@@ -750,7 +784,9 @@ export async function addIssuance(
     templateId?: string | null;
   },
 ): Promise<ServiceResult<{ issuances: IssuanceRow[]; activeCount: number }>> {
+  if (!can(actor.roles, "workers.issuances.manage")) return {ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo izmjene."};
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const items: { itemName: string; quantity: number; size: string | null }[] = [];
 
     if (input.templateId) {
@@ -828,12 +864,14 @@ export async function addIssuance(
 
 export async function returnIssuance(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   issuanceId: string,
   input: { returnedAt: string; condition?: string; note?: string | null },
 ): Promise<ServiceResult<{ issuances: IssuanceRow[]; activeCount: number }>> {
+  if (!can(actor.roles, "workers.issuances.manage")) return {ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo izmjene."};
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!await workerVisible(client, actor, workerId)) return hiddenWorker;
     const rows = await client.query<Record<string, unknown>>(
       "SELECT * FROM worker_issuances WHERE company_id = $1 AND id = $2 AND worker_id = $3",
       [actor.companyId, issuanceId, workerId],
@@ -991,7 +1029,7 @@ export async function deletePpeTemplate(
  */
 export async function offboardWorker(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
   input: {
     endedAt: string;
@@ -1010,6 +1048,8 @@ export async function offboardWorker(
     retentionStartedFor: number;
   }>
 > {
+  if (actor.scope !== "COMPANY" || !can(actor.roles, "workers.manage"))
+    return {ok:false, status:403, code:"FORBIDDEN", message:"Radnja zahtijeva opseg firme."};
   return withCompany(pool, actor.companyId, async (client) => {
     const workerRow = await client.query<{ id: string; user_id: string | null; ended_at: string | null }>(
       "SELECT id, user_id, ended_at::text AS ended_at FROM workers WHERE company_id = $1 AND id = $2",
@@ -1161,7 +1201,7 @@ export async function offboardWorker(
  */
 export async function bulkWorkers(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   input:
     | { action: "changeTeam"; workerIds: string[]; team: string | null }
     | { action: "changeSupervisor"; workerIds: string[]; supervisorId: string | null }
@@ -1178,6 +1218,8 @@ export async function bulkWorkers(
         };
       },
 ): Promise<ServiceResult<{ updated: number; skipped: { workerId: string; workerName: string; reason: string }[] }>> {
+  if (actor.scope !== "COMPANY" || !can(actor.roles, "workers.manage"))
+    return {ok:false, status:403, code:"FORBIDDEN", message:"Radnja zahtijeva opseg firme."};
   return withCompany(pool, actor.companyId, async (client) => {
     const skipped: { workerId: string; workerName: string; reason: string }[] = [];
     let updated = 0;
@@ -1294,7 +1336,7 @@ export async function bulkWorkers(
 
 export async function workerHistory(
   pool: Pool,
-  actor: ServiceActor,
+  actor: WorkerScopedActor,
   workerId: string,
 ): Promise<
   ServiceResult<{
@@ -1311,15 +1353,21 @@ export async function workerHistory(
   }>
 > {
   return withCompany(pool, actor.companyId, async (client) => {
+    if (!can(actor.roles, "workers.view") || !await workerVisible(client, actor, workerId)) return hiddenWorker;
+    const sensitive = can(actor.roles, "workers.sensitive.view");
     const rows = await client.query<Record<string, unknown>>(
       `SELECT h.id, h.field, h.old_value, h.new_value, h.changed_at, h.changed_by, h.reason,
               (u.first_name || ' ' || u.last_name) AS changed_by_name
          FROM worker_history h
          LEFT JOIN users u ON u.id = h.changed_by
-        WHERE h.company_id = $1 AND h.worker_id = $2
+        WHERE h.company_id = $1 AND h.worker_id = $2 AND ($3::boolean OR NOT (h.field = ANY($4::text[])))
         ORDER BY h.changed_at DESC, h.id DESC`,
-      [actor.companyId, workerId],
+      [actor.companyId, workerId, sensitive, SENSITIVE_FIELDS],
     );
+    if (sensitive && rows.rows.some(row => (SENSITIVE_FIELDS as readonly string[]).includes(String(row.field)))) {
+      await writeAudit(client, { companyId: actor.companyId, actorId: actor.userId, actorEmail: null,
+        action: "worker.sensitive_viewed", retentionClass: "ACCESS", entityType: "worker", entityId: workerId, metadata: { fields: SENSITIVE_FIELDS, source: "history" } });
+    }
     return {
       ok: true as const,
       entries: rows.rows.map((row) => ({

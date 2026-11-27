@@ -21,7 +21,7 @@ export async function GET(
     const includeReturned = new URL(request.url).searchParams.get("includeReturned") === "true";
     const result = await listIssuances(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       includeReturned,
     );
@@ -46,7 +46,7 @@ export async function POST(
     const { id } = await context.params;
     const result = await addIssuance(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       parsed.data,
     );

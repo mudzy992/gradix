@@ -8,7 +8,7 @@ import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { can } from "@/server/permissions";
-import { equipmentScope } from "@/server/equipment-scope";
+import { activityScope, equipmentScope } from "@/server/equipment-scope";
 import { decodeSyncCursor, encodeSyncCursor, SyncCursorError } from "@/server/sync-cursor";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ const F9_PULL_TYPES = ["site_diary", "hse_incident", "hse_action", "hse_training
 type DbEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_fault" | (typeof F9_PULL_TYPES)[number];
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_fault" | "haul" | "machine_daily_check" | (typeof F9_PULL_TYPES)[number];
   entityId: string;
   version: number;
   payload: Record<string, unknown> | null;
@@ -39,7 +39,7 @@ function isDbEvent(value: unknown): value is DbEvent {
   return typeof event.id === "string"
     && typeof event.cursorSeq === "string"
     && isValidCursorSequence(event.cursorSeq)
-    && ["workday", "work_entry", "sync_conflict", "machine_fault", ...F9_PULL_TYPES].includes(String(event.entityType))
+    && ["workday", "work_entry", "sync_conflict", "machine_fault", "haul", "machine_daily_check", ...F9_PULL_TYPES].includes(String(event.entityType))
     && typeof event.entityId === "string"
     && Number.isInteger(event.version)
     && (event.payload === null || (!!event.payload && typeof event.payload === "object"))
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             .map((event) => event.id),
         );
         if (isForeman) for (const id of f9Ids) allowedEventIds.add(id);
-        for (const event of events) if (event.entityType === "machine_fault") allowedEventIds.add(event.id);
+        for (const event of events) if (["machine_fault", "haul", "machine_daily_check"].includes(event.entityType)) allowedEventIds.add(event.id);
         if (foremanWorkerId) {
           const scopedIds = await foremanVisibleR4EventIds(
             client, ctx.companyId, foremanWorkerId, ctx.userId, events,
@@ -209,6 +209,21 @@ export async function GET(request: NextRequest): Promise<Response> {
         for (const row of rows.rows) allowedFaults.add(row.id);
       }
       visible = visible.filter((event) => event.entityType !== "machine_fault" || allowedFaults.has(event.entityId));
+      for (const [entityType, table, workerColumn] of [
+        ["haul", "hauls", "driver_worker_id"], ["machine_daily_check", "machine_daily_checks", "worker_id"],
+      ] as const) {
+        const ids = visible.filter(event => event.entityType === entityType).map(event => event.entityId);
+        const allowed = new Set<string>();
+        const permission = entityType === "haul" ? "machines.haul.view" : "machines.check.view";
+        if (ids.length && can(ctx.roles, permission)) {
+          const values: unknown[] = [ctx.companyId, ids];
+          const predicate = activityScope(ctx, values, "a", workerColumn);
+          const rows = await client.query<{id: string}>(`SELECT a.id FROM public.${table} a
+            WHERE a.company_id=$1 AND a.id=ANY($2::text[]) AND ${predicate}`, values);
+          for (const row of rows.rows) allowed.add(row.id);
+        }
+        visible = visible.filter(event => event.entityType !== entityType || allowed.has(event.entityId));
+      }
       // Office role does not override a restricted session. Re-check the authoritative
       // conflict and both project references; never authorize using the event payload.
       if (ctx.scope !== "COMPANY") {
@@ -216,10 +231,12 @@ export async function GET(request: NextRequest): Promise<Response> {
         const allowed = new Set<string>();
         if (conflictIds.length && ctx.scope === "PROJECTS") {
           const rows = await client.query<{ id: string }>(`SELECT c.id FROM public.sync_conflicts c
-            JOIN public.work_entries e ON e.company_id=c.company_id AND e.id=c.work_entry_id
-            WHERE c.company_id=$1 AND c.id=ANY($2::text[]) AND e.project_id=ANY($3::text[])
+            LEFT JOIN public.work_entries e ON e.company_id=c.company_id AND e.id=c.work_entry_id
+            WHERE c.company_id=$1 AND c.id=ANY($2::text[])
+              AND (e.project_id=ANY($3::text[]) OR (c.work_entry_id IS NULL AND c.actor_id=$4
+                AND c.received_payload->>'projectId'=ANY($3::text[])))
               AND (c.received_payload->>'projectId' IS NULL OR c.received_payload->>'projectId'=ANY($3::text[]))`,
-            [ctx.companyId, conflictIds, ctx.projectIds ?? []]);
+            [ctx.companyId, conflictIds, ctx.projectIds ?? [], ctx.userId]);
           for (const row of rows.rows) allowed.add(row.id);
         } else if (conflictIds.length && ctx.scope === "SELF") {
           const rows = await client.query<{ id: string }>(`SELECT c.id FROM public.sync_conflicts c

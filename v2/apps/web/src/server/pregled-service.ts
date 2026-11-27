@@ -151,7 +151,7 @@ export async function buildPregled(
 
     // --- 2. Dani za provjeru: ISTI upit i opseg kao ekran „Radni dani“. ---
     const viewerWorkerId = await resolveViewerWorkerId(client, companyIdValue, actor.userId);
-    const reviewScope = workdayReviewScopeFor(actor.roles, viewerWorkerId);
+    const reviewScope = workdayReviewScopeFor(actor.roles, viewerWorkerId, {scope: actor.scope, projectIds: actor.projectIds ?? null});
     const reviewRows = (await listWorkdaysForReview(client, companyIdValue, reviewScope))
       .filter((day) => day.open_entries > 0 || day.unknown_end > 0)
       .sort((a, b) => a.work_date.localeCompare(b.work_date));

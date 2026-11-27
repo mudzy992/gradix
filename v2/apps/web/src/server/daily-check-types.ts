@@ -1,10 +1,7 @@
+import type { EquipmentActor } from "./equipment-scope";
 /** R5.4 shared types for machine daily checks. */
 
-export type DailyCheckActor = {
-  userId: string;
-  companyId: string;
-  roles: readonly string[];
-};
+export type DailyCheckActor = EquipmentActor;
 
 export type DailyCheckResult = "PASS" | "FAIL" | "CONDITIONAL";
 

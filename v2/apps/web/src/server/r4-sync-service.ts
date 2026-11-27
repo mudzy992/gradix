@@ -1,5 +1,5 @@
 import type { Scope } from "@gradix/domain";
-import { equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
+import { activityRecordAllowed, equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
 import { diaryProjectAllowed } from "./diary-service";
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
@@ -1061,6 +1061,20 @@ export async function pushR4SyncItems(
         results.push(invalidItem(item, !projectId && actor.scope === "COMPANY" ? "DIARY_REFERENCE_REQUIRED" : "SYNC_ITEM_REJECTED"));
         continue;
       }
+    }
+
+    if (item.entityType === "haul" || item.entityType === "machine_daily_check") {
+      const allowed = await withCompany(pool, actor.companyId, async (client) => {
+        const isHaul = item.entityType === "haul";
+        const data = isHaul ? item.haul : item.check;
+        const id = isHaul ? item.haulId : item.checkId;
+        const kind = isHaul ? "haul" : "check";
+        if (!await equipmentTargetAllowed(client, actor, data.projectId, data.machineId)) return false;
+        const table = isHaul ? "hauls" : "machine_daily_checks";
+        const exists = await client.query(`SELECT id FROM public.${table} WHERE company_id=$1 AND id=$2`, [actor.companyId, id]);
+        return !exists.rows[0] || activityRecordAllowed(client, actor, kind, id);
+      });
+      if (!allowed) { results.push(invalidItem(item, "SYNC_ITEM_REJECTED")); continue; }
     }
 
     if (item.entityType === "machine_fault" || item.entityType === "service_order_action") {

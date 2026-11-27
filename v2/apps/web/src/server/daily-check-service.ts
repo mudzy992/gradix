@@ -1,4 +1,4 @@
-import { equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
+import { activityScope, equipmentScope, equipmentTargetAllowed, isActorWorker, type EquipmentActor } from "./equipment-scope";
 /** R5.4: daily check list and create. Revise in daily-check-revise.ts. */
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
@@ -37,7 +37,9 @@ export async function listDailyChecks(
       && !actor.roles.some((role) => [...OFFICE_ROLES, "ACCOUNTANT"].includes(role));
     const conditions = ["c.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let idx = 2;
+    conditions.push(activityScope(actor, params, "c", "worker_id"));
+    let idx = params.length + 1;
+    if (isFieldOnly && !viewerWorkerId) conditions.push("FALSE");
     if (isFieldOnly && viewerWorkerId) {
       conditions.push(`c.worker_id = $${idx}`);
       params.push(viewerWorkerId);
@@ -63,6 +65,7 @@ export async function listDailyChecks(
       params.push(filters.result);
       idx += 1;
     }
+    const faultScope = can(actor.roles, "machines.fault.view") ? equipmentScope(actor, params, "f", "fault") : "FALSE";
     const result = await client.query<DbDailyCheckRow>(
       `SELECT c.id, c.machine_id, m.code AS machine_code, m.name AS machine_name,
               c.worker_id, w.first_name || ' ' || w.last_name AS worker_name,
@@ -71,7 +74,7 @@ export async function listDailyChecks(
               c.template_id,
               c.photo_required, c.photo_confirmed_at::text,
               (SELECT f.id FROM public.machine_faults f
-                WHERE f.company_id = c.company_id AND f.daily_check_id = c.id
+                WHERE f.company_id = c.company_id AND f.daily_check_id = c.id AND ${faultScope}
                 ORDER BY f.created_at LIMIT 1) AS fault_id
          FROM public.machine_daily_checks c
          JOIN public.machines m ON m.company_id = c.company_id AND m.id = c.machine_id
@@ -180,8 +183,8 @@ export async function createDailyCheck(
     const checklist = (input.checklistJson ?? {}) as Record<string, string>;
     const failed = template ? criticalFailures(template.items, checklist) : [];
     // A critical check creates a fault as a side effect: enforce the same fault boundary.
-    if (failed.length > 0 && (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId)
-      || (actor.scope === "SELF" && !await isActorWorker(client, actor, workerId)))) {
+    if (!await equipmentTargetAllowed(client, actor, input.projectId, input.machineId)
+      || (actor.scope === "SELF" && !await isActorWorker(client, actor, workerId))) {
       return { outcome: "FORBIDDEN", code: "SCOPE", message: "Nije dozvoljeno." };
     }
 

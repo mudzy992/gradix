@@ -27,7 +27,7 @@ export async function POST(
     const { id } = await context.params;
     const result = await offboardWorker(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       parsed.data,
     );

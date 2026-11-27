@@ -22,7 +22,7 @@ export async function PATCH(
     const { id, issuanceId } = await context.params;
     const result = await returnIssuance(
       await getVerifiedPool(),
-      { userId: guardResult.ctx.userId, companyId: guardResult.ctx.companyId, roles: guardResult.ctx.roles },
+      guardResult.ctx,
       id,
       issuanceId,
       parsed.data,

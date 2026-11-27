@@ -49,7 +49,7 @@ export default async function RadniDaniPage({
 
   const { days, weeks } = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => {
     const viewerWorkerId = await resolveViewerWorkerId(client, auth.ctx.companyId, auth.ctx.userId);
-    const scope = fromDashboard ? {kind:"assignments" as const, viewerWorkerId} : workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId);
+    const scope = fromDashboard && auth.ctx.scope === "COMPANY" ? {kind:"assignments" as const, viewerWorkerId} : workdayReviewScopeFor(auth.ctx.roles, viewerWorkerId, auth.ctx);
     const projectIds = fromDashboard ? await dashboardAssignedProjects(client, auth.ctx) : auth.ctx.scope === "COMPANY" ? null : auth.ctx.scope === "PROJECTS" ? auth.ctx.projectIds ?? [] : [];
     const all = await listWorkdaysForReview(client, auth.ctx.companyId, scope, 200,
       onlyUnconfirmed ? {unconfirmed:true, projectIds} : undefined);

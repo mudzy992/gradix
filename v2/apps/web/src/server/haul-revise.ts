@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
+import { activityRecordAllowed } from "./equipment-scope";
 import { reverseSourceCost } from "./cost-entry-service";
 import type { HaulActor, MutationOutcome } from "./haul-types";
 
@@ -19,6 +20,9 @@ export async function reviseHaul(
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await activityRecordAllowed(client, actor, "haul", haulId)) {
+      return { outcome: "FORBIDDEN", code: "SCOPE" };
+    }
     const haul = await client.query<{
       id: string;
       version: number;

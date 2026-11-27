@@ -25,6 +25,7 @@ export async function POST(
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, id, { reason: body.reason, payload: body.payload ?? {} });
     if (result.outcome === "FORBIDDEN") return fail("FORBIDDEN", result.message ?? "Nemate pravo.");
     if (result.outcome === "VALIDATION_FAILED") return fail("VALIDATION_FAILED", result.message);

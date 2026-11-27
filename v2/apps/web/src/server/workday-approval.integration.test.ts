@@ -17,12 +17,12 @@ const OTHER = `cmp_r4bx_${RUN}`;
 const WEEK = "2026-11-16";
 const DATE = "2026-11-18";
 
-const owner = { userId: `usr_r4b_own_${RUN}`, companyId: CO, roles: ["OWNER"] as const };
-const admin = { userId: `usr_r4b_adm_${RUN}`, companyId: CO, roles: ["ADMIN"] as const };
-const pm = { userId: `usr_r4b_pm_${RUN}`, companyId: CO, roles: ["PROJECT_MANAGER"] as const };
-const pmOut = { userId: `usr_r4b_pmx_${RUN}`, companyId: CO, roles: ["PROJECT_MANAGER"] as const };
-const ss = { userId: `usr_r4b_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const };
-const acct = { userId: `usr_r4b_acc_${RUN}`, companyId: CO, roles: ["ACCOUNTANT"] as const };
+const owner = { userId: `usr_r4b_own_${RUN}`, companyId: CO, roles: ["OWNER"] as const, scope: "COMPANY" as const, projectIds: null };
+const admin = { userId: `usr_r4b_adm_${RUN}`, companyId: CO, roles: ["ADMIN"] as const, scope: "COMPANY" as const, projectIds: null };
+const pm = { userId: `usr_r4b_pm_${RUN}`, companyId: CO, roles: ["PROJECT_MANAGER"] as const, scope: "COMPANY" as const, projectIds: null };
+const pmOut = { userId: `usr_r4b_pmx_${RUN}`, companyId: CO, roles: ["PROJECT_MANAGER"] as const, scope: "COMPANY" as const, projectIds: null };
+const ss = { userId: `usr_r4b_ss_${RUN}`, companyId: CO, roles: ["SITE_SUPERVISOR"] as const, scope: "COMPANY" as const, projectIds: null };
+const acct = { userId: `usr_r4b_acc_${RUN}`, companyId: CO, roles: ["ACCOUNTANT"] as const, scope: "COMPANY" as const, projectIds: null };
 
 describeDb("R4b approval (PostgreSQL)", () => {
   const dbAdmin = new Pool({ connectionString: adminUrl, max: 2 });

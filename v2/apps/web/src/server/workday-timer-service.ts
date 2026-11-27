@@ -22,15 +22,30 @@ import {
   safeTimezone,
   sumSegmentMinutes,
   workdayReviewState,
+  type Scope,
   type DayKind,
   type RoundingMinutes,
   type RoundingMode,
   type WorkdayReviewState,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { can } from "./permissions";
 import { bookWorkdayCost } from "./cost-entry-service";
 
 export type ServiceActor = { userId: string; companyId: CompanyId; roles: readonly string[] };
+
+type ScopedServiceActor = ServiceActor & { scope: Scope; projectIds: readonly string[] | null };
+
+async function scopedDayAllowed(client: PoolClient, actor: ScopedServiceActor, dayId: string): Promise<boolean> {
+  const result = await client.query(`SELECT d.id FROM public.workdays d WHERE d.company_id=$1 AND d.id=$2 AND (
+    $3::text='COMPANY' OR ($3::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w
+      WHERE w.company_id=d.company_id AND w.id=d.worker_id AND w.user_id=$4 AND w.is_active)) OR
+    ($3::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=d.company_id AND e.workday_id=d.id AND e.project_id=ANY($5::text[]))
+      AND NOT EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=d.company_id AND e.workday_id=d.id
+        AND (e.project_id IS NULL OR NOT e.project_id=ANY($5::text[])))))`,
+    [actor.companyId, dayId, actor.scope, actor.userId, actor.projectIds ?? []]);
+  return !!result.rowCount;
+}
 
 export type ServiceResult<T> =
   | ({ ok: true } & T)
@@ -656,11 +671,12 @@ export async function closeForgottenDay(
  */
 export async function setDayKind(
   pool: Pool,
-  actor: ServiceActor,
+  actor: ScopedServiceActor,
   dayId: string,
   input: { dayKind: DayKind; absenceNote?: string; reason?: string },
   now = new Date(),
 ): Promise<ServiceResult<{ day: TimerDay; blockers: Blocker[] }>> {
+  if (!can(actor.roles, "workdays.kind")) return { ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo izmjene." };
   return withCompany(pool, actor.companyId, async (client) => {
     const policy = await companyPolicy(client, actor.companyId);
     const day = await client.query<{ id: string; worker_id: string; day_kind: string; approval_status: string }>(
@@ -668,7 +684,7 @@ export async function setDayKind(
       [actor.companyId, dayId],
     );
     const row = day.rows[0];
-    if (!row) {
+    if (!row || !await scopedDayAllowed(client, actor, dayId)) {
       return { ok: false as const, status: 404, code: "NOT_FOUND", message: "Radni dan ne postoji." };
     }
     if (row.approval_status === "LOCKED") {
@@ -779,10 +795,11 @@ export type WeekView = {
  */
 export async function weekView(
   pool: Pool,
-  actor: ServiceActor,
+  actor: ScopedServiceActor,
   weekStart: string,
   options: { workerIds?: readonly string[] | null } = {},
 ): Promise<ServiceResult<{ week: WeekView }>> {
+  if (!can(actor.roles, "workdays.view")) return { ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo pregleda." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
     return { ok: false as const, status: 400, code: "VALIDATION_FAILED", message: "weekStart mora biti gggg-mm-dd." };
   }
@@ -797,8 +814,14 @@ export async function weekView(
          FROM workers w
         WHERE w.company_id = $1 AND w.ended_at IS NULL
           AND ($2::text[] IS NULL OR w.id = ANY($2::text[]))
+          AND ($3::text='COMPANY' OR ($3::text='SELF' AND w.user_id=$4 AND w.is_active)
+            OR ($3::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.project_assignments a
+              JOIN public.companies c ON c.id=a.company_id WHERE a.company_id=w.company_id AND a.worker_id=w.id
+                AND a.project_id=ANY($5::text[]) AND a.voided_at IS NULL
+                AND a.from_date<=(clock_timestamp() AT TIME ZONE c.timezone)::date
+                AND (a.to_date IS NULL OR a.to_date>=(clock_timestamp() AT TIME ZONE c.timezone)::date))))
         ORDER BY w.last_name, w.first_name`,
-      [actor.companyId, scope],
+      [actor.companyId, scope, actor.scope, actor.userId, actor.projectIds ?? []],
     );
 
     const days = await client.query<{
@@ -814,16 +837,18 @@ export async function weekView(
     }>(
       `SELECT d.id, d.worker_id, d.work_date::text AS work_date, d.day_kind, d.approval_status,
               (SELECT count(*)::text FROM work_entries e
-                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'UNKNOWN_END') AS unknown_end,
+                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'UNKNOWN_END' AND ($4::text <> 'PROJECTS' OR e.project_id=ANY($6::text[]))) AS unknown_end,
               (SELECT min(e.started_at) FROM work_entries e
-                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'OPEN') AS open_started_at,
+                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'OPEN' AND ($4::text <> 'PROJECTS' OR e.project_id=ANY($6::text[]))) AS open_started_at,
               (SELECT count(*)::text FROM work_entries e
-                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'KNOWN_END') AS minutes,
+                WHERE e.company_id = d.company_id AND e.workday_id = d.id AND e.end_state = 'KNOWN_END' AND ($4::text <> 'PROJECTS' OR e.project_id=ANY($6::text[]))) AS minutes,
               '0' AS raw_minutes
          FROM workdays d
         WHERE d.company_id = $1 AND d.work_date BETWEEN $2 AND $3
+          AND ($4::text='COMPANY' OR ($4::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=d.company_id AND w.id=d.worker_id AND w.user_id=$5 AND w.is_active))
+            OR ($4::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=d.company_id AND e.workday_id=d.id AND e.project_id=ANY($6::text[]))))
         ORDER BY d.work_date`,
-      [actor.companyId, start, end],
+      [actor.companyId, start, end, actor.scope, actor.userId, actor.projectIds ?? []],
     );
 
     // Zbir segmenata po danu računa DOMENA (zaokruživanje po segmentu), ne SQL — pravilo mora
@@ -836,8 +861,10 @@ export async function weekView(
       `SELECT e.workday_id, e.started_at, e.ended_at
          FROM work_entries e
          JOIN workdays d ON d.company_id = e.company_id AND d.id = e.workday_id
-        WHERE e.company_id = $1 AND d.work_date BETWEEN $2 AND $3`,
-      [actor.companyId, start, end],
+        WHERE e.company_id = $1 AND d.work_date BETWEEN $2 AND $3
+          AND ($4::text='COMPANY' OR ($4::text='PROJECTS' AND e.project_id=ANY($6::text[]))
+            OR ($4::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=d.company_id AND w.id=d.worker_id AND w.user_id=$5 AND w.is_active)))`,
+      [actor.companyId, start, end, actor.scope, actor.userId, actor.projectIds ?? []],
     );
 
     const byDay = new Map<string, { startedAt: string; endedAt: string | null }[]>();
@@ -890,9 +917,13 @@ export async function weekView(
     }
 
     const conflicts = await client.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM sync_conflicts
-        WHERE company_id = $1 AND status = 'OPEN' AND created_at >= $2::date AND created_at < ($3::date + 1)`,
-      [actor.companyId, start, end],
+      `SELECT count(*)::text AS n FROM public.sync_conflicts c
+        LEFT JOIN public.work_entries e ON e.company_id=c.company_id AND e.id=c.work_entry_id
+        WHERE c.company_id = $1 AND c.status = 'OPEN' AND c.created_at >= $2::date AND c.created_at < ($3::date + 1)
+          AND ($4::text='COMPANY' OR ($4::text='PROJECTS' AND e.project_id=ANY($6::text[])
+            AND (c.received_payload->>'projectId' IS NULL OR c.received_payload->>'projectId'=ANY($6::text[])))
+            OR ($4::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=e.company_id AND w.id=e.worker_id AND w.user_id=$5 AND w.is_active)))`,
+      [actor.companyId, start, end, actor.scope, actor.userId, actor.projectIds ?? []],
     );
 
     void timezone; // zona je već primijenjena na datume kroz `work_date`, koja je kalendarski dan
@@ -917,9 +948,13 @@ export async function weekView(
  */
 export async function bulkConfirm(
   pool: Pool,
-  actor: ServiceActor,
+  actor: ScopedServiceActor,
   input: { projectId: string; workDate: string; workerIds?: string[] },
 ): Promise<ServiceResult<{ confirmed: number; skipped: { workerId: string; workerName: string; reason: string }[] }>> {
+  if (!can(actor.roles, "workdays.confirm")) return { ok:false, status:403, code:"FORBIDDEN", message:"Nemate pravo potvrde." };
+  if (actor.scope !== "COMPANY" && (actor.scope !== "PROJECTS" || !(actor.projectIds ?? []).includes(input.projectId))) {
+    return { ok: false, status: 403, code: "FORBIDDEN", message: "Projekat nije u opsegu." };
+  }
   return withCompany(pool, actor.companyId, async (client) => {
     const assigned = await client.query<{ worker_id: string; name: string }>(
       `SELECT a.worker_id, (w.first_name || ' ' || w.last_name) AS name
@@ -946,6 +981,7 @@ export async function bulkConfirm(
         skipped.push({ workerId: row.worker_id, workerName: row.name, reason: "Nema radnog dana za taj datum." });
         continue;
       }
+      if (!await scopedDayAllowed(client, actor, existing.id)) continue;
       if (existing.approval_status !== "SUBMITTED") {
         skipped.push({
           workerId: row.worker_id,
