@@ -15,6 +15,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
+import { hseScope, type HseActor } from "./hse-scope";
 
 export const NOTIFICATION_KINDS = [
   "obligation.expiring",
@@ -137,6 +138,16 @@ const toRow = (row: Record<string, unknown>): NotificationRow => ({
   readAt: row.read_at ? new Date(row.read_at as string).toISOString() : null,
 });
 
+/** Role-targeted HSE notifications must not bypass the viewer's current scope. */
+function hseNotificationScope(actor: HseActor, params: unknown[]): string {
+  if (actor.scope === "COMPANY") return "TRUE";
+  const incident = hseScope(actor, params, "hi", "incident");
+  const inspection = hseScope(actor, params, "hp", "inspection");
+  return `(n.source_type IS NULL OR n.source_type NOT IN ('hse_incident','hse_inspection') OR
+    (n.source_type='hse_incident' AND EXISTS (SELECT 1 FROM public.hse_incidents hi WHERE hi.company_id=n.company_id AND hi.id=n.source_id AND ${incident})) OR
+    (n.source_type='hse_inspection' AND EXISTS (SELECT 1 FROM public.hse_inspections hp WHERE hp.company_id=n.company_id AND hp.id=n.source_id AND ${inspection})))`;
+}
+
 /**
  * Inbox jedne osobe: njena lična obavještenja + ona za njene role.
  *
@@ -145,19 +156,21 @@ const toRow = (row: Record<string, unknown>): NotificationRow => ({
  */
 export async function listNotifications(
   pool: Pool,
-  input: { companyId: string; userId: string; roles: readonly string[]; unreadOnly?: boolean; limit?: number },
+  input: HseActor & { unreadOnly?: boolean; limit?: number },
 ): Promise<NotificationRow[]> {
   const limit = Math.min(Math.max(input.limit ?? 30, 1), 100);
   return withCompany(pool, toCompanyId(input.companyId), async (client) => {
+    const params: unknown[] = [input.companyId, input.userId, input.roles, input.unreadOnly ?? false, limit];
+    const scope = hseNotificationScope(input, params);
     const rows = await client.query(
       `SELECT id, kind, title, body, href, severity, created_at, read_at
-         FROM public.notifications
-        WHERE company_id = $1
+         FROM public.notifications n
+        WHERE company_id = $1 AND ${scope}
           AND (user_id = $2 OR (user_id IS NULL AND role_target = ANY($3)))
           AND ($4::boolean IS FALSE OR read_at IS NULL)
         ORDER BY created_at DESC
         LIMIT $5`,
-      [input.companyId, input.userId, input.roles, input.unreadOnly ?? false, limit],
+      params,
     );
     return rows.rows.map((row) => toRow(row as Record<string, unknown>));
   });
@@ -166,14 +179,16 @@ export async function listNotifications(
 /** Broj neproučenih — zvonce u shellu. Jedan `count`, ne lista. */
 export async function unreadCount(
   pool: Pool,
-  input: { companyId: string; userId: string; roles: readonly string[] },
+  input: HseActor,
 ): Promise<number> {
   return withCompany(pool, toCompanyId(input.companyId), async (client) => {
+    const params: unknown[] = [input.companyId, input.userId, input.roles];
+    const scope = hseNotificationScope(input, params);
     const row = await client.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM public.notifications
-        WHERE company_id = $1 AND read_at IS NULL
+      `SELECT count(*)::int AS n FROM public.notifications n
+        WHERE company_id = $1 AND ${scope} AND read_at IS NULL
           AND (user_id = $2 OR (user_id IS NULL AND role_target = ANY($3)))`,
-      [input.companyId, input.userId, input.roles],
+      params,
     );
     return Number(row.rows[0]?.n ?? 0);
   });
@@ -185,16 +200,18 @@ export async function unreadCount(
  */
 export async function markRead(
   pool: Pool,
-  input: { companyId: string; userId: string; roles: readonly string[]; notificationId?: string; all?: boolean },
+  input: HseActor & { notificationId?: string; all?: boolean },
 ): Promise<number> {
   return withCompany(pool, toCompanyId(input.companyId), async (client) => {
     const target = input.notificationId ?? null;
+    const params: unknown[] = [input.companyId, input.userId, input.roles, target];
+    const scope = hseNotificationScope(input, params);
     const result = await client.query(
-      `UPDATE public.notifications SET read_at = now()
-        WHERE company_id = $1 AND read_at IS NULL
+      `UPDATE public.notifications n SET read_at = now()
+        WHERE company_id = $1 AND ${scope} AND read_at IS NULL
           AND (user_id = $2 OR (user_id IS NULL AND role_target = ANY($3)))
           AND ($4::text IS NULL OR id = $4)`,
-      [input.companyId, input.userId, input.roles, target],
+      params,
     );
     return result.rowCount ?? 0;
   });

@@ -1,3 +1,4 @@
+import { hseScope } from "@/server/hse-scope";
 /** GET/POST /api/hse/trainings — evidencija održanih obuka i toolbox razgovora (§1.4). */
 import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const ctx = guardResult.ctx;
     const params = request.nextUrl.searchParams;
     const trainings = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
+      const scopeParams: unknown[] = [ctx.companyId, params.get("kind") ?? null, params.get("project") ?? null];
+      const scopeSql = hseScope(ctx, scopeParams, "t", "training");
       const result = await client.query<{
         id: string; kind: string; title: string; topic: string | null; held_at: string;
         duration_minutes: number | null; location: string | null; project_name: string | null;
@@ -27,12 +30,12 @@ export async function GET(request: NextRequest): Promise<Response> {
                   WHERE a.company_id = t.company_id AND a.training_id = t.id) AS attendees
            FROM public.hse_trainings t
            LEFT JOIN public.projects p ON p.company_id = t.company_id AND p.id = t.project_id
-          WHERE t.company_id = $1
+          WHERE t.company_id = $1 AND ${scopeSql}
             AND ($2::text IS NULL OR t.kind = $2)
             AND ($3::text IS NULL OR t.project_id = $3)
           ORDER BY t.held_at DESC
           LIMIT 300`,
-        [ctx.companyId, params.get("kind") ?? null, params.get("project") ?? null],
+        scopeParams,
       );
       return result.rows.map((row) => ({
         id: row.id,
@@ -66,6 +69,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       body,
     );

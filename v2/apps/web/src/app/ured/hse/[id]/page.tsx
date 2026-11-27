@@ -27,7 +27,7 @@ export default async function HseIncidentPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const detail = await getIncident(
     await getVerifiedPool(),
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     id,
   );
   if (!detail) notFound();

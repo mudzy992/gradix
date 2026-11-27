@@ -22,6 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day) {
       return fail("VALIDATION_FAILED", "Projekat ili datum nije ispravan.");
     }
+    if (auth.ctx.scope === "PROJECTS" && !(auth.ctx.projectIds ?? []).includes(project)) return fail("FORBIDDEN", "Projekat je van opsega.");
     const rows = await withCompany(await getVerifiedPool(), auth.ctx.companyId, async (client) => client.query<{ id: string; name: string }>(
       `SELECT DISTINCT target.id, btrim(target.first_name || ' ' || coalesce(target.last_name, '')) AS name
          FROM public.workers self

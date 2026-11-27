@@ -22,6 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       companyId: guardResult.ctx.companyId,
       userId: guardResult.ctx.userId,
       roles: guardResult.ctx.roles,
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     };
     const pool = await getVerifiedPool();
     const [notifications, unread] = await Promise.all([

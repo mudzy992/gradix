@@ -214,6 +214,8 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
         await client.query("DELETE FROM hse_training_attendees WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_trainings WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_actions WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM hse_inspections WHERE company_id = $1", [company]);
+        await client.query("DELETE FROM project_assignments WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_investigations WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_incident_updates WHERE company_id = $1", [company]);
         await client.query("DELETE FROM hse_attachments WHERE company_id = $1", [company]);
@@ -490,11 +492,11 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       body: JSON.stringify({ action: "UPLOAD_URL" }),
     });
     expect((await route.POST(photoRequest(), context)).status).toBe(401);
-    expect((await route.POST(photoRequest(COOKIES.worker), context)).status).toBe(403);
+    expect((await route.POST(photoRequest(COOKIES.worker), context)).status).toBe(404);
     expect((await route.POST(photoRequest(COOKIES.b), context)).status).toBe(404);
     expect((await route.GET(new NextRequest("http://t/photo"), context)).status).toBe(401);
-    const actor = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"] };
-    const stranger = { companyId: CO, userId: USER_WORKER, roles: ["WORKER"] };
+    const actor = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"], scope: "COMPANY" as const, projectIds: null };
+    const stranger = { companyId: CO, userId: USER_WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null };
     expect(await hsePhotoDownload(admin, actor, payload.incidentId, sha)).toBeNull();
     expect((await resumeHsePhoto(admin, stranger, payload.incidentId, sha, "UPLOAD_URL")).outcome).toBe("FORBIDDEN");
     expect(await resumeHsePhoto(admin, actor, payload.incidentId, sha, "UPLOAD_URL"))
@@ -711,9 +713,10 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
     expect((await pushOne(COOKIES.driver, incidentItem({ incidentId: `hsi_driver_${RUN}` }))).status).toBe("APPLIED");
     const response = await pull(new NextRequest("http://t/api/sync/pull?limit=200", { headers: { cookie: COOKIES.driver } }));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { data: { events: { entityType: string }[] } };
+    const body = (await response.json()) as { data: { events: { entityType: string; entityId: string }[] } };
     expect(body.data.events.some((event) => event.entityType === "site_diary")).toBe(false);
-    expect(body.data.events.some((event) => event.entityType === "hse_incident")).toBe(false);
+    expect(body.data.events.some((event) => event.entityId === `hsi_driver_${RUN}`)).toBe(true);
+    expect(body.data.events.some((event) => event.entityId === `hsi_worker_${RUN}`)).toBe(false);
   });
 
   it("potpisan dnevnik ne prima sync dopune ni BOQ stavke bez revizije", async () => {
@@ -749,4 +752,128 @@ describeDb("F9 mobilni sync dnevnika i HSE", () => {
       ));
     expect(foreign.rows[0]?.count).toBe("0");
   });
+  it("HSE PROJECTS i SELF štite servis, liste, statistiku, mjere i offline push/retry/pull", async () => {
+    const { getVerifiedPool } = await import("./db");
+    const service = await import("./hse-service");
+    const pool = await getVerifiedPool();
+    const other = `prj_f9_hidden_${RUN}`;
+    await admin.query("INSERT INTO projects (id, company_id, code, name) VALUES ($1,$2,'OUT','Van opsega')", [other, CO]);
+    await admin.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date)
+      VALUES ($1,$2,$3,$4,'2020-01-01')`, [`asg_scope_${RUN}`,CO,PROJECT,WORKER_SUP]);
+    const owner = { companyId: CO, userId: USER_SUP, roles: ["SITE_SUPERVISOR"], scope: "COMPANY" as const, projectIds: null };
+    const otherAuthor = { ...owner, userId: USER_WORKER };
+    const incidentInput = (projectId: string, id: string) => ({ id, projectId, kind:"NEAR_MISS", severity:"MODERATE",
+      occurredAt:`${DAY}T10:00:00Z`, description:"Opis opasnog događaja" });
+    const allowedId = `hsi_scope_yes_${RUN}`, deniedId = `hsi_scope_no_${RUN}`;
+    expect((await service.reportIncident(pool, owner, incidentInput(PROJECT, allowedId))).outcome).toBe("OK");
+    expect((await service.reportIncident(pool, otherAuthor, incidentInput(other, deniedId))).outcome).toBe("OK");
+    const inspectionInput = (projectId:string) => ({kind:"INTERNAL" as const, inspectedAt:`${DAY}T10:00:00Z`, result:"PROHIBITION" as const, projectId});
+    const inInspection = await service.recordInspection(pool, owner, inspectionInput(PROJECT));
+    const outInspection = await service.recordInspection(pool, otherAuthor, inspectionInput(other));
+    if (inInspection.outcome !== "OK" || outInspection.outcome !== "OK") throw new Error("inspection fixture");
+    const actionInput = (incidentId:string) => ({incidentId,description:"Spriječiti opasnost",responsibleWorkerId:WORKER_SUP,dueOn:DAY});
+    const inAction = await service.createAction(pool, owner, actionInput(allowedId));
+    const outAction = await service.createAction(pool, owner, actionInput(deniedId));
+    if (inAction.outcome !== "OK" || outAction.outcome !== "OK") throw new Error("action fixture");
+    const trainingInput = (projectId:string, id:string) => ({id,projectId,kind:"TOOLBOX" as const,title:"Sigurnost",topic:"Zaštita",heldAt:`${DAY}T10:00:00Z`,durationMinutes:10,
+      attendees:[{workerId:WORKER_SUP,signatureName:"Šef",signedAt:`${DAY}T10:10:00Z`}]});
+    const trainingA = `hst_scope_yes_${RUN}`, trainingB = `hst_scope_no_${RUN}`;
+    expect((await service.createTraining(pool, owner, trainingInput(PROJECT, trainingA))).outcome).toBe("OK");
+    expect((await service.createTraining(pool, otherAuthor, trainingInput(other, trainingB))).outcome).toBe("OK");
+    // Generate event and receipt while scope is still COMPANY, then revoke project access.
+    const foreignItem = incidentItem({ incidentId:`hsi_sync_hidden_${RUN}` });
+    if (foreignItem.entityType !== "hse_incident") throw new Error("fixture");
+    foreignItem.incident.projectId = other;
+    expect((await pushOne(COOKIES.sup, foreignItem)).status).toBe("APPLIED");
+    try {
+      await admin.query("UPDATE memberships SET scope='PROJECTS' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+      const scoped = { ...owner, scope:"PROJECTS" as const, projectIds:[PROJECT] };
+      expect(await service.getIncident(pool, scoped, deniedId)).toBeNull();
+      expect(await service.getIncident(pool, scoped, allowedId)).not.toBeNull();
+      expect((await service.reportIncident(pool, scoped, incidentInput(other, `hsi_denied_${RUN}`))).outcome).toBe("NOT_FOUND");
+      expect((await service.saveInvestigation(pool, scoped, deniedId, {rootCause:"Opasan uzrok"})).outcome).toBe("NOT_FOUND");
+      expect((await service.createAction(pool, scoped, actionInput(deniedId))).outcome).toBe("NOT_FOUND");
+      expect((await service.completeAction(pool, scoped, outAction.id)).outcome).toBe("NOT_FOUND");
+      expect((await service.liftProhibition(pool, scoped, outInspection.id, "Zabrana otklonjena")).outcome).toBe("NOT_FOUND");
+      expect((await service.recordInspection(pool, scoped, inspectionInput(other))).outcome).toBe("NOT_FOUND");
+      expect((await service.createTraining(pool, scoped, trainingInput(other, `hst_denied_${RUN}`))).outcome).toBe("NOT_FOUND");
+      const wrongWorkerTraining = trainingInput(PROJECT, `hst_wrong_worker_${RUN}`);
+      wrongWorkerTraining.attendees[0]!.workerId = WORKER_INJURED;
+      expect((await service.createTraining(pool, scoped, wrongWorkerTraining)).outcome).toBe("NOT_FOUND");
+      expect((await service.createAction(pool, scoped, {...actionInput(allowedId),responsibleWorkerId:WORKER_INJURED})).outcome).toBe("NOT_FOUND");
+      expect((await pushOne(COOKIES.sup, foreignItem)).status).toBe("REJECTED");
+      const hiddenNew = incidentItem({incidentId:`hsi_sync_new_denied_${RUN}`});
+      if (hiddenNew.entityType !== "hse_incident") throw new Error("fixture");
+      hiddenNew.incident.projectId = other;
+      expect((await pushOne(COOKIES.sup, hiddenNew)).status).toBe("REJECTED");
+      const toolbox: R4SyncPushItem = {
+        localId: localId(), entityType: "hse_training", trainingId: `hst_sync_scoped_${RUN}`,
+        deviceSentAt:`${DAY}T12:00:00Z`, training: {kind:"TOOLBOX",title:"Sigurnost",topic:"Zaštita",
+          heldAt:`${DAY}T12:00:00Z`,projectId:PROJECT,location:null,durationMinutes:15,
+          attendees:[{workerId:WORKER_SUP,signatureName:"Šef",signedAt:`${DAY}T12:15:00Z`}]},
+      };
+      expect((await pushOne(COOKIES.sup, toolbox)).status).toBe("APPLIED");
+      const badToolbox = structuredClone(toolbox);
+      if (badToolbox.entityType !== "hse_training") throw new Error("fixture");
+      badToolbox.localId = localId(); badToolbox.trainingId = `hst_sync_bad_${RUN}`; badToolbox.training.projectId = other;
+      expect((await pushOne(COOKIES.sup, badToolbox)).status).toBe("REJECTED");
+      const forgedExisting = structuredClone(toolbox);
+      if (forgedExisting.entityType !== "hse_training") throw new Error("fixture");
+      forgedExisting.localId = localId(); forgedExisting.trainingId = trainingB;
+      expect((await pushOne(COOKIES.sup, forgedExisting)).status).toBe("REJECTED");
+      const badAction: R4SyncPushItem = {localId:localId(),entityType:"hse_action",actionId:`hsa_sync_bad_${RUN}`,
+        deviceSentAt:`${DAY}T12:00:00Z`,action:{incidentId:deniedId,inspectionId:null,description:"Strana mjera",responsibleWorkerId:WORKER_SUP,dueOn:DAY}};
+      expect((await pushOne(COOKIES.sup, badAction)).status).toBe("REJECTED");
+      await withCompany(admin, companyId(CO), async client => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("UPDATE project_assignments SET to_date='2020-01-02' WHERE id=$1", [`asg_scope_${RUN}`]);
+      });
+      expect((await pushOne(COOKIES.sup, toolbox)).status).toBe("REJECTED");
+      await withCompany(admin, companyId(CO), async client => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("UPDATE project_assignments SET to_date=NULL WHERE id=$1", [`asg_scope_${RUN}`]);
+      });
+      const page = await pull(new NextRequest("http://t/api/sync/pull?limit=200",{headers:{cookie:COOKIES.sup}}));
+      expect(JSON.stringify(await page.json())).not.toContain(foreignItem.incidentId);
+      const incidentList = await import("@/app/api/hse/incidents/route");
+      const actions = await import("@/app/api/hse/actions/route");
+      const trainings = await import("@/app/api/hse/trainings/route");
+      const inspections = await import("@/app/api/hse/inspections/route");
+      const attendees = await import("@/app/api/hse/trainings/[id]/attendees/route");
+      const req = () => new NextRequest("http://t/api/hse/test",{headers:{cookie:COOKIES.sup}});
+      const listed = JSON.stringify(await (await incidentList.GET(req())).json());
+      expect(listed).toContain(allowedId); expect(listed).not.toContain(deniedId);
+      const listedActions = JSON.stringify(await (await actions.GET(req())).json());
+      expect(listedActions).toContain(inAction.id); expect(listedActions).not.toContain(outAction.id);
+      const listedTrainings = JSON.stringify(await (await trainings.GET(req())).json());
+      expect(listedTrainings).toContain(trainingA); expect(listedTrainings).not.toContain(trainingB);
+      const listedInspections = JSON.stringify(await (await inspections.GET(req())).json());
+      expect(listedInspections).toContain(inInspection.id); expect(listedInspections).not.toContain(outInspection.id);
+      expect((await attendees.GET(req(),{params:Promise.resolve({id:trainingB})})).status).toBe(404);
+      expect((await service.hseStats(pool, scoped, {from:DAY,to:DAY,projectId:other})).incidents).toBe(0);
+      const notifications = await import("./notification-service");
+      const inbox = await notifications.listNotifications(pool, {...scoped,roles:["OWNER"]});
+      const sourceNotifications = await admin.query<{id:string;source_id:string}>("SELECT id,source_id FROM public.notifications WHERE company_id=$1 AND source_id=ANY($2::text[])",[CO,[inInspection.id,outInspection.id]]);
+      const visibleNotice = sourceNotifications.rows.find(row => row.source_id === inInspection.id)!;
+      const hiddenNotice = sourceNotifications.rows.find(row => row.source_id === outInspection.id)!;
+      expect(inbox.some(row => row.id === visibleNotice.id)).toBe(true);
+      expect(inbox.some(row => row.id === hiddenNotice.id)).toBe(false);
+      expect(await notifications.markRead(pool, {...scoped,roles:["OWNER"],notificationId:hiddenNotice.id})).toBe(0);
+      await admin.query("UPDATE memberships SET scope='SELF' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+      const self = {...owner, scope:"SELF" as const};
+      expect(await service.getIncident(pool,self,deniedId)).toBeNull();
+      expect(await service.getIncident(pool,self,allowedId)).not.toBeNull();
+      expect((await service.completeAction(pool,self,outAction.id)).outcome).toBe("NOT_FOUND");
+      const forgedSelf = incidentItem({incidentId:deniedId});
+      expect((await pushOne(COOKIES.sup, forgedSelf)).status).toBe("REJECTED");
+      const selfList = JSON.stringify(await (await incidentList.GET(req())).json());
+      expect(selfList).toContain(allowedId); expect(selfList).not.toContain(deniedId);
+      const selfTrainings = JSON.stringify(await (await trainings.GET(req())).json());
+      expect(selfTrainings).toContain(trainingA); expect(selfTrainings).not.toContain(trainingB);
+      expect((await attendees.GET(req(),{params:Promise.resolve({id:trainingB})})).status).toBe(404);
+    } finally {
+      await admin.query("UPDATE memberships SET scope='COMPANY' WHERE id=$1", [`mem_f9s_sup_${RUN}`]);
+    }
+  });
+
 });

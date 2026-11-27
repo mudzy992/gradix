@@ -1,3 +1,4 @@
+import { hseScope } from "@/server/hse-scope";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -32,6 +33,8 @@ export default async function ObukePage() {
 
   const pool = await getVerifiedPool();
   const [trainings, workers] = await withCompany(pool, auth.ctx.companyId, async (client) => {
+    const scopeParams: unknown[] = [auth.ctx.companyId];
+    const scopeSql = hseScope(auth.ctx, scopeParams, "t", "training");
     const list = await client.query<{
       id: string; kind: string; title: string; topic: string | null; held_at: string;
       duration_minutes: number | null; location: string | null; project_name: string | null; attendees: string;
@@ -42,15 +45,15 @@ export default async function ObukePage() {
                 WHERE a.company_id = t.company_id AND a.training_id = t.id) AS attendees
          FROM public.hse_trainings t
          LEFT JOIN public.projects p ON p.company_id = t.company_id AND p.id = t.project_id
-        WHERE t.company_id = $1
+        WHERE t.company_id = $1 AND ${scopeSql}
         ORDER BY t.held_at DESC
         LIMIT 200`,
-      [auth.ctx.companyId],
+      scopeParams,
     );
     const people = await client.query<{ id: string; full_name: string }>(
       `SELECT id, btrim(first_name || ' ' || coalesce(last_name, '')) AS full_name
-         FROM public.workers WHERE company_id = $1 AND is_active ORDER BY first_name, last_name`,
-      [auth.ctx.companyId],
+         FROM public.workers w WHERE company_id = $1 AND is_active AND ($2::text='COMPANY' OR ($2::text='SELF' AND w.user_id=$3) OR ($2::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.project_assignments pa JOIN public.companies c ON c.id=pa.company_id WHERE pa.company_id=w.company_id AND pa.worker_id=w.id AND pa.project_id=ANY($4::text[]) AND pa.voided_at IS NULL AND pa.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date AND (pa.to_date IS NULL OR pa.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date)))) ORDER BY first_name, last_name`,
+      [auth.ctx.companyId, auth.ctx.scope, auth.ctx.userId, auth.ctx.projectIds ?? []],
     );
     return [
       list.rows.map((row): TrainingRow => ({

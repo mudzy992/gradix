@@ -127,34 +127,34 @@ describeDb("F0.4 obavještenja (PostgreSQL)", () => {
     const asForeman = await listNotifications(app, {
       companyId: CO,
       userId: WORKER,
-      roles: ["SITE_SUPERVISOR"],
+      roles: ["SITE_SUPERVISOR"], scope: "COMPANY" as const, projectIds: null,
     });
     expect(asForeman.map((row) => row.title)).toContain("Svi šefovi");
 
-    const asWorker = await listNotifications(app, { companyId: CO, userId: WORKER, roles: ["WORKER"] });
+    const asWorker = await listNotifications(app, { companyId: CO, userId: WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null });
     expect(asWorker.map((row) => row.title)).not.toContain("Svi šefovi");
 
     // Tuđe lično obavještenje: OWNER ga ne vidi i ne može ga označiti.
-    const ownerInbox = await listNotifications(app, { companyId: CO, userId: OWNER, roles: ["OWNER"] });
+    const ownerInbox = await listNotifications(app, { companyId: CO, userId: OWNER, roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null });
     expect(ownerInbox.map((row) => row.title)).not.toContain("Ljekarski istječe za 7 dana");
 
-    const workerInbox = await listNotifications(app, { companyId: CO, userId: WORKER, roles: ["WORKER"] });
+    const workerInbox = await listNotifications(app, { companyId: CO, userId: WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null });
     const personal = workerInbox.find((row) => row.title === "Ljekarski istječe za 7 dana")!;
     const stolen = await markRead(app, {
       companyId: CO,
       userId: OWNER,
-      roles: ["OWNER"],
+      roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null,
       notificationId: personal.id,
     });
     expect(stolen).toBe(0);
 
-    const own = await markRead(app, { companyId: CO, userId: WORKER, roles: ["WORKER"], notificationId: personal.id });
+    const own = await markRead(app, { companyId: CO, userId: WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null, notificationId: personal.id });
     expect(own).toBe(1);
   });
 
   it("druga firma ne vidi ništa", async () => {
-    expect(await unreadCount(app, { companyId: OTHER, userId: WORKER, roles: ["WORKER"] })).toBe(0);
-    const foreign = await listNotifications(app, { companyId: OTHER, userId: WORKER, roles: ["WORKER"] });
+    expect(await unreadCount(app, { companyId: OTHER, userId: WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null })).toBe(0);
+    const foreign = await listNotifications(app, { companyId: OTHER, userId: WORKER, roles: ["WORKER"], scope: "COMPANY" as const, projectIds: null });
     expect(foreign).toEqual([]);
   });
 

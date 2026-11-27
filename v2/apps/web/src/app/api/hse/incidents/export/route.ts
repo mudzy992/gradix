@@ -18,7 +18,7 @@ export async function GET(request:NextRequest):Promise<Response> {
     const kind=request.nextUrl.searchParams.get("kind") ?? "",status=request.nextUrl.searchParams.get("status") ?? "";
     if ((kind && !HseIncidentKind.safeParse(kind).success) || (status && !HseIncidentStatus.safeParse(status).success)) return fail("VALIDATION_FAILED","Neispravni filteri incidenata.");
     const pool=await getVerifiedPool();
-    const all=await listIncidents(pool,{userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles},{});
+    const all=await listIncidents(pool,{userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles,scope:auth.ctx.scope,projectIds:auth.ctx.projectIds},{});
     const rows=filterIncidents(all,kind,status);
     const header=["Vrsta","Kada","Težina","Stanje","Projekat","Otvorene mjere","Mjere kasne","Prijava inspekciji"];
     const lines=rows.map(row=>[row.kind,row.occurredAt,row.severity,row.status,row.projectName ?? "",String(row.openActions),String(row.overdueActions),

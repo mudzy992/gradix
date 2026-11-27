@@ -38,7 +38,7 @@ import {
 import { writeAudit } from "./audit";
 import { companyToday } from "./project-service";
 import { notify } from "./notification-service";
-import type { DiaryActor } from "./diary-service";
+import { hseRecordAllowed, hseScope, hseTargetAllowed, hseWorkersAllowed, type HseActor } from "./hse-scope";
 
 export type HseOutcome =
   | { outcome: "OK"; id: string; version?: number; obligationId?: string | null }
@@ -80,7 +80,7 @@ export type IncidentInput = {
  * worker poslu), prijava bi mogla postojati bez zakonskog roka, a rok bez prijave. Veza je
  * `report_obligation_id`, pa ponovni poziv vidi da obaveza postoji.
  */
-export async function reportIncident(pool: Pool, actor: DiaryActor, input: IncidentInput): Promise<HseOutcome> {
+export async function reportIncident(pool: Pool, actor: HseActor, input: IncidentInput): Promise<HseOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), (client) => reportIncidentTx(client, actor, input));
 }
 
@@ -90,9 +90,10 @@ export async function reportIncident(pool: Pool, actor: DiaryActor, input: Incid
  */
 export async function reportIncidentTx(
   client: PoolClient,
-  actor: DiaryActor,
+  actor: HseActor,
   input: IncidentInput,
 ): Promise<HseOutcome> {
+  if (!hseTargetAllowed(actor, input.projectId)) return NOT_FOUND;
   if (!input.description || input.description.trim().length < 5) {
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Opis incidenta je obavezan." };
   }
@@ -107,6 +108,7 @@ export async function reportIncidentTx(
   if (input.injuredWorkerId && !allParticipants.some((p) => p.workerId === input.injuredWorkerId)) {
     allParticipants.push({ workerId: input.injuredWorkerId, injured: true });
   }
+  if (!await hseWorkersAllowed(client, actor, [input.reporterWorkerId, ...allParticipants.map(p => p.workerId)])) return NOT_FOUND;
   const firstInjured = input.injuredWorkerId ?? allParticipants.find((p) => p.injured)?.workerId ?? null;
   const lostDays = input.lostDays ?? 0;
   if (input.kind === "NEAR_MISS" && (lostDays > 0 || firstInjured)) {
@@ -144,7 +146,7 @@ export async function reportIncidentTx(
         return {
           outcome: "CONFLICT",
           code: "HSE_INCIDENT_DUPLICATE",
-          message: `Incident je već prijavljen (${duplicate.rows[0].id}).`,
+          message: actor.scope === "COMPANY" ? `Incident je već prijavljen (${duplicate.rows[0].id}).` : "Incident je već prijavljen.",
         } as HseOutcome;
       }
     }
@@ -268,7 +270,7 @@ export type IncidentUpdateInput = { body: string; authorWorkerId?: string | null
 /** Dopuna incidenta — append-only. Nikad ne mijenja incident, samo dodaje izjavu. */
 export async function addIncidentUpdate(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   incidentId: string,
   input: IncidentUpdateInput,
 ): Promise<HseOutcome> {
@@ -280,7 +282,7 @@ export async function addIncidentUpdate(
 /** Isto kao `addIncidentUpdate`, unutar transakcije pozivaoca (sync dopuna). */
 export async function addIncidentUpdateTx(
   client: PoolClient,
-  actor: DiaryActor,
+  actor: HseActor,
   incidentId: string,
   input: IncidentUpdateInput,
 ): Promise<HseOutcome> {
@@ -288,6 +290,8 @@ export async function addIncidentUpdateTx(
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Dopuna ne može biti prazna." };
   }
   {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return NOT_FOUND;
+    if (!await hseWorkersAllowed(client, actor, [input.authorWorkerId])) return NOT_FOUND;
     const incident = await client.query("SELECT 1 FROM public.hse_incidents WHERE company_id = $1 AND id = $2", [
       actor.companyId, incidentId,
     ]);
@@ -332,7 +336,7 @@ export type InvestigationInput = {
 /** Istraga: jedna po incidentu (`upsert`), jer bi druga značila dva uzroka i dvije istine. */
 export async function saveInvestigation(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   incidentId: string,
   input: InvestigationInput,
 ): Promise<HseOutcome> {
@@ -340,6 +344,7 @@ export async function saveInvestigation(
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Uzrok je obavezan (bar 5 znakova)." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return NOT_FOUND;
     const incident = await client.query<{ status: string }>(
       "SELECT status FROM public.hse_incidents WHERE company_id = $1 AND id = $2",
       [actor.companyId, incidentId],
@@ -386,8 +391,9 @@ export async function saveInvestigation(
  * Zatvaranje incidenta: traži završenu istragu i nijednu otvorenu mjeru. Odluka je u domeni
  * (`canCloseIncident`), servis je samo provodi — pa ekran, test i API ne mogu imati tri pravila.
  */
-export async function closeIncident(pool: Pool, actor: DiaryActor, incidentId: string): Promise<HseOutcome> {
+export async function closeIncident(pool: Pool, actor: HseActor, incidentId: string): Promise<HseOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return NOT_FOUND;
     const incident = await client.query<{ status: string }>(
       "SELECT status FROM public.hse_incidents WHERE company_id = $1 AND id = $2",
       [actor.companyId, incidentId],
@@ -448,14 +454,14 @@ export type ActionInput = {
 };
 
 /** Mjera bez odgovornog ili roka se odbija (§1.3/15) — i u servisu, i u domeni, i u bazi. */
-export async function createAction(pool: Pool, actor: DiaryActor, input: ActionInput): Promise<HseOutcome> {
+export async function createAction(pool: Pool, actor: HseActor, input: ActionInput): Promise<HseOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), (client) => createActionTx(client, actor, input));
 }
 
 /** Isto kao `createAction`, unutar transakcije pozivaoca (sync). */
 export async function createActionTx(
   client: PoolClient,
-  actor: DiaryActor,
+  actor: HseActor,
   input: ActionInput,
 ): Promise<HseOutcome> {
   const hasIncident = Boolean(input.incidentId);
@@ -474,6 +480,8 @@ export async function createActionTx(
     return { outcome: "VALIDATION_FAILED", code: "HSE_ACTION_DUE_REQUIRED", message: "Mjera traži rok (datum)." };
   }
   {
+    if (!await hseRecordAllowed(client, actor, hasIncident ? "incident" : "inspection", (input.incidentId ?? input.inspectionId)!)) return NOT_FOUND;
+    if (!await hseWorkersAllowed(client, actor, [input.responsibleWorkerId])) return NOT_FOUND;
     const worker = await client.query("SELECT 1 FROM public.workers WHERE company_id = $1 AND id = $2 AND is_active", [
       actor.companyId, input.responsibleWorkerId,
     ]);
@@ -522,11 +530,12 @@ export async function createActionTx(
 /** Završetak mjere. `done_at` je vrijeme radnje, ne datum roka — iz razlike se računa „na vrijeme“. */
 export async function completeAction(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   actionId: string,
   note?: string | null,
 ): Promise<HseOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "action", actionId)) return NOT_FOUND;
     const action = await client.query<{ status: string }>(
       "SELECT status FROM public.hse_actions WHERE company_id = $1 AND id = $2",
       [actor.companyId, actionId],
@@ -558,11 +567,12 @@ export async function completeAction(
   });
 }
 
-export async function cancelAction(pool: Pool, actor: DiaryActor, actionId: string, reason: string): Promise<HseOutcome> {
+export async function cancelAction(pool: Pool, actor: HseActor, actionId: string, reason: string): Promise<HseOutcome> {
   if (reason.trim().length < 5) {
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Otkazivanje mjere traži razlog." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "action", actionId)) return NOT_FOUND;
     const updated = await client.query(
       `UPDATE public.hse_actions
           SET status = 'CANCELLED',
@@ -596,9 +606,10 @@ export type InspectionInput = {
  */
 export async function recordInspection(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   input: InspectionInput,
 ): Promise<HseOutcome> {
+  if (!hseTargetAllowed(actor, input.projectId)) return NOT_FOUND;
   if (input.kind === "AUTHORITY" && (!input.authorityName || input.authorityName.trim().length < 2)) {
     return {
       outcome: "VALIDATION_FAILED",
@@ -648,7 +659,7 @@ export async function recordInspection(
 /** Podizanje zabrane rada — jedini način da nalaz prestane da bude aktivan. */
 export async function liftProhibition(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   inspectionId: string,
   note: string,
 ): Promise<HseOutcome> {
@@ -656,6 +667,7 @@ export async function liftProhibition(
     return { outcome: "VALIDATION_FAILED", code: "VALIDATION_FAILED", message: "Podizanje zabrane traži razlog." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "inspection", inspectionId)) return NOT_FOUND;
     const updated = await client.query(
       `UPDATE public.hse_inspections
           SET prohibition_lifted_at = clock_timestamp(),
@@ -700,16 +712,20 @@ export type TrainingInput = {
  * Prisustvo je POTPIS (§1.4/19): `signature_name` + `signed_at` po radniku. Provjera je u domeni
  * (`validToolboxInput` za toolbox), pa telefon i web ne mogu poslati različito „ispravno“.
  */
-export async function createTraining(pool: Pool, actor: DiaryActor, input: TrainingInput): Promise<HseOutcome> {
+export async function createTraining(pool: Pool, actor: HseActor, input: TrainingInput): Promise<HseOutcome> {
   return withCompany(pool, toCompanyId(actor.companyId), (client) => createTrainingTx(client, actor, input));
 }
 
 /** Isto kao `createTraining`, unutar transakcije pozivaoca (sync). */
 export async function createTrainingTx(
   client: PoolClient,
-  actor: DiaryActor,
+  actor: HseActor,
   input: TrainingInput,
 ): Promise<HseOutcome> {
+  if (!hseTargetAllowed(actor, input.projectId)) return NOT_FOUND;
+  if (!await hseWorkersAllowed(client, actor, [input.heldByWorkerId, ...input.attendees.map(a => a.workerId)])) return NOT_FOUND;
+  // Renewal is a separate obligations write; defer restricted renewal until it is scoped.
+  if (input.renewObligationId && actor.scope !== "COMPANY") return NOT_FOUND;
   if (input.kind === "TOOLBOX") {
     if (!validToolboxInput({ topic: input.topic ?? input.title, attendees: input.attendees.map((a) => a.workerId), durationMinutes: input.durationMinutes })) {
       return {
@@ -826,13 +842,14 @@ export type IncidentListItem = {
 
 export async function listIncidents(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   filter: { status?: string; kind?: string; projectId?: string; limit?: number } = {},
 ): Promise<IncidentListItem[]> {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const today = await companyToday(client, toCompanyId(actor.companyId));
     const conditions = ["i.company_id = $1"];
     const params: unknown[] = [actor.companyId];
+    conditions.push(hseScope(actor, params, "i", "incident"));
     if (filter.status) {
       params.push(filter.status);
       conditions.push(`i.status = $${params.length}`);
@@ -909,32 +926,48 @@ export type HseStats = {
  */
 export async function hseStats(
   pool: Pool,
-  actor: DiaryActor,
+  actor: HseActor,
   filter: { from: string; to: string; projectId?: string },
 ): Promise<HseStats> {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const today = await companyToday(client, toCompanyId(actor.companyId));
+    const hoursParams: unknown[] = [actor.companyId, filter.from, filter.to, filter.projectId ?? null];
+    let hoursScope = "FALSE";
+    if (actor.scope === "COMPANY") hoursScope = "TRUE";
+    else if (actor.scope === "PROJECTS") {
+      hoursParams.push(actor.projectIds ?? []);
+      const projects = `$${hoursParams.length}`;
+      hoursScope = `we.project_id=ANY(${projects}::text[]) AND EXISTS (
+        SELECT 1 FROM public.project_assignments pa JOIN public.companies c ON c.id=pa.company_id
+        WHERE pa.company_id=we.company_id AND pa.worker_id=we.worker_id AND pa.project_id=ANY(${projects}::text[])
+          AND pa.voided_at IS NULL AND pa.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date
+          AND (pa.to_date IS NULL OR pa.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date))`;
+    }
+    else if (actor.scope === "SELF") { hoursParams.push(actor.userId); hoursScope = `EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=we.company_id AND w.id=we.worker_id AND w.user_id=$${hoursParams.length} AND w.is_active)`; }
     const hoursResult = await client.query<{ minutes: string }>(
       `SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (coalesce(we.ended_at, we.started_at) - we.started_at)) / 60), 0)::text AS minutes
          FROM public.work_entries we
         WHERE we.company_id = $1
+          AND ${hoursScope}
           AND we.kind = 'WORK'
           AND we.resolution_state = 'ACTIVE'
           AND ($4::text IS NULL OR we.project_id = $4)
           AND (we.started_at AT TIME ZONE (SELECT timezone FROM public.companies WHERE id = $1))::date BETWEEN $2::date AND $3::date`,
-      [actor.companyId, filter.from, filter.to, filter.projectId ?? null],
+      hoursParams,
     );
     const workedHours = Math.round((Number(hoursResult.rows[0]?.minutes ?? 0) / 60) * 100) / 100;
 
+    const incidentParams: unknown[] = [actor.companyId, filter.projectId ?? null, filter.from, filter.to];
+    const incidentScope = hseScope(actor, incidentParams, "i", "incident");
     const incidentRows = await client.query<{
       kind: string; severity: string; lost_days: number; occurred_at: string; status: string;
     }>(
-      `SELECT kind, severity, lost_days, occurred_at::text, status
-         FROM public.hse_incidents
-        WHERE company_id = $1
+      `SELECT i.kind, i.severity, i.lost_days, i.occurred_at::text, i.status
+         FROM public.hse_incidents i
+        WHERE i.company_id = $1 AND ${incidentScope}
           AND ($2::text IS NULL OR project_id = $2)
           AND (occurred_at AT TIME ZONE (SELECT timezone FROM public.companies WHERE id = $1))::date BETWEEN $3::date AND $4::date`,
-      [actor.companyId, filter.projectId ?? null, filter.from, filter.to],
+      incidentParams,
     );
     const incidents: HseIncidentRow[] = incidentRows.rows.map((row) => ({
       kind: row.kind as HseIncidentRow["kind"],
@@ -944,13 +977,15 @@ export async function hseStats(
       status: row.status as HseIncidentRow["status"],
     }));
 
+    const actionParams: unknown[] = [actor.companyId, filter.from, filter.to, filter.projectId ?? null];
+    const actionScope = hseScope(actor, actionParams, "a", "action");
     const actionRows = await client.query<{ status: HseActionRow["status"]; due_on: string; done_at: string | null }>(
       `SELECT a.status, a.due_on::text, a.done_at::text FROM public.hse_actions a
         LEFT JOIN public.hse_incidents i ON i.company_id=a.company_id AND i.id=a.incident_id
         LEFT JOIN public.hse_inspections ins ON ins.company_id=a.company_id AND ins.id=a.inspection_id
-        WHERE a.company_id = $1 AND a.due_on BETWEEN $2::date AND $3::date
+        WHERE a.company_id = $1 AND ${actionScope} AND a.due_on BETWEEN $2::date AND $3::date
           AND ($4::text IS NULL OR i.project_id=$4 OR ins.project_id=$4)`,
-      [actor.companyId, filter.from, filter.to, filter.projectId ?? null],
+      actionParams,
     );
     const actions: HseActionRow[] = actionRows.rows.map((row) => ({
       status: row.status,
@@ -958,28 +993,33 @@ export async function hseStats(
       doneOn: row.done_at,
     }));
 
+    const trainingParams: unknown[] = [actor.companyId, filter.from, filter.to, filter.projectId ?? null];
+    const trainingScope = hseScope(actor, trainingParams, "t", "training");
+    const attendeeScope = hseScope(actor, trainingParams, "tt", "training");
     const trainingRows = await client.query<{ trainings: string; toolbox: string; attendees: string }>(
       `SELECT count(DISTINCT t.id)::text AS trainings,
               count(DISTINCT t.id) FILTER (WHERE t.kind = 'TOOLBOX')::text AS toolbox,
               (SELECT count(*)::text FROM public.hse_training_attendees a
                  JOIN public.hse_trainings tt ON tt.company_id = a.company_id AND tt.id = a.training_id
-                WHERE a.company_id = $1 AND tt.held_at::date BETWEEN $2::date AND $3::date
+                WHERE a.company_id = $1 AND ${attendeeScope} AND tt.held_at::date BETWEEN $2::date AND $3::date
                   AND ($4::text IS NULL OR tt.project_id=$4)) AS attendees
          FROM public.hse_trainings t
-        WHERE t.company_id = $1 AND t.held_at::date BETWEEN $2::date AND $3::date
+        WHERE t.company_id = $1 AND ${trainingScope} AND t.held_at::date BETWEEN $2::date AND $3::date
           AND ($4::text IS NULL OR t.project_id=$4)`,
-      [actor.companyId, filter.from, filter.to, filter.projectId ?? null],
+      trainingParams,
     );
 
+    const prohibitionParams: unknown[] = [actor.companyId, filter.projectId ?? null];
+    const prohibitionScope = hseScope(actor, prohibitionParams, "i", "inspection");
     const prohibition = await client.query<{
       id: string; inspected_at: string; authority_name: string | null; result: string; lifted: string | null;
     }>(
       `SELECT id, inspected_at::text, authority_name, result, prohibition_lifted_at::text AS lifted
-         FROM public.hse_inspections
-        WHERE company_id = $1 AND result = 'PROHIBITION' AND prohibition_lifted_at IS NULL
+         FROM public.hse_inspections i
+        WHERE i.company_id = $1 AND ${prohibitionScope} AND result = 'PROHIBITION' AND prohibition_lifted_at IS NULL
           AND ($2::text IS NULL OR project_id=$2)
         ORDER BY inspected_at DESC LIMIT 1`,
-      [actor.companyId, filter.projectId ?? null],
+      prohibitionParams,
     );
     const activeProhibition = prohibition.rows[0] && isActiveProhibition({
       result: prohibition.rows[0].result,
@@ -1041,22 +1081,27 @@ export async function hseAttention(
   actor: { userId: string; companyId: string; roles: readonly string[]; scope: Scope; projectIds: readonly string[] | null },
 ): Promise<HseAttention | null> {
   const today = await companyToday(client, toCompanyId(actor.companyId));
+  const params: unknown[] = [actor.companyId, today, actor.scope === "COMPANY", actor.scope === "PROJECTS", actor.projectIds ?? []];
+  const actionScope = hseScope(actor, params, "a", "action");
+  const incidentScope = hseScope(actor, params, "i", "incident");
   const counts = await client.query<{ overdue: string; open_incidents: string; unsigned: string }>(
     `SELECT
         (SELECT count(*)::text FROM public.hse_actions a
-          WHERE a.company_id = $1 AND a.status = 'OPEN' AND a.due_on < $2::date) AS overdue,
+          WHERE a.company_id = $1 AND ${actionScope} AND a.status = 'OPEN' AND a.due_on < $2::date) AS overdue,
         (SELECT count(*)::text FROM public.hse_incidents i
-          WHERE i.company_id = $1 AND i.status <> 'CLOSED') AS open_incidents,
+          WHERE i.company_id = $1 AND ${incidentScope} AND i.status <> 'CLOSED') AS open_incidents,
         (SELECT count(*)::text FROM public.site_diaries d
           WHERE d.company_id = $1 AND d.status = 'DRAFT' AND d.diary_date <= $2::date - INTERVAL '2 days'
             AND ($3::boolean OR ($4::boolean AND d.project_id=ANY($5::text[])))) AS unsigned`,
-    [actor.companyId, today, actor.scope === "COMPANY", actor.scope === "PROJECTS", actor.projectIds ?? []],
+    params,
   );
+  const prohibitionParams: unknown[] = [actor.companyId];
+  const prohibitionScope = hseScope(actor, prohibitionParams, "i", "inspection");
   const prohibition = await client.query<{ id: string; inspected_at: string; authority_name: string | null }>(
-    `SELECT id, inspected_at::text, authority_name FROM public.hse_inspections
-      WHERE company_id = $1 AND result = 'PROHIBITION' AND prohibition_lifted_at IS NULL
+    `SELECT id, inspected_at::text, authority_name FROM public.hse_inspections i
+      WHERE i.company_id = $1 AND ${prohibitionScope} AND result = 'PROHIBITION' AND prohibition_lifted_at IS NULL
       ORDER BY inspected_at DESC LIMIT 1`,
-    [actor.companyId],
+    prohibitionParams,
   );
   const row = counts.rows[0];
   return {
@@ -1074,8 +1119,9 @@ export async function hseAttention(
 }
 
 /** Detalj incidenta: zaglavlje, dopune, istraga, mjere, prilozi. */
-export async function getIncident(pool: Pool, actor: DiaryActor, incidentId: string) {
+export async function getIncident(pool: Pool, actor: HseActor, incidentId: string) {
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return null;
     const today = await companyToday(client, toCompanyId(actor.companyId));
     const header = await client.query<Record<string, never> & {
       id: string; company_id: string; project_id: string | null; project_name: string | null;

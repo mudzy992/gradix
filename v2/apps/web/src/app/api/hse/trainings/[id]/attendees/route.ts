@@ -1,3 +1,4 @@
+import { hseRecordAllowed } from "@/server/hse-scope";
 /** GET /api/hse/trainings/{id}/attendees — potpisi prisutnih (§1.4/19, 22). */
 import type { NextRequest } from "next/server";
 import { withCompany } from "@gradix/db";
@@ -17,6 +18,7 @@ export async function GET(
     const { id } = await context.params;
     const ctx = guardResult.ctx;
     const data = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
+      if (!await hseRecordAllowed(client, ctx, "training", id)) return null;
       const training = await client.query<{ id: string; title: string; kind: string; held_at: string }>(
         "SELECT id, title, kind, held_at::text FROM public.hse_trainings WHERE company_id = $1 AND id = $2",
         [ctx.companyId, id],

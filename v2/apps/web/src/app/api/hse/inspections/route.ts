@@ -1,3 +1,4 @@
+import { hseScope } from "@/server/hse-scope";
 /**
  * GET/POST /api/hse/inspections — inspekcije i nalazi (§1.5).
  *
@@ -21,6 +22,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const ctx = guardResult.ctx;
     const params = request.nextUrl.searchParams;
     const inspections = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
+      const scopeParams: unknown[] = [ctx.companyId, params.get("result") ?? null];
+      const scopeSql = hseScope(ctx, scopeParams, "i", "inspection");
       const result = await client.query<{
         id: string; kind: string; authority_name: string | null; inspected_at: string;
         inspector_name: string | null; summary: string | null; result: string;
@@ -33,12 +36,12 @@ export async function GET(request: NextRequest): Promise<Response> {
                   WHERE a.company_id = i.company_id AND a.inspection_id = i.id AND a.status = 'OPEN') AS open_actions
            FROM public.hse_inspections i
            LEFT JOIN public.projects p ON p.company_id = i.company_id AND p.id = i.project_id
-          WHERE i.company_id = $1
+          WHERE i.company_id = $1 AND ${scopeSql}
             AND ($2::text IS NULL OR i.result = $2)
           ORDER BY (i.result = 'PROHIBITION' AND i.prohibition_lifted_at IS NULL) DESC,
                    i.inspected_at DESC
           LIMIT 300`,
-        [ctx.companyId, params.get("result") ?? null],
+        scopeParams,
       );
       return result.rows.map((row) => ({
         id: row.id,
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       body,
     );
@@ -101,6 +105,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       body.id,
       body.note,

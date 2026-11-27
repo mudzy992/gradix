@@ -1,3 +1,4 @@
+import { hseScope } from "@/server/hse-scope";
 /**
  * GET/PATCH /api/hse/actions — jedna tabela korektivnih mjera za incidente i inspekcije (§1.3/15).
  *
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const onlyOverdue = params.get("overdue") === "1" || params.get("overdue") === "true";
     const data = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
       const today = await companyToday(client, ctx.companyId);
+      const scopeParams: unknown[] = [ctx.companyId, params.get("incident") ?? null, params.get("inspection") ?? null];
+      const scopeSql = hseScope(ctx, scopeParams, "a", "action");
       const result = await client.query<{
         id: string; description: string; due_on: string; status: string; done_at: string | null;
         incident_id: string | null; inspection_id: string | null; responsible_name: string | null;
@@ -34,12 +37,12 @@ export async function GET(request: NextRequest): Promise<Response> {
                 btrim(w.first_name || ' ' || coalesce(w.last_name, '')) AS responsible_name
            FROM public.hse_actions a
            LEFT JOIN public.workers w ON w.company_id = a.company_id AND w.id = a.responsible_worker_id
-          WHERE a.company_id = $1
+          WHERE a.company_id = $1 AND ${scopeSql}
             AND ($2::text IS NULL OR a.incident_id = $2)
             AND ($3::text IS NULL OR a.inspection_id = $3)
           ORDER BY (a.status = 'OPEN') DESC, a.due_on ASC
           LIMIT 500`,
-        [ctx.companyId, params.get("incident") ?? null, params.get("inspection") ?? null],
+        scopeParams,
       );
       const actions = result.rows
         .map((row) => ({
@@ -79,6 +82,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
       roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     };
     const outcome = body.kind === "DONE"
       ? await completeAction(await getVerifiedPool(), actor, body.id, body.note ?? null)

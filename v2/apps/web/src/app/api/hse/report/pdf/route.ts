@@ -33,7 +33,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const pool = await getVerifiedPool();
     const stats = await hseStats(
       pool,
-      { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[] },
+      { userId: ctx.userId, companyId: ctx.companyId, roles: ctx.roles as Role[], scope: ctx.scope, projectIds: ctx.projectIds },
       { from, to, projectId: params.get("project") ?? undefined },
     );
     const company = await withCompany(pool, ctx.companyId, (client) =>

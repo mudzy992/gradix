@@ -1,3 +1,4 @@
+import { hseScope } from "@/server/hse-scope";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { redirect } from "next/navigation";
@@ -26,6 +27,8 @@ export default async function InspekcijePage() {
 
   const pool = await getVerifiedPool();
   const inspections = await withCompany(pool, auth.ctx.companyId, async (client) => {
+    const scopeParams: unknown[] = [auth.ctx.companyId];
+    const scopeSql = hseScope(auth.ctx, scopeParams, "i", "inspection");
     const result = await client.query<{
       id: string; kind: string; authority_name: string | null; inspected_at: string;
       inspector_name: string | null; summary: string | null; result: string;
@@ -37,10 +40,10 @@ export default async function InspekcijePage() {
                 WHERE a.company_id = i.company_id AND a.inspection_id = i.id AND a.status = 'OPEN') AS open_actions
          FROM public.hse_inspections i
          LEFT JOIN public.projects p ON p.company_id = i.company_id AND p.id = i.project_id
-        WHERE i.company_id = $1
+        WHERE i.company_id = $1 AND ${scopeSql}
         ORDER BY (i.result = 'PROHIBITION' AND i.prohibition_lifted_at IS NULL) DESC, i.inspected_at DESC
         LIMIT 200`,
-      [auth.ctx.companyId],
+      scopeParams,
     );
     return result.rows.map((row): InspectionRow => ({
       id: row.id,

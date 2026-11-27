@@ -1,5 +1,7 @@
 import type { Scope } from "@gradix/domain";
 import { activityRecordAllowed, equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
+import { hseSyncAllowed } from "./hse-scope";
+import { syncWorkdayAllowed } from "./sync-workday-scope";
 import { diaryProjectAllowed } from "./diary-service";
 /** R4 item-scoped sync writes. Every database transaction is tenant-scoped through withCompany. */
 import { createHash, randomUUID } from "node:crypto";
@@ -928,6 +930,17 @@ async function applyReservedItem(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       [reservationKey(actor.companyId, actor.userId, item.localId, "operation")],
     );
+    if ((item.entityType === "workday" || item.entityType === "work_entry") &&
+      !await syncWorkdayAllowed(client, actor, worker.id, item)) {
+      await skipReservationInTransaction(client, actor, reservation);
+      if (workdayReservation) await skipReservationInTransaction(client, actor, workdayReservation);
+      return invalidItem(item, "SYNC_ITEM_REJECTED");
+    }
+    if ((item.entityType === "hse_incident" || item.entityType === "hse_training" || item.entityType === "hse_action") &&
+      !await hseSyncAllowed(client, actor, item)) {
+      await skipReservationInTransaction(client, actor, reservation);
+      return invalidItem(item, "SYNC_ITEM_REJECTED");
+    }
     const prior = await client.query<StoredReceipt>(
       `SELECT request_hash, result FROM public.sync_receipts
         WHERE company_id = $1 AND actor_id = $2 AND local_id = $3`,
@@ -1055,6 +1068,14 @@ export async function pushR4SyncItems(
     }
 
     // Apply scope before receipt replay too: an old receipt must not survive revocation.
+    if ((item.entityType === "workday" || item.entityType === "work_entry") &&
+      !await withCompany(pool, actor.companyId, client => syncWorkdayAllowed(client, actor, worker.id, item))) {
+      results.push(invalidItem(item, foremanWorkerId ? "FOREMAN_SCOPE_FORBIDDEN" : "SYNC_ITEM_REJECTED")); continue;
+    }
+    if ((item.entityType === "hse_incident" || item.entityType === "hse_training" || item.entityType === "hse_action") &&
+      !await withCompany(pool, actor.companyId, client => hseSyncAllowed(client, actor, item))) {
+      results.push(invalidItem(item, "SYNC_ITEM_REJECTED")); continue;
+    }
     if (item.entityType === "site_diary" || item.entityType === "site_diary_item") {
       const projectId = item.entityType === "site_diary" ? item.diary.projectId : item.diaryProjectId;
       if (!projectId || !diaryProjectAllowed(actor, projectId)) {

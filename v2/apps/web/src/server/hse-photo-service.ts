@@ -5,18 +5,19 @@ import type { Pool } from "pg";
 import { writeAudit } from "./audit";
 import { can } from "./permissions";
 import { detectContentType, presignDownload, presignUpload, sha256Hex, storageConfig, type AllowedContentType } from "./storage";
-import type { DiaryActor } from "./diary-service";
+import { hseRecordAllowed, type HseActor } from "./hse-scope";
 
 export type HsePhotoResult =
   | { outcome: "OK"; status: "pending" | "confirmed"; uploadUrl: string | null }
   | { outcome: "NOT_FOUND" | "FORBIDDEN" | "VALIDATION_FAILED" | "STORAGE_UNAVAILABLE"; message: string };
 
-export async function hsePhotoDownload(pool: Pool, actor: DiaryActor, incidentId: string, sha256: string):
+export async function hsePhotoDownload(pool: Pool, actor: HseActor, incidentId: string, sha256: string):
 Promise<{ url: string; expiresAt: string } | null> {
   if (!/^[a-f0-9]{64}$/.test(sha256)) return null;
   const config = storageConfig();
   if (!config.configured) return null;
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return null;
     const found = await client.query<{ object_key: string; file_name: string; content_type: AllowedContentType }>(
       `SELECT object_key, file_name, content_type FROM public.hse_attachments
         WHERE company_id = $1 AND entity_type = 'INCIDENT' AND entity_id = $2 AND sha256 = $3 AND status = 'confirmed'`,
@@ -29,12 +30,13 @@ Promise<{ url: string; expiresAt: string } | null> {
 }
 
 export async function resumeHsePhoto(
-  pool: Pool, actor: DiaryActor, incidentId: string, sha256: string, action: "UPLOAD_URL" | "CONFIRM",
+  pool: Pool, actor: HseActor, incidentId: string, sha256: string, action: "UPLOAD_URL" | "CONFIRM",
 ): Promise<HsePhotoResult> {
   if (!/^[a-f0-9]{64}$/.test(sha256)) return { outcome: "VALIDATION_FAILED", message: "Kontrolni zbir nije ispravan." };
   const config = storageConfig();
   if (!config.configured) return { outcome: "STORAGE_UNAVAILABLE", message: config.reason };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await hseRecordAllowed(client, actor, "incident", incidentId)) return { outcome: "NOT_FOUND", message: "Prijava ili fotografija nije pronađena." };
     const found = await client.query<{
       id: string; object_key: string; content_type: AllowedContentType; size_bytes: string;
       status: "pending" | "confirmed"; reporter_user_id: string | null;

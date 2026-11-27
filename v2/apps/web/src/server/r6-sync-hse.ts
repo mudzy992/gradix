@@ -47,7 +47,7 @@ export async function applyHseIncidentSyncItem(
     if (body.trim().length > 0) {
       const added = await addIncidentUpdateTx(
         client,
-        { userId: actor.userId, companyId: actor.companyId, roles: actor.roles },
+        actor,
         current.id,
         { body, authorWorkerId: worker.id, clientLocalId: item.localId },
       );
@@ -71,7 +71,7 @@ export async function applyHseIncidentSyncItem(
     return duplicate;
   }
 
-  const created = await reportIncidentTx(client, { userId: actor.userId, companyId: actor.companyId, roles: actor.roles }, {
+  const created = await reportIncidentTx(client, actor, {
     id: item.incidentId,
     kind: item.incident.kind,
     severity: item.incident.severity,
@@ -153,7 +153,7 @@ export async function applyHseActionSyncItem(
 
   const created = await createActionTx(
     client,
-    { userId: actor.userId, companyId: actor.companyId, roles: actor.roles },
+    actor,
     {
       id: item.actionId,
       incidentId: item.action.incidentId,
@@ -199,7 +199,7 @@ export async function applyHseTrainingSyncItem(
 
   const created = await createTrainingTx(
     client,
-    { userId: actor.userId, companyId: actor.companyId, roles: actor.roles },
+    actor,
     {
       id: item.trainingId,
       kind: item.training.kind,

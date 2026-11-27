@@ -28,6 +28,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       companyId: guardResult.ctx.companyId,
       userId: guardResult.ctx.userId,
       roles: guardResult.ctx.roles,
+      scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       ...(parsed.data.id ? { notificationId: parsed.data.id } : {}),
       ...(parsed.data.all ? { all: true } : {}),
     });

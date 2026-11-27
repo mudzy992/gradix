@@ -96,8 +96,7 @@ export async function globalSearch(pool: Pool, actor: DashboardActor, q: string)
     if (can(actor.roles,"hse.view")) {
       const rows=await client.query<{id:string;kind:string}>(`SELECT i.id,i.kind FROM public.hse_incidents i
         WHERE i.company_id=$1 AND i.kind ILIKE $3 AND ($2::text[] IS NULL OR
-          (NOT $4::boolean AND i.project_id=ANY($2::text[])) OR ($4::boolean AND (i.reporter_user_id=$5 OR EXISTS (
-            SELECT 1 FROM public.workers w WHERE w.company_id=i.company_id AND w.id=i.reporter_worker_id AND w.user_id=$5))))
+          (NOT $4::boolean AND i.project_id=ANY($2::text[])) OR ($4::boolean AND i.reporter_user_id=$5))
         ORDER BY i.occurred_at DESC,i.id LIMIT 8`,[actor.companyId,ids,pattern,actor.scope === "SELF",actor.userId]);
       results.push(...rows.rows.map(r=>({type:"INCIDENT" as const,title:`Incident — ${r.kind}`,href:`/ured/hse/${encodeURIComponent(r.id)}`})));
     }

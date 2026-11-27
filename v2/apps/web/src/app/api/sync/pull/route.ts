@@ -8,6 +8,7 @@ import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { can } from "@/server/permissions";
+import { hseScope } from "@/server/hse-scope";
 import { activityScope, equipmentScope } from "@/server/equipment-scope";
 import { decodeSyncCursor, encodeSyncCursor, SyncCursorError } from "@/server/sync-cursor";
 
@@ -172,6 +173,7 @@ export async function GET(request: NextRequest): Promise<Response> {
             .map((event) => event.id),
         );
         if (isForeman) for (const id of f9Ids) allowedEventIds.add(id);
+        for (const event of events) if (["hse_incident", "hse_action", "hse_training"].includes(event.entityType)) allowedEventIds.add(event.id);
         for (const event of events) if (["machine_fault", "haul", "machine_daily_check"].includes(event.entityType)) allowedEventIds.add(event.id);
         if (foremanWorkerId) {
           const scopedIds = await foremanVisibleR4EventIds(
@@ -180,6 +182,55 @@ export async function GET(request: NextRequest): Promise<Response> {
           for (const eventId of scopedIds) allowedEventIds.add(eventId);
         }
         visible = events.filter((event) => allowedEventIds.has(event.id));
+      }
+
+      // Apply the session scope even to office roles and intersect it with the existing
+      // worker/foreman feed. Authorize against current rows, not mutable event payloads.
+      if (ctx.scope !== "COMPANY") {
+        const dayIds = visible.filter(e => e.entityType === "workday").map(e => e.entityId);
+        const entryIds = visible.filter(e => e.entityType === "work_entry").map(e => e.entityId);
+        const days = new Set<string>(), entries = new Set<string>();
+        if (dayIds.length) {
+          const rows = await client.query<{id:string}>(`SELECT d.id FROM public.workdays d
+            WHERE d.company_id=$1 AND d.id=ANY($2::text[]) AND (
+              ($3::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=d.company_id AND w.id=d.worker_id AND w.user_id=$4 AND w.is_active)) OR
+              ($3::text='PROJECTS' AND EXISTS (SELECT 1 FROM public.project_assignments pa JOIN public.companies c ON c.id=pa.company_id
+                WHERE pa.company_id=d.company_id AND pa.worker_id=d.worker_id AND pa.project_id=ANY($5::text[]) AND pa.voided_at IS NULL
+                  AND pa.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date AND (pa.to_date IS NULL OR pa.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date))
+              AND EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=d.company_id AND e.workday_id=d.id AND e.project_id=ANY($5::text[]))
+                AND NOT EXISTS (SELECT 1 FROM public.work_entries e WHERE e.company_id=d.company_id AND e.workday_id=d.id AND (e.project_id IS NULL OR NOT e.project_id=ANY($5::text[])))))`,
+            [ctx.companyId,dayIds,ctx.scope,ctx.userId,ctx.projectIds ?? []]);
+          for (const row of rows.rows) days.add(row.id);
+        }
+        if (entryIds.length) {
+          const rows = await client.query<{id:string}>(`SELECT e.id FROM public.work_entries e
+            WHERE e.company_id=$1 AND e.id=ANY($2::text[]) AND (
+              ($3::text='PROJECTS' AND e.project_id=ANY($5::text[]) AND EXISTS (SELECT 1 FROM public.project_assignments pa JOIN public.companies c ON c.id=pa.company_id
+                WHERE pa.company_id=e.company_id AND pa.worker_id=e.worker_id AND pa.project_id=ANY($5::text[]) AND pa.voided_at IS NULL
+                  AND pa.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date AND (pa.to_date IS NULL OR pa.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date))) OR
+              ($3::text='SELF' AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=e.company_id AND w.id=e.worker_id AND w.user_id=$4 AND w.is_active)))`,
+            [ctx.companyId,entryIds,ctx.scope,ctx.userId,ctx.projectIds ?? []]);
+          for (const row of rows.rows) entries.add(row.id);
+        }
+        visible = visible.filter(e => e.entityType === "workday" ? days.has(e.entityId) : e.entityType !== "work_entry" ||
+          (entries.has(e.entityId) && (ctx.scope !== "PROJECTS" || (typeof e.payload?.projectId === "string" && (ctx.projectIds ?? []).includes(e.payload.projectId)))));
+      }
+
+      // Resolve HSE events through their current source, never through event payloads.
+      for (const [entityType, table, kind] of [
+        ["hse_incident", "hse_incidents", "incident"],
+        ["hse_action", "hse_actions", "action"],
+        ["hse_training", "hse_trainings", "training"],
+      ] as const) {
+        const ids = visible.filter(e => e.entityType === entityType).map(e => e.entityId);
+        const allowed = new Set<string>();
+        if (ids.length && can(ctx.roles, entityType === "hse_training" ? "hse.training.view" : "hse.view")) {
+          const params: unknown[] = [ctx.companyId, ids];
+          const scope = hseScope(ctx, params, "h", kind);
+          const rows = await client.query<{id:string}>(`SELECT h.id FROM public.${table} h WHERE h.company_id=$1 AND h.id=ANY($2::text[]) AND ${scope}`, params);
+          for (const row of rows.rows) allowed.add(row.id);
+        }
+        visible = visible.filter(e => e.entityType !== entityType || allowed.has(e.entityId));
       }
 
       // Diary events are project-wide data, including for OWNER/ADMIN with a restricted scope.

@@ -30,6 +30,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
         roles: guardResult.ctx.roles as Role[],
+        scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       body,
     );

@@ -164,9 +164,10 @@ describeDb("R4 SITE_SUPERVISOR roster and group push (PostgreSQL)", () => {
     const allowedEntry = randomUUID();
     const forbiddenEntry = randomUUID();
     const futureEntry = randomUUID();
+    const allowedItem = makeItem(TARGET, PROJECT, allowedEntry);
     const response = await syncPushRoute(postRequest("http://interni/api/sync/push", {
       items: [
-        makeItem(TARGET, PROJECT, allowedEntry),
+        allowedItem,
         makeItem(OUTSIDE, OTHER_PROJECT, forbiddenEntry),
         makeItem(FUTURE, PROJECT, futureEntry),
       ],
@@ -302,6 +303,39 @@ describeDb("R4 SITE_SUPERVISOR roster and group push (PostgreSQL)", () => {
     expect(pullBody.data.events.every((event) => !JSON.stringify(event.payload).match(/phone|email/i))).toBe(true);
     expect(JSON.stringify(pullBody)).not.toContain(OUTSIDE);
     expect(JSON.stringify(pullBody)).not.toContain("ne smije se vratiti");
+
+    // Even an office role is constrained by session scope, and revoked scope cannot replay receipts.
+    try {
+      await admin.query(`UPDATE public.memberships SET roles=ARRAY['ADMIN','SITE_SUPERVISOR']::"Role"[], scope='PROJECTS' WHERE id=$1`, [`mem_foreman_${RUN}`]);
+      const scoped = await syncPullRoute(getRequest("http://interni/api/sync/pull", cookie));
+      const projectEvents = (await scoped.json()).data.events as {entityId:string;entityType:string}[];
+      expect(projectEvents.some(e => e.entityId === allowedEntry)).toBe(true);
+      expect(projectEvents.some(e => e.entityId === hiddenEntry)).toBe(false);
+      const canonical = await admin.query<{workday_id:string}>("SELECT workday_id FROM public.work_entries WHERE company_id=$1 AND id=$2", [COMPANY,allowedEntry]);
+      const mixedId = `we_mixed_${RUN}`;
+      await admin.query(`INSERT INTO public.work_entries
+        (id,company_id,workday_id,worker_id,kind,started_at,ended_at,end_state,project_id,created_by,updated_by)
+        VALUES ($1,$2,$3,$4,'WORK',$5::timestamptz,$6::timestamptz,'KNOWN_END',$7,$8,$8)`,
+        [mixedId,COMPANY,canonical.rows[0]!.workday_id,TARGET,`${workDate}T16:00:00Z`,`${workDate}T17:00:00Z`,OTHER_PROJECT,USER]);
+      const mixed = await syncPullRoute(getRequest("http://interni/api/sync/pull", cookie));
+      const mixedEvents = (await mixed.json()).data.events as {entityId:string;entityType:string}[];
+      expect(mixedEvents.some(e => e.entityType === "workday" && e.entityId === canonical.rows[0]!.workday_id)).toBe(false);
+      expect(mixedEvents.some(e => e.entityId === allowedEntry)).toBe(true);
+      const mixedRetry = await syncPushRoute(postRequest("http://interni/api/sync/push", {items:[allowedItem]}, cookie));
+      expect((await mixedRetry.json()).data.results[0].status).toBe("REJECTED");
+      await withCompany(admin, companyId(COMPANY), async client => {
+        await client.query("SET LOCAL session_replication_role = replica");
+        await client.query("DELETE FROM public.work_entries WHERE id=$1", [mixedId]);
+      });
+      await admin.query(`UPDATE public.memberships SET scope='SELF' WHERE id=$1`, [`mem_foreman_${RUN}`]);
+      const own = await syncPullRoute(getRequest("http://interni/api/sync/pull", cookie));
+      const selfEvents = (await own.json()).data.events as {entityId:string;entityType:string}[];
+      expect(selfEvents.some(e => e.entityId === allowedEntry || e.entityId === hiddenEntry)).toBe(false);
+      const retry = await syncPushRoute(postRequest("http://interni/api/sync/push", {items:[allowedItem]}, cookie));
+      expect((await retry.json()).data.results[0].status).toBe("REJECTED");
+    } finally {
+      await admin.query(`UPDATE public.memberships SET roles=ARRAY['SITE_SUPERVISOR']::"Role"[],scope='PROJECTS' WHERE id=$1`, [`mem_foreman_${RUN}`]);
+    }
   });
   it("izgubljen telefon: administratorski opoziv sesije zaustavlja push i pull tog uređaja (401)", async () => {
     const adminUser = `usr_admin_${RUN}`;
