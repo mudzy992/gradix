@@ -1,16 +1,17 @@
 # STATE — Program audita Gradix
 
 - Datum snimka: 2026-11-27.
-- Aktivna faza: 0 — G0 paket predan; čeka se vlasnikova odluka.
-- Modul u radu: nema; inventar je G0, nije audit nijednog modula.
+- Aktivna faza: 1 — Modul 1 dokumentovan nakon vlasnikove potvrde G0; vlasnička trijaža još slijedi.
+- Modul u radu: 01 — firma, korisnici, role i audit; vlasnička trijaža slijedi, nijednom nalazu nije dodijeljen S-nivo.
 - Grana: `arena/7b5ea9bf-gradix` (active), bazna grana `v2-bootstrap`.
-- Zadnji pregledani commit koda: `e7a37910a9c0a651d3d77a059592d755330b399c`.
-- Radno stablo prije G0 dokumenata bilo je čisto; nije mijenjan poslovni kod.
-- Urađeno: obavezno čitanje, specifikacije 01–12, ADR 0001–0017, izvještaji/pilot vodič; provjeren inventar web/API/server/domain/DB/worker/test putanja.
-- G0 artefakti: `PRAVILA.md`, `INVENTAR.md`, `0018-audit-program.md`, `G0-IZVJESTAJ.md`; jedna uputna linija u `v2/AGENTS.md`.
-- Testovi, typecheck, lint, quality checker, build, DB preflight, deploy/pilot: nisu pokretani.
-- Sljedeće: čekati vlasnikovu potvrdu G0 ili ispravke; ne počinjati Fazu 1/module audit.
-- Otvoreno: `pilot-ready` nema dostupnu remote ref/API 404; treba vlasnikova referenca i potvrda F10 statusa.
-- Otvoreno: C.1 je „prijedlog“ u `DESIGN.md`, a „odobreno“ u `reference.html`.
-- Otvoreno: postoje migracije datirane 2026-11-28 do 2026-12-01 u snimku 2026-11-27.
-- Izričito zabilježeno: korisniku se sviđaju kartica Pregleda, njen sadržaj i koncept osmišljavanja; mobilne preglede zasad zanemariti.
+- Kodni baseline pregledan: `e7a37910a9c0a651d3d77a059592d755330b399c`; G0 commit/push: `045e0e03bbfb8af0a9390c864453cb1b427fcfae`.
+- Urađeno: statička triangulacija spec 01, ADR 0003/0005/0007/0013/0017, API/UI, servisa, migracija/ACL-a, testnih ankera i quality registra.
+- Kreirani: `01-firme-korisnici-role-audit/{01-AUDIT,02-DIZAJN,03-PLAN,04-MATRICA}.md`.
+- Uočeni kandidati: platform runtime principal/onboarding/MFA-support; password expiry; role-change session revoke; audit retencija/readovi; pozivnice/reset; user settings; sesijski UI/telemetrija; osjetljive dozvole.
+- Nije mijenjan poslovni kod; implementacija nije odobrena. Potrebna je `KREĆEMO U KODIRANJE: 1` prije koda.
+- Dokumentacijske provjere: staged diff čist; lokalne Markdown veze i citirane putanje ispravne; svaki modulni dokument <3.000 riječi; STATE 17/40 linija.
+- Testovi, typecheck, lint, quality checker, build, DB preflight, deploy/pilot nisu pokretani.
+- Sljedeće: vlasnička trijaža Modula 1; zatim nastaviti odobrenim redoslijedom. Bez poslovnog koda do zasebne vlasničke fraze.
+- Otvorene odluke Modula 1: platform DB principal i MFA; passkey kao MFA; višefirmski login; audit purge/legal model; outbox vlasništvo; lokalizacijske postavke; broj modula 11/12.
+- G0 pitanja iz `G0-IZVJESTAJ.md` (pilot-ready ref/status, C.1, migracije poslije datuma snimka) ostaju bez nezavisne provjere.
+- Programski G1 slijedi tek nakon svih 12 modula i `00-UKRSTENO.md`; Etapa B i kodiranje imaju zasebne vlasničke kapije.
