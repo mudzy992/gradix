@@ -27,7 +27,7 @@ export default async function SatiMasinePage() {
   const pool = await getVerifiedPool();
   const logs = await listMachineWorkLogs(
     pool,
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     {},
   );
 

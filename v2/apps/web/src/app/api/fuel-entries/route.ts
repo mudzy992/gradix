@@ -16,7 +16,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const rows = await listFuelEntries(await getVerifiedPool(), {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
-      roles: guardResult.ctx.roles as Role[],
+      roles: guardResult.ctx.roles as Role[], scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, {
       machineId: params.get("machineId") ?? undefined,
       from: params.get("from") ?? undefined,
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const result = await createFuelEntry(await getVerifiedPool(), {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
-      roles: guardResult.ctx.roles as Role[],
+      roles: guardResult.ctx.roles as Role[], scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, body);
     if (result.outcome === "FORBIDDEN") {
       return fail("FORBIDDEN", result.message ?? "Nemate pravo unosa.");

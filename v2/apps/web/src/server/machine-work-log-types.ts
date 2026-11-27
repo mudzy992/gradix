@@ -1,9 +1,6 @@
 /** R5.1 shared types for machine work-log service. */
-export type MachineWorkLogActor = {
-  userId: string;
-  companyId: string;
-  roles: readonly string[];
-};
+import type { MachineActivityActor } from "./machine-activity-scope";
+export type MachineWorkLogActor = MachineActivityActor;
 
 export type MachineWorkLogRow = {
   id: string;

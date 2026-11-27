@@ -9,6 +9,8 @@ import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
 import { can } from "@/server/permissions";
 import { hseScope } from "@/server/hse-scope";
+import { machineActivityScope } from "@/server/machine-activity-scope";
+import { canViewFuelPrice } from "@/server/fuel-entry-price";
 import { activityScope, equipmentScope } from "@/server/equipment-scope";
 import { decodeSyncCursor, encodeSyncCursor, SyncCursorError } from "@/server/sync-cursor";
 
@@ -26,7 +28,7 @@ const F9_PULL_TYPES = ["site_diary", "hse_incident", "hse_action", "hse_training
 type DbEvent = {
   id: string;
   cursorSeq: string;
-  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_fault" | "haul" | "machine_daily_check" | (typeof F9_PULL_TYPES)[number];
+  entityType: "workday" | "work_entry" | "sync_conflict" | "machine_fault" | "haul" | "machine_daily_check" | "machine_work_log" | "fuel_entry" | (typeof F9_PULL_TYPES)[number];
   entityId: string;
   version: number;
   payload: Record<string, unknown> | null;
@@ -40,7 +42,7 @@ function isDbEvent(value: unknown): value is DbEvent {
   return typeof event.id === "string"
     && typeof event.cursorSeq === "string"
     && isValidCursorSequence(event.cursorSeq)
-    && ["workday", "work_entry", "sync_conflict", "machine_fault", "haul", "machine_daily_check", ...F9_PULL_TYPES].includes(String(event.entityType))
+    && ["workday", "work_entry", "sync_conflict", "machine_fault", "haul", "machine_daily_check", "machine_work_log", "fuel_entry", ...F9_PULL_TYPES].includes(String(event.entityType))
     && typeof event.entityId === "string"
     && Number.isInteger(event.version)
     && (event.payload === null || (!!event.payload && typeof event.payload === "object"))
@@ -174,7 +176,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         );
         if (isForeman) for (const id of f9Ids) allowedEventIds.add(id);
         for (const event of events) if (["hse_incident", "hse_action", "hse_training"].includes(event.entityType)) allowedEventIds.add(event.id);
-        for (const event of events) if (["machine_fault", "haul", "machine_daily_check"].includes(event.entityType)) allowedEventIds.add(event.id);
+        for (const event of events) if (["machine_fault", "haul", "machine_daily_check", "machine_work_log", "fuel_entry"].includes(event.entityType)) allowedEventIds.add(event.id);
         if (foremanWorkerId) {
           const scopedIds = await foremanVisibleR4EventIds(
             client, ctx.companyId, foremanWorkerId, ctx.userId, events,
@@ -275,6 +277,43 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
         visible = visible.filter(event => event.entityType !== entityType || allowed.has(event.entityId));
       }
+      for (const [entityType, table, workerColumn, permission] of [
+        ["machine_work_log", "machine_work_logs", "worker_id", "machines.work_log.view"],
+        ["fuel_entry", "fuel_entries", "driver_worker_id", "machines.fuel.view"],
+      ] as const) {
+        const ids = visible.filter(e => e.entityType === entityType).map(e => e.entityId);
+        const allowed = new Map<string, { project_id: string | null; worker_id: string }>();
+        if (ids.length && can(ctx.roles, permission)) {
+          const values: unknown[] = [ctx.companyId, ids];
+          const predicate = machineActivityScope(ctx, values, "a", workerColumn);
+          const fieldOnly = !ctx.roles.some(r => ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"].includes(r));
+          if (fieldOnly) values.push(ctx.userId);
+          const fieldPredicate = fieldOnly ? `AND EXISTS (SELECT 1 FROM public.workers w WHERE w.company_id=a.company_id AND w.id=a.${workerColumn} AND w.user_id=$${values.length} AND w.is_active)` : "";
+          const rows = await client.query<{id:string;project_id:string|null;worker_id:string}>(`SELECT a.id,a.project_id,a.${workerColumn} AS worker_id FROM public.${table} a WHERE a.company_id=$1 AND a.id=ANY($2::text[]) AND ${predicate} ${fieldPredicate}`, values);
+          for (const row of rows.rows) allowed.set(row.id, row);
+        }
+        visible = visible.filter(e => {
+          if (e.entityType !== entityType) return true;
+          const current = allowed.get(e.entityId);
+          if (!current) return false;
+          // Historical payloads must not retain access after a row changes ownership or project.
+          if (ctx.scope !== "COMPANY" && (!e.payload || e.payload.projectId !== current.project_id ||
+            e.payload[entityType === "machine_work_log" ? "workerId" : "driverWorkerId"] !== current.worker_id)) return false;
+          return true;
+        });
+      }
+      if (!canViewFuelPrice(ctx.roles)) visible = visible.map(event => {
+        if (!event.payload) return event;
+        if (event.entityType === "fuel_entry") return { ...event, payload: { ...event.payload, amount: null, currencyCode: null, totalAmount: null, unitPriceAmount: null } };
+        // Fuel conflicts carry the original request nested in receivedPayload.
+        const received = event.payload.receivedPayload;
+        if (event.entityType === "sync_conflict" && received && typeof received === "object" && !Array.isArray(received)) {
+          const safe = { ...received as Record<string, unknown> };
+          for (const key of ["amount", "totalAmount", "unitPriceAmount", "currencyCode"]) delete safe[key];
+          return { ...event, payload: { ...event.payload, receivedPayload: safe } };
+        }
+        return event;
+      });
       // Office role does not override a restricted session. Re-check the authoritative
       // conflict and both project references; never authorize using the event payload.
       if (ctx.scope !== "COMPANY") {

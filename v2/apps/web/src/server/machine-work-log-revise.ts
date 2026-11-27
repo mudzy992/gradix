@@ -1,5 +1,6 @@
 /** R5.1: append-only revision of machine work logs (original row untouched). */
 import { randomUUID } from "node:crypto";
+import { machineActivityRecordAllowed } from "./machine-activity-scope";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
@@ -19,6 +20,7 @@ export async function reviseMachineWorkLog(
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await machineActivityRecordAllowed(client, actor, "machine_work_log", workLogId)) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Zapis ne postoji." };
     const log = await client.query<{ id: string; version: number; machine_id: string; meter_end: string | null }>(
       `SELECT id, version, machine_id, meter_end::text
          FROM public.machine_work_logs WHERE company_id = $1 AND id = $2`,

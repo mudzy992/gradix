@@ -26,7 +26,7 @@ export async function POST(
     const result = await reviseMachineWorkLog(await getVerifiedPool(), {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
-      roles: guardResult.ctx.roles as Role[],
+      roles: guardResult.ctx.roles as Role[], scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, id, {
       reason: body.reason,
       payload: body.payload ?? {},

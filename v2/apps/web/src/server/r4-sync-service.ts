@@ -1,3 +1,4 @@
+import { syncMachineActivityAllowed } from "./machine-activity-scope";
 import type { Scope } from "@gradix/domain";
 import { activityRecordAllowed, equipmentRecordAllowed, equipmentTargetAllowed } from "./equipment-scope";
 import { hseSyncAllowed } from "./hse-scope";
@@ -941,6 +942,11 @@ async function applyReservedItem(
       await skipReservationInTransaction(client, actor, reservation);
       return invalidItem(item, "SYNC_ITEM_REJECTED");
     }
+    if ((item.entityType === "machine_work_log" || item.entityType === "fuel_entry") &&
+      !await syncMachineActivityAllowed(client, actor, worker.id, item)) {
+      await skipReservationInTransaction(client, actor, reservation);
+      return invalidItem(item, "SYNC_ITEM_REJECTED");
+    }
     const prior = await client.query<StoredReceipt>(
       `SELECT request_hash, result FROM public.sync_receipts
         WHERE company_id = $1 AND actor_id = $2 AND local_id = $3`,
@@ -1109,7 +1115,14 @@ export async function pushR4SyncItems(
       if (!allowed) { results.push(invalidItem(item, "SYNC_ITEM_REJECTED")); continue; }
     }
     const requestHash = sha256(canonical(item));
-    const prior = await readReceipt(pool, actor, item, requestHash);
+    const prior = item.entityType === "machine_work_log" || item.entityType === "fuel_entry"
+      ? await withCompany(pool, actor.companyId, async client => {
+          if (!await syncMachineActivityAllowed(client, actor, worker.id, item)) return invalidItem(item, "SYNC_ITEM_REJECTED");
+          const rows = await client.query<StoredReceipt>(`SELECT request_hash, result FROM public.sync_receipts
+            WHERE company_id=$1 AND actor_id=$2 AND local_id=$3`, [actor.companyId, actor.userId, item.localId]);
+          return rows.rows[0] ? repeatReceipt(rows.rows[0], item, requestHash) : null;
+        })
+      : await readReceipt(pool, actor, item, requestHash);
     if (prior) {
       results.push(prior);
       continue;

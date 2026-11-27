@@ -1,5 +1,6 @@
 /** R5.2: append-only revision of fuel entries. */
 import { randomUUID } from "node:crypto";
+import { machineActivityRecordAllowed } from "./machine-activity-scope";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { can } from "./permissions";
@@ -19,6 +20,7 @@ export async function reviseFuelEntry(
     return { outcome: "VALIDATION_FAILED", code: "REASON_TOO_SHORT", message: "Razlog ≥10 znakova." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await machineActivityRecordAllowed(client, actor, "fuel_entry", fuelEntryId)) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Zapis ne postoji." };
     const entry = await client.query<{ id: string; version: number; machine_id: string; meter_reading: string | null }>(
       `SELECT id, version, machine_id, meter_reading::text
          FROM public.fuel_entries WHERE company_id = $1 AND id = $2`,

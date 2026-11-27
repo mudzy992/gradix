@@ -22,7 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       {
         userId: guardResult.ctx.userId,
         companyId: guardResult.ctx.companyId,
-        roles: guardResult.ctx.roles as Role[],
+        roles: guardResult.ctx.roles as Role[], scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
       },
       { status, machineId: request.nextUrl.searchParams.get("machineId") ?? undefined },
     );

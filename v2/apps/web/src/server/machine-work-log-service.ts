@@ -1,4 +1,5 @@
 /** R5.1: machine work-log list and create. Revise lives in machine-work-log-revise.ts. */
+import { machineActivityScope, machineActivityTargetAllowed } from "./machine-activity-scope";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
@@ -39,7 +40,9 @@ export async function listMachineWorkLogs(
       );
     const conditions = ["mwl.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let idx = 2;
+    conditions.push(machineActivityScope(actor, params, "mwl", "worker_id"));
+    let idx = params.length + 1;
+    if (isOperatorOnly && !viewerWorkerId) conditions.push("FALSE");
     if (isOperatorOnly && viewerWorkerId) {
       conditions.push(`mwl.worker_id = $${idx}`);
       params.push(viewerWorkerId);
@@ -145,6 +148,9 @@ export async function createMachineWorkLog(
         code: "NO_WORKER",
         message: isOffice ? "Izaberi radnika za unos." : "Nalog nije povezan s radnikom.",
       };
+    }
+    if (!await machineActivityTargetAllowed(client, actor, input.projectId, workerId)) {
+      return { outcome: "FORBIDDEN", code: "SCOPE", message: "Zapis nije u vašem opsegu." };
     }
     // F0.3: radni sati mašine traže važeće obaveze mašine (spec 05 §29).
     const decision = await checkUse(client, actor.companyId, {

@@ -1,4 +1,5 @@
 /** Office writes a previously unknown fuel amount. A known amount, including zero, is not replaced. */
+import { machineActivityRecordAllowed } from "./machine-activity-scope";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import { isCurrency, type Currency } from "@gradix/domain";
@@ -18,6 +19,7 @@ export async function setFuelAmount(
     return { outcome: "FORBIDDEN", code: "ROLE", message: "Cijenu unosi ured." };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await machineActivityRecordAllowed(client, actor, "fuel_entry", fuelEntryId)) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Zapis ne postoji." };
     const found = await client.query<{ currency_code: string; amount_cents: string | null }>(
       `SELECT currency_code, amount_cents::text
          FROM public.fuel_entries

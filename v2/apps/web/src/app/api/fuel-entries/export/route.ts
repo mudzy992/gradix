@@ -20,7 +20,7 @@ export async function GET(request:NextRequest):Promise<Response> {
     const machineId=request.nextUrl.searchParams.get("machineId") ?? "";
     if (machineId.length > 128) return fail("VALIDATION_FAILED","Neispravan filter mašine.");
     const pool=await getVerifiedPool();
-    const actor={userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles};
+    const actor={userId:auth.ctx.userId,companyId:auth.ctx.companyId,roles:auth.ctx.roles,scope:auth.ctx.scope,projectIds:auth.ctx.projectIds};
     const all=await listFuelEntries(pool,actor,{});
     const rows=machineId ? all.filter(row=>row.machine_id===machineId) : all;
     const price=canViewFuelPrice(auth.ctx.roles);

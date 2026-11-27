@@ -28,7 +28,7 @@ export default async function GorivoPage() {
   const pool = await getVerifiedPool();
   const entries = await listFuelEntries(
     pool,
-    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles },
+    { userId: auth.ctx.userId, companyId: auth.ctx.companyId, roles: auth.ctx.roles, scope: auth.ctx.scope, projectIds: auth.ctx.projectIds },
     {},
   );
 

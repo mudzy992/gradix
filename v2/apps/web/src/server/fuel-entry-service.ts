@@ -1,4 +1,5 @@
 /** R5.2: fuel list and create. Revise in fuel-entry-revise.ts. */
+import { machineActivityScope, machineActivityTargetAllowed } from "./machine-activity-scope";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
@@ -49,7 +50,8 @@ export async function listFuelEntries(
       );
     const conditions = ["fe.company_id = $1"];
     const params: unknown[] = [actor.companyId];
-    let idx = 2;
+    conditions.push(machineActivityScope(actor, params, "fe", "driver_worker_id"));
+    let idx = params.length + 1;
     if (isFieldOnly) {
       if (viewerWorkerId) {
         conditions.push(`fe.driver_worker_id = $${idx}`);
@@ -174,6 +176,9 @@ export async function createFuelEntry(
         code: "NO_WORKER",
         message: isOffice ? "Izaberi vozača za unos." : "Nalog nije povezan s radnikom.",
       };
+    }
+    if (!await machineActivityTargetAllowed(client, actor, input.projectId, driverId)) {
+      return { outcome: "FORBIDDEN", code: "SCOPE", message: "Zapis nije u vašem opsegu." };
     }
     /*
      * F4 §1.3.10: cijena se PREDLAŽE iz šifarnika po datumu točenja. Predlog se koristi samo kad

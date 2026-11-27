@@ -17,7 +17,7 @@ export async function loadFuelReport(pool: Pool, actor: Actor, filters: Filters,
   const rows = await listFuelEntries(pool, actor, {
     from: `${filters.from}T00:00:00.000Z`,
     untilExclusive: new Date(Date.parse(`${filters.to}T00:00:00Z`) + 86400000).toISOString(),
-    projectIds:ids, projectId:filters.projectId, team:filters.team, limit:maxRows+1,
+    projectIds:actor.scope === "SELF" ? null : ids, projectId:filters.projectId, team:filters.team, limit:maxRows+1,
   });
   if (rows.length > maxRows) throw new Error("REPORT_TOO_LARGE");
   const price = canViewFuelPrice(actor.roles);

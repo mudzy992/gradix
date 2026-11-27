@@ -23,7 +23,7 @@ export async function POST(
     const result = await setFuelAmount(await getVerifiedPool(), {
       userId: guardResult.ctx.userId,
       companyId: guardResult.ctx.companyId,
-      roles: guardResult.ctx.roles as Role[],
+      roles: guardResult.ctx.roles as Role[], scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds,
     }, id, body.totalAmount);
     if (result.outcome === "FORBIDDEN") return fail("FORBIDDEN", result.message ?? "Nemate pravo.");
     if (result.outcome === "CONFLICT") return fail("CONFLICT", result.message);

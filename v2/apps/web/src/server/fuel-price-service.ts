@@ -15,6 +15,7 @@
  * Cisterna i pumpa se NIKAD ne vode paralelno: ako je `tank_id` popunjen, zapis je iz cisterne i
  * stanje se skida; ako nije, točenje je na pumpi i stanja nema.
  */
+import { machineActivityScope, machineActivityRecordAllowed, type MachineActivityActor } from "./machine-activity-scope";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
@@ -504,12 +505,25 @@ function asInstant(value: string): string {
 }
 
 /** Prosjek potrošnje mašine u zadnjih 90 dana prije datuma (spec 05 §1.3.13). */
+function deviationScope(actor: MachineActivityActor, params: unknown[], alias: string): string {
+  const scope = machineActivityScope(actor, params, alias, "driver_worker_id");
+  const fieldOnly = actor.roles.some(r => ["DRIVER", "MACHINE_OPERATOR"].includes(r)) &&
+    !actor.roles.some(r => ["OWNER", "ADMIN", "PROJECT_MANAGER", "SITE_SUPERVISOR", "ACCOUNTANT"].includes(r));
+  if (!fieldOnly) return scope;
+  params.push(actor.userId);
+  return `(${scope}) AND EXISTS (SELECT 1 FROM public.workers fw WHERE fw.company_id=${alias}.company_id
+    AND fw.id=${alias}.driver_worker_id AND fw.user_id=$${params.length} AND fw.is_active)`;
+}
+
 async function baselineConsumption(
   client: PoolClient,
   companyId: string,
   machineId: string,
   beforeDate: string,
+  actor?: MachineActivityActor,
 ): Promise<number | null> {
+  const params: unknown[] = [companyId, machineId, asInstant(beforeDate)];
+  const scope = actor ? deviationScope(actor, params, "fe") : "TRUE";
   const row = await client.query<{ avg: string | null }>(
     `SELECT avg(fe.liters / NULLIF(delta, 0)) AS avg
        FROM (
@@ -519,10 +533,10 @@ async function baselineConsumption(
           WHERE fe.company_id = $1 AND fe.machine_id = $2
             AND fe.meter_reading IS NOT NULL
             AND fe.filled_at < $3::timestamptz
-            AND fe.filled_at >= ($3::timestamptz - interval '90 days')
+            AND fe.filled_at >= ($3::timestamptz - interval '90 days') AND ${scope}
        ) fe
       WHERE delta > 0`,
-    [companyId, machineId, asInstant(beforeDate)],
+    params,
   );
   const avg = row.rows[0]?.avg;
   return avg === null || avg === undefined ? null : Number(avg);
@@ -589,14 +603,14 @@ export async function assessFuelDeviation(
  */
 export async function listFuelDeviations(
   pool: Pool,
-  actor: FuelActor,
+  actor: MachineActivityActor,
   filters: { status?: "OPEN" | "EXPLAINED" | "DISMISSED"; machineId?: string } = {},
 ): Promise<{ deviations: DeviationView[]; open_count: number }> {
   if (!can(actor.roles, "machines.fuel.view")) return { deviations: [], open_count: 0 };
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     const threshold = await deviationThreshold(client, actor.companyId);
     const params: unknown[] = [actor.companyId];
-    const conditions = ["fe.company_id = $1", "fe.deviation_status IS NOT NULL"];
+    const conditions = ["fe.company_id = $1", "fe.deviation_status IS NOT NULL", deviationScope(actor, params, "fe")];
     if (filters.status) {
       params.push(filters.status);
       conditions.push(`fe.deviation_status = $${params.length}`);
@@ -623,21 +637,23 @@ export async function listFuelDeviations(
       params,
     );
 
+    const countParams: unknown[] = [actor.companyId];
+    const countScope = deviationScope(actor, countParams, "fe");
     const { rows: openRows } = await client.query<{ count: string }>(
-      `SELECT count(*)::text AS count FROM public.fuel_entries
-        WHERE company_id = $1 AND deviation_status = 'OPEN'`,
-      [actor.companyId],
+      `SELECT count(*)::text AS count FROM public.fuel_entries fe
+        WHERE fe.company_id = $1 AND fe.deviation_status = 'OPEN' AND ${countScope}`, countParams,
     );
 
     const deviations: DeviationView[] = [];
     for (const row of result.rows) {
       // Prethodno očitanje iste mašine prije ovog točenja — potrošnja se računa, ne čuva.
+      const previousParams: unknown[] = [actor.companyId, row.machine_id, row.filled_at];
+      const previousScope = deviationScope(actor, previousParams, "fe");
       const previous = await client.query<{ meter_reading: string }>(
-        `SELECT meter_reading::text FROM public.fuel_entries
-          WHERE company_id = $1 AND machine_id = $2 AND meter_reading IS NOT NULL
-            AND filled_at < $3::timestamptz
-          ORDER BY filled_at DESC LIMIT 1`,
-        [actor.companyId, row.machine_id, row.filled_at],
+        `SELECT fe.meter_reading::text FROM public.fuel_entries fe
+          WHERE fe.company_id = $1 AND fe.machine_id = $2 AND fe.meter_reading IS NOT NULL
+            AND fe.filled_at < $3::timestamptz AND ${previousScope}
+          ORDER BY fe.filled_at DESC LIMIT 1`, previousParams,
       );
       const consumption = fuelConsumption({
         liters: Number(row.liters),
@@ -645,7 +661,7 @@ export async function listFuelDeviations(
         meterEnd: row.meter_reading === null ? null : Number(row.meter_reading),
         meter: row.meter === "KM" ? "KM" : "HOURS",
       });
-      const baselineRow = await baselineConsumption(client, actor.companyId, row.machine_id, row.filled_at);
+      const baselineRow = await baselineConsumption(client, actor.companyId, row.machine_id, row.filled_at, actor);
       const baseline = baselineRow === null
         ? null
         : row.meter === "KM" ? Number((baselineRow * 100).toFixed(2)) : Number(baselineRow.toFixed(2));
@@ -681,7 +697,7 @@ export async function listFuelDeviations(
  */
 export async function explainFuelDeviation(
   pool: Pool,
-  actor: FuelActor,
+  actor: MachineActivityActor,
   entryId: string,
   input: { status: "EXPLAINED" | "DISMISSED"; reason: "BREAKDOWN" | "THEFT" | "MISREAD" | "OTHER"; note: string },
 ): Promise<Outcome<{ id: string; status: string }>> {
@@ -695,6 +711,11 @@ export async function explainFuelDeviation(
     };
   }
   return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+    if (!await machineActivityRecordAllowed(client, actor, "fuel_entry", entryId)) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Točenje nije pronađeno." };
+    const values: unknown[] = [actor.companyId, entryId];
+    const scope = deviationScope(actor, values, "fe");
+    const visible = await client.query(`SELECT fe.id FROM public.fuel_entries fe WHERE fe.company_id=$1 AND fe.id=$2 AND ${scope}`, values);
+    if (!visible.rowCount) return { outcome: "VALIDATION_FAILED", code: "NOT_FOUND", message: "Točenje nije pronađeno." };
     const entry = await client.query<{ deviation_status: string | null }>(
       "SELECT deviation_status FROM public.fuel_entries WHERE company_id = $1 AND id = $2 FOR UPDATE",
       [actor.companyId, entryId],

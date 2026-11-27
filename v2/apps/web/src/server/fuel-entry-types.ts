@@ -1,9 +1,6 @@
 /** R5.2 shared types for fuel-entry service. */
-export type FuelEntryActor = {
-  userId: string;
-  companyId: string;
-  roles: readonly string[];
-};
+import type { MachineActivityActor } from "./machine-activity-scope";
+export type FuelEntryActor = MachineActivityActor;
 
 export type FuelEntryRow = {
   id: string;
