@@ -562,7 +562,7 @@ export async function listPeriods(
                   /* Bruto osnova je zbir ZARADA (bez odbitaka) i samo kad sve linije imaju
                      iznos; inače je NULL — djelimičan zbir bi bio lažno tačan broj. */
                   CASE WHEN count(*) FILTER (WHERE l.status <> 'OK') > 0 THEN NULL
-                       ELSE sum(l.amount_cents) FILTER (WHERE l.amount_cents > 0) END AS gross_total
+                       ELSE sum(l.amount_cents) FILTER (WHERE l.amount_cents > 0 OR l.component_code = 'KOREKCIJA') END AS gross_total
              FROM public.payroll_runs pr
              JOIN public.payroll_run_lines l
                ON l.company_id = pr.company_id AND l.run_id = pr.id
@@ -966,14 +966,13 @@ function installmentFor(
   bounds: { start: string; end: string },
 ): bigint {
   const remaining = BigInt(advance.remaining_cents);
-  if (remaining <= 0n) return 0n;
+  if (remaining <= 0n || advance.issued_on > bounds.end) return 0n;
   if (advance.kind === "ADVANCE") {
     // U mjesecu izdavanja cijela; poslije izdavanja samo ono što je ostalo (npr. djelimično
     // naplaćeno ranije) — nikad više od ostatka.
     return remaining;
   }
   const installment = advance.installment_cents ? BigInt(advance.installment_cents) : remaining;
-  void bounds;
   return installment < remaining ? installment : remaining;
 }
 
@@ -1031,15 +1030,6 @@ export async function calculatePeriod(
         message: "Period je odobren; ponovni izračun traži novo otvaranje perioda.",
       } as PayrollError;
     }
-
-    // Existing advance balances are reduced at calculation time, not lock time. Until their
-    // allocations are revision-safe, do not recalculate such a run and silently deduct twice.
-    const priorAdvance = await client.query(`SELECT 1 FROM public.payroll_line_sources s
-      JOIN public.payroll_run_lines l ON l.company_id=s.company_id AND l.id=s.line_id
-      WHERE s.company_id=$1 AND s.source_type='ADVANCE' AND l.run_id=(
-        SELECT id FROM public.payroll_runs WHERE company_id=$1 AND period_id=$2 ORDER BY revision DESC LIMIT 1
-      ) LIMIT 1`,[actor.companyId,periodId]);
-    if (priorAdvance.rowCount) return {code:"CONFLICT",message:"Ponovni izračun s odbitkom akontacije ili pozajmice nije siguran; potrebna je provjera obračuna."} as PayrollError;
 
     await ensureComponents(client, actor.companyId, actor.userId);
     const rules = await loadRules(client, actor.companyId);
@@ -1191,7 +1181,7 @@ export async function calculatePeriod(
       HOLIDAY: "PRAZNIK",
     };
 
-    for (const worker of workers.values()) {
+    for (const worker of [...workers.values()].sort((a,b)=>Buffer.compare(Buffer.from(a.worker_id), Buffer.from(b.worker_id)))) {
       let ordinal = 0;
       // Zarada TOG radnika — osnovica za granicu odbitka (vidi `deductable` niže).
       let workerEarnings = 0n;
@@ -1486,17 +1476,30 @@ export async function calculatePeriod(
         `SELECT id, kind, remaining_cents::text, installment_cents::text, issued_on::text
            FROM public.worker_advances
           WHERE company_id = $1 AND worker_id = $2 AND remaining_cents > 0
-          ORDER BY issued_on`,
+          ORDER BY id COLLATE "C" FOR UPDATE`,
         [actor.companyId, worker.worker_id],
       );
+
+      // Latest revisions in other open periods reserve debt; the row lock serializes reservations.
+      const reservations = await client.query<{source_id:string; cents:string}>(
+        `SELECT s.source_id,sum(-s.amount_cents)::text AS cents FROM public.payroll_line_sources s
+         JOIN public.payroll_run_lines l ON l.company_id=s.company_id AND l.id=s.line_id
+         JOIN public.payroll_runs r ON r.company_id=l.company_id AND r.id=l.run_id
+         JOIN public.pay_periods p ON p.company_id=r.company_id AND p.id=r.period_id
+         WHERE s.company_id=$1 AND s.source_type='ADVANCE' AND l.worker_id=$2
+           AND p.id <> $3 AND p.status <> 'LOCKED'
+           AND r.id=(SELECT id FROM public.payroll_runs WHERE company_id=$1 AND period_id=p.id ORDER BY revision DESC LIMIT 1)
+         GROUP BY s.source_id`,[actor.companyId,worker.worker_id,periodId]);
+      const reserved = new Map(reservations.rows.map(row=>[row.source_id,BigInt(row.cents)]));
 
       /*
        * Odbici se mjere prema zaradi TOG radnika. Zajednički zbir firme bi značio da radnik sa
        * velikom zaradom „dozvoljava“ veći odbitak drugome — a to nije njegov dug.
        */
       let deductable = workerEarnings > 0n ? workerEarnings : 0n;
-      for (const advance of advances.rows) {
-        const wanted = installmentFor(advance, bounds);
+      for (const advance of advances.rows.sort((a,b)=>a.issued_on.localeCompare(b.issued_on) || a.id.localeCompare(b.id))) {
+        const available = BigInt(advance.remaining_cents) - (reserved.get(advance.id) ?? 0n);
+        const wanted = installmentFor({...advance,remaining_cents:(available > 0n ? available : 0n).toString()}, bounds);
         if (wanted <= 0n) continue;
         /* Odbici ne smiju dati negativan obračun: naplati se do nule, ostatak prelazi dalje. */
         const taken = wanted <= deductable ? wanted : deductable;
@@ -1530,13 +1533,6 @@ export async function calculatePeriod(
             },
           ],
         });
-        // Ostatak se smanjuje odmah: obračun je izvršen, dug više ne stoji u cjelosti.
-        await client.query(
-          `UPDATE public.worker_advances
-              SET remaining_cents = remaining_cents - $3, updated_at = clock_timestamp()
-            WHERE company_id = $1 AND id = $2`,
-          [actor.companyId, advance.id, taken.toString()],
-        );
       }
     }
 
@@ -1749,6 +1745,26 @@ export async function lockPeriod(
     // or newly opened day/conflict before the irreversible transition.
     const blockers = await periodBlockers(client, actor.companyId, periodId, periodBounds(found.year, found.month));
     if (blockers.length) return {code:"PERIOD_NOT_READY", message:"Period nije spreman za zaključavanje.", detail:{blockers}} as PayrollError;
+    // Only the latest revision becomes a repayment. The period and all debt rows stay locked
+    // until the status change commits; lock in the same worker/id order as calculation.
+    const allocations=await client.query<{id:string;worker_id:string;cents:string}>(
+      `SELECT s.source_id AS id,l.worker_id,sum(-s.amount_cents)::text AS cents
+       FROM public.payroll_line_sources s
+       JOIN public.payroll_run_lines l ON l.company_id=s.company_id AND l.id=s.line_id
+       WHERE s.company_id=$1 AND s.source_type='ADVANCE' AND l.run_id=(
+         SELECT id FROM public.payroll_runs WHERE company_id=$1 AND period_id=$2 ORDER BY revision DESC LIMIT 1
+       ) GROUP BY s.source_id,l.worker_id ORDER BY l.worker_id COLLATE "C",s.source_id COLLATE "C"`,[actor.companyId,periodId]);
+    for (const allocation of allocations.rows) {
+      const advance=await client.query<{remaining_cents:string}>(
+        `SELECT remaining_cents::text FROM public.worker_advances
+         WHERE company_id=$1 AND id=$2 AND worker_id=$3 FOR UPDATE`,
+        [actor.companyId,allocation.id,allocation.worker_id]);
+      if (!advance.rows[0] || BigInt(allocation.cents) < 0n || BigInt(advance.rows[0].remaining_cents) < BigInt(allocation.cents))
+        return {code:"CONFLICT",message:"Stanje akontacije se promijenilo; obračun nije moguće zaključati."} as PayrollError;
+    }
+    for (const allocation of allocations.rows) await client.query(
+      `UPDATE public.worker_advances SET remaining_cents=remaining_cents-$3::bigint,updated_at=clock_timestamp()
+       WHERE company_id=$1 AND id=$2`,[actor.companyId,allocation.id,allocation.cents]);
     await client.query(
       `UPDATE public.pay_periods
           SET status = 'LOCKED', locked_at = clock_timestamp(), locked_by = $3,
@@ -2112,7 +2128,7 @@ export type PayCorrectionRow = {
 export async function listCorrections(
   pool: Pool,
   actor: PayrollActor,
-  filters: { periodId?: string; status?: "OPEN" | "APPLIED" } = {},
+  filters: { periodId?: string; workerId?: string; status?: "OPEN" | "APPLIED" } = {},
 ): Promise<PayrollResult<{ corrections: PayCorrectionRow[] }>> {
   if (!actor.system && !can(actor.roles, "payroll.view")) {
     return { code: "FORBIDDEN", message: "Nemate pravo pregleda korekcija." };
@@ -2130,15 +2146,18 @@ export async function listCorrections(
       status: "OPEN" | "APPLIED";
       created_at: string;
     }>(
-      `SELECT id, period_id, target_period_id, workday_id, payroll_line_id,
-              delta_hours::float8 AS delta_hours, delta_amount_cents::text, reason, status,
-              created_at::text
-         FROM public.pay_corrections
-        WHERE company_id = $1
-          AND ($2::text IS NULL OR period_id = $2::text)
-          AND ($3::text IS NULL OR status = $3::text)
-        ORDER BY created_at DESC`,
-      [actor.companyId, filters.periodId ?? null, filters.status ?? null],
+      `SELECT c.id, c.period_id, c.target_period_id, c.workday_id, c.payroll_line_id,
+              c.delta_hours::float8 AS delta_hours, c.delta_amount_cents::text, c.reason, c.status,
+              c.created_at::text
+         FROM public.pay_corrections c
+         LEFT JOIN public.workdays d ON d.company_id=c.company_id AND d.id=c.workday_id
+         LEFT JOIN public.payroll_run_lines l ON l.company_id=c.company_id AND l.id=c.payroll_line_id
+        WHERE c.company_id = $1
+          AND ($2::text IS NULL OR c.period_id = $2::text)
+          AND ($3::text IS NULL OR c.status = $3::text)
+          AND ($4::text IS NULL OR COALESCE(d.worker_id,l.worker_id) = $4)
+        ORDER BY c.created_at DESC`,
+      [actor.companyId, filters.periodId ?? null, filters.status ?? null, filters.workerId ?? null],
     );
     return {
       corrections: rows.rows.map((row) => ({
@@ -2146,6 +2165,36 @@ export async function listCorrections(
         delta_amount_cents: row.delta_amount_cents === null ? null : Number(row.delta_amount_cents),
       })),
     };
+  });
+}
+
+/** Record a reviewed monetary difference, never overwrite an already confirmed value. */
+export async function confirmCorrectionValue(
+  pool:Pool,actor:PayrollActor,input:{correctionId:string;amount:string;explanation:string},
+):Promise<PayrollResult<{id:string;amount_cents:string}>> {
+  if (!actor.system && !can(actor.roles,"payroll.manage")) return {code:"FORBIDDEN",message:"Nemate pravo potvrde korekcije."};
+  const explanation=input.explanation.trim();
+  if (explanation.length < 10 || explanation.length > 500 || !/^-?\d{1,10}\.\d{2}$/.test(input.amount))
+    return {code:"VALIDATION_FAILED",message:"Navedite iznos sa dvije decimale i obrazloženje od najmanje 10 znakova."};
+  let cents:bigint;
+  try {cents=money(input.amount,"BAM").cents;} catch {return {code:"VALIDATION_FAILED",message:"Neispravan iznos."};}
+  return withCompany(pool,toCompanyId(actor.companyId),async client=>{
+    const ref=await client.query<{target_period_id:string}>("SELECT target_period_id FROM public.pay_corrections WHERE company_id=$1 AND id=$2",[actor.companyId,input.correctionId]);
+    if(!ref.rows[0]) return {code:"NOT_FOUND",message:"Korekcija ne postoji."} as PayrollError;
+    // Identical lock order to calculate/approve/lock: target period, then correction.
+    const period=await client.query<{status:string}>("SELECT status FROM public.pay_periods WHERE company_id=$1 AND id=$2 FOR UPDATE",[actor.companyId,ref.rows[0].target_period_id]);
+    const correction=await client.query<{status:string;delta_amount_cents:string|null}>("SELECT status,delta_amount_cents::text FROM public.pay_corrections WHERE company_id=$1 AND id=$2 FOR UPDATE",[actor.companyId,input.correctionId]);
+    const row=correction.rows[0];
+    if(!row || !period.rows[0]) return {code:"NOT_FOUND",message:"Korekcija ne postoji."} as PayrollError;
+    if(row.delta_amount_cents !== null && BigInt(row.delta_amount_cents) === cents)
+      return {id:input.correctionId,amount_cents:cents.toString()};
+    if(row.status!=="OPEN" || row.delta_amount_cents!==null || !["OPEN","CALCULATED"].includes(period.rows[0].status))
+      return {code:"CONFLICT",message:"Iznos je već potvrđen ili je period zatvoren za izmjene."} as PayrollError;
+    await client.query("UPDATE public.pay_corrections SET delta_amount_cents=$3 WHERE company_id=$1 AND id=$2",[actor.companyId,input.correctionId,cents.toString()]);
+    await writeAudit(client,{companyId:actor.companyId,actorId:actor.userId,actorEmail:null,
+      action:"payroll.correction_valued",entityType:"pay_correction",entityId:input.correctionId,
+      metadata:{amountCents:cents.toString(),explanation,targetPeriodId:ref.rows[0].target_period_id},retentionClass:"FINANCIAL"});
+    return {id:input.correctionId,amount_cents:cents.toString()};
   });
 }
 

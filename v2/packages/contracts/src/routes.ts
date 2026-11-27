@@ -65,6 +65,8 @@ import {
   ActivePatch,
   MyPayrollResponse,
   PayCorrectionsResponse,
+  PayCorrectionValueInput,
+  PayCorrectionValueResponse,
   PayPeriod,
   PayPeriodInput,
   PayPeriodsResponse,
@@ -2954,6 +2956,12 @@ export const ROUTES = [
     permission: "payroll.view",
     request: null,
     response: PayCorrectionsResponse,
+  },
+  {
+    method: "POST", path: "/api/payroll/corrections",
+    summary: "Računovodstvena potvrda obračunanog iznosa korekcije uz obrazloženje.",
+    auth: true, permission: "payroll.manage",
+    request: PayCorrectionValueInput, response: PayCorrectionValueResponse,
   },
   {
     method: "GET",

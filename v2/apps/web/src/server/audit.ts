@@ -179,6 +179,7 @@ export const AUDIT_ACTIONS = [
   "payroll.parameter_created",
   "payroll.advance_created",
   "payroll.correction_applied",
+  "payroll.correction_valued",
   "payroll.exported",
   /* F8: servis i održavanje. Radnje su odvojene po događaju koji mijenja stanje (početak, kraj,
      odobrenje, ispravka zastoja), jer se u auditu traži TAČNO jedna od njih — „servis izmijenjen“
@@ -442,6 +443,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "payroll.parameter_created": "Parametar obračuna dodan",
   "payroll.advance_created": "Akontacija/pozajmica izdata",
   "payroll.correction_applied": "Korekcija obračuna primijenjena",
+  "payroll.correction_valued": "Iznos korekcije potvrđen",
   "payroll.exported": "Obračun izvezen",
   "service.order_created": "Servisni nalog otvoren",
   "service.order_updated": "Servisni nalog izmijenjen",

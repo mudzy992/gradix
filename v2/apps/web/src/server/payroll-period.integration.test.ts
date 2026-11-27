@@ -15,12 +15,16 @@
  */
 import { randomUUID } from "node:crypto";
 import ExcelJS from "exceljs";
+import { NextRequest } from "next/server";
+import { POST as valueCorrectionRoute, GET as correctionsRoute } from "@/app/api/payroll/corrections/route";
+import { ACCESS_COOKIE, issueAccessToken } from "./session";
 import { Pool } from "pg";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import {
   approvePeriod,
   calculatePeriod,
+  confirmCorrectionValue,
   createAdvance,
   createPeriod,
   getMyPayroll,
@@ -416,9 +420,35 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     const corr=await admin.query<{id:string;target_period_id:string}>("SELECT id,target_period_id FROM public.pay_corrections WHERE company_id=$1 AND workday_id=$2",[CO,day]);
     const target=corr.rows[0]!.target_period_id;
     await seedDay({workDate:"2026-04-02",start:"07:00",end:"15:00"});
-    // Simulates a separately verified monetary delta; the trigger does not price it yet.
-    await admin.query("UPDATE public.pay_corrections SET delta_amount_cents=-1000 WHERE company_id=$1 AND id=$2",[CO,corr.rows[0]!.id]);
-    for(let revision=1;revision<=2;revision++) {
+    // The correction starts without a value. A calculation cannot be approved until an
+    // accountant confirms their calculation with an auditable explanation.
+    expect(isPayrollError(await calculatePeriod(app,actor,target))).toBe(false);
+    expect(await approvePeriod(app,actor,target)).toMatchObject({code:"PERIOD_NOT_READY",detail:{blockers:expect.arrayContaining([expect.objectContaining({code:"PENDING_CORRECTIONS"})])}});
+    const input={correctionId:corr.rows[0]!.id,amount:"-10.00",explanation:"Jedan sat po satnici 10 BAM"};
+    const accountant={userId:ACCT,companyId:CO,roles:["ACCOUNTANT"] as const};
+    expect(await confirmCorrectionValue(app,{...accountant,roles:["WORKER"]},input)).toMatchObject({code:"FORBIDDEN"});
+    expect(await confirmCorrectionValue(app,{userId:OWNER_B,companyId:CO_B,roles:["OWNER"]},input)).toMatchObject({code:"NOT_FOUND"});
+    const sessionId=`ses_paycorr_${RUN}`;
+    await admin.query("INSERT INTO public.sessions(id,company_id,user_id,token_hash,expires_at) VALUES($1,$2,$3,$4,now()+interval '1 day')",[sessionId,CO,ACCT,`hash_${sessionId}`]);
+    const cookie=`${ACCESS_COOKIE}=${issueAccessToken({sub:ACCT,sid:sessionId,companyId:CO})}`;
+    try {
+      const response=await valueCorrectionRoute(new NextRequest("http://t/api/payroll/corrections",{
+        method:"POST",headers:{cookie,"content-type":"application/json"},
+        body:JSON.stringify({correction_id:input.correctionId,amount:input.amount,explanation:input.explanation}),
+      }));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({data:{id:input.correctionId,amount_cents:"-1000"}});
+      const listed=await correctionsRoute(new NextRequest(`http://t/api/payroll/corrections?worker=${WORKER}`,{headers:{cookie}}));
+      expect(listed.status).toBe(200);
+      expect(await listed.json()).toMatchObject({data:{corrections:[expect.objectContaining({id:input.correctionId})]}});
+      const foreignWorker=await correctionsRoute(new NextRequest(`http://t/api/payroll/corrections?worker=${ACCT_WORKER}`,{headers:{cookie}}));
+      expect(await foreignWorker.json()).toMatchObject({data:{corrections:[]}});
+    } finally {await admin.query("DELETE FROM public.sessions WHERE company_id=$1 AND id=$2",[CO,sessionId]);}
+    expect(await confirmCorrectionValue(app,accountant,input)).toEqual({id:input.correctionId,amount_cents:"-1000"});
+    expect(await confirmCorrectionValue(app,accountant,{...input,amount:"-20.00"})).toMatchObject({code:"CONFLICT"});
+    const audit=await admin.query("SELECT 1 FROM public.audit_events WHERE company_id=$1 AND entity_id=$2 AND action='payroll.correction_valued'",[CO,input.correctionId]);
+    expect(audit.rowCount).toBe(1);
+    for(let revision=2;revision<=3;revision++) {
       const result=await calculatePeriod(app,actor,target); if(isPayrollError(result)) throw Error(result.message);
       expect(result.gross_cents).toBe("7000");
       const lines=await listLines(app,actor,target); if(isPayrollError(lines)) throw Error(lines.message);
@@ -562,13 +592,60 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
       "SELECT remaining_cents::text FROM public.worker_advances WHERE company_id = $1 AND id = $2",
       [CO, advance.id],
     );
-    // Ostatak 20,00 prelazi u naredni mjesec — dug nije izgubljen ni „oprošten“.
-    expect(remaining.rows[0]!.remaining_cents).toBe("2000");
-    expect(await calculatePeriod(app,actor,periodId)).toMatchObject({code:"CONFLICT"});
-    const afterRetry=await admin.query<{remaining_cents:string}>("SELECT remaining_cents::text FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,advance.id]);
-    expect(afterRetry.rows[0]!.remaining_cents).toBe("2000");
-    const unchanged=await listLines(app,actor,periodId); if(isPayrollError(unchanged)) throw Error(unchanged.message);
-    expect(unchanged.revision).toBe(1);
+    // Obračun rezerviše, ali ne naplaćuje. Tri revizije su isti plan, ne tri odbitka.
+    expect(remaining.rows[0]!.remaining_cents).toBe("10000");
+    for(let revision=2;revision<=3;revision++) {
+      const retry=await calculatePeriod(app,actor,periodId); if(isPayrollError(retry)) throw Error(retry.message);
+      const revised=await listLines(app,actor,periodId); if(isPayrollError(revised)) throw Error(revised.message);
+      expect(revised.revision).toBe(revision);
+      expect(revised.lines.find(line=>line.component_code==="AKONTACIJA")?.amount_cents).toBe(-8000);
+      const debt=await admin.query<{remaining_cents:string}>("SELECT remaining_cents::text FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,advance.id]);
+      expect(debt.rows[0]!.remaining_cents).toBe("10000");
+    }
+    expect(isPayrollError(await approvePeriod(app,actor,periodId))).toBe(false);
+    expect(isPayrollError(await lockPeriod(app,actor,periodId))).toBe(false);
+    expect(isPayrollError(await lockPeriod(app,actor,periodId))).toBe(true);
+    const afterLock=await admin.query<{remaining_cents:string}>("SELECT remaining_cents::text FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,advance.id]);
+    expect(afterLock.rows[0]!.remaining_cents).toBe("2000");
+  });
+
+  it("paralelni periodi rezervišu ukupno najviše dug, a zaključavanje ga naplati jednom",async()=>{
+    await addRate(WORKER,1000);
+    await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    await seedDay({workDate:"2026-04-02",start:"07:00",end:"15:00"});
+    const debt=await createAdvance(app,actor,{workerId:WORKER,kind:"ADVANCE",amount:"100.00",issuedOn:"2026-03-01"});
+    if(isPayrollError(debt)) throw Error(debt.message);
+    const march=await openPeriod(2026,3),april=await openPeriod(2026,4);
+    const calculated=await Promise.all([calculatePeriod(app,actor,march),calculatePeriod(app,actor,april)]);
+    for(const result of calculated) if(isPayrollError(result)) throw Error(result.message);
+    const marchLines=await listLines(app,actor,march),aprilLines=await listLines(app,actor,april);
+    if(isPayrollError(marchLines)||isPayrollError(aprilLines)) throw Error("missing lines");
+    const amounts=[marchLines,aprilLines].map(x=>x.lines.find(l=>l.component_code==="AKONTACIJA")?.amount_cents ?? 0);
+    expect(amounts.sort((a,b)=>a-b)).toEqual([-8000,-2000]);
+    const balance=async()=> (await admin.query<{remaining:string}>("SELECT remaining_cents::text AS remaining FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,debt.id])).rows[0]!.remaining;
+    expect(await balance()).toBe("10000");
+    expect(isPayrollError(await approvePeriod(app,actor,march))).toBe(false);
+    expect(isPayrollError(await approvePeriod(app,actor,april))).toBe(false);
+    const locked=await Promise.all([lockPeriod(app,actor,march),lockPeriod(app,actor,april)]);
+    for(const result of locked) if(isPayrollError(result)) throw Error(result.message);
+    expect(await balance()).toBe("0");
+  });
+
+  it("zaključavanje ne naplati nijedan dug ako je druga rezervacija nekonzistentna",async()=>{
+    await addRate(WORKER,1000);
+    await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    const first=await createAdvance(app,actor,{workerId:WORKER,kind:"ADVANCE",amount:"20.00",issuedOn:"2026-03-01"});
+    const second=await createAdvance(app,actor,{workerId:WORKER,kind:"ADVANCE",amount:"20.00",issuedOn:"2026-03-02"});
+    if(isPayrollError(first)||isPayrollError(second)) throw Error("advance create failed");
+    const period=await openPeriod(2026,3);
+    expect(isPayrollError(await calculatePeriod(app,actor,period))).toBe(false);
+    expect(isPayrollError(await approvePeriod(app,actor,period))).toBe(false);
+    // Inject an inconsistent balance on the second row in the lock order.
+    const [ok,bad]=[first.id,second.id].sort();
+    await admin.query("UPDATE public.worker_advances SET remaining_cents=0 WHERE company_id=$1 AND id=$2",[CO,bad]);
+    expect(await lockPeriod(app,actor,period)).toMatchObject({code:"CONFLICT"});
+    expect((await admin.query("SELECT remaining_cents::text AS remaining FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,ok])).rows[0].remaining).toBe("2000");
+    expect((await admin.query("SELECT status FROM public.pay_periods WHERE company_id=$1 AND id=$2",[CO,period])).rows[0].status).toBe("APPROVED");
   });
 
   it("SELF_APPROVAL_FORBIDDEN: računovođa ne odobrava obračun u kojem je sam", async () => {

@@ -4324,6 +4324,14 @@ export const PayCorrection = z.object({
 });
 export type PayCorrection = z.infer<typeof PayCorrection>;
 
+/** Računovođa potvrđuje prethodno utvrđen potpisani iznos i navodi osnov obračuna. */
+export const PayCorrectionValueInput = z.object({
+  correction_id: SafeText,
+  amount: z.string().regex(/^-?\d{1,10}\.\d{2}$/, "Iznos mora imati dvije decimale."),
+  explanation: SafeText.min(10).max(500),
+}).strict();
+export const PayCorrectionValueResponse = z.object({ id: SafeText, amount_cents: z.string() });
+
 export const PayCorrectionsResponse = z.object({
   corrections: z.array(PayCorrection),
 });

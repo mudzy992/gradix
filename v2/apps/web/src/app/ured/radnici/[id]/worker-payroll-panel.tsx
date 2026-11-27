@@ -61,11 +61,12 @@ export function WorkerPayrollPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [selectedCorrection, setSelectedCorrection] = useState<Correction | null>(null);
 
   const load = useCallback(async () => {
     const [advanceResult, correctionResult] = await Promise.all([
       apiCall<{ advances: Advance[] }>(`/api/workers/${workerId}/advances`),
-      apiCall<{ corrections: Correction[] }>("/api/payroll/corrections"),
+      apiCall<{ corrections: Correction[] }>(`/api/payroll/corrections?worker=${encodeURIComponent(workerId)}`),
     ]);
     if (!advanceResult.ok) setError(advanceResult.message);
     else setAdvances(advanceResult.data.advances);
@@ -79,7 +80,7 @@ export function WorkerPayrollPanel({
   if (advances === null || corrections === null) return <Skeleton rows={3} />;
 
   const remaining = advances.reduce((sum, row) => sum + row.remaining_cents, 0);
-  const mine = corrections.filter((row) => row.workday_id !== null);
+  const mine = corrections;
 
   return (
     <Card>
@@ -136,6 +137,8 @@ export function WorkerPayrollPanel({
             },
             { key: "status", header: "Stanje", cell: (row) => (row.status === "OPEN" ? "Otvorena" : "Primijenjena") },
             { key: "reason", header: "Razlog", cell: (row) => row.reason },
+            { key: "action", header: "Radnja", cell: (row) => canManage && row.status === "OPEN" && row.delta_amount_cents === null
+              ? <Button variant="quiet" onClick={() => setSelectedCorrection(row)}>Potvrdi iznos</Button> : "—" },
           ]}
           empty={(
             <EmptyState
@@ -145,6 +148,9 @@ export function WorkerPayrollPanel({
           )}
         />
       </Stack>
+
+      {selectedCorrection ? <CorrectionValueDialog correction={selectedCorrection} onClose={() => setSelectedCorrection(null)}
+        onDone={async () => {setSelectedCorrection(null);setNotice("Iznos je potvrđen. Ponovo izračunajte ciljni period.");await load();}} /> : null}
 
       <AdvanceDialog
         open={open}
@@ -224,4 +230,30 @@ function AdvanceDialog({
       </Stack>
     </Dialog>
   );
+}
+
+function CorrectionValueDialog({correction,onClose,onDone}:{
+  correction:Correction;onClose:()=>void;onDone:()=>Promise<void>;
+}) {
+  const [amount,setAmount]=useState("");
+  const [explanation,setExplanation]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState<string|null>(null);
+  const submit=async()=>{
+    setBusy(true);setError(null);
+    const result=await apiCall<{id:string;amount_cents:string}>("/api/payroll/corrections",jsonBody({
+      correction_id:correction.id,amount:amount.trim(),explanation:explanation.trim(),
+    }));
+    setBusy(false);
+    if(!result.ok) {setError(result.message);return;}
+    await onDone();
+  };
+  return <Dialog title="Potvrda iznosa korekcije" onClose={onClose}><Stack>
+    <p className="gx-page-sub">{correction.reason} Razlika sati: {correction.delta_hours}. Utvrdite razliku prema starom obračunu i važećim satnicama i parametrima. Negativan iznos umanjuje zaradu.</p>
+    {error ? <Alert tone="error">{error}</Alert> : null}
+    <FormField label="Potvrđeni iznos (npr. -10.00)"><Input value={amount} onChange={event=>setAmount(event.target.value)} /></FormField>
+    <FormField label="Obrazloženje obračuna" hint="Najmanje 10 znakova; ostaje u revizijskom tragu."><Input value={explanation} onChange={event=>setExplanation(event.target.value)} /></FormField>
+    <Inline><Button variant="primary" disabled={busy || !amount.trim() || explanation.trim().length<10} onClick={()=>void submit()}>Potvrdi iznos</Button>
+      <Button variant="quiet" onClick={onClose}>Otkaži</Button></Inline>
+  </Stack></Dialog>;
 }

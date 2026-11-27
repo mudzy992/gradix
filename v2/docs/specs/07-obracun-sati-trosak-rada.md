@@ -40,6 +40,7 @@ Postojeće stanje (ostaje kao polazna tačka): `work_entries` (`kind` `WORK|BREA
 ### 1.5 Terenski dodatak, akontacije, pozajmice
 19. **Terenski** = `FIELD_ALLOWANCE_PER_DAY × broj dana na terenu`; teren = dan rada na projektu čiji `site_place` ≠ `companies.city`. Ručna korekcija dopuštena uz razlog.
 20. `worker_advances` (`worker_id`, `amount_cents`, `issued_on`, `kind` `ADVANCE|LOAN`, `installment_cents NULL`, `remaining_cents`, `note`): akontacija se odbija u mjesecu izdavanja, pozajmica u ratama. Obje su `DEDUCTION` linije sa vezom na izvor.
+20a. Izračun `OPEN`/`CALCULATED` perioda samo rezerviše odbitak u posljednjoj reviziji. Druge nezaključane revizije istog perioda ne rezervišu dodatni dug; rezervacije drugih perioda imaju prednost prema redoslijedu obrade. Tek `LOCKED` atomski umanjuje `remaining_cents`, jednom. Datum izdavanja mora biti u periodu ili ranije.
 21. **Odbici nikad ne stvaraju negativan obračun:** ako ukupni odbici prelaze zaradu mjeseca, naplaćuje se do nule, a ostatak (`remaining_cents`) prelazi u sljedeći period. Nema negativne linije.
 
 ### 1.6 Izvoz
@@ -49,6 +50,7 @@ Postojeće stanje (ostaje kao polazna tačka): `work_entries` (`kind` `WORK|BREA
 
 ### 1.7 Korekcije nakon zaključavanja
 25. `pay_corrections` (`period_id`, `workday_id`/`payroll_line_id`, `delta_hours`, `delta_amount_cents`, `reason` (obavezan), `target_period_id`, `status` `OPEN|APPLIED`): izmjena dana u `LOCKED` periodu otvara korekciju koja se primjenjuje u **narednom** obračunu.
+25a. Automatska evidencija izmjene ne određuje novčanu razliku: računovođa ili drugi korisnik s `payroll.manage` na kartici radnika potvrđuje **već izračunati** potpisani iznos u BAM i obrazloženje (sati sami nisu dovoljni za klasifikacije/dodatke). Potvrda se evidentira u finansijskom auditu i ne može se prepisati. Ciljni period mora se zatim ponovo izračunati; neobrađena korekcija blokira odobrenje i zaključavanje. Ako su podaci za ispravan obračun nepotpuni, iznos ne treba nagađati.
 26. Korekcija je vidljiva na oba mjesta: u periodu gdje je nastala (referenca) i u periodu gdje je primijenjena (linija sa `calc_note`). Ništa se ne briše.
 
 ### 1.8 Kontrola i pristup
@@ -92,7 +94,8 @@ Sve nove tenant tabele: `FORCE RLS` + politika + `privilege-matrix.tsv` + prefli
 | GET/POST/PATCH | `/api/payroll/parameters` | `payroll.manage` |
 | GET/POST/PATCH | `/api/payroll/components` | `payroll.manage` |
 | GET/POST | `/api/workers/:id/advances` | `payroll.manage` |
-| GET | `/api/payroll/corrections` | `payroll.view` |
+| GET | `/api/payroll/corrections` (+`?worker`) | `payroll.view` |
+| POST | `/api/payroll/corrections` (potvrda iznosa i obrazloženje) | `payroll.manage` |
 
 Nove dozvole: `payroll.view` (OWNER, ADMIN, ACCOUNTANT), `payroll.manage` (OWNER, ADMIN, ACCOUNTANT), `payroll.approve` (OWNER, ADMIN, ACCOUNTANT — uz `SELF_APPROVAL_FORBIDDEN`), `payroll.own.view` (svi, samo vlastito).
 Novi kodovi: `RATE_MISSING`, `PARAMETER_MISSING`, `PERIOD_NOT_READY`, `SELF_APPROVAL_FORBIDDEN`, `PERIOD_LOCKED_CORRECTION`, `NEGATIVE_NET_FORBIDDEN`, `PAYROLL_ALREADY_LOCKED`.
@@ -134,3 +137,7 @@ Novi kodovi: `RATE_MISSING`, `PARAMETER_MISSING`, `PERIOD_NOT_READY`, `SELF_APPR
 17. Izolacija: firma B ne vidi periode, parametre, komponente, akontacije firme A.
 
 Van opsega (Faza 2, uz pisanu potvrdu računovođe i paralelni probni obračun): bruto→neto, doprinosi, porez, olakšice, platni listić PDF, uplatni nalozi, bankovni export.
+
+### Nadogradnja rezervacija (Sweep 2B)
+
+Migraciju `20261201120000_sweep2b_advance_reservations` izvršiti u održavanju, bez paralelnog rada stare aplikacije, kontrolisanim migracijskim administratorom sa `BYPASSRLS` ili superuser privilegijom; runtime `gradix_app` je nikad ne izvodi. Migracija atomarno vraća odbitke svih historijskih revizija nezaključanih perioda, a posljednja revizija postaje rezervacija. Zaključani periodi ostaju naplaćeni. Ako naslijeđeni izvori i saldo nisu konzistentni, migracija se zaustavlja bez promjena (`ADVANCE_LEGACY_BALANCE_INCONSISTENT`); prije ponovnog pokušaja potrebna je računovodstvena provjera i usklađenje podataka, ne ručno preskakanje migracije. Dovršena migracija se ne primjenjuje dvaput.
