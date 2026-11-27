@@ -71,6 +71,7 @@ export const ERROR_CODES = [
   /* Faza 5 — Modul 6: projekti, budžet, knjiženje troška, zatvaranje. */
   "BUDGET_REVISION_CONFLICT",
   "PROJECT_CLOSED",
+  "PROJECT_FINISHED",
   /* F6 (Modul 7): nedostatak podatka je IMENOVANA blokada, ne prazna linija i ne nula. */
   "RATE_MISSING",
   "PARAMETER_MISSING",
@@ -189,6 +190,7 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
    */
   BUDGET_REVISION_CONFLICT: 409,
   PROJECT_CLOSED: 422,
+  PROJECT_FINISHED: 409,
   /*
    * F6: `RATE_MISSING` i `PARAMETER_MISSING` su 422 — zahtjev je ispravan, ali obračun ne može
    * izdati iznos bez podatka. 400 bi rekao „loš unos“, a ovdje unos nije problem: nedostaje

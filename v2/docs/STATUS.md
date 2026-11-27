@@ -1,5 +1,22 @@
 # STATUS — Gradix v2
 
+## Pilot / Sweep 3 — priprema za pilot
+
+- Servisni dijelovi, jedinice bolovanja/terena, web/offline blokade i pilot reset.
+  Uputstvo i granice: [PILOT-TEST-VODIC.md](PILOT-TEST-VODIC.md).
+- Real-PG ciljani suiteovi 110/110; dodatno reset: ponovljivost, rollback, prava i stvarna prijava.
+  Šest statičkih provjera prolazi; matrix parity zadržava postojeće R1 upozorenje.
+- CI za `6663aa6` je pao zbog nedostajućeg NUL registra za novu korekcijsku POST rutu; registar je
+  popravljen i ciljani NUL suite 12/12 prolazi. CI konačnog commita treba provjeriti zasebno.
+- Parametri seeda su testni primjeri, ne verifikovan zakonski obračun. Pilot ne zamjenjuje pregled
+  računovođe ni vlasnikovu provjeru na uređaju. Reset je destruktivan i samo za namjensku bazu.
+- Timer start/resume i offline segment odbijaju `FINISHED` kodom `PROJECT_FINISHED`, uz zaključavanje
+  projekta do kraja transakcije; prethodni segmenti nisu obrisani. Docker bundle je testiran u
+  standalone rasporedu; stvarni build slike i Coolify/uređaji nisu ovdje operativno isprobani.
+- Ostaju otvoreni raniji rizici: deduplikacija odvojenih CREATE zahtjeva s novim source ID-jem i
+  cijena TANK izlaza; to ne treba prešutjeti pri pilotu.
+
+
 **Datum:** 2026-11-23 · **Grana:** `arena/44b867b0-gradix` · **Faze 0–8: završene; F9: završni checkpoint** · **Tag:** `phase-9` · **CI:** rezultat provjeriti na završnom commitu
 
 Faza 9 dodaje mobilni dnevnik, incident s učesnicima i offline foto red te Toolbox, uz postojeću

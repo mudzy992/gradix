@@ -13,6 +13,7 @@ import type { Pool, PoolClient } from "pg";
 import { companyId as toCompanyId, withCompany } from "@gradix/db";
 import {
   ServiceError,
+  averageIssueCostCents,
   assertServiceTransition,
   serviceApprovalCheck,
   formatHundredths,
@@ -346,28 +347,29 @@ export async function recordPartUsage(
   }
   const stockError = await preparePartStock(client, params);
   if (stockError) return stockError;
-  let unitCostCents: bigint;
-  if (params.unitCostAmount) {
+  // Isti ulazi i ista formula kao izlaz materijala, pod već stečenom bravom skladišta.
+  // Ukupnu vrijednost čuvamo odvojeno od zaokružene jedinične cijene.
+  const pricing = await client.query<{qty:string|null;value:string|null;unknown:boolean}>(
+    `SELECT sum(quantity)::text AS qty,sum(amount_cents)::text AS value,
+            COALESCE(bool_or(amount_cents IS NULL),false) AS unknown
+       FROM public.stock_movements WHERE company_id=$1 AND item_id=$2 AND kind='IN'
+        AND warehouse_id=(SELECT id FROM public.warehouses WHERE company_id=$1 AND kind='CENTRAL')`,
+    [params.companyId,params.itemId]);
+  const price=pricing.rows[0]!;
+  if (price.unknown || price.qty===null || price.value===null)
+    return {outcome:"VALIDATION_FAILED",code:"STOCK_PRICE_UNKNOWN",message:"Prosječna cijena nije poznata; unesite cijenu prijema."};
+  const incoming=toThousandths(price.qty), value=BigInt(price.value);
+  const amount=averageIssueCostCents(value,incoming,toThousandths(params.quantity));
+  if (amount===null) return {outcome:"VALIDATION_FAILED",code:"STOCK_PRICE_UNKNOWN",message:"Prosječna cijena nije poznata."};
+  const unitCostCents=(value*1000n+incoming/2n)/incoming;
+  if (amount>9223372036854775807n || unitCostCents>9223372036854775807n)
+    return {outcome:"VALIDATION_FAILED",code:"UNIT_COST_INVALID",message:"Vrijednost dijela prelazi dozvoljeni opseg."};
+  // Stari klijenti još šalju cijenu: ne smiju je tiho prepisati niti zavesti korisnika.
+  if(params.unitCostAmount !== null) {
     try {
-      unitCostCents = toHundredths(params.unitCostAmount);
-    } catch {
-      return {
-        outcome: "VALIDATION_FAILED",
-        code: "UNIT_COST_INVALID",
-        message: "Cijena dijela mora biti iznos sa dvije decimale.",
-      };
-    }
-  } else {
-    /* Bez unesene cijene koristi se ZADNJA nabavna cijena iz kretnji `IN`. Bez nje trošak je
-       nula, ne izmišljena vrijednost — i to se vidi kao `0,00` u nalogu. */
-    const last = await client.query<{ unit_cost_cents: string | null }>(
-      `SELECT unit_cost_cents::text FROM public.stock_movements
-        WHERE company_id = $1 AND item_id = $2 AND kind = 'IN' AND unit_cost_cents IS NOT NULL
-          AND warehouse_id = (SELECT id FROM public.warehouses WHERE company_id = $1 AND kind = 'CENTRAL')
-        ORDER BY occurred_on DESC, created_at DESC LIMIT 1`,
-      [params.companyId, params.itemId],
-    );
-    unitCostCents = last.rows[0]?.unit_cost_cents ? BigInt(last.rows[0].unit_cost_cents) : 0n;
+      if(toHundredths(params.unitCostAmount)!==unitCostCents)
+        return {outcome:"VALIDATION_FAILED",code:"UNIT_COST_INVALID",message:"Cijena se određuje po prosječnoj nabavnoj cijeni skladišta; osvježite nalog."};
+    } catch {return {outcome:"VALIDATION_FAILED",code:"UNIT_COST_INVALID",message:"Cijena dijela mora imati dvije decimale."};}
   }
 
   const today = await companyToday(client, toCompanyId(params.companyId));
@@ -375,8 +377,8 @@ export async function recordPartUsage(
   const inserted = await client.query<{ id: string }>(
     `INSERT INTO public.stock_movements
        (id, company_id, item_id, kind, quantity, unit_cost_cents, occurred_on, source_type,
-        source_id, note, created_by)
-     VALUES ($1,$2,$3,'OUT',$4,$5,$6::date,'SERVICE_ORDER',$7,$8,$9)
+        source_id, note, created_by, amount_cents)
+     VALUES ($1,$2,$3,'OUT',$4,$5,$6::date,'SERVICE_ORDER',$7,$8,$9,$10)
      ON CONFLICT (company_id, source_type, source_id, item_id) WHERE source_id IS NOT NULL DO NOTHING
      RETURNING id`,
     [
@@ -389,6 +391,7 @@ export async function recordPartUsage(
       `${params.orderId}:${params.partId}`,
       params.note ?? null,
       params.actorId,
+      amount.toString(),
     ],
   );
   const movement = inserted.rows[0];
@@ -427,9 +430,10 @@ export async function recordPartUsage(
             updated_at = clock_timestamp(),
             version = version + 1
        FROM (
-         SELECT COALESCE(SUM(round(quantity * unit_cost_cents)), 0)::bigint AS total
-           FROM public.service_order_parts
-          WHERE company_id = $1 AND service_order_id = $2
+         SELECT COALESCE(SUM(COALESCE(sm.amount_cents, round(sp.quantity * sp.unit_cost_cents))), 0)::bigint AS total
+           FROM public.service_order_parts sp
+           LEFT JOIN public.stock_movements sm ON sm.company_id=sp.company_id AND sm.id=sp.stock_movement_id
+          WHERE sp.company_id = $1 AND sp.service_order_id = $2
        ) src
       WHERE so.company_id = $1 AND so.id = $2`,
     [params.companyId, params.orderId],

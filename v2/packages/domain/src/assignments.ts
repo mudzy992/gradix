@@ -73,7 +73,7 @@ export function checkAssignment(
   today: string,
 ): AssignmentCheck {
   const blocking = obligations.filter(
-    (obligation) => obligation.blocksAssignment && obligation.state === "expired",
+    (obligation) => obligation.blocksAssignment && (obligation.state === "expired" || obligation.state === "rejected"),
   );
 
   const blocked: AssignmentBlocker[] = [];
@@ -108,5 +108,5 @@ export function checkAssignment(
 export function assignmentBlockMessage(check: AssignmentCheck): string | null {
   if (check.blocked.length === 0) return null;
   const labels = check.blocked.map((entry) => entry.typeLabel).join(", ");
-  return `Ne može se dodijeliti: isteklo je — ${labels}. Dodajte iznimku sa razlogom ili obnovite obavezu.`;
+  return `Ne može se dodijeliti: isteklo ili odbijeno — ${labels}. Dodajte iznimku sa razlogom ili obnovite obavezu.`;
 }

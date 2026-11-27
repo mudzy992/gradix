@@ -519,6 +519,21 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     expect(field?.amount_cents).toBe(2000);
   });
 
+  it("terenski iznos se čita za svaki datum, a bolovanje prihvata 0.80 koeficijent",async()=>{
+    await addRate(WORKER,1000);
+    await admin.query(`INSERT INTO public.payroll_parameters(id,company_id,code,value,unit,valid_from,valid_to,confirmed_by,created_by) VALUES
+      ($1,$2,'FIELD_ALLOWANCE_PER_DAY',1500,'CENTS','2026-03-01','2026-03-15',$3,$3),
+      ($4,$2,'FIELD_ALLOWANCE_PER_DAY',2000,'CENTS','2026-03-16',NULL,$3,$3),
+      ($5,$2,'SICK_PAY_PCT',0.80,'MULTIPLIER','2026-03-01',NULL,$3,$3)`,[`f1_${RUN}`,CO,OWNER,`f2_${RUN}`,`sick_${RUN}`]);
+    await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00",projectId:PROJECT});
+    await seedDay({workDate:"2026-03-20",start:"07:00",end:"15:00",projectId:PROJECT});
+    await seedDay({workDate:"2026-03-21",start:"07:00",end:"15:00",dayKind:"SICK",projectId:IN_CITY_PROJECT});
+    const id=await openPeriod(2026,3);await calculatePeriod(app,actor,id);
+    const lines=await listLines(app,actor,id);if(isPayrollError(lines)) throw Error(lines.message);
+    expect(lines.lines.find(l=>l.component_code==="TERENSKI")?.amount_cents).toBe(3500);
+    expect(lines.lines.find(l=>l.component_code==="BOLOVANJE")?.amount_cents).toBe(6400);
+  });
+
   it("izostanci: SICK daje liniju dana bez sati, UNPAID_LEAVE i NO_SHOW su vidljivi sa 0", async () => {
     await addRate(WORKER, 1000);
     await seedDay({ workDate: "2026-03-03", start: "07:00", end: "15:00" });

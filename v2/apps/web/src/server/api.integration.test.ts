@@ -15,6 +15,7 @@ import { POST as loginRoute } from "@/app/api/auth/login/route";
 import { POST as refreshRoute } from "@/app/api/auth/refresh/route";
 import { GET as meRoute } from "@/app/api/me/route";
 import { POST as pushRoute } from "@/app/api/sync/push/route";
+import { POST as timerRoute } from "@/app/api/workdays/timer/route";
 import { GET as pullRoute } from "@/app/api/sync/pull/route";
 import { completeLogin } from "@/test/two-step-login";
 import { resetLoginAttempts, seedTotp, type TotpFixture } from "@/test/totp-fixture";
@@ -230,6 +231,36 @@ describeDb("API (integracija na pravoj bazi)", () => {
     // Nakon reuse-a sve sesije korisnika su opozvane, uključujući novi token.
     const afterReuse = await refreshRoute(jsonRequest("http://localhost/api/auth/refresh", { refreshToken: nextToken }));
     expect(afterReuse.status).toBe(401);
+  });
+
+  it("FINISHED odbija timer i offline segment bez upisa rada", async () => {
+    const login = await loginRoute(jsonRequest("http://localhost/api/auth/login", { email: "it-worker-a@test.example", password: PASSWORD }));
+    const cookie = cookieFrom(login, "gx_at");
+    expect(cookie).toBeTruthy();
+    await admin.query("UPDATE public.projects SET status='FINISHED',closed_at=clock_timestamp(),closed_by=$3 WHERE company_id=$1 AND id=$2", [COMPANY_A, PROJECT_A, USER_A]);
+    try {
+      const timerId = randomUUID();
+      for (const action of ["start", "resume"]) {
+        const timer = await timerRoute(jsonRequest("http://localhost/api/workdays/timer", {
+          action, localId: timerId, projectId: PROJECT_A, at: "2026-10-07T08:00:00+01:00",
+        }, cookie));
+        expect(timer.status).toBe(409);
+        expect(await timer.json()).toMatchObject({ error: { code: "PROJECT_FINISHED" } });
+      }
+      expect((await admin.query("SELECT id FROM public.work_entries WHERE company_id=$1 AND id=$2", [COMPANY_A, timerId])).rowCount).toBe(0);
+      const entry = workEntryItem(randomUUID(), randomUUID(), randomUUID(), "rad na zatvorenom projektu");
+      entry.entry.startedAt = "2026-10-08T08:00:00+01:00";
+      entry.entry.endedAt = "2026-10-08T09:00:00+01:00";
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await pushRoute(jsonRequest("http://localhost/api/sync/push", { items: [entry] }, cookie));
+        expect(response.status).toBe(200);
+        expect(await response.json()).toMatchObject({ data: { results: [{ status: "REJECTED", code: "PROJECT_FINISHED" }] } });
+      }
+      expect((await admin.query("SELECT id FROM public.work_entries WHERE company_id=$1 AND id=$2", [COMPANY_A, entry.workEntryId])).rowCount).toBe(0);
+      expect((await admin.query("SELECT id FROM public.workdays WHERE company_id=$1 AND id=$2", [COMPANY_A, entry.workdayId])).rowCount).toBe(0);
+    } finally {
+      await admin.query("UPDATE public.projects SET status='ACTIVE',closed_at=NULL,closed_by=NULL WHERE company_id=$1 AND id=$2", [COMPANY_A, PROJECT_A]);
+    }
   });
 
   it("R4 push je idempotentan; pull je ograničen na radnika i firmu", async () => {

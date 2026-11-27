@@ -14,6 +14,7 @@
     "test:a11y": "pnpm --filter @gradix/web test:a11y",
     "db:migrate": "pnpm --filter @gradix/db migrate",
     "db:seed": "pnpm --filter @gradix/db seed",
+    "db:reset:pilot": "pnpm --filter @gradix/web exec tsx scripts/reset-pilot-clean.ts",
     "db:reset": "pnpm --filter @gradix/db reset",
     "check-expo": "pnpm --filter @gradix/mobile check-expo",
     "check-maestro": "node infra/scripts/check-maestro.mjs .",

@@ -410,6 +410,22 @@ describeDb("F8 servis i održavanje — integraciono", () => {
 
   /* ------------------------------------------------------------ 5. knjiženje troška */
 
+  it("dijelovi koriste ponderisani prosjek i tačnu vrijednost izlaza, ne posljednju cijenu",async()=>{
+    const item=await stockItemsPost(jsonRequest("http://t/api/stock-items",COOKIES.mech,{code:"AVG-01",name:"Prosjek",unit:"kom",minQuantity:"0"}));
+    const itemId=((await item.json()) as {data:{id:string}}).data.id;
+    for(const [quantity,unitCostAmount] of [["1","0.01"],["1","0.00"]])
+      expect((await movementsPost(jsonRequest("http://t/api/stock-movements",COOKIES.mech,{itemId,kind:"IN",quantity,unitCostAmount}))).status).toBe(200);
+    const order=await createOrder(COOKIES.mech,{machineId:MACHINE,origin:"MANUAL",kind:"INTERNAL",priority:"LOW",description:"Prosjek dijela",assignedMechanicWorkerId:WORKER_MECH});
+    const usage=await partsPost(jsonRequest(`http://t/api/service-orders/${order.id}/parts`,COOKIES.mech,{itemId,quantity:"1.500"}),{params:Promise.resolve({id:order.id})});
+    expect(usage.status).toBe(200);
+    const detail=await orderGet(new NextRequest(`http://t/api/service-orders/${order.id}`,{headers:{cookie:COOKIES.mech}}),{params:Promise.resolve({id:order.id})});
+    const body=await detail.json() as {data:{order:OrderRow;parts:Array<{unit_cost_amount:string;total_cost_amount:string}>}};
+    expect(body.data.order.parts_cost_amount).toBe("0.01");
+    expect(body.data.parts[0]).toMatchObject({unit_cost_amount:"0.01",total_cost_amount:"0.01"});
+    const movement=await admin.query("SELECT amount_cents::text FROM public.stock_movements WHERE company_id=$1 AND item_id=$2 AND source_type='SERVICE_ORDER'",[CO_A,itemId]);
+    expect(movement.rows[0].amount_cents).toBe("1");
+  });
+
   it("paralelna ugradnja dijelova ne može preći raspoloživu zalihu",async()=>{
     const itemResponse=await stockItemsPost(jsonRequest("http://t/api/stock-items",COOKIES.mech,{code:"RACE-PART",name:"Dio",unit:"kom"}));
     expect(itemResponse.status).toBe(200);

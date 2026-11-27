@@ -23,6 +23,7 @@ import {
   formatPgDate,
   visibleProjectIds,
   type AssignmentOverride,
+  type ObligationState,
   type Scope,
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
@@ -508,7 +509,7 @@ const ASSIGNMENT_SELECT = `
     LEFT JOIN users voider ON voider.id = a.voided_by
 `;
 
-type ObligationForCheck = { id: string; typeLabel: string; state: "valid" | "expiring" | "expired" | "superseded" | "no_expiry"; blocksAssignment: boolean };
+type ObligationForCheck = { id: string; typeLabel: string; state: ObligationState; blocksAssignment: boolean };
 
 /**
  * Obaveze entiteta koje ulaze u provjeru blokade.
@@ -527,8 +528,9 @@ async function entityObligations(
   if (!value) return [];
 
   const result = await client.query(
-    `SELECT o.id, t.label AS type_label, t.blocks_assignment,
-            obligation_state(o.expires_at, t.default_reminder_days, $2) AS state
+    `SELECT o.id, t.label AS type_label, (t.blocks_assignment AND 'assign'=ANY(t.blocks_actions)) AS blocks_assignment,
+            obligation_state(o.expires_at, COALESCE(o.reminder_days,t.default_reminder_days), $2,
+              o.superseded_by IS NOT NULL, o.review_at, o.review_state) AS state
        FROM obligations o
        JOIN obligation_types t ON t.company_id = o.company_id AND t.id = o.type_id
       WHERE ${column} = $1 AND o.company_id = $3 AND o.superseded_by IS NULL`,

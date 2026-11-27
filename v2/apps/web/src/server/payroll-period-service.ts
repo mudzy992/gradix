@@ -326,9 +326,15 @@ export async function parameterOn(
   );
   const found = row.rows[0];
   if (!found) return null;
+  const value=Number(found.value);
+  // Fail closed for misconfigured legacy parameters; units are part of the formula.
+  if (!Number.isFinite(value) || value < 0 ||
+      (code.endsWith("_MULTIPLIER") && found.unit !== "MULTIPLIER") ||
+      (code === "SICK_PAY_PCT" && !(found.unit === "PERCENT" && value <= 100) && !(found.unit === "MULTIPLIER" && value <= 1)) ||
+      (code === "FIELD_ALLOWANCE_PER_DAY" && (found.unit !== "CENTS" || !Number.isSafeInteger(value)))) return null;
   return {
     id: found.id,
-    value: Number(found.value),
+    value,
     unit: found.unit,
     validFrom: found.valid_from,
   };
@@ -1332,9 +1338,9 @@ export async function calculatePeriod(
             parameterMissing += 1;
           } else {
             const pct = applied.SICK_PAY_PCT
-              ? (applied.SICK_PAY_PCT as { value: number }).value
-              : 100;
-            amount = scaleCents(dayRate.rate_cents, workdayHours, pct / 100);
+              ? (applied.SICK_PAY_PCT as { value: number; unit: string })
+              : {value:100,unit:"PERCENT"};
+            amount = scaleCents(dayRate.rate_cents, workdayHours, pct.unit === "MULTIPLIER" ? pct.value : pct.value / 100);
           }
         }
         if (status !== "OK") {
@@ -1379,6 +1385,7 @@ export async function calculatePeriod(
            JOIN public.projects p ON p.company_id = e.company_id AND p.id = e.project_id
           WHERE d.company_id = $1 AND d.worker_id = $2
             AND d.work_date BETWEEN $3::date AND $4::date
+            AND d.day_kind = 'WORK'
             AND d.approval_status IN ('FOREMAN_CONFIRMED', 'LOCKED')
             AND p.site_place IS NOT NULL AND btrim(p.site_place) <> ''
             AND ($5::text IS NULL OR lower(btrim(p.site_place)) <> lower(btrim($5::text)))`,
@@ -1386,65 +1393,26 @@ export async function calculatePeriod(
       );
       if (fieldDays.rows.length > 0) {
         const component = componentByCode.get("TERENSKI");
-        const parameter = await parameterOn(client, actor.companyId, "FIELD_ALLOWANCE_PER_DAY", bounds.start);
+        const dated = await Promise.all(fieldDays.rows.map(async row => ({
+          row, parameter:await parameterOn(client, actor.companyId, "FIELD_ALLOWANCE_PER_DAY", row.work_date),
+        })));
         if (component) {
           ordinal += 1;
-          const days = fieldDays.rows.length;
-          if (!parameter) {
-            parameterMissing += 1;
-            anyMissing = true;
-            await insertLine({
-              workerId: worker.worker_id,
-              componentCode: "TERENSKI",
-              hours: 0,
-              days,
-              rateCents: null,
-              amountCents: null,
-              status: "PARAMETER_MISSING",
-              note: `Nedostaje parametar FIELD_ALLOWANCE_PER_DAY (dani na terenu: ${days}).`,
-              ordinal,
-              sources: fieldDays.rows.map((row) => ({
-                sourceType: "WORKDAY" as const,
-                sourceId: row.workday_id,
-                workDate: row.work_date,
-                hours: 0,
-                days: 1,
-                amountCents: null,
-                appliedParameters: {},
-              })),
-            });
-          } else {
-            const perDay = BigInt(Math.round(parameter.value));
-            const amount = perDay * BigInt(days);
-            await insertLine({
-              workerId: worker.worker_id,
-              componentCode: "TERENSKI",
-              hours: 0,
-              days,
-              rateCents: perDay,
-              amountCents: amount,
-              status: "OK",
-              note: `Terenski dodatak: ${days} dan(a) van sjedišta firme.`,
-              ordinal,
-              sources: fieldDays.rows.map((row) => ({
-                sourceType: "WORKDAY" as const,
-                sourceId: row.workday_id,
-                workDate: row.work_date,
-                hours: 0,
-                days: 1,
-                amountCents: perDay,
-                appliedParameters: {
-                  FIELD_ALLOWANCE_PER_DAY: {
-                    value: parameter.value,
-                    unit: parameter.unit,
-                    valid_from: parameter.validFrom,
-                  },
-                },
-              })),
-            });
-            grossTotal += amount;
-            workerEarnings += amount;
-          }
+          const days=dated.length;
+          const missing=dated.some(entry=>!entry.parameter);
+          if(missing) {parameterMissing += 1;anyMissing=true;}
+          const amount=dated.reduce((sum,entry)=>sum+BigInt(entry.parameter?.value ?? 0),0n);
+          await insertLine({
+            workerId:worker.worker_id,componentCode:"TERENSKI",hours:0,days,rateCents:null,
+            amountCents:missing ? null : amount,status:missing ? "PARAMETER_MISSING" : "OK",
+            note:missing ? "Nedostaje važeći iznos FIELD_ALLOWANCE_PER_DAY za najmanje jedan dan." : `Terenski dodatak: ${days} dan(a) van sjedišta firme.`,
+            ordinal,sources:dated.map(({row,parameter})=>({
+              sourceType:"WORKDAY" as const,sourceId:row.workday_id,workDate:row.work_date,hours:0,days:1,
+              amountCents:parameter ? BigInt(parameter.value) : null,
+              appliedParameters:parameter ? {FIELD_ALLOWANCE_PER_DAY:{value:parameter.value,unit:parameter.unit,valid_from:parameter.validFrom}} : {},
+            })),
+          });
+          if(!missing) {grossTotal+=amount;workerEarnings+=amount;}
         }
       }
 

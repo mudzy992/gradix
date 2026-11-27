@@ -259,7 +259,7 @@ import { GET as payrollComponentsGet, POST as payrollComponentsPost } from "@/ap
 import { PATCH as payrollComponentPatch } from "@/app/api/payroll/components/[id]/route";
 import { GET as payrollParametersGet, POST as payrollParametersPost } from "@/app/api/payroll/parameters/route";
 import { GET as payrollSources } from "@/app/api/payroll/lines/[id]/sources/route";
-import { GET as payrollCorrections } from "@/app/api/payroll/corrections/route";
+import { GET as payrollCorrections, POST as payrollCorrectionValue } from "@/app/api/payroll/corrections/route";
 import { GET as myPayrollGet } from "@/app/api/me/payroll/route";
 import { GET as advancesGet, POST as advancesPost } from "@/app/api/workers/[id]/advances/route";
 
@@ -606,7 +606,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   "/api/payroll/components/{id}": { PATCH: payrollComponentPatch },
   "/api/payroll/parameters": { GET: payrollParametersGet, POST: payrollParametersPost },
   "/api/payroll/lines/{id}/sources": { GET: payrollSources },
-  "/api/payroll/corrections": { GET: payrollCorrections },
+  "/api/payroll/corrections": { GET: payrollCorrections, POST: payrollCorrectionValue },
   "/api/me/payroll": { GET: myPayrollGet },
   "/api/workers/{id}/advances": { GET: advancesGet, POST: advancesPost },
 

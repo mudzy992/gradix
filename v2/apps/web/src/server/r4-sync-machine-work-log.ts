@@ -4,6 +4,8 @@ import type { PoolClient } from "pg";
 import type { R4MachineWorkLogPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { encodeSyncCursor } from "./sync-cursor";
 import { bookMachineWorkLogCost } from "./cost-entry-service";
+import { checkUse } from "./usage-service";
+import { companyToday } from "./project-service";
 import type { SyncMachineWorkLogApplyDeps } from "./r4-sync-machine-work-log-types";
 
 export type { SyncMachineWorkLogApplyDeps } from "./r4-sync-machine-work-log-types";
@@ -41,6 +43,11 @@ export async function applyMachineWorkLogSyncItem(
       version: duplicate.rows[0].version,
     });
   }
+  const decision=await checkUse(client,actor.companyId,{
+    entityKind:"MACHINE",entityId:item.log.machineId,action:"machine_hours",
+    today:await companyToday(client,actor.companyId),viewer:actor,
+  });
+  if(!decision.allowed) return reject(helpers.invalidItem(item,"SYNC_ITEM_REJECTED"));
   const workDate = await helpers.businessDate(client, item.log.startedAt);
   if (!workDate) return reject();
   try {

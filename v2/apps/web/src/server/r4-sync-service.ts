@@ -795,13 +795,14 @@ async function applyItem(
   }
 
   // A same-company project/machine must exist; cross-company or missing IDs fail closed. Existing
-  // but inactive/unassigned resources are accepted and persisted with an office review flag.
+  // but inactive/unassigned resources are flagged; FINISHED projects reject work entirely.
   if (item.entry.kind === "WORK") {
-    const project = await client.query<{ id: string }>(
-      "SELECT id FROM public.projects WHERE company_id = $1 AND id = $2",
+    const project = await client.query<{ id: string; status: string }>(
+      "SELECT id, status FROM public.projects WHERE company_id = $1 AND id = $2 FOR SHARE",
       [actor.companyId, item.entry.projectId],
     );
     if (!project.rows[0]) return reject();
+    if (project.rows[0].status === "FINISHED") return reject(invalidItem(item, "PROJECT_FINISHED"));
   }
   if (item.entry.machineId) {
     const machine = await client.query<{ id: string }>(

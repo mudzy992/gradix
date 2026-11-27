@@ -6,7 +6,7 @@
  * događaj još nije stigao.
  */
 import type { PoolClient } from "pg";
-import { formatHundredths, nextServiceStatuses, toThousandths } from "@gradix/domain";
+import { formatHundredths, nextServiceStatuses } from "@gradix/domain";
 import { companyToday } from "./project-service";
 import { toServiceOrderRow, type DbServiceOrderRow } from "./service-order-mapper";
 import type { ServiceOrderDetail, ServiceOrderRow } from "./service-order-types";
@@ -88,11 +88,14 @@ export async function serviceOrderDetail(
     quantity: string;
     unit_cost_cents: string;
     stock_movement_id: string | null;
+    total_cents: string;
     note: string | null;
   }>(
     `SELECT sp.id, sp.item_id, si.code AS item_code, si.name AS item_name, si.unit,
-            sp.quantity::text, sp.unit_cost_cents::text, sp.stock_movement_id, sp.note
+            sp.quantity::text, sp.unit_cost_cents::text, sp.stock_movement_id, sp.note,
+            COALESCE(sm.amount_cents, round(sp.quantity * sp.unit_cost_cents))::text AS total_cents
        FROM public.service_order_parts sp
+       LEFT JOIN public.stock_movements sm ON sm.company_id=sp.company_id AND sm.id=sp.stock_movement_id
        JOIN public.stock_items si ON si.company_id = sp.company_id AND si.id = sp.item_id
       WHERE sp.company_id = $1 AND sp.service_order_id = $2
       ORDER BY sp.created_at ASC, sp.id ASC`,
@@ -125,11 +128,7 @@ export async function serviceOrderDetail(
       unit: row.unit,
       quantity: row.quantity,
       unit_cost_amount: formatHundredths(BigInt(row.unit_cost_cents)),
-      /* Iznos stavke: količina (3 decimale) × cijena (2 decimale) = 5 decimala, pa nazivnik
-         `100000`, a ne `100` — inače bi 0,5 kom × 12,50 KM dalo 625 KM umjesto 6,25 KM. */
-      total_cost_amount: formatHundredths(
-        (toThousandths(row.quantity) * BigInt(row.unit_cost_cents)) / 1000n,
-      ),
+      total_cost_amount: formatHundredths(BigInt(row.total_cents)),
       stock_movement_id: row.stock_movement_id,
       note: row.note,
     })),

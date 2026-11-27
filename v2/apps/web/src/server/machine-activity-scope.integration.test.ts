@@ -75,6 +75,20 @@ describeDb("machine hours and fuel session scope", () => {
     expect((await createMachineWorkLog(app,projects,{...log,projectId:p1})).outcome).toBe("OK");
     expect((await createFuelEntry(app,self,{...fuel,driverWorkerId:worker})).outcome).toBe("OK");
   });
+  it("istekla registracija jednako blokira web i offline sate mašine",async()=>{
+    const obl=`obl_${run}`;
+    await admin.query(`INSERT INTO public.obligations(id,company_id,type_id,machine_id,expires_at,created_by)
+      SELECT $1,$2,id,$3,'2000-01-01',$4 FROM public.obligation_types WHERE company_id=$2 AND code='REGISTRATION'`,[obl,co,machine,user]);
+    try {
+      const log={machineId:machine,workerId:worker,projectId:p1,startedAt:"2024-04-01T08:00:00Z",endedAt:"2024-04-01T09:00:00Z",mode:"IDLE"};
+      expect(await createMachineWorkLog(app,company,log)).toMatchObject({outcome:"CONFLICT",code:"BLOCKED"});
+      const workLogId=randomUUID();
+      const item={localId:randomUUID(),entityType:"machine_work_log",workLogId,deviceSentAt:new Date().toISOString(),log:{machineId:machine,projectId:p1,startedAt:log.startedAt,endedAt:log.endedAt,mode:log.mode,meterEnd:null,note:null}};
+      const response=await push(new NextRequest("http://local/api/sync/push",{method:"POST",headers:{cookie,"content-type":"application/json"},body:JSON.stringify({items:[item]})}));
+      expect(response.status).toBe(200);expect((await response.json()).data.results[0]).toMatchObject({status:"REJECTED"});
+      expect((await admin.query("SELECT 1 FROM public.machine_work_logs WHERE company_id=$1 AND id=$2",[co,workLogId])).rowCount).toBe(0);
+    } finally {await admin.query("DELETE FROM public.obligations WHERE company_id=$1 AND id=$2",[co,obl]);}
+  });
   it("offline push, pull i replay nakon opoziva PROJECTS, pa SELF",async () => {
     const now=new Date().toISOString();
     const log={localId:randomUUID(),entityType:"machine_work_log",workLogId:randomUUID(),deviceSentAt:now,log:{machineId:machine,projectId:p1,startedAt:"2024-03-01T08:00:00Z",endedAt:"2024-03-01T09:00:00Z",mode:"IDLE",meterEnd:null,note:null}};

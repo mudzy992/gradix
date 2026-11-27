@@ -48,7 +48,7 @@ RUN pnpm --filter @gradix/web build \
       --banner:js='import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' \
       --outfile=/app/diagnostics.bundle.mjs \
  && cd apps/web \
- && for s in seed demo-sukobi demo-pregled demo-r4b-approval; do \
+ && for s in seed demo-sukobi demo-pregled demo-r4b-approval reset-pilot-clean; do \
       pnpm exec esbuild "scripts/${s}.ts" \
         --bundle --platform=node --format=esm --target=node22 \
         --outfile="${s}.mjs" \
@@ -102,6 +102,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/packages/db/preflight-checks ./db
 # zavisnosti unutar ESM-a (bez njega stvarni S3 zahtjev puca na node:https).
 COPY --from=builder --chown=nextjs:nodejs /app/diagnostics.bundle.mjs ./diagnostics/run.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed.mjs ./seed.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/reset-pilot-clean.mjs ./reset-pilot-clean.mjs
+# Fail the image build if standalone tracing omitted the reset bundle's native/runtime dependencies.
+RUN node --input-type=module -e "await import('pg'); await import('argon2')" \
+ && test -s /app/reset-pilot-clean.mjs
 # seed-demo-podaci je CJS: exceljs radi dynamic require("crypto") koji ESM bundle ne podržava.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/seed-demo-podaci.cjs ./seed-demo-podaci.cjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/demo-sukobi.mjs ./demo-sukobi.mjs

@@ -416,15 +416,6 @@ export async function applyTimer(
       }
       const { assignments, hasAssignmentToday } = await assignmentsForWorker(client, actor.companyId, workerId);
 
-      // Pauza se zatvara prije nego što se otvori novi rad: `finish`-ana pauza nije posao.
-      if (current?.kind === "BREAK") {
-        await client.query(
-          `UPDATE work_entries SET ended_at = $3, end_state = 'KNOWN_END', updated_by = $4, updated_at = clock_timestamp()
-            WHERE company_id = $1 AND id = $2`,
-          [actor.companyId, current.id, input.at ?? now.toISOString(), actor.userId],
-        );
-      }
-
       let projectId = input.projectId ?? null;
       let machineId = input.machineId ?? null;
       if (!projectId) {
@@ -449,6 +440,25 @@ export async function applyTimer(
             message: "Danas nemate aktivnu dodjelu na projektu, pa nema šta da se počne.",
           };
         }
+      }
+
+      // Hold the project row through the write so closing it cannot race a new segment.
+      const project = await client.query<{ status: string }>(
+        "SELECT status FROM public.projects WHERE company_id = $1 AND id = $2 FOR SHARE",
+        [actor.companyId, projectId],
+      );
+      if (!project.rows[0]) return { ok: false as const, status: 404, code: "NOT_FOUND", message: "Projekat ne postoji." };
+      if (project.rows[0].status === "FINISHED") return {
+        ok: false as const, status: 409, code: "PROJECT_FINISHED", message: "Projekat je završen; novi rad nije dozvoljen.",
+      };
+
+      // Pauza se zatvara prije nego što se otvori novi rad: `finish`-ana pauza nije posao.
+      if (current?.kind === "BREAK") {
+        await client.query(
+          `UPDATE work_entries SET ended_at = $3, end_state = 'KNOWN_END', updated_by = $4, updated_at = clock_timestamp()
+            WHERE company_id = $1 AND id = $2`,
+          [actor.companyId, current.id, input.at ?? now.toISOString(), actor.userId],
+        );
       }
 
       const entryId = input.localId ?? `we_${globalThis.crypto.randomUUID()}`;

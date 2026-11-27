@@ -16,6 +16,8 @@ services:
       # Database: required app principal plus optional separate migrator.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL mora biti postavljen u Coolifyju}
       DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:-}
+      # Reset provjerava da pg-boss ne koristi drugu bazu.
+      BOSS_DATABASE_URL: ${BOSS_DATABASE_URL:-}
       APP_URL: ${APP_URL:-}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET mora biti postavljen u Coolifyju (min 32 znaka)}
