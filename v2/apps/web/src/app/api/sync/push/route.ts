@@ -11,7 +11,7 @@ import {
 import { fail, internal, ok } from "@/server/api";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
-import { bookSyncFinishedOrders, pushR4SyncItems, SyncPushAccessError } from "@/server/r4-sync-service";
+import { pushR4SyncItems, SyncPushAccessError } from "@/server/r4-sync-service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -112,8 +112,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       projectIds: auth.ctx.projectIds,
     };
     const results = await pushR4SyncItems(pool, actor, items);
-    /* Trošak se knjiži poslije commit-a radnje — vidi `bookSyncFinishedOrders`. */
-    await bookSyncFinishedOrders(pool, actor, items, results);
     return ok({ results });
   } catch (error) {
     if (error instanceof SyncPushAccessError) {

@@ -19,7 +19,7 @@ import { listLines, listPeriods } from "./payroll-period-service";
 import { isPayrollError } from "./payroll-period-service";
 
 /** Mijenja se kad se raspored kolona promijeni; stara verzija ostaje čitljiva u arhivi. */
-export const EXPORT_FORMAT_VERSION = "OBRACUN-1";
+export const EXPORT_FORMAT_VERSION = "OBRACUN-2";
 
 export type ExportInput = {
   periodId: string;
@@ -122,7 +122,7 @@ export async function buildPayrollExport(
     if (line.amount_cents === null) continue;
     const cents = BigInt(line.amount_cents);
     aggregate.cents[line.component_code] = (aggregate.cents[line.component_code] ?? 0n) + cents;
-    if (cents >= 0n) aggregate.earningsCents += cents;
+    if (line.kind === "EARNING") aggregate.earningsCents += cents;
     else aggregate.deductionsCents += cents;
     if (line.hours > 0) aggregate.hours[line.component_code] = line.hours;
     if (line.days > 0) aggregate.days[line.component_code] = line.days;
@@ -145,6 +145,7 @@ export async function buildPayrollExport(
     "Dani godišnjeg",
     "Dani terenski",
     "Terenski dodatak",
+    "Korekcija",
     "Akontacija",
     "Pozajmica",
     "Ukupno zarade",
@@ -162,6 +163,7 @@ export async function buildPayrollExport(
       worker.days.GODISNJI ?? 0,
       worker.days.TERENSKI ?? 0,
       money2(worker.cents.TERENSKI ?? 0n),
+      money2(worker.cents.KOREKCIJA ?? 0n),
       // Odbici se u koloni prikazuju kao pozitivan iznos („koliko se odbija“), a u linijama su
       // negativni da zbir zarada + odbici daje neto.
       money2(-(worker.cents.AKONTACIJA ?? 0n)),

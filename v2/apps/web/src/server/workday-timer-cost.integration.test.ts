@@ -142,6 +142,17 @@ describeDb("timer → potvrda šefa → jedna knjiga troška rada (PostgreSQL)",
     await dbApp.end();
   });
 
+  it("neuspješno knjiženje poništava potvrdu umjesto lažnog uspjeha",async()=>{
+    await seedDay("SUBMITTED");
+    await dbAdmin.query("UPDATE public.projects SET status='FINISHED',closed_at=clock_timestamp(),closed_by=$3 WHERE company_id=$1 AND id=$2",[CO,PROJECT,SUPERVISOR]);
+    try {
+      await expect(confirmWorkday(dbApp,ss,WORKDAY)).rejects.toThrow(/PROJECT_CLOSED/);
+      const day=await dbAdmin.query<{approval_status:string}>("SELECT approval_status FROM public.workdays WHERE company_id=$1 AND id=$2",[CO,WORKDAY]);
+      expect(day.rows[0]?.approval_status).toBe("SUBMITTED");
+      expect((await workdayCostRows()).rowCount).toBe(0);
+    } finally {await dbAdmin.query("UPDATE public.projects SET status='ACTIVE',closed_at=NULL,closed_by=NULL WHERE company_id=$1 AND id=$2",[CO,PROJECT]);}
+  });
+
   it("grupna potvrda šefa knjiži TAČNO JEDAN trošak rada, i ponovni klik ne dodaje drugi", async () => {
     await seedDay("SUBMITTED");
 

@@ -14,6 +14,7 @@
 import type { PoolClient } from "pg";
 import { ServiceError, assertServiceTransition, downtimeMinutes, serviceCost } from "@gradix/domain";
 import { writeAudit } from "./audit";
+import { bookServiceOrderCost } from "./cost-entry-service";
 import { recordManualDowntime } from "./service-order-downtime";
 import { orderStatus, parseExternalCost } from "./service-order-shared";
 import type { ServiceOutcome } from "./service-order-types";
@@ -196,6 +197,9 @@ export async function finishOrderInTransaction(
       retentionClass: "FINANCIAL",
     });
 
-    return { outcome: "OK" as const, id: params.orderId };
+    const booked = await bookServiceOrderCost(client, {
+      companyId: params.companyId,actorId: params.actorId,serviceOrderId: params.orderId,
+    });
+    return { outcome: "OK" as const, id: params.orderId, cost: booked };
 }
 

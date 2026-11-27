@@ -22,7 +22,6 @@ import {
 } from "@gradix/domain";
 import { can } from "./permissions";
 import { writeAudit } from "./audit";
-import { bookServiceOrderCostInCompany } from "./cost-entry-service";
 import { companyToday } from "./project-service";
 import { loadServiceOrder } from "./service-order-read";
 import type { ServiceOutcome } from "./service-order-types";
@@ -260,7 +259,7 @@ export async function finishServiceOrder(
     };
   }
 
-  const outcome = await withCompany(pool, toCompanyId(actor.companyId), async (client) => {
+  return withCompany(pool, toCompanyId(actor.companyId), async (client) => {
     if (!await equipmentRecordAllowed(client, actor, "order", orderId) || !await linkedFaultAllowed(client, actor, orderId))
       return { outcome: "NOT_FOUND" as const, code: "NOT_FOUND", message: "Nalog ne postoji." };
     return finishOrderInTransaction(client, {
@@ -276,16 +275,7 @@ export async function finishServiceOrder(
     });
   });
 
-  if (outcome.outcome !== "OK") return outcome as ServiceOutcome;
-  /* Knjiženje NAKON commit-a naloga: `bookServiceOrderCostInCompany` otvara svoju transakciju, pa
-     bi unutar iste transakcije bila dva vlasnika. Ako knjiženje padne, nalog ostaje završen sa
-     `skipped` u odgovoru — a worker `budget.thresholds` i noćni prolaz hvataju zaostatke. */
-  const posted = await bookServiceOrderCostInCompany(pool, {
-    companyId: actor.companyId,
-    actorId: actor.userId,
-    serviceOrderId: orderId,
-  });
-  return { outcome: "OK", id: orderId, cost: posted };
+
 }
 
 /* ------------------------------------------------------------------ parts */

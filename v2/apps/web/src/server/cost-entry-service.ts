@@ -326,31 +326,13 @@ export async function settlePendingCost(
   return { id: entry.id, settled: true };
 }
 
-/**
- * Omotač za POZIVNE TAČKE (servisi i sync) koje već imaju svoju transakciju.
- *
- * Zašto savepoint: `withCompany` inače otvara novu transakciju i COMMIT-uje je, što bi u sredini
- * sync stavke objavilo tuđe nepotvrđene izmjene. Sa `savepoint: true` tenant se postavlja u
- * tekućoj transakciji, pa knjiženje dijeli sudbinu izmjene koja ga je izazvala — ako upis padne,
- * trošak ne ostaje.
- *
- * Knjiženje NIKAD ne obara poslovnu radnju: dan rada je potvrđen bez obzira na to što šifarnik
- * kategorija nije popunjen. Zato se ovdje hvata greška i vraća `skipped` — a worker
- * `budget.thresholds` i noćni prolaz hvataju zaostatke.
- */
+/** Background booking owns its transaction; a failure must reach the caller. */
 async function bookInCompany(
   pool: Pool,
   companyId: string,
   fn: (client: PoolClient) => Promise<{ posted: number; pending: number; skipped: number }>,
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    /* NE `savepoint`: ovdje smo vlasnik transakcije (`withCompany` je otvara), pa bi `SAVEPOINT`
-       pao sa 25P01 „SAVEPOINT can only be used in transaction blocks“ — i to tiho, jer poziv
-       hvata grešku. `savepoint` koriste samo pozivaoci koji VEĆ imaju transakciju. */
-    return await withCompany(pool, toCompanyId(companyId), fn);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return withCompany(pool, toCompanyId(companyId), fn);
 }
 
 /* ============================================================ automatsko knjiženje */
@@ -457,8 +439,14 @@ async function bookWorkdayCostWithClient(
           : payRate.rate_kind === "MONTHLY"
             ? BigInt(Math.round(Number(payRate.amount_cents) / 160))
             : null;
-    if (rateCents === null || rateCents <= 0n) {
-      skipped += 1;
+    if (rateCents === null) {
+      const result = await postCost(client, {
+        companyId: params.companyId,projectId: segment.project_id,phaseId: header.phase_id,
+        sourceType: "WORKDAY",sourceId,occurredOn: header.work_date,amountCents: null,
+        quantity: hours,unit: "h",note: "Satnica nije utvrđena — trošak čeka cijenu.",actorId: params.actorId,
+      });
+      if (result.created) pending += 1;
+      else skipped += 1;
       continue;
     }
     const amount = computeCostAmount(hours, rateCents, currency);
@@ -742,67 +730,40 @@ async function bookServiceOrderCostWithClient(
     : { posted: 1, pending: 0, skipped: 0 };
 }
 
-/**
- * Javni ulazi ZA POZIVNE TAČKE KOJE VEĆ IMAJU TRANSAKCIJU.
- *
- * Zašto `client` a ne `pool`: trošak mora dijeliti sudbinu izmjene koja ga je izazvala. Da servis
- * otvori svoju transakciju, potvrda dana bi bila commit-ovana prije troška, pa bi pad knjiženja
- * ostavio potvrđen dan bez troška (ili obratno). Greška se hvata i vraća kao `skipped` — potvrda
- * dana ne smije pasti zbog šifarnika kategorija.
- */
-export async function bookWorkdayCost(
+/** Booking shares the caller's transaction. Failures roll back the business action. */
+export function bookWorkdayCost(
   client: PoolClient,
   params: { companyId: string; actorId: string; workdayId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    return await bookWorkdayCostWithClient(client, params);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return bookWorkdayCostWithClient(client, params);
 }
 
-export async function bookMachineWorkLogCost(
+export function bookMachineWorkLogCost(
   client: PoolClient,
   params: { companyId: string; actorId: string; workLogId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    return await bookMachineWorkLogCostWithClient(client, params);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return bookMachineWorkLogCostWithClient(client, params);
 }
 
-export async function bookFuelEntryCost(
+export function bookFuelEntryCost(
   client: PoolClient,
   params: { companyId: string; actorId: string; fuelEntryId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    return await bookFuelEntryCostWithClient(client, params);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return bookFuelEntryCostWithClient(client, params);
 }
 
-export async function bookHaulCost(
+export function bookHaulCost(
   client: PoolClient,
   params: { companyId: string; actorId: string; haulId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    return await bookHaulCostWithClient(client, params);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return bookHaulCostWithClient(client, params);
 }
 
-export async function bookServiceOrderCost(
+export function bookServiceOrderCost(
   client: PoolClient,
   params: { companyId: string; actorId: string; serviceOrderId: string },
 ): Promise<{ posted: number; pending: number; skipped: number }> {
-  try {
-    return await bookServiceOrderCostWithClient(client, params);
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
+  return bookServiceOrderCostWithClient(client, params);
 }
 
 /**

@@ -101,7 +101,7 @@ export async function applyFuelEntrySyncItem(
     /*
      * F5 (§1.3.13): točenje poslano sa terena knjiži trošak ISTO kao unos kroz servis. Bez ovoga
      * bi mobilni unos ostao izvan ledgera — a to je upravo put kojim najviše zapisa i nastaje.
-     * Knjiženje ne obara sync: `bookFuelEntryCost` grešku vraća kao `skipped`.
+     * Neuspjelo knjiženje poništava i izvorni sync zapis.
      */
     await bookFuelEntryCost(client, {
       companyId: actor.companyId,

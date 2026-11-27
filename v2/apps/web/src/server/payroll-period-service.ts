@@ -489,10 +489,12 @@ async function periodBlockers(
     });
   }
 
-  // Corrections are reviewable but are not yet applied to runs. Never silently
-  // approve or pay a period while an incoming correction remains unapplied.
+  // A correction must belong to the latest revision, not just any old run.
   const corrections = await client.query<{n:string}>(
-    "SELECT count(*)::text AS n FROM public.pay_corrections WHERE company_id=$1 AND target_period_id=$2 AND status='OPEN'",
+    `SELECT count(*)::text AS n FROM public.pay_corrections c
+      WHERE c.company_id=$1 AND c.target_period_id=$2
+        AND (c.status <> 'APPLIED' OR c.applied_run_id IS DISTINCT FROM
+          (SELECT id FROM public.payroll_runs WHERE company_id=$1 AND period_id=$2 ORDER BY revision DESC LIMIT 1))`,
     [company,periodId],
   );
   if (Number(corrections.rows[0]?.n ?? 0) > 0) blockers.push({
@@ -508,6 +510,16 @@ async function periodBlockers(
     blockers.push({ code: "NO_RUN", count: 1, message: "Period još nije izračunat." });
     return blockers;
   }
+
+  const negative = await client.query<{n:string}>(
+    `SELECT count(*)::text AS n FROM (
+       SELECT worker_id FROM public.payroll_run_lines WHERE company_id=$1 AND run_id=$2
+       GROUP BY worker_id HAVING sum(amount_cents) < 0
+     ) x`, [company,runId],
+  );
+  if (Number(negative.rows[0]?.n ?? 0) > 0) blockers.push({
+    code:"NEGATIVE_NET_FORBIDDEN",count:Number(negative.rows[0]!.n),message:"Korekcija ili odbici stvaraju negativan obračun radnika.",
+  });
 
   const missing = await client.query<{ status: string; n: string }>(
     `SELECT status, count(*)::text AS n FROM public.payroll_run_lines
@@ -1020,6 +1032,15 @@ export async function calculatePeriod(
       } as PayrollError;
     }
 
+    // Existing advance balances are reduced at calculation time, not lock time. Until their
+    // allocations are revision-safe, do not recalculate such a run and silently deduct twice.
+    const priorAdvance = await client.query(`SELECT 1 FROM public.payroll_line_sources s
+      JOIN public.payroll_run_lines l ON l.company_id=s.company_id AND l.id=s.line_id
+      WHERE s.company_id=$1 AND s.source_type='ADVANCE' AND l.run_id=(
+        SELECT id FROM public.payroll_runs WHERE company_id=$1 AND period_id=$2 ORDER BY revision DESC LIMIT 1
+      ) LIMIT 1`,[actor.companyId,periodId]);
+    if (priorAdvance.rowCount) return {code:"CONFLICT",message:"Ponovni izračun s odbitkom akontacije ili pozajmice nije siguran; potrebna je provjera obračuna."} as PayrollError;
+
     await ensureComponents(client, actor.companyId, actor.userId);
     const rules = await loadRules(client, actor.companyId);
     const bounds = periodBounds(found.year, found.month);
@@ -1032,6 +1053,27 @@ export async function calculatePeriod(
     const companyCity = company.rows[0]?.city ?? null;
 
     const workers = await loadPeriodDays(client, actor.companyId, bounds, rules);
+    // Only explicitly valued corrections can be applied without guessing payroll rules.
+    // Rebind previously applied ones to every new revision; unresolved ones remain OPEN.
+    const corrections = await client.query<{
+      id:string; worker_id:string|null; worker_name:string|null; work_date:string|null;
+      delta_amount_cents:string|null; delta_hours:string; reason:string;
+    }>(`SELECT c.id,COALESCE(d.worker_id,l.worker_id) AS worker_id,
+       (w.first_name || ' ' || w.last_name) AS worker_name,d.work_date::text,
+       c.delta_amount_cents::text,c.delta_hours::text,c.reason
+      FROM public.pay_corrections c
+      JOIN public.pay_periods source ON source.company_id=c.company_id AND source.id=c.period_id AND source.status='LOCKED'
+      LEFT JOIN public.workdays d ON d.company_id=c.company_id AND d.id=c.workday_id
+      LEFT JOIN public.payroll_run_lines l ON l.company_id=c.company_id AND l.id=c.payroll_line_id
+      LEFT JOIN public.workers w ON w.company_id=c.company_id AND w.id=COALESCE(d.worker_id,l.worker_id)
+      WHERE c.company_id=$1 AND c.target_period_id=$2 ORDER BY c.created_at,c.id FOR UPDATE OF c`,
+      [actor.companyId,periodId]);
+    for (const correction of corrections.rows) {
+      if (correction.delta_amount_cents === null || !correction.worker_id || !correction.worker_name) continue;
+      if (!workers.has(correction.worker_id)) workers.set(correction.worker_id, {
+        worker_id:correction.worker_id,worker_name:correction.worker_name,days:[],
+      });
+    }
 
     const revisionRow = await client.query<{ next: number }>(
       `SELECT COALESCE(max(revision), 0) + 1 AS next FROM public.payroll_runs
@@ -1416,6 +1458,23 @@ export async function calculatePeriod(
         }
       }
 
+      // Each valued correction is a separate, traceable earning adjustment.
+      for (const correction of corrections.rows) {
+        if (correction.worker_id !== worker.worker_id || correction.delta_amount_cents === null) continue;
+        const amount=BigInt(correction.delta_amount_cents);
+        ordinal += 1;
+        await insertLine({
+          workerId:worker.worker_id,componentCode:"KOREKCIJA",hours:0,days:0,rateCents:null,
+          amountCents:amount,status:"OK",note:correction.reason,ordinal,
+          sources:[{sourceType:"CORRECTION",sourceId:correction.id,workDate:correction.work_date,
+            hours:0,days:0,amountCents:amount,appliedParameters:{delta_hours:correction.delta_hours}}],
+        });
+        grossTotal += amount;
+        workerEarnings += amount;
+        await client.query(`UPDATE public.pay_corrections SET status='APPLIED',applied_run_id=$3,applied_at=clock_timestamp()
+          WHERE company_id=$1 AND id=$2`,[actor.companyId,correction.id,runId]);
+      }
+
       // ---- akontacije i pozajmice: odbici, nikad ispod nule
       const advances = await client.query<{
         id: string;
@@ -1491,8 +1550,8 @@ export async function calculatePeriod(
      * dan potvrđen prije nego je satnica unesena, bez ovog koraka trošak bi zauvijek ostao
      * „nepoznat“, iako obračun satnicu ima.
      *
-     * Greška u knjiženju NE obara obračun (`bookWorkdayCost` vraća `skipped`) — novac radnika je
-     * važniji od šifarnika kategorija, a preskočeno se broji i prijavljuje.
+     * Greška knjiženja prekida čitavu transakciju; samo idempotentno postojeći ili
+     * poslovno neprimjenjivi izvori broje se kao preskočeni.
      */
     let costWritten = 0;
     let costSkipped = 0;
@@ -1776,7 +1835,8 @@ export async function listLines(
       `SELECT l.id, l.run_id, l.worker_id,
               (w.first_name || ' ' || w.last_name) AS worker_name,
               l.component_code, COALESCE(c.name, l.component_code) AS component_name,
-              COALESCE(c.kind, CASE WHEN l.amount_cents < 0 THEN 'DEDUCTION' ELSE 'EARNING' END) AS kind,
+              CASE WHEN l.component_code = 'KOREKCIJA' THEN 'EARNING'
+                ELSE COALESCE(c.kind, CASE WHEN l.amount_cents < 0 THEN 'DEDUCTION' ELSE 'EARNING' END) END AS kind,
               l.hours::float8 AS hours, l.days::float8 AS days,
               l.rate_cents::bigint AS rate_cents,
               l.amount_cents::text, l.currency_code, l.status, l.calc_note
@@ -1809,7 +1869,7 @@ export async function listLines(
       }
       if (line.amount_cents === null) continue;
       currency ??= line.currency_code;
-      if (line.amount_cents >= 0) earnings = (earnings ?? 0) + line.amount_cents;
+      if (line.kind === "EARNING") earnings = (earnings ?? 0) + line.amount_cents;
       else deductions = (deductions ?? 0) + line.amount_cents;
     }
     /* Djelimičan zbir je laž: ako ijedna linija nema iznos, bruto osnova je `null`, a ne zbir
@@ -1860,7 +1920,8 @@ export async function listLineSources(
       `SELECT l.id, l.run_id, l.worker_id,
               (w.first_name || ' ' || w.last_name) AS worker_name,
               l.component_code, COALESCE(c.name, l.component_code) AS component_name,
-              COALESCE(c.kind, CASE WHEN l.amount_cents < 0 THEN 'DEDUCTION' ELSE 'EARNING' END) AS kind,
+              CASE WHEN l.component_code = 'KOREKCIJA' THEN 'EARNING'
+                ELSE COALESCE(c.kind, CASE WHEN l.amount_cents < 0 THEN 'DEDUCTION' ELSE 'EARNING' END) END AS kind,
               l.hours::float8 AS hours, l.days::float8 AS days,
               l.rate_cents::bigint AS rate_cents, l.amount_cents::text, l.currency_code,
               l.status, l.calc_note

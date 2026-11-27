@@ -405,6 +405,55 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     expect(approval).toMatchObject({code:"PERIOD_NOT_READY",detail:{blockers:expect.arrayContaining([expect.objectContaining({code:"PENDING_CORRECTIONS",count:2})])}});
   });
 
+  it("iznosom utvrđena korekcija ulazi u svaku reviziju jednom, raspis i bruto",async()=>{
+    await addRate(WORKER,1000);
+    const day=await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    const source=await openPeriod(2026,3);
+    expect(isPayrollError(await calculatePeriod(app,actor,source))).toBe(false);
+    expect(isPayrollError(await approvePeriod(app,actor,source))).toBe(false);
+    expect(isPayrollError(await lockPeriod(app,actor,source))).toBe(false);
+    await withCompany(app,toCompanyId(CO),client=>client.query("UPDATE public.work_entries SET ended_at=ended_at-interval '1 hour' WHERE company_id=$1 AND workday_id=$2",[CO,day]));
+    const corr=await admin.query<{id:string;target_period_id:string}>("SELECT id,target_period_id FROM public.pay_corrections WHERE company_id=$1 AND workday_id=$2",[CO,day]);
+    const target=corr.rows[0]!.target_period_id;
+    await seedDay({workDate:"2026-04-02",start:"07:00",end:"15:00"});
+    // Simulates a separately verified monetary delta; the trigger does not price it yet.
+    await admin.query("UPDATE public.pay_corrections SET delta_amount_cents=-1000 WHERE company_id=$1 AND id=$2",[CO,corr.rows[0]!.id]);
+    for(let revision=1;revision<=2;revision++) {
+      const result=await calculatePeriod(app,actor,target); if(isPayrollError(result)) throw Error(result.message);
+      expect(result.gross_cents).toBe("7000");
+      const lines=await listLines(app,actor,target); if(isPayrollError(lines)) throw Error(lines.message);
+      expect(lines.revision).toBe(revision);
+      expect(lines.totals.earnings_cents).toBe(7000);
+      const adjustments=lines.lines.filter(l=>l.component_code==="KOREKCIJA");
+      expect(adjustments).toHaveLength(1);
+      expect(adjustments[0]).toMatchObject({kind:"EARNING",amount_cents:-1000});
+      const sources=await listLineSources(app,actor,adjustments[0]!.id); if(isPayrollError(sources)) throw Error(sources.message);
+      expect(sources.sources).toMatchObject([{source_type:"CORRECTION",source_id:corr.rows[0]!.id,amount_cents:-1000}]);
+      const state=await admin.query("SELECT status,applied_run_id FROM public.pay_corrections WHERE company_id=$1 AND id=$2",[CO,corr.rows[0]!.id]);
+      expect(state.rows[0]).toEqual({status:"APPLIED",applied_run_id:lines.run_id});
+    }
+    expect(isPayrollError(await approvePeriod(app,actor,target))).toBe(false);
+    expect(isPayrollError(await lockPeriod(app,actor,target))).toBe(false);
+    const exported=await buildPayrollExport(app,actor,{periodId:target,format:"xlsx"});
+    if("code" in exported) throw Error(exported.message);
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(exported.body as never);
+    expect(wb.getWorksheet("RASPIS")!.getSheetValues().flat(Infinity)).toContain("KOREKCIJA");
+  });
+
+  it("negativna korekcija veća od zarade blokira odobrenje",async()=>{
+    await addRate(WORKER,1000);
+    const day=await seedDay({workDate:"2026-03-03",start:"07:00",end:"15:00"});
+    const source=await openPeriod(2026,3);
+    await calculatePeriod(app,actor,source); await approvePeriod(app,actor,source); await lockPeriod(app,actor,source);
+    await withCompany(app,toCompanyId(CO),client=>client.query("UPDATE public.work_entries SET ended_at=ended_at-interval '1 hour' WHERE company_id=$1 AND workday_id=$2",[CO,day]));
+    const corr=await admin.query<{id:string;target_period_id:string}>("SELECT id,target_period_id FROM public.pay_corrections WHERE company_id=$1 AND workday_id=$2",[CO,day]);
+    await admin.query("UPDATE public.pay_corrections SET delta_amount_cents=-1000 WHERE company_id=$1 AND id=$2",[CO,corr.rows[0]!.id]);
+    const target=corr.rows[0]!.target_period_id;
+    expect(isPayrollError(await calculatePeriod(app,actor,target))).toBe(false);
+    const result=await approvePeriod(app,actor,target);
+    expect(result).toMatchObject({code:"PERIOD_NOT_READY",detail:{blockers:expect.arrayContaining([expect.objectContaining({code:"NEGATIVE_NET_FORBIDDEN"})])}});
+  });
+
   it("terenski dodatak: dan van sjedišta firme traži parametar, pa daje dodatak po danu", async () => {
     await addRate(WORKER, 1000);
     // Projekt van grada (Mostar), firma u Sarajevu — jedan dan na terenu.
@@ -515,6 +564,11 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     );
     // Ostatak 20,00 prelazi u naredni mjesec — dug nije izgubljen ni „oprošten“.
     expect(remaining.rows[0]!.remaining_cents).toBe("2000");
+    expect(await calculatePeriod(app,actor,periodId)).toMatchObject({code:"CONFLICT"});
+    const afterRetry=await admin.query<{remaining_cents:string}>("SELECT remaining_cents::text FROM public.worker_advances WHERE company_id=$1 AND id=$2",[CO,advance.id]);
+    expect(afterRetry.rows[0]!.remaining_cents).toBe("2000");
+    const unchanged=await listLines(app,actor,periodId); if(isPayrollError(unchanged)) throw Error(unchanged.message);
+    expect(unchanged.revision).toBe(1);
   });
 
   it("SELF_APPROVAL_FORBIDDEN: računovođa ne odobrava obračun u kojem je sam", async () => {
@@ -593,7 +647,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     });
     if ("code" in provisional) throw new Error(provisional.message);
     expect(provisional.meta.provisional).toBe(true);
-    expect(provisional.meta.version).toBe("OBRACUN-1");
+    expect(provisional.meta.version).toBe("OBRACUN-2");
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(new Uint8Array(provisional.body) as never);
@@ -604,7 +658,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     // Zaglavlje nosi verziju formata i oznaku provizornosti — fajl sam kaže šta je.
     const main = workbook.getWorksheet("OBRAČUN")!;
     const headerText = String(main.getRow(1).getCell(1).value ?? "");
-    expect(headerText).toContain("OBRACUN-1");
+    expect(headerText).toContain("OBRACUN-2");
     const provisionalText = String(main.getRow(2).getCell(1).value ?? "");
     expect(provisionalText).toContain("PROVIZORNO");
 
@@ -615,7 +669,7 @@ describeDb("F6 obračun — zlatni testovi novca (PostgreSQL)", () => {
     if ("code" in final) throw new Error(final.message);
     expect(final.meta.provisional).toBe(false);
     const csv = final.body.toString("utf8");
-    expect(csv).toContain("OBRACUN-1");
+    expect(csv).toContain("OBRACUN-2");
     expect(csv).toContain("Konačan obračun");
   });
 

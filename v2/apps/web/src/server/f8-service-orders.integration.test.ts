@@ -423,6 +423,20 @@ describeDb("F8 servis i održavanje — integraciono", () => {
     expect(balance.rows[0]?.balance).toBe("3.000");
   });
 
+  it("servis se ne završava ako knjiženje na zatvoren projekat ne uspije",async()=>{
+    const projectId=`prj_f8_closed_${RUN}`;
+    await admin.query("INSERT INTO public.projects(id,company_id,code,name) VALUES($1,$2,'F8-CLOSED','Zatvoren projekat')",[projectId,CO_A]);
+    const order=await createOrder(COOKIES.mech,{machineId:MACHINE,origin:"MANUAL",kind:"INTERNAL",priority:"LOW",description:"Nalog s blokiranim troškom",projectId,assignedMechanicWorkerId:WORKER_MECH});
+    expect((await startPost(jsonRequest(`http://t/api/service-orders/${order.id}/start`,COOKIES.mech),{params:Promise.resolve({id:order.id})})).status).toBe(200);
+    await admin.query("UPDATE public.projects SET status='FINISHED',closed_at=clock_timestamp(),closed_by=$3 WHERE company_id=$1 AND id=$2",[CO_A,projectId,USER_OWNER]);
+    const response=await finishPost(jsonRequest(`http://t/api/service-orders/${order.id}/finish`,COOKIES.mech,{laborHours:"2"}),{params:Promise.resolve({id:order.id})});
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    const row=await admin.query<{status:string}>("SELECT status FROM public.service_orders WHERE company_id=$1 AND id=$2",[CO_A,order.id]);
+    expect(row.rows[0]?.status).toBe("IN_PROGRESS");
+    const costs=await admin.query("SELECT 1 FROM public.cost_entries WHERE company_id=$1 AND source_type='SERVICE_ORDER' AND source_id=$2",[CO_A,order.id]);
+    expect(costs.rowCount).toBe(0);
+  });
+
   it("trošak sa projektom ide na projekat; bez projekta SAMO na mašinu — nikad oboje", async () => {
     const projectId = `prj_f8_${RUN}`;
     /* Projekat se upisuje u SVOJOJ transakciji prije kreiranja naloga: rute rade nad drugom

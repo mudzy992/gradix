@@ -223,17 +223,17 @@ test.describe("pregled C.1", { tag: ["@deep", "@deep-admin"] }, () => {
     await expect(page.getByRole("heading", { name: "Šta traži pažnju" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Sažetak" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Stanje sinhronizacije" })).toBeVisible();
-    const expired = page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ });
+    const expired = page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ }).and(page.locator("a.gx-attention-row"));
     await expect(expired).toBeVisible();
     await expect(expired).toHaveAttribute("href", "/ured/rokovi?stanje=isteklo");
-    const days = page.getByRole("link", { name: /^Dani za provjeru/ });
+    const days = page.getByRole("link", { name: /^Dani za provjeru/ }).and(page.locator("a.gx-attention-row"));
     await expect(days).toBeVisible();
     await expect(days).toHaveAttribute("href", "/ured/radni-dani?filter=za-provjeru");
   });
 
   test("C.1 vlasnik: klik na red otvara listu već filtriranu (rokovi → isteklo)", async ({ page }) => {
     await loginUi(page, E2E_USERS.owner);
-    await page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ }).click();
+    await page.getByRole("link", { name: /^Istekli rokovi(?! blokiraju)/ }).and(page.locator("a.gx-attention-row")).click();
     await page.waitForURL(/\/ured\/rokovi\?stanje=isteklo$/);
     await expect(page.getByRole("heading", { name: "Rokovi" })).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Stanje" })).toHaveValue("expired", { timeout: 20_000 });
@@ -242,7 +242,7 @@ test.describe("pregled C.1", { tag: ["@deep", "@deep-admin"] }, () => {
 
   test("C.1 vlasnik: klik na dane za provjeru otvara samo dane s oznakom", async ({ page }) => {
     await loginUi(page, E2E_USERS.owner);
-    await page.getByRole("link", { name: /^Dani za provjeru/ }).click();
+    await page.getByRole("link", { name: /^Dani za provjeru/ }).and(page.locator("a.gx-attention-row")).click();
     await page.waitForURL(/\/ured\/radni-dani\?filter=za-provjeru$/);
     await expect(page.getByRole("heading", { name: "Radni dani" })).toBeVisible();
     await expect(page.getByText("Za provjeru", { exact: false }).first()).toBeVisible();

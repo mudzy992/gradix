@@ -12,18 +12,16 @@
  *  - `PART` — `stock_movements` ima djelimični unikat po `(source_type, source_id, item_id)`, pa
  *    drugi push istog ključa vraća `STOCK_ALREADY_POSTED` → `DUPLICATE`.
  */
-import type { Pool, PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import type { R4ServiceOrderActionPushItem, R4SyncPushItemResult } from "@gradix/domain";
 import { can } from "./permissions";
 import { equipmentRecordAllowed, linkedFaultAllowed } from "./equipment-scope";
-import { bookServiceOrderCost } from "./cost-entry-service";
 import { recordPartUsage } from "./service-order-actions";
 import { finishOrderFromSync, setOrderStatusFromSync } from "./service-order-sync-actions";
 import { encodeSyncCursor } from "./sync-cursor";
 import type { SyncOrderActionDeps } from "./r4-sync-service-order-types";
 
 export async function applyServiceOrderAction(
-  pool: Pool,
   client: PoolClient,
   deps: SyncOrderActionDeps,
   item: R4ServiceOrderActionPushItem,
@@ -109,9 +107,7 @@ export async function applyServiceOrderAction(
       : reject(outcome.code);
   }
 
-  /* FINISH — jedina radnja koja pravi trošak. Knjiženje ide POSLIJE commit-a radnje, jer
-     `bookServiceOrderCost` piše `cost_entries` uz trigger koji ne trpi dva vlasnika transakcije
-     preko `withCompany` granice; zato se poziva iz `pushR4SyncItems` poslije uspjeha. */
+  // The shared finish operation books the cost in this same transaction.
   const outcome = await finishOrderFromSync(client, {
     companyId: actor.companyId,
     actorId: actor.userId,
@@ -130,25 +126,4 @@ export async function applyServiceOrderAction(
   );
   const row = updated.rows[0];
   return finish(appliedResult(item.serviceOrderId, row?.version ?? null));
-}
-
-/**
- * Knjiženje troška poslije commit-a R4 push-a.
- *
- * Zašto ovdje a ne u `finishOrderFromSync`: `bookServiceOrderCost` otvara SVOJU transakciju preko
- * `withCompany`; kad bi se pozvala unutar push transakcije, dva vlasnika bi pisala u isti ledger.
- * Ako knjiženje padne, nalog ostaje završen sa `skipped` — noćni prolaz hvata zaostatak.
- */
-export async function bookFinishedOrderCost(
-  pool: Pool,
-  params: { companyId: string; actorId: string; serviceOrderId: string },
-): Promise<{ posted: number; pending: number; skipped: number }> {
-  const { withCompany, companyId: toCompanyId } = await import("@gradix/db");
-  try {
-    return await withCompany(pool, toCompanyId(params.companyId), (client) =>
-      bookServiceOrderCost(client, params),
-    );
-  } catch {
-    return { posted: 0, pending: 0, skipped: 1 };
-  }
 }

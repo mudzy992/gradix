@@ -22,7 +22,7 @@ import { applyFuelEntrySyncItem } from "./r4-sync-fuel-entry";
 import { applyHaulSyncItem } from "./r4-sync-haul";
 import { applyDailyCheckSyncItem } from "./r4-sync-daily-check";
 import { applyFaultSyncItem } from "./r4-sync-fault";
-import { applyServiceOrderAction, bookFinishedOrderCost } from "./r4-sync-service-order";
+import { applyServiceOrderAction } from "./r4-sync-service-order";
 import { applySiteDiaryItemSyncItem, applySiteDiarySyncItem } from "./r6-sync-diary";
 import { applyHseActionSyncItem, applyHseIncidentSyncItem, applyHseTrainingSyncItem } from "./r6-sync-hse";
 import { can, type Permission } from "./permissions";
@@ -637,7 +637,7 @@ async function applyItem(
     }, item);
   }
   if (item.entityType === "service_order_action") {
-    return applyServiceOrderAction(pool, client, {
+    return applyServiceOrderAction(client, {
       actor,
       requestHash,
       reservation,
@@ -1140,31 +1140,6 @@ export async function pushR4SyncItems(
     ));
   }
   return results;
-}
-
-/**
- * Knjiženje troška za naloge završene u OVOM batchu.
- *
- * Zove se iz rute POSLIJE `pushR4SyncItems`: radnja je tada commitovana, pa knjiženje otvara svoju
- * transakciju (ledger i nalog ne dijele vlasnika). Neuspjeh knjiženja ne obara push — odgovor
- * stavke ostaje `APPLIED`, a zaostatak hvata noćni prolaz (`budget.thresholds`).
- */
-export async function bookSyncFinishedOrders(
-  pool: Pool,
-  actor: SyncPushActor,
-  items: readonly R4SyncPushItem[],
-  results: readonly R4SyncPushItemResult[],
-): Promise<void> {
-  const applied = new Set(results.filter((result) => result.status === "APPLIED").map((result) => result.localId));
-  for (const item of items) {
-    if (item.entityType !== "service_order_action" || item.action.kind !== "FINISH") continue;
-    if (!applied.has(item.localId)) continue;
-    await bookFinishedOrderCost(pool, {
-      companyId: actor.companyId,
-      actorId: actor.userId,
-      serviceOrderId: item.serviceOrderId,
-    });
-  }
 }
 
 /** Runtime guard in addition to the domain validator; prevents accidentally bypassing it. */
