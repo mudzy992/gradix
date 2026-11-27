@@ -19,7 +19,7 @@ export async function POST(
     const result = await confirmAttachment(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles, scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds },
       id,
       attachmentId,
     );

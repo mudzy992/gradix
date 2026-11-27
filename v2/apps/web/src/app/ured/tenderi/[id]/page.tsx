@@ -49,7 +49,7 @@ export default async function TenderDetailPage({ params }: Ctx) {
     pool,
     auth.ctx.companyId as CompanyId,
     { tenderId: id },
-    { scope: "COMPANY", userId: auth.ctx.userId, includeAttachments: false },
+    { scope: auth.ctx.scope, projectIds: auth.ctx.projectIds, userId: auth.ctx.userId, includeAttachments: false },
   );
 
   const checklist = await listTenderChecklist(pool, actor, id);

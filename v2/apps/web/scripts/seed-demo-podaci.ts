@@ -143,7 +143,7 @@ export async function seedDemoPodaci(
     return owner.rows[0]?.user_id;
   });
   if (!actorUserId) throw new Error("Demo firma nema vlasnika (OWNER) za audit zapis uvoza.");
-  const actor = { userId: actorUserId, roles: ["OWNER"] };
+  const actor = { userId: actorUserId, roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
 
   const report: DemoPodaciReport = {
     workers: { imported: 0, duplicates: 0, errors: 0, skipped: 0 },

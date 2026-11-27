@@ -13,7 +13,6 @@ import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { companyId } from "@gradix/db";
-import type { Actor } from "./access-service";
 import {
   createObligation,
   createObligationType,
@@ -100,18 +99,18 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
   });
 
   it("lista rokova demo firme ne sadrži rok druge firme", async () => {
-    const page = await listObligations(admin, demo);
+    const page = await listObligations(admin, demo, {}, {userId:"usr_vlasnik",scope:"COMPANY",projectIds:null});
     const ids = page.obligations.map((row) => row.id);
     expect(ids).toContain(demoObligation);
     expect(ids).not.toContain(drugaObligation);
   });
 
   it("detalj tuđeg roka je NOT_FOUND, vlastiti dolazi", async () => {
-    const tuđi = await getObligation(admin, demo, drugaObligation);
+    const tuđi = await getObligation(admin, demo, drugaObligation, {userId:"usr_vlasnik",scope:"COMPANY",projectIds:null});
     expect(isServiceError(tuđi)).toBe(true);
     if (isServiceError(tuđi)) expect(tuđi.code).toBe("NOT_FOUND");
 
-    const svoj = await getObligation(admin, demo, demoObligation);
+    const svoj = await getObligation(admin, demo, demoObligation, {userId:"usr_vlasnik",scope:"COMPANY",projectIds:null});
     expect(isServiceError(svoj)).toBe(false);
     if (!isServiceError(svoj)) {
       expect(svoj.obligation.id).toBe(demoObligation);
@@ -125,7 +124,7 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
    * tuđe redove i bez lažnih sukoba na tuđe oznake.
    */
   it("tip obaveze: oznaka druge firme je slobodna; tuđi tip nije vidljiv", async () => {
-    const actor: Actor = { userId: "usr_vlasnik", roles: ["OWNER"] };
+    const actor = { userId: "usr_vlasnik", roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
 
     const istaOznaka = await createObligationType(admin, demo, actor, {
       code: drugaOnlyTypeCode,
@@ -143,7 +142,7 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
   });
 
   it("opseg obaveze: radnik druge firme nije vidljiv", async () => {
-    const actor: Actor = { userId: "usr_vlasnik", roles: ["OWNER"] };
+    const actor = { userId: "usr_vlasnik", roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
     const tuđiRadnik = await createObligation(admin, demo, actor, {
       typeId: demoWorkerType,
       workerId: drugaWorker,
@@ -153,7 +152,7 @@ describeDb("rokovi pod admin rolom ne vraćaju drugu firmu (popravka stavke 1)",
   });
 
   it("izmjena, obnova, brisanje i prilog tuđe obaveze su NOT_FOUND", async () => {
-    const actor: Actor = { userId: "usr_vlasnik", roles: ["OWNER"] };
+    const actor = { userId: "usr_vlasnik", roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
 
     const izmjena = await updateObligation(admin, demo, actor, drugaObligation, {
       typeId: `obt_iso_cmp_demo_${STAMP}`,

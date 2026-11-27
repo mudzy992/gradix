@@ -30,6 +30,7 @@ import {
 } from "@gradix/domain";
 import { writeAudit } from "./audit";
 import type { Actor } from "./rbac-service";
+import { obligationRecordAllowed, obligationScope, obligationTargetAllowed, type ObligationActor, type ObligationViewer } from "./obligation-scope";
 import {
   attachmentDownloadUrl as attachmentDownloadUrlShared,
   confirmAttachment as confirmAttachmentShared,
@@ -316,7 +317,6 @@ const ATTACHMENTS_SELECT = `
   SELECT id, entity_id AS obligation_id, file_name, content_type, size_bytes, status, created_at
     FROM attachments
    WHERE company_id = $1 AND entity_type = 'OBLIGATION' AND status <> 'deleted'
-   ORDER BY created_at DESC
 `;
 
 /** Poslovni datum firme — JEDNO mjesto gdje se „danas“ pretvara u datum. */
@@ -397,15 +397,8 @@ function toObligation(
  * vezane za SVOJ nalog (radnika vezanog za nalog ili gdje je odgovoran). Tuđe ne vidi ni ako pošalje
  * `?workerId=` tuđeg radnika — filter se tada sužava, ne širi.
  */
-export type ObligationScope = "COMPANY" | "SELF";
-
-/** Prilozi su lični podatak: bez `obligations.attachments.view` se ne vraćaju u listi. */
-export type ObligationListOptions = {
-  scope?: ObligationScope;
-  /** `userId` za opseg `SELF` — čije obaveze. */
-  userId?: string;
-  includeAttachments?: boolean;
-};
+export type ObligationScope = ObligationViewer["scope"];
+export type ObligationListOptions = ObligationViewer & { includeAttachments?: boolean };
 
 export type ObligationFilter = {
   state?: string;
@@ -444,7 +437,7 @@ export async function listObligations(
   pool: Pool,
   companyId: CompanyId,
   filter: ObligationFilter = {},
-  options: ObligationListOptions = {},
+  options: ObligationListOptions,
 ): Promise<ObligationsPage> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
@@ -465,18 +458,6 @@ export async function listObligations(
      * Radnik u podupitu je vezan na `o.company_id` (kompozitni FK), pa korisnikove veze
      * u drugim firmama ne otvaraju tuđe rokove.
      */
-    if (options.scope === "SELF") {
-      const korisnik = options.userId ?? "";
-      conditions.push(
-        cond(
-          `(o.responsible_user_id = $
-            OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $ AND company_id = o.company_id))`,
-          korisnik,
-          korisnik,
-        ),
-      );
-    }
-
     if (!filter.includeSuperseded) conditions.push(cond("o.superseded_by IS NULL"));
     if (filter.typeId) conditions.push(cond("o.type_id = $", filter.typeId));
     if (filter.entityKind) conditions.push(cond("t.entity_kind = $", filter.entityKind));
@@ -497,13 +478,14 @@ export async function listObligations(
     }
 
     const { where, params } = buildWhere(conditions);
-    const result = await client.query(`${OBLIGATION_SELECT} ${where}`, params);
+    const scoped = obligationScope(options, params, "o");
+    const result = await client.query(`${OBLIGATION_SELECT} ${where} AND ${scoped}`, params);
 
     // Bez prava na priloge upit se NE izvršava — podatak koji se ne smije vidjeti ne treba ni doći
     // iz baze, pa ne postoji put da ga neko „zaboravi" ukloniti iz odgovora.
     const attachments = options.includeAttachments === false
       ? { rows: [] as Array<Record<string, unknown>> }
-      : await client.query(ATTACHMENTS_SELECT, [companyId]);
+      : await client.query(`${ATTACHMENTS_SELECT} AND entity_id = ANY($2::text[]) ORDER BY created_at DESC`, [companyId, result.rows.map(row => row.id)]);
     const byObligation = new Map<string, ObligationAttachmentRow[]>();
     for (const row of attachments.rows) {
       const key = String(row.obligation_id);
@@ -568,7 +550,7 @@ export async function getObligation(
   pool: Pool,
   companyId: CompanyId,
   obligationId: string,
-  options: ObligationListOptions = {},
+  options: ObligationListOptions,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
     const today = await companyToday(client, companyId);
@@ -583,20 +565,9 @@ export async function getObligation(
       // čini da to važi i pod admin rolom, ne samo kroz RLS.
       cond("o.company_id = $", companyId),
     ];
-    if (options.scope === "SELF") {
-      const korisnik = options.userId ?? "";
-      conditions.push(
-        cond(
-          `(o.responsible_user_id = $
-            OR o.worker_id IN (SELECT id FROM workers WHERE user_id = $ AND company_id = o.company_id))`,
-          korisnik,
-          korisnik,
-        ),
-      );
-    }
-
     const { where, params } = buildWhere(conditions);
-    const row = await client.query(`${OBLIGATION_SELECT} ${where}`, params);
+    const scoped = obligationScope(options, params, "o");
+    const row = await client.query(`${OBLIGATION_SELECT} ${where} AND ${scoped}`, params);
     if (row.rowCount === 0) {
       return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     }
@@ -714,7 +685,7 @@ function resolveScope(
 export async function createObligation(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   input: ObligationInput,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
   const scope = resolveScope(input);
@@ -730,6 +701,7 @@ export async function createObligation(
   }
 
   return withCompany(pool, companyId, async (client) => {
+    if (!await obligationTargetAllowed(client, companyId, actor, scope)) return { code: "NOT_FOUND", message: "Entitet nije pronađen." } as ServiceError;
     const type = await client.query<{ entity_kind: string; requires_attachment: boolean }>(
       "SELECT entity_kind, requires_attachment FROM obligation_types WHERE id = $1 AND company_id = $2 AND is_active",
       [input.typeId, companyId],
@@ -899,7 +871,7 @@ async function getObligationWithClient(
 export async function updateObligation(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
   input: Partial<ObligationInput>,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
@@ -907,6 +879,8 @@ export async function updateObligation(
   if ("code" in scope) return scope;
 
   return withCompany(pool, companyId, async (client) => {
+    if (!await obligationTargetAllowed(client, companyId, actor, scope)) return { code: "NOT_FOUND", message: "Entitet nije pronađen." } as ServiceError;
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     const existing = await client.query<{ id: string }>(
       "SELECT id FROM obligations WHERE id = $1 AND company_id = $2",
       [obligationId, companyId],
@@ -975,7 +949,7 @@ export type ObligationRenewInput = {
 export async function renewObligation(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
   input: ObligationRenewInput,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
@@ -990,6 +964,7 @@ export async function renewObligation(
   }
 
   return withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     const existing = await client.query<{ current_version: number; expires_at: Date | null }>(
       "SELECT current_version, expires_at FROM obligations WHERE id = $1 AND company_id = $2 FOR UPDATE",
       [obligationId, companyId],
@@ -1049,7 +1024,7 @@ export const CORRECTION_WINDOW_HOURS = 24;
 export async function correctObligation(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
   input: ObligationRenewInput,
 ): Promise<{ obligation: ObligationRow; versions: ObligationVersionRow[] } | ServiceError> {
@@ -1067,6 +1042,7 @@ export async function correctObligation(
   }
 
   return withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     const existing = await client.query<{
       current_version: number;
       expires_at: Date | null;
@@ -1145,10 +1121,11 @@ export async function correctObligation(
 export async function deleteObligation(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
 ): Promise<{ deleted: true } | ServiceError> {
   return withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return { code: "NOT_FOUND", message: "Obaveza nije pronađena." } as ServiceError;
     const existing = await client.query<{ versions: number; created_at: Date; type_code: string }>(
       `SELECT (SELECT count(*)::int FROM obligation_versions WHERE obligation_id = o.id) AS versions,
               o.created_at, t.code AS type_code
@@ -1219,7 +1196,7 @@ export type AttachmentRequest = {
 export async function registerAttachment(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
   input: AttachmentRequest,
 ): Promise<
@@ -1227,6 +1204,7 @@ export async function registerAttachment(
   | ServiceError
 > {
   const exists = await withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return false;
     const obligation = await client.query<{ id: string }>(
       "SELECT id FROM obligations WHERE id = $1 AND company_id = $2",
       [obligationId, companyId],
@@ -1255,11 +1233,12 @@ export async function registerAttachment(
 export async function confirmAttachment(
   pool: Pool,
   companyId: CompanyId,
-  actor: Actor,
+  actor: ObligationActor,
   obligationId: string,
   attachmentId: string,
 ): Promise<{ attachment: AttachmentRow } | ServiceError> {
   const belongs = await withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return false;
     const found = await client.query<{ id: string }>(
       "SELECT id FROM attachments WHERE id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND entity_id = $3",
       [attachmentId, companyId, obligationId],
@@ -1283,10 +1262,12 @@ export async function confirmAttachment(
 export async function attachmentDownloadUrl(
   pool: Pool,
   companyId: CompanyId,
+  actor: ObligationViewer,
   obligationId: string,
   attachmentId: string,
 ): Promise<{ url: string; expiresAt: string } | ServiceError> {
   const belongs = await withCompany(pool, companyId, async (client) => {
+    if (!await obligationRecordAllowed(client, companyId, actor, obligationId)) return false;
     const found = await client.query<{ id: string }>(
       "SELECT id FROM attachments WHERE id = $1 AND company_id = $2 AND entity_type = 'OBLIGATION' AND entity_id = $3",
       [attachmentId, companyId, obligationId],

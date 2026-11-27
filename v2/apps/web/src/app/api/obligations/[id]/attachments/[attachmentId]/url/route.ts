@@ -25,7 +25,7 @@ export async function GET(
     if (!guardResult.ok) return guardResult.response;
 
     const { id, attachmentId } = await context.params;
-    const result = await attachmentDownloadUrl(await getVerifiedPool(), guardResult.ctx.companyId, id, attachmentId);
+    const result = await attachmentDownloadUrl(await getVerifiedPool(), guardResult.ctx.companyId, guardResult.ctx, id, attachmentId);
     if (isServiceError(result)) return fail(result.code, result.message);
     return ok(result);
   } catch (error) {

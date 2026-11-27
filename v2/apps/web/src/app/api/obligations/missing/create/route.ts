@@ -20,6 +20,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const guardResult = await guard(request, "obligations.manage");
     if (!guardResult.ok) return guardResult.response;
+    if (guardResult.ctx.scope !== "COMPANY") return fail("FORBIDDEN", "Ova radnja trenutno zahtijeva opseg firme.");
 
     const body = (await request.json().catch(() => null)) as {
       reviewAt?: unknown;

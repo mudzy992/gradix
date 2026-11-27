@@ -64,7 +64,7 @@ vi.mock("./guard", () => ({
     }
     return {
       ok: true as const,
-      ctx: { userId, companyId: company, roles: [role], email: "att@test.example" },
+      ctx: { userId, companyId: company, roles: [role], scope: "COMPANY", projectIds: null, email: "att@test.example" },
     };
   },
 }));
@@ -137,7 +137,7 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
 
   it("presign → INSERT → confirm → lista → download; tuđa firma 404; WORKER 403", async () => {
     const head = new TextEncoder().encode("%PDF-1.7\nsinteticki\n");
-    const actor = { userId: USER, roles: ["OWNER"] };
+    const actor = { userId: USER, roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
     const registered = await registerAttachment(app, companyId(CO), actor, OBL, {
       fileName: "sinteticki.pdf",
       sizeBytes: head.byteLength,
@@ -169,17 +169,17 @@ describeDb("obligation attachment flow (PostgreSQL + S3 double)", () => {
     if (isServiceError(confirmed)) return;
     expect(confirmed.attachment.status).toBe("ready");
 
-    const listed = await getObligation(app, companyId(CO), OBL, { includeAttachments: true });
+    const listed = await getObligation(app, companyId(CO), OBL, { ...actor, includeAttachments: true });
     expect(isServiceError(listed)).toBe(false);
     if (isServiceError(listed)) return;
     expect(listed.obligation.attachments.map((row) => row.id)).toContain(attachmentId);
 
-    const download = await attachmentDownloadUrl(app, companyId(CO), OBL, attachmentId);
+    const download = await attachmentDownloadUrl(app, companyId(CO), actor, OBL, attachmentId);
     expect(isServiceError(download)).toBe(false);
     if (isServiceError(download)) return;
     expect(download.url).toContain("https://minio.test.example/get/");
 
-    const foreign = await attachmentDownloadUrl(app, companyId(OTHER), OBL, attachmentId);
+    const foreign = await attachmentDownloadUrl(app, companyId(OTHER), actor, OBL, attachmentId);
     expect(isServiceError(foreign) && foreign.code).toBe("NOT_FOUND");
 
     (globalThis as { __attTestRole?: string }).__attTestRole = "WORKER";

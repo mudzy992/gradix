@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const result = await registerAttachment(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles, scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds },
       id,
       {
         fileName: parsed.data.fileName,

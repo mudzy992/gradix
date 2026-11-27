@@ -1,6 +1,5 @@
 import type { Pool } from "pg";
-import { companyId } from "@gradix/db";
-import { visibleProjectIds } from "@gradix/domain";
+import { companyId, withCompany } from "@gradix/db";
 import { can, type Role, type Scope } from "./permissions";
 import { listObligations, type ObligationRow } from "./obligation-service";
 import type { ReportDocument } from "./report-render";
@@ -11,18 +10,21 @@ type Filters = { from: string; to: string; projectId?: string };
 /** Reuses list state, urgency, and review-date semantics. Attachments and notes are never exported. */
 export async function loadDeadlinesReport(pool: Pool, actor: Actor, filters: Filters, generatedAt = new Date()): Promise<ReportDocument> {
   if (!can(actor.roles, "obligations.view")) throw new Error("REPORT_FORBIDDEN");
-  const allowed = visibleProjectIds({ userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds ?? [] });
-  let rows: ObligationRow[] = [];
-  if (actor.scope === "SELF") {
-    if (!filters.projectId) rows = (await listObligations(pool, companyId(actor.companyId), {},
-      { scope: "SELF", userId: actor.userId, includeAttachments: false })).obligations;
-  } else if (allowed === null) {
-    rows = (await listObligations(pool, companyId(actor.companyId), {projectId: filters.projectId}, {includeAttachments:false})).obligations;
-  } else {
-    const projects = filters.projectId ? allowed.filter(id=>id === filters.projectId) : allowed;
-    for (const projectId of projects) {
-      rows.push(...(await listObligations(pool, companyId(actor.companyId), {projectId}, {includeAttachments:false})).obligations);
-    }
+  const rowsPage = await listObligations(pool, companyId(actor.companyId), {}, {
+    userId: actor.userId, scope: actor.scope, projectIds: actor.projectIds, includeAttachments: false,
+  });
+  let rows: ObligationRow[] = rowsPage.obligations;
+  if (filters.projectId) {
+    // A project filter also includes workers and machines assigned to that project.
+    const wanted = filters.projectId;
+    const targets = await withCompany(pool, companyId(actor.companyId), client => client.query<{worker_id:string|null;machine_id:string|null}>(
+      `SELECT a.worker_id,a.machine_id FROM public.project_assignments a JOIN public.companies c ON c.id=a.company_id
+       WHERE a.company_id=$1 AND a.project_id=$2 AND a.voided_at IS NULL
+       AND a.from_date <= (clock_timestamp() AT TIME ZONE c.timezone)::date
+       AND (a.to_date IS NULL OR a.to_date >= (clock_timestamp() AT TIME ZONE c.timezone)::date)`, [actor.companyId,wanted]));
+    const workers = new Set(targets.rows.map(r => r.worker_id).filter(Boolean));
+    const machines = new Set(targets.rows.map(r => r.machine_id).filter(Boolean));
+    rows = rows.filter(r => r.projectId === wanted || (r.workerId !== null && workers.has(r.workerId)) || (r.machineId !== null && machines.has(r.machineId)));
   }
   rows = rows.filter(row => {
     const date = row.expiresAt ?? row.reviewAt;

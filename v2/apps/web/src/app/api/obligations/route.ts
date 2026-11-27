@@ -43,7 +43,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       ofLinkedWorkerUserId: params.get("mine") === "1" ? guardResult.ctx.userId : undefined,
       includeSuperseded: params.get("includeSuperseded") === "1",
     }, {
-      scope: ctx.scope === "SELF" ? "SELF" : "COMPANY",
+      scope: ctx.scope, projectIds: ctx.projectIds,
       userId: ctx.userId,
       includeAttachments: can(ctx.roles, "obligations.attachments.view"),
     });
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const result = await createObligation(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles, scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds },
       input,
     );
     if (isServiceError(result)) return fail(result.code, result.message);

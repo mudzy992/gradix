@@ -14,6 +14,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { obligationRecordAllowed } from "@/server/obligation-scope";
 import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Trajna obaveza: nema nove verzije, samo novi datum provjere.
         if (expiresAt === null && reviewAt !== null) {
           const done = await withCompany(pool, ctx.companyId, async (client) => {
+            if (!await obligationRecordAllowed(client, ctx.companyId, ctx, obligationId)) return false;
             const updated = await client.query(
               `UPDATE obligations SET review_at = $3::date, updated_at = now()
                 WHERE company_id = $1 AND id = $2 AND expires_at IS NULL`,
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         const renewed = await renewObligation(
           pool,
           ctx.companyId,
-          { userId: ctx.userId, roles: ctx.roles },
+          { userId: ctx.userId, roles: ctx.roles, scope: ctx.scope, projectIds: ctx.projectIds },
           obligationId,
           { expiresAt: expiresAt as string, issuedAt, number, issuer },
         );

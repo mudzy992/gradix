@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       ctx.companyId,
       id,
       {
-        scope: ctx.scope === "SELF" ? "SELF" : "COMPANY",
+        scope: ctx.scope, projectIds: ctx.projectIds,
         userId: ctx.userId,
         includeAttachments: can(ctx.roles, "obligations.attachments.view"),
       },
@@ -57,7 +57,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const result = await updateObligation(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles, scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds },
       id,
       input,
     );
@@ -77,7 +77,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     const result = await deleteObligation(
       await getVerifiedPool(),
       guardResult.ctx.companyId,
-      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles },
+      { userId: guardResult.ctx.userId, roles: guardResult.ctx.roles, scope: guardResult.ctx.scope, projectIds: guardResult.ctx.projectIds },
       id,
     );
     if (isServiceError(result)) return fail(result.code, result.message);

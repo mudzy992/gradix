@@ -178,7 +178,7 @@ export default async function PregledPage() {
   const obligationCounts = canSeeObligations
     ? (
         await listObligations(await getVerifiedPool(), ctx.companyId as CompanyId, {}, {
-          scope: ctx.scope === "SELF" ? "SELF" : "COMPANY",
+          scope: ctx.scope, projectIds: ctx.projectIds,
           userId: ctx.userId,
         })
       ).counts

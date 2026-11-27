@@ -38,8 +38,8 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     // Izvoz cijele firme nije za radnika: `SELF` opseg bi dao samo njegove redove, pa izvoz
     // nema smisla — a ako bi ga dobio, dvije rute bi imale različito vidno polje.
-    if (ctx.scope !== "COMPANY" || !can(ctx.roles, "export.data") || !can(ctx.roles, "workers.view")) {
-      return fail("FORBIDDEN", "Izvoz rokova zahtijeva pravo izvoza, pregled radnika i opseg firme.");
+    if (!can(ctx.roles, "export.data") || !can(ctx.roles, "workers.view")) {
+      return fail("FORBIDDEN", "Izvoz rokova zahtijeva pravo izvoza i pregled radnika.");
     }
 
     const params = request.nextUrl.searchParams;
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         includeSuperseded: false,
       },
       {
-        scope: "COMPANY",
+        scope: ctx.scope, projectIds: ctx.projectIds,
         userId: ctx.userId,
         // Izvoz ne nosi priloge: spisak za štampu ne sadrži skenove, bez obzira na dozvolu.
         includeAttachments: false,

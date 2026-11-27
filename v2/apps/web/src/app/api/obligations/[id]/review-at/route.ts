@@ -9,6 +9,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { obligationRecordAllowed } from "@/server/obligation-scope";
 import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
@@ -36,6 +37,7 @@ export async function PATCH(
     const ctx = guardResult.ctx;
 
     const outcome = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
+      if (!await obligationRecordAllowed(client, ctx.companyId, ctx, id)) return { kind: "not_found" as const };
       const company = await client.query<{ timezone: string | null }>(
         "SELECT timezone FROM companies WHERE id = $1",
         [ctx.companyId],

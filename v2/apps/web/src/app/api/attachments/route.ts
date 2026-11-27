@@ -35,6 +35,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, ATTACHMENT_ACCESS[entityType].read);
     if (!guardResult.ok) return guardResult.response;
 
+    // Fail closed until the generic attachment service enforces obligation scope in its transaction.
+    if (entityType === "OBLIGATION" && guardResult.ctx.scope !== "COMPANY") return fail("NOT_FOUND", "Obaveza nije pronađena.");
     const pool = await getVerifiedPool();
     if (!(await attachmentEntityExists(pool, guardResult.ctx.companyId, entityType, entityId))) {
       return fail("NOT_FOUND", `${ATTACHMENT_ACCESS[entityType].label} nije pronađen.`);
@@ -56,6 +58,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     const guardResult = await guard(request, ATTACHMENT_ACCESS[entityType].write);
     if (!guardResult.ok) return guardResult.response;
 
+    // Fail closed until the generic attachment service enforces obligation scope in its transaction.
+    if (entityType === "OBLIGATION" && guardResult.ctx.scope !== "COMPANY") return fail("NOT_FOUND", "Obaveza nije pronađena.");
     const pool = await getVerifiedPool();
     if (!(await attachmentEntityExists(pool, guardResult.ctx.companyId, entityType, entityId))) {
       return fail("NOT_FOUND", `${ATTACHMENT_ACCESS[entityType].label} nije pronađen.`);

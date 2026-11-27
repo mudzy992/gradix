@@ -12,6 +12,7 @@
  */
 import type { NextRequest } from "next/server";
 import { fail, internal, ok } from "@/server/api";
+import { obligationRecordAllowed } from "@/server/obligation-scope";
 import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import { guard } from "@/server/guard";
@@ -46,6 +47,7 @@ export async function POST(
     const ctx = guardResult.ctx;
 
     const outcome = await withCompany(await getVerifiedPool(), ctx.companyId, async (client) => {
+      if (!await obligationRecordAllowed(client, ctx.companyId, ctx, id)) return { kind: "not_found" as const };
       // Dokument mora postojati, ali i biti u stanju koje se provjerava: potvrda obaveze koja
       // nikad nije poslana na provjeru bila bi način da se preskoči `requires_attachment`.
       const current = await client.query<{ review_state: string }>(

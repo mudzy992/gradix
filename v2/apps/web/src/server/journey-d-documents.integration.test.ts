@@ -7,6 +7,7 @@ import { POST as createObligationRoute } from "@/app/api/obligations/route";
 import {
   createObligation,
   isServiceError,
+  getObligation,
   listObligations,
   renewObligation,
 } from "./obligation-service";
@@ -22,7 +23,7 @@ const ownerId = `usr_jd_own_${RUN}`;
 const workerUserId = `usr_jd_wrk_${RUN}`;
 const otherId = `usr_jd_oth_${RUN}`;
 const workerId = `wrk_jd_${RUN}`;
-const owner = { userId: ownerId, roles: ["OWNER"] };
+const owner = { userId: ownerId, roles: ["OWNER"], scope: "COMPANY" as const, projectIds: null };
 const EXPIRED = "2026-01-01";
 const RENEWED = "2027-06-01";
 
@@ -104,7 +105,7 @@ describeDb("journey D documents", () => {
     expect(created.obligation).toMatchObject({
       workerId, expiresAt: EXPIRED, currentVersion: 1, state: "expired",
     });
-    const listed = await listObligations(dbApp, companyId(CO), { workerId }, { scope: "COMPANY" });
+    const listed = await listObligations(dbApp, companyId(CO), { workerId }, { scope: "COMPANY", userId: ownerId, projectIds: null });
     expect(listed.obligations).toEqual([expect.objectContaining({ id: created.obligation.id, state: "expired" })]);
     const same = await renewObligation(dbApp, companyId(CO), owner, created.obligation.id, { expiresAt: EXPIRED });
     expect(isServiceError(same) && same.code).toBe("CONFLICT");
@@ -120,7 +121,7 @@ describeDb("journey D documents", () => {
     expect(renewed.versions).toHaveLength(2);
     const repeat = await renewObligation(dbApp, companyId(CO), owner, created.obligation.id, { expiresAt: RENEWED });
     expect(isServiceError(repeat) && repeat.code).toBe("CONFLICT");
-    const foreign = await renewObligation(dbApp, companyId(OTHER), { userId: otherId, roles: ["OWNER"] }, created.obligation.id, { expiresAt: "2028-01-01" });
+    const foreign = await renewObligation(dbApp, companyId(OTHER), { userId: otherId, roles: ["OWNER"], scope: "COMPANY", projectIds: null }, created.obligation.id, { expiresAt: "2028-01-01" });
     expect(isServiceError(foreign) && foreign.code).toBe("NOT_FOUND");
 
     const versions = await withCompany(dbApp, companyId(CO), (client) => client.query<{ version: string; expires_at: string }>(
@@ -139,13 +140,42 @@ describeDb("journey D documents", () => {
       WHERE company_id = $1 AND entity_id = $2 AND action = 'obligation.created'`, [CO, created.obligation.id])).toBe("1");
     expect(await count(CO, `SELECT count(*)::text AS n FROM public.audit_events
       WHERE company_id = $1 AND entity_id = $2 AND action = 'obligation.renewed'`, [CO, created.obligation.id])).toBe("1");
-    const own = await listObligations(dbApp, companyId(CO), {}, { scope: "SELF", userId: workerUserId });
+    const own = await listObligations(dbApp, companyId(CO), {}, { scope: "SELF", projectIds: null, userId: workerUserId });
     expect(own.obligations.map((row) => row.id)).toEqual([created.obligation.id]);
-    const hidden = await listObligations(dbApp, companyId(CO), {}, { scope: "SELF", userId: ownerId });
+    const hidden = await listObligations(dbApp, companyId(CO), {}, { scope: "SELF", projectIds: null, userId: ownerId });
     expect(hidden.obligations).toEqual([]);
     expect(await count(OTHER, `SELECT count(*)::text AS n FROM public.obligations WHERE company_id = $1 AND id = $2`, [CO, created.obligation.id])).toBe("0");
     expect(await count(OTHER, `SELECT count(*)::text AS n FROM public.obligation_versions WHERE company_id = $1 AND obligation_id = $2`, [CO, created.obligation.id])).toBe("0");
-    const otherList = await listObligations(dbApp, companyId(OTHER), {}, { scope: "COMPANY" });
+    const otherList = await listObligations(dbApp, companyId(OTHER), {}, { scope: "COMPANY", userId: ownerId, projectIds: null });
     expect(otherList.obligations).toEqual([]);
   });
+  it("PROJECTS i SELF ograničavaju listu, detalj, kreiranje i obnovu", async () => {
+    const project = `prj_scope_${RUN}`, outsider = `wrk_scope_other_${RUN}`;
+    const machine = `mch_scope_${RUN}`, assignment = `pas_scope_${RUN}`;
+    await dbAdmin.query("INSERT INTO projects (id,company_id,code,name) VALUES ($1,$2,'SCOPE','Scope')", [project, CO]);
+    await dbAdmin.query("INSERT INTO workers (id,company_id,first_name,last_name,hired_at) VALUES ($1,$2,'Van','Opsega','2020-01-01')", [outsider, CO]);
+    await dbAdmin.query("INSERT INTO machines (id,company_id,code,name,category_id) VALUES ($1,$2,'SCOPE','Mašina',$2 || '_cat_excavator')", [machine, CO]);
+    await dbAdmin.query(`INSERT INTO project_assignments (id,company_id,project_id,worker_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')`, [assignment, CO, project, workerId]);
+    await dbAdmin.query(`INSERT INTO project_assignments (id,company_id,project_id,machine_id,from_date) VALUES ($1,$2,$3,$4,'2020-01-01')`, [`${assignment}_m`, CO, project, machine]);
+    const pm = {userId: ownerId, roles: ["OWNER"], scope: "PROJECTS" as const, projectIds: [project]};
+    const self = {userId: workerUserId, roles: ["OWNER"], scope: "SELF" as const, projectIds: null};
+    const other = await createObligation(dbApp, companyId(CO), owner, {typeId:`${CO}_obt_driving`, workerId:outsider, responsibleUserId:workerUserId, expiresAt:"2031-01-01"});
+    const machineObl = await createObligation(dbApp, companyId(CO), pm, {typeId:`${CO}_obt_registration`, machineId:machine, expiresAt:"2031-01-01"});
+    expect(isServiceError(other)).toBe(false); expect(isServiceError(machineObl)).toBe(false);
+    if (isServiceError(other) || isServiceError(machineObl)) return;
+    const own = await listObligations(dbApp, companyId(CO), {}, self);
+    expect(own.obligations.every(row => row.workerId === workerId)).toBe(true);
+    expect(own.obligations.map(row => row.id)).not.toContain(other.obligation.id);
+    const pmList = await listObligations(dbApp, companyId(CO), {}, pm);
+    expect(pmList.obligations.map(row => row.id)).toContain(machineObl.obligation.id);
+    expect(pmList.obligations.map(row => row.id)).not.toContain(other.obligation.id);
+    expect(isServiceError(await getObligation(dbApp, companyId(CO), other.obligation.id, pm))).toBe(true);
+    expect(isServiceError(await renewObligation(dbApp, companyId(CO), pm, other.obligation.id, {expiresAt:"2032-01-01"}))).toBe(true);
+    expect(isServiceError(await createObligation(dbApp, companyId(CO), self, {typeId:`${CO}_obt_driving`, workerId:outsider, expiresAt:"2032-01-01"}))).toBe(true);
+    const renewed = await renewObligation(dbApp, companyId(CO), pm, machineObl.obligation.id, {expiresAt:"2032-01-01"});
+    expect(isServiceError(renewed)).toBe(false);
+    await dbAdmin.query("UPDATE project_assignments SET voided_at=now(), voided_by=$2, void_reason='Test poništavanja dodjele' WHERE id=$1", [`${assignment}_m`, ownerId]);
+    expect(isServiceError(await getObligation(dbApp, companyId(CO), machineObl.obligation.id, pm))).toBe(true);
+  });
+
 });

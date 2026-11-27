@@ -13,14 +13,14 @@ export const dynamic="force-dynamic";
 export async function GET(request:NextRequest):Promise<Response> {
   try {
     const auth=await guard(request,"export.data"); if (!auth.ok) return auth.response;
-    if (!can(auth.ctx.roles,"obligations.view") || !can(auth.ctx.roles,"workers.view") || auth.ctx.scope !== "COMPANY")
-      return fail("FORBIDDEN","Izvoz ove liste zahtijeva pristup radnicima i opseg firme.");
+    if (!can(auth.ctx.roles,"obligations.view") || !can(auth.ctx.roles,"workers.view"))
+      return fail("FORBIDDEN","Izvoz ove liste zahtijeva pristup radnicima.");
     const p=request.nextUrl.searchParams, state=p.get("state") ?? "",entity=p.get("entityKind") ?? "",type=p.get("typeId") ?? "",q=p.get("q") ?? "";
     const states=["","expired","rejected","pending_review","expiring","review_due","31-90","valid","no_expiry"];
     if (!states.includes(state) || !["","WORKER","MACHINE","PROJECT","TENDER","COMPANY"].includes(entity) || type.length>128 || q.length>128)
       return fail("VALIDATION_FAILED","Neispravni filteri obaveza.");
     const pool=await getVerifiedPool();
-    const source=await listObligations(pool,auth.ctx.companyId,{entityKind:entity || undefined},{includeAttachments:false});
+    const source=await listObligations(pool,auth.ctx.companyId,{entityKind:entity || undefined},{userId:auth.ctx.userId,scope:auth.ctx.scope,projectIds:auth.ctx.projectIds,includeAttachments:false});
     const rows=filterObligations(source.obligations,state,type,q);
     if (rows.length>1000) return fail("CONFLICT","Izvoz je prevelik; suzite filtere na najviše 1000 redova.");
     const header=["Obaveza","Izdavalac","Broj","Nosilac","Rok","Stanje"];
