@@ -2,7 +2,7 @@
 
 **Snimak:** 2026-11-27 · **Grana:** `arena/7b5ea9bf-gradix` · **Pregledani kodni commit:** `e7a37910a9c0a651d3d77a059592d755330b399c`
 
-**Status:** radna sinteza nakon G0; nalazi čekaju vlasničku trijažu. Nijednom nije dodijeljen S-nivo.
+**Status:** vlasnik je potvrdio težinsku mapu i odluke o tenant MFA, platform DB granici i podjeli obavještenja. Nakon dodatne potvrde, F1-04c je S1. Platform operator MFA i purge sign-off ostaju otvoreni; nema runtime/pilot verifikacije.
 
 ## Sažetak i granice dokaza
 
@@ -10,7 +10,7 @@ Izvorni kod sadrži značajan dio temelja Modula 1: `withCompany()` u `v2/apps/w
 
 G0 je potvrđen. Pregledani su zaključana [specifikacija 01](../../specs/01-firme-korisnici-role-audit.md), ADR 0003/0005/0007/0013/0017, relevantni API/UI, servisi, migracije, ACL, testni ankeri i `identity.json`. U ovoj sesiji nisu pokretani testovi, typecheck, lint, build, DB preflight, deploy ni pilot. Kvalitetni registar ima 13 zapisa `COVERED`, od kojih se dio odnosi na R4; to su deklaracije registra, ne svježi rezultati.
 
-Konačna težina i potvrđivanje posljedica u stvarnom okruženju ostaju otvoreni; vlasnik ih određuje u trijaži prema [PRAVILA.md](../PRAVILA.md) §3.
+Vlasnik je potvrdio mapu: S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za raspored taba u F1-08. Posljedice u deployu ostaju neprovjerene.
 
 ## Kandidati za nalaz
 
@@ -30,12 +30,13 @@ Dodatno, ekran ima tri koraka naspram pet u §1.10/§4.2. Nema izbora PDV/adrese
 
 Migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` dodaje `platform_users.totp_enabled` uz komentar da je TOTP obavezan, a komentar uz `platformLogin()` u `v2/apps/web/src/server/platform-service.ts` tvrdi da svaka nova sesija zahtijeva 2FA. Ipak, login čita samo lozinku i zatim direktno kreira osmosatnu sesiju; u pregledanim platform API rutama nema 2FA izazova. Spec 01 §1.8 traži odvojenu prijavu, ali ne propisuje izričito platform TOTP, pa prvo treba potvrditi da li je komentar/migracija namjerna politika.
 
-`grantSupportAccess()` u `v2/apps/web/src/server/platform-service.ts` upisuje razlog i rok i poziva se iz `v2/apps/web/src/app/api/platform/companies/[id]/support-access/route.ts`; `activeSupportAccess()` čita važeći zapis, ali nema pronađenog pozivaoca. Pregledani tok ne izdaje scoped support kontekst niti koristi grant da ograniči pristup podacima; `activeSupportAccess()` nema pozivaoca u pretraženom web kodu. Platform UI prikazuje rok operatoru, ali nije pronađen prikaz aktivnog support pristupa u firmnom zaglavlju. Dakle, evidentiran grant nije dokaz da je stvarni support data-plane i vidljivost firmi isporučena.
+`grantSupportAccess()` u `v2/apps/web/src/server/platform-service.ts` upisuje razlog i rok i poziva se iz `v2/apps/web/src/app/api/platform/companies/[id]/support-access/route.ts`; `activeSupportAccess()` čita važeći zapis, ali nema pronađenog pozivaoca. Nije pronađen scoped support kontekst koji koristi grant za pristup podacima niti firmni banner koji prikazuje aktivan pristup. Evidentiran grant zato nije dokaz da je operativni support data-plane isporučen.
 
 ### F1-04 · Dva auth zahtjeva nisu ispunjena kroz stvarni servisni tok · statički dokaz jak
 
 - **Rotacija nakon 180 dana:** migracija `v2/packages/db/migrations/20261124110000_f1_2_access_security/migration.sql` i `v2/apps/web/src/server/access-service.ts` upisuju `password_expires_at`; domena `v2/packages/domain/src/password-policy.ts#isPasswordExpired()` postoji. Pretraga pozivatelja nije našla primjenu te funkcije u prijavi ili `authenticate()`; `v2/apps/web/src/server/auth-lookup.ts` čita datum, ali `login()` u `v2/apps/web/src/server/auth-service.ts` ga ne koristi. `v2/apps/web/src/server/f1-access.integration.test.ts` potvrđuje datum, ne odbijanje pristupa/traženje promjene. Uredske role tako nemaju potvrđenu prisilnu rotaciju iz §1.4.20.
 - **Promjena role/opsega:** `changeMembership()` u `v2/apps/web/src/server/rbac-service.ts` ažurira članstvo i audit, ali ne opoziva sesije kako traži §1.2.11. `authenticate()` u `v2/apps/web/src/server/tenant-context.ts` ponovo čita članstvo/role po zahtjevu, pa to ublažava zastarjela prava; ipak sesija ostaje aktivna. Anker u `v2/apps/web/src/server/f1-access.integration.test.ts` ručno radi SQL izmjenu i opoziv, ne poziva servis/rutu.
+- **TOTP na passkey prijavi (vlasnička politika 2026-11-27):** vlasnik je potvrdio da passkey nije zamjena za obavezni TOTP. `passkeyLogin()` u `v2/apps/web/src/server/passkey-service.ts` provjerava WebAuthn user-verification, ali zatim izdaje sesiju bez `twoFactorGate()`. Prema potvrđenoj politici, ovo ne provodi TOTP za OWNER/ADMIN/ACCOUNTANT; nalaz je statički i ne dokazuje iskorištavanje u runtime-u.
 
 ### F1-05 · Retencija i dio audit čitanja nisu povezani u izvršiv lifecycle · statički dokaz jak
 
@@ -59,10 +60,37 @@ Spec §1.2.12 traži korisnički `locale` i `timezone`, naslijeđene od firme i 
 
 `PERMISSION_INFO` u `v2/apps/web/src/server/permissions.ts`, `roleMatrix()` u `v2/apps/web/src/server/rbac-service.ts` i `roles-client.tsx` u `v2/apps/web/src/app/ured/role/roles-client.tsx` prikazuju ključ/naziv/opis i pripadnost roli, bez osjetljivog atributa ili oznake. To propušta eksplicitni zahtjev §1.7.32 za `payroll.*`, `users.manage` i `audit.view`; nije utvrđeno da sama autorizacija zbog toga popušta.
 
-## Odluke/hipoteze za trijažu
+## Vlasnička trijaža — potvrđeno i otvoreno
 
-1. Da li passkey s obaveznom WebAuthn user-verification zamjenjuje TOTP za obavezne role? `passkeyLogin()` u `v2/apps/web/src/server/passkey-service.ts` izdaje standardnu sesiju bez `twoFactorGate()`; ADR 0017 uređuje biblioteku/origin, ne ovu politiku.
-2. Da li MVP treba izbor firme za korisnika s više aktivnih članstava? `login()` u `v2/apps/web/src/server/auth-service.ts` uzima prvo aktivno članstvo; specifikacija kaže da model više firmi ne smije biti pokvaren, ali UI ne izlaže izbor.
-3. Specifikacija 01 naslovom kaže „Modul 1 od 11“, dok inventar programa ima 12 modula. Razriješiti brojanje bez tihog prepisivanja specifikacije.
+Vlasnik je 2026-11-27 potvrdio mapu S1/S2/S3, tenant TOTP politiku, zasebnu runtime rolu i podjelu outboxa. Nakon potvrde težine F1-04c, navedene težine su vlasnički zaključene. Klasifikacija se zasniva na statičkim dokazima; nema runtime/pilot potvrde ni osnova za S0. S1 blokira prihvatanje Modula 1 dok se ne zatvori; S2 se planira, a S3 ide u `ODLOŽENO`.
 
-Sljedeći korak: vlasnik potvrđuje obim/težine i otvorene odluke. Ovaj audit ne odobrava kodiranje, deploy ni produkcijsku spremnost.
+| Stavka | Preporuka | Obrazloženje i predloženo postupanje |
+|---|---|---|
+| F1-01 — platform runtime veza | **S1** | Platform login, onboarding i upravljanje firmama ovise o vezi koju web entrypoint uklanja. Zatvoriti prije prihvatanja Modula 1; runtime potvrdu uraditi tek na odobrenom okruženju i bez migratorske veze u Node procesu. |
+| F1-02 — onboarding ugovor | **S1** | Trenutni UI zahtjev pada na validaciji, a odgovor se ne poklapa s klijentskim oblikom. Zatvoriti API–UI ugovor i dodati e2e dokaz onboarding toka. |
+| F1-03a — support data-plane | **S2** | Spec traži ograničen, obrazložen i firmi vidljiv pristup; trenutno je potvrđen zapis/grant, ne potrošač konteksta. Do zatvaranja ostati deny-by-default; ne stvarati tihi pristup podacima. |
+| F1-03b — platform MFA | **ODLUKA; bez težine** | Spec §1.8 traži odvojenu prijavu, ali ne definiše operatorov faktor; migracija/komentar sugerišu TOTP. Vlasnik treba zaključati politiku prije ocjene ili koda. |
+| F1-04a — istek lozinke | **S2** | Zahtjev od 180 dana postoji, ali nije primijenjen u prijavi; nema dokaza o kompromitaciji. Ipak, zatvoriti eksplicitni sigurnosni zahtjev i testirati uredske/terenske role. |
+| F1-04b — opoziv nakon promjene role | **S2** | Spec traži opoziv svih sesija. Ponovna provjera članstva po zahtjevu ublažava zastarjele dozvole, pa statički pregled ne pokazuje role-bypass; dodati atomski opoziv i servisni test. |
+| F1-04c — TOTP gate u passkey prijavi | **S1 potvrđen 2026-11-27** | Vlasnik je potvrdio da passkey nije zamjena za TOTP i odredio S1. `passkeyLogin()` ipak izdaje sesiju bez `twoFactorGate()`; zatvoriti prije prihvatanja Modula 1. |
+| F1-05a — audit retencija/purge | **S2** | Brisanje/arhiviranje po rokovima nije izvršeno u workeru; rizik je lifecycle/usklađenost, ne potvrđen gubitak zapisa. Prije destruktivnog posla tražiti pravnu/računovodstvenu potvrdu. |
+| F1-05b — audit osjetljivih čitanja | **S2** | Nedostaju pisci za navedene read akcije; to slabi trag pristupa, ali samo po sebi ne dokazuje neautorizovan pristup. Dodati ACCESS događaje i pokriti čitanje u testu. |
+| F1-05c — metadata ugovor | **S2** | Helper prihvata slobodan oblik i plitko provjerava tajne; rizik je neujednačen/nepotpun audit, bez dokaza da je zapis izmijenjen. Uvesti tipizirani ugovor i rekurzivnu zaštitu. |
+| F1-06 — pozivnice/reset/outbox | **S2** | Ručno kopiranje linka i administratorski reset su workaroundi; self-service i pouzdana dostava iz specifikacije nedostaju. Razgraničiti emitovanje događaja Modula 1 od zajedničkog outboxa/retryja. |
+| F1-07 — sesijski/admin UI | **S2** | API postoji, ali administrativni detalj i vjerodostojan `last_seen_at`/IP prikaz nisu dovršeni; ne utvrđuje se zaobilaženje autorizacije. Povezati postojeće API-je i testirati prikaz/opoziv. |
+| F1-08 — postavke | **S2** za locale/timezone/currency; **S3** za raspored taba | Nedostaju specifikacijske postavke; drugačiji raspored „Dokumenti“ je UI nedosljednost bez utvrđenog gubitka funkcije. Funkcionalna polja planirati, raspored taba može biti `ODLOŽENO`. |
+| F1-09 — oznake osjetljivih prava | **S2** | UI ne ističe osjetljiva prava kako specifikacija traži; pregled nije našao popuštanje server-side autorizacije. Dodati metapodatak/oznaku i test matrice. |
+
+## Vlasničke odluke zabilježene
+
+- **Težine:** potvrđeni su S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za položaj taba u F1-08.
+- **Tenant MFA:** TOTP ostaje obavezan za OWNER/ADMIN/ACCOUNTANT; passkey nije zamjena. F1-04c je zato potvrđen kao S1.
+- **Platform DB:** izabrana je zasebna runtime rola s tačnim grantovima; `DATABASE_ADMIN_URL` ne ostaje u web runtime-u.
+- **Podjela:** Modul 1 emituje invite/reset događaje i zadržava scoped, vidljiv support pristup; Modul 12 vodi outbox, dostavu i retry UI. Audit purge čeka pravnu/računovodstvenu potvrdu.
+
+## Preostalo prije zatvaranja trijaže
+
+1. Platform operator MFA ostaje otvoreno; odluka o tenant TOTP-u ne proširuje se prešutno na platform naloge.
+2. Pravna/računovodstvena potvrda arhiviranja/brisanja audita i tačni grantovi/preflight za izabranu runtime rolu.
+3. Višefirmski izbor ostaje `ODLOŽENO` prema MVP specifikaciji; „Modul 1 od 11“ naspram programa od 12 modula je dokumentacijsko pitanje, ne kodni blocker.
+Prihvaćena težina ne odobrava implementaciju. Za svaki poslovni kod/migraciju/UI i dalje je potrebna fraza **`KREĆEMO U KODIRANJE: 1`**.

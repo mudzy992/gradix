@@ -15,7 +15,7 @@
 | §1.2 — korisnik/članstvo | Djelimično | Globalni users, članstvo, deaktivacija/OWNER zaštita i trenutni auth kontekst postoje. Promjena role/opsega ne opoziva sesije kroz `changeMembership`; korisnički locale nedostaje; više aktivnih članstava bira prvo. | `access.integration.test.ts`, `rbac.integration.test.ts`, `f1-access.integration.test.ts` |
 | §1.3 — pozivnice/reset | Djelimično | Jednokratni hashirani tokeni i potrošnja postoje; admin dobija link za ručno slanje. Nema javnog zahtjeva za reset niti slanja/`BLOCKED_NO_PROVIDER` događaja iz pozivnice. | `access.integration.test.ts`; UI `users-client.test.tsx` |
 | §1.4 — lozinke | Djelimično | Argon2id, blacklist, istorija, rate-limit i 10/15 zaključavanje su u kodu. `password_expires_at` se postavlja, ali `isPasswordExpired()` nema auth pozivaoca. | `password-policy.test.ts`, `f1-access.integration.test.ts`, `access.integration.test.ts` |
-| §1.5 — 2FA | Djelimično | TOTP, recovery kodovi, šifrovanje, replay zaštita i obavezne tenant role imaju tokove. Platform kolona/komentari kažu TOTP, ali platform login izdaje sesiju nakon lozinke. Passkey kao MFA traži vlasničku odluku. | `two-factor-lifecycle.integration.test.ts`, `two-factor-app-role.integration.test.ts`, `passkeys.integration.test.ts` |
+| §1.5 — 2FA | Djelimično | Vlasnik je potvrdio obavezni tenant TOTP i da passkey nije zamjena; `passkeyLogin()` ipak izdaje sesiju bez TOTP gatea (F1-04c). MFA platform operatora ostaje otvoreno. | `two-factor-lifecycle.integration.test.ts`, `two-factor-app-role.integration.test.ts`, `passkeys.integration.test.ts` — nisu pokrenuti |
 | §1.6 — sesije | Djelimično | Refresh/rotacija, korisnički opoziv i admin API postoje. Admin rute nisu povezane u korisnički UI; `ip_hash` se ne vraća; `last_seen_at` se ne osvježava nakon prijave/rotacije; promjena role ne opoziva sesije. | `f1-access.integration.test.ts`, `access.integration.test.ts`, `passkeys.integration.test.ts` |
 | §1.7 — matrica rola | Djelimično | `PERMISSIONS` je izvor za guard/meni/matricu; UI je read-only. Nedostaje eksplicitna oznaka osjetljivih prava iz §1.7.32. | `rbac.integration.test.ts`, `roles-client.test.tsx`, `nav.test.ts` |
 | §1.8 — platforma/support | Gap/djelimično | Platform servisi/rute postoje, ali traže `DATABASE_ADMIN_URL`, koji web entrypoint uklanja; ne koristiti admin URL u runtime-u. MFA politika nije provedena. Support grant/audit postoji, ali nije pronađen scoped support data-plane ni firmni header consumer. | `f1-access.integration.test.ts` pokriva DB/service anker, ne deploy/UI tok; platform rute uključene su u `nul-guard.integration.test.ts` |
@@ -28,8 +28,8 @@
 
 ## Vodeći nalazi
 
-- **Platforma/onboarding/support:** F1-01 do F1-03 u [01-AUDIT.md](01-AUDIT.md).
-- **Auth/audit/UI:** F1-04 do F1-09 u [01-AUDIT.md](01-AUDIT.md); nijednom nalazu još nije dodijeljen S-nivo.
-- **Otvorena politika:** passkey–TOTP, višefirmski izbor, retencija i podjela outboxa; nijedno nije konačno ocijenjeno.
+- **Vlasnik potvrdio:** S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; S3 za položaj taba u F1-08.
+- **Otvoreno:** platform operator MFA ostaje bez težine dok se politika ne definiše.
+- **Odluke potvrđene:** tenant TOTP je obavezan, passkey nije zamjena; zasebna platform runtime rola; Modul 1 emituje invite/reset, Modul 12 vodi outbox/dostavu/retry; purge čeka pravnu/računovodstvenu potvrdu.
 
-Matrica pokazuje gdje kod postoji ili odstupa; ne izjednačava `POSTOJI` s `TESTIRANO`, `CI`, `DEPLOY` ili `VLASNIK UŽIVO`.
+Matrica pokazuje gdje kod postoji ili odstupa;

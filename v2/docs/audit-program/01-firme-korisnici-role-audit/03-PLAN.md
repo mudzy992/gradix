@@ -6,42 +6,42 @@
 
 ## Kapija
 
-G0 je potvrđen i četiri dokumenta Modula 1 su predana kao radna sinteza. Nalazi nisu konačno ocijenjeni. Svaki poslovni kod, migracija, UI ili deployment promjena čeka izričitu vlasnikovu frazu **`KREĆEMO U KODIRANJE: 1`**. Ne ostavljati `DATABASE_ADMIN_URL` u web runtime-u kao prečicu. Nema izvršenih testova/typecheck/lint/build/preflight/deploy u ovoj sesiji.
+Vlasnik je potvrdio prvobitnu težinsku mapu i sve težine, uključujući F1-04c kao S1, kako je zabilježeno u `01-AUDIT.md`. Platform operator MFA i purge sign-off ostaju otvoreni; kod i dalje čeka zasebnu frazu.
 
 ## Redoslijed predloženog rada
 
-### A. Zaključati sigurnosne i ugovorne odluke
+### A. Zatvoriti preostale sigurnosne i ugovorne odluke
 
-Vlasnik potvrđuje platform DB principal, MFA operatora, passkey ekvivalenciju, višefirmski login, retencijski model, outbox vlasništvo i polja ličnih naspram firmnih postavki. Pošto su neka pitanja izvan koda, zabilježiti odluku prije mijenjanja specifikacije ili ACL-a. Odabrati tačan isporučivi obim i konačnu težinu F1-01–F1-09.
+Vlasnik je potvrdio S1 za F1-01/F1-02/F1-04c; S2 za F1-03a, F1-04a–b, F1-05–F1-07, F1-08 postavke i F1-09; te S3 za položaj taba u F1-08. Tenant TOTP bez passkey zamjene, zasebna runtime rola i podjela obavještenja (M1 emituje, M12 vodi outbox/dostavu/retry) su potvrđeni. Preostaje platform operator MFA, pravna/računovodstvena potvrda purgea i tačan ACL grant set.
 
 **Izlaz:** odobreni dizajn i testabilni acceptance kriteriji; bez koda dok nema fraze iz kapije.
 
 ### B. Učiniti platform tok bezbjednim i upotrebljivim
 
-1. Zamijeniti nedostupnu/pretjerano privilegovanu runtime vezu zasebnim, recenziranim platform principalom/operacijama; dodati ga u ACL matricu i preflight. Migratorski kredencijali ostaju van Node procesa.
+1. Implementirati vlasnički izabranu zasebnu, najmanje privilegovanu platform runtime rolu s tačnim grantovima; dodati je u ACL matricu i preflight. Migratorski kredencijali ostaju van Node procesa.
 2. Uskladiti onboarding request/response između `PlatformCompanyCreateInput`, rute, servisa i ekrana; dovršiti specifikacijskih pet koraka, vlasničke podatke i seed zahtjeve; osigurati da se konflikt sluga vraća kao kontrolisan `CONFLICT`, uključujući konkurentni pokušaj.
-3. Implementirati MFA operatora samo prema potvrđenoj politici. Dovršiti support tok tako da grant stvarno ograniči platformsku podršku i bude vidljiv firmi; ne otvarati opći tenant pristup.
+3. Platform operator MFA ne implementirati dok politika ne bude potvrđena. Dovršiti support tok prema specu: scoped pristup, obavezan razlog, rok ≤60 min i vidljivi tenant banner; ne otvarati opći tenant pristup.
 
 **Prihvat:** API i UI e2e kreiraju firmu tačno jednom, pozivnica se prikazuje jednom, invalidan payload ne stvara podatke; runtime platform rola ne može čitati proizvoljne poslovne zapise; support pristup ističe i ostavlja provjerljiv trag.
 
 ### C. Zatvoriti identitetske i sesijske invarijante
 
-1. Primijeniti odluku o 180-dnevnom isteku kroz centralnu prijavu/guard; testirati uredske i terenske role, promjenu lozinke i refresh.
-2. U `changeMembership` izmjenu + opoziv sesija + audit izvršiti u istoj transakciji; test poziva servis/API, ne ručno SQL.
-3. Uskladiti passkey i TOTP politiku; testirati i lozinku, passkey, recovery i obavezne role prema istoj odluci.
-4. Ako se zadrži specifikacija sesija: osvježavati `last_seen_at`, prikazati IP hash i povezati administratorske sesije/reset 2FA u korisnički detalj; provjeriti da se ne vraćaju tokeni/sirovi UA.
+1. Zatvoriti TOTP gate u passkey putanji prije sesije za OWNER/ADMIN/ACCOUNTANT; passkey nije zamjena prema potvrđenoj politici. Dodati test koji pokušava passkey prijavu bez TOTP.
+2. Primijeniti 180-dnevni istek kroz centralnu prijavu/guard; testirati uredske/terenske role, promjenu lozinke i refresh.
+3. U `changeMembership` izmjenu + opoziv sesija + audit izvršiti u istoj transakciji; test poziva servis/API, ne ručno SQL.
+4. Osvježavati `last_seen_at`, prikazati IP hash i povezati administratorske sesije/reset 2FA u korisnički detalj; ne vraćati tokene/sirovi UA.
 
 **Prihvat:** promjena prava važi odmah i stare sesije su opozvane; istek lozinke vodi samo u dozvoljeni reset tok; UI prikazuje podatke iz servera uz auditiran admin opoziv.
 
 ### D. Završiti lifecycle pozivnica, reset i postavki
 
-Dodati potvrđeni self-service reset i dostavu kroz zajednički notification ugovor; bez SMTP-a eksplicitno prikazati `BLOCKED_NO_PROVIDER`, nikad lažno „poslano“. Razgraničiti administrativni outbox/retry s Modulom 12. Dodati korisničke `locale`/`timezone` preferencije i firmne valutu/zonu samo ako ih vlasnik potvrdi u obimu; zadržati izmjene uz audit.
+Modul 1 emituje invite/reset događaje; Modul 12 isporučuje ih kroz zajednički outbox i vodi status/retry UI. Dodati self-service reset; bez SMTP-a prikazati `BLOCKED_NO_PROVIDER`, nikad lažno „poslano“. Ne praviti paralelni outbox. Korisničke i firmine lokalizacijske postavke implementirati u potvrđenom obimu uz audit.
 
 **Prihvat:** javni zahtjev za reset ne otkriva postojanje emaila; token je jednokratan i hashiran; pozivnica/reset ima status dostave; korisnički override i firmni default se ne miješaju.
 
 ### E. Završiti audit i matrice
 
-Klasifikovati svaku audit akciju, uvesti izvršivu retenciju i odobriti purge/archive ponašanje; dodati audit događaje za obračun i osjetljive priloge. Standardizovati metadata i rekurzivnu zabranu tajni. Dodati oznake osjetljivosti u permission metadata/UI i pokriti ih testom.
+Klasifikovati svaku audit akciju i dodati izvršivu retenciju/read writers. Destruktivni purge/archive čeka pravnu/računovodstvenu potvrdu; dodati audit događaje za obračun i osjetljive priloge. Standardizovati metadata i rekurzivnu zabranu tajni; dodati oznake osjetljivosti i test matrice.
 
 **Prihvat:** finansijski i pristupni događaji imaju očekivane klase; osjetljiva čitanja su provjerljiva; purge je idempotentan, tenant-siguran i ostavlja sažeti dokaz.
 
