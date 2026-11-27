@@ -144,3 +144,18 @@ describe("meni po roli == matrica dozvola (A4b, web)", () => {
     }
   });
 });
+
+describe("UI-1 moduli i tabovi po dozvolama", () => {
+  it.each(ROLES.map((role) => [role] as const))("%s zadržava sve dozvoljene putanje kroz najviše deset modula", async role => {
+    const {navModulesForRoles}=await import("./nav");
+    const modules=navModulesForRoles([role]);
+    expect(modules.length).toBeLessThanOrEqual(10);
+    const hrefs=modules.flatMap(module=>module.items.map(item=>item.href));
+    expect(new Set(hrefs).size).toBe(hrefs.length);
+    for(const entry of navEntriesForRoles([role])) expect(hrefs).toContain(entry.href);
+    for(const item of modules.flatMap(module=>module.items)) {
+      expect(item.permission === "authenticated" || can([role],item.permission)).toBe(true);
+      expect(pageRoutes(appDir)).toContain(item.href);
+    }
+  });
+});

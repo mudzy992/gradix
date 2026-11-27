@@ -371,6 +371,34 @@ body[data-c1-preview="ured"] .r4a-office{min-height:100vh;border-radius:0}
 body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r4a-mobile-screen{width:100vw;max-width:none;min-height:100vh}
 @media(max-width:960px){.c1-row{grid-template-columns:44px minmax(0,1fr) auto auto}.c1-ex{display:none}}
 @media(max-width:639px){.c1-row{grid-template-columns:40px minmax(0,1fr) auto;row-gap:4px;padding:12px 2px}.c1-count{font-size:20px}.c1-go{grid-column:2;display:inline-flex}.c1-ex{display:block;grid-column:2 / -1}.c1-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.c1-sync-row{grid-template-columns:minmax(0,1fr) auto}.c1-sync-row .c1-sync-when{display:none}}
+
+/* UI-1 proposal: existing palette and components, pending owner approval. */
+.ui1-ref{max-width:1440px;margin:48px auto;padding:24px}
+.ui1-preview{display:grid;grid-template-columns:218px minmax(0,1fr);background:var(--bg);border:1px solid var(--line);border-radius:20px;overflow:hidden;min-height:680px}
+.ui1-side{padding:26px 16px;border-right:1px solid var(--line)}
+.ui1-side strong{display:block;font-size:20px;margin:0 10px 26px}
+.ui1-side span{display:block;padding:9px 10px;color:var(--muted);font-weight:650;font-size:13px;border-radius:10px}
+.ui1-side span:first-of-type{color:var(--text);background:var(--panel)}
+.ui1-main{padding:24px;background:var(--panel);min-width:0}
+.ui1-top{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:24px;color:var(--muted);font-size:12px}
+.ui1-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.ui1-heading h2{font-size:25px;margin:0 0 5px}.ui1-heading p{margin:0;color:var(--muted);font-size:13px}
+.ui1-cta{display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700}
+.ui1-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.ui1-kpi{border:1px solid var(--line);border-radius:14px;padding:15px;background:var(--bg)}
+.ui1-kpi span{display:block;color:var(--muted);font-size:11px}.ui1-kpi b{display:block;font:700 23px "IBM Plex Mono",monospace;margin-top:7px}
+.ui1-cols{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,1fr);gap:14px}
+.ui1-box{border:1px solid var(--line);border-radius:16px;padding:18px;background:var(--panel)}
+.ui1-box h3{font-size:15px;margin:0 0 5px}.ui1-box .sub{margin:0 0 14px;font-size:12px}
+.ui1-row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid var(--line);padding:13px 0;font-size:13px}
+.ui1-row small{display:block;color:var(--muted);margin-top:3px}.ui1-row b{font-size:13px}.ui1-link{color:var(--link);font-weight:700;white-space:nowrap}
+.ui1-navtabs{display:flex;gap:18px;overflow:auto;border-bottom:1px solid var(--line);margin-top:22px;padding:0 0 12px;white-space:nowrap;font-size:12px;color:var(--muted)}
+.ui1-empty{margin-top:14px}.ui1-empty ol{padding-left:20px;font-size:13px;line-height:2}
+body[data-ui1-preview]{height:auto;overflow:auto}
+body[data-ui1-preview] > :not(#ui1-reference):not(script):not(svg){display:none}
+body[data-ui1-preview] #ui1-reference{max-width:none;margin:0;padding:16px}
+@media(max-width:850px){.ui1-preview{grid-template-columns:1fr}.ui1-side{border-right:0;border-bottom:1px solid var(--line)}.ui1-side strong{margin-bottom:12px}.ui1-side span{display:inline-block}.ui1-main{padding:20px}.ui1-cols{grid-template-columns:1fr}}
+@media(max-width:520px){.ui1-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ui1-side span:not(:first-of-type){display:none}.ui1-top{margin-bottom:20px}}
 </style>
 </head>
 <body>
@@ -1446,6 +1474,23 @@ body[data-c1-preview="mob"] .r4a-mobile-screen,body[data-c1-preview="prazno"] .r
   </div>
 </section>
 
+<section class="ui1-ref" id="ui1-reference" aria-labelledby="ui1-heading">
+  <p class="sub">UI-1 · DIZAJNERSKI PRIJEDLOG · ilustrativni podaci</p>
+  <h1 id="ui1-heading">Pregled i navigacija</h1>
+  <p class="sub">Postojeće komponente, jedna hijerarhija; dostupnost i brojke zavise od uloge. Prije implementacije potreban je pregled i odobrenje vlasnika.</p>
+  <div class="ui1-preview">
+    <aside class="ui1-side" aria-label="Primjer glavnih modula"><strong>Gradix</strong><span>Pregled</span><span>Projekti</span><span>Radnici i sati</span><span>Mehanizacija</span><span>Obaveze i rokovi</span><span>Skladište i nabavka</span><span>Dnevnik i HSE</span><span>Obračun</span><span>Izvještaji</span><span>Postavke</span></aside>
+    <div class="ui1-main"><div class="ui1-top"><span>⌕ &nbsp; Traži projekte, radnike, mašine &nbsp; · &nbsp; Ctrl K</span><span>Gradix Niskogradnja · Vlasnik</span></div>
+      <div class="ui1-heading"><div><h2>Dobro jutro, Amina</h2><p>Gradix Niskogradnja · Vlasnik &nbsp; / &nbsp; Vaš radni prostor</p></div><span class="ui1-cta">+ Novi projekat</span></div>
+      <div class="ui1-kpis"><div class="ui1-kpi"><span>Aktivni projekti</span><b>3</b></div><div class="ui1-kpi"><span>Radnici</span><b>12</b></div><div class="ui1-kpi"><span>Mašine</span><b>8</b></div><div class="ui1-kpi"><span>Za provjeru</span><b>2</b></div></div>
+      <div class="ui1-cols"><section class="ui1-box"><h3>Prioriteti za vas</h3><p class="sub">Najvažnije radnje, na jednom mjestu.</p><div class="ui1-row"><div><b>Istekli rokovi · 2</b><small>Dokumenti koji traže obnovu</small></div><span class="ui1-link">Otvori →</span></div><div class="ui1-row"><div><b>Dani za potvrdu · 3</b><small>Pristigli radni dani</small></div><span class="ui1-link">Pregledaj →</span></div></section>
+      <section class="ui1-box"><h3>Kvalitet podataka</h3><p class="sub">Kratka kontrola unosa.</p><div class="ui1-row"><span>Radnici bez satnice</span><b>2</b></div><div class="ui1-row"><span>Projekti s budžetom</span><b>U redu</b></div></section></div>
+      <section class="ui1-box ui1-empty"><h3>Početak rada · prazna firma</h3><p class="sub">Tri koraka da pripremite prvi radni dan.</p><ol><li>Dodajte radnike i satnice</li><li>Dodajte projekat i mašine</li><li>Napravite prvu dodjelu</li></ol></section>
+      <nav class="ui1-navtabs" aria-label="Primjer tabova modula"><b>Projekti</b><span>Zadaci</span><span>Tenderi</span><span>Podizvođači</span></nav>
+    </div>
+  </div>
+</section>
+
 <script>
 const r=document.documentElement,m=matchMedia("(prefers-color-scheme: dark)"),params=new URLSearchParams(location.search);
 const requestedTheme=params.get("theme");
@@ -1453,6 +1498,7 @@ r.dataset.theme=requestedTheme==="light"||requestedTheme==="dark"?requestedTheme
 if(params.get("preview")==="r4a1"&&(params.get("screen")==="worker"||params.get("screen")==="office"))document.body.dataset.r4aPreview=params.get("screen");
 if(params.get("preview")==="r4b-approval"&&["office","foreman"].includes(params.get("screen")))document.body.dataset.r4bApprovalPreview=params.get("screen");
 if(params.get("preview")==="c1"&&["ured","mob","prazno"].includes(params.get("screen")))document.body.dataset.c1Preview=params.get("screen");
+if(params.get("preview")==="ui1")document.body.dataset.ui1Preview="true";
 const toggleTheme=()=>{r.dataset.theme=r.dataset.theme==="dark"?"light":"dark"};
 document.getElementById("theme").onclick=toggleTheme;
 document.getElementById("r4a-mobile-theme").onclick=toggleTheme;

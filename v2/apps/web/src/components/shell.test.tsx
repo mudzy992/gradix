@@ -136,6 +136,7 @@ describe("okvir — tastatura", () => {
     expect(trigger).toHaveAttribute("aria-haspopup", "menu");
     await userEvent.click(trigger);
     const menu = screen.getByRole("menu", { name: "Korisnički meni" });
+    expect(within(menu).getByRole("menuitem", { name: "Moj profil i sigurnost" })).toHaveAttribute("href", "/ured/profil");
     expect(within(menu).getByRole("menuitem", { name: "Promijeni lozinku" })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Odjavi se" })).toBeInTheDocument();
   });

@@ -5,186 +5,91 @@
 import { expect } from "@playwright/test";
 import { test } from "./helpers/annotate";
 import { E2E_USERS, loginUi, logoutUi, requireE2ePassword } from "./helpers/auth";
-import { navLabels } from "./helpers/nav";
+import { ensureNavVisible, navLabels, openModuleTab } from "./helpers/nav";
 
 test.beforeAll(() => {
   requireE2ePassword();
 });
 
 test.describe("auth/nav smoke", { tag: ["@smoke"] }, () => {
-  test("vlasnik: meni sadrži Radne dane i Korisnike; odjava vraća na prijavu", async ({ page }) => {
+  test("vlasnik: fokusirani moduli i dozvoljeni tabovi vode na stvarne stranice", async ({ page }) => {
+    test.setTimeout(180_000);
     await loginUi(page, E2E_USERS.owner);
     const labels = await navLabels(page);
-    expect(labels).toContain("Radni dani");
-    expect(labels).toContain("Korisnici");
-    expect(labels).toContain("Radnici");
+    expect(labels.length).toBeLessThanOrEqual(10);
+    for (const label of ["Projekti", "Radnici i sati", "Mehanizacija", "Postavke"]) expect(labels).toContain(label);
+    for (const [module, tab, href] of [
+      ["Radnici i sati", "Radni dani", "/ured/radni-dani"],
+      ["Postavke", "Korisnici", "/ured/korisnici"],
+      ["Projekti", "Partneri", "/ured/partneri"],
+      ["Projekti", "Tenderi", "/ured/tenderi"],
+      ["Mehanizacija", "Sati mašina", "/ured/sati-masine"],
+      ["Mehanizacija", "Gorivo", "/ured/gorivo"],
+      ["Mehanizacija", "Ture", "/ured/ture"],
+      ["Mehanizacija", "Dnevni pregled", "/ured/dnevni-pregled"],
+      ["Mehanizacija", "Kvarovi", "/ured/kvarovi"],
+      ["Mehanizacija", "Trošak mašina", "/ured/trosak-masina"],
+      ["Postavke", "Kategorije troška", "/ured/postavke/kategorije-troska"],
+    ]) await openModuleTab(page, module!, tab!, href!);
     await logoutUi(page);
     await expect(page.getByRole("heading", { name: "Prijava" })).toBeVisible();
   });
 
-  test("radnik: meni nema uredske stavke (ni Radne dane ni Korisnike)", async ({ page }) => {
-    await loginUi(page, E2E_USERS.worker);
-    const labels = await navLabels(page);
-    expect(labels).not.toContain("Radni dani");
-    expect(labels).not.toContain("Korisnici");
-    expect(labels).not.toContain("Radnici");
-  });
-
-  test("zabranjen direktan URL: radnik na /ured/korisnici dobija 403 stranicu", async ({ page }) => {
-    await loginUi(page, E2E_USERS.worker);
-    await page.goto("/ured/korisnici");
-    await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
-    await page.getByRole("link", { name: "Nazad na pregled" }).click();
-    await page.waitForURL("**/pregled");
-  });
-
-  test("vlasnik i računovođa: meni sadrži Sati mašina", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    expect(await navLabels(page)).toContain("Sati mašina");
-    await logoutUi(page);
+  test("računovođa: tabovi su dostupni, ali unos ostaje zabranjen", async ({ page }) => {
+    test.setTimeout(180_000);
     await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Sati mašina");
-  });
-
-  test("računovođa: na Sati mašina nema dugmeta Novi unos", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    await page.goto("/ured/sati-masine");
-    await expect(page.getByRole("heading", { name: "Sati mašina" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
-  });
-
-  test("vlasnik i računovođa: stižu do Gorivo iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    expect(await navLabels(page)).toContain("Gorivo");
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Gorivo");
-  });
-
-  test("računovođa: na Gorivo nema dugmeta Novi unos", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    await page.goto("/ured/gorivo");
-    await expect(page.getByRole("heading", { name: "Gorivo" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
-  });
-
-  test("vlasnik i računovođa: stižu do Ture iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    expect(await navLabels(page)).toContain("Ture");
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Ture");
-  });
-
-  test("računovođa: na Ture nema dugmeta Novi unos", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    await page.goto("/ured/ture");
-    await expect(page.getByRole("heading", { name: "Ture" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
-  });
-
-  test("vlasnik i računovođa: stižu do Dnevni pregled iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    expect(await navLabels(page)).toContain("Dnevni pregled");
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Dnevni pregled");
-  });
-
-  test("računovođa: na Dnevni pregled nema dugmeta Novi unos", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    await page.goto("/ured/dnevni-pregled");
-    await expect(page.getByRole("heading", { name: "Dnevni pregled" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
-  });
-
-  test("vlasnik i računovođa: stižu do Kvarovi iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    expect(await navLabels(page)).toContain("Kvarovi");
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Kvarovi");
-  });
-
-  test("vlasnik: stiže do Partneri i Tenderi iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    const labels = await navLabels(page);
-    expect(labels).toContain("Partneri");
-    expect(labels).toContain("Tenderi");
-    await page.goto("/ured/partneri");
-    await expect(page.getByRole("heading", { name: "Partneri" })).toBeVisible();
-    await page.goto("/ured/tenderi");
-    await expect(page.getByRole("heading", { name: "Tenderi" })).toBeVisible();
-  });
-
-  test("računovođa: vidi Tenderi, nema dugme Novi tender", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Tenderi");
-    await page.goto("/ured/tenderi");
-    await expect(page.getByRole("heading", { name: "Tenderi" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "+ Novi tender" })).toHaveCount(0);
-  });
-
-  test("radnik: ne vidi Partneri ni Tenderi u meniju", async ({ page }) => {
-    await loginUi(page, E2E_USERS.worker);
-    const labels = await navLabels(page);
-    expect(labels).not.toContain("Partneri");
-    expect(labels).not.toContain("Tenderi");
-  });
-
-  test("računovođa: na Kvarovi nema dugmeta Novi unos", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    await page.goto("/ured/kvarovi");
-    await expect(page.getByRole("heading", { name: "Kvarovi" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Novi unos" })).toHaveCount(0);
-  });
-
-  /*
-   * F5: „Troškovi projekta“ više nije samostalan ekran nego TAB unutar projekta — trošak se gleda
-   * uz svoj budžet i maržu. Zato se provjerava ono što je sada istina: vlasnik stiže do Trošak
-   * mašina iz menija i do Kategorija troška, a ledger otvara kroz projekat.
-   */
-  test("vlasnik: stiže do Trošak mašina i Kategorija troška iz menija", async ({ page }) => {
-    await loginUi(page, E2E_USERS.owner);
-    const labels = await navLabels(page);
-    expect(labels).toContain("Trošak mašina");
-    expect(labels).toContain("Kategorije troška");
-    await page.goto("/ured/trosak-masina");
-    await expect(page.getByRole("heading", { name: "Trošak mašina" })).toBeVisible();
-    await page.goto("/ured/postavke/kategorije-troska");
-    await expect(page.getByRole("heading", { name: "Kategorije troška" })).toBeVisible();
-  });
-
-  test("računovođa: vidi Kategorije troška, nema knjiženja ni storna", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Kategorije troška");
-    await page.goto("/ured/postavke/kategorije-troska");
-    await expect(page.getByRole("heading", { name: "Kategorije troška" })).toBeVisible();
-    // Knjiženje i storno traže `projects.costs.book`, koje računovođa NEMA (§3).
-    await expect(page.getByRole("button", { name: "+ Nova kategorija" })).toHaveCount(0);
-  });
-
-  /*
-   * F6: „Obračun sati“ je postao „Obračun“ — mjesečni obračun sa iznosima. Izvoz sirovih sati
-   * (bivši ekran sa „Preuzmi CSV“) živi na `/ured/obracun-sati/sati`.
-   */
-  test("računovođa: stiže do Obračuna i do izvoza sirovih sati", async ({ page }) => {
-    await loginUi(page, E2E_USERS.accountant);
-    expect(await navLabels(page)).toContain("Obračun");
-    await page.goto("/ured/obracun-sati");
-    await expect(page.getByRole("heading", { name: "Obračun" })).toBeVisible();
-    await page.goto("/ured/obracun-sati/sati");
+    for (const [module, tab, href, heading, button] of [
+      ["Mehanizacija", "Sati mašina", "/ured/sati-masine", "Sati mašina", "Novi unos"],
+      ["Mehanizacija", "Gorivo", "/ured/gorivo", "Gorivo", "Novi unos"],
+      ["Mehanizacija", "Ture", "/ured/ture", "Ture", "Novi unos"],
+      ["Mehanizacija", "Dnevni pregled", "/ured/dnevni-pregled", "Dnevni pregled", "Novi unos"],
+      ["Mehanizacija", "Kvarovi", "/ured/kvarovi", "Kvarovi", "Novi unos"],
+      ["Projekti", "Tenderi", "/ured/tenderi", "Tenderi", "+ Novi tender"],
+      ["Postavke", "Kategorije troška", "/ured/postavke/kategorije-troska", "Kategorije troška", "+ Nova kategorija"],
+    ]) {
+      await openModuleTab(page, module!, tab!, href!);
+      await expect(page.getByRole("heading", { name: heading!, exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: button!, exact: true })).toHaveCount(0);
+    }
+    await openModuleTab(page, "Obračun", "Izvoz sati", "/ured/obracun-sati/sati");
     await expect(page.getByRole("heading", { name: "Izvoz sirovih sati" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Preuzmi CSV" })).toBeVisible();
   });
 
-  test("radnik: ne vidi Obračun u meniju (iznose ne vidi)", async ({ page }) => {
-    await loginUi(page, E2E_USERS.worker);
-    expect(await navLabels(page)).not.toContain("Obračun");
+  test("šef: radni dani su dostupni, korisnička administracija nije", async ({ page }) => {
+    await loginUi(page, E2E_USERS.supervisor);
+    await openModuleTab(page, "Radnici i sati", "Radni dani", "/ured/radni-dani");
+    await ensureNavVisible(page);
+    const settings = page.getByRole("navigation", { name: "Glavna navigacija" }).getByRole("link", { name: "Postavke", exact: true });
+    if (await settings.count()) {
+      await settings.click();
+      await expect(page.getByRole("navigation", { name: "Postavke — navigacija" }).getByRole("link", { name: "Korisnici", exact: true })).toHaveCount(0);
+    }
   });
 
-  test("šef: vidi Radnike i Radne dane, ne vidi Korisnike", async ({ page }) => {
-    await loginUi(page, E2E_USERS.supervisor);
+  test("profil: korisnički meni otvara sigurnost i dijalog za passkey", async ({ page }) => {
+    await loginUi(page, E2E_USERS.owner);
+    await page.getByRole("button", { name: /Korisnički meni/ }).click();
+    await page.getByRole("menuitem", { name: "Moj profil i sigurnost" }).click();
+    await expect(page).toHaveURL(/\/ured\/profil$/);
+    await page.getByRole("button", { name: "Dodaj passkey" }).click();
+    const dialog = page.getByRole("dialog", { name: "Dodaj passkey" });
+    await expect(dialog.getByLabel("Naziv uređaja")).not.toHaveValue("");
+    await expect(dialog.getByLabel("Trenutna lozinka")).toBeVisible();
+    await expect(dialog.getByLabel(/Kod iz autentikatora/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Odustani" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test("radnik: uredske funkcije ostaju zabranjene", async ({ page }) => {
+    await loginUi(page, E2E_USERS.worker);
     const labels = await navLabels(page);
-    expect(labels).toContain("Radnici");
-    expect(labels).toContain("Radni dani");
-    expect(labels).not.toContain("Korisnici");
+    expect(labels).not.toContain("Radnici i sati");
+    expect(labels).not.toContain("Obračun");
+    await page.goto("/ured/korisnici");
+    await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toBeVisible();
+    await page.getByRole("link", { name: "Nazad na pregled" }).click();
+    await page.waitForURL("**/pregled");
   });
 });
 

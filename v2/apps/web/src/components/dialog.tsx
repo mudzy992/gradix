@@ -18,6 +18,7 @@ export function Dialog({
   returnFocusTo,
   onClose,
   wide = false,
+  trapFocus = false,
 }: {
   title: string;
   hint?: ReactNode;
@@ -26,6 +27,7 @@ export function Dialog({
   returnFocusTo?: HTMLElement | null;
   onClose: () => void;
   wide?: boolean;
+  trapFocus?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const firstField = useRef<HTMLDivElement>(null);
@@ -41,6 +43,18 @@ export function Dialog({
     (target ?? panel.current)?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
+      if (trapFocus && event.key === "Tab" && panel.current) {
+        const focusable = Array.from(panel.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )).filter(element => !element.closest('[hidden], [aria-hidden="true"]'));
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (!first || !last) { event.preventDefault(); panel.current.focus(); }
+        else if (event.shiftKey && (document.activeElement === first || !panel.current.contains(document.activeElement))) {
+          event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !panel.current.contains(document.activeElement))) {
+          event.preventDefault(); first.focus();
+        }
+      }
       if (event.key === "Escape") {
         event.stopPropagation();
         onCloseRef.current();

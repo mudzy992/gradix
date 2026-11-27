@@ -81,9 +81,9 @@ export const PasskeyRegisterVerifyInput = z.object({
     authenticatorData: WebAuthnBinary.optional(),
   }) }),
 });
-export const PasskeyLoginOptionsInput = z.object({ email: SafeText.trim().min(3).max(200) });
+export const PasskeyLoginOptionsInput = z.object({ email: SafeText.trim().min(3).max(200).optional() });
 export const PasskeyLoginVerifyInput = z.object({
-  email: SafeText.trim().min(3).max(200),
+  email: SafeText.trim().min(3).max(200).optional(),
   credential: z.object({ ...WebAuthnBase, response: z.object({
     clientDataJSON: WebAuthnBinary, authenticatorData: WebAuthnBinary,
     signature: WebAuthnBinary, userHandle: WebAuthnBinary.nullable().optional(),

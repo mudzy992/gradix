@@ -42,7 +42,7 @@ test("šef potvrđuje dan, ured odobrava i zaključava; računovođa samo čita"
   await expect(acct.getByRole("button", { name: "Potvrdi dan" })).toHaveCount(0);
   await expect(acct.getByRole("button", { name: "Odobri sedmicu" })).toHaveCount(0);
   await expect(acct.getByRole("button", { name: "Zaključaj" })).toHaveCount(0);
-  const nav = acct.getByRole("navigation", { name: "Glavna navigacija" });
-  await expect(nav.getByRole("link", { name: "Radni dani" })).toBeVisible();
+  const tabs = acct.getByRole("navigation", { name: "Radnici i sati — navigacija" });
+  await expect(tabs.getByRole("link", { name: "Radni dani", exact: true })).toHaveAttribute("aria-current", "page");
   await acctCtx.close();
 });

@@ -102,3 +102,35 @@ export function navGroupsForRoles(
       })),
   })).filter((group) => group.items.length > 0);
 }
+
+/** UI-1: sve stare putanje ostaju dostupne, ali sidebar prikazuje samo glavne module. */
+export type NavModule = { label: string; icon: IconName; items: NavEntry[] };
+const MODULES: readonly { label: string; icon: IconName; hrefs: readonly string[] }[] = [
+  {label:"Pregled",icon:"home",hrefs:["/pregled"]},
+  {label:"Projekti",icon:"pin",hrefs:["/ured/projekti","/ured/zadaci","/ured/tenderi","/ured/tenderi/kalendar","/ured/tenderi/uspjesnost","/ured/podizvodjaci","/ured/partneri"]},
+  {label:"Radnici i sati",icon:"users",hrefs:["/ured/radnici","/ured/radni-dani","/ured/radni-dani/sedmica","/ured/sukobi","/ured/uvoz"]},
+  {label:"Mehanizacija",icon:"truck",hrefs:["/ured/masine","/ured/masine/kalendar","/ured/sati-masine","/ured/gorivo","/ured/ture","/ured/dnevni-pregled","/ured/kvarovi","/ured/servis","/ured/servis/planovi","/ured/trosak-masina"]},
+  {label:"Obaveze i rokovi",icon:"calendar",hrefs:["/ured/rokovi"]},
+  {label:"Skladište i nabavka",icon:"folder",hrefs:["/ured/skladiste","/ured/nabavka","/ured/dijelovi"]},
+  {label:"Dnevnik i HSE",icon:"shield",hrefs:["/ured/dnevnik","/ured/hse","/ured/hse/inspekcije","/ured/hse/obuke"]},
+  {label:"Obračun",icon:"list",hrefs:["/ured/obracun-sati","/ured/obracun-sati/sati","/ured/obracun-sati/postavke"]},
+  {label:"Izvještaji",icon:"list",hrefs:["/ured/izvjestaji"]},
+  {label:"Postavke",icon:"shield",hrefs:["/ured/postavke","/ured/postavke/kategorije-troska","/ured/korisnici","/ured/role","/ured/audit","/ured/obavjestenja"]},
+];
+const MODULE_EXTRA: readonly NavEntry[] = [
+  {href:"/ured/tenderi/kalendar",label:"Kalendar tendera",icon:"calendar",description:"Rokovi tendera",group:"Evidencija",permission:"tenders.view"},
+  {href:"/ured/tenderi/uspjesnost",label:"Uspješnost tendera",icon:"list",description:"Rezultati tendera",group:"Evidencija",permission:"tenders.view"},
+  {href:"/ured/radni-dani/sedmica",label:"Sedmični pregled",icon:"calendar",description:"Radnici po danima",group:"Rad / obračun",permission:"workdays.view"},
+  {href:"/ured/servis/planovi",label:"Planovi servisa",icon:"shield",description:"Preventivno održavanje",group:"Mehanizacija",permission:"service.view"},
+  {href:"/ured/dijelovi",label:"Dijelovi",icon:"folder",description:"Dijelovi u skladištu",group:"Evidencija",permission:"stock.view"},
+  {href:"/ured/hse/inspekcije",label:"Inspekcije",icon:"shield",description:"HSE inspekcije",group:"Evidencija",permission:"hse.view"},
+  {href:"/ured/hse/obuke",label:"Obuke",icon:"shield",description:"HSE obuke",group:"Evidencija",permission:"hse.view"},
+  {href:"/ured/obracun-sati/sati",label:"Izvoz sati",icon:"list",description:"Izvoz sirovih sati",group:"Rad / obračun",permission:"payroll.hours.export"},
+];
+export function navModulesForRoles(roles: readonly string[], badges: Partial<Record<string, {count:number;older:number}>> = {}): NavModule[] {
+  const entries=[...NAV_ENTRIES,...MODULE_EXTRA];
+  return MODULES.map(module=>({ ...module, items:module.hrefs.flatMap(href=>{
+    const entry=entries.find(candidate=>candidate.href===href);
+    return entry && (entry.permission === "authenticated" || can(roles,entry.permission)) ? [{...entry,badge:badges[href]}] : [];
+  })})).filter(module=>module.items.length>0);
+}

@@ -158,14 +158,16 @@
   color: var(--text);
 }
 
-.gx-nav-item[aria-current="page"] {
+.gx-nav-item[aria-current="page"],
+.gx-nav-item[aria-current="location"] {
   background: var(--panel);
   color: var(--text);
   box-shadow: var(--shadow);
   outline: 1px solid var(--line);
 }
 
-.gx-nav-item[aria-current="page"] .gx-nav-item__icon {
+.gx-nav-item[aria-current="page"] .gx-nav-item__icon,
+.gx-nav-item[aria-current="location"] .gx-nav-item__icon {
   color: var(--link);
 }
 
@@ -698,6 +700,16 @@
   cursor: pointer;
 }
 
+.gx-module-tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  white-space: nowrap;
+}
+.gx-module-tabs .gx-tab {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
 .gx-tab:hover {
   color: var(--text);
 }
@@ -1124,6 +1136,19 @@ textarea.gx-input {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
   gap: var(--space-5);
+}
+
+.gx-dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.gx-dashboard-column {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .gx-cols + .gx-card {

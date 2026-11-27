@@ -12,8 +12,8 @@
  * komponente, pa se prijava sa 2FA ne može „nastaviti" iz druge kartice — i ne treba.
  */
 import { useRouter } from "next/navigation";
-import { browserSupportsWebAuthn, startAuthentication, type PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
-import { useEffect, useState } from "react";
+import { browserSupportsWebAuthn, browserSupportsWebAuthnAutofill, startAuthentication, WebAuthnAbortService, type PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
+import { useEffect, useRef, useState } from "react";
 import { apiCall, jsonBody } from "@/api-client";
 import { isTwoFactorRequired, type LoginResponse } from "@gradix/contracts";
 import { Alert, Button, Input, Stack } from "@/components/ui/index";
@@ -35,7 +35,58 @@ export default function LoginPage() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [code, setCode] = useState("");
   const [passkeysSupported, setPasskeysSupported] = useState(false);
-  useEffect(() => { setPasskeysSupported(browserSupportsWebAuthn()); }, []);
+  const ceremony = useRef(0);
+  // The options response sets an HttpOnly challenge cookie. Serializing requests prevents
+  // a late conditional response from overwriting the cookie for an explicit ceremony.
+  const optionsTail = useRef<Promise<void>>(Promise.resolve());
+
+  function cancelPasskey() {
+    ceremony.current += 1;
+    WebAuthnAbortService.cancelCeremony();
+  }
+
+  async function passkeyOptions(emailAddress?: string) {
+    const previous = optionsTail.current;
+    let release!: () => void;
+    optionsTail.current = new Promise<void>(resolve => { release = resolve; });
+    await previous;
+    try {
+      return await apiCall<{options: PublicKeyCredentialRequestOptionsJSON}>(
+        "/api/auth/passkeys/login/options", jsonBody(emailAddress ? { email: emailAddress } : {}),
+      );
+    } finally { release(); }
+  }
+
+  async function runPasskey(emailAddress: string | undefined, autofill: boolean, generation: number) {
+    try {
+      const options = await passkeyOptions(emailAddress);
+      if (generation !== ceremony.current) return;
+      if (!options.ok) { if (!autofill) setState({ kind: "error", message: options.message }); return; }
+      const credential = await startAuthentication({ optionsJSON: options.data.options, useBrowserAutofill: autofill });
+      if (generation !== ceremony.current) return;
+      setBusy(true);
+      const result = await apiCall<{mustChangePassword: boolean}>(
+        "/api/auth/passkeys/login/verify", jsonBody({ ...(emailAddress ? { email: emailAddress } : {}), credential }),
+      );
+      if (generation !== ceremony.current) return;
+      if (!result.ok) { setState({ kind: "error", message: result.message }); return; }
+      router.replace(result.data.mustChangePassword ? "/lozinka/promjena" : "/pregled");
+      router.refresh();
+    } catch {
+      if (!autofill && generation === ceremony.current) setState({ kind: "error", message: "Passkey prijava nije dovršena. Pokušajte ponovo ili koristite lozinku." });
+    } finally { if (generation === ceremony.current) setBusy(false); }
+  }
+
+  useEffect(() => {
+    const supported = browserSupportsWebAuthn();
+    setPasskeysSupported(supported);
+    const generation = ++ceremony.current;
+    if (supported) void browserSupportsWebAuthnAutofill().then(available => {
+      if (available && generation === ceremony.current) void runPasskey(undefined, true, generation);
+    }).catch(() => { /* Password and the explicit button remain available. */ });
+    return () => { ceremony.current += 1; WebAuthnAbortService.cancelCeremony(); };
+  // Initialize conditional mediation once per mounted login page.
+  }, []);
 
   // Odbrojavanje traje samo dok traje zabrana; `retryAfter` u stanju je početna vrijednost.
   const retryAfter = state.kind === "error" ? state.retryAfter : undefined;
@@ -83,6 +134,7 @@ export default function LoginPage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    cancelPasskey();
     setBusy(true);
     // Tip dolazi iz ugovora (unija: puna sesija ili 2FA vrata) — ekran ne pogađa oblik.
     const result = await apiCall<LoginResponse>("/api/auth/login", jsonBody({ email, password }));
@@ -106,18 +158,10 @@ export default function LoginPage() {
     router.refresh();
   }
 
-  async function submitPasskey() {
-    if (!email.trim()) { setState({ kind: "error", message: "Unesite email za prijavu passkey ključem." }); return; }
+  function submitPasskey() {
+    cancelPasskey();
     setBusy(true);
-    try {
-      const options = await apiCall<{options: PublicKeyCredentialRequestOptionsJSON}>("/api/auth/passkeys/login/options", jsonBody({email}));
-      if (!options.ok) { setState({kind:"error",message:options.message}); return; }
-      const credential = await startAuthentication({optionsJSON: options.data.options});
-      const result = await apiCall<{mustChangePassword: boolean}>("/api/auth/passkeys/login/verify", jsonBody({email, credential}));
-      if (!result.ok) { setState({kind:"error",message:result.message}); return; }
-      router.replace(result.data.mustChangePassword ? "/lozinka/promjena" : "/pregled"); router.refresh();
-    } catch { setState({kind:"error",message:"Passkey prijava nije dovršena. Pokušajte ponovo ili koristite lozinku."}); }
-    finally { setBusy(false); }
+    void runPasskey(email.trim() || undefined, false, ceremony.current);
   }
 
   /** Sesija za uparivanje: dobija se bez koda, ali vidi samo Postavke → Sigurnost. */
@@ -188,7 +232,7 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={submit} noValidate>
             <Stack>
-              <Input label="Email" id="email" name="email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} />
+              <Input label="Email" id="email" name="email" type="email" autoComplete="username webauthn" required value={email} onChange={(event) => setEmail(event.target.value)} />
               <Input label="Lozinka" id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
 
               {state.kind === "error" ? (

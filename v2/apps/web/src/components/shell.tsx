@@ -12,6 +12,8 @@ import { useTheme } from "./shell-theme";
 import { ROLE_BS, initialsOf } from "./shell-user";
 import { CommandPalette } from "./shell-palette";
 import { ShellNav } from "./shell-nav";
+import { ModuleNavigation, ModuleTabs } from "./module-nav";
+import type { NavModule } from "./nav";
 import { ShellUserMenu } from "./shell-user-menu";
 import { ShellBell } from "./shell-bell";
 import type { NavItem } from "./shell-types";
@@ -23,10 +25,12 @@ export type ShellUser = { displayName: string; email: string; companyName: strin
 
 export default function Shell({
   groups,
+  modules,
   user,
   children,
 }: {
   groups: NavGroup[];
+  modules?: NavModule[];
   user: ShellUser;
   children: React.ReactNode;
 }) {
@@ -47,7 +51,7 @@ export default function Shell({
   }, [pathname]);
 
   const allItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
-  const current = allItems.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const current = allItems.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)).sort((a, b) => b.href.length - a.href.length)[0];
   const openSearch = useCallback(() => setSearchOpen(true), []);
 
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function Shell({
             Gradix
           </span>
         </div>
-        <ShellNav groups={groups} pathname={pathname} currentHref={current?.href} />
+        {modules ? <ModuleNavigation modules={modules} pathname={pathname} onNavigate={() => setDrawerOpen(false)} /> : <ShellNav groups={groups} pathname={pathname} currentHref={current?.href} />}
         <div className="gx-org">
           <span aria-hidden="true" className="gx-avatar">
             {initialsOf(user.displayName)}
@@ -143,6 +147,7 @@ export default function Shell({
           />
         </header>
         <main id="sadrzaj" className="gx-page gx-scroll-hidden" tabIndex={-1}>
+          {modules ? <ModuleTabs modules={modules} pathname={pathname} /> : null}
           {children}
         </main>
       </div>

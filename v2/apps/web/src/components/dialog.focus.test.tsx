@@ -14,7 +14,7 @@ function ControlledDialog({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   // Inline onClose na svaki render simulira Partneri/Tenderi klijente.
   return (
-    <Dialog title="Test" onClose={() => onClose()}>
+    <Dialog title="Test" onClose={() => onClose()} trapFocus>
       <label htmlFor="dlg-code">
         Šifra
         <input id="dlg-code" value={code} onChange={(e) => setCode(e.target.value)} />
@@ -40,6 +40,18 @@ describe("Dialog fokus (Faza 0)", () => {
     expect(name).toHaveFocus();
     await user.type(name, "abc");
     expect(name).toHaveValue("abc");
+    expect(name).toHaveFocus();
+  });
+
+  it("Tab i Shift+Tab ostaju unutar dijaloga", async () => {
+    const user = userEvent.setup();
+    render(<ControlledDialog onClose={vi.fn()} />);
+    const close = screen.getByRole("button", { name: "Zatvori" });
+    const name = screen.getByLabelText("Naziv");
+    name.focus();
+    await user.tab();
+    expect(close).toHaveFocus();
+    await user.tab({ shift: true });
     expect(name).toHaveFocus();
   });
 

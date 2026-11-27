@@ -130,11 +130,35 @@ run("Passkeys HTTP + RLS + stvarna WebAuthn kriptografija",()=>{
     await admin.query("UPDATE users SET locked_until=NULL WHERE id='pk-user'");await admin.query("UPDATE companies SET is_active=false WHERE id='pk-company'");expect((await attempt("pk@example.test",3)).response.status).toBe(401);
     await admin.query("UPDATE companies SET is_active=true WHERE id='pk-company'");
   });
+  it("discoverable prijava bez emaila provjerava handle, potpis, status i jednokratni izazov",async()=>{
+    async function options() {
+      const response=await loginOptions(req("/api/auth/passkeys/login/options",{}));
+      expect(response.status).toBe(200);
+      return {challenge:(await data(response)).options.challenge,token:getCookie(response,"gx_pk_login")};
+    }
+    let current=await options();
+    expect((await loginVerify(req("/api/auth/passkeys/login/verify",{credential:key.assertion(current.challenge,4,"pk-other")},current.token))).status).toBe(401);
+    current=await options();
+    const bad=key.assertion(current.challenge,4);bad.response.signature="AAAA";
+    expect((await loginVerify(req("/api/auth/passkeys/login/verify",{credential:bad},current.token))).status).toBe(401);
+    current=await options();
+    expect((await loginVerify(req("/api/auth/passkeys/login/verify",{email:"pk@example.test",credential:key.assertion(current.challenge,4)},current.token))).status).toBe(400);
+    await admin.query("UPDATE users SET locked_until=now()+interval '1 hour' WHERE id='pk-user'");
+    current=await options();
+    expect((await loginVerify(req("/api/auth/passkeys/login/verify",{credential:key.assertion(current.challenge,4)},current.token))).status).toBe(401);
+    await admin.query("UPDATE users SET locked_until=NULL WHERE id='pk-user'");
+    current=await options();
+    const payload={credential:key.assertion(current.challenge,4)};
+    const response=await loginVerify(req("/api/auth/passkeys/login/verify",payload,current.token));
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie().some(value=>value.startsWith(`${ACCESS_COOKIE}=`))).toBe(true);
+    expect((await loginVerify(req("/api/auth/passkeys/login/verify",payload,current.token))).status).toBe(400);
+  });
   it("brisanje samo vlastitog ključa ostavlja ACCESS audit",async()=>{
     const request=new NextRequest(`http://localhost:3000/api/auth/passkeys/${keyId}`,{method:"DELETE",headers:{host:"localhost:3000",origin:"http://localhost:3000",cookie}});
     const response=await remove(request,{params:Promise.resolve({id:keyId})});expect(response.status).toBe(200);
     expect((await admin.query("SELECT action,retention_class FROM audit_events WHERE entity_id=$1 ORDER BY created_at",[keyId])).rows).toEqual([
-      {action:"passkey.registered",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.deleted",retention_class:"ACCESS"},
+      {action:"passkey.registered",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.login",retention_class:"ACCESS"},{action:"passkey.deleted",retention_class:"ACCESS"},
     ]);
   });
 });

@@ -68,6 +68,9 @@ export function ShellUserMenu({
             {roles.map((role) => ROLE_BS[role] ?? role).join(", ")}
           </p>
         </div>
+        <Link role="menuitem" href="/ured/profil" className="gx-menu-item" onClick={() => setOpen(false)}>
+          Moj profil i sigurnost
+        </Link>
         <Link role="menuitem" href="/lozinka/promjena" className="gx-menu-item">
           Promijeni lozinku
         </Link>

@@ -16,7 +16,7 @@ import { ACCESS_COOKIE } from "@/server/session";
 import { withCompany } from "@gradix/db";
 import { getVerifiedPool } from "@/server/db";
 import Shell, { type NavGroup } from "./shell";
-import { navGroupsForRoles } from "./nav";
+import { navGroupsForRoles, navModulesForRoles } from "./nav";
 import { can } from "@/server/permissions";
 import { countOpenConflicts } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
@@ -61,6 +61,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
   return (
     <Shell
       groups={groups}
+      modules={navModulesForRoles(ctx.roles, badges)}
       user={{
         displayName,
         email: profile?.email ?? "",

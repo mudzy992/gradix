@@ -1,5 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { identifierHash } from "./rate-limit";
+
+/** NUL cannot occur in an accepted email, so this marker cannot alias an identified login. */
+export function passkeyLoginIdentifier(email?: string): string {
+  return identifierHash(email ?? "\0discoverable-passkey");
+}
 
 /** SET LOCAL is trusted server context, never a value supplied as an authenticated user ID by a client. */
 export async function withPasskeyContext<T>(pool: Pool, setting: "app.passkey_user_id" | "app.webauthn_token_hash", value: string, fn: (client: PoolClient) => Promise<T>): Promise<T> {

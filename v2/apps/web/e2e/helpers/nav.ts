@@ -1,5 +1,5 @@
 /** Navigacija helpers — L1: zatvorene grupe nisu u a11y stablu; <960px drawer. */
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /** Na Pixel 5 / uskom viewportu sidebar je drawer — otvori ga prije čitanja linkova. */
 export async function ensureNavVisible(page: Page): Promise<void> {
@@ -26,9 +26,23 @@ export async function expandNavGroups(page: Page): Promise<void> {
 export async function navLabels(page: Page): Promise<string[]> {
   await expandNavGroups(page);
   const nav = page.getByRole("navigation", { name: "Glavna navigacija" });
-  return (await nav.getByRole("link").allInnerTexts()).map((text) => text.trim());
+  return await nav.getByRole("link").evaluateAll(links => links.map(link => link.getAttribute("data-label") ?? link.textContent?.trim() ?? ""));
 }
 
 export async function gotoOffice(page: Page, href: string): Promise<void> {
   await page.goto(href);
+}
+
+/** Navigacija koristi stvarne klikove kroz modul i tab, uključujući mobilni drawer. */
+export async function openModuleTab(page: Page, module: string, tab: string, href: string): Promise<void> {
+  await ensureNavVisible(page);
+  const link = page.getByRole("navigation", { name: "Glavna navigacija" }).locator("a[data-label]").filter({ has: page.locator(`span:text-is("${module}")`) });
+  await expect(link).toBeVisible();
+  await link.click();
+  const tabs = page.getByRole("navigation", { name: `${module} — navigacija` });
+  const target = tabs.getByRole("link", { name: tab, exact: true });
+  await expect(target).toHaveAttribute("href", href);
+  await target.click();
+  await expect(page).toHaveURL(new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[?#].*)?$`), { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Nemate pristup ovoj stranici" })).toHaveCount(0);
 }

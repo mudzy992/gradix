@@ -48,6 +48,7 @@ function Section({
 
 export function ComponentCatalog() {
   const [tab, setTab] = useState("preklopi");
+  const [ui1Tab, setUi1Tab] = useState("pregled");
   const [confirm, setConfirm] = useState(false);
   const [dialog, setDialog] = useState(false);
   const [longDialog, setLongDialog] = useState(false);
@@ -575,6 +576,25 @@ export function ComponentCatalog() {
               <Chip tone="hollow">Nakon razrješenja: stanje „Razriješeno“ + ko/kad/razlog u auditu; radnik vidi ishod pri sljedećem syncu</Chip>
             </Inline>
           </Card>
+        </Stack>
+      </Section>
+
+      <Section id="ui1-preview" title="UI-1 — prijedlog pregleda i navigacije" hint="Odobreni dizajnerski prijedlog; brojke i sadržaj u katalogu su ilustrativni.">
+        <Stack>
+          <Card><SectionTitle>Glavni moduli</SectionTitle><Inline>
+            {['Pregled','Projekti','Radnici i sati','Mehanizacija','Obaveze i rokovi','Skladište i nabavka','Dnevnik i HSE','Obračun','Izvještaji','Postavke'].map(label=><Chip key={label} tone="hollow">{label}</Chip>)}
+          </Inline><p className="gx-page-sub">Podstranice ostaju na istim URL-ovima i dostupne su kroz tabove modula, samo kada rola ima dozvolu.</p></Card>
+          <Card><SectionTitle>Primjer tabova modula</SectionTitle><Tabs label="Projekti — dizajnerski primjer" active={ui1Tab} onChange={setUi1Tab} tabs={[
+            {key:"pregled",label:"Projekti"},{key:"zadaci",label:"Zadaci"},{key:"tenderi",label:"Tenderi"},{key:"podizvodjaci",label:"Podizvođači"},
+          ]} /></Card>
+          <Card><SectionTitle hint="Firma · Vlasnik">Dobro jutro, Amina</SectionTitle><Inline><Button variant="primary">+ Novi projekat</Button><Button>Brza pretraga · Ctrl K</Button></Inline>
+            <Inline><Stat label="Aktivni projekti" value="3" /><Stat label="Radnici" value="12" /><Stat label="Mašine" value="8" /><Stat label="Za provjeru" value="2" /></Inline>
+          </Card>
+          <FormGrid><Card><SectionTitle hint="Samo stavke koje traže odluku.">Prioriteti za vas</SectionTitle><Stack>
+            <ActionCard title="Istekli rokovi · 2" hint="Pregledajte dokumente koji traže obnovu." onClick={()=>push("info","Dizajnerski primjer")} />
+            <ActionCard title="Dani za potvrdu · 3" hint="Otvorite pristigle radne dane." onClick={()=>push("info","Dizajnerski primjer")} />
+          </Stack></Card><Card><SectionTitle hint="Samo podaci kojima imate pristup.">Kvalitet podataka</SectionTitle><Stack><p><Chip tone="hot">2</Chip> Radnici bez satnice</p><p><Chip tone="full">U redu</Chip> Projekti s budžetom</p></Stack></Card></FormGrid>
+          <Card><SectionTitle>Početak rada · prazna firma</SectionTitle><p>1. Dodajte radnike i satnice · 2. Dodajte projekat i mašine · 3. Napravite prvu dodjelu.</p></Card>
         </Stack>
       </Section>
 

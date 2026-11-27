@@ -6204,10 +6204,7 @@
                     "minLength": 3,
                     "maxLength": 200
                   }
-                },
-                "required": [
-                  "email"
-                ]
+                }
               }
             }
           }
@@ -7188,7 +7185,6 @@
                   }
                 },
                 "required": [
-                  "email",
                   "credential"
                 ]
               }

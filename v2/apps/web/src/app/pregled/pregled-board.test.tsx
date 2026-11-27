@@ -198,3 +198,24 @@ describe("PregledBoard — redovi pažnje", () => {
     await expectNoSeriousA11yViolations(container);
   });
 });
+
+describe("UI-1 odobreni pregled", () => {
+  it("čuva pažnju i sinhronizaciju u kolonama i nudi samo dozvoljenu brzu akciju", async () => {
+    const { container } = render(<PregledBoard data={base} firstName="Emir" greeting="Dobar dan" premium
+      companyName="Primjer d.o.o." rolesLabel="Vlasnik" canViewProjects canViewActions={false} canViewHealth={false}
+      extras={<p>Dodatni uvid</p>} />);
+    expect(screen.getByRole("heading", { name: "Dobar dan, Emir" })).toBeTruthy();
+    expect(screen.getByText(/Primjer d.o.o. · Vlasnik/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Otvori projekte" })).toHaveAttribute("href", "/ured/projekti");
+    expect(screen.getByRole("heading", { name: "Šta traži pažnju" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Stanje sinhronizacije" })).toBeTruthy();
+    expect(screen.getByText("Dodatni uvid")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Kvalitet podataka" })).toBeNull();
+    await expectNoSeriousA11yViolations(container);
+  });
+  it("ne nudi projekte bez dozvole", () => {
+    render(<PregledBoard data={{ ...base, sync: null }} firstName={null} greeting="Dobar dan" premium />);
+    expect(screen.queryByRole("link", { name: "Otvori projekte" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Stanje sinhronizacije" })).toBeNull();
+  });
+});

@@ -5,7 +5,7 @@ import { withCompany, type CompanyId } from "@gradix/db";
 import { getPool, getVerifiedPool } from "@/server/db";
 import { authenticate } from "@/server/tenant-context";
 import { ACCESS_COOKIE } from "@/server/session";
-import { can, type Role } from "@/server/permissions";
+import { can, ROLE_LABELS, type Role } from "@/server/permissions";
 import { buildPregled } from "@/server/pregled-service";
 import { Card, Chip, EmptyState, Icon, Inline, PageHeader, Stack, Stat } from "@/components/ui/index";
 import { MachinesTable } from "./machines-table";
@@ -15,6 +15,7 @@ import { listObligations } from "@/server/obligation-service";
 import { countOpenConflicts } from "@/server/workday-resolve";
 import { resolveViewerWorkerId, workdayResolveScopeFor } from "@/server/workday-review";
 import { PregledBoard } from "./pregled-board";
+import { GettingStarted } from "./onboarding";
 import { RoleDashboard } from "./role-dashboard";
 import { RiskyProjectsCard } from "./risky-projects-card";
 import { listRiskyProjects } from "@/server/pregled-risky";
@@ -160,12 +161,15 @@ export default async function PregledPage() {
       return (
         <div>
           <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
-          {reminder ? <PayrollReminderCard reminder={reminder} /> : null}
-          <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} />
-          <PregledBoard data={pregled} firstName={firstName} greeting={greeting} />
-          {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
-          {service ? <ServiceAttentionCard data={service} /> : null}
-          {hse ? <HseAttentionCard data={hse} /> : null}
+          <PregledBoard data={pregled} firstName={firstName} greeting={greeting} premium
+            companyName={data.company?.name} rolesLabel={ctx.roles.map(role => ROLE_LABELS[role as Role]?.label ?? role).join(", ")}
+            canViewProjects={can(ctx.roles, "projects.view")}
+            canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")}
+            onboarding={Object.values(pregled.summary).every(value => value === 0) ? <GettingStarted roles={ctx.roles} /> : null}
+            extras={<>{reminder ? <PayrollReminderCard reminder={reminder} /> : null}
+              {riskyData ? <RiskyProjectsCard data={riskyData} /> : null}
+              {service ? <ServiceAttentionCard data={service} /> : null}
+              {hse ? <HseAttentionCard data={hse} /> : null}</>} />
         </div>
       );
     }
@@ -198,11 +202,15 @@ export default async function PregledPage() {
     <div>
       <PageHeader
         title={firstName ? `Dobro došli, ${firstName}` : "Pregled"}
-        subtitle={`${data.company?.name ?? "Firma"} · ${data.profile?.first_name} ${data.profile?.last_name} · ${data.company?.currency}`}
+        subtitle={`${data.company?.name ?? "Firma"} · ${ctx.roles.map(role => ROLE_LABELS[role as Role]?.label ?? role).join(", ")} · ${data.company?.currency ?? ""}`}
+        actions={can(ctx.roles, "service.view") ? <Link className="gx-btn gx-btn--primary" href="/ured/servis">Otvori servis</Link> :
+          can(ctx.roles, "payroll.view") ? <Link className="gx-btn gx-btn--primary" href="/ured/obracun-sati">Otvori obračun</Link> :
+          <Link className="gx-btn gx-btn--quiet" href="/ured/profil">Moj profil</Link>}
       />
 
       <ScopeNotice scope={ctx.scope} assignmentCount={data.assignmentCount} />
-      <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} />
+      {machineCount === 0 ? <GettingStarted roles={ctx.roles} /> : null}
+      <RoleDashboard canViewActions={can(ctx.roles, "dashboard.actions.view")} canViewHealth={can(ctx.roles, "users.manage")} showKpis />
 
       <div className="gx-cols">
         <Card>

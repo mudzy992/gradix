@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { RoleDashboard } from "./role-dashboard";
 import type { PregledResponse } from "@gradix/contracts";
 import { Card, Chip, EmptyState, Icon, PageHeader, TextLink, type IconName } from "@/components/ui/index";
 import { formatDate, formatDayTime, formatLongDate } from "@/format";
@@ -168,11 +170,27 @@ export function PregledBoard({
   data,
   firstName,
   greeting,
+  companyName,
+  rolesLabel,
+  canViewProjects = false,
+  premium = false,
+  canViewActions = false,
+  canViewHealth = false,
+  onboarding,
+  extras,
 }: {
   data: PregledResponse;
   firstName: string | null;
   /** „Dobro jutro“ / „Dobar dan“ / „Dobro veče“ — računa stranica, u zoni firme. */
   greeting: string;
+  companyName?: string;
+  rolesLabel?: string;
+  canViewProjects?: boolean;
+  premium?: boolean;
+  canViewActions?: boolean;
+  canViewHealth?: boolean;
+  onboarding?: ReactNode;
+  extras?: ReactNode;
 }) {
   const visible = ROWS.filter((row) => row.count(data) > 0);
   const urgent = URGENT_KEYS.reduce((sum, key) => sum + (ROWS.find((row) => row.key === key)!.count(data)), 0);
@@ -183,13 +201,7 @@ export function PregledBoard({
     return `${datePart} · ${urgent} ${plural(urgent, "stvar", "stvari", "stvari")} ${plural(urgent, "traži", "traže", "traži")} vašu pažnju.`;
   })();
 
-  return (
-    <div>
-      <PageHeader
-        title={firstName ? `${greeting}, ${firstName}` : "Pregled"}
-        subtitle={subtitle}
-      />
-
+  const attention = (
       <Card>
         <div className="gx-section-head">
           <div className="gx-section-head__text">
@@ -235,10 +247,9 @@ export function PregledBoard({
           </ul>
         )}
       </Card>
-
-      <PregledSummaryCard data={data} />
-
-      {data.sync !== null ? (
+  );
+  const sync = (
+    data.sync !== null ? (
         <Card>
           <div className="gx-section-head">
             <div className="gx-section-head__text">
@@ -271,7 +282,25 @@ export function PregledBoard({
             </ul>
           )}
         </Card>
-      ) : null}
-    </div>
+    ) : null
   );
+  const header = <PageHeader
+    title={firstName ? `${greeting}, ${firstName}` : "Pregled"}
+    subtitle={[subtitle, companyName, rolesLabel].filter(Boolean).join(" · ")}
+    actions={canViewProjects ? <Link className="gx-btn gx-btn--primary" href="/ured/projekti">Otvori projekte</Link> : undefined}
+  />;
+
+  if (premium) return <div>
+    {header}
+    <PregledSummaryCard data={data} />
+    <RoleDashboard canViewActions={canViewActions} canViewHealth={canViewHealth}
+      leftTop={<>{onboarding}{attention}</>} leftBottom={extras} rightBottom={sync} />
+  </div>;
+
+  return <div>
+    {header}
+    {attention}
+    <PregledSummaryCard data={data} />
+    {sync}
+  </div>;
 }

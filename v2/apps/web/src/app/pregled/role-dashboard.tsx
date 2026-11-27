@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { DashboardActionsResponse, DataHealthResponse } from "@gradix/contracts";
 import { apiCall } from "@/api-client";
-import { Card } from "@/components/ui/index";
+import { Card, Chip, Stat } from "@/components/ui/index";
 
 type Dashboard = typeof DashboardActionsResponse._output;
 type Health = typeof DataHealthResponse._output;
@@ -31,7 +31,9 @@ const healthLabels: Record<Health["items"][number]["key"], string> = {
 };
 
 /** API permissions remain authoritative; do not display a misleading zero on request failure. */
-export function RoleDashboard({ canViewActions, canViewHealth }: { canViewActions: boolean; canViewHealth: boolean }) {
+export function RoleDashboard({ canViewActions, canViewHealth, leftTop, leftBottom, rightBottom, showKpis = false }: {
+  canViewActions: boolean; canViewHealth: boolean; leftTop?: ReactNode; leftBottom?: ReactNode; rightBottom?: ReactNode; showKpis?: boolean;
+}) {
   const [dashboard, setDashboard] = useState<Load<Dashboard>>({kind:"loading"});
   const [health, setHealth] = useState<Load<Health>>({kind:"loading"});
   useEffect(() => {
@@ -46,6 +48,12 @@ export function RoleDashboard({ canViewActions, canViewHealth }: { canViewAction
   }, [canViewActions,canViewHealth]);
 
   return <>
+    {showKpis && canViewActions && dashboard.kind === "ready" && dashboard.data.items.length ? <div className="gx-dashboard-kpis" aria-label="Sažetak po ulozi">
+      {dashboard.data.items.slice(0, 4).map(item => <Stat key={`${item.role}:${item.key}`} label={actionLabels[item.key] ?? item.key} value={String(item.count)} hint={roleLabels[item.role]} />)}
+    </div> : null}
+    <div className={canViewHealth || rightBottom ? "gx-cols" : "gx-dashboard-column"}>
+    <div className="gx-dashboard-column">
+    {leftTop}
     {canViewActions ? <Card>
       <h2 className="gx-section-title">Akcije za vas</h2>
       {dashboard.kind === "loading" ? <p role="status">Učitavanje akcija…</p> : null}
@@ -67,14 +75,19 @@ export function RoleDashboard({ canViewActions, canViewHealth }: { canViewAction
         </section> : null}
       </> : null}
     </Card> : null}
+    {leftBottom}
+    </div>
+    {canViewHealth || rightBottom ? <div className="gx-dashboard-column">
     {canViewHealth ? <Card>
       <h2 className="gx-section-title">Kvalitet podataka</h2>
       {health.kind === "loading" ? <p role="status">Provjera podataka…</p> : null}
       {health.kind === "error" ? <p role="alert">Provjera podataka trenutno nije dostupna.</p> : null}
-      {health.kind === "ready" ? health.data.items.filter(item=>item.count > 0).length ?
-        <ul className="gx-stack gx-stack--2">{health.data.items.filter(item=>item.count > 0).map(item =>
-          <li key={item.key}><Link href={item.href}><strong>{healthLabels[item.key]}</strong> · {item.count}</Link></li>)}</ul> :
+      {health.kind === "ready" ? health.data.items.length ?
+        <ul className="gx-stack gx-stack--2">{health.data.items.map(item =>
+          <li key={item.key}><Link href={item.href}><strong>{healthLabels[item.key]}</strong> <Chip tone={item.count > 0 ? "hot" : "hollow"}>{item.count > 0 ? `${item.count} za provjeru` : "U redu"}</Chip></Link></li>)}</ul> :
         <p>Nema prijavljenih nedostataka u dostupnom opsegu.</p> : null}
     </Card> : null}
-  </>;
+    {rightBottom}
+    </div> : null}
+  </div></>;
 }
