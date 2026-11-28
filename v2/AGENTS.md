@@ -104,6 +104,8 @@ docs/           STATUS.md, DECISIONS/ (ADR), PRODUCT/, specs/, design/, IMPLEMEN
 
 ## Dublje
 
+Audit program G0–G1: `docs/audit-program/` — pravila, stanje, inventar i artefakti izričito naručenog programa.
+
 `docs/STATUS.md` (trenutno stanje) · `docs/IMPLEMENTATION_PLAN.md` (redoslijed faza) ·
 `docs/DECISIONS/` (0015: baza je izvor istine — nema Prisme, shema kroz SQL migracije) ·
 `docs/specs/01…12` (zaključane specifikacije po modulima) ·

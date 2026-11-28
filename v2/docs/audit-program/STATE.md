@@ -1,0 +1,24 @@
+# STATE — Program audita Gradix
+
+- Datum snimka: 2026-11-27.
+- Aktivna faza: 1 — statički auditi; M1 kapije otvorene, M2 spreman za vlasnički pregled, M3 u djelimičnoj vlasničkoj trijaži.
+- Modul u radu: 03 — Radno vrijeme, terenski unos i sync; nalazi/težine su privremeni, modul nije vlasnički zatvoren.
+- Grana: `arena/7b5ea9bf-gradix` (active), bazna grana `v2-bootstrap`.
+- Pregledani kodni baseline: `e7a37910a9c0a651d3d77a059592d755330b399c`.
+- G0: inventar, PRAVILA, ADR 0018 i M1 artefakti postoje; ranije G0/M1 izmjene nisu dirane u ovom M3 prolazu.
+- M1: S1 F1-01/F1-02/F1-03b/F1-04c ostaju otvoreni; TOTP, platform ACL, purge sign-off i lokalizacija čekaju vlasničke odluke; kod nije odobren.
+- M2: četiri artefakta u `02-obaveze-s-rokom/` validirana i spremna za vlasnički pregled; nije vlasnički zatvoren, težine/politike nisu potvrđene.
+- M3 opseg: statički pregled web/API-ja, zajedničkih paketa, worker-a, migracija, dozvola, UI/exporta, praznika, RLS/grantova i testnih ankera. Mobilna aplikacija nije predmet audita.
+- Kreirani/validirani M3 dokumenti: `03-radno-vrijeme-sync/{01-AUDIT,02-DIZAJN,03-PLAN,04-MATRICA}.md`; zaključana spec 03 i M3 poslovni kod nisu mijenjani.
+- M3 kandidati su M3-01–M3-15; detalji/dokazi u `01-AUDIT.md`. Vlasnik 2026-11-27 ograničio PM na R3; M3-01 ostaje privremeni S0 kandidat bez runtime potvrde.
+- M3 odluke 2026-11-27: PM R3; no self-approval, strict single/bulk gates + atomic cost; live skew reject/offline `deviceSentAt` flag, `startedAt` event; manual time via revise/audit; unassigned project + warning; split WORK then round; `localId` all 4; snapshot only after all days resolved, LOCK no SUBMITTED; receipt details same retention incl. inactive firms/key permanent; WORK-only; M3/M5/M10 ownership; day_kind before booking or separate correction; historical roster + Monday normalization.
+- Preostali statički gapovi: M3-02 sync `workday` submit nema isti LOCKED/WEEK_APPROVED gate; M3-03 stari OPEN; M3-04 ±5/replay runtime-neprovjeren; M3-05 warning/read-model; M3-06 snapshot schema/freshness/history; M3-11 receipt TTL/ACL/inactive enumeration; M3-12 all-action `localId`; M3-13 correction/reconciliation/holiday lookup; M3-14 historijski roster/weekStart; M3-15 BREAK u read-modelu.
+- UI/spec: sedmični grid/statusi, projektne sume, reviewed_snapshot i specificirana export ruta nisu poravnati; CSV je klijentski. Ciljana pretraga workday timer/sync/UI putanja ne nalazi holiday lookup; postoje company-service CRUD i zasebni M6/M9 čitači.
+- RLS/grants: R4/R4b/cursor FORCE RLS i tenant politike, bootstrap least-privilege ACL i DB testni ankeri statički su pregledani; `sync_receipts` nema UPDATE grant. Nije dokaz primjene ni prolaza.
+- Retencija: policy je isti per-company rok, trajni replay key/hash i purge svih firmi; receipt trenutno ima fixed 90d default, a worker lista samo aktivne firme i čisti samo conflicts. Tehnički prijedlog za receipt TTL/tenant-safe batch funkciju/all-company ID lookup je u M3 dizajnu; nije implementirano.
+- M3 trijaža je djelimična; ciljne politike M3-01/02/04/05/06/07/09/11/12/13/14/15 evidentirane, ali nalazi/težine su privremeni i nijedan S0 nije potvrđen. M2 ostaje „spreman za vlasnički pregled“, ne zatvoren.
+- Završna validacija M3 (2026-11-27): UTF-8/LF, trailing whitespace, lokalne Markdown veze, matrica, STATE ≤40 linija i `git diff --check` prošli; spec 03 je neizmijenjena, `v2/apps` i `v2/packages` čisti.
+- Nisu pokrenuti testovi, typecheck, lint, build, DB/preflight, deploy ni pilot; fajlovi testova su samo ankeri.
+- Tehnička razrada M3-02/06/11/13 unesena je u 02-DIZAJN, 03-PLAN i 04-MATRICA kao prijedlog, ne odobrenje za kod; 01-AUDIT dopunjen statičkim dokazima.
+- Sljedeće vlasničke odluke: M3-02 OPEN conflict gate na submit; M3-06 status „eksplicitno razriješen“, stale digest/serialization i historija odluka; M3-11 receipt expiry/backfill anchor; M3-13 nezaključan potvrđeni dan, korekcijski ledger workflow, holiday marker/history. Zatim dispositions/težine uz dokaze.
+- Bez izmjene poslovnog koda do **`KREĆEMO U KODIRANJE: 3`**; programske kapije: 12 modula + `00-UKRSTENO.md` prije G1, uz zasebno vlasničko odobrenje.
