@@ -53,7 +53,7 @@
 
 ### Korak E — Jedna računica sati, sedmice, roster i reviewed snapshot (M3-06, M3-07, M3-14, M3-15)
 
-**Površine:** `packages/domain/src/workdays.ts`, `workday-timer-service.ts#loadDayBy/weekView`, `workday-week-actions.ts`, `work_week_approvals`, `/ured/radni-dani[/sedmica]`, CSV i project-cost writer.
+**Površine:** `packages/domain/src/workdays.ts`, `workday-timer-service.ts#loadDayBy/weekView`, `workday-week-actions.ts`, `work_week_approvals`, `WeekDecideInput`, `/api/work-weeks/decide`, `/ured/radni-dani[/sedmica]` decision/grid UI, CSV i project-cost writer.
 
 **Cilj:** M3 read modeli/CSV sabiraju samo `WORK`; radne minute se sijeku po poslovnoj zoni na dnevnoj/sedmičnoj granici prije zaokruživanja WORK dijelova. Roster prati assignment historiju na datum rada; validan `weekStart` se normalizuje na ponedjeljak; APPROVE/REJECT se izvršavaju tek kad svaki radnik-dan ima eksplicitnu dispoziciju i čuvaju append-only server snapshot iste slike; LOCK ne dopušta `SUBMITTED` dan.
 
