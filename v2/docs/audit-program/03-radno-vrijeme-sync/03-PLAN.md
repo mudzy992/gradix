@@ -7,7 +7,7 @@
 ## 1. Kapije prije rada
 
 1. Vlasnik potvrđuje konačnu dispoziciju i težinu svakog M3 nalaza; ciljne politike M3-01/02/04/05/06/07/09/11/12/13/14/15 zapisane su 2026-11-27, ali ne potvrđuju nalaze, S0 ni runtime stanje.
-2. Vlasnik/tehnički dizajn razrješava: M3-02 sync submit naspram approval gatea; M3-06 snapshot schema/freshness, race lock, istorija i eksplicitno razriješen dan; M3-11 receipt TTL/backfill, tenant-safe ACL i enumeracija neaktivnih firmi; M3-13 pre/post-booking correction, project-cost storno naspram M6 pay correction te praznični marker/istorija. M6 potvrđuje payroll interfejs; M5/M10 preuzimaju svoje entity resolvere/scope.
+2. Vlasničke politike su potvrđene: M3-02 OPEN conflict dopušta sync submit, ali blokira confirm/booking; M3-06 traži eksplicitnu dispoziciju svakog dana, strict `409 REVIEW_STALE` i append-only odluke; M3-11 backfill ne skraćuje expiry; M3-13 potvrđen ali nezaključan dan koristi zaseban correction record bez izmjene izvora i s project-cost storno/zamjenom. Tehnički dizajn još mora definirati M3-02 scope/race enforcement; M3-06 schema/canonical digest/source lock/history store; M3-11 tenant-safe ACL i all-company ID lookup; M3-13 correction schema/link/idempotency i holiday marker/history. M6 potvrđuje payroll interfejs; M5/M10 preuzimaju svoje entity resolvere/scope.
 3. Ažurira se dizajn i acceptance kriteriji bez izmjene zaključane specifikacije; ako je potrebna promjena pravila, staje se do vlasničke odluke.
 4. Poslovni kod ostaje netaknut do **`KREĆEMO U KODIRANJE: 3`**. Ovaj plan sam po sebi nije odobrenje.
 
@@ -25,11 +25,11 @@
 
 **Površine:** `workday-approval.ts`, `workday-timer-service.ts#bulkConfirm`, API rute confirm/confirm-bulk i statusni UI.
 
-**Cilj:** isti team predicate/readiness gateovi za single/bulk, zabrana `viewerWorkerId === worker_id` i sedmičnog samoodobravanja; `workdays.status=SUBMITTED` i week-status/OPEN conflict/segment parity; uspješan pojedinačni/grupni confirm knjiži `bookWorkdayCost()` u istoj transakciji, audit rezultat odgovara potvrđenim danima.
+**Cilj:** isti role ∩ session ∩ R3 scope predicate/readiness gateovi za single/bulk, zabrana `viewerWorkerId === worker_id` i sedmičnog samoodobravanja; `workdays.status=SUBMITTED` i week-status/OPEN conflict/segment parity; uspješan pojedinačni/grupni confirm knjiži `bookWorkdayCost()` u istoj transakciji, audit rezultat odgovara potvrđenim danima.
 
-**Gate:** single/bulk imaju iste server-side readiness gateove; vlastiti dan, ne-SUBMITTED dan, OPEN conflict/segment, nevažeće week stanje i radnik izvan R3 ostaju nepromijenjeni; sedmični actor ne odobrava vlastite sate; uspješan confirm + trošak je atomski, odbijeni poziv nema knjiženje.
+**Gate:** single/bulk imaju iste server-side readiness gateove; vlastiti dan, DRAFT (uključujući default `approval_status=SUBMITTED`), OPEN segment, OPEN `work_entry` i `workday` entity-conflict (uključujući konflikt bez `work_entry_id`), nevažeće week stanje i radnik izvan R3 ostaju nepromijenjeni; testirati `scope=COMPANY` SITE_SUPERVISOR bez dodjele na izabrani projekat, miješani project day, invalid `workDate` → 400 i paralelne confirm zahtjeve; sedmični actor ne odobrava vlastite sate; uspješan confirm + trošak je atomski, odbijeni poziv nema knjiženje/audit side-effecta.
 
-**Sync subgate / vlasničko pitanje:** poravnati `workday` submit s postojećim `syncGateForWorkDate()` koji koristi `work_entry`; `LOCKED` reject, `WEEK_APPROVED` conflict, bez `approval_status` potvrde i bez cost booking side-effecta. Potvrditi da li OPEN conflict blokira samo kasniji confirm (preporuka) ili i sync `DRAFT → SUBMITTED`; testirati oba sync item tipa, week gate, replay i da se odbijeni push ne promijeni.
+**Sync subgate / policy potvrđen:** `workday` i `work_entry` koriste isti `syncGateForWorkDate()` gate: `LOCKED` reject, `WEEK_APPROVED` conflict, bez `approval_status` potvrde i bez cost booking side-effecta. OPEN conflict **ne** blokira sync `DRAFT → SUBMITTED`, ali blokira kasniji confirm/booking. Testirati oba sync tipa, week gate, replay i nepromijenjeno stanje kod odbijenog push-a.
 
 ### Korak C — Opraviti timer datum/segment lifecycle (M3-03, M3-04, M3-08)
 
@@ -47,7 +47,7 @@
 
 **Gate:** dodjela A/rad na izabranom B → dozvoljen zapis + flag na dan/segment + uredski warning; bez projekta nema tihog pogađanja; istekla dodjela i TIMER/SYNC daju isti ishod. Absence se može postaviti samo prije confirm/booking nakon korekcije; nakon toga zaseban auditujući korektivni tok, LOCKED je nepromjenjiv; testirati ledger reconciliation/holiday suggestion.
 
-**Correction subgate (M3-13):** optimistic `base_version` + razlog; pre-confirm absence ne prolazi dok nije izričito razriješen svaki aktivni WORK segment i nema `WORKDAY` cost source-a sa statusom različitim od `REVERSED` (`POSTED` ili `PENDING`). Post-booking tok veže correction ID za izvorni dan/segmente/knjižbe i stornira/zamjenjuje project cost bez prepisivanja originala; zatvoren obračun ide kroz zasebni M6 `pay_corrections`. LOCKED izvor ostaje nepromijenjen; ne koristiti postojeći generički `workday_revisions.payload` kao dokaz primjene. Potvrditi status dozvoljen za korekciju potvrđenog ali nezaključanog dana.
+**Correction subgate (M3-13):** optimistic `base_version` + razlog; pre-confirm absence ne prolazi dok nije izričito razriješen svaki aktivni WORK segment i nema `WORKDAY` cost source-a sa statusom različitim od `REVERSED` (`POSTED` ili `PENDING`). Za potvrđen ali nezaključan izvor vlasnik je odabrao zaseban append-only correction record: izvorni workday/segmenti ostaju neizmijenjeni, record veže korekciju za izvor/segmente/knjižbe i project cost se stornira/zamjenjuje bez prepisivanja originala; zatvoren obračun ide kroz zasebni M6 `pay_corrections`. LOCKED izvor ostaje nepromijenjen i ne otključava se. Ne koristiti postojeći generički `workday_revisions.payload` kao dokaz primjene; record schema/link/idempotency ostaju za tehnički dizajn.
 
 **Holiday subgate:** per-company lookup po `businessDate(startedAt, company.timezone)` i tačnom `holiday_date`; odgovor vraća suggestion, ne postavlja `day_kind`. Testirati firmni datum oko ponoći, `is_working=true` (radni/preneseni datum, ne odsustvo), neradni praznik kao prijedlog `HOLIDAY`, eksplicitni `WORK` uz marker i tenant izolaciju.
 
@@ -55,11 +55,11 @@
 
 **Površine:** `packages/domain/src/workdays.ts`, `workday-timer-service.ts#loadDayBy/weekView`, `workday-week-actions.ts`, `work_week_approvals`, `/ured/radni-dani[/sedmica]`, CSV i project-cost writer.
 
-**Cilj:** M3 read modeli/CSV sabiraju samo `WORK`; radne minute se sijeku po poslovnoj zoni na dnevnoj/sedmičnoj granici prije zaokruživanja WORK dijelova. Roster prati assignment historiju na datum rada; validan `weekStart` se normalizuje na ponedjeljak; APPROVE/REJECT se izvršavaju tek kad su svi dani potvrđeni ili eksplicitno razriješeni i čuvaju server snapshot iste slike; LOCK ne dopušta `SUBMITTED` dan.
+**Cilj:** M3 read modeli/CSV sabiraju samo `WORK`; radne minute se sijeku po poslovnoj zoni na dnevnoj/sedmičnoj granici prije zaokruživanja WORK dijelova. Roster prati assignment historiju na datum rada; validan `weekStart` se normalizuje na ponedjeljak; APPROVE/REJECT se izvršavaju tek kad svaki radnik-dan ima eksplicitnu dispoziciju i čuvaju append-only server snapshot iste slike; LOCK ne dopušta `SUBMITTED` dan.
 
-**Gate:** BREAK ne ulazi u WORK-minute/CSV ni project cost; split prije per-slice rounding; ne-ponedjeljak se normalizuje prije GET/decide/lock; roster po historijskim dodjelama; svi dani potvrđeni/eksplicitno razriješeni prije APPROVE/REJECT; snapshot equality/hash; LOCK odbija svaki `SUBMITTED` dan.
+**Gate:** BREAK ne ulazi u WORK-minute/CSV ni project cost; split prije per-slice rounding; ne-ponedjeljak se normalizuje prije GET/decide/lock; roster po historijskim dodjelama; nijedan prazan/nepostojeći dan nije implicitno razriješen; stale digest vraća `409 REVIEW_STALE` bez side-effecta i traži novi pregled; svaki REJECT/re-review/APPROVE ima append-only dokaz; LOCK odbija svaki `SUBMITTED` dan.
 
-**Snapshot subgate (M3-06):** versioned JSON s istim grid/CSV projekcijama, firmnim timezone/rounding/formula versionom i source IDs/versions; `GET` vraća server digest, a `decide` ga šalje nazad. Pod zajedničkim company+week write lockom koji koriste svi mutatori prikazanih izvora server ponovo računa digest; stale → 409 bez side effecta, match → upiši snapshot i odluku atomarno. Uključi `workdays.header_version`, `work_entries.version`, status/day_kind, open conflicts, roster/assignment i sume po projektu; nikad ne vjeruj klijentskim sumama. Probe: promjena entry/conflict/assignment/rounding između GET i POST, stale retry, concurrent writer, svaki REJECT/APPROVE snapshot i očuvanje ranijeg decision evidence.
+**Snapshot subgate (M3-06):** versioned JSON s istim grid/CSV projekcijama, firmnim timezone/rounding/formula versionom i source IDs/versions; `GET` vraća server digest, a `decide` ga šalje nazad. Pod zajedničkim company+week write lockom koji koriste svi mutatori prikazanih izvora server ponovo računa digest; stale → 409 bez side effecta, match + eksplicitna dispozicija svakog dana → upiši snapshot i odluku atomarno. Uključi `workdays.header_version`, `work_entries.version`, status/day_kind, open conflicts, roster/assignment i sume po projektu; nikad ne vjeruj klijentskim sumama. Probe: promjena entry/conflict/assignment/rounding između GET i POST, stale retry, concurrent writer, svaki REJECT/APPROVE snapshot i očuvanje ranijeg decision evidence.
 
 ### Korak F — Entity-aware sync konflikt lifecycle (M3-09)
 
@@ -79,7 +79,7 @@
 
 **Gate:** source/offset roundtrip; OPEN conflict ostaje; receipt/conflict detalji čiste se po istom company roku i za neaktivne firme; minimalni replay key/hash opstaje poslije expiry; testirati tenant-safe cleanup, idempotentni retry, više firmi/RLS i zabranu direktnog receipt UPDATE-a.
 
-**Receipt subgate (M3-11):** expiry se snima na INSERT-u po `sync_conflict_retention_days` (receipt od `created_at`, conflict od `resolved_at`); legacy backfill je konzervativan i ne skraćuje postojeći rok bez vlasničke odluke. Namjenska SECURITY DEFINER batch funkcija provjerava `app.company_id`, koristi `SKIP LOCKED`, vraća samo count i zove se po tenant transakciji. Novi ID-only worker lookup uključuje i neaktivne firme; active-only helper ostaje nepromijenjen. DB preflight/test potvrđuje `EXECUTE` least-privilege, no direct receipt UPDATE/DELETE, expired-only purge, retained hash i no cross-tenant purge.
+**Receipt subgate (M3-11):** expiry se snima na INSERT-u po `sync_conflict_retention_days` (receipt od `created_at`, conflict od `resolved_at`); legacy backfill koristi vlasnički potvrđeni `GREATEST(stari result_expires_at, created_at + novi per-company rok)` i ne skraćuje postojeći rok. Namjenska SECURITY DEFINER batch funkcija provjerava `app.company_id`, koristi `SKIP LOCKED`, vraća samo count i zove se po tenant transakciji. Novi ID-only worker lookup uključuje i neaktivne firme; active-only helper ostaje nepromijenjen. DB preflight/test potvrđuje `EXECUTE` least-privilege, no direct receipt UPDATE/DELETE, expired-only purge, retained hash i no cross-tenant purge.
 
 ## 3. Budući dokazi i završni pregled
 
